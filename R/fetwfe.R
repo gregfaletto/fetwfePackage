@@ -371,18 +371,21 @@ fetwfe <- function(
         X_ints=X_ints,
         y=y,
         in_sample_counts=in_sample_counts,
-        indep_counts=indep_counts,
         N=N,
         T=T,
         d=d,
         p=p,
         num_treats=num_treats,
         first_inds=first_inds,
+        indep_counts=indep_counts,
         sig_eps_sq=sig_eps_sq,
         sig_eps_c_sq=sig_eps_c_sq,
-        q=q,
+        lambda.max=lambda.max,
+        lambda.min=lambda.min,
         nlambda=nlambda,
-        verbose=verbose
+        q=q,
+        verbose=verbose,
+        alpha=alpha
         )
 
     if(indep_count_data_available){
