@@ -364,9 +364,6 @@ fetwfe_core <- function(
     stopifnot(length(alpha) == 1)
     stopifnot(alpha > 0)
     stopifnot(alpha < 1)
-    if(alpha > 0.5){
-        warning("Provided alpha > 0.5; are you sure you didn't mean to enter a smaller alpha? The confidence level will be 1 - alpha.")
-    }
 
     #
     #
@@ -512,8 +509,10 @@ fetwfe_core <- function(
         )
 
     theta_hat <- res$theta_hat
-    lambda_star <- res$lambda_star
+    lambda_star_ind <- res$lambda_star_ind
     lambda_star_model_size <- res$lambda_star_model_size
+
+    lambda_star <- fit$lambda[lambda_star_ind]
 
     c_names <- names(in_sample_counts)[2:(R + 1)]
     stopifnot(length(c_names) == R)
@@ -2815,26 +2814,26 @@ getBetaBIC <- function(fit, N, T, p, X_mod, y){
         BICs[k] <- N*T*log(mse_hat) + s*log(N*T)
     }
 
-    lambda_star <- which(BICs == min(BICs))
-    if(length(lambda_star) == 1){
-        lambda_star_final <- lambda_star
-        theta_hat <- fit$beta[, lambda_star_final]
+    lambda_star_ind <- which(BICs == min(BICs))
+    if(length(lambda_star_ind) == 1){
+        lambda_star_final_ind <- lambda_star_ind
+        theta_hat <- fit$beta[, lambda_star_final_ind]
     } else{
         # Choose smallest model size among models with equal BIC
-        model_sizes_star <- model_sizes[lambda_star]
+        model_sizes_star <- model_sizes[lambda_star_ind]
         min_model_size_ind <- which(model_sizes_star == min(model_sizes_star))
-        lambda_star_final <- lambda_star[min_model_size_ind][1]
-        stopifnot(length(lambda_star_final) == 1)
-        theta_hat <- fit$beta[, lambda_star_final]
+        lambda_star_final_ind <- lambda_star_ind[min_model_size_ind][1]
+        stopifnot(length(lambda_star_final_ind) == 1)
+        theta_hat <- fit$beta[, lambda_star_final_ind]
     }
-    stopifnot(length(lambda_star_final) == 1)
+    stopifnot(length(lambda_star_final_ind) == 1)
     stopifnot(length(theta_hat) == p + 1)
     stopifnot(all(!is.na(theta_hat)))
 
     return(list(
         theta_hat=theta_hat,
-        lambda_star=lambda_star_final,
-        lambda_star_model_size=model_sizes[lambda_star_final]
+        lambda_star_ind=lambda_star_final_ind,
+        lambda_star_model_size=model_sizes[lambda_star_final_ind]
         )
     )
 }
