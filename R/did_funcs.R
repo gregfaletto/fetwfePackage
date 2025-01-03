@@ -519,6 +519,10 @@ fetwfe_core <- function(
 
     print("lambda_star_model_size:")
     print(lambda_star_model_size)
+    print("which(theta_hat != 0):")
+    print(which(theta_hat != 0))
+    print("theta_hat[theta_hat != 0]:")
+    print(theta_hat[theta_hat != 0])
 
     # Handle edge case where no features are selected
     if(lambda_star_model_size == 0){
