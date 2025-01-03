@@ -517,6 +517,9 @@ fetwfe_core <- function(
     c_names <- names(in_sample_counts)[2:(R + 1)]
     stopifnot(length(c_names) == R)
 
+    print("lambda_star_model_size:")
+    print(lambda_star_model_size)
+
     # Handle edge case where no features are selected
     if(lambda_star_model_size == 0){
         print("No features selected; all treatment effects estimated to be 0.")
