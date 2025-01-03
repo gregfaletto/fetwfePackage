@@ -765,7 +765,7 @@ fetwfe_core <- function(
             indep_probs=TRUE
             )
         indep_att_hat <- indep_te_results$att_hat
-        indep_att_se <- indep_te_esults$att_te_se
+        indep_att_se <- indep_te_results$att_te_se
         indep_att_se_no_prob <- indep_te_results$att_te_se_no_prob
     } else{
         indep_att_hat <- NA
