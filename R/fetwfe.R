@@ -378,6 +378,8 @@ fetwfe <- function(
         p=p,
         num_treats=num_treats,
         first_inds=first_inds,
+        sig_eps_sq=sig_eps_sq,
+        sig_eps_c_sq=sig_eps_c_sq,
         q=q,
         nlambda=nlambda,
         verbose=verbose
