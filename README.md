@@ -10,7 +10,7 @@ The `fetwfe` package implements *fused extended two-way fixed effects* (FETWFE),
  
 To install the `fetwfe` package, simply use
 
-```
+```R
 # install.packages("remotes")  # if needed
 remotes::install_github("gregfaletto/fetwfePackage")
 library(fetwfe)
@@ -18,7 +18,7 @@ library(fetwfe)
 
 The `fetwfe` package contains one function, `fetwfe()`, which implements fused extended two-way fixed effects. Here's some example code that implements the data application from the paper:
 
-```
+```R
 library(fetwfe)
 library(bacondecomp)
 
