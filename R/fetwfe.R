@@ -2,9 +2,9 @@
 
 #' @title Fused extended two-way fixed effects
 #'
-#' @description Implementation of fused extended two-way fixed effects with no sample
-#' splitting. Estimates overall ATT as well as CATT (cohort average treatment
-#' effects on the treated units). 
+#' @description Implementation of fused extended two-way fixed effects.
+#' Estimates overall ATT as well as CATT (cohort average treatment effects on
+#' the treated units). 
 #'
 #' @param pdata Dataframe; the panel data set. Each row should represent an
 #' observation of a unit at a time. Should contain columns as described below.
@@ -169,6 +169,25 @@
 #'     response = "suiciderate_elast_jag",
 #'     q = 0.5,
 #'     verbose = TRUE)
+#'
+#' print("Average treatment effect on the treated unites (in percentage point
+#' units):")
+#' print(100 * res$att_hat)
+#' print("Conservative 95% confidence interval for ATT (in percentage point units):")
+#'
+#' low_att <- 100 * (res$att_hat - qnorm(1 - 0.05 / 2) * res$att_se)
+#' high_att <- 100 * (res$att_hat + qnorm(1 - 0.05 / 2) * res$att_se)
+#'
+#' print(c(low_att, high_att))
+#'
+#' catt_df_pct <- res$catt_df
+#' catt_df_pct[["Estimated TE"]] <- 100 * catt_df_pct[["Estimated TE"]]
+#' catt_df_pct[["SE"]] <- 100 * catt_df_pct[["SE"]]
+#' catt_df_pct[["ConfIntLow"]] <- 100 * catt_df_pct[["ConfIntLow"]]
+#' catt_df_pct[["ConfIntHigh"]] <- 100 * catt_df_pct[["ConfIntHigh"]]
+#'
+#' print("Cohort average treatment effects and confidence intervals (in percentage point units):")
+#' print(catt_df_pct)
 #' @export
 fetwfe <- function(
     pdata,
