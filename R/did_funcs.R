@@ -637,6 +637,12 @@ fetwfe_core <- function(
     stopifnot(max(first_inds) <= num_treats)
 
     stopifnot(length(sel_feat_inds) > 0)
+    stopifnot(length(sel_treat_inds_shifted) > 0)
+
+    print("sel_feat_inds:")
+    print(sel_feat_inds)
+    print("sel_treat_inds_shifted:")
+    print(sel_treat_inds_shifted)
 
     #
     #
@@ -2723,6 +2729,10 @@ getCohortATTsFinal <- function(
 
             }
 
+            print("length(psi_r):")
+            print(length(psi_r))
+            print("length(sel_treat_inds_shifted):")
+            print(length(sel_treat_inds_shifted))
             stopifnot(length(psi_r) == length(sel_treat_inds_shifted))
 
             psi_mat[, r] <- psi_r
