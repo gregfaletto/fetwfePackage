@@ -170,15 +170,19 @@
 #'     q = 0.5,
 #'     verbose = TRUE)
 #'
-#' print("Average treatment effect on the treated unites (in percentage point
-#' units):")
-#' print(100 * res$att_hat)
-#' print("Conservative 95% confidence interval for ATT (in percentage point units):")
+#' # Average treatment effect on the treated unites (in percentage point
+#' # units)
+#' 100 * res$att_hat
+#' 
+#' # Conservative 95% confidence interval for ATT (in percentage point units)
 #'
 #' low_att <- 100 * (res$att_hat - qnorm(1 - 0.05 / 2) * res$att_se)
 #' high_att <- 100 * (res$att_hat + qnorm(1 - 0.05 / 2) * res$att_se)
 #'
-#' print(c(low_att, high_att))
+#' c(low_att, high_att)
+#'
+#' # Cohort average treatment effects and confidence intervals (in percentage
+#' # point units)
 #'
 #' catt_df_pct <- res$catt_df
 #' catt_df_pct[["Estimated TE"]] <- 100 * catt_df_pct[["Estimated TE"]]
@@ -186,8 +190,7 @@
 #' catt_df_pct[["ConfIntLow"]] <- 100 * catt_df_pct[["ConfIntLow"]]
 #' catt_df_pct[["ConfIntHigh"]] <- 100 * catt_df_pct[["ConfIntHigh"]]
 #'
-#' print("Cohort average treatment effects and confidence intervals (in percentage point units):")
-#' print(catt_df_pct)
+#' catt_df_pct
 #' @export
 fetwfe <- function(
     pdata,
