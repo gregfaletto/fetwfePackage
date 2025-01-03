@@ -527,17 +527,22 @@ fetwfe_core <- function(
     # Handle edge case where no features are selected
     if(lambda_star_model_size == 0){
         print("No features selected; all treatment effects estimated to be 0.")
+        if(q < 1){
+            ret_se <- 0
+        } else{
+            ret_se <- NA
+        }
         return(list(
             in_sample_att_hat=0,
-            in_sample_att_se=0,
-            in_sample_att_se_no_prob=0,
+            in_sample_att_se=ret_se,
+            in_sample_att_se_no_prob=ret_se,
             indep_att_hat=0,
-            indep_att_se=0,
+            indep_att_se=ret_se,
             # indep_att_se_no_prob=indep_att_se_no_prob,
             catt_hats=rep(0, R),
-            catt_ses=rep(0, R),
-            catt_df=data.frame(c_names, rep(0, R), rep(NA, R),
-                rep(NA, R), rep(NA, R)),
+            catt_ses=rep(ret_se, R),
+            catt_df=data.frame(c_names, rep(0, R), rep(ret_se, R),
+                rep(ret_se, R), rep(ret_se, R)),
             theta_hat=theta_hat,
             beta_hat=theta_hat,
             treat_inds=treat_inds,
@@ -602,6 +607,57 @@ fetwfe_core <- function(
     stopifnot(all(sel_treat_inds_shifted >= 1))
     stopifnot(all(sel_treat_inds_shifted <= num_treats))
 
+    print("sel_treat_inds:")
+    print(sel_treat_inds)
+    print("sel_treat_inds_shifted:")
+    print(sel_treat_inds_shifted)
+
+    # Handle edgge case where no treatment features selected
+    if(length(sel_treat_inds_shifted) == 0){
+        print("No features selected; all treatment effects estimated to be 0.")
+        if(q < 1){
+            ret_se <- 0
+        } else{
+            ret_se <- NA
+        }
+        return(list(
+            in_sample_att_hat=0,
+            in_sample_att_se=ret_se,
+            in_sample_att_se_no_prob=ret_se,
+            indep_att_hat=0,
+            indep_att_se=ret_se,
+            # indep_att_se_no_prob=indep_att_se_no_prob,
+            catt_hats=rep(0, R),
+            catt_ses=rep(ret_se, R),
+            catt_df=data.frame(c_names, rep(0, R), rep(ret_se, R),
+                rep(ret_se, R), rep(ret_se, R)),
+            theta_hat=theta_hat,
+            beta_hat=theta_hat,
+            treat_inds=treat_inds,
+            treat_int_inds=treat_int_inds,
+            cohort_probs=cohort_probs,
+            indep_cohort_probs=indep_cohort_probs,
+            sig_eps_sq=sig_eps_sq,
+            sig_eps_c_sq=sig_eps_c_sq,
+            lambda.max=lambda.max,
+            lambda.max_model_size=lambda.max_model_size,
+            lambda.min=lambda.min,
+            lambda.min_model_size=lambda.min_model_size,
+            lambda_star=lambda_star,
+            lambda_star_model_size=lambda_star_model_size,
+            X_ints=X_ints,
+            y=y,
+            X_final=X_final,
+            y_final=y_final,
+            N=N,
+            T=T,
+            R=R,
+            d=d,
+            p=p
+            )
+        )
+    }
+
     #
     #
     # Step 4: transform estimated coefficients back to original feature
@@ -638,11 +694,6 @@ fetwfe_core <- function(
 
     stopifnot(length(sel_feat_inds) > 0)
     stopifnot(length(sel_treat_inds_shifted) > 0)
-
-    print("sel_feat_inds:")
-    print(sel_feat_inds)
-    print("sel_treat_inds_shifted:")
-    print(sel_treat_inds_shifted)
 
     #
     #
