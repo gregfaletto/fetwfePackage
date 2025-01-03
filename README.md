@@ -35,6 +35,25 @@ res <- fetwfe(
     response="suiciderate_elast_jag",
     q=0.5,
     verbose=TRUE)
+
+print("Average treatment effect on the treated unites (in percentage point
+units):")
+print(100 * res$att_hat)
+print("Conservative 95% confidence interval for ATT (in percentage point units):")
+
+low_att <- 100 * (res$att_hat - qnorm(1 - 0.05 / 2) * res$att_se)
+high_att <- 100 * (res$att_hat + qnorm(1 - 0.05 / 2) * res$att_se)
+
+print(c(low_att, high_att))
+
+catt_df_pct <- res$catt_df
+catt_df_pct[["Estimated TE"]] <- 100 * catt_df_pct[["Estimated TE"]]
+catt_df_pct[["SE"]] <- 100 * catt_df_pct[["SE"]]
+catt_df_pct[["ConfIntLow"]] <- 100 * catt_df_pct[["ConfIntLow"]]
+catt_df_pct[["ConfIntHigh"]] <- 100 * catt_df_pct[["ConfIntHigh"]]
+
+print("Cohort average treatment effects and confidence intervals (in percentage point units):")
+print(catt_df_pct)
 ```
 
 # Documentation
@@ -103,25 +122,6 @@ The function returns a named list with the following components:
 - `X_final`, `y_final`: The transformed design matrix and response vector after applying adjustments.
 - `N`, `T`, `R`, `d`, `p`: The number of units, time periods, treated cohorts, covariates, and features in the final dataset.
 
-## Examples
-```R
-set.seed(23451)
-
-library(bacondecomp)
-
-data(divorce)
-
-res <- fetwfe(
-  pdata = divorce[divorce$sex == 2, ],
-  time_var = "year",
-  unit_var = "st",
-  treatment = "changed",
-  covs = c("murderrate", "lnpersinc", "afdcrolls"),
-  response = "suiciderate_elast_jag",
-  q = 0.5,
-  verbose = TRUE
-)
-```
 
 ## References
 - Faletto, G (2024). *Fused Extended Two-Way Fixed Effects for Difference-in-Differences with Staggered Adoptions*. [arXiv preprint arXiv:2312.05985](https://arxiv.org/abs/2312.05985).
