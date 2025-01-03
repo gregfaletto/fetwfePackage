@@ -1,6 +1,6 @@
 # Fused Extended Two-Way Fixed Effects
 
-The `fetwfe` package implements *fused extended two-way fixed effects* (FETWFE), a methodology for estimating treatment effects in difference-in-differences with staggered adoptions.
+The `{fetwfe}` package implements *fused extended two-way fixed effects* (FETWFE), a methodology for estimating treatment effects in difference-in-differences with staggered adoptions.
 
 * For a brief introduction to the methodology, as well as background on difference-in-differences with staggered adoptions and motivation for FETWFE, see this [blog post](https://gregoryfaletto.com/2023/12/13/new-paper-fused-extended-two-way-fixed-effects-for-difference-in-differences-with-staggered-adoptions/).
 * For more detailed slides on the methodology (but less detailed than the paper), see [here](https://gregoryfaletto.com/2024/02/11/presentation-on-fused-extended-two-way-fixed-effects/).
@@ -8,7 +8,7 @@ The `fetwfe` package implements *fused extended two-way fixed effects* (FETWFE),
 
 # fetwfePackage
  
-To install the `fetwfe` package, simply use
+To install the `{fetwfe}` package, simply use
 
 ```R
 # install.packages("remotes")  # if needed
@@ -16,7 +16,7 @@ remotes::install_github("gregfaletto/fetwfePackage")
 library(fetwfe)
 ```
 
-The `fetwfe` package contains one function, `fetwfe()`, which implements fused extended two-way fixed effects. Here's some example code that implements the data application from the paper:
+The `{fetwfe}` package contains one function, `fetwfe()`, which implements fused extended two-way fixed effects. Here's some example code that implements the data application from the paper:
 
 ```R
 library(fetwfe)
