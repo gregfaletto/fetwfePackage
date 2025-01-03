@@ -371,6 +371,7 @@ fetwfe <- function(
         X_ints=X_ints,
         y=y,
         in_sample_counts=in_sample_counts,
+        indep_counts=indep_counts,
         N=N,
         T=T,
         d=d,
