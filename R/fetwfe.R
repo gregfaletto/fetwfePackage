@@ -384,8 +384,10 @@ fetwfe <- function(
         )
 
     if(indep_count_data_available){
-        stopifnot(!is.na(res$indep_att_hat))
-        stopifnot(!is.na(res$indep_att_se))
+        if(q < 1){
+            stopifnot(!is.na(res$indep_att_hat))
+            stopifnot(!is.na(res$indep_att_se))
+        }
         stopifnot(all(!is.na(res$indep_cohort_probs)))
         att_hat <- res$indep_att_hat
         att_se <- res$indep_att_se
