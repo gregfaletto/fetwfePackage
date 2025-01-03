@@ -4,7 +4,7 @@ To install the `fetwfe` package, simply use
 
 ```
 # install.packages("remotes")  # if needed
-remotes::install_github("gregfaletto/yourPackageName")
+remotes::install_github("gregfaletto/fetwfePackage")
 library(fetwfe)
 ```
 
