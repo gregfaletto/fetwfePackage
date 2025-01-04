@@ -565,6 +565,12 @@ fetwfe_core <- function(
         } else{
             ret_se <- NA
         }
+
+        catt_df_to_ret <- data.frame(c_names, rep(0, R), rep(ret_se, R),
+                rep(ret_se, R), rep(ret_se, R))
+
+        colnames(cat_df_to_ret) <- c("Cohort", "Estimated TE", "SE",
+            "ConfIntLow", "ConfIntHigh")
         return(list(
             in_sample_att_hat=0,
             in_sample_att_se=ret_se,
@@ -574,8 +580,7 @@ fetwfe_core <- function(
             # indep_att_se_no_prob=indep_att_se_no_prob,
             catt_hats=rep(0, R),
             catt_ses=rep(ret_se, R),
-            catt_df=data.frame(c_names, rep(0, R), rep(ret_se, R),
-                rep(ret_se, R), rep(ret_se, R)),
+            catt_df=catt_df_to_ret,
             theta_hat=theta_hat,
             beta_hat=theta_hat,
             treat_inds=treat_inds,
@@ -648,6 +653,12 @@ fetwfe_core <- function(
         } else{
             ret_se <- NA
         }
+
+        catt_df_to_ret <- data.frame(c_names, rep(0, R), rep(ret_se, R),
+                rep(ret_se, R), rep(ret_se, R))
+
+        colnames(cat_df_to_ret) <- c("Cohort", "Estimated TE", "SE",
+            "ConfIntLow", "ConfIntHigh")
         return(list(
             in_sample_att_hat=0,
             in_sample_att_se=ret_se,
@@ -657,8 +668,7 @@ fetwfe_core <- function(
             # indep_att_se_no_prob=indep_att_se_no_prob,
             catt_hats=rep(0, R),
             catt_ses=rep(ret_se, R),
-            catt_df=data.frame(c_names, rep(0, R), rep(ret_se, R),
-                rep(ret_se, R), rep(ret_se, R)),
+            catt_df=catt_df_to_ret,
             theta_hat=theta_hat,
             beta_hat=theta_hat,
             treat_inds=treat_inds,
