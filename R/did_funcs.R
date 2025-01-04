@@ -440,7 +440,47 @@ fetwfe_core <- function(
 
     #
     #
-    # Step 3: estimate bridge regression and extract fitted coefficients
+    # Step 3: get cohort-specific sample proportions (estimated treatment
+    # probabilities)
+    #
+    #
+
+    cohort_probs <- in_sample_counts[2:(R + 1)]/
+        sum(in_sample_counts[2:(R + 1)])
+
+    stopifnot(all(!is.na(cohort_probs)))
+    stopifnot(all(cohort_probs >= 0))
+    stopifnot(all(cohort_probs <= 1))
+    stopifnot(length(cohort_probs) == R)
+    stopifnot(abs(sum(cohort_probs) - 1) < 10^(-6))
+   
+    cohort_probs_overall <- in_sample_counts[2:(R + 1)]/N
+
+    stopifnot(abs(1 - sum(cohort_probs_overall) - in_sample_counts[1]/N) <
+        10^(-6))
+
+    if(indep_count_data_available){
+        indep_cohort_probs <- indep_counts[2:(R + 1)]/
+            sum(indep_counts[2:(R + 1)])
+
+        stopifnot(all(!is.na(indep_cohort_probs)))
+        stopifnot(all(indep_cohort_probs >= 0))
+        stopifnot(all(indep_cohort_probs <= 1))
+        stopifnot(length(indep_cohort_probs) == R)
+        stopifnot(abs(sum(indep_cohort_probs) - 1) < 10^(-6))
+
+        indep_cohort_probs_overall <- indep_counts[2:(R + 1)]/N
+
+        stopifnot(abs(1 - sum(
+            indep_cohort_probs_overall) - indep_counts[1] / N) < 10^(-6))
+    } else{
+        indep_cohort_probs <- NA
+        indep_cohort_probs_overall <- NA
+    }
+
+    #
+    #
+    # Step 4: estimate bridge regression and extract fitted coefficients
     #
     #
 
@@ -660,7 +700,7 @@ fetwfe_core <- function(
 
     #
     #
-    # Step 4: transform estimated coefficients back to original feature
+    # Step 5: transform estimated coefficients back to original feature
     # space
     #
     #
@@ -697,7 +737,7 @@ fetwfe_core <- function(
 
     #
     #
-    # Step 5: calculate cohort-specific treatment effects and standard
+    # Step 6: calculate cohort-specific treatment effects and standard
     # errors
     #
     #
@@ -729,59 +769,20 @@ fetwfe_core <- function(
 
     rm(res)
 
-    #
-    #
-    # Step 6: get cohort-specific sample proportions (estimated treatment
-    # probabilities)
-    #
-    #
-
-    # Get overal estimated ATT! First, get estimated cohort probabilities
-
-    cohort_probs <- in_sample_counts[2:(R + 1)]/
-        sum(in_sample_counts[2:(R + 1)])
-
-    stopifnot(all(!is.na(cohort_probs)))
-    stopifnot(all(cohort_probs >= 0))
-    stopifnot(all(cohort_probs <= 1))
-    stopifnot(length(cohort_probs) == R)
-    stopifnot(abs(sum(cohort_probs) - 1) < 10^(-6))
     if(q < 1){
         stopifnot(nrow(d_inv_treat_sel) == num_treats)
         stopifnot(ncol(d_inv_treat_sel) == length(sel_treat_inds_shifted))
     }
-   
 
-    cohort_probs_overall <- in_sample_counts[2:(R + 1)]/N
-
-    stopifnot(abs(1 - sum(cohort_probs_overall) - in_sample_counts[1]/N) <
-        10^(-6))
-
-    if(indep_count_data_available){
-        indep_cohort_probs <- indep_counts[2:(R + 1)]/
-            sum(indep_counts[2:(R + 1)])
-
-        stopifnot(all(!is.na(indep_cohort_probs)))
-        stopifnot(all(indep_cohort_probs >= 0))
-        stopifnot(all(indep_cohort_probs <= 1))
-        stopifnot(length(indep_cohort_probs) == R)
-        stopifnot(abs(sum(indep_cohort_probs) - 1) < 10^(-6))
-
-        indep_cohort_probs_overall <- indep_counts[2:(R + 1)]/N
-
-        stopifnot(abs(1 - sum(
-            indep_cohort_probs_overall) - indep_counts[1] / N) < 10^(-6))
-    } else{
-        indep_cohort_probs <- NA
-        indep_cohort_probs_overall <- NA
-    }
+    
 
     #
     #
     # Step 7: calculate overall average treatment effect on treated units
-    # TODO(gregfaletto): need to align with other function
     #
     #
+
+    # Get overal estimated ATT!
 
     in_sample_te_results <- getTeResults2(
         sig_eps_sq=sig_eps_sq,
