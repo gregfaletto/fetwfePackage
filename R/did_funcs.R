@@ -657,7 +657,7 @@ fetwfe_core <- function(
         catt_df_to_ret <- data.frame(c_names, rep(0, R), rep(ret_se, R),
                 rep(ret_se, R), rep(ret_se, R))
 
-        colnames(cat_df_to_ret) <- c("Cohort", "Estimated TE", "SE",
+        colnames(catt_df_to_ret) <- c("Cohort", "Estimated TE", "SE",
             "ConfIntLow", "ConfIntHigh")
         return(list(
             in_sample_att_hat=0,
