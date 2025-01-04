@@ -557,13 +557,6 @@ fetwfe_core <- function(
     c_names <- names(in_sample_counts)[2:(R + 1)]
     stopifnot(length(c_names) == R)
 
-    print("lambda_star_model_size:")
-    print(lambda_star_model_size)
-    print("which(theta_hat != 0):")
-    print(which(theta_hat != 0))
-    print("theta_hat[theta_hat != 0]:")
-    print(theta_hat[theta_hat != 0])
-
     # Handle edge case where no features are selected
     if(lambda_star_model_size == 0){
         print("No features selected; all treatment effects estimated to be 0.")
@@ -646,11 +639,6 @@ fetwfe_core <- function(
     stopifnot(all(sel_treat_inds_shifted %in% 1:num_treats))
     stopifnot(all(sel_treat_inds_shifted >= 1))
     stopifnot(all(sel_treat_inds_shifted <= num_treats))
-
-    print("sel_treat_inds:")
-    print(sel_treat_inds)
-    print("sel_treat_inds_shifted:")
-    print(sel_treat_inds_shifted)
 
     # Handle edgge case where no treatment features selected
     if(length(sel_treat_inds_shifted) == 0){
@@ -2781,10 +2769,6 @@ getCohortATTsFinal <- function(
 
             }
 
-            print("length(psi_r):")
-            print(length(psi_r))
-            print("length(sel_treat_inds_shifted):")
-            print(length(sel_treat_inds_shifted))
             stopifnot(length(psi_r) == length(sel_treat_inds_shifted))
 
             psi_mat[, r] <- psi_r
