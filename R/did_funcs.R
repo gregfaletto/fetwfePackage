@@ -913,9 +913,8 @@ idCohorts <- function(df, time_var, unit_var, treat_var, covs){
         df_s <- df[df[, unit_var] == s, ]
         # Assume this is a balanced panel
         if(nrow(df_s) != T){
-            stop(paste(
-                "Panel does not appear to be balanced (each unit does not have exactly T observations for T =",
-                T))
+            stop(paste("Panel does not appear to be balanced (unit", s,
+                "does not have exactly T observations for T =", T))
         }
 
         if(any(df_s[, treat_var] == 1)){
@@ -923,7 +922,9 @@ idCohorts <- function(df, time_var, unit_var, treat_var, covs){
             treat_year_s_ind <- min(which(df_s[, treat_var] == 1))
             # Make sure treatment is absorbing
             if(any(df_s[treat_year_s_ind:T, treat_var] != 1)){
-                stop("Treatment does not appear to be an absorbing state")
+                stop(paste(
+                    "Treatment does not appear to be an absorbing state for unit",
+                    s))
             }
 
             cohorts[[treat_year_s_ind]] <- c(cohorts[[treat_year_s_ind]], s)
