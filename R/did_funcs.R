@@ -1175,14 +1175,6 @@ addDummies <- function(df, cohorts, times, N, T, unit_var, time_var,
     # Assume balanced panel
     stopifnot(all(colSums(time_var_mat) == N))
 
-    # df <- data.frame(df, time_vars)
-    # Discard year and state variables
-    # X_df <- df[, !(colnames(df) %in% c(resp_var, time_var, unit_var))]
-
-    # Total number of columns in df: one for response, state/year dummies,
-    # p for covariates, num_treats for treatment effects
-    # stopifnot(ncol(X_df) == num_treats + p + n_cohorts + T)
-
     stopifnot(length(unlist(cohort_treat_names)) == num_treats)
     # stopifnot(all(unlist(cohort_treat_names) %in% colnames(X_df)))
     stopifnot(ncol(cohort_var_mat) == n_cohorts)
@@ -1206,16 +1198,6 @@ addDummies <- function(df, cohorts, times, N, T, unit_var, time_var,
 }
 
 ############## Create formula and model matrix
-
-# example code: https://github.com/grantmcdermott/etwfe/blob/main/R/etwfe.R
-
-    # red <- c("a", "b")
-    # blue <- c("c", "d", "e")
-    # paste_func <- function(...){
-    #   paste(..., sep=":")
-    # }
-    # 
-    # paste(do.call(paste_func, expand.grid(red, blue)), collapse=" + ")
 
 paste_func <- function(...){
     paste(..., sep=":")
@@ -1519,27 +1501,12 @@ generateFEInts <- function(X_long, cohort_fe, time_fe, N, T, R, d){
 
         stopifnot(last_col_r - first_col_r + 1 == d)
 
-        # print("R*d:")
-        # print(R*d)
-        # print("ncol(X_long_cohort):")
-        # print(ncol(X_long_cohort))
-        # print("first_col_r:last_col_r:")
-        # print(first_col_r:last_col_r)
-
         stopifnot(all(is.na(X_long_cohort[, first_col_r:last_col_r])))
 
         stopifnot(ncol(cohort_fe[, r]*X_long) == length(first_col_r:last_col_r))
 
-        # print("cohort_fe[, r]*X_long:")
-        # print(cohort_fe[, r]*X_long)
-
         X_long_cohort[, first_col_r:last_col_r] <- cohort_fe[, r]*X_long
 
-        # print("str(X_long_cohort):")
-        # print(str(X_long_cohort))
-
-        # print("ncol(X_long_cohort) (2):")
-        # print(ncol(X_long_cohort))
     }
 
     stopifnot(all(!is.na(X_long_cohort)))
@@ -1672,8 +1639,6 @@ genXintsData <- function(cohort_fe, time_fe, X_long, treat_mat_long, N, R, T,
     X_int <- cbind(cohort_fe, time_fe, X_long)
     stopifnot(ncol(X_int) == R + T - 1 + d)
 
-    # stopifnot(min(abs(cov(cbind(cohort_fe, time_fe, X_long)))) > 0)
-
     # Generate interactions of X with time and cohort fixed effects
     # Note: columns of X_long_cohort are arranged in blocks of size d for one
     # cohort at a time (that is, the first d columns are the interactions of
@@ -1712,10 +1677,6 @@ genXintsData <- function(cohort_fe, time_fe, X_long, treat_mat_long, N, R, T,
     stopifnot(ncol(X_int) == p)
     stopifnot(nrow(X_int) == N * T)
 
-    # if(p < N*T){
-    #     stopifnot(min(eigen(t(X_int) %*% X_int)$values) > 0)
-    # }
-
 
     return(X_int)
 }
@@ -1735,8 +1696,6 @@ genXY <- function(num_treats){
 
     X_int <- cbind(cohort_fe, time_fe, X_long)
     stopifnot(ncol(X_int) == R + T - 1 + d)
-
-    # stopifnot(min(abs(cov(cbind(cohort_fe, time_fe, X_long)))) > 0)
 
     # Generate interactions of X with time and cohort fixed effects
     # Note: columns of X_long_cohort are arranged in blocks of size d for one
@@ -1762,9 +1721,6 @@ genXY <- function(num_treats){
     rm(res)
 
     X_int <- cbind(X_int, treat_mat_long)
-
-    # stopifnot(min(abs(cov(cbind(cohort_fe, time_fe, X_long, X_long_cohort,
-    #     X_long_time, treat_mat_long)))) > 0)
 
     # Generate interactions of treatment effects with X
     X_long_treat <- genTreatInts(treat_mat_long, X_long, num_treats, cohort_fe,
@@ -1883,8 +1839,6 @@ genTransformedMatTwoWayFusion <- function(X_sub, first_inds){
 
     D <- matrix(0, k, k)
 
-    # D[1, 1] <- 1
-
     for(i in 1:k){
         for(j in 1:k){
             if(i == j){
@@ -1952,24 +1906,12 @@ transformXintDataApp <- function(X_int, N, T, R, d, num_treats, first_inds=NA){
     stopifnot(nrow(X_int) == N*T)
 
     # Handle cohort fixed effects:
-    # X_mod[, 1:R] <- genTransformedMatFusion(X_int[, 1:R])
     X_mod[, 1:R] <- X_int[, 1:R] %*% genBackwardsInvFusionTransformMatDataApp(R)
-    # b <- genTransformedMatFusion(X_int[, 1:R])
-    # print("b:")
-    # print(b)
-    # print("X_mod[, 1:R]:")
-    # print(X_mod[, 1:R])
-    # stopifnot(all(abs(b - X_mod[, 1:R]) < 10^(-7)))
 
     # Time fixed effects
-    # X_mod[, (R + 1):(R + T - 1)] <- genTransformedMatFusion(X_int[,
-    #     (R + 1):(R + T - 1)])
     stopifnot(all(is.na(X_mod[, (R + 1):(R + T - 1)])))
     X_mod[, (R + 1):(R + T - 1)] <- X_int[, (R + 1):(R + T - 1)] %*%
         genBackwardsInvFusionTransformMatDataApp(T - 1)
-
-    # b <- genTransformedMatFusion(X_int[, (R + 1):(R + T - 1)])
-    # stopifnot(all(abs(b - X_mod[, (R + 1):(R + T - 1)]) < 10^(-7)))
 
     # X goes in unpenalized
     stopifnot(all(is.na(X_mod[, (R + T - 1 + 1):(R + T - 1 + d)])))
@@ -1997,13 +1939,9 @@ transformXintDataApp <- function(X_int, N, T, R, d, num_treats, first_inds=NA){
 
         stopifnot(all(is.na(X_mod[, feat_inds_j])))
 
-        # X_mod[, feat_inds_j] <- genTransformedMatFusion(X_int[, feat_inds_j])
-        
         X_mod[, feat_inds_j] <- X_int[, feat_inds_j] %*%
             genBackwardsInvFusionTransformMatDataApp(R)
 
-        # b <- genTransformedMatFusion(X_int[, feat_inds_j])
-        # stopifnot(all(abs(X_mod[, feat_inds_j] - b) < 10^(-7)))
     }
     stopifnot(all(!is.na(X_mod[, 1:(R + T - 1 + d + R*d)])))
     stopifnot(all(is.na(X_mod[, (R + T - 1 + d + R*d + 1):p])))
@@ -2020,12 +1958,9 @@ transformXintDataApp <- function(X_int, N, T, R, d, num_treats, first_inds=NA){
         stopifnot(length(feat_inds_j) == T - 1)
 
         stopifnot(all(is.na(X_mod[, feat_inds_j])))
-        # X_mod[, feat_inds_j] <- genTransformedMatFusion(X_int[, feat_inds_j])
         X_mod[, feat_inds_j] <- X_int[, feat_inds_j] %*%
             genBackwardsInvFusionTransformMatDataApp(T - 1)
 
-        # b <- genTransformedMatFusion(X_int[, feat_inds_j])
-        # stopifnot(all(abs(X_mod[, feat_inds_j] - b) < 10^(-7)))
     }
     stopifnot(all(!is.na(X_mod[, 1:(R + T - 1 + d + R*d + (T - 1)*d)])))
     stopifnot(all(is.na(X_mod[, (R + T - 1 + d + R*d + (T - 1)*d + 1):p])))
@@ -2040,14 +1975,9 @@ transformXintDataApp <- function(X_int, N, T, R, d, num_treats, first_inds=NA){
 
     # Now ready to generate the appropriate transformed matrix
     stopifnot(all(is.na(X_mod[, feat_inds])))
-    # X_mod[, feat_inds] <- genTransformedMatTwoWayFusion(X_int[, feat_inds],
-        # first_inds)
 
     X_mod[, feat_inds] <- X_int[, feat_inds] %*%
         genInvTwoWayFusionTransformMat(num_treats, first_inds, R)
-
-    # b <- genTransformedMatTwoWayFusion(X_int[, feat_inds], first_inds)
-    # stopifnot(all(abs(X_mod[, feat_inds] - b) < 10^(-7)))
 
     stopifnot(all(!is.na(X_mod[, 1:(R + T - 1 + d + R*d + (T - 1)*d + num_treats)])))
     stopifnot(all(is.na(X_mod[, (R + T - 1 + d + R*d + (T - 1)*d + num_treats + 1):p])))
@@ -2067,13 +1997,9 @@ transformXintDataApp <- function(X_int, N, T, R, d, num_treats, first_inds=NA){
 
         # Now ready to generate the appropriate transformed matrix
         stopifnot(all(is.na(X_mod[, inds_j])))
-        # X_mod[, inds_j] <- genTransformedMatTwoWayFusion(X_int[, inds_j],
-        #     first_inds)
+
         X_mod[, inds_j] <- X_int[, inds_j] %*%
             genInvTwoWayFusionTransformMat(num_treats, first_inds, R)
-
-        # b <- genTransformedMatTwoWayFusion(X_int[, inds_j], first_inds)
-        # stopifnot(all(abs(X_mod[, inds_j] - b) < 10^(-7)))
 
         stopifnot(all(!is.na(X_mod[, inds_j])))
     }
@@ -2109,15 +2035,12 @@ untransformTwoWayFusionCoefs <- function(coef_vec, first_inds, len){
 
     for(j in 1:R){
         first_ind_j <- first_inds[j]
-        # print("first_ind_j:")
-        # print(first_ind_j)
+
         if(j < R){
             last_ind_j <- first_inds[j + 1] - 1
         } else{
             last_ind_j <- len
         }
-        # print("last_ind_j:")
-        # print(last_ind_j)
 
         stopifnot(last_ind_j >= first_ind_j + 1)
 
@@ -2125,10 +2048,7 @@ untransformTwoWayFusionCoefs <- function(coef_vec, first_inds, len){
             stopifnot(is.na(ret_vec[k]))
             stopifnot(!is.na(ret_vec[first_ind_j]))
             stopifnot(all(!is.na(coef_vec[(first_ind_j + 1):k])))
-            # print("base term:")
-            # print(ret_vec[first_ind_j])
-            # print("things I'm adding:")
-            # print(coef_vec[(first_ind_j + 1):k])
+
             ret_vec[k] <- ret_vec[first_ind_j] +
                 sum(coef_vec[(first_ind_j + 1):k])
         }
@@ -2141,8 +2061,7 @@ untransformTwoWayFusionCoefs <- function(coef_vec, first_inds, len){
 
 untransformCoefsDataApp <- function(beta_hat_mod, T, R, p, d, num_treats,
     first_inds=NA){
-    # theta = D %*% beta
-    # beta = solve(D) %*% theta
+
     stopifnot(length(beta_hat_mod) == p)
     beta_hat <- rep(as.numeric(NA), p)
 
@@ -2151,15 +2070,12 @@ untransformCoefsDataApp <- function(beta_hat_mod, T, R, p, d, num_treats,
     }
     
     # First handle R cohort fixed effects effects
-    # beta_hat[1:R] <- untransformVecFusion(beta_hat_mod[1:R], len=R)
     beta_hat[1:R] <- genBackwardsInvFusionTransformMatDataApp(R) %*% beta_hat_mod[1:R] 
 
     stopifnot(all(!is.na(beta_hat[1:R])))
     stopifnot(all(is.na(beta_hat[(R + 1):p])))
 
     # Next, T - 1 time fixed effects
-    # beta_hat[(R + 1):(R + T - 1)] <- untransformVecFusion(beta_hat_mod[(R + 1):
-    #     (R + T - 1)], len=T - 1)
     beta_hat[(R + 1):(R + T - 1)] <- genBackwardsInvFusionTransformMatDataApp(T - 1) %*%
         beta_hat_mod[(R + 1):(R + T - 1)]
 
@@ -2185,8 +2101,7 @@ untransformCoefsDataApp <- function(beta_hat_mod, T, R, p, d, num_treats,
         stopifnot(length(feat_inds_j) == R)
 
         stopifnot(all(is.na(beta_hat[feat_inds_j])))
-        # beta_hat[feat_inds_j] <- untransformVecFusion(beta_hat_mod[feat_inds_j],
-        #     len=R)
+
         beta_hat[feat_inds_j] <- genBackwardsInvFusionTransformMatDataApp(R) %*% 
             beta_hat_mod[feat_inds_j]
         stopifnot(all(!is.na(beta_hat[feat_inds_j])))
@@ -2207,8 +2122,7 @@ untransformCoefsDataApp <- function(beta_hat_mod, T, R, p, d, num_treats,
         stopifnot(length(feat_inds_j) == T - 1)
 
         stopifnot(all(is.na(beta_hat[feat_inds_j])))
-        # beta_hat[feat_inds_j] <- untransformVecFusion(beta_hat_mod[feat_inds_j],
-        #     len=T - 1)
+
         beta_hat[feat_inds_j] <- genBackwardsInvFusionTransformMatDataApp(T - 1) %*%
             beta_hat_mod[feat_inds_j]
         stopifnot(all(!is.na(beta_hat[feat_inds_j])))
@@ -2223,8 +2137,6 @@ untransformCoefsDataApp <- function(beta_hat_mod, T, R, p, d, num_treats,
 
     stopifnot(all(is.na(beta_hat[feat_inds])))
 
-    # beta_hat[feat_inds] <- untransformTwoWayFusionCoefs(beta_hat_mod[feat_inds],
-    #     first_inds, num_treats)
     beta_hat[feat_inds] <- genInvTwoWayFusionTransformMat(num_treats,
         first_inds, R) %*% beta_hat_mod[feat_inds]
 
@@ -2248,8 +2160,6 @@ untransformCoefsDataApp <- function(beta_hat_mod, T, R, p, d, num_treats,
 
         # Now ready to untransform the estimated coefficients
         stopifnot(all(is.na(beta_hat[inds_j])))
-        # beta_hat[inds_j] <- untransformTwoWayFusionCoefs(beta_hat_mod[inds_j],
-        #     first_inds, num_treats)
 
         beta_hat[inds_j] <- genInvTwoWayFusionTransformMat(num_treats,
             first_inds, R) %*% beta_hat_mod[inds_j]
@@ -2261,22 +2171,6 @@ untransformCoefsDataApp <- function(beta_hat_mod, T, R, p, d, num_treats,
 
     return(beta_hat)
 }
-
-# sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T){
-#     stopifnot(length(eta_hat) == 1)
-#     stopifnot(length(beta_hat) == ncol(X_mod))
-
-#     y_hat <- X_mod %*% beta_hat + eta_hat
-#     stopifnot(length(y_hat) == N*T)
-#     stopifnot(all(!is.na(y_hat)))
-
-#     ret <- sum((y - y_hat)^2)/(N*T)
-
-#     stopifnot(!is.na(ret))
-#     stopifnot(ret >= 0)
-
-#     return(ret)
-# }
 
 sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T){
     stopifnot(length(eta_hat) == 1)
@@ -2315,12 +2209,6 @@ genBackwardsFusionTransformMat <- function(n_vars){
         }
     }
 
-    # # Double-check
-    # D_inv <- genInvFusionTransformMat(n_vars)
-
-    # stopifnot(min(abs(D %*% D_inv - diag(rep(1, n_vars)))) < 10^(-7))
-    # stopifnot(min(abs(D_inv %*% D - diag(rep(1, n_vars)))) < 10^(-7))
-
     return(D)
 }
 
@@ -2357,12 +2245,6 @@ genFusionTransformMat <- function(n_vars){
         }
     }
 
-    # # Double-check
-    # D_inv <- genInvFusionTransformMat(n_vars)
-
-    # stopifnot(min(abs(D %*% D_inv - diag(rep(1, n_vars)))) < 10^(-7))
-    # stopifnot(min(abs(D_inv %*% D - diag(rep(1, n_vars)))) < 10^(-7))
-
     return(D)
 }
 
@@ -2383,8 +2265,6 @@ genInvFusionTransformMat <- function(n_vars){
 genTwoWayFusionTransformMat <- function(n_vars, first_inds){
     D <- matrix(0, n_vars, n_vars)
     stopifnot(length(first_inds) == R)
-
-    # D[1, 1] <- 1
 
     for(i in 1:n_vars){
         for(j in 1:n_vars){
@@ -2421,29 +2301,6 @@ genTwoWayFusionTransformMat <- function(n_vars, first_inds){
     return(D)
 }
 
-# genInvTwoWayFusionTransformMat <- function(n_vars, first_inds){
-#     stopifnot(length(n_vars) == 1)
-#     stopifnot(length(first_inds) == R)
-#     D <- matrix(0, n_vars, n_vars)
-
-#     diag(D) <- 1
-
-#     for(j in 1:(R - 1)){
-#         index_j <- first_inds[j]
-#         next_index <- first_inds[j + 1]
-
-#         D[index_j:n_vars, index_j] <- 1
-#         D[next_index:n_vars, next_index] <- 1
-
-#         if(index_j + 1 <= next_index - 1){
-#             for(k in (index_j + 1):(next_index - 1)){
-#                 D[k, (index_j + 1):k] <- 1
-#             }
-#         }
-#     }
-
-#     return(D)
-# }
 
 estOmegaSqrtInv <- function(y, X_ints, N, T, p){
 
@@ -2492,127 +2349,7 @@ estOmegaSqrtInv <- function(y, X_ints, N, T, p){
 
     return(list(sig_eps_sq=sigma_hat_sq, sig_eps_c_sq=sigma_c_sq_hat))
 
-    # Omega <- diag(rep(sigma_hat_sq, T)) + matrix(sigma_c_sq_hat, T, T)
-
-    # Omega_sqrt_inv <- expm::sqrtm(solve(Omega))
-
-    # return(list(Omega_sqrt_inv=Omega_sqrt_inv, sigma_hat_sq=sigma_hat_sq))
 }
-
-# getCohortATTs <- function(X_final, sel_feat_inds, treat_inds, num_treats,
-#     first_inds, sel_treat_inds_shifted, c_names, tes, sig_eps_sq, alpha=0.05,
-#     multiply=FALSE){
-#     # # Start by getting Gram matrix needed for standard errors
-#     # gram <- 1/(N*T)*(t(X_final[, sel_feat_inds]) %*% X_final[, sel_feat_inds])
-#     # stopifnot(nrow(gram) == length(sel_feat_inds))
-#     # stopifnot(ncol(gram) == length(sel_feat_inds))
-
-#     # gram_inv <- solve(gram)
-
-#     # # Get only the parts of gram_inv that have to do with treatment effects
-#     # gram_inv <- gram_inv[sel_feat_inds %in% treat_inds,
-#     #     sel_feat_inds %in% treat_inds]
-
-#     stopifnot(max(sel_treat_inds_shifted) <= num_treats)
-#     stopifnot(min(sel_treat_inds_shifted) >= 1)
-#     stopifnot(length(tes) == num_treats)
-#     stopifnot(all(!is.na(tes)))
-
-#     gram_inv <- getGramInv(N, T, X_final, sel_feat_inds, treat_inds, num_treats,
-#         sel_treat_inds_shifted)
-
-#     # Get the parts of D_inv that have to do with treatment effects
-#     d_inv_treat <- genInvTwoWayFusionTransformMat(num_treats, first_inds, R)
-
-#     # First, each cohort
-#     cohort_tes <- rep(as.numeric(NA), R)
-#     cohort_te_ses <- rep(0, R)
-
-#     psi_mat <- matrix(0, length(sel_treat_inds_shifted), R)
-
-#     for(r in 1:R){
-#         first_ind_r <- first_inds[r]
-#         if(r < R){
-#             last_ind_r <- first_inds[r + 1] - 1
-#         } else{
-#             last_ind_r <- num_treats
-#         }
-        
-#         cohort_tes[r] <- mean(tes[first_ind_r:last_ind_r])
-
-
-#         if(cohort_tes[r] != 0){
-
-#             # Get psi vector: the part of D inverse that we need to look at is the
-#             # block corresponding to the treatment effect estimates, which is the
-#             # num_treats x num_treats matrix yielded by
-#             # genInvTwoWayFusionTransformMat(num_treats, first_inds). We will look
-#             # at the
-
-#             print("first_ind_r:last_ind_r:")
-#             print(first_ind_r:last_ind_r)
-
-#             if(last_ind_r > first_ind_r){
-#                 sel_treat_inds_shifted_r  <- sel_treat_inds_shifted[sel_treat_inds_shifted %in% which(colMeans(d_inv_treat[first_ind_r:
-#                     last_ind_r, ]) != 0)]
-#             } else{
-#                 sel_treat_inds_shifted_r  <- sel_treat_inds_shifted[sel_treat_inds_shifted %in% which(d_inv_treat[first_ind_r:
-#                     last_ind_r, ] != 0)]
-#             }
-            
-
-#             # sel_treat_inds_shifted_r <- sel_treat_inds_shifted[sel_treat_inds_shifted >= first_ind_r &
-#             #     sel_treat_inds_shifted <= last_ind_r]
-
-#             stopifnot(length(sel_treat_inds_shifted_r) > 0)
-#             stopifnot(all(sel_treat_inds_shifted_r %in% sel_treat_inds_shifted))
-
-#             # Correct rows of matrix
-            
-#             print("sel_treat_inds_shifted:")
-#             # print(sel_treat_inds_shifted)
-
-#             # print("dim(d_inv_treat[first_ind_r:last_ind_r, sel_treat_inds_shifted]):")
-#             # print(dim(d_inv_treat[first_ind_r:last_ind_r,
-#             #     sel_treat_inds_shifted]))
-
-#             if(last_ind_r > first_ind_r){
-#                 psi_r <- colMeans(d_inv_treat[first_ind_r:last_ind_r,
-#                     sel_treat_inds_shifted])
-#             } else{
-#                 psi_r <- d_inv_treat[first_ind_r:last_ind_r,
-#                     sel_treat_inds_shifted]
-#             }
-            
-#             stopifnot(length(psi_r) == length(sel_treat_inds_shifted))
-
-#             psi_mat[, r] <- psi_r
-#             # Get standard errors
-#             cohort_te_ses[r] <- sqrt(sig_eps_sq*as.numeric(t(psi_r) %*%
-#                 gram_inv %*% psi_r)/(N*T))
-#         }
-#     }
-#     stopifnot(length(c_names) == R)
-#     stopifnot(length(cohort_tes) == R)
-#     stopifnot(length(cohort_te_ses) == R)
-
-#     if(multiply){
-#         cohort_te_df <- data.frame(c_names, cohort_tes*100, cohort_te_ses*100,
-#             cohort_tes*100 - qnorm(1 - alpha/2)*cohort_te_ses*100,
-#             cohort_tes*100 + qnorm(1 - alpha/2)*cohort_te_ses*100)
-#     } else{
-#         cohort_te_df <- data.frame(c_names, cohort_tes, cohort_te_ses,
-#             cohort_tes - qnorm(1 - alpha/2)*cohort_te_ses,
-#             cohort_tes + qnorm(1 - alpha/2)*cohort_te_ses)
-#     }
-    
-
-#     colnames(cohort_te_df) <- c("Cohort", "Estimated TE", "SE", "ConfIntLow",
-#         "ConfIntHigh")
-
-#     return(list(cohort_te_df=cohort_te_df, cohort_tes=cohort_tes,
-#         psi_mat=psi_mat, gram_inv=gram_inv))
-# }
 
 
 getSecondVarTermDataApp <- function(cohort_probs, psi_mat,
@@ -2956,20 +2693,6 @@ getPsiRFused <- function(first_ind_r, last_ind_r, sel_treat_inds_shifted,
     # block corresponding to the treatment effect estimates, which is the
     # num_treats x num_treats matrix yielded by
     # genInvTwoWayFusionTransformMat(num_treats, first_inds).
-
-    # if(last_ind_r > first_ind_r){
-    #     relevant_inds <- sel_treat_inds_shifted %in%
-    #         which(as.logical(colSums(d_inv_treat[first_ind_r:last_ind_r,
-    #             ] != 0)))
-    # } else{
-    #     relevant_inds <- sel_treat_inds_shifted %in%
-    #         which(d_inv_treat[first_ind_r:last_ind_r, ] != 0)
-    # }
-
-    # sel_treat_inds_shifted_r  <- sel_treat_inds_shifted[relevant_inds]
-
-    # stopifnot(length(sel_treat_inds_shifted_r) > 0)
-    # stopifnot(all(sel_treat_inds_shifted_r %in% sel_treat_inds_shifted))
 
     # Correct rows of matrix
 
