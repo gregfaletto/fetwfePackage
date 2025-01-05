@@ -764,10 +764,11 @@ fetwfe_core <- function(
     psi_mat <- res$psi_mat
     gram_inv <- res$gram_inv
     d_inv_treat_sel <- res$d_inv_treat_sel
+    calc_ses <- res$calc_ses
 
     rm(res)
 
-    if(q < 1){
+    if(calc_ses){
         stopifnot(nrow(d_inv_treat_sel) == num_treats)
         stopifnot(ncol(d_inv_treat_sel) == length(sel_treat_inds_shifted))
     }
@@ -798,7 +799,7 @@ fetwfe_core <- function(
         cohort_probs_overall=cohort_probs_overall,
         first_inds=first_inds,
         theta_hat_treat_sel=theta_hat[sel_treat_inds],
-        q=q,
+        calc_ses=calc_ses,
         indep_probs=FALSE
         )
 
@@ -823,7 +824,7 @@ fetwfe_core <- function(
             cohort_probs_overall=indep_cohort_probs_overall,
             first_inds=first_inds,
             theta_hat_treat_sel=theta_hat[sel_treat_inds],
-            q=q,
+            calc_ses=calc_ses,
             indep_probs=TRUE
             )
         indep_att_hat <- indep_te_results$att_hat
@@ -2711,8 +2712,11 @@ getCohortATTsFinal <- function(
 
     # Start by getting Gram matrix needed for standard errors
     if(calc_ses){
-        gram_inv <- getGramInv(N, T, X_final, sel_feat_inds, treat_inds, num_treats,
-            sel_treat_inds_shifted)
+        res <- getGramInv(N, T, X_final, sel_feat_inds, treat_inds, num_treats,
+            sel_treat_inds_shifted, calc_ses)
+
+        gram_inv <- res$gram_inv
+        calc_ses <- res$calc_ses
     } else{
         gram_inv <- NA
     }
@@ -2745,7 +2749,7 @@ getCohortATTsFinal <- function(
         
         cohort_tes[r] <- mean(tes[first_ind_r:last_ind_r])
 
-        if(calc_ses & all(!is.na(gram_inv))){
+        if(calc_ses){
             # Calculate standard errors
 
             if(fused){
@@ -2791,7 +2795,7 @@ getCohortATTsFinal <- function(
         } 
     }
 
-    if(fused & calc_ses & all(!is.na(gram_inv))){
+    if(fused & calc_ses){
         if(nrow(d_inv_treat_sel) != num_treats){
             err_mes <- paste("nrow(d_inv_treat_sel) == num_treats is not TRUE. ",
                 "nrow(d_inv_treat_sel): ", nrow(d_inv_treat_sel), ". num_treats: ",
@@ -2826,10 +2830,11 @@ getCohortATTsFinal <- function(
         stopifnot(is.matrix(d_inv_treat_sel))
         ret <- list(cohort_te_df=cohort_te_df, cohort_tes=cohort_tes,
             cohort_te_ses=cohort_te_ses, psi_mat=psi_mat, gram_inv=gram_inv,
-            d_inv_treat_sel=d_inv_treat_sel)
+            d_inv_treat_sel=d_inv_treat_sel, calc_ses=calc_ses)
     } else{
         ret <- list(cohort_te_df=cohort_te_df, cohort_tes=cohort_tes,
-            cohort_te_ses=cohort_te_ses, psi_mat=psi_mat, gram_inv=gram_inv)
+            cohort_te_ses=cohort_te_ses, psi_mat=psi_mat, gram_inv=gram_inv,
+            calc_ses=calc_ses)
     }
     return(ret)
 }
@@ -2904,7 +2909,7 @@ getBetaBIC <- function(fit, N, T, p, X_mod, y){
 }
 
 getGramInv <- function(N, T, X_final, sel_feat_inds, treat_inds, num_treats,
-    sel_treat_inds_shifted){
+    sel_treat_inds_shifted, calc_ses){
 
     stopifnot(nrow(X_final) == N * T)
     X_sel <- X_final[, sel_feat_inds]
@@ -2920,7 +2925,7 @@ getGramInv <- function(N, T, X_final, sel_feat_inds, treat_inds, num_treats,
 
     if(min_gram_eigen < 10^(-12)){
         warning("Gram matrix corresponding to selected features is not invertible. Assumptions needed for inference are not satisfied. Standard errors will not be calculed.")
-        return(NA)
+        return(list(gram_inv=NA, calc_ses=FALSE))
     }
 
     gram_inv <- solve(gram)
@@ -2939,7 +2944,7 @@ getGramInv <- function(N, T, X_final, sel_feat_inds, treat_inds, num_treats,
     stopifnot(nrow(gram_inv) == ncol(gram_inv))
     stopifnot(nrow(gram_inv) == length(sel_treat_inds_shifted))
 
-    return(gram_inv)
+    return(list(gram_inv=gram_inv, calc_ses=calc_ses))
 }
 
 getPsiRFused <- function(first_ind_r, last_ind_r, sel_treat_inds_shifted,
@@ -3020,13 +3025,13 @@ getTeResults2 <- function(
     cohort_probs_overall,
     first_inds,
     theta_hat_treat_sel,
-    q,
+    calc_ses,
     indep_probs=FALSE
     ){
 
     att_hat <- as.numeric(cohort_tes %*% cohort_probs)
 
-    if(q < 1){
+    if(calc_ses){
         # Get ATT standard error
         # first variance term: convergence of theta
         psi_att <- psi_mat %*% cohort_probs
