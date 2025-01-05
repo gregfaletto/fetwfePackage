@@ -2915,7 +2915,7 @@ getGramInv <- function(N, T, X_final, sel_feat_inds, treat_inds, num_treats,
     stopifnot(nrow(gram) == length(sel_feat_inds))
     stopifnot(ncol(gram) == length(sel_feat_inds))
 
-    min_gram_eigen <- eigen(t(X_int) %*% X_int, symmetric = TRUE,
+    min_gram_eigen <- eigen(gram, symmetric = TRUE,
                 only.values = TRUE)$values
 
     if(min_gram_eigen < 10^(-12)){
