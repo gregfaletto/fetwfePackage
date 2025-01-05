@@ -170,7 +170,7 @@
 #'     q = 0.5,
 #'     verbose = TRUE)
 #'
-#' # Average treatment effect on the treated unites (in percentage point
+#' # Average treatment effect on the treated units (in percentage point
 #' # units)
 #' 100 * res$att_hat
 #' 
