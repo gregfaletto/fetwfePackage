@@ -2915,8 +2915,8 @@ getGramInv <- function(N, T, X_final, sel_feat_inds, treat_inds, num_treats,
     stopifnot(nrow(gram) == length(sel_feat_inds))
     stopifnot(ncol(gram) == length(sel_feat_inds))
 
-    min_gram_eigen <- eigen(gram, symmetric = TRUE,
-                only.values = TRUE)$values
+    min_gram_eigen <- min(eigen(gram, symmetric = TRUE,
+                only.values = TRUE)$values)
 
     if(min_gram_eigen < 10^(-12)){
         warning("Gram matrix corresponding to selected features is not invertible. Assumptions needed for inference are not satisfied. Standard errors will not be calculed.")
