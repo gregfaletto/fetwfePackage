@@ -348,24 +348,24 @@ fetwfe <- function(
         }
     }
 
-    # If q is less than 1 and X_ints doesn't have full row rank, it's possible
-    # the final Gram matrix (after only including the selected features) will
-    # not be invertible, leading to an error
-    if(q < 1){
+    # # If q is less than 1 and X_ints doesn't have full row rank, it's possible
+    # # the final Gram matrix (after only including the selected features) will
+    # # not be invertible, leading to an error
+    # if(q < 1){
 
-        if(nrow(X_ints) < ncol(X_ints)){
-            warning("Final design matrix does not have full column rank. May run into an error later if the Gram matrix corresponding to the selected features is not invertible. (Or everything might be fine if few enough features are selected. If there's no error, everything is okay.)")
-        } else{
-            # Calculate minimum singular value of X_ints
-            smallest_eigenvalue <- min(eigen(t(X_ints) %*% X_ints, symmetric = TRUE,
-                only.values = TRUE)$values)
+    #     if(nrow(X_ints) < ncol(X_ints)){
+    #         warning("Final design matrix does not have full column rank. May run into an error later if the Gram matrix corresponding to the selected features is not invertible. (Or everything might be fine if few enough features are selected. If there's no error, everything is okay.)")
+    #     } else{
+    #         # Calculate minimum singular value of X_ints
+    #         smallest_eigenvalue <- min(eigen(t(X_ints) %*% X_ints, symmetric = TRUE,
+    #             only.values = TRUE)$values)
 
-            if(smallest_eigenvalue < 10^(-9)){
-                warning("Final design matrix does not have full column rank. May run into an error later if the Gram matrix corresponding to the selected features is not invertible. (Or everything might be fine if few enough features are selected. If there's no error, everything is okay.)")
-            }
-        }
+    #         if(smallest_eigenvalue < 10^(-9)){
+    #             warning("Final design matrix does not have full column rank. May run into an error later if the Gram matrix corresponding to the selected features is not invertible. (Or everything might be fine if few enough features are selected. If there's no error, everything is okay.)")
+    #         }
+    #     }
         
-    }
+    # }
 
     res <- fetwfe_core(
         X_ints=X_ints,

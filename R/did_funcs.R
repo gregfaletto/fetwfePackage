@@ -1789,7 +1789,8 @@ genXY <- function(num_treats){
     stopifnot(ncol(X_int) == p)
 
     if(p < N*T){
-        eigens <- eigen(t(X_int) %*% X_int)$values
+        eigens <- eigen(t(X_int) %*% X_int, symmetric = TRUE,
+                only.values = TRUE)$values
         stopifnot(min(eigens) > 0)
     }
 
@@ -2744,7 +2745,7 @@ getCohortATTsFinal <- function(
         
         cohort_tes[r] <- mean(tes[first_ind_r:last_ind_r])
 
-        if(calc_ses){
+        if(calc_ses & all(!is.na(gram_inv))){
             # Calculate standard errors
 
             if(fused){
@@ -2790,7 +2791,7 @@ getCohortATTsFinal <- function(
         } 
     }
 
-    if(fused & calc_ses){
+    if(fused & calc_ses & all(!is.na(gram_inv))){
         if(nrow(d_inv_treat_sel) != num_treats){
             err_mes <- paste("nrow(d_inv_treat_sel) == num_treats is not TRUE. ",
                 "nrow(d_inv_treat_sel): ", nrow(d_inv_treat_sel), ". num_treats: ",
@@ -2803,7 +2804,7 @@ getCohortATTsFinal <- function(
     stopifnot(length(c_names) == R)
     stopifnot(length(cohort_tes) == R)
 
-    if(calc_ses){
+    if(calc_ses & all(!is.na(gram_inv))){
         stopifnot(length(cohort_te_ses) == R)
 
         cohort_te_df <- data.frame(c_names, cohort_tes, cohort_te_ses,
@@ -2913,6 +2914,14 @@ getGramInv <- function(N, T, X_final, sel_feat_inds, treat_inds, num_treats,
 
     stopifnot(nrow(gram) == length(sel_feat_inds))
     stopifnot(ncol(gram) == length(sel_feat_inds))
+
+    min_gram_eigen <- eigen(t(X_int) %*% X_int, symmetric = TRUE,
+                only.values = TRUE)$values
+
+    if(min_gram_eigen < 10^(-12)){
+        warning("Gram matrix corresponding to selected features is not invertible. Assumptions needed for inference are not satisfied. Standard errors will not be calculed.")
+        return(NA)
+    }
 
     gram_inv <- solve(gram)
 
