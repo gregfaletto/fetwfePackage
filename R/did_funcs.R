@@ -957,7 +957,11 @@ idCohorts <- function(df, time_var, unit_var, treat_var, covs){
     # Treatment no longer needed
     df <- df[, colnames(df) != treat_var]
 
+    # Make sure there is an empty cohort for the first time
     cohorts[[as.character(times[1])]] <- character()
+
+    # Order cohorts in order of times
+    cohorts <- cohorts[order(as.numeric(names(cohorts)))]
 
     print("cohorts 3:")
     print(cohorts)
