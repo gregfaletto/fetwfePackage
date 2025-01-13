@@ -932,15 +932,8 @@ idCohorts <- function(df, time_var, unit_var, treat_var, covs){
         }
     }
 
-    print("cohorts 1:")
-    print(cohorts)
-
     stopifnot(length(unlist(cohorts)) <= N)
     cohorts <- cohorts[lengths(cohorts) > 0]
-
-    print("cohorts 2:")
-    print(cohorts)
-
     
     # Need at least one untreated period, so have to omit units that were
     # treated in the very first time period
@@ -962,9 +955,6 @@ idCohorts <- function(df, time_var, unit_var, treat_var, covs){
 
     # Order cohorts in order of times
     cohorts <- cohorts[order(as.numeric(names(cohorts)))]
-
-    print("cohorts 3:")
-    print(cohorts)
 
     # This should have been the first cohort
     stopifnot(length(cohorts[[1]]) == 0)
