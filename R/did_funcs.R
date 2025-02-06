@@ -1,35 +1,5 @@
 #' @import glmnet
 
-#' @param data Dataframe; the panel data set. Each row should represent an
-#' observation of a unit at a time. Should contain columns as described below.
-#' @param time_var Character; the name of a single column containing a variable
-#' for the time period. This column is expected to contain integer values (for
-#' example, years). Recommended encodings for dates include format YYYY, YYYYMM,
-#' or YYYYMMDD, whichever is appropriate for your data.
-#' @param unit_var Character; the name of a single column containing a variable
-#' for each unit. This column is expected to contain character values (i.e. the
-#' "name" of each unit).
-#' @param treatment Character; the name of a single column containing a variable
-#' for the treatment dummy indicator. This column is expected to contain integer
-#' values, and in particular, should equal 0 if the unit was untreated at that
-#' time and 1 otherwise. Treatment should be an absorbing state; that is, if
-#' unit `i` is treated at time `t`, then it must also be treated at all times
-#' `t` + 1, ..., `T`. Any units treated in the first time period will be removed
-#' automatically. Please make sure yourself that at least some units remain
-#' remain untreated at the final time period ("never-treated units").
-#' @param covs Character; a vector containing the names of the columns for
-#' covariates. All of these columns are expected to contain integer or numeric
-#' values (so if you use categorical values, encode them using e.g. binary
-#' indicators before passing the data to this function).
-#' @param response Character; the name of a single column containing the
-#' response for each unit at each time. The response must be an integer or
-#' numeric value.
-#' @author Gregory Faletto
-#' @references
-#' Faletto, G (2024). Fused Extended Two-Way Fixed Effects for
-#' Difference-in-Differences with Staggered Adoptions.
-#' \emph{arXiv preprint arXiv:2312.05985}.
-#' \url{https://arxiv.org/abs/2312.05985}.
 prepXints <- function(
     data,
     time_var,
@@ -216,53 +186,7 @@ prepXints <- function(
     )
 }
 
-#' @param q Numeric; determines what L_q penalty is used for the fusion
-#' regularization. `q` = 1 is the lasso, and for 0 < `q` < 1, it is possible to
-#' get standard errors and confidence intervals. `q` = 2 is ridge regression.
-#' See Faletto (2024) for details. Default is 0.5.
-#' @param num_treats Integer; the number of treatment effects to be estimated.
-#' @param verbose Logical; if TRUE, more details on the progress of the function will
-#' be printed as the function executes. Default is FALSE.
-#' @param alpha Numeric; function will calculate (1 - `alpha`) confidence intervals
-#' for the cohort average treatment effects.
-#' @return A named list with the following elements: \item{att_hat}{The
-#' estimated overall average treatment effect on all treated units.} 
-#' \item{att_se}{A conservative standard error for the ATT (conservativeness is
-#' necessary because this function does not use sample splitting).}
-#' \item{catt_hats}{A named vector containing the estimated average treatment
-#' effects for each cohort.} \item{catt_ses}{A named vector containing the
-#' (aymptotically exact, non-conservative) standard errors for the estimated
-#' average treatment effects within each cohort.} \item{catt_df}{A dataframe
-#' displaying the cohort names, average tretment effects, standard errors, and
-#' confidence interval bounds.} \item{beta_hat}{The full vector of estimated
-#' coefficients.} \item{treat_inds}{The indices of `beta_hat` corresponding to
-#' the treatment effects for each cohort at each time.} \item{int_inds}{The
-#' indices of `beta_hat` corresponding to the interactions between the treatment
-#' effects for each cohort at each time and the covariates.}
-#' \item{cohort_probs}{A named list of the proportions of the treated units that
-#' were in each cohort.} \item{X_ints}{The design matrix created containing all
-#' interactions, time and cohort dummies, etc.} \item{y}{The vector of 
-#' responses, containing `nrow(X_ints)` entries.} \item{X_final}{The design
-#' matrix after applying the change in coordinates to fit the model and also
-#' multiplying on the left by the square root inverse of the estimated
-#' covariance matrix for each unit.} \item{y_final}{The final response after
-#' multiplying on the left by the square root inverse of the estimated
-#' covariance matrix for each unit.} \item{N}{The final number of units that
-#' were in the  data set used for estimation (after any units may have been
-#' removed because they were treated in the first time period).} \item{T}{The 
-#' number of time
-#' periods in the final data set.} \item{R}{The final number of treated cohorts
-#' that appear in the final data set.} \item{d}{The final number of covariates
-#' that appear in the final data set (after any covariates may have been removed
-#' because they contained missing values or all contained the same value for
-#' every unit).} \item{p}(The final number of columns in the full set of
-#' covariates used to estimate the model.)
-#' @author Gregory Faletto
-#' @references
-#' Faletto, G (2024). Fused Extended Two-Way Fixed Effects for
-#' Difference-in-Differences with Staggered Adoptions.
-#' \emph{arXiv preprint arXiv:2312.05985}.
-#' \url{https://arxiv.org/abs/2312.05985}.
+
 fetwfe_core <- function(
     X_ints,
     y,
