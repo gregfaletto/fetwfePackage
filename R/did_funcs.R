@@ -1958,7 +1958,9 @@ genInvTwoWayFusionTransformMat <- function(n_vars, first_inds, R){
 
     diag(D) <- 1
 
-    stopifnot(R >= 2)
+    if(R < 2){
+        stop("Only one treated cohort detected in data. Currently fetwfe only supports data sets with at least two treated cohorts.")
+    }
 
     for(j in 1:(R - 1)){
         index_j <- first_inds[j]
