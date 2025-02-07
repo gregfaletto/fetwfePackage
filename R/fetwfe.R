@@ -326,6 +326,9 @@ fetwfe <- function(
     R <- length(in_sample_counts) - 1
     stopifnot(R >= 1)
     stopifnot(R <= T - 1)
+    if(R < 2){
+        stop("Only one treated cohort detected in data. Currently fetwfe only supports data sets with at least two treated cohorts.")
+    }
 
     stopifnot(sum(in_sample_counts) == N)
     stopifnot(all(in_sample_counts >= 0))

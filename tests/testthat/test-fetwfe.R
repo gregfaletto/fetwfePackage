@@ -86,8 +86,8 @@ generate_bad_panel_data <- function(N = 30, T = 10, seed = 123) {
 generate_minimal_panel_data <- function(seed = 123) {
   set.seed(seed)
 
-  N <- 2
-  T <- 2
+  N <- 3
+  T <- 3
   # Create a vector of unit IDs (as characters)
   unit_ids <- sprintf("unit%02d", 1:N)
   time_vals <- 1:T
@@ -97,8 +97,10 @@ generate_minimal_panel_data <- function(seed = 123) {
   first_treat <- sapply(unit_ids, function(u) {
     if (u  == "unit01") {
       Inf
-    } else {
+    } else if (u  == "unit02") {
       2
+    } else{
+      3
     }
   })
   
@@ -515,7 +517,9 @@ test_that("fetwfe works on a minimal valid dataset", {
     treatment = "treatment",
     covs      = c("cov1"),
     response  = "y",
-    verbose   = FALSE
+    verbose   = FALSE,
+    sig_eps_sq = 1,
+    sig_eps_c_sq = 1,
   )
   
   expect_type(result$att_hat, "double")

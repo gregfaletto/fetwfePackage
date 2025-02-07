@@ -1958,34 +1958,22 @@ genInvTwoWayFusionTransformMat <- function(n_vars, first_inds, R){
 
     diag(D) <- 1
 
-    if(R > 1){
-        for(j in 1:(R - 1)){
-            index_j <- first_inds[j]
-            next_index <- first_inds[j + 1]
+    stopifnot(R >= 2)
 
-            D[index_j:n_vars, index_j] <- 1
-            D[next_index:n_vars, next_index] <- 1
-
-            if(index_j + 1 <= next_index - 1){
-                for(k in (index_j + 1):(next_index - 1)){
-                    D[k, (index_j + 1):k] <- 1
-                }
-            }
-        }
-    } else{
-        index_j <- first_inds[1]
-        # next_index <- first_inds[j + 1]
+    for(j in 1:(R - 1)){
+        index_j <- first_inds[j]
+        next_index <- first_inds[j + 1]
 
         D[index_j:n_vars, index_j] <- 1
-        # D[next_index:n_vars, next_index] <- 1
+        D[next_index:n_vars, next_index] <- 1
 
-        # if(index_j + 1 <= next_index - 1){
-            # for(k in (index_j + 1):(next_index - 1)){
-            #     D[k, (index_j + 1):k] <- 1
-            # }
-        # }
-
+        if(index_j + 1 <= next_index - 1){
+            for(k in (index_j + 1):(next_index - 1)){
+                D[k, (index_j + 1):k] <- 1
+            }
+        }
     }
+
     
     return(D)
 }
