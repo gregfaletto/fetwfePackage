@@ -1094,8 +1094,9 @@ addDummies <- function(df, cohorts, times, N, T, unit_var, time_var,
 
     # treat_var_mat should have one extra column at the beginning that we used
     # to initalize it
+    stopifnot(is.numeric(ncol(treat_var_mat)) | is.integer(ncol(treat_var_mat)))
     stopifnot(ncol(treat_var_mat) == num_treats + 1)
-    treat_var_mat <- treat_var_mat[, 2:(num_treats + 1)]
+    treat_var_mat <- treat_var_mat[, 2:(num_treats + 1), drop=FALSE]
 
     # Add time dummies for all but first time
     time_var_mat <- matrix(0L, N*T, T - 1)
