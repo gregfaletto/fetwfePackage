@@ -1464,47 +1464,53 @@ generateFEInts <- function(X_long, cohort_fe, time_fe, N, T, R, d){
     return(list(X_long_cohort=X_long_cohort, X_long_time=X_long_time))
 }
 
-genTreatVarsSim <- function(n_treats){
-    # Treatment indicators
-    treat_mat_long <- matrix(0, N*T, n_treats)
-    treat_ind <- 0
-    total_feats_added <- 0
-    first_inds <- rep(as.integer(NA), R)
-    for(r in 1:R){
-        # The rth cohort has T - r treatment indicators, starting at time t = r + 1.
-        n_treats_r <- T - r
+# genTreatVarsSim <- function(
+#     n_treats,
+#     N,
+#     R,
+#     N_UNTREATED,
+#     N_PER_COHORT
+#     ){
+#     # Treatment indicators
+#     treat_mat_long <- matrix(0, N*T, n_treats)
+#     treat_ind <- 0
+#     total_feats_added <- 0
+#     first_inds <- rep(as.integer(NA), R)
+#     for(r in 1:R){
+#         # The rth cohort has T - r treatment indicators, starting at time t = r + 1.
+#         n_treats_r <- T - r
 
-        first_ind_r <- N_UNTREATED*T + (r - 1)*N_PER_COHORT*T + 1
-        last_ind_r <- first_ind_r + N_PER_COHORT*T - 1
+#         first_ind_r <- N_UNTREATED*T + (r - 1)*N_PER_COHORT*T + 1
+#         last_ind_r <- first_ind_r + N_PER_COHORT*T - 1
 
-        for(t in (r + 1):T){
-            treat_ind <- treat_ind + 1
-            stopifnot(treat_ind <= n_treats)
+#         for(t in (r + 1):T){
+#             treat_ind <- treat_ind + 1
+#             stopifnot(treat_ind <= n_treats)
 
-            if(t == r + 1){
-                first_inds[r] <- treat_ind
-            }
+#             if(t == r + 1){
+#                 first_inds[r] <- treat_ind
+#             }
 
-            first_ind_r <- N_UNTREATED*T + (r - 1)*N_PER_COHORT*T + t
-            last_ind_r <- first_ind_r + (N_PER_COHORT - 1)*T
+#             first_ind_r <- N_UNTREATED*T + (r - 1)*N_PER_COHORT*T + t
+#             last_ind_r <- first_ind_r + (N_PER_COHORT - 1)*T
 
-            r_inds <- seq(first_ind_r, last_ind_r, by=T)
+#             r_inds <- seq(first_ind_r, last_ind_r, by=T)
 
-            stopifnot(length(r_inds) == N_PER_COHORT)
+#             stopifnot(length(r_inds) == N_PER_COHORT)
             
-            treat_mat_long[r_inds, treat_ind] <- 1
-            total_feats_added <- total_feats_added + 1
-        }
-    }
+#             treat_mat_long[r_inds, treat_ind] <- 1
+#             total_feats_added <- total_feats_added + 1
+#         }
+#     }
 
-    stopifnot(all(colSums(treat_mat_long) == N_PER_COHORT))
-    stopifnot(total_feats_added == n_treats)
+#     stopifnot(all(colSums(treat_mat_long) == N_PER_COHORT))
+#     stopifnot(total_feats_added == n_treats)
 
-    stopifnot(all(!is.na(first_inds)))
-    stopifnot(length(first_inds) == length(unique(first_inds)))
+#     stopifnot(all(!is.na(first_inds)))
+#     stopifnot(length(first_inds) == length(unique(first_inds)))
 
-    return(list(treat_mat_long=treat_mat_long, first_inds=first_inds))
-}
+#     return(list(treat_mat_long=treat_mat_long, first_inds=first_inds))
+# }
 
 genTreatInts <- function(treat_mat_long, X_long, n_treats, cohort_fe, N, T, R,
     d, N_UNTREATED){
@@ -1800,7 +1806,7 @@ genXintsData <- function(cohort_fe, time_fe, X_long, treat_mat_long, N, R, T,
 #     }
 # }
 
-getFirstIndsDataApp <- function(n_treats){
+getFirstIndsDataApp <- function(n_treats, R){
     # Let's identify the indices of the first treatment effects for each cohort.
     # The first one is index 1, then the second one is index (T - 1) + 1 = T,
     # then the third one is (T - 1) + (T - 2) + 1 = 2*T - 2. In general, for
@@ -1854,7 +1860,7 @@ transformXintDataApp <- function(X_int, N, T, R, d, num_treats, first_inds=NA){
     # For each individual feature, this will be handled using
     # genTransformedMatFusion.
     if(any(is.na(first_inds))){
-        first_inds <- getFirstIndsDataApp(num_treats)
+        first_inds <- getFirstIndsDataApp(num_treats, R)
     }
 
     for(j in 1:d){
@@ -1995,7 +2001,7 @@ untransformCoefsDataApp <- function(beta_hat_mod, T, R, p, d, num_treats,
     beta_hat <- rep(as.numeric(NA), p)
 
     if(any(is.na(first_inds))){
-        first_inds <- getFirstIndsDataApp(num_treats)
+        first_inds <- getFirstIndsDataApp(num_treats, R)
     }
     
     # First handle R cohort fixed effects effects
@@ -2191,44 +2197,44 @@ genInvFusionTransformMat <- function(n_vars){
     return(D_inv)
 }
 
-genTwoWayFusionTransformMat <- function(n_vars, first_inds){
-    D <- matrix(0, n_vars, n_vars)
-    stopifnot(length(first_inds) == R)
+# genTwoWayFusionTransformMat <- function(n_vars, first_inds){
+#     D <- matrix(0, n_vars, n_vars)
+#     stopifnot(length(first_inds) == R)
 
-    for(i in 1:n_vars){
-        for(j in 1:n_vars){
-            if(i == j){
-                D[i, j] <- 1
-            }
-            if(j + 1 == i){
-                D[i, j] <- -1
-            }
-        }
-    }
+#     for(i in 1:n_vars){
+#         for(j in 1:n_vars){
+#             if(i == j){
+#                 D[i, j] <- 1
+#             }
+#             if(j + 1 == i){
+#                 D[i, j] <- -1
+#             }
+#         }
+#     }
 
-    # Now we need to adjust this matrix--in particular, we need to change which
-    # feature the first treatment effect of each group fuses toward.
+#     # Now we need to adjust this matrix--in particular, we need to change which
+#     # feature the first treatment effect of each group fuses toward.
 
-    # So we need to modify not the row corresponding to the last index of
-    # first_inds, but the remaining rows of D
-    # corresponding to the entries of first_inds. And the modification we need to
-    # make is to move the -1 from the entry where it currently is in this row to
-    # the entry corresponding to the subsequent first index.
+#     # So we need to modify not the row corresponding to the last index of
+#     # first_inds, but the remaining rows of D
+#     # corresponding to the entries of first_inds. And the modification we need to
+#     # make is to move the -1 from the entry where it currently is in this row to
+#     # the entry corresponding to the subsequent first index.
 
-    for(j in 2:R){
-        index_j <- first_inds[j]
-        prev_index <- first_inds[j - 1]
+#     for(j in 2:R){
+#         index_j <- first_inds[j]
+#         prev_index <- first_inds[j - 1]
 
-        stopifnot(D[index_j, index_j] == 1)
-        stopifnot(D[index_j, index_j - 1] == -1)
+#         stopifnot(D[index_j, index_j] == 1)
+#         stopifnot(D[index_j, index_j - 1] == -1)
 
-        # Modify matrix
-        D[index_j, index_j - 1] <- 0
-        D[index_j, prev_index] <- -1
-    }
+#         # Modify matrix
+#         D[index_j, index_j - 1] <- 0
+#         D[index_j, prev_index] <- -1
+#     }
 
-    return(D)
-}
+#     return(D)
+# }
 
 
 estOmegaSqrtInv <- function(y, X_ints, N, T, p){
@@ -2478,8 +2484,8 @@ getCohortATTsFinal <- function(
         stopifnot(length(cohort_te_ses) == R)
 
         cohort_te_df <- data.frame(c_names, cohort_tes, cohort_te_ses,
-            cohort_tes - qnorm(1 - alpha/2)*cohort_te_ses,
-            cohort_tes + qnorm(1 - alpha/2)*cohort_te_ses)
+            cohort_tes - stats::qnorm(1 - alpha/2)*cohort_te_ses,
+            cohort_tes + stats::qnorm(1 - alpha/2)*cohort_te_ses)
 
         names(cohort_te_ses) <- c_names
         names(cohort_tes) <- c_names
@@ -2503,6 +2509,38 @@ getCohortATTsFinal <- function(
             calc_ses=calc_ses)
     }
     return(ret)
+}
+
+getPsiRUnfused <- function(first_ind_r, last_ind_r, sel_treat_inds_shifted,
+    gram_inv){
+
+    which_inds_ir <- sel_treat_inds_shifted %in% (first_ind_r:last_ind_r)
+
+    psi_r <- rep(0, length(sel_treat_inds_shifted))
+
+    if(sum(which_inds_ir) > 0){
+
+        inds_r <- which(which_inds_ir)
+
+        stopifnot(is.integer(inds_r) | is.numeric(inds_r))
+        stopifnot(identical(inds_r, as.integer(round(inds_r))))
+        stopifnot(length(inds_r) >= 1)
+        stopifnot(length(inds_r) == length(unique(inds_r)))
+        stopifnot(length(inds_r) <= length(sel_treat_inds_shifted))
+        stopifnot(all(inds_r %in% 1:length(sel_treat_inds_shifted)))
+
+        stopifnot(max(inds_r) <= nrow(gram_inv))
+        stopifnot(max(inds_r) <= ncol(gram_inv))
+        stopifnot(min(inds_r) >= 0)
+
+        psi_r[inds_r] <- 1
+
+        stopifnot(sum(psi_r) > 0)
+
+        psi_r <- psi_r/sum(psi_r)
+    }
+
+    return(psi_r)
 }
 
 genInvTwoWayFusionTransformMat <- function(n_vars, first_inds, R){
