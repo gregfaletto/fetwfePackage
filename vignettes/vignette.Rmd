@@ -20,9 +20,9 @@ library(dplyr)
 
 # Introduction
 
-If you understand the basic idea of what difference-in-differences with staggered adoptions is, all you need to know about fused extended two-way fixed effects (FETWFE) is that given an appropriately formatted panel data set, `fetwfe()` will give you an estimate of the overall average treatment effect on the treated units, the average treatment effect within each cohort, and standard errors for each of these estimates.
+If you understand the basic idea of what difference-in-differences with staggered adoptions is, all you need to know about fused extended two-way fixed effects (FETWFE) to get started using the `{fetwfe}` package is this: given an appropriately formatted panel data set, `fetwfe()` will give you an estimate of the overall average treatment effect on the treated units, the average treatment effect within each cohort, and standard errors for each of these estimates.
 
-Feel free to skip to the "Package Usage" section if you want to jump right in to using the package, or in the next "Background" subsection you can read a little more background information on the methodology if you'd like.
+Feel free to skip to the "Package Usage" section if you want to jump right in to using the package. In the next "Background" subsection, you can read a little more background information on the methodology if you'd like.
 
 ## Background
 
@@ -34,9 +34,9 @@ This vignette is written under the assumption that you're at least vaguely famil
 
 The estimator in this package, fused extended two-way fixed effects (FETWFE), is one of those unbiased estimators. Of course, I made this estimator because I think FETWFE brings something to the table that the others don't. Here's a brief summary on that:
 
-One issue with these estimators has been that they've worked so hard to be unbiased that they are **inefficient** (in the language of econometrics), or **high-variance** (in the language of machine learning). In particular, these estimators add extra parameters in order to remove bias, but estimating extra parameters means you have less data per parameter and your estimates are noisier.
+One issue with these estimators has been that they've worked so hard to be unbiased that they are **inefficient** (in the language of econometrics), or **high-variance** (in the language of machine learning). These estimators add extra parameters in order to remove bias, but estimating extra parameters means you have less data per parameter and your estimates are noisier.
 
-In the machine learning literature, creating a more flexible estimator with lots of parameters and then finding that it is too high variance (that is, it *overfits*) is a familiar issue. The most common solution has been **regularization**.
+In machine learning, creating a more flexible estimator with lots of parameters and then finding that it is too high variance (that is, it *overfits*) is a familiar issue. The most common solution has been **regularization**.
 
 You could just add $\ell_2$ or $\ell_1$ regularization to a difference-in-differences regression estimator and probably see an improvement in your efficiency, but FETWFE does something more sophisticated than that. (Plus, that approach wouldn't allow you to get valid standard errors for your treatment effect estimates, but FETWFE does.)
 
@@ -66,13 +66,19 @@ The package provides a single exported function, `fetwfe()`, which implements th
 
 The function returns a list containing, for example, the estimated overall average treatment effect, cohort-specific treatment effects, standard errors (when available), and various diagnostic quantities.
 
-You can get the full documentation details by using `?fetwfe`.
+You can get the full documentation details by using `?fetwfe` in R when you have the package loaded.
+
+In the next sections, we'll walk through examples of how `fetwfe()` is used.
 
 ## Simulated Data Example
 
-In addition to real data applications, you can also experiment with FETWFE on simulated data. The example below simulates a balanced panel with 60 time periods, 30 individuals, and 5 waves of treatment. In the simulation, each individual is assigned a random cohort (which determines the timing of treatment) and three time-invariant covariates are generated. The response variable is constructed so that, after treatment, its evolution depends on a treatment effect (which varies by cohort) and a linear trend, plus the covariates and some random noise.
+I'll start illustrating how to use `fetwfe()` by using a simulated data set. The example below simulates a balanced panel with 60 time periods, 30 individuals, and 5 waves of treatment. 
+
+In the simulation, each individual is assigned a random cohort (which determines the timing of treatment) and three time-invariant covariates are generated. The response variable is constructed so that, after treatment, its evolution depends on a treatment effect (which varies by cohort) and a linear trend, plus the covariates and some random noise.
 
 Below is the complete code for simulating the data, converting it into the required pdata format, and running the `fetwfe()` function.
+
+**I borrowed some of the below code from [Asjad Naqvi](https://asjadnaqvi.github.io/)'s helpful [website for DiD estimators](https://asjadnaqvi.github.io/DiD/docs/code_r). Thanks for sharing the code publicly!**
 
 ```{r}
 # Set seed for reproducibility
@@ -158,8 +164,7 @@ result <- fetwfe(
   unit_var = "unit",          # The unit identifier
   treatment = "treated",      # The treatment dummy indicator
   covs = c("cov1", "cov2", "cov3"),  # Covariates
-  response = "response",      # The response variable
-  q = 0.5                    # The L_q penalty for fusion regularization
+  response = "response"      # The response variable
 )
 
 # Display the overall average treatment effect estimate
@@ -168,117 +173,75 @@ cat("Estimated Overall ATT:", result$att_hat, "\n")
 
 When you run this code, the function internally performs all the necessary data preparation, applies the fusion penalty via a bridge regression (using the `grpreg` package), and returns a list with overall and cohort-specific treatment effect estimates, standard errors (if available), and additional diagnostics.
 
-This example shows how you can simulate panel data with treatment heterogeneity, convert it to the required format, and apply the FETWFE estimator to recover treatment effect estimates.
+## A "Real Data" Example
 
-## A Basic Example
+Next I illustrate FETWFE in an empirical context. I'll use data from Stevenson and Wolfers (2006), via the `divorce` data set from the `bacondecomp` package, on the impact of no-fault divorce laws on women's suicide rates. (See also Goodman-Bacon (2021) for an alternative analysis.) The below is identical to the data application from [my paper](https://arxiv.org/abs/2312.05985).
 
-Below is an example of how to use `fetwfe()` on a panel data set. (In this example I use the `divorce` data from the `bacondecomp` package; you may substitute any appropriate panel data.)
+In this application, the panel data consist of state-level observations over 33 years. After removing states that received treatment in the first period, we are left with 42 states, of which 5 are never treated and 12 cohorts adopt treatment at various times.
+
+Time-varying covariates (such as the state homicide rate, logged personal income, and welfare participation) are included as controls (using the pre-treatment values). In this example, I use FETWFE to estimate the marginal average treatment effect of no-fault divorce laws. Note: the below code takes about 15 seconds to run on my laptop.
 
 ```{r}
-# Load the necessary packages
-library(fetwfe)
 library(bacondecomp)  # for the example data
 
 # Load the example data
 data(divorce)
 
+set.seed(23451)
+
 # Suppose we wish to estimate the effect of a policy (here represented by the variable "changed")
 # on the response "suiciderate_elast_jag" using covariates "murderrate", "lnpersinc", and "afdcrolls".
-# Assume that:
+# Here
 # - 'year' is the time period variable (as an integer),
 # - 'st' is the unit identifier,
 # - 'changed' is the treatment indicator (with 0 = untreated, 1 = treated),
-# - We only use observations that are not treated in the first period.
+# 
+# The `fetwfe()` function will automatically take care of removing units that were treated in the
+# first time period.
 
-# Call the estimator (note: adjust variable names as needed)
-result <- fetwfe(
+# Call the estimator
+res <- fetwfe(
     pdata=divorce[divorce$sex == 2, ],
     time_var="year",
     unit_var="st",
     treatment="changed",
     covs=c("murderrate", "lnpersinc", "afdcrolls"),
-    response="suiciderate_elast_jag",
-    q=0.5 # fusion penalty parameter (q in (0,2])
+    response="suiciderate_elast_jag"
     )
 
-# Display the overall average treatment effect
-cat("Overall ATT estimate:", result$att_hat, "\n")
+# Average treatment effect on the treated units (in percentage point
+# units)
+100 * res$att_hat
 
-# If available, display the conservative 95% confidence interval
-if (!is.na(result$att_se)) {
-  se <- result$att_se
-  lower <- result$att_hat - qnorm(0.975) * se
-  upper <- result$att_hat + qnorm(0.975) * se
-  cat("95% Confidence Interval: (", lower, ", ", upper, ")\n")
-}
+# Conservative 95% confidence interval for ATT (in percentage point units)
 
-# Display the cohort-specific treatment effects as a data frame
-print(result$catt_df)
+low_att <- 100 * (res$att_hat - qnorm(1 - 0.05 / 2) * res$att_se)
+high_att <- 100 * (res$att_hat + qnorm(1 - 0.05 / 2) * res$att_se)
+
+c(low_att, high_att)
+
+# Cohort average treatment effects and confidence intervals (in percentage
+# point units)
+
+catt_df_pct <- res$catt_df
+catt_df_pct[["Estimated TE"]] <- 100 * catt_df_pct[["Estimated TE"]]
+catt_df_pct[["SE"]] <- 100 * catt_df_pct[["SE"]]
+catt_df_pct[["ConfIntLow"]] <- 100 * catt_df_pct[["ConfIntLow"]]
+catt_df_pct[["ConfIntHigh"]] <- 100 * catt_df_pct[["ConfIntHigh"]]
+
+catt_df_pct
 ```
 
-When you run this code, the function internally performs all necessary data transformations, applies the fusion penalty via a bridge regression (using the `grpreg` package), and returns the estimated treatment effects along with diagnostic information.
-
-# Empirical Application
-
-To illustrate FETWFE in an empirical context, we now reproduce an analysis using data from Stevenson and Wolfers (2006) on the impact of no-fault divorce laws on female suicide rates. (See also Goodman-Bacon (2021) for an alternative analysis.) In our application, the panel data consist of state-level observations over 33 years. After removing states that received treatment in the first period, we are left with 42 states, of which 5 are never treated and 12 cohorts adopt treatment at various times.
-
-Time-varying covariates (such as the state homicide rate, logged personal income, and welfare participation) are included as controls (using the pre-treatment values). In our example, we use FETWFE with \(q = 0.5\) to estimate the marginal average treatment effects. For instance:
-
-```{r}
-# Load the divorce data (from bacondecomp package)
-data(divorce)
-
-# (For illustration: filter out units treated in the first period if necessary)
-# In our empirical application, suppose we remove states treated at t = 1.
-# This step is handled internally by the function, but you can also pre-filter your data.
-
-# Call the FETWFE estimator with appropriate parameters.
-# (Assume that the following variable names correspond to the variables described in the paper.)
-result_emp <- fetwfe(
-  pdata=divorce[divorce$sex == 2, ],
-  time_var="year",
-  unit_var="st",
-  treatment="changed",
-  covs=c("murderrate", "lnpersinc", "afdcrolls"),
-  response="suiciderate_elast_jag",
-  q=0.5
-)
-
-# Print the overall average treatment effect (ATT)
-cat("Estimated overall ATT (percent change):", 100 * result_emp$att_hat, "\n")
-
-# Print the cohort-specific treatment effect estimates
-print(result_emp$catt_df)
-```
-
-For the data application, our estimates yielded an overall ATT of approximately –3.76% change in the female suicide rate, similar to other estimates in the literature. In addition, the output table (stored in `result_emp$catt_df`) displays the cohort-specific estimates. (Note that standard errors for the individual cohort estimates are less reliable when the number of units per cohort is small.)
-
-Below is an excerpt of the table produced by our estimator:
-
-| Cohort | Estimated TE |   SE   | ConfIntLow | ConfIntHigh |
-|:------:|:------------:|:------:|:----------:|:-----------:|
-| 1969   |  0%          |   —    |     —      |     —       |
-| 1970   | -40.142%     |   —    |     —      |     —       |
-| 1971   |  0%          |   —    |     —      |     —       |
-| ⋮      |   ⋮          |   ⋮    |     ⋮      |     ⋮       |
-
-*Table: Cohort average treatment effect estimates.*
+For the data application, FETWFE yielded an overall ATT of approximately –3.76% change in the female suicide rate, similar to other estimates in the literature. In addition, the output table (stored in `result_emp$catt_df`) displays the cohort-specific estimates. (Note that standard errors for the individual cohort estimates are less reliable when the number of units per cohort is small.)
 
 # Conclusion
 
-This vignette has introduced the FETWFE estimator—a fusion-penalized extended two-way fixed effects method—for estimating treatment effects in panel data with staggered adoptions. By automatically fusing together similar treatment effects across cohorts and time periods, FETWFE reduces model complexity while preserving desirable asymptotic properties. In our examples, we demonstrated how to use the single function `fetwfe()` (or `fewtfe()` as you may name it) to obtain both overall and cohort-specific treatment effect estimates.
-
-I encourage users to explore further the detailed theoretical properties (consistency, oracle property, asymptotic normality) presented in the accompanying paper. Feedback and suggestions are welcome!
+This should be enough to get you started using `fetwfe()` on your own data. Please feel free to [reach out](https://gregoryfaletto.com/about/) if you have any questions or feedback or run into any issues using the package. You can also [create an issue](https://github.com/gregfaletto/fetwfePackage/issues) if you think there’s a bug in the package or you’d like to request a feature. **Thanks so much for checking out the package!**
 
 # References
 
-- Borusyak, K., Jaravel, X., & Spiess, J. (2024). Revisiting difference-in-differences. *Journal of Econometrics*.
-- Callaway, B., & Sant’Anna, P. H. (2021). Difference-in-Differences with multiple time periods. *Journal of Econometrics*.
+- Faletto, G. (2024). Fused Extended Two-Way Fixed Effects for Difference-in-Differences with Staggered Adoptions. [arXiv preprint arXiv:2312.05985](https://arxiv.org/abs/2312.05985).
 - Goodman-Bacon, A. (2021). Difference-in-Differences with variation in treatment timing. *Journal of Econometrics*.
-- Huang, J., Horowitz, J. L., & Wei, F. (2008). Asymptotic properties of bridge estimators in sparse high-dimensional regression models. *Annals of Statistics*.
-- Pesaran, M. H. (2015). *Time Series and Panel Data Econometrics*. Oxford University Press.
-- Sun, L., & Abraham, S. (2021). Estimating dynamic treatment effects in event studies with heterogeneous treatment effects. *Journal of Econometrics*.
-- Tibshirani, R. (1996). Regression shrinkage and selection via the lasso. *Journal of the Royal Statistical Society: Series B*.
-- Tibshirani, R., Saunders, M., Rosset, S., Zhu, J., & Knight, K. (2005). Sparsity and smoothness via the fused lasso. *Journal of the Royal Statistical Society: Series B*.
-- Wooldridge, J. M. (2021). Two-way fixed effects estimators with heterogeneous treatment effects. *Journal of Econometrics*.
+- Flack, E., & Jee, E. (2020). bacondecomp: Goodman-Bacon Decomposition. R package version 0.1.1. [https://CRAN.R-project.org/package=bacondecomp](https://CRAN.R-project.org/package=bacondecomp).
+- Stevenson, B., & Wolfers, J. (2006). Bargaining in the shadow of the law: Divorce laws and family distress. *The Quarterly Journal of Economics*, 121(1), 267-288.
 
