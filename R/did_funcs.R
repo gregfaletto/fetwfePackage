@@ -2249,10 +2249,10 @@ estOmegaSqrtInv <- function(y, X_ints, N, T, p){
     lin_mod_fe <- glmnet::cv.glmnet(x=X_ints_fe, y=y_fe, alpha=0)
 
     # Get residuals
-    y_hat_fe <- glmnet::predict(lin_mod_fe, s="lambda.min", newx=X_ints_fe)
+    y_hat_fe <- stats::predict(lin_mod_fe, s="lambda.min", newx=X_ints_fe)
 
     # Get coefficients
-    beta_hat_fe <- glmnet::coef(lin_mod_fe, s="lambda.min")[2:(p + 1)]
+    beta_hat_fe <- stats::coef(lin_mod_fe, s="lambda.min")[2:(p + 1)]
 
     resids <- y_fe - y_hat_fe
 
