@@ -1,0 +1,303 @@
+library(testthat)
+library(fetwfe)
+
+# ------------------------------------------------------------------------------
+# Helper function: generate a synthetic balanced panel data set.
+# We now use N=30 units and T=10 periods so that the degrees‐of‐freedom condition
+# (N * (T - 1) - p > 0) holds.
+# For each unit, we randomly decide whether the unit is never treated (first_treat = Inf)
+# or, if treated, assign a first treatment time (ensuring that no unit is treated in time 1).
+# ------------------------------------------------------------------------------
+generate_panel_data <- function(N = 30, T = 10, seed = 123) {
+  set.seed(seed)
+  # Create a vector of unit IDs (as characters)
+  unit_ids <- sprintf("unit%02d", 1:N)
+  time_vals <- 1:T
+  
+  # For each unit, decide the first treatment time:
+  # With probability 0.5 the unit is never treated (first_treat = Inf);
+  # Otherwise, sample a first treatment time uniformly between 2 and T.
+  first_treat <- sapply(unit_ids, function(u) {
+    if (runif(1) < 0.5) {
+      Inf
+    } else {
+      sample(2:T, 1)
+    }
+  })
+  
+  # Build panel data (each unit appears for every time period)
+  df <- do.call(rbind, lapply(seq_along(unit_ids), function(i) {
+    unit <- unit_ids[i]
+    ft <- first_treat[i]
+    data.frame(
+      time      = as.integer(time_vals),            # must be integer
+      unit      = as.character(unit),               # must be character
+      treatment = as.integer(ifelse(time_vals >= ft, 1, 0)),  # must be integer 0/1
+      cov1      = rnorm(T),
+      cov2      = runif(T),
+      y         = rnorm(T)                          # outcome (numeric)
+    )
+  }))
+  
+  # The idCohorts function automatically removes any unit that was treated in period 1.
+  # (This is simulated by removing any row with time == 1 and treatment == 1.)
+  df <- df[!(df$time == 1 & df$treatment == 1), ]
+  
+  # Order rows by unit then time
+  df <- df[order(df$unit, df$time), ]
+  rownames(df) <- NULL
+  return(df)
+}
+
+# ------------------------------------------------------------------------------
+# Test 1: Check that valid input produces a list with the expected output elements.
+# ------------------------------------------------------------------------------
+test_that("fetwfe returns expected output structure with valid input", {
+  df <- generate_panel_data()  # uses N = 30, T = 10 by default
+  
+  result <- fetwfe(
+    pdata     = df,
+    time_var  = "time",
+    unit_var  = "unit",
+    treatment = "treatment",
+    covs      = c("cov1", "cov2"),
+    response  = "y",
+    q         = 0.5,
+    verbose   = FALSE
+  )
+  
+  expect_type(result, "list")
+  
+  # Check that the returned list contains the main expected names.
+  expected_names <- c("att_hat", "att_se", "catt_hats", "catt_ses", "catt_df",
+                      "beta_hat", "treat_inds", "treat_int_inds",
+                      "sig_eps_sq", "sig_eps_c_sq",
+                      "lambda.max", "lambda.max_model_size",
+                      "lambda.min", "lambda.min_model_size",
+                      "lambda_star", "lambda_star_model_size",
+                      "X_ints", "y", "X_final", "y_final",
+                      "N", "T", "R", "d", "p")
+  for (nm in expected_names) {
+    expect_true(nm %in% names(result))
+  }
+  
+  # Also check that catt_df is a data frame with the expected column names.
+  expect_s3_class(result$catt_df, "data.frame")
+  expect_true(all(c("Cohort", "Estimated TE", "SE", "ConfIntLow", "ConfIntHigh") %in% colnames(result$catt_df)))
+})
+
+# ------------------------------------------------------------------------------
+# Test 2: Error when pdata is not a data.frame
+# ------------------------------------------------------------------------------
+test_that("fetwfe errors when pdata is not a data.frame", {
+  expect_error(
+    fetwfe(
+      pdata     = "not a data.frame",
+      time_var  = "time",
+      unit_var  = "unit",
+      treatment = "treatment",
+      covs      = c("cov1", "cov2"),
+      response  = "y"
+    ),
+    "is.data.frame"
+  )
+})
+
+# ------------------------------------------------------------------------------
+# Test 3: Error when time_var column is not integer.
+# ------------------------------------------------------------------------------
+test_that("fetwfe errors when time_var is not integer", {
+  df <- generate_panel_data()
+  df$time <- as.character(df$time)  # convert time to character
+  
+  expect_error(
+    fetwfe(
+      pdata     = df,
+      time_var  = "time",
+      unit_var  = "unit",
+      treatment = "treatment",
+      covs      = c("cov1", "cov2"),
+      response  = "y"
+    ),
+    "is.integer"
+  )
+})
+
+# ------------------------------------------------------------------------------
+# Test 4: Error when unit_var column is not character.
+# ------------------------------------------------------------------------------
+test_that("fetwfe errors when unit_var is not character", {
+  df <- generate_panel_data()
+  df$unit <- as.factor(df$unit)  # make unit a factor
+  
+  expect_error(
+    fetwfe(
+      pdata     = df,
+      time_var  = "time",
+      unit_var  = "unit",
+      treatment = "treatment",
+      covs      = c("cov1", "cov2"),
+      response  = "y"
+    ),
+    "is.character"
+  )
+})
+
+# ------------------------------------------------------------------------------
+# Test 5: Error when treatment column is not integer.
+# ------------------------------------------------------------------------------
+test_that("fetwfe errors when treatment is not integer", {
+  df <- generate_panel_data()
+  df$treatment <- as.character(df$treatment)  # wrong type
+  
+  expect_error(
+    fetwfe(
+      pdata     = df,
+      time_var  = "time",
+      unit_var  = "unit",
+      treatment = "treatment",
+      covs      = c("cov1", "cov2"),
+      response  = "y"
+    ),
+    "is.integer"
+  )
+})
+
+# ------------------------------------------------------------------------------
+# Test 6: Error when treatment column contains values other than 0 and 1.
+# ------------------------------------------------------------------------------
+test_that("fetwfe errors when treatment has values other than 0/1", {
+  df <- generate_panel_data()
+  # Force an invalid value into treatment (e.g. 2)
+  df$treatment[1] <- 2L
+  
+  expect_error(
+    fetwfe(
+      pdata     = df,
+      time_var  = "time",
+      unit_var  = "unit",
+      treatment = "treatment",
+      covs      = c("cov1", "cov2"),
+      response  = "y"
+    ),
+    "all\\(pdata\\[, treatment\\] %in% c\\(0, 1\\)\\)"
+  )
+})
+
+# ------------------------------------------------------------------------------
+# Test 7: Error when a specified covariate column is missing.
+# ------------------------------------------------------------------------------
+test_that("fetwfe errors when a covariate column is missing", {
+  df <- generate_panel_data()
+  # Remove one of the covariate columns
+  df <- df[, !(names(df) %in% "cov2")]
+  
+  expect_error(
+    fetwfe(
+      pdata     = df,
+      time_var  = "time",
+      unit_var  = "unit",
+      treatment = "treatment",
+      covs      = c("cov1", "cov2"),
+      response  = "y"
+    ),
+    "all\\(covs %in% colnames\\(pdata\\)\\)"
+  )
+})
+
+# ------------------------------------------------------------------------------
+# Test 8: Error when response column is not numeric.
+# ------------------------------------------------------------------------------
+test_that("fetwfe errors when response is not numeric", {
+  df <- generate_panel_data()
+  df$y <- as.character(df$y)
+  
+  expect_error(
+    fetwfe(
+      pdata     = df,
+      time_var  = "time",
+      unit_var  = "unit",
+      treatment = "treatment",
+      covs      = c("cov1", "cov2"),
+      response  = "y"
+    ),
+    "is.numeric"
+  )
+})
+
+# ------------------------------------------------------------------------------
+# Test 9: Warning when alpha > 0.5.
+# ------------------------------------------------------------------------------
+test_that("fetwfe warns when alpha > 0.5", {
+  df <- generate_panel_data()
+  
+  expect_warning(
+    fetwfe(
+      pdata     = df,
+      time_var  = "time",
+      unit_var  = "unit",
+      treatment = "treatment",
+      covs      = c("cov1", "cov2"),
+      response  = "y",
+      alpha     = 0.6,
+      verbose   = FALSE
+    ),
+    "Provided alpha > 0.5"
+  )
+})
+
+# ------------------------------------------------------------------------------
+# Test 10: Error when there are no never‐treated units.
+# Create a panel in which every unit is treated in the first period.
+# ------------------------------------------------------------------------------
+test_that("fetwfe errors when no never-treated units are present", {
+  # Create a panel data frame with 5 units and 5 periods,
+  # where treatment is 1 for all observations.
+  df <- data.frame(
+    time      = rep(1:5, times = 5),
+    unit      = rep(sprintf("unit%02d", 1:5), each = 5),
+    treatment = rep(1L, 25),
+    cov1      = rnorm(25),
+    cov2      = runif(25),
+    y         = rnorm(25)
+  )
+  
+  expect_error(
+    fetwfe(
+      pdata     = df,
+      time_var  = "time",
+      unit_var  = "unit",
+      treatment = "treatment",
+      covs      = c("cov1", "cov2"),
+      response  = "y",
+      verbose   = FALSE
+    ),
+    "No never-treated units detected in data to fit model; estimating treatment effects is not possible"
+  )
+})
+
+# ------------------------------------------------------------------------------
+# Test 11: Error when the data has too few rows (less than 4).
+# ------------------------------------------------------------------------------
+test_that("fetwfe errors when data has fewer than 4 rows", {
+  df <- data.frame(
+    time      = as.integer(1:3),
+    unit      = as.character(c("u1", "u2", "u3")),
+    treatment = as.integer(c(0, 0, 0)),
+    cov1      = rnorm(3),
+    cov2      = runif(3),
+    y         = rnorm(3)
+  )
+  
+  expect_error(
+    fetwfe(
+      pdata     = df,
+      time_var  = "time",
+      unit_var  = "unit",
+      treatment = "treatment",
+      covs      = c("cov1", "cov2"),
+      response  = "y"
+    ),
+    "nrow\\(pdata\\) >= 4"
+  )
+})

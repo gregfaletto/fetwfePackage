@@ -871,6 +871,10 @@ idCohorts <- function(df, time_var, unit_var, treat_var, covs){
     }
     N <- length(units)
 
+    if (N == 0) {
+        stop("All units were treated in the first time period; estimating treatment effects is not possible")
+    }
+
     # Treatment no longer needed
     df <- df[, colnames(df) != treat_var]
 
