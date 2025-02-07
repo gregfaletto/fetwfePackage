@@ -541,9 +541,7 @@ test_that("minimal data set requires provided noise variance", {
     treatment = "treatment",
     covs      = c("cov1"),
     response  = "y",
-    verbose   = FALSE,
-    sig_eps_sq = 1,
-    sig_eps_c_sq = 1,
+    verbose   = FALSE
   ),
   "Not enough units available to estimate the noise variance."
   )
