@@ -304,9 +304,9 @@ test_that("fetwfe errors when all units are treated in the first period", {
       covs      = c("cov1", "cov2"),
       response  = "y",
       verbose   = FALSE
-    ),
+    )),
     "All units were treated in the first time period; estimating treatment effects is not possible"
-  ))
+  )
 })
 
 # ------------------------------------------------------------------------------
@@ -325,9 +325,9 @@ test_that("fetwfe errors with a panel having no never-treated units", {
       covs      = c("cov1", "cov2"),
       response  = "y",
       verbose   = FALSE
-    ),
+    )),
     "No never-treated units detected in data to fit model; estimating treatment effects is not possible"
-  ))
+  )
 })
 
 # ------------------------------------------------------------------------------
