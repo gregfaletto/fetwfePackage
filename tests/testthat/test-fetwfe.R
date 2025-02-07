@@ -247,10 +247,10 @@ test_that("fetwfe warns when alpha > 0.5", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 10: Error when there are no never‐treated units.
+# Test 10: Error when all units are treated in the first period.
 # Create a panel in which every unit is treated in the first period.
 # ------------------------------------------------------------------------------
-test_that("fetwfe errors when no never-treated units are present", {
+test_that("fetwfe errors when all units are treated in the first period", {
   # Create a panel data frame with 5 units and 5 periods,
   # where treatment is 1 for all observations.
   df <- data.frame(
@@ -272,7 +272,7 @@ test_that("fetwfe errors when no never-treated units are present", {
       response  = "y",
       verbose   = FALSE
     ),
-    "No never-treated units detected in data to fit model; estimating treatment effects is not possible"
+    "All units were treated in the first time period; estimating treatment effects is not possible"
   )
 })
 

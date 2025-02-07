@@ -865,15 +865,17 @@ idCohorts <- function(df, time_var, unit_var, treat_var, covs){
     df <- df[!(df[, unit_var] %in% first_year_cohort), ]
 
     units <- unique(df[, unit_var])
+
+    if(length(units) == 0) {
+        stop("All units were treated in the first time period; estimating treatment effects is not possible")
+    }
+
     if(length(units) < N){
         warning(paste(N - length(units),
             "units were removed because they were treated in the first time period"))
     }
     N <- length(units)
 
-    if (N == 0) {
-        stop("All units were treated in the first time period; estimating treatment effects is not possible")
-    }
 
     # Treatment no longer needed
     df <- df[, colnames(df) != treat_var]
