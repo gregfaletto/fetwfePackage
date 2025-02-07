@@ -1,6 +1,6 @@
 Package: fetwfe
 Title: Fused Extended Two-Way Fixed Effects
-Version: 0.2.0
+Version: 0.3.0
 Authors@R: 
     person("Gregory", "Faletto", , "gfaletto@gmail.com", role = c("aut", "cre"))
 Description: An implementation of fused extended two-way fixed effects for unbiased, efficient estimation of difference-in-differences with staggered adoptions.
