@@ -22,7 +22,12 @@ generate_panel_data <- function(N = 30, T = 10, R = 9, seed = 123) {
     if (runif(1) < 0.5) {
       Inf
     } else {
-      sample(2:(R + 1), 1)
+      if(R > 1){
+        sample(2:(R + 1), 1)
+      } else{
+        2
+      }
+      
     }
   })
   
@@ -559,11 +564,32 @@ test_that("fetwfe works on only two cohorts", {
     time_var  = "time",
     unit_var  = "unit",
     treatment = "treatment",
-    covs      = c("cov1"),
+    covs      = c("cov1", "cov2"),
     response  = "y",
     verbose   = FALSE
   )
   
   expect_type(result$att_hat, "double")
   expect_false(is.na(result$att_hat))
+})
+
+# ------------------------------------------------------------------------------
+# Test 19: Test that at least 2 treated cohorts requires
+# ------------------------------------------------------------------------------
+test_that("at least two treated cohorts required", {
+  # Create a balanced panel with N = 3 units and T = 3 time periods.
+  df <- generate_panel_data(N = 30, T = 10, R = 1, seed = 202)
+  
+  expect_error(
+    fetwfe(
+    pdata     = df,
+    time_var  = "time",
+    unit_var  = "unit",
+    treatment = "treatment",
+    covs      = c("cov1", "cov2"),
+    response  = "y",
+    verbose   = FALSE
+  ),
+  "Only one treated cohort detected in data. Currently fetwfe only supports data sets with at least two treated cohorts."
+  )
 })
