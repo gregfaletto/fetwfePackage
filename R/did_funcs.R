@@ -1647,7 +1647,9 @@ genInvFusionTransformMat <- function(n_vars){
 
 estOmegaSqrtInv <- function(y, X_ints, N, T, p){
 
-    stopifnot(N*(T - 1) - p > 0)
+    if(N*(T - 1) - p <= 0){
+        stop("Not enough units available to estimate the noise variance.")
+    }
     stopifnot(N > 1)
 
     # Estimate standard deviations

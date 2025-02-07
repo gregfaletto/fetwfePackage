@@ -507,7 +507,7 @@ test_that("fetwfe returns a valid numeric overall ATT", {
 # Test 17: Test that function works on a minimal data set
 # ------------------------------------------------------------------------------
 test_that("fetwfe works on a minimal valid dataset", {
-  # Create a balanced panel with N = 6 units and T = 5 time periods.
+  # Create a balanced panel with N = 3 units and T = 3 time periods.
   df_min <- generate_minimal_panel_data()
   
   result <- fetwfe(
@@ -520,6 +520,50 @@ test_that("fetwfe works on a minimal valid dataset", {
     verbose   = FALSE,
     sig_eps_sq = 1,
     sig_eps_c_sq = 1,
+  )
+  
+  expect_type(result$att_hat, "double")
+  expect_false(is.na(result$att_hat))
+})
+
+# ------------------------------------------------------------------------------
+# Test 17: Test that minimal data set requires provided noise variance
+# ------------------------------------------------------------------------------
+test_that("minimal data set requires provided noise variance", {
+  # Create a balanced panel with N = 3 units and T = 3 time periods.
+  df_min <- generate_minimal_panel_data()
+  
+  expect_error(
+    fetwfe(
+    pdata     = df_min,
+    time_var  = "time",
+    unit_var  = "unit",
+    treatment = "treatment",
+    covs      = c("cov1"),
+    response  = "y",
+    verbose   = FALSE,
+    sig_eps_sq = 1,
+    sig_eps_c_sq = 1,
+  ),
+  "Not enough units available to estimate the noise variance."
+  )
+})
+
+# ------------------------------------------------------------------------------
+# Test 18: Test that function works on only two cohorts
+# ------------------------------------------------------------------------------
+test_that("fetwfe works on only two cohorts", {
+  # Create a balanced panel with N = 6 units and T = 5 time periods.
+  df <- generate_panel_data(N = 30, T = 10, R = 2, seed = 202)
+  
+  result <- fetwfe(
+    pdata     = df,
+    time_var  = "time",
+    unit_var  = "unit",
+    treatment = "treatment",
+    covs      = c("cov1"),
+    response  = "y",
+    verbose   = FALSE
   )
   
   expect_type(result$att_hat, "double")
