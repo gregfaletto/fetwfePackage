@@ -152,6 +152,9 @@ prepXints <- function(
     stopifnot(num_treats == length(unlist(cohort_treat_names)))
     stopifnot(all(covs %in% colnames(data)))
 
+    stopifnot(is.numeric(ncol(treat_var_mat)) | is.integer(ncol(treat_var_mat)))
+    stopifnot(ncol(treat_var_mat) >= 1)
+
     covariate_mat <- as.matrix(data[, covs]) # Covariates
 
     rm(ret)
@@ -1119,6 +1122,7 @@ addDummies <- function(df, cohorts, times, N, T, unit_var, time_var,
     # stopifnot(all(time_var_names %in% colnames(X_df)))
 
     stopifnot(ncol(treat_var_mat) == num_treats)
+    stopifnot(ncol(treat_var_mat) >= 1)
 
     stopifnot(length(cohort_vars) == n_cohorts)
     # stopifnot(all(cohort_vars %in% colnames(X_df)))
@@ -1275,9 +1279,21 @@ genXintsData <- function(cohort_fe, time_fe, X_long, treat_mat_long, N, R, T,
 
     rm(res)
 
+    stopifnot(is.integer(ncol(treat_mat_long)) | is.numeric(ncol(treat_mat_long)))
+    stopifnot(ncol(treat_mat_long) >= 1)
+
     # Generate interactions of treatment effects with X
-    X_long_treat <- genTreatInts(treat_mat_long, X_long, ncol(treat_mat_long),
-        cohort_fe, N=N, T=T, R=R, d=d, N_UNTREATED=N_UNTREATED)
+    X_long_treat <- genTreatInts(
+        treat_mat_long=treat_mat_long, 
+        X_long=X_long, 
+        n_treats=ncol(treat_mat_long),
+        cohort_fe,
+        N=N,
+        T=T,
+        R=R,
+        d=d,
+        N_UNTREATED=N_UNTREATED
+        )
 
     # The first R columns are the cohort fixed effects in order
     # Next T are time fixed effects in order
