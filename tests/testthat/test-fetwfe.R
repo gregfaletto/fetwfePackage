@@ -331,7 +331,7 @@ test_that("fetwfe errors with a panel having no never-treated units", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 11: Error when the data has too few rows (less than 4).
+# Test 12: Error when the data has too few rows (less than 4).
 # ------------------------------------------------------------------------------
 test_that("fetwfe errors when data has fewer than 4 rows", {
   df <- data.frame(
@@ -356,4 +356,103 @@ test_that("fetwfe errors when data has fewer than 4 rows", {
   )
 })
 
+# ------------------------------------------------------------------------------
+# Test 13: Test that optional lambda parameters are handled.
+# ------------------------------------------------------------------------------
+test_that("fetwfe returns expected output when lambda parameters are supplied", {
+  df <- generate_panel_data(N = 30, T = 10, seed = 456)
+  
+  result <- fetwfe(
+    pdata     = df,
+    time_var  = "time",
+    unit_var  = "unit",
+    treatment = "treatment",
+    covs      = c("cov1", "cov2"),
+    response  = "y",
+    lambda.max = 5,
+    lambda.min = 0.5,
+    nlambda    = 50,
+    verbose   = FALSE
+  )
+  
+  expect_true(is.numeric(result$lambda.max))
+  expect_true(is.numeric(result$lambda.min))
+  # Also check that some model size was recorded.
+  expect_true(result$lambda.max_model_size >= 0)
+})
 
+# ------------------------------------------------------------------------------
+# Test 14: Test that the function returns a standard error when q < 1 and not
+# when q >= 1.
+# ------------------------------------------------------------------------------
+test_that("fetwfe returns att_se for q < 1 and att_se is NA for q >= 1", {
+  df <- generate_panel_data(N = 30, T = 10, seed = 789)
+  
+  result1 <- fetwfe(
+    pdata     = df,
+    time_var  = "time",
+    unit_var  = "unit",
+    treatment = "treatment",
+    covs      = c("cov1", "cov2"),
+    response  = "y",
+    q         = 0.5,
+    verbose   = FALSE
+  )
+  expect_false(is.na(result1$att_se))
+  
+  result2 <- fetwfe(
+    pdata     = df,
+    time_var  = "time",
+    unit_var  = "unit",
+    treatment = "treatment",
+    covs      = c("cov1", "cov2"),
+    response  = "y",
+    q         = 2,  # ridge-like penalty, where SE is not computed
+    verbose   = FALSE
+  )
+  expect_true(is.na(result2$att_se))
+})
+
+# ------------------------------------------------------------------------------
+# Test 15: Test that an error is thrown when all covariates are constant.
+# In this case, processCovs should remove all covariates and then stop.
+# ------------------------------------------------------------------------------
+test_that("fetwfe errors when all covariates are removed due to constant values", {
+  df_const <- generate_panel_data(N = 30, T = 10, seed = 101)
+  # Set both covariates to a constant value
+  df_const$cov1 <- 1
+  df_const$cov2 <- 1
+  
+  expect_error(
+    fetwfe(
+      pdata     = df_const,
+      time_var  = "time",
+      unit_var  = "unit",
+      treatment = "treatment",
+      covs      = c("cov1", "cov2"),
+      response  = "y",
+      verbose   = FALSE
+    ),
+    "All covariates were removed"  # expecting an error message including this substring
+  )
+})
+
+# ------------------------------------------------------------------------------
+# Test 16: Test that the overall ATT (att_hat) is numeric and non-missing.
+# ------------------------------------------------------------------------------
+test_that("fetwfe returns a valid numeric overall ATT", {
+  df <- generate_panel_data(N = 30, T = 10, seed = 202)
+  
+  result <- fetwfe(
+    pdata     = df,
+    time_var  = "time",
+    unit_var  = "unit",
+    treatment = "treatment",
+    covs      = c("cov1", "cov2"),
+    response  = "y",
+    verbose   = FALSE
+  )
+  
+  expect_true(is.numeric(result$att_hat))
+  expect_false(is.na(result$att_hat))
+})
