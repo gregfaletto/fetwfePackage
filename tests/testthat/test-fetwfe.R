@@ -49,6 +49,39 @@ generate_panel_data <- function(N = 30, T = 10, seed = 123) {
   return(df)
 }
 
+generate_bad_panel_data <- function(N = 30, T = 10, seed = 123) {
+  set.seed(seed)
+  # Create a vector of unit IDs (as characters)
+  unit_ids <- sprintf("unit%02d", 1:N)
+  time_vals <- 1:T
+  
+  # For each unit, decide the first treatment time:
+  # Always sample a first treatment time uniformly between 2 and T
+  # No never-treated units.
+  first_treat <- sapply(unit_ids, function(u) {
+      sample(2:T, 1)
+  })
+  
+  # Build panel data (each unit appears for every time period)
+  df <- do.call(rbind, lapply(seq_along(unit_ids), function(i) {
+    unit <- unit_ids[i]
+    ft <- first_treat[i]
+    data.frame(
+      time      = as.integer(time_vals),            # must be integer
+      unit      = as.character(unit),               # must be character
+      treatment = as.integer(ifelse(time_vals >= ft, 1, 0)),  # must be integer 0/1
+      cov1      = rnorm(T),
+      cov2      = runif(T),
+      y         = rnorm(T)                          # outcome (numeric)
+    )
+  }))
+  
+  # Order rows by unit then time
+  df <- df[order(df$unit, df$time), ]
+  rownames(df) <- NULL
+  return(df)
+}
+
 # ------------------------------------------------------------------------------
 # Test 1: Check that valid input produces a list with the expected output elements.
 # ------------------------------------------------------------------------------
@@ -263,7 +296,7 @@ test_that("fetwfe errors when all units are treated in the first period", {
   )
   
   expect_error(
-    fetwfe(
+    suppressWarnings(fetwfe(
       pdata     = df,
       time_var  = "time",
       unit_var  = "unit",
@@ -273,7 +306,28 @@ test_that("fetwfe errors when all units are treated in the first period", {
       verbose   = FALSE
     ),
     "All units were treated in the first time period; estimating treatment effects is not possible"
-  )
+  ))
+})
+
+# ------------------------------------------------------------------------------
+# Test 11: Error when there are no never-treated units.
+# ------------------------------------------------------------------------------
+
+test_that("fetwfe errors with a panel having no never-treated units", {
+  df_bad <- generate_bad_panel_data(N = 30, T = 10, seed = 123)
+  
+  expect_error(
+    suppressWarnings(fetwfe(
+      pdata     = df_bad,
+      time_var  = "time",
+      unit_var  = "unit",
+      treatment = "treatment",
+      covs      = c("cov1", "cov2"),
+      response  = "y",
+      verbose   = FALSE
+    ),
+    "No never-treated units detected in data to fit model; estimating treatment effects is not possible"
+  ))
 })
 
 # ------------------------------------------------------------------------------
@@ -301,3 +355,5 @@ test_that("fetwfe errors when data has fewer than 4 rows", {
     "nrow\\(pdata\\) >= 4"
   )
 })
+
+
