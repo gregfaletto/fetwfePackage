@@ -20,25 +20,27 @@ library(dplyr)
 
 # Introduction
 
-Difference-in-differences (DiD) methods have become a workhorse in applied research to estimate causal effects when policies or treatments are adopted in a staggered manner. However, the canonical two‐way fixed effects (TWFE) estimator can be biased in settings with staggered adoptions. In his recent work, Wooldridge (2021) introduced the extended TWFE estimator that augments the baseline model with many additional parameters in order to target unbiased estimands. The downside, however, is that such models often sacrifice efficiency.
+This vignette is written under the assumption that you're vaguely familiar with developments in [difference-in-differences](https://en.wikipedia.org/wiki/Difference_in_differences) with [staggered adoptions](https://bookdown.org/mike/data_analysis/difference-in-differences.html#staggered-dif-n-dif) since about 2018. Just to make sure we're on the same page, the brief recap is:
+* Historically, under staggered adoptions researchers used the [standard two-way fixed effects estimator](https://bookdown.org/mike/data_analysis/two-way-fixed-effects.html) and interpreted the coefficient on the treatment dummy as an average treatment effect on the treated units.
+* In the late 2010s, econometricians formally checked what this estimator was doing and found that in fact, this coefficient was not any kind of reasonable average treatment effect estimator.
+* Since then, a number of new difference-in-differences estimators that are unbiased under staggered adoptions have been developed.
 
-In our package I implement the **FETWFE** (Fused Extended Two-Way Fixed Effects) estimator. This estimator applies a machine learning penalty—specifically, sparse fusion (or “bridge”) penalties—to automatically select data‐driven restrictions among the many parameters in the extended TWFE model. Under appropriate sparsity conditions, FETWFE is shown to identify the “correct” restrictions with probability tending to one, thereby reducing the variance of the treatment effect estimates while retaining asymptotic unbiasedness and consistency.
+The estimator in this package, fused extended two-way fixed effects (FETWFE), is one of those unbiased estimators. One issue with these estimators has been that they've worked so hard to be unbiased that they are inefficient (in the language of econometrics), or high-variance (in the language of machine learning). In particular, these estimators add extra parameters in order to remove bias, but estimating extra parameters means you have less data per parameter and your estimates are noisier.
 
-For a complete treatment of the methodology, see the paper:
+In the machine learning literature, creating a more flexible estimator with lots of parameters and then finding that it is too high variance (that is, it *overfits*) is a familiar issue. The most common solution has been regularization.
 
-> **Fused Extended Two-Way Fixed Effects for Difference-in-Differences With Staggered Adoptions**  
-> *Gregory Faletto, University of Southern California*  
-> (A preprint version is available on arXiv.)
+So the headline summary of what fused extended two-way fixed effects brings to the table in a crowded field of estimators is: **fused extended two-way fixed effects is not only unbiased, it also uses machine learning to maximize efficiency (minimize variance)**. Further, unlike many machine learning estimators, **fused extended two-way fixed effects still gives you standard errors for the treatment effect estimates.**
 
-# Methodology Overview
+That's all the description I'll give you in this vignette. You can learn all of the details in the paper on arXiv:
 
-The FETWFE approach builds on the following key ideas:
+> **[Fused Extended Two-Way Fixed Effects for Difference-in-Differences With Staggered Adoptions](https://arxiv.org/abs/2312.05985)**
 
-- **Extended TWFE model:** In the extended model each cohort and each post-treatment time period gets its own parameter for the treatment effect. This allows the estimator to capture heterogeneous effects across both cohorts and time.
-- **Fusion penalties:** By imposing an ℓ<sub>q</sub> (bridge) penalty on the differences between treatment effect parameters, FETWFE “fuses” together coefficients that are close, thereby effectively reducing the model’s complexity.
-- **Automatic restriction selection:** Unlike ad hoc restrictions, FETWFE uses a single tuning parameter (selected via BIC or cross-validation) to determine which coefficients should be pooled, thereby retaining asymptotic properties (consistency, oracle property, and asymptotic normality) under appropriate sparsity assumptions.
+If you want to learn a little more before you dive into the full paper, here are some other resources with descriptions of the methodology that provide a little more detail than this vignette:
+* My [blog post](https://gregoryfaletto.com/2023/12/13/new-paper-fused-extended-two-way-fixed-effects-for-difference-in-differences-with-staggered-adoptions/) announcing the paper.
+* [Some slides](https://gregoryfaletto.com/2024/02/11/presentation-on-fused-extended-two-way-fixed-effects/) I made for a presentation on FETWFE.
+* Another [blog post](https://gregoryfaletto.com/2025/01/03/new-r-fetwfe-package-implementing-fused-extended-two-way-fixed-effects/) focused on what this package is doing under the hood.
 
-A schematic diagram (see Figure 1 in the paper) illustrates which treatment effect parameters \(\hat{\tau}_{rt}\) are fused together. (For instance, treatment effects within the same cohort and initial treatment effects across adjacent cohorts are shrunk toward one another.)
+For now, all you need to know is that given an appropriately formatted panel data set, `fetwfe()` will give you an estimate of the overall average treatment effect on the treated units, the average treatment effect within each cohort, and standard errors for each of these estimates.
 
 # Package Usage
 
@@ -53,6 +55,108 @@ The package provides a single exported function, `fetwfe()`, which implements th
 - **Additional tuning parameters:** such as the tuning parameter for the bridge penalty (controlled via argument `q`) and options for verbosity, standard error calculation, and so on.
 
 The function returns a list containing, for example, the estimated overall average treatment effect, cohort-specific treatment effects, standard errors (when available), and various diagnostic quantities.
+
+## Simulated Data Example
+
+In addition to real data applications, you can also experiment with FETWFE on simulated data. The example below simulates a balanced panel with 60 time periods, 30 individuals, and 5 waves of treatment. In the simulation, each individual is assigned a random cohort (which determines the timing of treatment) and three time-invariant covariates are generated. The response variable is constructed so that, after treatment, its evolution depends on a treatment effect (which varies by cohort) and a linear trend, plus the covariates and some random noise.
+
+Below is the complete code for simulating the data, converting it into the required pdata format, and running the `fetwfe()` function.
+
+```{r}
+# Set seed for reproducibility
+set.seed(123456L)
+
+# 60 time periods, 30 individuals, and 5 waves of treatment
+tmax = 60; imax = 30; nlvls = 5
+
+dat = 
+  expand.grid(time = 1:tmax, id = 1:imax) |>
+  within({
+    
+    # Generate time-invariant covariates
+    cov1 = rep(runif(imax, 0, 1), each = tmax)  # Random uniform values (0, 1) per individual
+    cov2 = rep(sample(1:5, imax, replace = TRUE), each = tmax)  # Random categorical values (1-5) per individual
+    cov3 = rep(rnorm(imax, mean = 0, sd = 1), each = tmax)  # Random Gaussian values (mean=0, sd=1) per individual
+    
+    # Initialize columns
+    cohort      = NA
+    effect      = NA
+    first_treat = NA
+    
+    for (chrt in 1:imax) {
+      cohort = ifelse(id==chrt, sample.int(nlvls, 1), cohort)
+    }
+    
+    for (lvls in 1:nlvls) {
+      effect      = ifelse(cohort==lvls, sample(2:10, 1), effect)
+      first_treat = ifelse(cohort==lvls, sample(1:(tmax+20), 1), first_treat)
+    }
+    
+    first_treat = ifelse(first_treat>tmax, Inf, first_treat)
+    treat       = time >= first_treat
+    rel_time    = time - first_treat
+    y           = id + time + ifelse(treat, effect*rel_time, 0) + cov1 + cov2 + cov3 + rnorm(imax*tmax)
+    
+    rm(chrt, lvls, cohort, effect)
+  })
+
+head(dat)
+```
+
+The simulated data (`dat`) now has columns for time, id, covariates (`cov1`, `cov2`, `cov3`), a treatment indicator (`treat`), and a response variable (`y`). Next, we convert this data into the panel data format required by `fetwfe()`.
+
+```{r}
+library(dplyr)
+
+# Specify column names for the pdata format
+time_var <- "time"       # Column for the time period
+unit_var <- "unit"       # Column for the unit identifier
+treatment <- "treated"   # Column for the treatment dummy indicator
+covs <- c("cov1", "cov2", "cov3")  # Columns for covariates
+response <- "response"   # Column for the response variable
+
+# Convert the dataset
+pdata <- dat |>
+  mutate(
+    # Rename id to unit and convert to character
+    {{ unit_var }} := as.character(id),
+    # Ensure treatment dummy is 0/1
+    {{ treatment }} := as.integer(treat),
+    # Rename y to response
+    {{ response }} := y
+  ) |>
+  select(
+    {{ time_var }}, {{ unit_var }}, {{ treatment }}, all_of(covs), {{ response }}
+  ) 
+
+# Preview the resulting pdata dataframe
+head(pdata)
+```
+
+Now that `pdata` is properly formatted, we run the FETWFE estimator on the simulated data.
+
+```{r}
+
+library(fetwfe)
+
+# Run the FETWFE estimator on the simulated data
+result <- fetwfe(
+  pdata = pdata,              # The panel dataset
+  time_var = "time",          # The time variable
+  unit_var = "unit",          # The unit identifier
+  treatment = "treated",      # The treatment dummy indicator
+  covs = c("cov1", "cov2", "cov3"),  # Covariates
+  response = "response",      # The response variable
+  q = 0.5                    # The L_q penalty for fusion regularization
+)
+
+# Display the overall average treatment effect estimate
+cat("Estimated Overall ATT:", result$att_hat, "\n")
+```
+
+When you run this code, the function internally performs all the necessary data preparation, applies the fusion penalty via a bridge regression (using the `grpreg` package), and returns a list with overall and cohort-specific treatment effect estimates, standard errors (if available), and additional diagnostics.
+
+This example shows how you can simulate panel data with treatment heterogeneity, convert it to the required format, and apply the FETWFE estimator to recover treatment effect estimates.
 
 ## A Basic Example
 
@@ -147,106 +251,6 @@ Below is an excerpt of the table produced by our estimator:
 | ⋮      |   ⋮          |   ⋮    |     ⋮      |     ⋮       |
 
 *Table: Cohort average treatment effect estimates.*
-
-# Simulated Data Example
-
-In addition to real data applications, you can also experiment with FETWFE on simulated data. The example below simulates a balanced panel with 60 time periods, 30 individuals, and 5 waves of treatment. In the simulation, each individual is assigned a random cohort (which determines the timing of treatment) and three time-invariant covariates are generated. The response variable is constructed so that, after treatment, its evolution depends on a treatment effect (which varies by cohort) and a linear trend, plus the covariates and some random noise.
-
-Below is the complete code for simulating the data, converting it into the required pdata format, and running the `fetwfe()` function.
-
-```{r}
-# Set seed for reproducibility
-set.seed(123456L)
-
-# 60 time periods, 30 individuals, and 5 waves of treatment
-tmax = 60; imax = 30; nlvls = 5
-
-dat = 
-  expand.grid(time = 1:tmax, id = 1:imax) |>
-  within({
-    
-    # Generate time-invariant covariates
-    cov1 = rep(runif(imax, 0, 1), each = tmax)  # Random uniform values (0, 1) per individual
-    cov2 = rep(sample(1:5, imax, replace = TRUE), each = tmax)  # Random categorical values (1-5) per individual
-    cov3 = rep(rnorm(imax, mean = 0, sd = 1), each = tmax)  # Random Gaussian values (mean=0, sd=1) per individual
-    
-    # Initialize columns
-    cohort      = NA
-    effect      = NA
-    first_treat = NA
-    
-    for (chrt in 1:imax) {
-      cohort = ifelse(id==chrt, sample.int(nlvls, 1), cohort)
-    }
-    
-    for (lvls in 1:nlvls) {
-      effect      = ifelse(cohort==lvls, sample(2:10, 1), effect)
-      first_treat = ifelse(cohort==lvls, sample(1:(tmax+20), 1), first_treat)
-    }
-    
-    first_treat = ifelse(first_treat>tmax, Inf, first_treat)
-    treat       = time >= first_treat
-    rel_time    = time - first_treat
-    y           = id + time + ifelse(treat, effect*rel_time, 0) + cov1 + cov2 + cov3 + rnorm(imax*tmax)
-    
-    rm(chrt, lvls, cohort, effect)
-  })
-
-head(dat)
-```
-
-The simulated data (`dat`) now has columns for time, id, covariates (`cov1`, `cov2`, `cov3`), a treatment indicator (`treat`), and a response variable (`y`). Next, we convert this data into the panel data format required by `fetwfe()`.
-
-```{r}
-library(dplyr)
-
-# Specify column names for the pdata format
-time_var <- "time"       # Column for the time period
-unit_var <- "unit"       # Column for the unit identifier
-treatment <- "treated"   # Column for the treatment dummy indicator
-covs <- c("cov1", "cov2", "cov3")  # Columns for covariates
-response <- "response"   # Column for the response variable
-
-# Convert the dataset
-pdata <- dat |>
-  mutate(
-    # Rename id to unit and convert to character
-    {{ unit_var }} := as.character(id),
-    # Ensure treatment dummy is 0/1
-    {{ treatment }} := as.integer(treat),
-    # Rename y to response
-    {{ response }} := y
-  ) |>
-  select(
-    {{ time_var }}, {{ unit_var }}, {{ treatment }}, all_of(covs), {{ response }}
-  ) 
-
-# Preview the resulting pdata dataframe
-head(pdata)
-```
-
-Now that `pdata` is properly formatted, we run the FETWFE estimator on the simulated data.
-
-```{r}
-
-# Run the FETWFE estimator on the simulated data
-result <- fetwfe(
-  pdata = pdata,              # The panel dataset
-  time_var = "time",          # The time variable
-  unit_var = "unit",          # The unit identifier
-  treatment = "treated",      # The treatment dummy indicator
-  covs = c("cov1", "cov2", "cov3"),  # Covariates
-  response = "response",      # The response variable
-  q = 0.5                    # The L_q penalty for fusion regularization
-)
-
-# Display the overall average treatment effect estimate
-cat("Estimated Overall ATT:", result$att_hat, "\n")
-```
-
-When you run this code, the function internally performs all the necessary data preparation, applies the fusion penalty via a bridge regression (using the `grpreg` package), and returns a list with overall and cohort-specific treatment effect estimates, standard errors (if available), and additional diagnostics.
-
-This example shows how you can simulate panel data with treatment heterogeneity, convert it to the required format, and apply the FETWFE estimator to recover treatment effect estimates.
 
 # Conclusion
 
