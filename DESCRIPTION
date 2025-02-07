@@ -16,5 +16,5 @@ Suggests:
     bacondecomp,
     knitr,
     rmarkdown,
-    dplyr,
+    dplyr
 VignetteBuilder: knitr
