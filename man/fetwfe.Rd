@@ -129,7 +129,7 @@ unit.} \item{att_se}{If \code{q < 1}, a standard error for the ATT. If
 not, it is asymptotically conservative. If \code{q >= 1}, this will be NA.}
 \item{catt_hats}{A named vector containing the estimated average treatment
 effects for each cohort.} \item{catt_ses}{If \code{q < 1}, a named vector
-containing the (aymptotically exact, non-conservative) standard errors for
+containing the (asymptotically exact, non-conservative) standard errors for
 the estimated average treatment effects within each cohort.}
 \item{cohort_probs}{A vector of the estimated probabilities of being in each
 cohort conditional on being treated, which was used in calculating \code{att_hat}.
