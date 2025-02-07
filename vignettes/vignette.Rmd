@@ -22,7 +22,7 @@ library(dplyr)
 
 If you understand the basic idea of what difference-in-differences with staggered adoptions is, all you need to know about fused extended two-way fixed effects (FETWFE) is that given an appropriately formatted panel data set, `fetwfe()` will give you an estimate of the overall average treatment effect on the treated units, the average treatment effect within each cohort, and standard errors for each of these estimates.
 
-Feel free to skip to the next section if you want to jump right in to using the package, or in the next section you can read a little more background information on the methodology if you'd like.
+Feel free to skip to the "Package Usage" section if you want to jump right in to using the package, or in the next "Background" subsection you can read a little more background information on the methodology if you'd like.
 
 ## Background
 
