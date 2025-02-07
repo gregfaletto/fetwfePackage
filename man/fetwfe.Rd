@@ -190,6 +190,8 @@ library(bacondecomp)
 
 data(divorce)
 
+# sig_eps_sq and sig_eps_c_sq, calculated in a separate run of `fetwfe(),
+# are provided to speed up the computation of the example
 res <- fetwfe(
     pdata = divorce[divorce$sex == 2, ],
     time_var = "year",
@@ -197,7 +199,8 @@ res <- fetwfe(
     treatment = "changed",
     covs = c("murderrate", "lnpersinc", "afdcrolls"),
     response = "suiciderate_elast_jag",
-    q = 0.5,
+    sig_eps_sq = 0.1025361,
+    sig_eps_c_sq = 4.227651e-35,
     verbose = TRUE)
 
 # Average treatment effect on the treated units (in percentage point
