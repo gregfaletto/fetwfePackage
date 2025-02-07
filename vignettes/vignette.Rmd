@@ -10,6 +10,7 @@ vignette: >
   %\VignetteIndexEntry{fetwfe: A Package for Fused Extended Two-Way Fixed Effects}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+  Depends: dplyr
 ---
 
 ```{r setup, include=FALSE}
@@ -196,6 +197,8 @@ head(dat)
 The simulated data (`dat`) now has columns for time, id, covariates (`cov1`, `cov2`, `cov3`), a treatment indicator (`treat`), and a response variable (`y`). Next, we convert this data into the panel data format required by `fetwfe()`.
 
 ```{r}
+library(dplyr)
+
 # Specify column names for the pdata format
 time_var <- "time"       # Column for the time period
 unit_var <- "unit"       # Column for the unit identifier
@@ -205,7 +208,7 @@ response <- "response"   # Column for the response variable
 
 # Convert the dataset
 pdata <- dat |>
-  dplyr::mutate(
+  mutate(
     # Rename id to unit and convert to character
     {{ unit_var }} := as.character(id),
     # Ensure treatment dummy is 0/1
@@ -213,8 +216,8 @@ pdata <- dat |>
     # Rename y to response
     {{ response }} := y
   ) |>
-  dplyr::select(
-    {{ time_var }}, {{ unit_var }}, {{ treatment }}, dplyr::all_of(covs), {{ response }}
+  select(
+    {{ time_var }}, {{ unit_var }}, {{ treatment }}, all_of(covs), {{ response }}
   ) 
 
 # Preview the resulting pdata dataframe
