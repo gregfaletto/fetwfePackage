@@ -13,4 +13,7 @@ Imports:
     glmnet,
     grpreg
 Suggests: 
-    bacondecomp
+    bacondecomp,
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
