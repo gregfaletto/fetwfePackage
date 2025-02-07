@@ -8,8 +8,9 @@ library(fetwfe)
 # For each unit, we randomly decide whether the unit is never treated (first_treat = Inf)
 # or, if treated, assign a first treatment time (ensuring that no unit is treated in time 1).
 # ------------------------------------------------------------------------------
-generate_panel_data <- function(N = 30, T = 10, seed = 123) {
+generate_panel_data <- function(N = 30, T = 10, R = 9, seed = 123) {
   set.seed(seed)
+  stopifnot(R <= T - 1)
   # Create a vector of unit IDs (as characters)
   unit_ids <- sprintf("unit%02d", 1:N)
   time_vals <- 1:T
@@ -21,7 +22,7 @@ generate_panel_data <- function(N = 30, T = 10, seed = 123) {
     if (runif(1) < 0.5) {
       Inf
     } else {
-      sample(2:T, 1)
+      sample(2:(R + 1), 1)
     }
   })
   
@@ -75,6 +76,48 @@ generate_bad_panel_data <- function(N = 30, T = 10, seed = 123) {
       y         = rnorm(T)                          # outcome (numeric)
     )
   }))
+  
+  # Order rows by unit then time
+  df <- df[order(df$unit, df$time), ]
+  rownames(df) <- NULL
+  return(df)
+}
+
+generate_minimal_panel_data <- function(seed = 123) {
+  set.seed(seed)
+
+  N <- 2
+  T <- 2
+  # Create a vector of unit IDs (as characters)
+  unit_ids <- sprintf("unit%02d", 1:N)
+  time_vals <- 1:T
+  
+  # For each unit, decide the first treatment time:
+  # one treated, one untreated unit.
+  first_treat <- sapply(unit_ids, function(u) {
+    if (u  == "unit01") {
+      Inf
+    } else {
+      2
+    }
+  })
+  
+  # Build panel data (each unit appears for every time period)
+  df <- do.call(rbind, lapply(seq_along(unit_ids), function(i) {
+    unit <- unit_ids[i]
+    ft <- first_treat[i]
+    data.frame(
+      time      = as.integer(time_vals),            # must be integer
+      unit      = as.character(unit),               # must be character
+      treatment = as.integer(ifelse(time_vals >= ft, 1, 0)),  # must be integer 0/1
+      cov1      = rnorm(T),
+      y         = rnorm(T)                          # outcome (numeric)
+    )
+  }))
+  
+  # The idCohorts function automatically removes any unit that was treated in period 1.
+  # (This is simulated by removing any row with time == 1 and treatment == 1.)
+  df <- df[!(df$time == 1 & df$treatment == 1), ]
   
   # Order rows by unit then time
   df <- df[order(df$unit, df$time), ]
@@ -360,7 +403,7 @@ test_that("fetwfe errors when data has fewer than 4 rows", {
 # Test 13: Test that optional lambda parameters are handled.
 # ------------------------------------------------------------------------------
 test_that("fetwfe returns expected output when lambda parameters are supplied", {
-  df <- generate_panel_data(N = 30, T = 10, seed = 456)
+  df <- generate_panel_data(N = 30, T = 10, R = 9, seed = 456)
   
   result <- fetwfe(
     pdata     = df,
@@ -386,7 +429,7 @@ test_that("fetwfe returns expected output when lambda parameters are supplied", 
 # when q >= 1.
 # ------------------------------------------------------------------------------
 test_that("fetwfe returns att_se for q < 1 and att_se is NA for q >= 1", {
-  df <- generate_panel_data(N = 30, T = 10, seed = 789)
+  df <- generate_panel_data(N = 30, T = 10, R = 9, seed = 789)
   
   result1 <- fetwfe(
     pdata     = df,
@@ -418,7 +461,7 @@ test_that("fetwfe returns att_se for q < 1 and att_se is NA for q >= 1", {
 # In this case, processCovs should remove all covariates and then stop.
 # ------------------------------------------------------------------------------
 test_that("fetwfe errors when all covariates are removed due to constant values", {
-  df_const <- generate_panel_data(N = 30, T = 10, seed = 101)
+  df_const <- generate_panel_data(N = 30, T = 10, R = 9, seed = 101)
   # Set both covariates to a constant value
   df_const$cov1 <- 1
   df_const$cov2 <- 1
@@ -441,7 +484,7 @@ test_that("fetwfe errors when all covariates are removed due to constant values"
 # Test 16: Test that the overall ATT (att_hat) is numeric and non-missing.
 # ------------------------------------------------------------------------------
 test_that("fetwfe returns a valid numeric overall ATT", {
-  df <- generate_panel_data(N = 30, T = 10, seed = 202)
+  df <- generate_panel_data(N = 30, T = 10, R = 9, seed = 202)
   
   result <- fetwfe(
     pdata     = df,
@@ -454,5 +497,27 @@ test_that("fetwfe returns a valid numeric overall ATT", {
   )
   
   expect_true(is.numeric(result$att_hat))
+  expect_false(is.na(result$att_hat))
+})
+
+
+# ------------------------------------------------------------------------------
+# Test 17: Test that function works on a minimal data set
+# ------------------------------------------------------------------------------
+test_that("fetwfe works on a minimal valid dataset", {
+  # Create a balanced panel with N = 6 units and T = 5 time periods.
+  df_min <- generate_minimal_panel_data()
+  
+  result <- fetwfe(
+    pdata     = df_min,
+    time_var  = "time",
+    unit_var  = "unit",
+    treatment = "treatment",
+    covs      = c("cov1"),
+    response  = "y",
+    verbose   = FALSE
+  )
+  
+  expect_type(result$att_hat, "double")
   expect_false(is.na(result$att_hat))
 })

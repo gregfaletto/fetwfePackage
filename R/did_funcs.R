@@ -1191,6 +1191,18 @@ genTreatInts <- function(treat_mat_long, X_long, n_treats, cohort_fe, N, T, R,
 
     stopifnot(ncol(cohort_fe) == R)
     stopifnot(ncol(treat_mat_long) == n_treats)
+
+    stopifnot(is.numeric(d) | is.integer(d))
+    stopifnot(d >= 1)
+
+    stopifnot(is.numeric(n_treats) | is.integer(n_treats))
+    stopifnot(n_treats >= 1)
+
+    stopifnot(is.numeric(N) | is.integer(N))
+    stopifnot(N >= 2)
+
+    stopifnot(is.numeric(T) | is.integer(T))
+    stopifnot(T >= 2)
     # Interact with covariates
     X_long_treat <- matrix(as.numeric(NA), nrow=N*T, ncol=d*n_treats)
 
