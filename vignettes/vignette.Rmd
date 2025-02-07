@@ -10,11 +10,12 @@ vignette: >
   %\VignetteIndexEntry{fetwfe: A Package for Fused Extended Two-Way Fixed Effects}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
-  Depends: dplyr
+  %\VignetteDepends{dplyr}
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
 ```
 
 # Introduction
@@ -59,7 +60,7 @@ Below is an example of how to use `fetwfe()` on a panel data set. (In this examp
 
 ```{r}
 # Load the necessary packages
-library(fetwfe)       # your package with the FETWFE estimator
+library(fetwfe)
 library(bacondecomp)  # for the example data
 
 # Load the example data
