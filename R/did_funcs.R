@@ -301,7 +301,7 @@ fetwfe_core <- function(
     #
 
     if(verbose){
-        print("Transforming matrix...")
+        message("Transforming matrix...")
     }
     
     # Transform matrix (change of coordinates so that fitting regular bridge
@@ -325,7 +325,7 @@ fetwfe_core <- function(
     #
 
     if(verbose){
-        print("Getting omega sqrt inverse estimate...")
+        message("Getting omega sqrt inverse estimate...")
         t0 <- Sys.time()
     }
 
@@ -345,8 +345,8 @@ fetwfe_core <- function(
         rm(omega_res)
 
         if(verbose){
-            print("Done! Time to estimate noise variances:")
-            print(Sys.time() - t0)
+            message("Done! Time to estimate noise variances:")
+            message(Sys.time() - t0)
             t0 <- Sys.time()
         }
     }
@@ -358,8 +358,8 @@ fetwfe_core <- function(
     Omega_sqrt_inv <- expm::sqrtm(solve(Omega))
 
     if(verbose){
-        print("Time to get sqrt inverse matrix:")
-        print(Sys.time() - t0)
+        message("Time to get sqrt inverse matrix:")
+        message(Sys.time() - t0)
     }
 
     y_final <- kronecker(diag(N), sqrt(sig_eps_sq)*Omega_sqrt_inv) %*% y
@@ -413,7 +413,7 @@ fetwfe_core <- function(
 
     # Estimate bridge regression
     if(verbose){
-        print("Estimating bridge regression...")
+        message("Estimating bridge regression...")
         t0 <- Sys.time()
     }
 
@@ -452,8 +452,8 @@ fetwfe_core <- function(
     }
     
     if(verbose){
-        print("Done! Time for estimation:")
-        print(Sys.time() - t0)
+        message("Done! Time for estimation:")
+        message(Sys.time() - t0)
     }
 
     # For diagnostics later, store largest and smallest lambda, as well as 
@@ -486,7 +486,10 @@ fetwfe_core <- function(
 
     # Handle edge case where no features are selected
     if(lambda_star_model_size == 0){
-        print("No features selected; all treatment effects estimated to be 0.")
+        if(verbose){
+            message("No features selected; all treatment effects estimated to be 0.")
+        }
+        
         if(q < 1){
             ret_se <- 0
         } else{
@@ -574,7 +577,10 @@ fetwfe_core <- function(
 
     # Handle edgge case where no treatment features selected
     if(length(sel_treat_inds_shifted) == 0){
-        print("No features selected; all treatment effects estimated to be 0.")
+        if(verbose){
+            message("No features selected; all treatment effects estimated to be 0.")
+        }
+        
         if(q < 1){
             ret_se <- 0
         } else{
@@ -938,8 +944,8 @@ processCovs <- function(df, units, unit_var, times, time_var, covs, resp_var,
     for(cov in covs){
         if(length(unique(df[, cov])) == 1){
             if(verbose){
-                print("Removing covariate because all units have the same value:")
-                print(cov)
+                message("Removing covariate because all units have the same value:")
+                message(cov)
             }
             covs_to_remove <- c(covs_to_remove, cov)
         }
@@ -962,7 +968,7 @@ processCovs <- function(df, units, unit_var, times, time_var, covs, resp_var,
     # Finally, replace all remaining covariates for each unit with value from
     # first time period
     if(verbose){
-        print("For any time-varying covariates, replacing all values with value in first (pre-treatment) period")
+        message("For any time-varying covariates, replacing all values with value in first (pre-treatment) period")
     }
     for(s in units){
         df_s <- df[df[, unit_var] == s, ]
