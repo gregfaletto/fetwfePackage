@@ -1,5 +1,10 @@
 # NEWS
 
+## Version 0.4.2 (2025-02-16)
+
+- Added more detail to DESCRIPTION.
+- Changed how messages are printed to use `message()` instead of `print()`, and modified code so that all messages are suppressed when the argument `verbose` is FALSE.
+
 ## Version 0.4.1 (2025-02-07)
 
 - Modified `.Rbuildignore` to conform with CRAN requirements.
