@@ -532,7 +532,7 @@ test_that("fetwfe works on a minimal valid dataset", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 17: Test that minimal data set requires provided noise variance
+# Test 18: Test that minimal data set requires provided noise variance
 # ------------------------------------------------------------------------------
 test_that("minimal data set requires provided noise variance", {
   # Create a balanced panel with N = 3 units and T = 3 time periods.
@@ -553,7 +553,7 @@ test_that("minimal data set requires provided noise variance", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 18: Test that function works on only two cohorts
+# Test 19: Test that function works on only two cohorts
 # ------------------------------------------------------------------------------
 test_that("fetwfe works on only two cohorts", {
   # Create a balanced panel with N = 6 units and T = 5 time periods.
@@ -574,7 +574,7 @@ test_that("fetwfe works on only two cohorts", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 19: Test that at least 2 treated cohorts requires
+# Test 20: Test that at least 2 treated cohorts requires
 # ------------------------------------------------------------------------------
 test_that("at least two treated cohorts required", {
   # Create a balanced panel with N = 3 units and T = 3 time periods.
