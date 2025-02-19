@@ -1,9 +1,9 @@
 Package: fetwfe
 Title: Fused Extended Two-Way Fixed Effects
-Version: 0.4.2
+Version: 0.4.3
 Authors@R: 
     person("Gregory", "Faletto", , "gfaletto@gmail.com", role = c("aut", "cre"))
-Description: The 'fetwfe' package implements the fused extended two-way fixed effects (FETWFE) estimator for unbiased and efficient estimation of difference-in-differences in panel data with staggered treatment adoption. This estimator overcomes biases inherent in conventional two-way fixed effects models by eliminating bias, while also employing a novel bridge regression regularization approach to improve efficiency and yield valid standard errors. The package features robust input validation, flexible tuning parameters (including user-specified or data-driven choices for penalty parameters), detailed output including overall and cohort-specific treatment effects with confidence intervals, and extensive diagnostic tools. See details in Faletto (2024) (<https://arxiv.org/abs/2312.05985>).
+Description: The 'fetwfe' package implements the fused extended two-way fixed effects (FETWFE) estimator for unbiased and efficient estimation of difference-in-differences in panel data with staggered treatment adoption. This estimator overcomes biases inherent in conventional two-way fixed effects models by eliminating bias, while also employing a novel bridge regression regularization approach to improve efficiency and yield valid standard errors. The package features robust input validation, flexible tuning parameters (including user-specified or data-driven choices for penalty parameters), detailed output including overall and cohort-specific treatment effects with confidence intervals, and extensive diagnostic tools. See details in Faletto (2024) (<doi:10.48550/arXiv.2312.05985>).
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

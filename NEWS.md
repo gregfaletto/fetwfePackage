@@ -1,5 +1,9 @@
 # NEWS
 
+## Version 0.4.3 (2025-02-19)
+
+- Change URL to DOI in DESCRIPTION.
+
 ## Version 0.4.2 (2025-02-16)
 
 - Added more detail to DESCRIPTION.
