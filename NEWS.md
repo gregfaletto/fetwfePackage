@@ -1,5 +1,9 @@
 # NEWS
 
+## Version 0.4.4 (2025-02-20)
+
+- Update DESCRIPTION to align with CRAN requirements.
+
 ## Version 0.4.3 (2025-02-19)
 
 - Change URL to DOI in DESCRIPTION.
