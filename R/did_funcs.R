@@ -459,7 +459,7 @@ fetwfe_core <- function(
     # For diagnostics later, store largest and smallest lambda, as well as 
     # corresponding smallest and largest model sizes, to return.
     lambda.max <- max(fit$lambda)
-    lambda.max_model_size <- sum(fit$beta[, ncol(beta)] != 0)
+    lambda.max_model_size <- sum(fit$beta[, ncol(fit$beta)] != 0)
 
     lambda.min <- min(fit$lambda)
     lambda.min_model_size <- sum(fit$beta[, 1] != 0)

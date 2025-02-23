@@ -1,5 +1,9 @@
 # NEWS
 
+## Version 0.4.5 (2025-02-22)
+
+- Fix typo in definition of `lambda.max_model_size`
+
 ## Version 0.4.4 (2025-02-20)
 
 - Update DESCRIPTION to align with CRAN requirements.
