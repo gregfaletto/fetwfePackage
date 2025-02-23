@@ -12,9 +12,13 @@ The `{fetwfe}` package implements *fused extended two-way fixed effects* (FETWFE
 To install the `{fetwfe}` package, simply use
 
 ```R
+install.packages("fetwfe")
+```
+
+You can also install the latest development version by using
+```R
 # install.packages("remotes")  # if needed
 remotes::install_github("gregfaletto/fetwfePackage")
-library(fetwfe)
 ```
 
 The `{fetwfe}` package contains one function, `fetwfe()`, which implements fused extended two-way fixed effects. Here's some example code that implements the data application from the paper:
@@ -59,6 +63,8 @@ catt_df_pct[["ConfIntHigh"]] <- 100 * catt_df_pct[["ConfIntHigh"]]
 
 catt_df_pct
 ```
+
+For a vigentte and full documentation, check out the [page for the {fetwfe} package on CRAN](https://cran.r-project.org/web/packages/fetwfe/index.html).
 
 # Documentation
 
