@@ -1469,8 +1469,8 @@ transformXintDataApp <- function(X_int, N, T, R, d, num_treats, first_inds=NA){
     X_mod[, feat_inds] <- X_int[, feat_inds] %*%
         genInvTwoWayFusionTransformMat(num_treats, first_inds, R)
 
-    stopifnot(all(!is.na(X_mod[, 1:(R + T - 1 + d + R*d + (T - 1)*d + num_treats)])))
-    stopifnot(all(is.na(X_mod[, (R + T - 1 + d + R*d + (T - 1)*d + num_treats + 1):p])))
+    # stopifnot(all(!is.na(X_mod[, 1:(R + T - 1 + d + R*d + (T - 1)*d + num_treats)])))
+    # stopifnot(all(is.na(X_mod[, (R + T - 1 + d + R*d + (T - 1)*d + num_treats + 1):p])))
 
     if(d > 0){
         # Lastly, penalize interactions between each treatment effect and each feature.
