@@ -911,85 +911,106 @@ idCohorts <- function(df, time_var, unit_var, treat_var, covs){
 ###### Replace time-varying variables with pre-treatment values for all times;
 
 
-processCovs <- function(df, units, unit_var, times, time_var, covs, resp_var,
-    T, verbose=FALSE){
+processCovs <- function(
+    df,
+    units,
+    unit_var,
+    times,
+    time_var,
+    covs,
+    resp_var,
+    T,
+    verbose=FALSE
+    ){
 
-    d <- length(covs)
-
+    # Always check that every unit has exactly T observations.
     for(s in units){
-      
         df_s <- df[df[, unit_var] == s, ]
-        # Assume a balanced panel
-        stopifnot(nrow(df_s) == T)
-
-        # Identify first time covariates
+        if(nrow(df_s) != T){
+            stop(paste("Unit", s, "does not have exactly", T, "observations."))
+        }
+    }
+    
+    # If no covariates are provided, simply return the ordered data frame.
+    if(length(covs) == 0){
+        if(verbose){
+            message("No covariates provided; skipping covariate processing.")
+        }
+        df <- df[, c(resp_var, time_var, unit_var)]
+        df <- df[order(df[, unit_var], df[, time_var], decreasing=FALSE), ]
+        return(list(df = df, covs = covs))
+    }
+    
+    d <- length(covs)
+    
+    # For each unit, ensure that the first period has non-missing covariate values.
+    # Remove any covariates with missing values in the first period.
+    for(s in units){
+        df_s <- df[df[, unit_var] == s, ]
+        # (The balanced panel check above guarantees nrow(df_s)==T.)
         covs_s <- df_s[df_s[, time_var] == times[1], covs]
-        stopifnot(length(covs_s) == length(covs))
-        # Remove covariates with mising values
+        if(length(covs_s) != length(covs)){
+            stop(paste("Unit", s, "does not have exactly", length(covs),
+                "covariate values in the first period."))
+        }
         covs <- covs[!is.na(covs_s)]
         if(length(covs) == 0){
-            stop("All covariates were removed because for all of them, at least one unit had a missing value during the first time period")
+            warning("All covariates were removed because for all of them, at least one unit had a missing value during the first time period")
         }
     }
-
-    if(length(covs) < d){
+    
+    if((length(covs) < d) & (length(covs) > 0)){
         warning(paste(d - length(covs),
-            "covariates were removed because they contained missing values."))
+            "covariate(s) were removed because they contained missing values in the first period."))
     }
-
     d <- length(covs)
-
-    ###### Check if any covariates only have one unique value, and if so drop
-    covs_to_remove <- character()
-    for(cov in covs){
-        if(length(unique(df[, cov])) == 1){
-            if(verbose){
-                message("Removing covariate because all units have the same value:")
-                message(cov)
+    
+    # Remove covariates that are constant across units.
+    if(d > 0){
+        covs_to_remove <- character()
+        for(cov in covs){
+            if(length(unique(df[, cov])) == 1){
+                if(verbose){
+                    message("Removing covariate because all units have the same value: ", cov)
+                }
+                covs_to_remove <- c(covs_to_remove, cov)
             }
-            covs_to_remove <- c(covs_to_remove, cov)
         }
+        covs <- covs[!(covs %in% covs_to_remove)]
+        if(length(covs) == 0){
+            warning("All covariates were removed after screening for missing values and constant values. Continuing with no covariates.")
+        } else if(length(covs) < d){
+            warning(paste(d - length(covs),
+                "covariate(s) were removed because all units had the same value."))
+        }
+        d <- length(covs)
     }
-
-    covs <- covs[!(covs %in% covs_to_remove)]
-    if(length(covs) == 0){
-        stop("All covariates were removed after screening out missing values in first time period and checking whether all units has the same value of a covariate")
-    }
-    if(length(covs) < d){
-        warning(paste(d - length(covs),
-            "covariates were removed because all units had the same value."))
-    }
-
-    d <- length(covs)
-
-    # No longer need discarded covariates
+    
+    # Keep only the needed columns.
     df <- df[, c(resp_var, time_var, unit_var, covs)]
-
-    # Finally, replace all remaining covariates for each unit with value from
-    # first time period
+    
+    # For any time-varying covariates, replace all values with the first-period value.
     if(verbose){
-        message("For any time-varying covariates, replacing all values with value in first (pre-treatment) period")
+        message("Replacing time-varying covariate values with first-period values...")
     }
     for(s in units){
         df_s <- df[df[, unit_var] == s, ]
-        stopifnot(nrow(df_s) == T)
-
-        # Identify first year covariates
+        
         covs_s <- df_s[df_s[, time_var] == times[1], covs]
-        # Replace all covariates with first year covariates
         for(t in 1:T){
             ind_s_t <- (df[, unit_var] == s) & (df[, time_var] == times[t])
             stopifnot(sum(ind_s_t) == 1)
             df[ind_s_t, covs] <- covs_s
         }
     }
-
+    
     # Sort rows: first T rows should be the observations for the first unit, and
     # so on
     df <- df[order(df[, unit_var], df[, time_var], decreasing=FALSE), ]
-
-    return(list(df=df, covs=covs))
+    
+    return(list(df = df, covs = covs))
 }
+
 
 ######################### Add cohort dummies and treatment variables
 
@@ -1144,6 +1165,13 @@ addDummies <- function(df, cohorts, times, N, T, unit_var, time_var,
 }
 
 generateFEInts <- function(X_long, cohort_fe, time_fe, N, T, R, d){
+
+    # If no covariates are present, return empty matrices.
+    if(d == 0){
+        return(list(X_long_cohort = matrix(nrow=N*T, ncol=0),
+                    X_long_time   = matrix(nrow=N*T, ncol=0)))
+    }
+
     # Interact with cohort effects
     X_long_cohort <- matrix(as.numeric(NA), nrow=N*T, ncol=R*d)
 
@@ -1200,19 +1228,24 @@ generateFEInts <- function(X_long, cohort_fe, time_fe, N, T, R, d){
 genTreatInts <- function(treat_mat_long, X_long, n_treats, cohort_fe, N, T, R,
     d, N_UNTREATED){
 
+    # If there are no covariates, return an empty matrix.
+    if(d == 0){
+        return(matrix(nrow=N*T, ncol=0))
+    }
+
     stopifnot(ncol(cohort_fe) == R)
     stopifnot(ncol(treat_mat_long) == n_treats)
 
-    stopifnot(is.numeric(d) | is.integer(d))
+    stopifnot(is.numeric(d) || is.integer(d))
     stopifnot(d >= 1)
 
-    stopifnot(is.numeric(n_treats) | is.integer(n_treats))
+    stopifnot(is.numeric(n_treats) || is.integer(n_treats))
     stopifnot(n_treats >= 1)
 
-    stopifnot(is.numeric(N) | is.integer(N))
+    stopifnot(is.numeric(N) || is.integer(N))
     stopifnot(N >= 2)
 
-    stopifnot(is.numeric(T) | is.integer(T))
+    stopifnot(is.numeric(T) || is.integer(T))
     stopifnot(T >= 2)
     # Interact with covariates
     X_long_treat <- matrix(as.numeric(NA), nrow=N*T, ncol=d*n_treats)
@@ -1268,6 +1301,7 @@ genTreatInts <- function(treat_mat_long, X_long, n_treats, cohort_fe, N, T, R,
 genXintsData <- function(cohort_fe, time_fe, X_long, treat_mat_long, N, R, T,
     d, N_UNTREATED, p){
 
+    # X_long may be an empty matrix if d == 0.
     X_int <- cbind(cohort_fe, time_fe, X_long)
     stopifnot(ncol(X_int) == R + T - 1 + d)
 
@@ -1289,18 +1323,18 @@ genXintsData <- function(cohort_fe, time_fe, X_long, treat_mat_long, N, R, T,
     stopifnot(is.integer(ncol(treat_mat_long)) | is.numeric(ncol(treat_mat_long)))
     stopifnot(ncol(treat_mat_long) >= 1)
 
-    # Generate interactions of treatment effects with X
+    # Generate interactions between treatment effects and X (if any)
     X_long_treat <- genTreatInts(
-        treat_mat_long=treat_mat_long, 
-        X_long=X_long, 
-        n_treats=ncol(treat_mat_long),
-        cohort_fe,
-        N=N,
-        T=T,
-        R=R,
-        d=d,
-        N_UNTREATED=N_UNTREATED
-        )
+        treat_mat_long = treat_mat_long, 
+        X_long         = X_long, 
+        n_treats       = ncol(treat_mat_long),
+        cohort_fe      = cohort_fe,
+        N              = N,
+        T              = T,
+        R              = R,
+        d              = d,
+        N_UNTREATED    = N_UNTREATED
+    )
 
     # The first R columns are the cohort fixed effects in order
     # Next T are time fixed effects in order
@@ -1353,25 +1387,22 @@ getFirstIndsDataApp <- function(n_treats, R){
 
 transformXintDataApp <- function(X_int, N, T, R, d, num_treats, first_inds=NA){
     
-
-    p = ncol(X_int)
-
+    p <- ncol(X_int)
     X_mod <- matrix(as.numeric(NA), nrow=N*T, ncol=p)
-
     stopifnot(nrow(X_int) == N*T)
-
-    # Handle cohort fixed effects:
+    
+    # Transform cohort fixed effects
     X_mod[, 1:R] <- X_int[, 1:R] %*% genBackwardsInvFusionTransformMatDataApp(R)
-
-    # Time fixed effects
-    stopifnot(all(is.na(X_mod[, (R + 1):(R + T - 1)])))
+    
+    # Transform time fixed effects
     X_mod[, (R + 1):(R + T - 1)] <- X_int[, (R + 1):(R + T - 1)] %*%
         genBackwardsInvFusionTransformMatDataApp(T - 1)
-
-    # X goes in unpenalized
-    stopifnot(all(is.na(X_mod[, (R + T - 1 + 1):(R + T - 1 + d)])))
-    X_mod[, (R + T - 1 + 1):(R + T - 1 + d)] <- X_int[, (R + T - 1 + 1):
-        (R + T - 1 + d)]
+    
+    # Copy X (the main covariate block; may be empty when d==0)
+    if(d > 0){
+        stopifnot(all(is.na(X_mod[, (R + T - 1 + 1):(R + T - 1 + d)])))
+        X_mod[, (R + T - 1 + 1):(R + T - 1 + d)] <- X_int[, (R + T - 1 + 1):(R + T - 1 + d)]
+    }
 
     stopifnot(all(!is.na(X_mod[, 1:(R + T - 1 + d)])))
     stopifnot(all(is.na(X_mod[, (R + T - 1 + d + 1):p])))
@@ -1383,42 +1414,44 @@ transformXintDataApp <- function(X_int, N, T, R, d, num_treats, first_inds=NA){
         first_inds <- getFirstIndsDataApp(num_treats, R)
     }
 
-    for(j in 1:d){
-        # Get indices corresponding to interactions between feature j and cohort
-        # fixed effects--these are the first feature, the (1 + d)th feature, and
-        # so on R times
-        feat_1 <- R + T - 1 + d + j
-        feat_R <- R + T - 1 + d + (R - 1)*d + j
-        feat_inds_j <- seq(feat_1, feat_R, by=d)
-        stopifnot(length(feat_inds_j) == R)
+    if(d > 0){
+        for(j in 1:d){
+            # Get indices corresponding to interactions between feature j and cohort
+            # fixed effects--these are the first feature, the (1 + d)th feature, and
+            # so on R times
+            feat_1 <- R + T - 1 + d + j
+            feat_R <- R + T - 1 + d + (R - 1)*d + j
+            feat_inds_j <- seq(feat_1, feat_R, by=d)
+            stopifnot(length(feat_inds_j) == R)
 
-        stopifnot(all(is.na(X_mod[, feat_inds_j])))
+            stopifnot(all(is.na(X_mod[, feat_inds_j])))
 
-        X_mod[, feat_inds_j] <- X_int[, feat_inds_j] %*%
-            genBackwardsInvFusionTransformMatDataApp(R)
+            X_mod[, feat_inds_j] <- X_int[, feat_inds_j] %*%
+                genBackwardsInvFusionTransformMatDataApp(R)
 
+        }
+        stopifnot(all(!is.na(X_mod[, 1:(R + T - 1 + d + R*d)])))
+        stopifnot(all(is.na(X_mod[, (R + T - 1 + d + R*d + 1):p])))
+
+        # Similar for time effects interacted with X
+
+        for(j in 1:d){
+            # Get indices corresponding to interactions between feature j and time
+            # fixed effects--these are the first feature, the (1 + d)th feature, and
+            # so on T - 1 times
+            feat_1 <- R + T - 1 + d + R*d + j
+            feat_T_minus_1 <- R + T - 1 + d + R*d + (T - 2)*d + j
+            feat_inds_j <- seq(feat_1, feat_T_minus_1, by=d)
+            stopifnot(length(feat_inds_j) == T - 1)
+
+            stopifnot(all(is.na(X_mod[, feat_inds_j])))
+            X_mod[, feat_inds_j] <- X_int[, feat_inds_j] %*%
+                genBackwardsInvFusionTransformMatDataApp(T - 1)
+
+        }
+        stopifnot(all(!is.na(X_mod[, 1:(R + T - 1 + d + R*d + (T - 1)*d)])))
+        stopifnot(all(is.na(X_mod[, (R + T - 1 + d + R*d + (T - 1)*d + 1):p])))
     }
-    stopifnot(all(!is.na(X_mod[, 1:(R + T - 1 + d + R*d)])))
-    stopifnot(all(is.na(X_mod[, (R + T - 1 + d + R*d + 1):p])))
-
-    # Similar for time effects interacted with X
-
-    for(j in 1:d){
-        # Get indices corresponding to interactions between feature j and time
-        # fixed effects--these are the first feature, the (1 + d)th feature, and
-        # so on T - 1 times
-        feat_1 <- R + T - 1 + d + R*d + j
-        feat_T_minus_1 <- R + T - 1 + d + R*d + (T - 2)*d + j
-        feat_inds_j <- seq(feat_1, feat_T_minus_1, by=d)
-        stopifnot(length(feat_inds_j) == T - 1)
-
-        stopifnot(all(is.na(X_mod[, feat_inds_j])))
-        X_mod[, feat_inds_j] <- X_int[, feat_inds_j] %*%
-            genBackwardsInvFusionTransformMatDataApp(T - 1)
-
-    }
-    stopifnot(all(!is.na(X_mod[, 1:(R + T - 1 + d + R*d + (T - 1)*d)])))
-    stopifnot(all(is.na(X_mod[, (R + T - 1 + d + R*d + (T - 1)*d + 1):p])))
 
     # Now base treatment effects. For each cohort, will penalize base term, then
     # fuse remaining terms toward it. Also, for each cohort, will penalize base
@@ -1437,26 +1470,28 @@ transformXintDataApp <- function(X_int, N, T, R, d, num_treats, first_inds=NA){
     stopifnot(all(!is.na(X_mod[, 1:(R + T - 1 + d + R*d + (T - 1)*d + num_treats)])))
     stopifnot(all(is.na(X_mod[, (R + T - 1 + d + R*d + (T - 1)*d + num_treats + 1):p])))
 
-    # Lastly, penalize interactions between each treatment effect and each feature.
-    # Feature-wise, we can do this with genTransformedMatTwoWayFusion, in the same
-    # way that we did for previous interactions with X.
-    for(j in 1:d){
-        # Recall that we have arranged the last d*num_Feats features in X_int
-        # as follows: the first d are the first column of treat_mat_long interacted
-        # with all of the columns of X, and so on. So, the columns that interact
-        # the jth feature with all of the treatment effects are columns j, j + 1*d,
-        # j + 2*d, ..., j + (num_treats - 1)*d.
-        inds_j <- seq(j, j + (num_treats - 1)*d, by=d)
-        stopifnot(length(inds_j) == num_treats)
-        inds_j <- inds_j + R + T - 1 + d + R*d + (T - 1)*d + num_treats
+    if(d > 0){
+        # Lastly, penalize interactions between each treatment effect and each feature.
+        # Feature-wise, we can do this with genTransformedMatTwoWayFusion, in the same
+        # way that we did for previous interactions with X.
+        for(j in 1:d){
+            # Recall that we have arranged the last d*num_Feats features in X_int
+            # as follows: the first d are the first column of treat_mat_long interacted
+            # with all of the columns of X, and so on. So, the columns that interact
+            # the jth feature with all of the treatment effects are columns j, j + 1*d,
+            # j + 2*d, ..., j + (num_treats - 1)*d.
+            inds_j <- seq(j, j + (num_treats - 1)*d, by=d)
+            stopifnot(length(inds_j) == num_treats)
+            inds_j <- inds_j + R + T - 1 + d + R*d + (T - 1)*d + num_treats
 
-        # Now ready to generate the appropriate transformed matrix
-        stopifnot(all(is.na(X_mod[, inds_j])))
+            # Now ready to generate the appropriate transformed matrix
+            stopifnot(all(is.na(X_mod[, inds_j])))
 
-        X_mod[, inds_j] <- X_int[, inds_j] %*%
-            genInvTwoWayFusionTransformMat(num_treats, first_inds, R)
+            X_mod[, inds_j] <- X_int[, inds_j] %*%
+                genInvTwoWayFusionTransformMat(num_treats, first_inds, R)
 
-        stopifnot(all(!is.na(X_mod[, inds_j])))
+            stopifnot(all(!is.na(X_mod[, inds_j])))
+        }
     }
 
     stopifnot(all(!is.na(X_mod)))
@@ -1490,53 +1525,54 @@ untransformCoefsDataApp <- function(beta_hat_mod, T, R, p, d, num_treats,
     stopifnot(all(!is.na(beta_hat[1:(R + T - 1)])))
     stopifnot(all(is.na(beta_hat[(R + T):p])))
 
-    # Next, coefficients for X stay the same
+    # Coefficients for X (if any)
+    if(d > 0){
 
-    beta_hat[(R + T):(R + T - 1 + d)] <- beta_hat_mod[(R + T):(R + T - 1 + d)]
+        beta_hat[(R + T):(R + T - 1 + d)] <- beta_hat_mod[(R + T):(R + T - 1 + d)]
 
-    stopifnot(all(!is.na(beta_hat[1:(R + T - 1 + d)])))
-    stopifnot(all(is.na(beta_hat[(R + T + d):p])))
+        stopifnot(all(!is.na(beta_hat[1:(R + T - 1 + d)])))
+        stopifnot(all(is.na(beta_hat[(R + T + d):p])))
 
-    # Next, coefficients for cohort effects interacted with X. For each individual
-    # feature, this will be handled using untransformVecFusion.
-    for(j in 1:d){
-        # Get indices corresponding to interactions between feature j and cohort
-        # fixed effects--these are the first feature, the (1 + d)th feature, and
-        # so on R times
-        feat_1 <- R + T - 1 + d + j
-        feat_R <- R + T - 1 + d + (R - 1)*d + j
-        feat_inds_j <- seq(feat_1, feat_R, by=d)
-        stopifnot(length(feat_inds_j) == R)
+        # Next, coefficients for cohort effects interacted with X. For each individual
+        # feature, this will be handled using untransformVecFusion.
+        for(j in 1:d){
+            # Get indices corresponding to interactions between feature j and cohort
+            # fixed effects--these are the first feature, the (1 + d)th feature, and
+            # so on R times
+            feat_1 <- R + T - 1 + d + j
+            feat_R <- R + T - 1 + d + (R - 1)*d + j
+            feat_inds_j <- seq(feat_1, feat_R, by=d)
+            stopifnot(length(feat_inds_j) == R)
 
-        stopifnot(all(is.na(beta_hat[feat_inds_j])))
+            stopifnot(all(is.na(beta_hat[feat_inds_j])))
 
-        beta_hat[feat_inds_j] <- genBackwardsInvFusionTransformMatDataApp(R) %*% 
-            beta_hat_mod[feat_inds_j]
-        stopifnot(all(!is.na(beta_hat[feat_inds_j])))
+            beta_hat[feat_inds_j] <- genBackwardsInvFusionTransformMatDataApp(R) %*% 
+                beta_hat_mod[feat_inds_j]
+            stopifnot(all(!is.na(beta_hat[feat_inds_j])))
+        }
+        stopifnot(all(!is.na(beta_hat[1:(R + T - 1 + d + R*d)])))
+        stopifnot(all(is.na(beta_hat[(R + T - 1 + d + R*d + 1):p])))
+    
+        # Similar for time effects interacted with X
+
+        for(j in 1:d){
+            # Get indices corresponding to interactions between feature j and time
+            # fixed effects--these are the first feature, the (1 + d)th feature, and
+            # so on T - 1 times
+            feat_1 <- R + T - 1 + d + R*d + j
+            feat_T_minus_1 <- R + T - 1 + d + R*d + (T - 2)*d + j
+            feat_inds_j <- seq(feat_1, feat_T_minus_1, by=d)
+            stopifnot(length(feat_inds_j) == T - 1)
+
+            stopifnot(all(is.na(beta_hat[feat_inds_j])))
+
+            beta_hat[feat_inds_j] <- genBackwardsInvFusionTransformMatDataApp(T - 1) %*%
+                beta_hat_mod[feat_inds_j]
+            stopifnot(all(!is.na(beta_hat[feat_inds_j])))
+        }
+        stopifnot(all(!is.na(beta_hat[1:(R + T - 1 + d + R*d + (T - 1)*d)])))
+        stopifnot(all(is.na(beta_hat[(R + T - 1 + d + R*d + (T - 1)*d + 1):p])))
     }
-
-    stopifnot(all(!is.na(beta_hat[1:(R + T - 1 + d + R*d)])))
-    stopifnot(all(is.na(beta_hat[(R + T - 1 + d + R*d + 1):p])))
-
-    # Similar for time effects interacted with X
-
-    for(j in 1:d){
-        # Get indices corresponding to interactions between feature j and time
-        # fixed effects--these are the first feature, the (1 + d)th feature, and
-        # so on T - 1 times
-        feat_1 <- R + T - 1 + d + R*d + j
-        feat_T_minus_1 <- R + T - 1 + d + R*d + (T - 2)*d + j
-        feat_inds_j <- seq(feat_1, feat_T_minus_1, by=d)
-        stopifnot(length(feat_inds_j) == T - 1)
-
-        stopifnot(all(is.na(beta_hat[feat_inds_j])))
-
-        beta_hat[feat_inds_j] <- genBackwardsInvFusionTransformMatDataApp(T - 1) %*%
-            beta_hat_mod[feat_inds_j]
-        stopifnot(all(!is.na(beta_hat[feat_inds_j])))
-    }
-    stopifnot(all(!is.na(beta_hat[1:(R + T - 1 + d + R*d + (T - 1)*d)])))
-    stopifnot(all(is.na(beta_hat[(R + T - 1 + d + R*d + (T - 1)*d + 1):p])))
 
     # Now base treatment effects.
 
@@ -1553,26 +1589,28 @@ untransformCoefsDataApp <- function(beta_hat_mod, T, R, p, d, num_treats,
     stopifnot(all(is.na(beta_hat[(R + T - 1 + d + R*d + (T - 1)*d + num_treats +
         1):p])))
 
-    # Lastly, interactions between each treatment effect and each feature.
-    # Feature-wise, we can do this with untransformTwoWayFusionCoefs, in the same
-    # way that we did for previous interactions with X.
-    for(j in 1:d){
-        # Recall that we have arranged the last d*num_Feats features in X_int
-        # as follows: the first d are the first column of treat_mat_long interacted
-        # with all of the columns of X, and so on. So, the columns that interact
-        # the jth feature with all of the treatment effects are columns j, j + 1*d,
-        # j + 2*d, ..., j + (num_treats - 1)*d.
-        inds_j <- seq(j, j + (num_treats - 1)*d, by=d)
-        stopifnot(length(inds_j) == num_treats)
-        inds_j <- inds_j + R + T - 1 + d + R*d + (T - 1)*d + num_treats
+    if(d > 0){
+        # Lastly, interactions between each treatment effect and each feature.
+        # Feature-wise, we can do this with untransformTwoWayFusionCoefs, in the same
+        # way that we did for previous interactions with X.
+        for(j in 1:d){
+            # Recall that we have arranged the last d*num_Feats features in X_int
+            # as follows: the first d are the first column of treat_mat_long interacted
+            # with all of the columns of X, and so on. So, the columns that interact
+            # the jth feature with all of the treatment effects are columns j, j + 1*d,
+            # j + 2*d, ..., j + (num_treats - 1)*d.
+            inds_j <- seq(j, j + (num_treats - 1)*d, by=d)
+            stopifnot(length(inds_j) == num_treats)
+            inds_j <- inds_j + R + T - 1 + d + R*d + (T - 1)*d + num_treats
 
-        # Now ready to untransform the estimated coefficients
-        stopifnot(all(is.na(beta_hat[inds_j])))
+            # Now ready to untransform the estimated coefficients
+            stopifnot(all(is.na(beta_hat[inds_j])))
 
-        beta_hat[inds_j] <- genInvTwoWayFusionTransformMat(num_treats,
-            first_inds, R) %*% beta_hat_mod[inds_j]
+            beta_hat[inds_j] <- genInvTwoWayFusionTransformMat(num_treats,
+                first_inds, R) %*% beta_hat_mod[inds_j]
 
-        stopifnot(all(!is.na(beta_hat[inds_j])))
+            stopifnot(all(!is.na(beta_hat[inds_j])))
+        }
     }
 
     stopifnot(all(!is.na(beta_hat)))

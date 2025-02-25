@@ -593,3 +593,151 @@ test_that("at least two treated cohorts required", {
   "Only one treated cohort detected in data. Currently fetwfe only supports data sets with at least two treated cohorts."
   )
 })
+
+
+# ------------------------------------------------------------------------------
+# Test 21: Overall ATT standard error is computed (non‐zero) when q < 1,
+# and is NA when q >= 1.
+# ------------------------------------------------------------------------------
+test_that("Overall ATT standard error is positive for q < 1", {
+  df <- generate_panel_data(N = 30, T = 10, R = 9, seed = 303)
+  
+  # q < 1: expect an overall standard error to be computed
+  result <- fetwfe(
+    pdata     = df,
+    time_var  = "time",
+    unit_var  = "unit",
+    treatment = "treatment",
+    covs      = c("cov1", "cov2"),
+    response  = "y",
+    q         = 0.5,
+    verbose   = FALSE,
+    sig_eps_sq = 1,    # provided noise variances
+    sig_eps_c_sq = 1
+  )
+  
+  expect_true(is.numeric(result$att_se))
+  expect_true(result$att_se > 0)
+})
+
+test_that("Overall ATT standard error is NA for q >= 1", {
+  df <- generate_panel_data(N = 30, T = 10, R = 9, seed = 404)
+  
+  # q >= 1 (ridge-like): standard error is not computed
+  result <- fetwfe(
+    pdata     = df,
+    time_var  = "time",
+    unit_var  = "unit",
+    treatment = "treatment",
+    covs      = c("cov1", "cov2"),
+    response  = "y",
+    q         = 2,
+    verbose   = FALSE,
+    sig_eps_sq = 1,
+    sig_eps_c_sq = 1
+  )
+  
+  expect_true(is.na(result$att_se))
+})
+
+# ------------------------------------------------------------------------------
+# Test 22: Cohort-specific treatment effect standard errors are computed,
+# nonnegative, and match the number of treated cohorts.
+# ------------------------------------------------------------------------------
+test_that("Cohort-specific standard errors are computed correctly", {
+  df <- generate_panel_data(N = 30, T = 10, R = 9, seed = 505)
+  
+  result <- fetwfe(
+    pdata     = df,
+    time_var  = "time",
+    unit_var  = "unit",
+    treatment = "treatment",
+    covs      = c("cov1", "cov2"),
+    response  = "y",
+    q         = 0.5,
+    verbose   = FALSE,
+    sig_eps_sq = 1,
+    sig_eps_c_sq = 1
+  )
+  
+  expect_true(is.numeric(result$catt_ses))
+  expect_equal(length(result$catt_ses), result$R)
+  expect_true(all(result$catt_ses >= 0))
+})
+
+# ------------------------------------------------------------------------------
+# Test 23: The estimator works when no covariates are provided.
+# (processCovs() should issue a warning but continue.)
+# ------------------------------------------------------------------------------
+test_that("Estimator works with no covariates", {
+  df <- generate_panel_data(N = 30, T = 10, R = 9, seed = 606)
+  
+  # Call fetwfe with an empty covariate vector.
+  result <- fetwfe(
+    pdata     = df,
+    time_var  = "time",
+    unit_var  = "unit",
+    treatment = "treatment",
+    covs      = character(0),
+    response  = "y",
+    q         = 0.5,
+    verbose   = TRUE,
+    sig_eps_sq = 1,
+    sig_eps_c_sq = 1
+  )
+  
+  expect_true(is.numeric(result$att_hat))
+  expect_false(is.na(result$att_hat))
+  expect_true(is.numeric(result$att_se))
+  expect_true(result$att_se > 0)
+  # Also, the returned 'd' (number of covariates) should be 0.
+  expect_equal(result$d, 0)
+})
+
+# ------------------------------------------------------------------------------
+# Test 24: processCovs() properly handles an empty covariate vector.
+# ------------------------------------------------------------------------------
+test_that("processCovs handles empty covariate vector correctly", {
+  df <- generate_panel_data(N = 30, T = 10, R = 9, seed = 707)
+  
+  res <- processCovs(
+    df = df,
+    units = unique(df$unit),
+    unit_var = "unit",
+    times = sort(unique(df$time)),
+    time_var = "time",
+    covs = character(0),
+    resp_var = "y",
+    T = 10,
+    verbose = TRUE
+  )
+  
+  expect_true(is.data.frame(res$df))
+  expect_equal(length(res$covs), 0)
+})
+
+# ------------------------------------------------------------------------------
+# Test 25: Overall ATT and cohort-specific estimates are finite and numeric.
+# ------------------------------------------------------------------------------
+test_that("Overall and cohort-specific treatment effects are valid", {
+  df <- generate_panel_data(N = 30, T = 10, R = 9, seed = 808)
+  
+  result <- fetwfe(
+    pdata     = df,
+    time_var  = "time",
+    unit_var  = "unit",
+    treatment = "treatment",
+    covs      = c("cov1", "cov2"),
+    response  = "y",
+    q         = 0.5,
+    verbose   = FALSE,
+    sig_eps_sq = 1,
+    sig_eps_c_sq = 1
+  )
+  
+  expect_true(is.numeric(result$att_hat))
+  expect_false(is.na(result$att_hat))
+  expect_true(is.numeric(result$catt_hats))
+  expect_equal(length(result$catt_hats), result$R)
+  expect_true(all(!is.na(result$catt_hats)))
+})
