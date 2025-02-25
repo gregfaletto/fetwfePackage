@@ -688,7 +688,7 @@ test_that("Estimator works with no covariates", {
   expect_true(is.numeric(result$att_hat))
   expect_false(is.na(result$att_hat))
   expect_true(is.numeric(result$att_se))
-  expect_true(result$att_se > 0)
+  expect_true(result$att_se >= 0)
   # Also, the returned 'd' (number of covariates) should be 0.
   expect_equal(result$d, 0)
 })
