@@ -31,13 +31,13 @@ prepXints <- function(
     stopifnot(all(data[, treatment] %in% c(0, 1)))
 
     stopifnot(is.character(covs))
-    if(length(covs) < 1){
-        stop("Must include at least one covariate.")
+    if(length(covs) > 0){
+        stopifnot(all(covs %in% colnames(data)))
+        for(cov in covs){
+            stopifnot(is.numeric(data[[cov]]) | is.integer(data[[cov]]))
+        }
     }
-    stopifnot(all(covs %in% colnames(data)))
-    for(cov in covs){
-        stopifnot(is.numeric(data[[cov]]) | is.integer(data[[cov]]))
-    }
+    
 
     stopifnot(is.character(response))
     stopifnot(length(response) == 1)
@@ -1402,10 +1402,12 @@ transformXintDataApp <- function(X_int, N, T, R, d, num_treats, first_inds=NA){
     if(d > 0){
         stopifnot(all(is.na(X_mod[, (R + T - 1 + 1):(R + T - 1 + d)])))
         X_mod[, (R + T - 1 + 1):(R + T - 1 + d)] <- X_int[, (R + T - 1 + 1):(R + T - 1 + d)]
+
+        stopifnot(all(!is.na(X_mod[, 1:(R + T - 1 + d)])))
+        stopifnot(all(is.na(X_mod[, (R + T - 1 + d + 1):p])))
     }
 
-    stopifnot(all(!is.na(X_mod[, 1:(R + T - 1 + d)])))
-    stopifnot(all(is.na(X_mod[, (R + T - 1 + d + 1):p])))
+    
 
     # For cohort effects interacted with X: we have d*R columns to deal with.
     # For each individual feature, this will be handled using

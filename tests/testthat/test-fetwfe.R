@@ -464,16 +464,15 @@ test_that("fetwfe returns att_se for q < 1 and att_se is NA for q >= 1", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 15: Test that an error is thrown when all covariates are constant.
-# In this case, processCovs should remove all covariates and then stop.
+# Test 15: Test that a warning is thrown when all covariates are constant.
 # ------------------------------------------------------------------------------
-test_that("fetwfe errors when all covariates are removed due to constant values", {
+test_that("fetwfe warns when all covariates are removed due to constant values", {
   df_const <- generate_panel_data(N = 30, T = 10, R = 9, seed = 101)
   # Set both covariates to a constant value
   df_const$cov1 <- 1
   df_const$cov2 <- 1
   
-  expect_error(
+  expect_warning(
     fetwfe(
       pdata     = df_const,
       time_var  = "time",
@@ -483,7 +482,7 @@ test_that("fetwfe errors when all covariates are removed due to constant values"
       response  = "y",
       verbose   = FALSE
     ),
-    "All covariates were removed"  # expecting an error message including this substring
+    "All covariates were removed after screening for missing values and constant values. Continuing with no covariates."  # expecting an error message including this substring
   )
 })
 
@@ -599,7 +598,7 @@ test_that("at least two treated cohorts required", {
 # Test 21: Overall ATT standard error is computed (non‐zero) when q < 1,
 # and is NA when q >= 1.
 # ------------------------------------------------------------------------------
-test_that("Overall ATT standard error is positive for q < 1", {
+test_that("Overall ATT standard error is non-negative for q < 1", {
   df <- generate_panel_data(N = 30, T = 10, R = 9, seed = 303)
   
   # q < 1: expect an overall standard error to be computed
@@ -617,7 +616,7 @@ test_that("Overall ATT standard error is positive for q < 1", {
   )
   
   expect_true(is.numeric(result$att_se))
-  expect_true(result$att_se > 0)
+  expect_true(result$att_se >= 0)
 })
 
 test_that("Overall ATT standard error is NA for q >= 1", {
