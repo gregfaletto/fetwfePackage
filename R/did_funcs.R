@@ -30,8 +30,8 @@ prepXints <- function(
     stopifnot(is.integer(data[[treatment]]))
     stopifnot(all(data[, treatment] %in% c(0, 1)))
 
-    stopifnot(is.character(covs))
     if(length(covs) > 0){
+        stopifnot(is.character(covs))
         stopifnot(all(covs %in% colnames(data)))
         for(cov in covs){
             stopifnot(is.numeric(data[[cov]]) | is.integer(data[[cov]]))
