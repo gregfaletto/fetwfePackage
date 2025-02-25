@@ -233,8 +233,8 @@ fetwfe <- function(
     stopifnot(is.integer(pdata[[treatment]]))
     stopifnot(all(pdata[, treatment] %in% c(0, 1)))
 
-    stopifnot(is.character(covs))
     if(length(covs) > 0){
+        stopifnot(is.character(covs))
         stopifnot(all(covs %in% colnames(pdata)))
         for(cov in covs){
             stopifnot(is.numeric(pdata[[cov]]) | is.integer(pdata[[cov]]))

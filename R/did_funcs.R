@@ -1594,12 +1594,11 @@ untransformCoefsDataApp <- function(beta_hat_mod, T, R, p, d, num_treats,
     beta_hat[feat_inds] <- genInvTwoWayFusionTransformMat(num_treats,
         first_inds, R) %*% beta_hat_mod[feat_inds]
 
-    stopifnot(all(!is.na(beta_hat[1:
-        (R + T - 1 + d + R*d + (T - 1)*d + num_treats)])))
-    stopifnot(all(is.na(beta_hat[(R + T - 1 + d + R*d + (T - 1)*d + num_treats +
-        1):p])))
-
     if(d > 0){
+        stopifnot(all(!is.na(beta_hat[1:
+            (R + T - 1 + d + R*d + (T - 1)*d + num_treats)])))
+        stopifnot(all(is.na(beta_hat[(R + T - 1 + d + R*d + (T - 1)*d + num_treats +
+            1):p])))
         # Lastly, interactions between each treatment effect and each feature.
         # Feature-wise, we can do this with untransformTwoWayFusionCoefs, in the same
         # way that we did for previous interactions with X.
