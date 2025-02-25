@@ -484,6 +484,26 @@ fetwfe_core <- function(
     c_names <- names(in_sample_counts)[2:(R + 1)]
     stopifnot(length(c_names) == R)
 
+    # Indices corresponding to base treatment effects
+    treat_inds <- (R + T - 1 + d + R*d + (T - 1)*d + 1):
+        (R + T - 1 + d + R*d + (T - 1)*d + num_treats)
+
+    stopifnot(length(treat_inds) == num_treats)
+    if(d > 0){
+
+        stopifnot(max(treat_inds) + 1 <= p)
+        stopifnot(max(treat_inds) == R + T - 1 + d + R*d + (T - 1)*d + num_treats)
+
+        treat_int_inds <- (max(treat_inds) + 1):p
+
+        stopifnot(length(treat_int_inds) == num_treats * d)
+    } else{
+        stopifnot(max(treat_inds) <= p)
+        stopifnot(max(treat_inds) == R + T - 1 + num_treats)
+
+        treat_int_inds <- c()
+    }
+
     # Handle edge case where no features are selected
     if(lambda_star_model_size == 0){
         if(verbose){
@@ -546,18 +566,6 @@ fetwfe_core <- function(
 
     # Indices of selected features in transformed feature space
     sel_feat_inds <- which(theta_hat != 0)
-
-    # Indices corresponding to base treatment effects
-    treat_inds <- (R + T - 1 + d + R*d + (T - 1)*d + 1):
-        (R + T - 1 + d + R*d + (T - 1)*d + num_treats)
-
-    stopifnot(length(treat_inds) == num_treats)
-    stopifnot(max(treat_inds) + 1 <= p)
-    stopifnot(max(treat_inds) == R + T - 1 + d + R*d + (T - 1)*d + num_treats)
-
-    treat_int_inds <- (max(treat_inds) + 1):p
-
-    stopifnot(length(treat_int_inds) == num_treats * d)
 
     # treat_int_ind_first <- R + T - 1 + d + R*d + (T - 1)*d + num_treats + 1
     # stopifnot(treat_int_ind_first == max(treat_inds) + 1)
