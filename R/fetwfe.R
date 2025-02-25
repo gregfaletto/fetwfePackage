@@ -234,13 +234,13 @@ fetwfe <- function(
     stopifnot(all(pdata[, treatment] %in% c(0, 1)))
 
     stopifnot(is.character(covs))
-    if(length(covs) < 1){
-        stop("Must include at least one covariate.")
+    if(length(covs) > 0){
+        stopifnot(all(covs %in% colnames(pdata)))
+        for(cov in covs){
+            stopifnot(is.numeric(pdata[[cov]]) | is.integer(pdata[[cov]]))
+        }
     }
-    stopifnot(all(covs %in% colnames(pdata)))
-    for(cov in covs){
-        stopifnot(is.numeric(pdata[[cov]]) | is.integer(pdata[[cov]]))
-    }
+    
 
     stopifnot(is.character(response))
     stopifnot(length(response) == 1)
