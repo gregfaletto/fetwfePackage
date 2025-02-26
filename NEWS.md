@@ -1,5 +1,9 @@
 # NEWS
 
+## Version 0.5.0 (2025-02-25)
+
+- Add support for data with no covariates.
+
 ## Version 0.4.5 (2025-02-22)
 
 - Fix typo in definition of `lambda.max_model_size`
