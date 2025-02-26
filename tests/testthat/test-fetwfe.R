@@ -802,7 +802,6 @@ test_that("Estimator works with no covariates again", {
     time_var = "time",          # The time variable
     unit_var = "unit",          # The unit identifier
     treatment = "treated",      # The treatment dummy indicator
-    covs = c(),  # Covariates
     response = "response",      # The response variable
     q = 0.5                    # The L_q penalty for fusion regularization
   )
