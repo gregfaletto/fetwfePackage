@@ -671,13 +671,12 @@ test_that("Cohort-specific standard errors are computed correctly", {
 test_that("Estimator works with no covariates", {
   df <- generate_panel_data(N = 30, T = 10, R = 9, seed = 606)
   
-  # Call fetwfe with an empty covariate vector.
+  # Call fetwfe with no covariate argument.
   result <- fetwfe(
     pdata     = df,
     time_var  = "time",
     unit_var  = "unit",
     treatment = "treatment",
-    covs      = character(0),
     response  = "y",
     q         = 0.5,
     verbose   = TRUE,
