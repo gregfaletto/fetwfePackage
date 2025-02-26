@@ -26,8 +26,9 @@
 #' @param covs Character; a vector containing the names of the columns for
 #' covariates. All of these columns are expected to contain integer or numeric
 #' values (so if you use categorical values, encode them using e.g. binary
-#' indicators before passing the data to this function). At least one covariate
-#' must be provided.
+#' indicators before passing the data to this function). If no covariates are
+#' provided, the treatment effect estimation will proceed, but it will only be
+#' valid under unconditional assumptions of parallel trends and no anticipation.
 #' @param response Character; the name of a single column containing the
 #' response for each unit at each time. The response must be an integer or
 #' numeric value.
