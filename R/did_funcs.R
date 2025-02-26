@@ -1794,10 +1794,10 @@ getSecondVarTermDataApp <- function(cohort_probs, psi_mat,
 
         if(length(sel_treat_inds_shifted) > 1){
             jacobian_mat[r, ] <- cons_r *
-                colMeans(d_inv_treat_sel[sel_inds[[r]], ])
+                colMeans(d_inv_treat_sel[sel_inds[[r]], , drop = FALSE])
         } else{
             jacobian_mat[r, ] <- cons_r *
-                mean(d_inv_treat_sel[sel_inds[[r]], ])
+                mean(d_inv_treat_sel[sel_inds[[r]], , drop = FALSE])
         }
         for(r_double_prime in setdiff(1:R, r)){
             cons_r_double_prime <- (sum(cohort_probs_overall) -
@@ -1805,10 +1805,10 @@ getSecondVarTermDataApp <- function(cohort_probs, psi_mat,
 
             if(length(sel_treat_inds_shifted) > 1){
                 jacobian_mat[r, ] <- jacobian_mat[r, ] - cons_r_double_prime *
-                    colMeans(d_inv_treat_sel[sel_inds[[r_double_prime]], ])
+                    colMeans(d_inv_treat_sel[sel_inds[[r_double_prime]], , drop = FALSE])
             } else{
                 jacobian_mat[r, ] <- jacobian_mat[r, ] - cons_r_double_prime *
-                    mean(d_inv_treat_sel[sel_inds[[r_double_prime]], ])
+                    mean(d_inv_treat_sel[sel_inds[[r_double_prime]], , drop = FALSE])
             }
         }
     }

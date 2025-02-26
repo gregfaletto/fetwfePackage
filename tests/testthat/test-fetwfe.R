@@ -740,3 +740,81 @@ test_that("Overall and cohort-specific treatment effects are valid", {
   expect_equal(length(result$catt_hats), result$R)
   expect_true(all(!is.na(result$catt_hats)))
 })
+
+# ------------------------------------------------------------------------------
+# Test 26: Second test when no covariates are provided.
+# (processCovs() should issue a warning but continue.)
+# ------------------------------------------------------------------------------
+test_that("Estimator works with no covariates again", {
+
+  set.seed(123456L)
+
+  # 5 time periods, 30 individuals, and 4 waves of treatment
+  tmax = 5; imax = 30; nlvls = 5
+
+  dat = 
+    expand.grid(time = 1:tmax, id = 1:imax) |>
+    within({
+      
+      # Initialize columns
+      cohort      = rep(1:nlvls, each = imax/nlvls)[id]
+      effect      = NA
+      first_treat = NA
+      
+      for (lvls in 1:nlvls) {
+        effect      = ifelse(cohort==lvls, sample(2:10, 1), effect)
+        first_treat = ifelse(cohort==lvls, lvls + 1, first_treat)
+      }
+      
+      first_treat = ifelse(first_treat>tmax, Inf, first_treat)
+      treat       = time >= first_treat
+      rel_time    = time - first_treat
+      y           = id + time + ifelse(treat, effect*rel_time, 0) + rnorm(imax*tmax)
+      
+      rm(lvls, cohort, effect)
+    })
+
+  # Convert `dat` to `pdata` based on the specified requirements
+
+  # Specify column names for the pdata format
+  time_var <- "time"       # Column for the time period
+  unit_var <- "unit"       # Column for the unit identifier
+  treatment <- "treated"   # Column for the treatment dummy indicator
+  covs <- c()  # Columns for covariates
+  response <- "response"   # Column for the response variable
+
+  # Convert the dataset
+  pdata <- dat |>
+    dplyr::mutate(
+      # Rename id to unit and convert to character
+      {{ unit_var }} := as.character(id),
+      # Ensure treatment dummy is 0/1
+      {{ treatment }} := as.integer(treat),
+      # Rename y to response
+      {{ response }} := y
+    ) |>
+    dplyr::select(
+      {{ time_var }}, {{ unit_var }}, {{ treatment }}, {{ response }}
+    ) 
+
+  result <- fetwfe(
+    pdata = pdata,              # The panel dataset
+    time_var = "time",          # The time variable
+    unit_var = "unit",          # The unit identifier
+    treatment = "treated",      # The treatment dummy indicator
+    covs = c(),  # Covariates
+    response = "response",      # The response variable
+    q = 0.5                    # The L_q penalty for fusion regularization
+  )
+
+  expect_true(is.numeric(result$att_hat))
+  expect_false(is.na(result$att_hat))
+  expect_true(result$att_hat != 0)
+  expect_true(is.numeric(result$att_se))
+  expect_true(result$att_se > 0)
+  # Also, the returned 'd' (number of covariates) should be 0.
+  expect_equal(result$d, 0)
+})
+
+
+
