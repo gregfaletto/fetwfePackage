@@ -9,8 +9,8 @@ fetwfe(
   time_var,
   unit_var,
   treatment,
-  covs,
   response,
+  covs = c(),
   indep_counts = NA,
   sig_eps_sq = NA,
   sig_eps_c_sq = NA,
@@ -44,15 +44,17 @@ unit \code{i} is treated at time \code{t}, then it must also be treated at all t
 automatically. Please make sure yourself that at least some units remain
 untreated at the final time period ("never-treated units").}
 
-\item{covs}{Character; a vector containing the names of the columns for
-covariates. All of these columns are expected to contain integer or numeric
-values (so if you use categorical values, encode them using e.g. binary
-indicators before passing the data to this function). At least one covariate
-must be provided.}
-
 \item{response}{Character; the name of a single column containing the
 response for each unit at each time. The response must be an integer or
 numeric value.}
+
+\item{covs}{(Optional.) Character; a vector containing the names of the
+columns for covariates. All of these columns are expected to contain integer
+or numeric values (so if you use categorical values, encode them using e.g.
+binary indicators before passing the data to this function). If no covariates
+are provided, the treatment effect estimation will proceed, but it will only
+be valid under unconditional assumptions of parallel trends and no
+anticipation. Default is c().}
 
 \item{indep_counts}{(Optional.) Integer; a vector. If you have a sufficiently
 large number of units, you can optionally randomly split your data set in
