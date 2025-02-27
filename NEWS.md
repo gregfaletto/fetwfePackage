@@ -1,5 +1,9 @@
 # NEWS
 
+## Version 0.5.1 (2025-02-26)
+
+- Slight updates to handle cases when only one column or row of matrix is selected more smoothly.
+
 ## Version 0.5.0 (2025-02-25)
 
 - Add support for data with no covariates.

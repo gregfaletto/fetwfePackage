@@ -1269,7 +1269,7 @@ genTreatInts <- function(treat_mat_long, X_long, n_treats, cohort_fe, N, T, R,
 
     stopifnot(all(is.na(X_long_centered[unt_row_inds, ])))
 
-    X_long_centered[unt_row_inds, ] <- scale(X_long[unt_row_inds, ],
+    X_long_centered[unt_row_inds, ] <- scale(X_long[unt_row_inds, , drop = FALSE],
         center=TRUE, scale=FALSE)
 
     for(r in 1:R){
@@ -1278,7 +1278,7 @@ genTreatInts <- function(treat_mat_long, X_long, n_treats, cohort_fe, N, T, R,
 
         cohort_r_inds <- which(cohort_fe[, r] == 1)
 
-        new_mat <- scale(X_long[cohort_r_inds, ], center=TRUE, scale=FALSE)
+        new_mat <- scale(X_long[cohort_r_inds, , drop = FALSE], center=TRUE, scale=FALSE)
 
         stopifnot(all(!is.na(new_mat)))
         stopifnot(all(is.na(X_long_centered[cohort_r_inds, ])))
@@ -2084,7 +2084,7 @@ getGramInv <- function(N, T, X_final, sel_feat_inds, treat_inds, num_treats,
     sel_treat_inds_shifted, calc_ses){
 
     stopifnot(nrow(X_final) == N * T)
-    X_sel <- X_final[, sel_feat_inds]
+    X_sel <- X_final[, sel_feat_inds, drop = FALSE]
     X_sel_centered <- scale(X_sel, center=TRUE, scale=FALSE)
 
     gram <- 1/(N*T)*(t(X_sel_centered) %*% X_sel_centered)
