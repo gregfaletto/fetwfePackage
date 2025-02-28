@@ -27,7 +27,15 @@ test_that("genRandomData (with interactions) returns expected output", {
   p_int <- compute_p_int(T_val, R_val, d_val)
   beta_int <- rnorm(p_int)
   
-  res <- genRandomData(N, T_val, R_val, d_val, sig_eps_sq, sig_eps_c_sq, beta_int, seed = 123, gen_ints = TRUE)
+  res <- genRandomData(N=N,
+    T=T_val,
+    R=R_val,
+    d=d_val, 
+    sig_eps_sq=sig_eps_sq,
+    sig_eps_c_sq=sig_eps_c_sq,
+    beta=beta_int,
+    seed = 123,
+    gen_ints = TRUE)
   
   # Check list names (X now instead of X_int)
   expected_names <- c("X", "y", "coefs", "first_inds", "N_UNTREATED",

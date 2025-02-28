@@ -163,6 +163,8 @@ prepXints <- function(
     #### Create matrix with all interactions
     p <- R + T - 1 + d * (1 + R + T - 1) + (d + 1) * num_treats
 
+    stopifnot(ncol(cohort_var_mat) == R)
+
     X_ints <- genXintsData(
         cohort_fe=cohort_var_mat,
         time_fe=time_var_mat,
@@ -1319,6 +1321,7 @@ genXintsData <- function(cohort_fe, time_fe, X_long, treat_mat_long, N, R, T,
     # all d features with the indicator variables for the first block, and
     # so on). Similarly, the columns of X_long_time are arranged in T - 1
     # blocks of size d.
+    stopifnot(ncol(cohort_fe) == R)
     res <- generateFEInts(X_long, cohort_fe, time_fe, N, T, R, d)
 
     X_long_cohort <- res$X_long_cohort
@@ -1330,6 +1333,8 @@ genXintsData <- function(cohort_fe, time_fe, X_long, treat_mat_long, N, R, T,
 
     stopifnot(is.integer(ncol(treat_mat_long)) | is.numeric(ncol(treat_mat_long)))
     stopifnot(ncol(treat_mat_long) >= 1)
+
+    stopifnot(ncol(cohort_fe) == R)
 
     # Generate interactions between treatment effects and X (if any)
     X_long_treat <- genTreatInts(

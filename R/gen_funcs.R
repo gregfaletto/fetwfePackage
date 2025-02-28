@@ -1,16 +1,26 @@
-generateBaseEffects <- function(N, d, T, R){
-    ret <- genCohortTimeFE(N, T, R, d)
+generateBaseEffects <- function(N, d, T, R, distribution = "gaussian"){
+  ret <- genCohortTimeFE(N, T, R, d)
+  
+  if (distribution == "gaussian") {
+    X <- matrix(rnorm(N * d), nrow = N, ncol = d)
+  } else if (distribution == "uniform") {
+    # Generate U(-sqrt(3), sqrt(3)) so that variance = 1 (same as standard normal)
+    a <- sqrt(3)
+    X <- matrix(runif(N * d, min = -a, max = a), nrow = N, ncol = d)
+  } else {
+    stop("Unsupported distribution. Please choose 'gaussian' or 'uniform'.")
+  }
 
-    # Generate time-invariant covariates
-    X <- matrix(rnorm(N*d), N, d)
-
-    # Put into matrix form (will have T observations from first unit, then T
-    # from next, and so on)
-    X_long <- X[rep(1:N, each=T), ]
-
-    return(list(cohort_fe=ret$cohort_fe, time_fe=ret$time_fe, X_long=X_long,
-        assignments=ret$assignments, cohort_inds=ret$inds))
+  stopifnot(ncol(ret$cohort_fe) == R)
+  
+  X_long <- X[rep(1:N, each = T), ]
+  return(list(cohort_fe = ret$cohort_fe, 
+              time_fe = ret$time_fe, 
+              X_long = X_long,
+              assignments = ret$assignments,
+              cohort_inds = ret$inds))
 }
+
 
 genCohortTimeFE <- function(N, T, R, d){
     # The observations will be arranged row-wise as blocks of T, one unit at

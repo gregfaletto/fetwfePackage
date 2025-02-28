@@ -552,12 +552,20 @@ genRandomData <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = NUL
     }
     
     # Generate base effects and covariates (using specified distribution)
-    res_base <- generateBaseEffects(N, d, T, R, distribution = distribution)
+    res_base <- generateBaseEffects(
+        N=N,
+        d=d,
+        T=T,
+        R=R,
+        distribution = distribution
+        )
     cohort_fe <- res_base$cohort_fe
     time_fe <- res_base$time_fe
     X_long <- res_base$X_long
     assignments <- res_base$assignments
     cohort_inds <- res_base$cohort_inds
+
+    stopifnot(ncol(cohort_fe) == R)
     
     # Base matrix: cohort FE, time FE, and covariates (if any)
     X_base <- if (d > 0) {
@@ -585,9 +593,20 @@ genRandomData <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = NUL
     X_ints2 <- cbind(X_ints1, treat_mat_long)
     
     if (d > 0) {
-      X_long_treat <- genTreatInts(treat_mat_long, X_long, num_treats, cohort_fe,
-                                   R, N, T, d, N_UNTREATED = assignments[1])
-      X_final <- cbind(X_ints2, X_long_treat)
+        stopifnot(ncol(cohort_fe) == R)
+        X_long_treat <- genTreatInts(
+            treat_mat_long=treat_mat_long,
+            X_long=X_long,
+            n_treats=num_treats,
+            cohort_fe=cohort_fe,
+            N=N,
+            T=T,
+            R=R,
+            d=d,
+            N_UNTREATED = assignments[1]
+            )
+
+        X_final <- cbind(X_ints2, X_long_treat)
     } else {
       X_final <- X_ints2
     }
@@ -644,6 +663,8 @@ genRandomData <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = NUL
     X_long <- res_base$X_long
     assignments <- res_base$assignments
     cohort_inds <- res_base$cohort_inds
+
+    stopifnot(ncol(cohort_fe) == R)
     
     X_base <- if (d > 0) {
       cbind(cohort_fe, time_fe, X_long)
