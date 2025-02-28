@@ -695,10 +695,14 @@ genRandomData <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = NUL
     df_panel$treatment <- as.integer(df_panel$treatment)
     
     return(list(
-        pdf = df_panel,
+        pdata = df_panel,
       X = X_ret,
       y = y,
       cov_names = cov_names,
+      time_var = "time",
+      unit_var = "unit",
+      treatment = "treatment",
+      response = "y",
       coefs = beta,
       first_inds = first_inds,
       N_UNTREATED = assignments[1],

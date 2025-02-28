@@ -232,12 +232,12 @@ test_that("Output from genRandomData can be passed to fetwfe()", {
   # Note: Since the simulated data come from a simplified process,
   # we can use an empty list for indep_counts and leave noise variance as provided.
   result <- fetwfe(
-    pdata     = sim_data$pdf,
-    time_var  = "time",
-    unit_var  = "unit",
-    treatment = "treatment",
+    pdata     = sim_data$pdata,
+    time_var  = sim_data$time_var,
+    unit_var  = sim_data$unit_var,
+    treatment = sim_data$treatment,
     covs      = sim_data$cov_names,
-    response  = "y",
+    response  = sim_data$response,
     sig_eps_sq = sig_eps_sq,
     sig_eps_c_sq = sig_eps_c_sq,
     verbose   = FALSE
