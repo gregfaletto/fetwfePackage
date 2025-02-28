@@ -467,9 +467,12 @@ fetwfe <- function(
 #'
 #' @return A named list with the following elements:
 #' \describe{
+#'   \item{pdf}{A dataframe containing generated data that can be passed to \code{fetwfe()}.}
 #'   \item{X}{The design matrix. When \code{gen_ints = TRUE}, \eqn{X} has \eqn{p} columns with
 #'     interactions; when \code{gen_ints = FALSE}, \eqn{X} has no interactions.}
 #'   \item{y}{A numeric vector of length \eqn{N \times T} containing the generated responses.}
+#'   \item{cov_names}{A character vector containing the names of the generated features (if \eqn{d > 0}),
+#'          or simply an empty vector (if \eqn{d = 0})}
 #'   \item{coefs}{The coefficient vector \eqn{\beta} used for data generation.}
 #'   \item{first_inds}{A vector of indices indicating the first treatment effect for each treated cohort.}
 #'   \item{N_UNTREATED}{The number of never-treated units.}
@@ -645,10 +648,57 @@ genRandomData <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = NUL
           stop("Constructed design matrix without interactions has incorrect number of columns.")
         }
     }
+
+    # Prepare dataframe for `fetwfe()`
+
+    # We know that when gen_ints = FALSE, the design matrix X is:
+    # X = [cohort_fe, time_fe, X_long, treat_mat_long]
+    # The base part (cohort_fe, time_fe, X_long) has (R + (T-1) + d) columns.
+    base_cols <- R + (T - 1) + d
+
+    # The treatment dummy block is in columns (base_cols + 1) : (base_cols + num_treats)
+    treat_dummy <- cbind(X_base, treat_mat_long)[, (base_cols + 1):(base_cols + num_treats), drop = FALSE]
+    # For each row, the observed treatment indicator is 1 if any entry in treat_dummy is 1.
+    treatment_vec <- as.integer(apply(treat_dummy, 1, function(x) { any(x == 1) }))
+
+    # Extract the covariate columns from the base part: they are the last d columns of the base part.
+    if(d > 0){
+        cov_cols <- seq(from = (R + (T - 1) + 1), to = (R + (T - 1) + d))
+        covariates <- cbind(X_base, treat_mat_long)[, cov_cols, drop = FALSE]
+    }
+    
+
+    # Construct a data frame with the panel structure.
+    df_panel <- data.frame(
+    time = rep(1:T, times = N),
+    unit = rep(sprintf("unit%02d", 1:N), each = T),
+    treatment = treatment_vec,
+    y = as.numeric(y)
+    )
+
+    cov_names <- c()
+
+    if(d > 0){
+        # Add covariate columns with names "cov1", "cov2", ...
+        for (j in seq_len(d)) {
+            cov_name_j <- paste0("cov", j)
+            df_panel[[cov_name_j]] <- covariates[, j]
+            cov_names <- c(cov_names, cov_name_j)
+        }
+    }
+
+    stopifnot(length(cov_names) == d)
+
+    # Ensure that time is integer and unit is character.
+    df_panel$time <- as.integer(df_panel$time)
+    df_panel$unit <- as.character(df_panel$unit)
+    df_panel$treatment <- as.integer(df_panel$treatment)
     
     return(list(
+        pdf = df_panel,
       X = X_ret,
       y = y,
+      cov_names = cov_names,
       coefs = beta,
       first_inds = first_inds,
       N_UNTREATED = assignments[1],

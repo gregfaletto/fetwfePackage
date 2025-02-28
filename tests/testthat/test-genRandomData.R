@@ -154,3 +154,148 @@ test_that("genRandomData returns non-missing X and y", {
   expect_true(all(!is.na(res$X)))
   expect_true(all(!is.na(res$y)))
 })
+
+
+# ------------------------------------------------------------------------------
+# Test 7: When distribution is "uniform", covariates are bounded between -sqrt(3) and sqrt(3)
+# ------------------------------------------------------------------------------
+test_that("Covariates are uniformly bounded when distribution = 'uniform'", {
+  N <- 120; T_val <- 30; R_val <- 5; d_val <- 12
+  sig_eps_sq <- 5; sig_eps_c_sq <- 5
+  num_treats <- T_val * R_val - (R_val * (R_val + 1)) / 2
+  # For gen_ints = FALSE, expected p = R + (T-1) + d + num_treats.
+  p_expected <- compute_p_int(T_val, R_val, d_val)
+  beta <- rnorm(p_expected)
+  
+  sim_data <- genRandomData(N, T_val, R_val, d_val, sig_eps_sq, sig_eps_c_sq, beta,
+                            seed = 123, gen_ints = FALSE, distribution = "uniform")
+  
+  # In the no-interactions case, the design matrix X is built as:
+  # X = [cohort_fe, time_fe, X_long, treat_mat_long]
+  # The covariate part is in columns (R + (T-1) + 1) to (R + (T-1) + d)
+  base_cols <- R_val + (T_val - 1)
+  cov_cols <- seq(from = base_cols + 1, to = base_cols + d_val)
+  covariates <- sim_data$X[, cov_cols, drop = FALSE]
+  
+  a <- sqrt(3)
+  expect_true(all(covariates >= -a - 1e-6))
+  expect_true(all(covariates <= a + 1e-6))
+})
+
+# ------------------------------------------------------------------------------
+# Test 8: Covariates are constant over time for each unit.
+# ------------------------------------------------------------------------------
+test_that("Covariates are constant over time within each unit", {
+  N <- 50; T_val <- 20; R_val <- 3; d_val <- 5
+  sig_eps_sq <- 2; sig_eps_c_sq <- 2
+  num_treats <- T_val * R_val - (R_val * (R_val + 1)) / 2
+  p_expected <- compute_p_int(T_val, R_val, d_val)
+  beta <- rnorm(p_expected)
+  
+  sim_data <- genRandomData(N, T_val, R_val, d_val, sig_eps_sq, sig_eps_c_sq, beta,
+                            seed = 456, gen_ints = FALSE, distribution = "gaussian")
+  
+  # The design matrix X = [cohort_fe, time_fe, X_long, treat_mat_long].
+  # The covariate part is in columns (R + (T-1) + 1):(R + (T-1) + d)
+  base_cols <- R_val + (T_val - 1)
+  cov_cols <- seq(from = base_cols + 1, to = base_cols + d_val)
+  covariates <- sim_data$X[, cov_cols, drop = FALSE]
+  
+  # Because covariates were generated as X_long = X (N x d) repeated each T times,
+  # for each unit (each block of T rows) the covariate values should be identical.
+  X_long_mat <- matrix(NA, nrow = N, ncol = d_val)
+  for(i in 1:N) {
+    rows <- ((i - 1) * T_val + 1):(i * T_val)
+    # For each covariate, check that all values in the block are equal.
+    X_long_mat[i, ] <- apply(covariates[rows, , drop = FALSE], 2, function(x) { x[1] })
+    for(j in 1:d_val) {
+      expect_equal(covariates[rows, j], rep(X_long_mat[i, j], T_val))
+    }
+  }
+})
+
+# ------------------------------------------------------------------------------
+# Test 9: When gen_ints = FALSE, the output can be used to create a panel data frame 
+#         that is accepted by fetwfe().
+# ------------------------------------------------------------------------------
+test_that("Output from genRandomData can be passed to fetwfe()", {
+  N <- 30; T_val <- 10; R_val <- 2; d_val <- 2
+  sig_eps_sq <- 1; sig_eps_c_sq <- 1
+  num_treats <- T_val * R_val - (R_val * (R_val + 1)) / 2
+  p_expected <- compute_p_int(T_val, R_val, d_val)
+  beta <- rnorm(p_expected)
+  
+  sim_data <- genRandomData(N, T_val, R_val, d_val, sig_eps_sq, sig_eps_c_sq, beta,
+                            seed = 789, gen_ints = FALSE, distribution = "gaussian")
+  
+  # Now call fetwfe() with this panel data frame.
+  # Note: Since the simulated data come from a simplified process,
+  # we can use an empty list for indep_counts and leave noise variance as provided.
+  result <- fetwfe(
+    pdata     = sim_data$pdf,
+    time_var  = "time",
+    unit_var  = "unit",
+    treatment = "treatment",
+    covs      = sim_data$cov_names,
+    response  = "y",
+    sig_eps_sq = sig_eps_sq,
+    sig_eps_c_sq = sig_eps_c_sq,
+    verbose   = FALSE
+  )
+  
+  expect_true(is.numeric(result$att_hat))
+  expect_false(is.na(result$att_hat))
+})
+
+# ------------------------------------------------------------------------------
+# Test 10: Error when R >= T
+# ------------------------------------------------------------------------------
+test_that("genRandomData errors when R >= T", {
+  # For example, set T = 5 and R = 5 (since R should be <= T-1).
+  N <- 30; T_val <- 5; R_val <- 5; d_val <- 2
+  num_treats <- T_val * R_val - (R_val * (R_val + 1)) / 2
+  p_expected <- compute_p_int(T_val, R_val, d_val)
+  beta <- rnorm(p_expected)
+  
+  expect_error(
+    genRandomData(N, T_val, R_val, d_val, 1, 1, beta, seed = 123, 
+                  gen_ints = FALSE, distribution = "gaussian"),
+    regexp = "R <= T - 1"  # Expect an error message indicating R must be <= T-1
+  )
+})
+
+# ------------------------------------------------------------------------------
+# Test 11: Error when T < 3
+# ------------------------------------------------------------------------------
+test_that("genRandomData errors when T < 3", {
+  # For instance, T = 2 should trigger an error (we require at least T = 3).
+  N <- 30; T_val <- 2; R_val <- 1; d_val <- 2
+  num_treats <- T_val * R_val - (R_val * (R_val + 1)) / 2
+  p_expected <- compute_p_int(T_val, R_val, d_val)
+  beta <- rnorm(p_expected)
+  
+  expect_error(
+    genRandomData(N, T_val, R_val, d_val, 1, 1, beta, seed = 123, 
+                  gen_ints = FALSE, distribution = "gaussian"),
+    regexp = "T >= 3"  # Expect an error message indicating T must be at least 3
+  )
+})
+
+# ------------------------------------------------------------------------------
+# Test 12: Error when N < R
+# ------------------------------------------------------------------------------
+test_that("genRandomData errors when N < R", {
+  # For example, if there are 3 units and 4 treated cohorts, that's impossible.
+  N <- 3; T_val <- 5; R_val <- 4; d_val <- 2
+  num_treats <- T_val * R_val - (R_val * (R_val + 1)) / 2
+  p_expected <- compute_p_int(T_val, R_val, d_val)
+  beta <- rnorm(p_expected)
+  
+  expect_error(
+    genRandomData(N, T_val, R_val, d_val, 1, 1, beta, seed = 123, 
+                  gen_ints = FALSE, distribution = "gaussian"),
+    regexp = "N >= R"  # Expect an error message indicating N must be at least R
+  )
+})
+
+
