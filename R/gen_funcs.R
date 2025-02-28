@@ -197,3 +197,12 @@ getActualCohortTes <- function(R, first_inds, treat_inds, coefs, num_treats){
 
     return(actual_cohort_tes)
 }
+
+# Function for concisely picking a sign randomly
+rfunc <- function(n, prob){
+    # sample(c(-1, 1), size=n, replace=TRUE)
+    vec <- rbinom(n=n, size=1, prob=prob)
+    vec[vec == 0] <- -1
+    stopifnot(all(vec %in% c(-1, 1)))
+    return(vec)
+}
