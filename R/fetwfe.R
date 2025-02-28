@@ -423,3 +423,275 @@ fetwfe <- function(
     )
 
 }
+
+
+#' Generate Random Panel Data for FETWFE Simulations
+#'
+#' @description
+#' Generates a random panel dataset for simulation studies of the fused extended two-way fixed
+#' effects (FETWFE) estimator. The function creates a balanced panel with \eqn{N} units over \eqn{T}
+#' time periods, assigns treatment status across \eqn{R} treated cohorts (with equal marginal
+#' probabilities for treatment and non-treatment), and constructs a design matrix along with the
+#' corresponding outcome. When \code{gen_ints = TRUE} the full design matrix is generated (including
+#' interactions between covariates and fixed effects and treatment indicators) as expected by
+#' \code{fetwfe_core()}. When \code{gen_ints = FALSE} the design matrix is generated in a simpler
+#' format (with no interactions) as expected by \code{fetwfe()}. Moreover, the covariates are generated
+#' according to the specified \code{distribution}: by default, covariates are drawn from a normal distribution;
+#' if \code{distribution = "uniform"}, they are drawn uniformly from \eqn{[-\sqrt{3}, \sqrt{3}]}.
+#'
+#' When \eqn{d = 0} (i.e. no covariates), no covariate-related columns or interactions are generated.
+#'
+#' @param N Integer. Number of units in the panel.
+#' @param T Integer. Number of time periods.
+#' @param R Integer. Number of treated cohorts (with treatment starting in periods 2 to T).
+#' @param d Integer. Number of time-invariant covariates.
+#' @param sig_eps_sq Numeric. Variance of the idiosyncratic (observation-level) noise.
+#' @param sig_eps_c_sq Numeric. Variance of the unit-level random effects.
+#' @param beta Numeric vector. Coefficient vector for data generation. Its required length depends on
+#'   the value of \code{gen_ints}:
+#'   \itemize{
+#'     \item If \code{gen_ints = TRUE} and \code{d > 0}, the expected length is 
+#'       \eqn{p = R + (T-1) + d + dR + d(T-1) + num\_treats + num\_treats \times d}, where 
+#'       \eqn{num\_treats = T \times R - \frac{R(R+1)}{2}}.
+#'     \item If \code{gen_ints = TRUE} and \code{d = 0}, the expected length is 
+#'       \eqn{p = R + (T-1) + num\_treats}.
+#'     \item If \code{gen_ints = FALSE}, the expected length is 
+#'       \eqn{p = R + (T-1) + d + num\_treats}.
+#'   }
+#' @param seed (Optional) Integer. Seed for reproducibility.
+#' @param gen_ints Logical. If \code{TRUE}, generate the full design matrix with interactions;
+#'   if \code{FALSE} (the default), generate a design matrix without any interaction terms.
+#' @param distribution Character. Distribution to generate covariates.
+#'   Defaults to \code{"gaussian"}. If set to \code{"uniform"}, covariates are drawn uniformly
+#'   from \eqn{[-\sqrt{3}, \sqrt{3}]}.
+#'
+#' @return A named list with the following elements:
+#' \describe{
+#'   \item{X}{The design matrix. When \code{gen_ints = TRUE}, \eqn{X} has \eqn{p} columns with
+#'     interactions; when \code{gen_ints = FALSE}, \eqn{X} has no interactions.}
+#'   \item{y}{A numeric vector of length \eqn{N \times T} containing the generated responses.}
+#'   \item{coefs}{The coefficient vector \eqn{\beta} used for data generation.}
+#'   \item{first_inds}{A vector of indices indicating the first treatment effect for each treated cohort.}
+#'   \item{N_UNTREATED}{The number of never-treated units.}
+#'   \item{assignments}{A vector of counts (of length \eqn{R+1}) indicating how many units fall into
+#'         the never-treated group and each of the \eqn{R} treated cohorts.}
+#'   \item{indep_assignments}{Independent cohort assignments (for auxiliary purposes).}
+#'   \item{actual_cohort_tes}{The true cohort-specific treatment effects, computed by averaging the
+#'         coefficients corresponding to the treatment dummies.}
+#'   \item{att_true}{The overall average treatment effect on the treated, computed as the (equal-weight)
+#'         average of the cohort treatment effects.}
+#'   \item{p}{The number of columns in the design matrix \eqn{X}.}
+#'   \item{N}{Number of units.}
+#'   \item{T}{Number of time periods.}
+#'   \item{R}{Number of treated cohorts.}
+#'   \item{d}{Number of covariates.}
+#'   \item{sig_eps_sq}{The idiosyncratic noise variance.}
+#'   \item{sig_eps_c_sq}{The unit-level noise variance.}
+#' }
+#'
+#' @details
+#' When \code{gen_ints = TRUE}, the function constructs the design matrix by first generating
+#' base fixed effects and a long-format covariate matrix (via \code{generateBaseEffects()}), then
+#' appending interactions between the covariates and cohort/time fixed effects (via \code{generateFEInts()})
+#' and finally treatment indicator columns and treatment-covariate interactions
+#' (via \code{genTreatVarsSim()} and \code{genTreatInts()}). When \code{gen_ints = FALSE},
+#' the design matrix consists only of the base fixed effects, covariates, and treatment indicators.
+#'
+#' The argument \code{distribution} controls the generation of covariates. For
+#' \code{"gaussian"}, covariates are drawn from \code{rnorm}; for \code{"uniform"},
+#' they are drawn from \code{runif} on the interval \eqn{[-\sqrt{3}, \sqrt{3}]}.
+#'
+#' When \eqn{d = 0} (i.e. no covariates), the function omits any covariate-related columns
+#' and their interactions.
+#'
+#' @examples
+#' \dontrun{
+#' # Full design with interactions (default behavior, with gaussian covariates):
+#' N <- 120; T <- 30; R <- 5; d <- 12; sig_eps_sq <- 5; sig_eps_c_sq <- 5
+#' num_treats <- T * R - (R * (R + 1)) / 2
+#' p_int <- R + (T - 1) + d + d * R + d * (T - 1) + num_treats + num_treats * d
+#' beta_int <- rnorm(p_int)
+#' sim_int <- genRandomData(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta_int,
+#'                           seed = 123, gen_ints = TRUE, distribution = "gaussian")
+#'
+#' # Simple design without interactions using uniform covariates:
+#' p_no_int <- R + (T - 1) + d + num_treats
+#' beta_no_int <- rnorm(p_no_int)
+#' sim_no_int <- genRandomData(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta_no_int,
+#'                             seed = 123, gen_ints = FALSE, distribution = "uniform")
+#'
+#' # When d = 0, no covariate or interaction terms are generated.
+#' p_no_cov <- R + (T - 1) + num_treats
+#' beta_no_cov <- rnorm(p_no_cov)
+#' sim_no_cov <- genRandomData(N, T, R, 0, sig_eps_sq, sig_eps_c_sq, beta_no_cov,
+#'                             seed = 123, gen_ints = TRUE, distribution = "gaussian")
+#' }
+#'
+#' @export
+genRandomData <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = NULL, 
+                          gen_ints = FALSE, distribution = "gaussian") {
+  if (!is.null(seed)) set.seed(seed)
+  stopifnot(R <= T - 1)
+  
+  # Compute the number of treatment effects (common to both cases)
+  num_treats <- T * R - (R * (R + 1)) / 2
+  
+  if (gen_ints) {
+    # --- Full design matrix with interactions ---
+    # Expected number of columns:
+    # If d > 0: p = R + (T - 1) + d + d*R + d*(T - 1) + num_treats + num_treats*d
+    # If d == 0: p = R + (T - 1) + num_treats
+    if (d > 0) {
+      p_expected <- R + (T - 1) + d + d * R + d * (T - 1) + num_treats + num_treats * d
+    } else {
+      p_expected <- R + (T - 1) + num_treats
+    }
+    
+    if (length(beta) != p_expected) {
+      stop(sprintf("For gen_ints = TRUE, length(beta) must be %d", p_expected))
+    }
+    
+    # Generate base effects and covariates (using specified distribution)
+    res_base <- generateBaseEffects(N, d, T, R, distribution = distribution)
+    cohort_fe <- res_base$cohort_fe
+    time_fe <- res_base$time_fe
+    X_long <- res_base$X_long
+    assignments <- res_base$assignments
+    cohort_inds <- res_base$cohort_inds
+    
+    # Base matrix: cohort FE, time FE, and covariates (if any)
+    X_base <- if (d > 0) {
+      cbind(cohort_fe, time_fe, X_long)
+    } else {
+      cbind(cohort_fe, time_fe)
+    }
+    
+    indep_assignments <- genAssignments(N, R)
+    
+    if (d > 0) {
+      res_ints <- generateFEInts(X_long, cohort_fe, time_fe, N, T, R, d)
+      X_ints1 <- cbind(X_base, res_ints$X_long_cohort, res_ints$X_long_time)
+    } else {
+      X_ints1 <- X_base
+    }
+    
+    first_inds_test <- getFirstInds(num_treats, R, T)
+    res_treat <- genTreatVarsSim(num_treats, N, T, R, assignments, cohort_inds,
+                                 N_UNTREATED = assignments[1],
+                                 first_inds_test = first_inds_test, d = d)
+    treat_mat_long <- res_treat$treat_mat_long
+    first_inds <- res_treat$first_inds
+    
+    X_ints2 <- cbind(X_ints1, treat_mat_long)
+    
+    if (d > 0) {
+      X_long_treat <- genTreatInts(treat_mat_long, X_long, num_treats, cohort_fe,
+                                   R, N, T, d, N_UNTREATED = assignments[1])
+      X_final <- cbind(X_ints2, X_long_treat)
+    } else {
+      X_final <- X_ints2
+    }
+    
+    if (ncol(X_final) != p_expected) {
+      stop("Constructed design matrix with interactions has incorrect number of columns.")
+    }
+    
+    unit_res <- rnorm(N, mean = 0, sd = sqrt(sig_eps_c_sq))
+    y <- X_final %*% beta + rep(unit_res, each = T) + 
+      rnorm(N * T, mean = 0, sd = sqrt(sig_eps_sq))
+    y <- y - mean(y)
+    
+    base_cols <- if (d > 0) {
+      R + (T - 1) + d + d * R + d * (T - 1)
+    } else {
+      R + (T - 1)
+    }
+    treat_inds <- seq(from = base_cols + 1, length.out = num_treats)
+    
+    actual_cohort_tes <- getActualCohortTes(R, first_inds, treat_inds, beta, num_treats)
+    att_true <- as.numeric(mean(actual_cohort_tes))
+    
+    return(list(
+      X = X_final,
+      y = y,
+      coefs = beta,
+      first_inds = first_inds,
+      N_UNTREATED = assignments[1],
+      assignments = assignments,
+      indep_assignments = indep_assignments,
+      actual_cohort_tes = actual_cohort_tes,
+      att_true = att_true,
+      p = p_expected,
+      N = N,
+      T = T,
+      R = R,
+      d = d,
+      sig_eps_sq = sig_eps_sq,
+      sig_eps_c_sq = sig_eps_c_sq
+    ))
+    
+  } else {
+    # --- Simple design matrix with NO interactions ---
+    # Expected number of columns: p = R + (T - 1) + d + num_treats
+    p_expected <- R + (T - 1) + d + num_treats
+    if (length(beta) != p_expected) {
+      stop(sprintf("For gen_ints = FALSE, length(beta) must be %d", p_expected))
+    }
+    
+    res_base <- generateBaseEffects(N, d, T, R, distribution = distribution)
+    cohort_fe <- res_base$cohort_fe
+    time_fe <- res_base$time_fe
+    X_long <- res_base$X_long
+    assignments <- res_base$assignments
+    cohort_inds <- res_base$cohort_inds
+    
+    X_base <- if (d > 0) {
+      cbind(cohort_fe, time_fe, X_long)
+    } else {
+      cbind(cohort_fe, time_fe)
+    }
+    
+    indep_assignments <- genAssignments(N, R)
+    
+    first_inds_test <- getFirstInds(num_treats, R, T)
+    res_treat <- genTreatVarsSim(num_treats, N, T, R, assignments, cohort_inds,
+                                 N_UNTREATED = assignments[1],
+                                 first_inds_test = first_inds_test, d = d)
+    treat_mat_long <- res_treat$treat_mat_long
+    first_inds <- res_treat$first_inds
+    
+    X_final <- cbind(X_base, treat_mat_long)
+    if (ncol(X_final) != p_expected) {
+      stop("Constructed design matrix without interactions has incorrect number of columns.")
+    }
+    
+    unit_res <- rnorm(N, mean = 0, sd = sqrt(sig_eps_c_sq))
+    y <- X_final %*% beta + rep(unit_res, each = T) + 
+      rnorm(N * T, mean = 0, sd = sqrt(sig_eps_sq))
+    y <- y - mean(y)
+    
+    base_cols <- R + (T - 1) + d
+    treat_inds <- seq(from = base_cols + 1, length.out = num_treats)
+    actual_cohort_tes <- getActualCohortTes(R, first_inds, treat_inds, beta, num_treats)
+    att_true <- as.numeric(mean(actual_cohort_tes))
+    
+    return(list(
+      X = X_final,
+      y = y,
+      coefs = beta,
+      first_inds = first_inds,
+      N_UNTREATED = assignments[1],
+      assignments = assignments,
+      indep_assignments = indep_assignments,
+      actual_cohort_tes = actual_cohort_tes,
+      att_true = att_true,
+      p = p_expected,
+      N = N,
+      T = T,
+      R = R,
+      d = d,
+      sig_eps_sq = sig_eps_sq,
+      sig_eps_c_sq = sig_eps_c_sq
+    ))
+  }
+}
