@@ -823,15 +823,15 @@ genCoefs <- function(R, T, d, density, eff_size){
     beta[(R + 1):(R + T - 1)] <- genBackwardsInvFusionTransformMat(T - 1) %*%
         theta[(R + 1):(R + T - 1)]
 
-    # Coefficients corresponding to X don't need to be transformed
-    stopifnot(all(is.na(beta[(R + T - 1 + 1):(R + T - 1 + d)])))
-    beta[(R + T - 1 + 1):(R + T - 1 + d)] <- theta[(R + T - 1 + 1):
-        (R + T - 1 + d)]
-
-    # Cohort-X interactions (one cohort at a time, with all interactions for
-    # X. So R blocks of size d.)
-
     if(d > 0){
+        # Coefficients corresponding to X don't need to be transformed
+        stopifnot(all(is.na(beta[(R + T - 1 + 1):(R + T - 1 + d)])))
+        beta[(R + T - 1 + 1):(R + T - 1 + d)] <- theta[(R + T - 1 + 1):
+            (R + T - 1 + d)]
+
+        # Cohort-X interactions (one cohort at a time, with all interactions for
+        # X. So R blocks of size d.)
+
         for(j in 1:d){
             first_ind_j <- R + T - 1 + d + j
             last_ind_j <- R + T - 1 + d + (R - 1)*d + j
