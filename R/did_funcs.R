@@ -308,7 +308,7 @@ fetwfe_core <- function(
     
     # Transform matrix (change of coordinates so that fitting regular bridge
     # regression results in FETWFE fusion penalties)
-    X_mod <- transformXintDataApp(
+    X_mod <- transformXintImproved(
         X_ints,
         N=N,
         T=T,
@@ -646,7 +646,7 @@ fetwfe_core <- function(
     #
     #
 
-    beta_hat <- untransformCoefsDataApp(
+    beta_hat <- untransformCoefImproved(
         theta_hat,
         first_inds,
         T=T,
@@ -1373,7 +1373,7 @@ genXintsData <- function(cohort_fe, time_fe, X_long, treat_mat_long, N, R, T,
 }
 
 
-getFirstIndsDataApp <- function(n_treats, R){
+getFirstInds <- function(n_treats, R, T){
     # Let's identify the indices of the first treatment effects for each cohort.
     # The first one is index 1, then the second one is index (T - 1) + 1 = T,
     # then the third one is (T - 1) + (T - 2) + 1 = 2*T - 2. In general, for
@@ -1398,18 +1398,18 @@ getFirstIndsDataApp <- function(n_treats, R){
     return(f_inds)
 }
 
-transformXintDataApp <- function(X_int, N, T, R, d, num_treats, first_inds=NA){
+transformXintImproved <- function(X_int, N, T, R, d, num_treats, first_inds=NA){
     
     p <- ncol(X_int)
     X_mod <- matrix(as.numeric(NA), nrow=N*T, ncol=p)
     stopifnot(nrow(X_int) == N*T)
     
     # Transform cohort fixed effects
-    X_mod[, 1:R] <- X_int[, 1:R] %*% genBackwardsInvFusionTransformMatDataApp(R)
+    X_mod[, 1:R] <- X_int[, 1:R] %*% genBackwardsInvFusionTransformMat(R)
     
     # Transform time fixed effects
     X_mod[, (R + 1):(R + T - 1)] <- X_int[, (R + 1):(R + T - 1)] %*%
-        genBackwardsInvFusionTransformMatDataApp(T - 1)
+        genBackwardsInvFusionTransformMat(T - 1)
     
     # Copy X (the main covariate block; may be empty when d==0)
     if(d > 0){
@@ -1426,7 +1426,7 @@ transformXintDataApp <- function(X_int, N, T, R, d, num_treats, first_inds=NA){
     # For each individual feature, this will be handled using
     # genTransformedMatFusion.
     if(any(is.na(first_inds))){
-        first_inds <- getFirstIndsDataApp(num_treats, R)
+        first_inds <- getFirstInds(num_treats, R)
     }
 
     if(d > 0){
@@ -1442,7 +1442,7 @@ transformXintDataApp <- function(X_int, N, T, R, d, num_treats, first_inds=NA){
             stopifnot(all(is.na(X_mod[, feat_inds_j])))
 
             X_mod[, feat_inds_j] <- X_int[, feat_inds_j] %*%
-                genBackwardsInvFusionTransformMatDataApp(R)
+                genBackwardsInvFusionTransformMat(R)
 
         }
         stopifnot(all(!is.na(X_mod[, 1:(R + T - 1 + d + R*d)])))
@@ -1461,7 +1461,7 @@ transformXintDataApp <- function(X_int, N, T, R, d, num_treats, first_inds=NA){
 
             stopifnot(all(is.na(X_mod[, feat_inds_j])))
             X_mod[, feat_inds_j] <- X_int[, feat_inds_j] %*%
-                genBackwardsInvFusionTransformMatDataApp(T - 1)
+                genBackwardsInvFusionTransformMat(T - 1)
 
         }
         stopifnot(all(!is.na(X_mod[, 1:(R + T - 1 + d + R*d + (T - 1)*d)])))
@@ -1517,24 +1517,24 @@ transformXintDataApp <- function(X_int, N, T, R, d, num_treats, first_inds=NA){
 }
 
 
-untransformCoefsDataApp <- function(beta_hat_mod, T, R, p, d, num_treats,
+untransformCoefImproved <- function(beta_hat_mod, T, R, p, d, num_treats,
     first_inds=NA){
 
     stopifnot(length(beta_hat_mod) == p)
     beta_hat <- rep(as.numeric(NA), p)
 
     if(any(is.na(first_inds))){
-        first_inds <- getFirstIndsDataApp(num_treats, R)
+        first_inds <- getFirstInds(num_treats, R)
     }
     
     # First handle R cohort fixed effects effects
-    beta_hat[1:R] <- genBackwardsInvFusionTransformMatDataApp(R) %*% beta_hat_mod[1:R] 
+    beta_hat[1:R] <- genBackwardsInvFusionTransformMat(R) %*% beta_hat_mod[1:R] 
 
     stopifnot(all(!is.na(beta_hat[1:R])))
     stopifnot(all(is.na(beta_hat[(R + 1):p])))
 
     # Next, T - 1 time fixed effects
-    beta_hat[(R + 1):(R + T - 1)] <- genBackwardsInvFusionTransformMatDataApp(T - 1) %*%
+    beta_hat[(R + 1):(R + T - 1)] <- genBackwardsInvFusionTransformMat(T - 1) %*%
         beta_hat_mod[(R + 1):(R + T - 1)]
 
     stopifnot(all(!is.na(beta_hat[1:(R + T - 1)])))
@@ -1561,7 +1561,7 @@ untransformCoefsDataApp <- function(beta_hat_mod, T, R, p, d, num_treats,
 
             stopifnot(all(is.na(beta_hat[feat_inds_j])))
 
-            beta_hat[feat_inds_j] <- genBackwardsInvFusionTransformMatDataApp(R) %*% 
+            beta_hat[feat_inds_j] <- genBackwardsInvFusionTransformMat(R) %*% 
                 beta_hat_mod[feat_inds_j]
             stopifnot(all(!is.na(beta_hat[feat_inds_j])))
         }
@@ -1581,7 +1581,7 @@ untransformCoefsDataApp <- function(beta_hat_mod, T, R, p, d, num_treats,
 
             stopifnot(all(is.na(beta_hat[feat_inds_j])))
 
-            beta_hat[feat_inds_j] <- genBackwardsInvFusionTransformMatDataApp(T - 1) %*%
+            beta_hat[feat_inds_j] <- genBackwardsInvFusionTransformMat(T - 1) %*%
                 beta_hat_mod[feat_inds_j]
             stopifnot(all(!is.na(beta_hat[feat_inds_j])))
         }
@@ -1672,7 +1672,7 @@ genBackwardsFusionTransformMat <- function(n_vars){
     return(D)
 }
 
-genBackwardsInvFusionTransformMatDataApp <- function(n_vars){
+genBackwardsInvFusionTransformMat <- function(n_vars){
     # Generates inverse of D matrix in relation theta = D beta, where D beta is
     # what we want to penalize (for a single set of coefficients where we want
     # to penalize last coefficient directly and penalize remaining coefficints
@@ -1682,6 +1682,9 @@ genBackwardsInvFusionTransformMatDataApp <- function(n_vars){
     diag(D_inv) <- 1
 
     D_inv[upper.tri(D_inv)] <- 1
+
+    stopifnot(nrow(D_inv) == n_vars)
+    stopifnot(ncol(D_inv) == n_vars)
 
     return(D_inv)
 }
