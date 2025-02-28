@@ -739,12 +739,12 @@ genRandomData <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = NUL
 #'
 #' @param R Integer. The number of treated cohorts (treatment is assumed to start in periods 2 to T).
 #' @param T Integer. The total number of time periods.
+#' @param d Integer. The number of time-invariant covariates. If \code{d > 0}, additional terms
+#'   corresponding to covariate main effects and interactions are included in \code{beta}.
 #' @param density Numeric in \eqn{(0,1)}. The probability that any given entry in the initial
 #'   sparse coefficient vector \code{theta} is nonzero.
 #' @param eff_size Numeric. The magnitude used to scale nonzero entries in \code{theta}. Each
 #'   nonzero is set to \code{eff_size} or \code{-eff_size} (with a 60\% chance of being positive).
-#' @param d Integer. The number of time-invariant covariates. If \code{d > 0}, additional terms
-#'   corresponding to covariate main effects and interactions are included in \code{beta}.
 #'
 #' @return A list with two elements:
 #' \describe{
@@ -782,7 +782,11 @@ genRandomData <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = NUL
 #' }
 #'
 #' @export
-genCoefs <- function(R, T, density, eff_size, d){
+genCoefs <- function(R, T, d, density, eff_size){
+
+    stopifnot(R >= 2)
+    stopifnot(T >= 3)
+    stopifnot(R <= T - 1)
 
     num_treats <- T * R - (R * (R + 1)) / 2
 
@@ -802,6 +806,8 @@ genCoefs <- function(R, T, density, eff_size, d){
     }
     
     num_coefs <- length(theta_inds)
+    # Generate signs of coefficients in transformed space, and bias away from
+    # 0.5 (as described in paper)
     signs <- rfunc(num_coefs, prob=0.6)
 
     theta[theta_inds] <- eff_size*signs
@@ -824,35 +830,38 @@ genCoefs <- function(R, T, density, eff_size, d){
 
     # Cohort-X interactions (one cohort at a time, with all interactions for
     # X. So R blocks of size d.)
-    for(j in 1:d){
-        first_ind_j <- R + T - 1 + d + j
-        last_ind_j <- R + T - 1 + d + (R - 1)*d + j
 
-        inds_j <- seq(first_ind_j, last_ind_j, by=d)
+    if(d > 0){
+        for(j in 1:d){
+            first_ind_j <- R + T - 1 + d + j
+            last_ind_j <- R + T - 1 + d + (R - 1)*d + j
 
-        stopifnot(length(inds_j) == R)
-        stopifnot(all(is.na(beta[inds_j])))
+            inds_j <- seq(first_ind_j, last_ind_j, by=d)
 
-        beta[inds_j] <- genBackwardsInvFusionTransformMat(R) %*% theta[inds_j]
+            stopifnot(length(inds_j) == R)
+            stopifnot(all(is.na(beta[inds_j])))
+
+            beta[inds_j] <- genBackwardsInvFusionTransformMat(R) %*% theta[inds_j]
+        }
+
+        stopifnot(all(!is.na(beta[1:(R + T - 1 + d + R*d)])))
+        stopifnot(all(is.na(beta[(R + T - 1 + d + R*d + 1):p])))
+
+        # Time-X interactions
+        for(j in 1:d){
+            first_ind_j <- R + T - 1 + d + R*d + j
+            last_ind_j <- R + T - 1 + d + R*d + (T - 2)*d + j
+
+            inds_j <- seq(first_ind_j, last_ind_j, by=d)
+            stopifnot(length(inds_j) == T - 1)
+            stopifnot(all(is.na(beta[inds_j])))
+
+            beta[inds_j] <- genBackwardsInvFusionTransformMat(T - 1) %*% theta[inds_j]
+        }
+
+        stopifnot(all(!is.na(beta[1:(R + T - 1 + d + R*d + (T - 1)*d)])))
+        stopifnot(all(is.na(beta[(R + T - 1 + d + R*d + (T - 1)*d + 1):p])))
     }
-
-    stopifnot(all(!is.na(beta[1:(R + T - 1 + d + R*d)])))
-    stopifnot(all(is.na(beta[(R + T - 1 + d + R*d + 1):p])))
-
-    # Time-X interactions
-    for(j in 1:d){
-        first_ind_j <- R + T - 1 + d + R*d + j
-        last_ind_j <- R + T - 1 + d + R*d + (T - 2)*d + j
-
-        inds_j <- seq(first_ind_j, last_ind_j, by=d)
-        stopifnot(length(inds_j) == T - 1)
-        stopifnot(all(is.na(beta[inds_j])))
-
-        beta[inds_j] <- genBackwardsInvFusionTransformMat(T - 1) %*% theta[inds_j]
-    }
-
-    stopifnot(all(!is.na(beta[1:(R + T - 1 + d + R*d + (T - 1)*d)])))
-    stopifnot(all(is.na(beta[(R + T - 1 + d + R*d + (T - 1)*d + 1):p])))
 
     # Base treatment effects: need to identify indices of first treatment
     # effect for each cohort
@@ -868,22 +877,26 @@ genCoefs <- function(R, T, density, eff_size, d){
 
     stopifnot(all(!is.na(beta[1:(R + T - 1 + d + R*d + (T - 1)*d +
         num_treats)])))
-    stopifnot(all(is.na(beta[(R + T - 1 + d + R*d + (T - 1)*d + num_treats +
-        1):p])))
 
-    # Treatment effect-X interactions
-    for(j in 1:d){
-        first_ind_j <- R + T - 1 + d + R*d + (T - 1)*d + num_treats + j
-        last_ind_j <- R + T - 1 + d + R*d + (T - 1)*d + num_treats +
-            (num_treats - 1)*d + j
+    if(d > 0){
 
-        inds_j <- seq(first_ind_j, last_ind_j, by=d)
+        stopifnot(all(is.na(beta[(R + T - 1 + d + R*d + (T - 1)*d + num_treats +
+            1):p])))
 
-        stopifnot(length(inds_j) == num_treats)
-        stopifnot(all(is.na(beta[inds_j])))
+        # Treatment effect-X interactions
+        for(j in 1:d){
+            first_ind_j <- R + T - 1 + d + R*d + (T - 1)*d + num_treats + j
+            last_ind_j <- R + T - 1 + d + R*d + (T - 1)*d + num_treats +
+                (num_treats - 1)*d + j
 
-        beta[inds_j] <- genInvTwoWayFusionTransformMat(num_treats,
-            first_inds, R) %*% theta[inds_j]
+            inds_j <- seq(first_ind_j, last_ind_j, by=d)
+
+            stopifnot(length(inds_j) == num_treats)
+            stopifnot(all(is.na(beta[inds_j])))
+
+            beta[inds_j] <- genInvTwoWayFusionTransformMat(num_treats,
+                first_inds, R) %*% theta[inds_j]
+        }
     }
 
     stopifnot(all(!is.na(beta)))

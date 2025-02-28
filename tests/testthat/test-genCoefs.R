@@ -18,7 +18,7 @@ compute_p <- function(T, R, d) {
 #         and that both are numeric vectors.
 # ------------------------------------------------------------------------------
 test_that("genCoefs returns expected output structure", {
-  res <- genCoefs(R = 5, T = 30, density = 0.1, eff_size = 2, d = 12)
+  res <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2)
   
   expect_type(res, "list")
   expect_true("beta" %in% names(res))
@@ -35,7 +35,7 @@ test_that("genCoefs returns beta and theta of correct length", {
   R <- 5; T <- 30; d <- 12
   expected_length <- compute_p(T, R, d)
   
-  res <- genCoefs(R = R, T = T, density = 0.1, eff_size = 2, d = d)
+  res <- genCoefs(R = R, T = T, d = d, density = 0.1, eff_size = 2)
   expect_equal(length(res$beta), expected_length)
   expect_equal(length(res$theta), expected_length)
 })
@@ -60,7 +60,7 @@ test_that("genCoefs is reproducible with the same seed", {
 # ------------------------------------------------------------------------------
 test_that("beta from genCoefs is a valid input for genRandomData", {
   R <- 5; T <- 30; d <- 12
-  res_coefs <- genCoefs(R = R, T = T, density = 0.1, eff_size = 2, d = d)
+  res_coefs <- genCoefs(R = R, T = T, d = d, density = 0.1, eff_size = 2)
   
   N <- 120
   sig_eps_sq <- 5; sig_eps_c_sq <- 5
@@ -86,7 +86,7 @@ test_that("beta from genCoefs is a valid input for genRandomData", {
 # ------------------------------------------------------------------------------
 test_that("genCoefs produces theta with approximately correct sparsity", {
   R <- 5; T <- 30; d <- 12; density <- 0.1
-  res <- genCoefs(R = R, T = T, density = density, eff_size = 2, d = d)
+  res <- genCoefs(R = R, T = T, d = d, density = density, eff_size = 2)
   theta <- res$theta
   total <- length(theta)
   nonzero <- sum(theta != 0)
@@ -94,4 +94,59 @@ test_that("genCoefs produces theta with approximately correct sparsity", {
   
   # Allow some tolerance given randomness; here we allow a deviation of 0.03.
   expect_true(abs(prop_nonzero - density) < 0.03)
+})
+
+
+# ------------------------------------------------------------------------------
+# Test 6: d = 0 case.
+# ------------------------------------------------------------------------------
+test_that("genRandomData and fetwfe work when d = 0", {
+  # Set parameters for simulation
+  N <- 120
+  T_val <- 30
+  R_val <- 5
+  d_val <- 0
+  sig_eps_sq <- 5
+  sig_eps_c_sq <- 5
+  
+  # For d = 0, the expected number of columns in the design matrix is:
+  # p = R + (T - 1) + num_treats, where num_treats = T * R - (R*(R+1))/2.
+  num_treats <- T_val * R_val - (R_val * (R_val + 1)) / 2
+  expected_p <- R_val + (T_val - 1) + num_treats
+  
+  # Generate coefficients with no covariates using genCoefs.
+  coefs <- genCoefs(R = R_val, T = T_val, density = 0.1, eff_size = 2, d = d_val)
+  
+  # Use genRandomData() with gen_ints = FALSE.
+  sim_data <- genRandomData(
+    N = N, T = T_val, R = R_val, d = d_val, 
+    sig_eps_sq = sig_eps_sq, sig_eps_c_sq = sig_eps_c_sq,
+    beta = coefs$beta, seed = 123, gen_ints = FALSE
+  )
+  
+  # Check that cov_names is empty since d = 0.
+  expect_equal(length(sim_data$cov_names), 0)
+  
+  # Check that the design matrix X has the expected dimensions.
+  expect_equal(dim(sim_data$X), c(N * T_val, expected_p))
+  
+  # Now run fetwfe() on the simulated panel data.
+  result <- fetwfe(
+    pdata     = sim_data$pdata,
+    time_var  = sim_data$time_var,
+    unit_var  = sim_data$unit_var,
+    treatment = sim_data$treatment,
+    covs      = sim_data$cov_names,  # should be empty
+    response  = sim_data$response,
+    sig_eps_sq = sig_eps_sq,
+    sig_eps_c_sq = sig_eps_c_sq,
+    verbose   = FALSE
+  )
+  
+  # Verify that the returned d (number of covariates) is 0.
+  expect_equal(result$d, 0)
+  
+  # Also, overall ATT (att_hat) should be numeric and non-missing.
+  expect_true(is.numeric(result$att_hat))
+  expect_false(is.na(result$att_hat))
 })
