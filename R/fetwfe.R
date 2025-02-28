@@ -695,7 +695,7 @@ genRandomData <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = NUL
       sig_eps_c_sq = sig_eps_c_sq
     ))
     
-  } 
+  
   # else {
     
     

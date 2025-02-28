@@ -60,9 +60,11 @@ test_that("genRandomData (without interactions) returns expected output", {
   N <- 120; T_val <- 30; R_val <- 5; d_val <- 12
   sig_eps_sq <- 5; sig_eps_c_sq <- 5
   p_no_int <- compute_p_no_int(T_val, R_val, d_val)
-  beta_no_int <- rnorm(p_no_int)
+
+  p_int <- compute_p_int(T_val, R_val, d_val)
+  beta_int <- rnorm(p_int)
   
-  res <- genRandomData(N, T_val, R_val, d_val, sig_eps_sq, sig_eps_c_sq, beta_no_int, seed = 123, gen_ints = FALSE)
+  res <- genRandomData(N, T_val, R_val, d_val, sig_eps_sq, sig_eps_c_sq, beta_int, seed = 123, gen_ints = FALSE)
   
   expect_equal(dim(res$X), c(N * T_val, p_no_int))
   expect_equal(length(res$y), N * T_val)
@@ -70,10 +72,14 @@ test_that("genRandomData (without interactions) returns expected output", {
   
   # Check that the treatment dummy columns are at the end of the design matrix.
   num_treats <- compute_num_treats(T_val, R_val)
-  base_cols <- R_val + (T_val - 1) + d_val
+  base_cols <- if (d_val > 0) {
+    R_val + (T_val - 1) + d_val + d_val * R_val + d_val * (T_val - 1)
+  } else {
+    R_val + (T_val - 1)
+  }
   treat_inds <- seq(from = base_cols + 1, length.out = num_treats)
   # Use getActualCohortTes() to compute actual cohort effects.
-  actual_cohort_tes <- getActualCohortTes(R_val, res$first_inds, treat_inds, beta_no_int, num_treats)
+  actual_cohort_tes <- getActualCohortTes(R_val, res$first_inds, treat_inds, beta_int, num_treats)
   expect_equal(res$actual_cohort_tes, actual_cohort_tes)
   
   # Check that overall ATT equals mean of actual cohort effects.
@@ -87,10 +93,12 @@ test_that("genRandomData is reproducible with same seed", {
   N <- 120; T_val <- 30; R_val <- 5; d_val <- 12
   sig_eps_sq <- 5; sig_eps_c_sq <- 5
   p_no_int <- compute_p_no_int(T_val, R_val, d_val)
-  beta_no_int <- rnorm(p_no_int)
+
+  p_int <- compute_p_int(T_val, R_val, d_val)
+  beta_int <- rnorm(p_int)
   
-  res1 <- genRandomData(N, T_val, R_val, d_val, sig_eps_sq, sig_eps_c_sq, beta_no_int, seed = 456, gen_ints = FALSE)
-  res2 <- genRandomData(N, T_val, R_val, d_val, sig_eps_sq, sig_eps_c_sq, beta_no_int, seed = 456, gen_ints = FALSE)
+  res1 <- genRandomData(N, T_val, R_val, d_val, sig_eps_sq, sig_eps_c_sq, beta_int, seed = 456, gen_ints = FALSE)
+  res2 <- genRandomData(N, T_val, R_val, d_val, sig_eps_sq, sig_eps_c_sq, beta_int, seed = 456, gen_ints = FALSE)
   
   expect_equal(res1$X, res2$X)
   expect_equal(res1$y, res2$y)
@@ -138,9 +146,11 @@ test_that("genRandomData returns non-missing X and y", {
   N <- 120; T_val <- 30; R_val <- 5; d_val <- 12
   sig_eps_sq <- 5; sig_eps_c_sq <- 5
   p_no_int <- compute_p_no_int(T_val, R_val, d_val)
-  beta_no_int <- rnorm(p_no_int)
+
+  p_int <- compute_p_int(T_val, R_val, d_val)
+  beta_int <- rnorm(p_int)
   
-  res <- genRandomData(N, T_val, R_val, d_val, sig_eps_sq, sig_eps_c_sq, beta_no_int, seed = 789, gen_ints = FALSE)
+  res <- genRandomData(N, T_val, R_val, d_val, sig_eps_sq, sig_eps_c_sq, beta_int, seed = 789, gen_ints = FALSE)
   expect_true(all(!is.na(res$X)))
   expect_true(all(!is.na(res$y)))
 })
