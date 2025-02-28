@@ -721,7 +721,15 @@ genRandomData <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = NUL
 }
 
 
-genCoefs <- function(R, T, density, eff_size, num_treats, p, d){
+genCoefs <- function(R, T, density, eff_size, d){
+
+    num_treats <- T * R - (R * (R + 1)) / 2
+
+    if (d > 0) {
+      p <- R + (T - 1) + d + d * R + d * (T - 1) + num_treats + num_treats * d
+    } else {
+      p <- R + (T - 1) + num_treats
+    }
 
     theta <- rep(0, p)
 
