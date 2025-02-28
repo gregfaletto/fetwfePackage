@@ -639,36 +639,8 @@ genRandomData <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = NUL
         X_ret <- X_final
     } else{
         # Return X with no interactions
-        # --- Simple design matrix with NO interactions ---
         # Expected number of columns: p = R + (T - 1) + d + num_treats
         p_expected <- R + (T - 1) + d + num_treats
-        # if (length(beta) != p_expected) {
-        #   stop(sprintf("For gen_ints = FALSE, length(beta) must be %d", p_expected))
-        # }
-
-        # res_base <- generateBaseEffects(N, d, T, R, distribution = distribution)
-        # cohort_fe <- res_base$cohort_fe
-        # time_fe <- res_base$time_fe
-        # X_long <- res_base$X_long
-        # assignments <- res_base$assignments
-        # cohort_inds <- res_base$cohort_inds
-
-        # stopifnot(ncol(cohort_fe) == R)
-
-        # X_base <- if (d > 0) {
-        #   cbind(cohort_fe, time_fe, X_long)
-        # } else {
-        #   cbind(cohort_fe, time_fe)
-        # }
-
-        # indep_assignments <- genAssignments(N, R)
-
-        # first_inds_test <- getFirstInds(num_treats, R, T)
-        # res_treat <- genTreatVarsSim(num_treats, N, T, R, assignments, cohort_inds,
-        #                              N_UNTREATED = assignments[1],
-        #                              first_inds_test = first_inds_test, d = d)
-        # treat_mat_long <- res_treat$treat_mat_long
-        # first_inds <- res_treat$first_inds
 
         X_ret <- cbind(X_base, treat_mat_long)
         if (ncol(X_ret) != p_expected) {
@@ -694,38 +666,4 @@ genRandomData <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = NUL
       sig_eps_sq = sig_eps_sq,
       sig_eps_c_sq = sig_eps_c_sq
     ))
-    
-  
-  # else {
-    
-    
-  #   unit_res <- rnorm(N, mean = 0, sd = sqrt(sig_eps_c_sq))
-  #   y <- X_final %*% beta + rep(unit_res, each = T) + 
-  #     rnorm(N * T, mean = 0, sd = sqrt(sig_eps_sq))
-  #   y <- y - mean(y)
-    
-  #   base_cols <- R + (T - 1) + d
-  #   treat_inds <- seq(from = base_cols + 1, length.out = num_treats)
-  #   actual_cohort_tes <- getActualCohortTes(R, first_inds, treat_inds, beta, num_treats)
-  #   att_true <- as.numeric(mean(actual_cohort_tes))
-    
-  #   return(list(
-  #     X = X_final,
-  #     y = y,
-  #     coefs = beta,
-  #     first_inds = first_inds,
-  #     N_UNTREATED = assignments[1],
-  #     assignments = assignments,
-  #     indep_assignments = indep_assignments,
-  #     actual_cohort_tes = actual_cohort_tes,
-  #     att_true = att_true,
-  #     p = p_expected,
-  #     N = N,
-  #     T = T,
-  #     R = R,
-  #     d = d,
-  #     sig_eps_sq = sig_eps_sq,
-  #     sig_eps_c_sq = sig_eps_c_sq
-  #   ))
-  # }
 }
