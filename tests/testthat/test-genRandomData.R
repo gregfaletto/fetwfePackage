@@ -215,7 +215,7 @@ test_that("Covariates are constant over time within each unit", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 9: When gen_ints = FALSE, the output can be used to create a panel data frame 
+# Test 9: The output can be used to create a panel data frame 
 #         that is accepted by fetwfe().
 # ------------------------------------------------------------------------------
 test_that("Output from genRandomData can be passed to fetwfe()", {
@@ -248,7 +248,40 @@ test_that("Output from genRandomData can be passed to fetwfe()", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 10: Error when R >= T
+# Test 10: The output can be used to create a panel data frame 
+#         that is accepted by fetwfe() even when d = 0.
+# ------------------------------------------------------------------------------
+test_that("Output from genRandomData can be passed to fetwfe()", {
+  N <- 30; T_val <- 10; R_val <- 2; d_val <- 0
+  sig_eps_sq <- 1; sig_eps_c_sq <- 1
+  num_treats <- T_val * R_val - (R_val * (R_val + 1)) / 2
+  p_expected <- compute_p_int(T_val, R_val, d_val)
+  beta <- rnorm(p_expected)
+  
+  sim_data <- genRandomData(N, T_val, R_val, d_val, sig_eps_sq, sig_eps_c_sq, beta,
+                            seed = 789, gen_ints = TRUE, distribution = "uniform")
+  
+  # Now call fetwfe() with this panel data frame.
+  # Note: Since the simulated data come from a simplified process,
+  # we can use an empty list for indep_counts and leave noise variance as provided.
+  result <- fetwfe(
+    pdata     = sim_data$pdata,
+    time_var  = sim_data$time_var,
+    unit_var  = sim_data$unit_var,
+    treatment = sim_data$treatment,
+    covs      = sim_data$cov_names,
+    response  = sim_data$response,
+    sig_eps_sq = sig_eps_sq,
+    sig_eps_c_sq = sig_eps_c_sq,
+    verbose   = FALSE
+  )
+  
+  expect_true(is.numeric(result$att_hat))
+  expect_false(is.na(result$att_hat))
+})
+
+# ------------------------------------------------------------------------------
+# Test 11: Error when R >= T
 # ------------------------------------------------------------------------------
 test_that("genRandomData errors when R >= T", {
   # For example, set T = 5 and R = 5 (since R should be <= T-1).
@@ -265,7 +298,7 @@ test_that("genRandomData errors when R >= T", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 11: Error when T < 3
+# Test 12: Error when T < 3
 # ------------------------------------------------------------------------------
 test_that("genRandomData errors when T < 3", {
   # For instance, T = 2 should trigger an error (we require at least T = 3).
@@ -282,7 +315,7 @@ test_that("genRandomData errors when T < 3", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 12: Error when N < R
+# Test 13: Error when N < R
 # ------------------------------------------------------------------------------
 test_that("genRandomData errors when N < R", {
   # For example, if there are 3 units and 4 treated cohorts, that's impossible.
