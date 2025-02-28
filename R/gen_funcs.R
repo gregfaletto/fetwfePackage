@@ -96,31 +96,6 @@ genAssignments <- function(N, R){
     return(assignments)
 }
 
-getFirstInds <- function(n_treats, R, T){
-    # Let's identify the indices of the first treatment effects for each cohort.
-    # The first one is index 1, then the second one is index (T - 1) + 1 = T,
-    # then the third one is (T - 1) + (T - 2) + 1 = 2*T - 2. In general, for
-    # r > 1 the rth one will occur at index
-    #
-    # (T - 1) + (T - 2) + ... + (T - (r - 1)) + 1
-    # = 1 + (r - 1)*(T - 1 + T - r + 1)/2
-    # = 1 + (r - 1)*(2*T - r)/2.
-    #
-    # (Looks like the formula works for r = 1 too.)
-    f_inds <- integer(R)
-
-    for(r in 1:R){
-        f_inds[r] <- 1 + (r - 1)*(2*T - r)/2
-    }
-    stopifnot(all(f_inds <= n_treats))
-    stopifnot(f_inds[1] == 1)
-    # Last cohort has T - R treatment effects to estimate. So last first_ind
-    # should be at position num_treats - (T - R) + 1 = num_treats - T + R + 1.
-    stopifnot(f_inds[R] == n_treats - T + R + 1)
-
-    return(f_inds)
-}
-
 genTreatVarsSim <- function(n_treats, N, T, R, assignments, cohort_inds,
     N_UNTREATED, first_inds_test, d){
     # Treatment indicators
