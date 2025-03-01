@@ -66,10 +66,6 @@ or simply an empty vector (if \eqn{d = 0})}
 \item{assignments}{A vector of counts (of length \eqn{R+1}) indicating how many units fall into
 the never-treated group and each of the \eqn{R} treated cohorts.}
 \item{indep_assignments}{Independent cohort assignments (for auxiliary purposes).}
-\item{actual_cohort_tes}{The true cohort-specific treatment effects, computed by averaging the
-coefficients corresponding to the treatment dummies.}
-\item{att_true}{The overall average treatment effect on the treated, computed as the (equal-weight)
-average of the cohort treatment effects.}
 \item{p}{The number of columns in the design matrix \eqn{X}.}
 \item{N}{Number of units.}
 \item{T}{Number of time periods.}
@@ -112,7 +108,7 @@ and their interactions.
 \dontrun{
 # Full design with interactions (default behavior, with gaussian covariates):
 N <- 120; T <- 30; R <- 5; d <- 12; sig_eps_sq <- 5; sig_eps_c_sq <- 5
-num_treats <- T * R - (R * (R + 1)) / 2
+num_treats <- getNumTreats(R=R, T=T)
 p_int <- R + (T - 1) + d + d * R + d * (T - 1) + num_treats + num_treats * d
 beta_int <- rnorm(p_int)
 sim_int <- genRandomData(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta_int,

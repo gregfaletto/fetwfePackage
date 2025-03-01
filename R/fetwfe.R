@@ -481,10 +481,6 @@ fetwfe <- function(
 #'   \item{assignments}{A vector of counts (of length \eqn{R+1}) indicating how many units fall into
 #'         the never-treated group and each of the \eqn{R} treated cohorts.}
 #'   \item{indep_assignments}{Independent cohort assignments (for auxiliary purposes).}
-#'   \item{actual_cohort_tes}{The true cohort-specific treatment effects, computed by averaging the
-#'         coefficients corresponding to the treatment dummies.}
-#'   \item{att_true}{The overall average treatment effect on the treated, computed as the (equal-weight)
-#'         average of the cohort treatment effects.}
 #'   \item{p}{The number of columns in the design matrix \eqn{X}.}
 #'   \item{N}{Number of units.}
 #'   \item{T}{Number of time periods.}
@@ -513,7 +509,7 @@ fetwfe <- function(
 #' \dontrun{
 #' # Full design with interactions (default behavior, with gaussian covariates):
 #' N <- 120; T <- 30; R <- 5; d <- 12; sig_eps_sq <- 5; sig_eps_c_sq <- 5
-#' num_treats <- T * R - (R * (R + 1)) / 2
+#' num_treats <- getNumTreats(R=R, T=T)
 #' p_int <- R + (T - 1) + d + d * R + d * (T - 1) + num_treats + num_treats * d
 #' beta_int <- rnorm(p_int)
 #' sim_int <- genRandomData(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta_int,
@@ -542,8 +538,7 @@ genRandomData <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = NUL
     stopifnot(sig_eps_c_sq > 0)
 
     # Compute the number of treatment effects (common to both cases)
-    num_treats <- T * R - (R * (R + 1)) / 2
-  
+    num_treats <- getNumTreats(R=R, T=T)
   
     # --- Full design matrix with interactions ---
     # Expected number of columns:
@@ -591,7 +586,7 @@ genRandomData <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = NUL
       X_ints1 <- X_base
     }
 
-    first_inds_test <- getFirstInds(num_treats, R, T)
+    first_inds_test <- getFirstInds(R=R, T=T)
     res_treat <- genTreatVarsSim(num_treats, N, T, R, assignments, cohort_inds,
                                  N_UNTREATED = assignments[1],
                                  first_inds_test = first_inds_test, d = d)
@@ -627,16 +622,6 @@ genRandomData <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = NUL
     y <- X_final %*% beta + rep(unit_res, each = T) + 
       rnorm(N * T, mean = 0, sd = sqrt(sig_eps_sq))
     y <- y - mean(y)
-
-    base_cols <- if (d > 0) {
-      R + (T - 1) + d + d * R + d * (T - 1)
-    } else {
-      R + (T - 1)
-    }
-    treat_inds <- seq(from = base_cols + 1, length.out = num_treats)
-
-    actual_cohort_tes <- getActualCohortTes(R, first_inds, treat_inds, beta, num_treats)
-    att_true <- as.numeric(mean(actual_cohort_tes))
 
     if (gen_ints){
         X_ret <- X_final
@@ -710,8 +695,6 @@ genRandomData <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = NUL
       N_UNTREATED = assignments[1],
       assignments = assignments,
       indep_assignments = indep_assignments,
-      actual_cohort_tes = actual_cohort_tes,
-      att_true = att_true,
       p = p_expected,
       N = N,
       T = T,
@@ -820,13 +803,9 @@ genCoefs <- function(R, T, d, density, eff_size){
     stopifnot(T >= 3)
     stopifnot(R <= T - 1)
 
-    num_treats <- T * R - (R * (R + 1)) / 2
+    num_treats <- getNumTreats(R=R, T=T)
 
-    if (d > 0) {
-      p <- R + (T - 1) + d + d * R + d * (T - 1) + num_treats + num_treats * d
-    } else {
-      p <- R + (T - 1) + num_treats
-    }
+    p <- getP(R=R, T=T, d=d, num_treats=num_treats)
 
     theta <- rep(0, p)
 
@@ -897,10 +876,9 @@ genCoefs <- function(R, T, d, density, eff_size){
 
     # Base treatment effects: need to identify indices of first treatment
     # effect for each cohort
-    first_inds <- getFirstInds(num_treats, R, T)
+    first_inds <- getFirstInds(R=R, T=T)
 
-    treat_inds <- (R + T - 1 + d + R*d + (T - 1)*d + 1):
-        (R + T - 1 + d + R*d + (T - 1)*d + num_treats)
+    treat_inds <- getTreatInds(R=R, T=T, d=d, num_treats=num_treats)
 
     stopifnot(all(is.na(beta[treat_inds])))
 
@@ -935,3 +913,38 @@ genCoefs <- function(R, T, d, density, eff_size){
 
     return(list(beta=beta, theta=theta))
 }
+
+
+
+#' @return A list with two elements:
+#' \describe{
+#'   \item{att_true}{The overall average treatment effect on the treated, computed as the (equal-weight)
+#'         average of the cohort treatment effects.}
+#'   \item{actual_cohort_tes}{The true cohort-specific treatment effects, computed by averaging the
+#'         coefficients corresponding to the treatment dummies.}
+#' }
+#' @export
+getTes <- function(beta, R, T, d){
+
+    num_treats <- getNumTreats(R=R, T=T)
+
+    p <- getP(R=R, T=T, d=d, num_treats=num_treats)
+
+    stopifnot(length(beta) == p)
+
+    first_inds <- getFirstInds(R=R, T=T)
+    treat_inds <- getTreatInds(R=R, T=T, d=d, num_treats=num_treats)
+
+    actual_cohort_tes <- getActualCohortTes(
+        R=R,
+        first_inds=first_inds,
+        treat_inds=treat_inds,
+        coefs=beta,
+        num_treats=num_treats
+        )
+
+    att_true <- as.numeric(mean(actual_cohort_tes))
+
+    return(list(att_true=att_true, actual_cohort_tes=actual_cohort_tes))
+}
+

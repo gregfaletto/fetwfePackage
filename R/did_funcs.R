@@ -161,7 +161,7 @@ prepXints <- function(
     rm(data)
 
     #### Create matrix with all interactions
-    p <- R + T - 1 + d * (1 + R + T - 1) + (d + 1) * num_treats
+    p <- getP(R=R, T=T, d=d, num_treats=num_treats)
 
     stopifnot(ncol(cohort_var_mat) == R)
 
@@ -487,10 +487,8 @@ fetwfe_core <- function(
     stopifnot(length(c_names) == R)
 
     # Indices corresponding to base treatment effects
-    treat_inds <- (R + T - 1 + d + R*d + (T - 1)*d + 1):
-        (R + T - 1 + d + R*d + (T - 1)*d + num_treats)
+    treat_inds <- getTreatInds(R=R, T=T, d=d, num_treats=num_treats)
 
-    stopifnot(length(treat_inds) == num_treats)
     if(d > 0){
 
         stopifnot(max(treat_inds) + 1 <= p)
@@ -1365,6 +1363,10 @@ genXintsData <- function(cohort_fe, time_fe, X_long, treat_mat_long, N, R, T,
     # treat_mat_long interacted with all of the columns of X, and so on.
     X_int <- cbind(X_int, X_long_treat)
 
+    if(ncol(X_int) != p){
+        stop(paste("ncol(X_int) =", ncol(X_int), ", p =", p, ", R =", R, ", T =", T, ", d =", d))
+    }
+
     stopifnot(ncol(X_int) == p)
     stopifnot(nrow(X_int) == N * T)
 
@@ -1373,7 +1375,7 @@ genXintsData <- function(cohort_fe, time_fe, X_long, treat_mat_long, N, R, T,
 }
 
 
-getFirstInds <- function(n_treats, R, T){
+getFirstInds <- function(R, T){
     # Let's identify the indices of the first treatment effects for each cohort.
     # The first one is index 1, then the second one is index (T - 1) + 1 = T,
     # then the third one is (T - 1) + (T - 2) + 1 = 2*T - 2. In general, for
@@ -1384,6 +1386,9 @@ getFirstInds <- function(n_treats, R, T){
     # = 1 + (r - 1)*(2*T - r)/2.
     #
     # (Looks like the formula works for r = 1 too.)
+
+    n_treats <- getNumTreats(R=R, T=T)
+
     f_inds <- integer(R)
 
     for(r in 1:R){
@@ -1400,7 +1405,8 @@ getFirstInds <- function(n_treats, R, T){
 
 transformXintImproved <- function(X_int, N, T, R, d, num_treats, first_inds=NA){
     
-    p <- ncol(X_int)
+    p <- getP(R=R, T=T, d=d, num_treats=num_treats)
+    stopifnot(p == ncol(X_int))
     X_mod <- matrix(as.numeric(NA), nrow=N*T, ncol=p)
     stopifnot(nrow(X_int) == N*T)
     
@@ -1426,7 +1432,7 @@ transformXintImproved <- function(X_int, N, T, R, d, num_treats, first_inds=NA){
     # For each individual feature, this will be handled using
     # genTransformedMatFusion.
     if(any(is.na(first_inds))){
-        first_inds <- getFirstInds(num_treats, R)
+        first_inds <- getFirstInds(R=R, T=T)
     }
 
     if(d > 0){
@@ -1524,7 +1530,7 @@ untransformCoefImproved <- function(beta_hat_mod, T, R, p, d, num_treats,
     beta_hat <- rep(as.numeric(NA), p)
 
     if(any(is.na(first_inds))){
-        first_inds <- getFirstInds(num_treats, R)
+        first_inds <- getFirstInds(R=R, T=T)
     }
     
     # First handle R cohort fixed effects effects
@@ -2241,3 +2247,33 @@ getTeResults2 <- function(
         )
     )
 }
+
+getNumTreats <- function(R, T){
+    return(T * R - (R * (R + 1)) / 2)
+}
+
+getTreatInds <- function(R, T, d, num_treats){
+    base_cols <- if (d > 0) {
+      R + (T - 1) + d + d * R + d * (T - 1)
+    } else {
+      R + (T - 1)
+    }
+
+    treat_inds <- seq(from = base_cols + 1, length.out = num_treats)
+
+    stopifnot(length(treat_inds) == num_treats)
+    if(d > 0){
+        stopifnot(max(treat_inds) == R + T - 1 + d + R*d + (T - 1)*d + num_treats)
+    } else{
+        stopifnot(max(treat_inds) == R + T - 1 + num_treats)
+    }
+
+    return(treat_inds)
+}
+
+
+getP <- function(R, T, d, num_treats){
+    return(R + (T - 1) + d + d * R + d * (T - 1) + num_treats + num_treats * d)
+}
+
+

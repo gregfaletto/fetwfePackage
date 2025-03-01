@@ -3,4 +3,5 @@
 export(fetwfe)
 export(genCoefs)
 export(genRandomData)
+export(getTes)
 import(glmnet)

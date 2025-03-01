@@ -39,8 +39,8 @@ test_that("genRandomData (with interactions) returns expected output", {
   
   # Check list names (X now instead of X_int)
   expected_names <- c("X", "y", "coefs", "first_inds", "N_UNTREATED",
-                      "assignments", "indep_assignments", "actual_cohort_tes",
-                      "att_true", "p", "N", "T", "R", "d", "sig_eps_sq", "sig_eps_c_sq")
+                      "assignments", "indep_assignments", "p", "N", "T",
+                      "R", "d", "sig_eps_sq", "sig_eps_c_sq")
   for (nm in expected_names) {
     expect_true(nm %in% names(res))
   }
@@ -49,8 +49,6 @@ test_that("genRandomData (with interactions) returns expected output", {
   expect_equal(dim(res$X), c(N * T_val, p_int))
   expect_equal(length(res$y), N * T_val)
   
-  # Check that att_true equals the mean of actual_cohort_tes
-  expect_equal(res$att_true, as.numeric(mean(res$actual_cohort_tes)), tolerance = 1e-6)
 })
 
 # ------------------------------------------------------------------------------
@@ -70,20 +68,6 @@ test_that("genRandomData (without interactions) returns expected output", {
   expect_equal(length(res$y), N * T_val)
   expect_equal(res$p, p_no_int)
   
-  # Check that the treatment dummy columns are at the end of the design matrix.
-  num_treats <- compute_num_treats(T_val, R_val)
-  base_cols <- if (d_val > 0) {
-    R_val + (T_val - 1) + d_val + d_val * R_val + d_val * (T_val - 1)
-  } else {
-    R_val + (T_val - 1)
-  }
-  treat_inds <- seq(from = base_cols + 1, length.out = num_treats)
-  # Use getActualCohortTes() to compute actual cohort effects.
-  actual_cohort_tes <- getActualCohortTes(R_val, res$first_inds, treat_inds, beta_int, num_treats)
-  expect_equal(res$actual_cohort_tes, actual_cohort_tes)
-  
-  # Check that overall ATT equals mean of actual cohort effects.
-  expect_equal(res$att_true, as.numeric(mean(actual_cohort_tes)), tolerance = 1e-6)
 })
 
 # ------------------------------------------------------------------------------
