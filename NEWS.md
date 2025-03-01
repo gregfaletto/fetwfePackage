@@ -1,5 +1,9 @@
 # NEWS
 
+## Version 0.6.0 (2025-02-28)
+
+- Added functions `genRandomData()`, for generating random panel data suitable for `fetwfe()`, and `genCoefs()`, which generates a random vector of coefficients that is needed as an input to `genRandomData()`.
+
 ## Version 0.5.1 (2025-02-26)
 
 - Slight updates to handle cases when only one column or row of matrix is selected more smoothly.
