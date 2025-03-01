@@ -150,3 +150,55 @@ test_that("genRandomData and fetwfe work when d = 0", {
   expect_true(is.numeric(result$att_hat))
   expect_false(is.na(result$att_hat))
 })
+
+
+
+test_that("genCoefs errors when T < 3", {
+  expect_error(
+    genCoefs(R = 5, T = 2, density = 0.1, eff_size = 2, d = 12),
+    regexp = "T must be a numeric value greater than or equal to 3"
+  )
+})
+
+test_that("genCoefs errors when R < 2", {
+  expect_error(
+    genCoefs(R = 1, T = 30, density = 0.1, eff_size = 2, d = 12),
+    regexp = "R must be a numeric value greater than or equal to 2"
+  )
+})
+
+test_that("genCoefs errors when R > T - 1", {
+  # For example, if T = 30 then R must be <= 29.
+  expect_error(
+    genCoefs(R = 30, T = 30, density = 0.1, eff_size = 2, d = 12),
+    regexp = "R must be less than or equal to T - 1"
+  )
+})
+
+test_that("genCoefs errors when d is negative", {
+  expect_error(
+    genCoefs(R = 5, T = 30, density = 0.1, eff_size = 2, d = -1),
+    regexp = "d must be a non-negative numeric value"
+  )
+})
+
+test_that("genCoefs errors when density is not between 0 and 1", {
+  expect_error(
+    genCoefs(R = 5, T = 30, density = -0.1, eff_size = 2, d = 12),
+    regexp = "density must be"
+  )
+  expect_error(
+    genCoefs(R = 5, T = 30, density = 1.1, eff_size = 2, d = 12),
+    regexp = "density must be"
+  )
+})
+
+test_that("genCoefs errors when eff_size is not numeric", {
+  expect_error(
+    genCoefs(R = 5, T = 30, density = 0.1, eff_size = "2", d = 12),
+    regexp = "eff_size must be a numeric value"
+  )
+})
+
+
+

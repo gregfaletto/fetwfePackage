@@ -332,6 +332,8 @@ fetwfe <- function(
         stop("Only one treated cohort detected in data. Currently fetwfe only supports data sets with at least two treated cohorts.")
     }
 
+    stopifnot(N >= R + 1)
+
     stopifnot(sum(in_sample_counts) == N)
     stopifnot(all(in_sample_counts >= 0))
     stopifnot(is.integer(in_sample_counts))
@@ -535,7 +537,7 @@ genRandomData <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = NUL
     stopifnot(R <= T - 1)
     stopifnot(T >= 3)
     stopifnot(R >= 2)
-    stopifnot(N >= R)
+    stopifnot(N >= R + 1)
     stopifnot(sig_eps_sq > 0)
     stopifnot(sig_eps_c_sq > 0)
 
@@ -783,6 +785,36 @@ genRandomData <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = NUL
 #'
 #' @export
 genCoefs <- function(R, T, d, density, eff_size){
+
+    # Check that T is a numeric scalar and at least 3.
+  if (!is.numeric(T) || length(T) != 1 || T < 3) {
+    stop("T must be a numeric value greater than or equal to 3")
+  }
+  
+  # Check that R is a numeric scalar and at least 2.
+  if (!is.numeric(R) || length(R) != 1 || R < 2) {
+    stop("R must be a numeric value greater than or equal to 2 (currently there is only support for data sets with staggered adoptions, so at least two treated cohorts)")
+  }
+  
+  # Check that R does not exceed T - 1.
+  if (R > T - 1) {
+    stop("R must be less than or equal to T - 1")
+  }
+  
+  # Check that d is a numeric scalar and is non-negative.
+  if (!is.numeric(d) || length(d) != 1 || d < 0) {
+    stop("d must be a non-negative numeric value")
+  }
+  
+  # Check that density is a numeric scalar strictly between 0 and 1.
+  if (!is.numeric(density) || length(density) != 1 || density <= 0 || density >= 1) {
+    stop("density must be numeric and strictly between 0 and 1")
+  }
+  
+  # Check that eff_size is numeric.
+  if (!is.numeric(eff_size) || length(eff_size) != 1) {
+    stop("eff_size must be a numeric value")
+  }
 
     stopifnot(R >= 2)
     stopifnot(T >= 3)

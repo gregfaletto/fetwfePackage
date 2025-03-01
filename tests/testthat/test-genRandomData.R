@@ -330,5 +330,3 @@ test_that("genRandomData errors when N < R", {
     regexp = "N >= R"  # Expect an error message indicating N must be at least R
   )
 })
-
-
