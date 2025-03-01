@@ -54,9 +54,12 @@ from \eqn{[-\sqrt{3}, \sqrt{3}]}.}
 \value{
 A named list with the following elements:
 \describe{
+\item{pdf}{A dataframe containing generated data that can be passed to \code{fetwfe()}.}
 \item{X}{The design matrix. When \code{gen_ints = TRUE}, \eqn{X} has \eqn{p} columns with
 interactions; when \code{gen_ints = FALSE}, \eqn{X} has no interactions.}
 \item{y}{A numeric vector of length \eqn{N \times T} containing the generated responses.}
+\item{cov_names}{A character vector containing the names of the generated features (if \eqn{d > 0}),
+or simply an empty vector (if \eqn{d = 0})}
 \item{coefs}{The coefficient vector \eqn{\beta} used for data generation.}
 \item{first_inds}{A vector of indices indicating the first treatment effect for each treated cohort.}
 \item{N_UNTREATED}{The number of never-treated units.}
@@ -81,11 +84,11 @@ Generates a random panel dataset for simulation studies of the fused extended tw
 effects (FETWFE) estimator. The function creates a balanced panel with \eqn{N} units over \eqn{T}
 time periods, assigns treatment status across \eqn{R} treated cohorts (with equal marginal
 probabilities for treatment and non-treatment), and constructs a design matrix along with the
-corresponding outcome. When \code{gen_ints = TRUE} the full design matrix is generated (including
-interactions between covariates and fixed effects and treatment indicators) as expected by
-\code{fetwfe_core()}. When \code{gen_ints = FALSE} the design matrix is generated in a simpler
-format (with no interactions) as expected by \code{fetwfe()}. Moreover, the covariates are generated
-according to the specified \code{distribution}: by default, covariates are drawn from a normal distribution;
+corresponding outcome. When \code{gen_ints = TRUE} the full design matrix is returned (including
+interactions between covariates and fixed effects and treatment indicators). When
+\code{gen_ints = FALSE} the design matrix is generated in a simpler format (with no interactions)
+as expected by \code{fetwfe()}. Moreover, the covariates are generated according to the
+specified \code{distribution}: by default, covariates are drawn from a normal distribution;
 if \code{distribution = "uniform"}, they are drawn uniformly from \eqn{[-\sqrt{3}, \sqrt{3}]}.
 
 When \eqn{d = 0} (i.e. no covariates), no covariate-related columns or interactions are generated.
@@ -115,10 +118,8 @@ beta_int <- rnorm(p_int)
 sim_int <- genRandomData(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta_int,
                           seed = 123, gen_ints = TRUE, distribution = "gaussian")
 
-# Simple design without interactions using uniform covariates:
-p_no_int <- R + (T - 1) + d + num_treats
-beta_no_int <- rnorm(p_no_int)
-sim_no_int <- genRandomData(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta_no_int,
+# Simple design without interactions using uniform covariates returned:
+sim_no_int <- genRandomData(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta_int,
                             seed = 123, gen_ints = FALSE, distribution = "uniform")
 
 # When d = 0, no covariate or interaction terms are generated.
