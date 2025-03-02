@@ -660,57 +660,46 @@ genRandomData <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = NUL
 #'
 #' This function generates a coefficient vector \code{beta} along with a sparse auxiliary vector
 #' \code{theta} for simulation studies of the fused extended two-way fixed effects estimator. The
-#' returned \code{beta} is formatted to align with the dimension of the design matrix created by
-#' \code{genRandomData()}, and is a valid input for the \code{beta} argument of
-#' \code{genRandomData()}. It is constructed via an inverse fusion transform from a sparse vector
-#' \code{theta} (with approximately \code{density} proportion of nonzero entries scaled by
-#' \code{eff_size}).
+#' returned \code{beta} is formatted to align with the design matrix created by \code{genRandomData()},
+#' and is a valid input for the \code{beta} argument of that function. The vector \code{theta} is sparse,
+#' with nonzero entries occurring with probability \code{density} and scaled by \code{eff_size}.
 #'
-#' The total length of \code{beta} is given by:
-#' \deqn{
-#' p = R + (T - 1) + d + dR + d(T - 1) + \text{num_treats} + (\text{num_treats} \times d),
-#' }
-#' where in the cohort assignment scheme used by \code{genRandomData()},
-#' \deqn{
-#' \text{num\_treats} = T \times R - \frac{R(R+1)}{2}.
-#' }
-#'
-#' @param R Integer. The number of treated cohorts (treatment is assumed to start in periods 2 to
-#' \code{R + 1}).
+#' @param R Integer. The number of treated cohorts (treatment is assumed to start in periods 2 to \code{R + 1}).
 #' @param T Integer. The total number of time periods.
-#' @param d Integer. The number of time-invariant covariates. If \code{d > 0}, additional terms
-#'   corresponding to covariate main effects and interactions are included in \code{beta}.
-#' @param density Numeric in \eqn{(0,1)}. The probability that any given entry in the initial
-#'   sparse coefficient vector \code{theta} is nonzero.
-#' @param eff_size Numeric. The magnitude used to scale nonzero entries in \code{theta}. Each
-#'   nonzero is set to \code{eff_size} or \code{-eff_size} (with a 60\% chance of being positive).
+#' @param d Integer. The number of time-invariant covariates. If \code{d > 0}, additional terms corresponding
+#'   to covariate main effects and interactions are included in \code{beta}.
+#' @param density Numeric in (0,1). The probability that any given entry in the initial sparse coefficient
+#'   vector \code{theta} is nonzero.
+#' @param eff_size Numeric. The magnitude used to scale nonzero entries in \code{theta}. Each nonzero entry is
+#'   set to \code{eff_size} or \code{-eff_size} (with a 60 percent chance for a positive value).
 #'
 #' @return A list with two elements:
 #' \describe{
-#'   \item{\code{beta}}{A numeric vector of length \eqn{R + (T-1) + d + dR + d(T-1) + \text{num_treats} + (\text{num_treats} \times d)},
-#'   which is a valid input for the \code{beta} argument of \code{genRandomData()}.}
-#'   \item{\code{theta}}{A numeric vector of the same length as \code{beta} that is sparse (with nonzero
-#'   entries determined by \code{density} and scaled by \code{eff_size}). This vector is transformed
-#'   to obtain \code{beta}.}
+#'   \item{\code{beta}}{A numeric vector representing the full coefficient vector after the inverse fusion transform.}
+#'   \item{\code{theta}}{A numeric vector that is sparse, from which \code{beta} is derived.}
 #' }
 #'
-#' @details The function works as follows:
+#' @details
+#' The length of \code{beta} is given by
+#' \deqn{p = R + (T - 1) + d + dR + d(T - 1) + \mathit{num\_treats} + (\mathit{num\_treats} \times d)}{p = R + (T - 1) + d + dR + d(T - 1) + num_treats + (num_treats * d)},
+#' where the number of treatment parameters is defined as
+#' \deqn{\mathit{num\_treats} = T \times R - \frac{R(R+1)}{2}}{num_treats = T * R - R(R+1)/2}.
+#'
+#' The function operates in two steps:
 #' \enumerate{
-#'   \item It first creates a vector \code{theta} of length \eqn{p} (as computed above) where each
-#'   entry is independently set to a nonzero value with probability \code{density}. For nonzero entries,
-#'   the value is \code{eff_size} or \code{-eff_size} (with a 60\% probability for a positive sign).
-#'   \item It then computes \code{beta} by applying an inverse fusion transform (using internal routines
-#'   such as \code{genBackwardsInvFusionTransformMat()} and \code{genInvTwoWayFusionTransformMat()})
-#'   to \code{theta}. This step converts the sparse parameter vector \code{theta} into a full coefficient
-#'   vector \code{beta} that is compatible with the design matrix used in \code{genRandomData()}.
+#'   \item It first creates a sparse vector \code{theta} of length \eqn{p}, with nonzero entries occurring
+#'   with probability \code{density}. Nonzero entries are set to \code{eff_size} or \code{-eff_size} (with a 60\%
+#'   chance for a positive value).
+#'   \item The full coefficient vector \code{beta} is then computed by applying an inverse fusion transform to \code{theta}
+#'   using internal routines (e.g., \code{genBackwardsInvFusionTransformMat()} and \code{genInvTwoWayFusionTransformMat()}).
 #' }
 #'
 #' @examples
 #' \dontrun{
 #'   # Generate coefficients for a panel with 5 treated cohorts, 30 time periods,
-#'   # density 0.1 for nonzero coefficients, effect size 2, and 12 covariates.
+#'   # a density of 0.1 for nonzero coefficients, effect size 2, and 12 covariates.
 #'   coefs <- genCoefs(R = 5, T = 30, density = 0.1, eff_size = 2, d = 12)
-#'   
+#'
 #'   # Use the generated beta vector in a simulation study:
 #'   simData <- genRandomData(
 #'     N = 120, T = 30, R = 5, d = 12,

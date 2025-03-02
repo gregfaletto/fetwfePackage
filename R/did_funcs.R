@@ -391,10 +391,10 @@ fetwfe_core <- function(
         stopifnot(ncol(D_inverse) == ncol(X_final))
 
         # Now add rows
-        lambda_ridge <- 0.0001 * (sig_eps_sq + sig_eps_c_sq)
+        lambda_ridge <- 0.00001 * (sig_eps_sq + sig_eps_c_sq) * sqrt(p / (N * T))
 
         X_final <- rbind(X_final, sqrt(lambda_ridge) * D_inverse)
-        y_final <- c(y_final, rep(0, nrow(d_inverse)))
+        y_final <- c(y_final, rep(0, nrow(D_inverse)))
 
         stopifnot(nrow(X_final) == length(y_final))
         stopifnot(nrow(X_final) == N * T + p)
