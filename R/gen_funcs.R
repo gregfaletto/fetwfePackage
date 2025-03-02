@@ -37,7 +37,6 @@ genCohortTimeFE <- function(N, T, R, d){
     # Generate cohort assignments
     assignments <- genAssignments(N, R)
     
-
     # Cohort fixed effects
     cohort_fe <- matrix(0, N*T, R)
     first_ind_r <- assignments[1]*T + 1
@@ -84,6 +83,7 @@ genCohortTimeFE <- function(N, T, R, d){
 
 genAssignments <- function(N, R){
     # Make sure at least one observation in each cohort
+    stopifnot(N >= R + 1)
     pass_condition <- FALSE
     while(!pass_condition){
         assignments <- rmultinom(n=1, size=N, prob=rep(1/(R + 1), R + 1))[, 1]
@@ -205,4 +205,29 @@ rfunc <- function(n, prob){
     vec[vec == 0] <- -1
     stopifnot(all(vec %in% c(-1, 1)))
     return(vec)
+}
+
+testGenRandomDataInputs <- function(beta, R, T, d, N, sig_eps_sq, sig_eps_c_sq){
+
+    stopifnot(R <= T - 1)
+    stopifnot(T >= 3)
+    stopifnot(R >= 2)
+    stopifnot(N >= R + 1)
+    stopifnot(sig_eps_sq > 0)
+    stopifnot(sig_eps_c_sq > 0)
+
+    # Compute the number of treatment effects (common to both cases)
+    num_treats <- getNumTreats(R=R, T=T)
+  
+    # --- Full design matrix with interactions ---
+    # Expected number of columns:
+    # If d > 0: p = R + (T - 1) + d + d*R + d*(T - 1) + num_treats + num_treats*d
+    # If d == 0: p = R + (T - 1) + num_treats
+    p_expected <- getP(R=R, T=T, d=d, num_treats=num_treats)
+
+    if (length(beta) != p_expected) {
+      stop(sprintf("For gen_ints = TRUE, length(beta) must be %d", p_expected))
+    }
+
+    return(list(num_treats=num_treats, p_expected=p_expected))
 }

@@ -463,29 +463,20 @@ fetwfe <- function(
 genRandomData <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = NULL, 
                           gen_ints = FALSE, distribution = "gaussian") {
     if (!is.null(seed)) set.seed(seed)
-    stopifnot(R <= T - 1)
-    stopifnot(T >= 3)
-    stopifnot(R >= 2)
-    stopifnot(N >= R + 1)
-    stopifnot(sig_eps_sq > 0)
-    stopifnot(sig_eps_c_sq > 0)
 
-    # Compute the number of treatment effects (common to both cases)
-    num_treats <- getNumTreats(R=R, T=T)
-  
-    # --- Full design matrix with interactions ---
-    # Expected number of columns:
-    # If d > 0: p = R + (T - 1) + d + d*R + d*(T - 1) + num_treats + num_treats*d
-    # If d == 0: p = R + (T - 1) + num_treats
-    if (d > 0) {
-      p_expected <- R + (T - 1) + d + d * R + d * (T - 1) + num_treats + num_treats * d
-    } else {
-      p_expected <- R + (T - 1) + num_treats
-    }
+    res <- testGenRandomDataInputs(
+        beta=beta,
+        R=R,
+        T=T,
+        d=d,
+        N=N,
+        sig_eps_sq=sig_eps_sq,
+        sig_eps_c_sq=sig_eps_c_sq)
 
-    if (length(beta) != p_expected) {
-      stop(sprintf("For gen_ints = TRUE, length(beta) must be %d", p_expected))
-    }
+    num_treats <- res$num_treats
+    p_expected <- res$p_expected
+
+    rm(res)
 
     # Generate base effects and covariates (using specified distribution)
     res_base <- generateBaseEffects(
@@ -867,9 +858,20 @@ genCoefs <- function(R, T, d, density, eff_size){
 
     stopifnot(all(!is.na(beta)))
 
+    # Confirm beta satisfies input requirements of genRandomData() (make
+    # up values for N, sig_eps_sq, and sig_eps_c_sq that meet requirements)
+
+    testGenRandomDataInputs(
+        beta=beta,
+        R=R,
+        T=T,
+        d=d,
+        N=R+1,
+        sig_eps_sq=1,
+        sig_eps_c_sq=1)
+
     return(list(beta=beta, theta=theta))
 }
-
 
 
 #' Compute True Treatment Effects
