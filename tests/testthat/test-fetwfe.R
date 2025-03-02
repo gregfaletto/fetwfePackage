@@ -859,7 +859,7 @@ test_that("data application works with ridge penalty", {
 
   # sig_eps_sq and sig_eps_c_sq, calculated in a separate run of `fetwfe(),
   # are provided to speed up the computation of the example
-  res <- fetwfe(
+  res <- suppressWarnings(fetwfe(
       pdata = divorce[divorce$sex == 2, ],
       time_var = "year",
       unit_var = "st",
@@ -869,7 +869,7 @@ test_that("data application works with ridge penalty", {
       sig_eps_sq = 0.1025361,
       sig_eps_c_sq = 4.227651e-35,
       verbose = TRUE,
-      add_ridge=TRUE)
+      add_ridge=TRUE))
 
   expect_true(is.numeric(res$att_hat))
   expect_false(is.na(res$att_hat))

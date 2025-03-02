@@ -741,7 +741,7 @@ fetwfe_core <- function(
         calc_ses = q < 1,
         p=p,
         alpha=alpha,
-        add_ridge=add_ridge,
+        add_ridge=add_ridge
         )
 
     cohort_te_df <- res$cohort_te_df
