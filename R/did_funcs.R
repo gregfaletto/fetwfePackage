@@ -1908,12 +1908,26 @@ getCohortATTsFinal <- function(
 
     if(add_ridge){
         stopifnot(nrow(X_final) == N * T + p)
+        X_to_pass <- X_final[1:(N*T), ]
+    } else{
+        stopifnot(nrow(X_final) == N * T)
+        X_to_pass <- X_final
     }
+
+    stopifnot(nrow(X_to_pass) == N * T)
 
     # Start by getting Gram matrix needed for standard errors
     if(calc_ses){
-        res <- getGramInv(N, T, X_final[1:(N * T), ], sel_feat_inds, treat_inds, num_treats,
-            sel_treat_inds_shifted, calc_ses)
+        res <- getGramInv(
+            N=N,
+            T=T, 
+            X_final=X_to_pass,
+            sel_feat_inds=sel_feat_inds,
+            treat_inds=treat_inds,
+            num_treats=num_treats,
+            sel_treat_inds_shifted=sel_treat_inds_shifted,
+            calc_ses=calc_ses
+            )
 
         gram_inv <- res$gram_inv
         calc_ses <- res$calc_ses
