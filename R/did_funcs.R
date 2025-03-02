@@ -396,7 +396,7 @@ fetwfe_core <- function(
         X_final <- rbind(X_final, sqrt(lambda_ridge) * d_inverse)
         y_final <- c(y_final, rep(0, nrow(d_inverse)))
 
-        stopifnot(ncol(X_final) == length(y_final))
+        stopifnot(nrow(X_final) == length(y_final))
     }
 
     #

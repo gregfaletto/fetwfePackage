@@ -19,7 +19,8 @@ fetwfe(
   nlambda = 100,
   q = 0.5,
   verbose = FALSE,
-  alpha = 0.05
+  alpha = 0.05,
+  add_ridge = FALSE
 )
 }
 \arguments{
@@ -122,6 +123,10 @@ be printed as the function executes. Default is FALSE.}
 
 \item{alpha}{Numeric; function will calculate (1 - \code{alpha}) confidence intervals
 for the cohort average treatment effects that will be returned in \code{catt_df}.}
+
+\item{add_ridge}{(Optional.) Logical; if TRUE, adds a small amount of ridge
+regularization to the (untransformed) coefficients to stabilize estimation.
+Default is FALSE.}
 }
 \value{
 A named list with the following elements: \item{att_hat}{The
