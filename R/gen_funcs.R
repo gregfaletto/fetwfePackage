@@ -158,7 +158,7 @@ genTreatVarsSim <- function(n_treats, N, T, R, assignments, cohort_inds,
 
         stopifnot(all(treat_inds_r <= n_treats))
         stopifnot(length(treat_inds_r) == n_treats_r)
-        stopifnot(all(colSums(treat_mat_long[, treat_inds_r]) ==
+        stopifnot(all(colSums(treat_mat_long[, treat_inds_r, drop=FALSE]) ==
             assignments[r + 1]))
 
         if(r < R){

@@ -314,3 +314,35 @@ test_that("genRandomData errors when N < R", {
     regexp = "N >= R"  # Expect an error message indicating N must be at least R
   )
 })
+
+# ------------------------------------------------------------------------------
+# Test 14: Input from genCoefs() works.
+# ------------------------------------------------------------------------------
+test_that("Input from genCoefs() works", {
+  N <- 30; T_val <- 3; R_val <- 2; d_val <- 2
+  sig_eps_sq <- 1; sig_eps_c_sq <- 1
+  density=0.2
+  eff_size <- 1
+
+  res <- genCoefs(R=R_val, T=T_val, d=d_val, density=density, eff_size=eff_size)
+
+  p_int <- compute_p_int(T=T_val, R=R_val, d=d_val)
+
+  expect_equal(p_int, length(res$beta))
+  
+  sim_data <- genRandomData(N=N, T=T_val, R=R_val, d=d_val, sig_eps_sq=sig_eps_sq,
+    sig_eps_c_sq=sig_eps_c_sq, beta=res$beta, gen_ints = TRUE, seed = 789)
+  
+  # Check list names (X now instead of X_int)
+  expected_names <- c("X", "y", "coefs", "covs", "first_inds", "N_UNTREATED",
+                      "assignments", "indep_counts", "p", "N", "T",
+                      "R", "d", "sig_eps_sq", "sig_eps_c_sq")
+  for (nm in expected_names) {
+    expect_true(nm %in% names(sim_data))
+  }
+
+  # Check dimensions of X and y
+  expect_equal(nrow(sim_data$X), N*T_val)
+  expect_equal(ncol(sim_data$X), p_int)
+  expect_equal(length(sim_data$y), N * T_val)
+})

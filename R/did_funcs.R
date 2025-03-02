@@ -397,6 +397,7 @@ fetwfe_core <- function(
         y_final <- c(y_final, rep(0, nrow(d_inverse)))
 
         stopifnot(nrow(X_final) == length(y_final))
+        stopifnot(nrow(X_final) == N * T + p)
     }
 
     #
@@ -719,13 +720,17 @@ fetwfe_core <- function(
     #
     #
 
+    if(add_ridge){
+        stopifnot(nrow(X_final) == N * T + p)
+    }
+
     res <- getCohortATTsFinal(
-        X_final,
-        sel_feat_inds,
-        treat_inds,
-        num_treats,
-        first_inds,
-        sel_treat_inds_shifted,
+        X_final=X_final,
+        sel_feat_inds=sel_feat_inds,
+        treat_inds=treat_inds,
+        num_treats=num_treats,
+        first_inds=first_inds,
+        sel_treat_inds_shifted=sel_treat_inds_shifted,
         c_names=c_names,
         tes=tes,
         sig_eps_sq=sig_eps_sq,

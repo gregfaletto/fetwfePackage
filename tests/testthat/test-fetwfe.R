@@ -833,5 +833,20 @@ test_that("adding ridge regularization to fetwfe works", {
   
   expect_true(is.numeric(result$att_hat))
   expect_false(is.na(result$att_hat))
+
+  result <- fetwfe(
+    pdata     = df,
+    time_var  = "time",
+    unit_var  = "unit",
+    treatment = "treatment",
+    covs      = c("cov1", "cov2"),
+    response  = "y",
+    verbose   = FALSE,
+    add_ridge = TRUE,
+    q         = 0.5
+  )
+  
+  expect_true(is.numeric(result$att_hat))
+  expect_false(is.na(result$att_hat))
 })
 

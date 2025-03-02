@@ -153,6 +153,7 @@ test_that("genRandomData and fetwfe work when d = 0", {
 
 
 
+
 test_that("genCoefs errors when T < 3", {
   expect_error(
     genCoefs(R = 5, T = 2, density = 0.1, eff_size = 2, d = 12),
