@@ -91,6 +91,9 @@
 #' be printed as the function executes. Default is FALSE.
 #' @param alpha Numeric; function will calculate (1 - `alpha`) confidence intervals
 #' for the cohort average treatment effects that will be returned in `catt_df`.
+#' @param add_ridge (Optional.) Logical; if TRUE, adds a small amount of ridge
+#' regularization to the (untransformed) coefficients to stabilize estimation.
+#' Default is FALSE.
 #' @return A named list with the following elements: \item{att_hat}{The
 #' estimated overall average treatment effect for a randomly selected treated
 #' unit.} \item{att_se}{If `q < 1`, a standard error for the ATT. If
@@ -212,7 +215,8 @@ fetwfe <- function(
     nlambda=100,
     q=0.5,
     verbose=FALSE,
-    alpha=0.05
+    alpha=0.05,
+    add_ridge=FALSE
     ){
 
     # Check inputs
@@ -231,7 +235,8 @@ fetwfe <- function(
         nlambda=nlambda,
         q=q,
         verbose=verbose,
-        alpha=alpha
+        alpha=alpha,
+        add_ridge=add_ridge
     )
 
     pdata <- pdata[, c(response, time_var, unit_var, treatment, covs)]
@@ -309,7 +314,8 @@ fetwfe <- function(
         nlambda=nlambda,
         q=q,
         verbose=verbose,
-        alpha=alpha
+        alpha=alpha,
+        add_ridge=add_ridge
         )
 
     if(indep_count_data_available){
@@ -622,7 +628,8 @@ genRandomData <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = NUL
         nlambda=100,
         q=0.5,
         verbose=FALSE,
-        alpha=0.05
+        alpha=0.05,
+        add_ridge=FALSE
     )
     
     return(list(

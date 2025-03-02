@@ -210,7 +210,8 @@ fetwfe_core <- function(
     nlambda=100,
     q=0.5,
     verbose=FALSE,
-    alpha=0.05
+    alpha=0.05,
+    add_ridge=FALSE
     ){
 
     #
@@ -294,6 +295,9 @@ fetwfe_core <- function(
     stopifnot(alpha > 0)
     stopifnot(alpha < 1)
 
+    stopifnot(is.logical(add_ridge))
+    stopifnot(length(add_ridge) == 1)
+
     #
     #
     # Step 1: change coordinates of data so that regular bridge regression
@@ -366,6 +370,34 @@ fetwfe_core <- function(
 
     y_final <- kronecker(diag(N), sqrt(sig_eps_sq)*Omega_sqrt_inv) %*% y
     X_final <- kronecker(diag(N), sqrt(sig_eps_sq)*Omega_sqrt_inv) %*% X_mod
+
+    #
+    #
+    # Optional: if using ridge regularization on untransformed coefficients,
+    # add those rows now
+    #
+    #
+
+    if(add_ridge){
+        # Add rows to X_final. First need to get D^{-1}:
+        d_inverse <- genFullInvFusionTransformMat(
+            first_inds=first_inds,
+            T=T,
+            R=R,
+            d=d,
+            num_treats=num_treats
+            )
+
+        stopifnot(ncol(d_inverse) == ncol(X_final))
+
+        # Now add rows
+        lambda_ridge <- 0.001 * sqrt(sig_eps_sq + sig_eps_c_sq)
+
+        X_final <- rbind(X_final, sqrt(lambda_ridge) * d_inverse)
+        y_final <- c(y_final, rep(0, nrow(d_inverse)))
+
+        stopifnot(ncol(X_final) == length(y_final))
+    }
 
     #
     #
@@ -653,6 +685,12 @@ fetwfe_core <- function(
         d=d,
         num_treats=num_treats
         )
+
+    # If using ridge regularization, multiply the "naive" estimated coefficients
+    # by 1 + lambda_ridge, similar to suggestion in original elastic net paper.
+    if(add_ridge){
+        beta_hat <- beta_hat * (1 + lambda_ridge)
+    }
 
     # TODO(gregfaletto): add labels to these estimates to make them easier to 
     # interpret
@@ -2292,7 +2330,8 @@ checkFetwfeInputs <- function(
     nlambda=100,
     q=0.5,
     verbose=FALSE,
-    alpha=0.05
+    alpha=0.05,
+    add_ridge=FALSE
     ){
 
      # Check inputs
@@ -2381,6 +2420,68 @@ checkFetwfeInputs <- function(
         warning("Provided alpha > 0.5; are you sure you didn't mean to enter a smaller alpha? The confidence level will be 1 - alpha.")
     }
 
+    stopifnot(is.logical(add_ridge))
+    stopifnot(length(add_ridge) == 1)
+
     return(indep_count_data_available)
 
+}
+
+#' Generate the full D^{-1} transformation matrix.
+#'
+#' @param first_inds A vector of indices corresponding to the first treatment effect for each treated cohort.
+#' @param T Total number of time periods.
+#' @param R Number of treated cohorts.
+#' @param d Number of covariates (time–invariant).
+#' @param num_treats Total number of base treatment effect parameters.
+#'
+#' @return A matrix of dimension p x p where p = R + (T - 1) + d + d*R + d*(T - 1) + num_treats + d*num_treats.
+#'
+#' @examples
+#' # Example: first_inds = c(1, 5, 8) for R = 3, T = 6, d = 2, num_treats = 10.
+#' D_inv <- genFullInvFusionTransformMat(first_inds = c(1, 5, 8), T = 6, R = 3, d = 2, num_treats = 10)
+genFullInvFusionTransformMat <- function(first_inds, T, R, d, num_treats) {
+  # Load required package for block diagonal concatenation.
+  if (!requireNamespace("Matrix", quietly = TRUE)) {
+    stop("The 'Matrix' package is required but not installed.")
+  }
+  
+  # Block 1: Cohort fixed effects block, size R x R.
+  block1 <- genBackwardsInvFusionTransformMat(R)
+  
+  # Block 2: Time fixed effects block, size (T - 1) x (T - 1).
+  block2 <- genBackwardsInvFusionTransformMat(T - 1)
+  
+  # Block 3: Covariate main effects, identity of dimension d.
+  block3 <- if (d > 0) diag(d) else NULL
+  
+  # Block 4: Cohort-X interactions: I_d \otimes genBackwardsInvFusionTransformMat(R)
+  block4 <- if (d > 0) kronecker(diag(d), genBackwardsInvFusionTransformMat(R)) else NULL
+  
+  # Block 5: Time-X interactions: I_d \otimes genBackwardsInvFusionTransformMat(T - 1)
+  block5 <- if (d > 0) kronecker(diag(d), genBackwardsInvFusionTransformMat(T - 1)) else NULL
+  
+  # Block 6: Base treatment effects: genInvTwoWayFusionTransformMat(num_treats, first_inds, R)
+  block6 <- genInvTwoWayFusionTransformMat(num_treats, first_inds, R)
+  
+  # Block 7: Treatment-X interactions: I_d \otimes genInvTwoWayFusionTransformMat(num_treats, first_inds, R)
+  block7 <- if (d > 0) kronecker(diag(d), genInvTwoWayFusionTransformMat(num_treats, first_inds, R)) else NULL
+  
+  # Combine blocks into a block-diagonal matrix.
+  # Use Matrix::bdiag which returns a sparse matrix; convert to dense if needed.
+  blocks <- list(block1, block2)
+  if (!is.null(block3)) blocks <- c(blocks, list(block3))
+  if (!is.null(block4)) blocks <- c(blocks, list(block4))
+  if (!is.null(block5)) blocks <- c(blocks, list(block5))
+  blocks <- c(blocks, list(block6))
+  if (!is.null(block7)) blocks <- c(blocks, list(block7))
+  
+  full_D_inv <- as.matrix(Matrix::bdiag(blocks))
+
+  p <- getP(R=R, T=T, d=d, num_treats=num_treats)
+
+  stopifnot(nrow(full_D_inv) == p)
+  stopifnot(ncol(full_D_inv) == p)
+  
+  return(full_D_inv)
 }

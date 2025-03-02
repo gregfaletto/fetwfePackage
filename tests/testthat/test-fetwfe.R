@@ -814,5 +814,24 @@ test_that("Estimator works with no covariates again", {
   expect_equal(result$d, 0)
 })
 
-
+# ------------------------------------------------------------------------------
+# Test 27: Test that adding ridge regularization works
+# ------------------------------------------------------------------------------
+test_that("adding ridge regularization to fetwfe works", {
+  df <- generate_panel_data(N = 30, T = 10, R = 9, seed = 202)
+  
+  result <- fetwfe(
+    pdata     = df,
+    time_var  = "time",
+    unit_var  = "unit",
+    treatment = "treatment",
+    covs      = c("cov1", "cov2"),
+    response  = "y",
+    verbose   = FALSE,
+    add_ridge = TRUE
+  )
+  
+  expect_true(is.numeric(result$att_hat))
+  expect_false(is.na(result$att_hat))
+})
 
