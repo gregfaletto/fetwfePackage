@@ -850,3 +850,29 @@ test_that("adding ridge regularization to fetwfe works", {
   expect_false(is.na(result$att_hat))
 })
 
+test_that("data application works with ridge penalty", {
+  set.seed(23451)
+
+  library(bacondecomp)
+
+  data(divorce)
+
+  # sig_eps_sq and sig_eps_c_sq, calculated in a separate run of `fetwfe(),
+  # are provided to speed up the computation of the example
+  res <- fetwfe(
+      pdata = divorce[divorce$sex == 2, ],
+      time_var = "year",
+      unit_var = "st",
+      treatment = "changed",
+      covs = c("murderrate", "lnpersinc", "afdcrolls"),
+      response = "suiciderate_elast_jag",
+      sig_eps_sq = 0.1025361,
+      sig_eps_c_sq = 4.227651e-35,
+      verbose = TRUE,
+      add_ridge=TRUE)
+
+  expect_true(is.numeric(res$att_hat))
+  expect_false(is.na(res$att_hat))
+
+  })
+

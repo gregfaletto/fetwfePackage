@@ -739,7 +739,9 @@ fetwfe_core <- function(
         T=T,
         fused=TRUE,
         calc_ses = q < 1,
-        alpha=alpha
+        p=p,
+        alpha=alpha,
+        add_ridge=add_ridge,
         )
 
     cohort_te_df <- res$cohort_te_df
@@ -1894,7 +1896,9 @@ getCohortATTsFinal <- function(
     T,
     fused,
     calc_ses,
-    alpha=0.05
+    p,
+    alpha=0.05,
+    add_ridge=FALSE
     ){
 
     stopifnot(max(sel_treat_inds_shifted) <= num_treats)
@@ -1902,9 +1906,13 @@ getCohortATTsFinal <- function(
     stopifnot(length(tes) == num_treats)
     stopifnot(all(!is.na(tes)))
 
+    if(add_ridge){
+        stopifnot(nrow(X_final) == N * T + p)
+    }
+
     # Start by getting Gram matrix needed for standard errors
     if(calc_ses){
-        res <- getGramInv(N, T, X_final, sel_feat_inds, treat_inds, num_treats,
+        res <- getGramInv(N, T, X_final[1:(N * T), ], sel_feat_inds, treat_inds, num_treats,
             sel_treat_inds_shifted, calc_ses)
 
         gram_inv <- res$gram_inv
