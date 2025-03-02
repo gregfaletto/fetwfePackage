@@ -215,91 +215,24 @@ fetwfe <- function(
     alpha=0.05
     ){
 
-     # Check inputs
-    stopifnot(is.data.frame(pdata))
-    stopifnot(nrow(pdata) >= 4) # bare minimum, 2 units at 2 times
-
-    stopifnot(is.character(time_var))
-    stopifnot(length(time_var) == 1)
-    stopifnot(time_var %in% colnames(pdata))
-    stopifnot(is.integer(pdata[[time_var]]))
-
-    stopifnot(is.character(unit_var))
-    stopifnot(length(unit_var) == 1)
-    stopifnot(unit_var %in% colnames(pdata))
-    stopifnot(is.character(pdata[[unit_var]]))
-
-    stopifnot(is.character(treatment))
-    stopifnot(length(treatment) == 1)
-    stopifnot(treatment %in% colnames(pdata))
-    stopifnot(is.integer(pdata[[treatment]]))
-    stopifnot(all(pdata[, treatment] %in% c(0, 1)))
-
-    if(length(covs) > 0){
-        stopifnot(is.character(covs))
-        stopifnot(all(covs %in% colnames(pdata)))
-        for(cov in covs){
-            stopifnot(is.numeric(pdata[[cov]]) | is.integer(pdata[[cov]]))
-        }
-    }
-    
-
-    stopifnot(is.character(response))
-    stopifnot(length(response) == 1)
-    stopifnot(response %in% colnames(pdata))
-    stopifnot(is.numeric(pdata[[response]]) | is.integer(pdata[[response]]))
-
-    indep_count_data_available <- FALSE
-    if(any(!is.na(indep_counts))){
-        stopifnot(is.integer(indep_counts))
-        if(any(indep_counts <= 0)){
-            stop("At least one cohort in the independent count data has 0 members")
-        }
-        indep_count_data_available <- TRUE
-    }
-
-    if(any(!is.na(sig_eps_sq))){
-        stopifnot(is.numeric(sig_eps_sq) | is.integer(sig_eps_sq))
-        stopifnot(length(sig_eps_sq) == 1)
-        stopifnot(sig_eps_sq >= 0)
-    }
-
-    if(any(!is.na(sig_eps_c_sq))){
-        stopifnot(is.numeric(sig_eps_c_sq) | is.integer(sig_eps_c_sq))
-        stopifnot(length(sig_eps_c_sq) == 1)
-        stopifnot(sig_eps_c_sq >= 0)
-    }
-
-    if(any(!is.na(lambda.max))){
-        stopifnot(is.numeric(lambda.max) | is.integer(lambda.max))
-        stopifnot(length(lambda.max) == 1)
-        stopifnot(lambda.max > 0)
-    }
-
-    if(any(!is.na(lambda.min))){
-        stopifnot(is.numeric(lambda.min) | is.integer(lambda.min))
-        stopifnot(length(lambda.min) == 1)
-        stopifnot(lambda.min >= 0)
-        if(any(!is.na(lambda.max))){
-            stopifnot(lambda.max > lambda.min)
-        }
-    }
-
-    stopifnot(is.numeric(q) | is.integer(q))
-    stopifnot(length(q) == 1)
-    stopifnot(q > 0)
-    stopifnot(q <= 2)
-
-    stopifnot(is.logical(verbose))
-    stopifnot(length(verbose) == 1)
-
-    stopifnot(is.numeric(alpha))
-    stopifnot(length(alpha) == 1)
-    stopifnot(alpha > 0)
-    stopifnot(alpha < 1)
-    if(alpha > 0.5){
-        warning("Provided alpha > 0.5; are you sure you didn't mean to enter a smaller alpha? The confidence level will be 1 - alpha.")
-    }
+    # Check inputs
+    indep_count_data_available <- checkFetwfeInputs(
+        pdata=pdata,
+        time_var=time_var,
+        unit_var=unit_var,
+        treatment=treatment,
+        response=response,
+        covs=covs,
+        indep_counts=indep_counts,
+        sig_eps_sq=sig_eps_sq,
+        sig_eps_c_sq=sig_eps_c_sq,
+        lambda.max=lambda.max,
+        lambda.min=lambda.min,
+        nlambda=nlambda,
+        q=q,
+        verbose=verbose,
+        alpha=alpha
+    )
 
     pdata <- pdata[, c(response, time_var, unit_var, treatment, covs)]
 
@@ -473,14 +406,14 @@ fetwfe <- function(
 #'   \item{X}{The design matrix. When \code{gen_ints = TRUE}, \eqn{X} has \eqn{p} columns with
 #'     interactions; when \code{gen_ints = FALSE}, \eqn{X} has no interactions.}
 #'   \item{y}{A numeric vector of length \eqn{N \times T} containing the generated responses.}
-#'   \item{cov_names}{A character vector containing the names of the generated features (if \eqn{d > 0}),
+#'   \item{covs}{A character vector containing the names of the generated features (if \eqn{d > 0}),
 #'          or simply an empty vector (if \eqn{d = 0})}
 #'   \item{coefs}{The coefficient vector \eqn{\beta} used for data generation.}
 #'   \item{first_inds}{A vector of indices indicating the first treatment effect for each treated cohort.}
 #'   \item{N_UNTREATED}{The number of never-treated units.}
 #'   \item{assignments}{A vector of counts (of length \eqn{R+1}) indicating how many units fall into
 #'         the never-treated group and each of the \eqn{R} treated cohorts.}
-#'   \item{indep_assignments}{Independent cohort assignments (for auxiliary purposes).}
+#'   \item{indep_counts}{Independent cohort assignments (for auxiliary purposes).}
 #'   \item{p}{The number of columns in the design matrix \eqn{X}.}
 #'   \item{N}{Number of units.}
 #'   \item{T}{Number of time periods.}
@@ -680,12 +613,32 @@ genRandomData <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = NUL
     df_panel$time <- as.integer(df_panel$time)
     df_panel$unit <- as.character(df_panel$unit)
     df_panel$treatment <- as.integer(df_panel$treatment)
+
+    # confirm that outputs satisfy input requirements of fetwfe()
+    # (Plug in default values for arguments not generated here)
+    checkFetwfeInputs(
+        pdata=df_panel,
+        time_var="time",
+        unit_var="unit",
+        treatment="treatment",
+        response="y",
+        covs=cov_names,
+        indep_counts=indep_assignments,
+        sig_eps_sq=sig_eps_sq,
+        sig_eps_c_sq=sig_eps_c_sq,
+        lambda.max=NA,
+        lambda.min=NA,
+        nlambda=100,
+        q=0.5,
+        verbose=FALSE,
+        alpha=0.05
+    )
     
     return(list(
-        pdata = df_panel,
+      pdata = df_panel,
       X = X_ret,
       y = y,
-      cov_names = cov_names,
+      covs = cov_names,
       time_var = "time",
       unit_var = "unit",
       treatment = "treatment",
@@ -694,7 +647,7 @@ genRandomData <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = NUL
       first_inds = first_inds,
       N_UNTREATED = assignments[1],
       assignments = assignments,
-      indep_assignments = indep_assignments,
+      indep_counts = indep_assignments,
       p = p_expected,
       N = N,
       T = T,
@@ -709,20 +662,23 @@ genRandomData <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = NUL
 #'
 #' This function generates a coefficient vector \code{beta} along with a sparse auxiliary vector
 #' \code{theta} for simulation studies of the fused extended two-way fixed effects estimator. The
-#' returned \code{beta} is constructed via an inverse fusion transform from a sparse vector
+#' returned \code{beta} is formatted to align with the dimension of the design matrix created by
+#' \code{genRandomData()}, and is a valid input for the \code{beta} argument of
+#' \code{genRandomData()}. It is constructed via an inverse fusion transform from a sparse vector
 #' \code{theta} (with approximately \code{density} proportion of nonzero entries scaled by
-#' \code{eff_size}) and is a valid input for the \code{beta} argument of \code{genRandomData()}.
+#' \code{eff_size}).
 #'
 #' The total length of \code{beta} is given by:
 #' \deqn{
 #' p = R + (T - 1) + d + dR + d(T - 1) + \text{num_treats} + (\text{num_treats} \times d),
 #' }
-#' where
+#' where in the cohort assignment scheme used by \code{genRandomData()},
 #' \deqn{
 #' \text{num\_treats} = T \times R - \frac{R(R+1)}{2}.
 #' }
 #'
-#' @param R Integer. The number of treated cohorts (treatment is assumed to start in periods 2 to T).
+#' @param R Integer. The number of treated cohorts (treatment is assumed to start in periods 2 to
+#' \code{R + 1}).
 #' @param T Integer. The total number of time periods.
 #' @param d Integer. The number of time-invariant covariates. If \code{d > 0}, additional terms
 #'   corresponding to covariate main effects and interactions are included in \code{beta}.

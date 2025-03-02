@@ -58,14 +58,14 @@ A named list with the following elements:
 \item{X}{The design matrix. When \code{gen_ints = TRUE}, \eqn{X} has \eqn{p} columns with
 interactions; when \code{gen_ints = FALSE}, \eqn{X} has no interactions.}
 \item{y}{A numeric vector of length \eqn{N \times T} containing the generated responses.}
-\item{cov_names}{A character vector containing the names of the generated features (if \eqn{d > 0}),
+\item{covs}{A character vector containing the names of the generated features (if \eqn{d > 0}),
 or simply an empty vector (if \eqn{d = 0})}
 \item{coefs}{The coefficient vector \eqn{\beta} used for data generation.}
 \item{first_inds}{A vector of indices indicating the first treatment effect for each treated cohort.}
 \item{N_UNTREATED}{The number of never-treated units.}
 \item{assignments}{A vector of counts (of length \eqn{R+1}) indicating how many units fall into
 the never-treated group and each of the \eqn{R} treated cohorts.}
-\item{indep_assignments}{Independent cohort assignments (for auxiliary purposes).}
+\item{indep_counts}{Independent cohort assignments (for auxiliary purposes).}
 \item{p}{The number of columns in the design matrix \eqn{X}.}
 \item{N}{Number of units.}
 \item{T}{Number of time periods.}

@@ -7,7 +7,8 @@
 genCoefs(R, T, d, density, eff_size)
 }
 \arguments{
-\item{R}{Integer. The number of treated cohorts (treatment is assumed to start in periods 2 to T).}
+\item{R}{Integer. The number of treated cohorts (treatment is assumed to start in periods 2 to
+\code{R + 1}).}
 
 \item{T}{Integer. The total number of time periods.}
 
@@ -33,16 +34,18 @@ to obtain \code{beta}.}
 \description{
 This function generates a coefficient vector \code{beta} along with a sparse auxiliary vector
 \code{theta} for simulation studies of the fused extended two-way fixed effects estimator. The
-returned \code{beta} is constructed via an inverse fusion transform from a sparse vector
+returned \code{beta} is formatted to align with the dimension of the design matrix created by
+\code{genRandomData()}, and is a valid input for the \code{beta} argument of
+\code{genRandomData()}. It is constructed via an inverse fusion transform from a sparse vector
 \code{theta} (with approximately \code{density} proportion of nonzero entries scaled by
-\code{eff_size}) and is a valid input for the \code{beta} argument of \code{genRandomData()}.
+\code{eff_size}).
 }
 \details{
 The total length of \code{beta} is given by:
 \deqn{
 p = R + (T - 1) + d + dR + d(T - 1) + \text{num_treats} + (\text{num_treats} \times d),
 }
-where
+where in the cohort assignment scheme used by \code{genRandomData()},
 \deqn{
 \text{num\_treats} = T \times R - \frac{R(R+1)}{2}.
 }

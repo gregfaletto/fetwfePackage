@@ -38,8 +38,8 @@ test_that("genRandomData (with interactions) returns expected output", {
     gen_ints = TRUE)
   
   # Check list names (X now instead of X_int)
-  expected_names <- c("X", "y", "coefs", "first_inds", "N_UNTREATED",
-                      "assignments", "indep_assignments", "p", "N", "T",
+  expected_names <- c("X", "y", "coefs", "covs", "first_inds", "N_UNTREATED",
+                      "assignments", "indep_counts", "p", "N", "T",
                       "R", "d", "sig_eps_sq", "sig_eps_c_sq")
   for (nm in expected_names) {
     expect_true(nm %in% names(res))
@@ -88,7 +88,7 @@ test_that("genRandomData is reproducible with same seed", {
   expect_equal(res1$y, res2$y)
   expect_equal(res1$first_inds, res2$first_inds)
   expect_equal(res1$assignments, res2$assignments)
-  expect_equal(res1$indep_assignments, res2$indep_assignments)
+  expect_equal(res1$indep_counts, res2$indep_counts)
   expect_equal(res1$actual_cohort_tes, res2$actual_cohort_tes)
   expect_equal(res1$att_true, res2$att_true)
 })
@@ -220,7 +220,7 @@ test_that("Output from genRandomData can be passed to fetwfe()", {
     time_var  = sim_data$time_var,
     unit_var  = sim_data$unit_var,
     treatment = sim_data$treatment,
-    covs      = sim_data$cov_names,
+    covs      = sim_data$covs,
     response  = sim_data$response,
     sig_eps_sq = sig_eps_sq,
     sig_eps_c_sq = sig_eps_c_sq,
@@ -253,7 +253,7 @@ test_that("Output from genRandomData can be passed to fetwfe()", {
     time_var  = sim_data$time_var,
     unit_var  = sim_data$unit_var,
     treatment = sim_data$treatment,
-    covs      = sim_data$cov_names,
+    covs      = sim_data$covs,
     response  = sim_data$response,
     sig_eps_sq = sig_eps_sq,
     sig_eps_c_sq = sig_eps_c_sq,

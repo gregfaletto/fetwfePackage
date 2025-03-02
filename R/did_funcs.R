@@ -2277,3 +2277,110 @@ getP <- function(R, T, d, num_treats){
 }
 
 
+checkFetwfeInputs <- function(
+    pdata,
+    time_var,
+    unit_var,
+    treatment,
+    response,
+    covs=c(),
+    indep_counts=NA,
+    sig_eps_sq=NA,
+    sig_eps_c_sq=NA,
+    lambda.max=NA,
+    lambda.min=NA,
+    nlambda=100,
+    q=0.5,
+    verbose=FALSE,
+    alpha=0.05
+    ){
+
+     # Check inputs
+    stopifnot(is.data.frame(pdata))
+    stopifnot(nrow(pdata) >= 4) # bare minimum, 2 units at 2 times
+
+    stopifnot(is.character(time_var))
+    stopifnot(length(time_var) == 1)
+    stopifnot(time_var %in% colnames(pdata))
+    stopifnot(is.integer(pdata[[time_var]]))
+
+    stopifnot(is.character(unit_var))
+    stopifnot(length(unit_var) == 1)
+    stopifnot(unit_var %in% colnames(pdata))
+    stopifnot(is.character(pdata[[unit_var]]))
+
+    stopifnot(is.character(treatment))
+    stopifnot(length(treatment) == 1)
+    stopifnot(treatment %in% colnames(pdata))
+    stopifnot(is.integer(pdata[[treatment]]))
+    stopifnot(all(pdata[, treatment] %in% c(0, 1)))
+
+    if(length(covs) > 0){
+        stopifnot(is.character(covs))
+        stopifnot(all(covs %in% colnames(pdata)))
+        for(cov in covs){
+            stopifnot(is.numeric(pdata[[cov]]) | is.integer(pdata[[cov]]))
+        }
+    }
+    
+
+    stopifnot(is.character(response))
+    stopifnot(length(response) == 1)
+    stopifnot(response %in% colnames(pdata))
+    stopifnot(is.numeric(pdata[[response]]) | is.integer(pdata[[response]]))
+
+    indep_count_data_available <- FALSE
+    if(any(!is.na(indep_counts))){
+        stopifnot(is.integer(indep_counts))
+        if(any(indep_counts <= 0)){
+            stop("At least one cohort in the independent count data has 0 members")
+        }
+        indep_count_data_available <- TRUE
+    }
+
+    if(any(!is.na(sig_eps_sq))){
+        stopifnot(is.numeric(sig_eps_sq) | is.integer(sig_eps_sq))
+        stopifnot(length(sig_eps_sq) == 1)
+        stopifnot(sig_eps_sq >= 0)
+    }
+
+    if(any(!is.na(sig_eps_c_sq))){
+        stopifnot(is.numeric(sig_eps_c_sq) | is.integer(sig_eps_c_sq))
+        stopifnot(length(sig_eps_c_sq) == 1)
+        stopifnot(sig_eps_c_sq >= 0)
+    }
+
+    if(any(!is.na(lambda.max))){
+        stopifnot(is.numeric(lambda.max) | is.integer(lambda.max))
+        stopifnot(length(lambda.max) == 1)
+        stopifnot(lambda.max > 0)
+    }
+
+    if(any(!is.na(lambda.min))){
+        stopifnot(is.numeric(lambda.min) | is.integer(lambda.min))
+        stopifnot(length(lambda.min) == 1)
+        stopifnot(lambda.min >= 0)
+        if(any(!is.na(lambda.max))){
+            stopifnot(lambda.max > lambda.min)
+        }
+    }
+
+    stopifnot(is.numeric(q) | is.integer(q))
+    stopifnot(length(q) == 1)
+    stopifnot(q > 0)
+    stopifnot(q <= 2)
+
+    stopifnot(is.logical(verbose))
+    stopifnot(length(verbose) == 1)
+
+    stopifnot(is.numeric(alpha))
+    stopifnot(length(alpha) == 1)
+    stopifnot(alpha > 0)
+    stopifnot(alpha < 1)
+    if(alpha > 0.5){
+        warning("Provided alpha > 0.5; are you sure you didn't mean to enter a smaller alpha? The confidence level will be 1 - alpha.")
+    }
+
+    return(indep_count_data_available)
+
+}
