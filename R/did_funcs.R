@@ -380,7 +380,7 @@ fetwfe_core <- function(
 
     if(add_ridge){
         # Add rows to X_final. First need to get D^{-1}:
-        d_inverse <- genFullInvFusionTransformMat(
+        D_inverse <- genFullInvFusionTransformMat(
             first_inds=first_inds,
             T=T,
             R=R,
@@ -388,12 +388,12 @@ fetwfe_core <- function(
             num_treats=num_treats
             )
 
-        stopifnot(ncol(d_inverse) == ncol(X_final))
+        stopifnot(ncol(D_inverse) == ncol(X_final))
 
         # Now add rows
-        lambda_ridge <- 0.001 * sqrt(sig_eps_sq + sig_eps_c_sq)
+        lambda_ridge <- 0.0001 * (sig_eps_sq + sig_eps_c_sq)
 
-        X_final <- rbind(X_final, sqrt(lambda_ridge) * d_inverse)
+        X_final <- rbind(X_final, sqrt(lambda_ridge) * D_inverse)
         y_final <- c(y_final, rep(0, nrow(d_inverse)))
 
         stopifnot(nrow(X_final) == length(y_final))
