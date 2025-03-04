@@ -273,6 +273,8 @@ testGenRandomDataInputs <- function(beta, R, T, d, N, sig_eps_sq, sig_eps_c_sq){
 #'
 genCoefsCore <- function(R, T, d, density, eff_size, seed){
 
+    if (!is.null(seed)) set.seed(seed)
+
     # Check that T is a numeric scalar and at least 3.
   if (!is.numeric(T) || length(T) != 1 || T < 3) {
     stop("T must be a numeric value greater than or equal to 3")
@@ -473,12 +475,16 @@ genCoefsCore <- function(R, T, d, density, eff_size, seed){
 #'
 #' @return A named list with the following elements:
 #' \describe{
-#'   \item{pdf}{A dataframe containing generated data that can be passed to \code{fetwfe()}.}
+#'   \item{pdata}{A dataframe containing generated data that can be passed to \code{fetwfe()}.}
 #'   \item{X}{The design matrix. When \code{gen_ints = TRUE}, \eqn{X} has \eqn{p} columns with
 #'     interactions; when \code{gen_ints = FALSE}, \eqn{X} has no interactions.}
 #'   \item{y}{A numeric vector of length \eqn{N \times T} containing the generated responses.}
 #'   \item{covs}{A character vector containing the names of the generated features (if \eqn{d > 0}),
 #'          or simply an empty vector (if \eqn{d = 0})}
+#'   \item{time_var}{The name of the time variable in pdata}
+#'   \item{unit_var}{The name of the unit variable in pdata}
+#'   \item{treatment}{The name of the treatment variable in pdata}
+#'   \item{response}{The name of the reponse varialbe in pdata}
 #'   \item{coefs}{The coefficient vector \eqn{\beta} used for data generation.}
 #'   \item{first_inds}{A vector of indices indicating the first treatment effect for each treated cohort.}
 #'   \item{N_UNTREATED}{The number of never-treated units.}
@@ -509,26 +515,6 @@ genCoefsCore <- function(R, T, d, density, eff_size, seed){
 #' When \eqn{d = 0} (i.e. no covariates), the function omits any covariate-related columns
 #' and their interactions.
 #'
-#' @examples
-#' \dontrun{
-#' # Full design with interactions (default behavior, with gaussian covariates):
-#' N <- 120; T <- 30; R <- 5; d <- 12; sig_eps_sq <- 5; sig_eps_c_sq <- 5
-#' num_treats <- getNumTreats(R=R, T=T)
-#' p_int <- R + (T - 1) + d + d * R + d * (T - 1) + num_treats + num_treats * d
-#' beta_int <- rnorm(p_int)
-#' sim_int <- genRandomData(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta_int,
-#'                           seed = 123, gen_ints = TRUE, distribution = "gaussian")
-#'
-#' # Simple design without interactions using uniform covariates returned:
-#' sim_no_int <- genRandomData(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta_int,
-#'                             seed = 123, gen_ints = FALSE, distribution = "uniform")
-#'
-#' # When d = 0, no covariate or interaction terms are generated.
-#' p_no_cov <- R + (T - 1) + num_treats
-#' beta_no_cov <- rnorm(p_no_cov)
-#' sim_no_cov <- genRandomData(N, T, R, 0, sig_eps_sq, sig_eps_c_sq, beta_no_cov,
-#'                             seed = 123, gen_ints = TRUE, distribution = "gaussian")
-#' }
 #'
 simulateDataCore <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = NULL, 
                           gen_ints = FALSE, distribution = "gaussian") {

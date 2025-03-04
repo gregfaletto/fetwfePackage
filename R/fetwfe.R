@@ -391,12 +391,16 @@ fetwfe <- function(
 #'
 #' @return An object of class \code{"FETWFE_simulated"}, which is a list containing:
 #' \describe{
-#'   \item{pdf}{A dataframe containing generated data that can be passed to \code{fetwfe()}.}
+#'   \item{pdata}{A dataframe containing generated data that can be passed to \code{fetwfe()}.}
 #'   \item{X}{The design matrix. When \code{gen_ints = TRUE}, \eqn{X} has \eqn{p} columns with
 #'     interactions; when \code{gen_ints = FALSE}, \eqn{X} has no interactions.}
 #'   \item{y}{A numeric vector of length \eqn{N \times T} containing the generated responses.}
 #'   \item{covs}{A character vector containing the names of the generated features (if \eqn{d > 0}),
 #'          or simply an empty vector (if \eqn{d = 0})}
+#'   \item{time_var}{The name of the time variable in pdata}
+#'   \item{unit_var}{The name of the unit variable in pdata}
+#'   \item{treatment}{The name of the treatment variable in pdata}
+#'   \item{response}{The name of the reponse varialbe in pdata}
 #'   \item{coefs}{The coefficient vector \eqn{\beta} used for data generation.}
 #'   \item{first_inds}{A vector of indices indicating the first treatment effect for each treated cohort.}
 #'   \item{N_UNTREATED}{The number of never-treated units.}
@@ -527,7 +531,7 @@ simulateData <- function(coefs_obj, N, sig_eps_sq, sig_eps_c_sq,
 #' }
 #'
 #' @export
-genCoefs <- function(R, T, d, density, eff_size){
+genCoefs <- function(R, T, d, density, eff_size, seed=NULL){
 
     # Check that T is a numeric scalar and at least 3.
   if (!is.numeric(T) || length(T) != 1 || T < 3) {
@@ -564,7 +568,7 @@ genCoefs <- function(R, T, d, density, eff_size){
     stopifnot(R <= T - 1)
   
   core_obj <- genCoefsCore(R=R, T=T, d=d, density=density, eff_size=eff_size,
-    seed = NULL)
+    seed = seed)
   if (is.null(core_obj$beta)) {
     stop("Internal error: genCoefsCore() did not return expected components.")
   }
