@@ -248,6 +248,7 @@ testGenRandomDataInputs <- function(beta, R, T, d, N, sig_eps_sq, sig_eps_c_sq){
 #'   vector \code{theta} is nonzero.
 #' @param eff_size Numeric. The magnitude used to scale nonzero entries in \code{theta}. Each nonzero entry is
 #'   set to \code{eff_size} or \code{-eff_size} (with a 60 percent chance for a positive value).
+#' @param seed (Optional) Integer. Seed for reproducibility.
 #'
 #' @return A list with two elements:
 #' \describe{
@@ -270,22 +271,7 @@ testGenRandomDataInputs <- function(beta, R, T, d, N, sig_eps_sq, sig_eps_c_sq){
 #'   using internal routines (e.g., \code{genBackwardsInvFusionTransformMat()} and \code{genInvTwoWayFusionTransformMat()}).
 #' }
 #'
-#' @examples
-#' \dontrun{
-#'   # Generate coefficients for a panel with 5 treated cohorts, 30 time periods,
-#'   # a density of 0.1 for nonzero coefficients, effect size 2, and 12 covariates.
-#'   coefs <- genCoefs(R = 5, T = 30, density = 0.1, eff_size = 2, d = 12)
-#'
-#'   # Use the generated beta vector in a simulation study:
-#'   simData <- genRandomData(
-#'     N = 120, T = 30, R = 5, d = 12,
-#'     sig_eps_sq = 5, sig_eps_c_sq = 5,
-#'     beta = coefs$beta,
-#'     seed = 123
-#'   )
-#' }
-#'
-genCoefsCore <- function(R, T, d, density, eff_size){
+genCoefsCore <- function(R, T, d, density, eff_size, seed){
 
     # Check that T is a numeric scalar and at least 3.
   if (!is.numeric(T) || length(T) != 1 || T < 3) {

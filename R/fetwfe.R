@@ -385,10 +385,9 @@ fetwfe <- function(
 #' @param N Integer. Number of units in the panel.
 #' @param sig_eps_sq Numeric. Variance of the idiosyncratic (observation-level) noise.
 #' @param sig_eps_c_sq Numeric. Variance of the unit-level random effects.
-#' @param seed (Optional) Integer. Seed for reproducibility.
 #' @param distribution Character. Distribution to generate covariates.
 #'   Defaults to \code{"gaussian"}. If set to \code{"uniform"}, covariates are drawn uniformly
-#'   from \eqn{[-\sqrt{3}, \sqrt{3}]}.
+#'   from \eqn{[-\sqrt{3}, \sqrt{3}]}..
 #'
 #' @return An object of class \code{"FETWFE_simulated"}, which is a list containing:
 #' \describe{
@@ -436,7 +435,7 @@ fetwfe <- function(
 #' }
 #'
 #' @export
-simulateData <- function(coefs_obj, N, sig_eps_sq, sig_eps_c_sq, seed = NULL,
+simulateData <- function(coefs_obj, N, sig_eps_sq, sig_eps_c_sq,
                          distribution = "gaussian") {
   if (!inherits(coefs_obj, "FETWFE_coefs")) {
     stop("coefs_obj must be an object of class 'FETWFE_coefs'")
@@ -456,6 +455,7 @@ simulateData <- function(coefs_obj, N, sig_eps_sq, sig_eps_c_sq, seed = NULL,
   T <- coefs_obj$T
   d <- coefs_obj$d
   beta <- coefs_obj$beta
+  seed <- coefs_obj$seed
   
   sim_data <- simulateDataCore(N=N, T=T, R=R, d=d, sig_eps_sq=sig_eps_sq,
     sig_eps_c_sq=sig_eps_c_sq, beta=beta, seed = seed, gen_ints = FALSE,
@@ -491,6 +491,7 @@ simulateData <- function(coefs_obj, N, sig_eps_sq, sig_eps_c_sq, seed = NULL,
 #'   vector \code{theta} is nonzero.
 #' @param eff_size Numeric. The magnitude used to scale nonzero entries in \code{theta}. Each nonzero entry is
 #'   set to \code{eff_size} or \code{-eff_size} (with a 60 percent chance for a positive value).
+#' @param seed (Optional) Integer. Seed for reproducibility.
 #'
 #' @return An object of class \code{"FETWFE_coefs"}, which is a list containing:
 #' \describe{
@@ -498,6 +499,7 @@ simulateData <- function(coefs_obj, N, sig_eps_sq, sig_eps_c_sq, seed = NULL,
 #'   \item{R}{The provided number of treated cohorts.}
 #'   \item{T}{The provided number of time periods.}
 #'   \item{d}{The provided number of covariates.}
+#'   \item{seed}{The provided seed.}
 #' }
 #'
 #' @details
@@ -518,10 +520,10 @@ simulateData <- function(coefs_obj, N, sig_eps_sq, sig_eps_c_sq, seed = NULL,
 #' @examples
 #' \dontrun{
 #'   # Generate coefficients
-#'   coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2)
+#'   coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
 #'
 #'   # Simulate data using the coefficients
-#'   sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5, seed = 123)
+#'   sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5)
 #' }
 #'
 #' @export
@@ -561,13 +563,14 @@ genCoefs <- function(R, T, d, density, eff_size){
     stopifnot(T >= 3)
     stopifnot(R <= T - 1)
   
-  core_obj <- genCoefsCore(R, T, d, density, eff_size)
+  core_obj <- genCoefsCore(R=R, T=T, d=d, density=density, eff_size=eff_size,
+    seed = NULL)
   if (is.null(core_obj$beta)) {
     stop("Internal error: genCoefsCore() did not return expected components.")
   }
   
   # Create an S3 object of class "FETWFE_coefs"
-  obj <- list(beta = core_obj$beta, R = R, T = T, d = d)
+  obj <- list(beta = core_obj$beta, R = R, T = T, d = d, seed = seed)
   class(obj) <- "FETWFE_coefs"
   return(obj)
 }
@@ -681,7 +684,7 @@ genCoefs <- function(R, T, d, density, eff_size){
 #'   # Simulate data using the coefficients
 #'   sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5, seed = 123)
 #'
-#'   result <- fetwfeWithSimulatedData(sim_data, verbose = TRUE)
+#'   result <- fetwfeWithSimulatedData(sim_data)
 #' }
 #'
 #' @export
