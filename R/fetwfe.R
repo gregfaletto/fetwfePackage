@@ -370,43 +370,27 @@ fetwfe <- function(
 #'
 #' @description
 #' Generates a random panel dataset for simulation studies of the fused extended two-way fixed
-#' effects (FETWFE) estimator. The function creates a balanced panel with \eqn{N} units over \eqn{T}
-#' time periods, assigns treatment status across \eqn{R} treated cohorts (with equal marginal
-#' probabilities for treatment and non-treatment), and constructs a design matrix along with the
-#' corresponding outcome. When \code{gen_ints = TRUE} the full design matrix is returned (including
-#' interactions between covariates and fixed effects and treatment indicators). When 
-#' \code{gen_ints = FALSE} the design matrix is generated in a simpler format (with no interactions)
-#' as expected by \code{fetwfe()}. Moreover, the covariates are generated according to the
-#' specified \code{distribution}: by default, covariates are drawn from a normal distribution;
-#' if \code{distribution = "uniform"}, they are drawn uniformly from \eqn{[-\sqrt{3}, \sqrt{3}]}.
+#' effects (FETWFE) estimator by taking an object of class  \code{"FETWFE_coefs"} (produced by
+#' \code{genCoefs()}) and using it to simulate data. The function creates a balanced panel
+#' with \eqn{N} units over \eqn{T} time periods, assigns treatment status across \eqn{R}
+#' treated cohorts (with equal marginal probabilities for treatment and non-treatment), and
+#' constructs a design matrix along with the corresponding outcome. The covariates are
+#' generated according to the specified \code{distribution}: by default, covariates are drawn
+#' from a normal distribution; if \code{distribution = "uniform"}, they are drawn uniformly
+#' from \eqn{[-\sqrt{3}, \sqrt{3}]}. When \eqn{d = 0} (i.e. no covariates), no
+#' covariate-related columns or interactions are generated.
 #'
-#' When \eqn{d = 0} (i.e. no covariates), no covariate-related columns or interactions are generated.
-#'
+#' @param coefs_obj An object of class \code{"FETWFE_coefs"} containing the coefficient vector
+#' and simulation parameters.
 #' @param N Integer. Number of units in the panel.
-#' @param T Integer. Number of time periods.
-#' @param R Integer. Number of treated cohorts (with treatment starting in periods 2 to T).
-#' @param d Integer. Number of time-invariant covariates.
 #' @param sig_eps_sq Numeric. Variance of the idiosyncratic (observation-level) noise.
 #' @param sig_eps_c_sq Numeric. Variance of the unit-level random effects.
-#' @param beta Numeric vector. Coefficient vector for data generation. Its required length depends on
-#'   the value of \code{gen_ints}:
-#'   \itemize{
-#'     \item If \code{gen_ints = TRUE} and \code{d > 0}, the expected length is 
-#'       \eqn{p = R + (T-1) + d + dR + d(T-1) + num\_treats + num\_treats \times d}, where 
-#'       \eqn{num\_treats = T \times R - \frac{R(R+1)}{2}}.
-#'     \item If \code{gen_ints = TRUE} and \code{d = 0}, the expected length is 
-#'       \eqn{p = R + (T-1) + num\_treats}.
-#'     \item If \code{gen_ints = FALSE}, the expected length is 
-#'       \eqn{p = R + (T-1) + d + num\_treats}.
-#'   }
 #' @param seed (Optional) Integer. Seed for reproducibility.
-#' @param gen_ints Logical. If \code{TRUE}, generate the full design matrix with interactions;
-#'   if \code{FALSE} (the default), generate a design matrix without any interaction terms.
 #' @param distribution Character. Distribution to generate covariates.
 #'   Defaults to \code{"gaussian"}. If set to \code{"uniform"}, covariates are drawn uniformly
 #'   from \eqn{[-\sqrt{3}, \sqrt{3}]}.
 #'
-#' @return A named list with the following elements:
+#' @return An object of class \code{"FETWFE_simulated"}, which is a list containing:
 #' \describe{
 #'   \item{pdf}{A dataframe containing generated data that can be passed to \code{fetwfe()}.}
 #'   \item{X}{The design matrix. When \code{gen_ints = TRUE}, \eqn{X} has \eqn{p} columns with
@@ -430,12 +414,10 @@ fetwfe <- function(
 #' }
 #'
 #' @details
-#' When \code{gen_ints = TRUE}, the function constructs the design matrix by first generating
-#' base fixed effects and a long-format covariate matrix (via \code{generateBaseEffects()}), then
-#' appending interactions between the covariates and cohort/time fixed effects (via \code{generateFEInts()})
-#' and finally treatment indicator columns and treatment-covariate interactions
-#' (via \code{genTreatVarsSim()} and \code{genTreatInts()}). When \code{gen_ints = FALSE},
-#' the design matrix consists only of the base fixed effects, covariates, and treatment indicators.
+#' This function extracts simulation parameters from the \code{FETWFE_coefs} object and passes them,
+#' along with additional simulation parameters, to the internal function \code{simulateDataCore()}.
+#' It validates that all necessary components are returned and assigns the S3 class \code{"FETWFE_simulated"}
+#' to the output.
 #'
 #' The argument \code{distribution} controls the generation of covariates. For
 #' \code{"gaussian"}, covariates are drawn from \code{rnorm}; for \code{"uniform"},
@@ -446,223 +428,60 @@ fetwfe <- function(
 #'
 #' @examples
 #' \dontrun{
-#' # Full design with interactions (default behavior, with gaussian covariates):
-#' N <- 120; T <- 30; R <- 5; d <- 12; sig_eps_sq <- 5; sig_eps_c_sq <- 5
-#' num_treats <- getNumTreats(R=R, T=T)
-#' p_int <- R + (T - 1) + d + d * R + d * (T - 1) + num_treats + num_treats * d
-#' beta_int <- rnorm(p_int)
-#' sim_int <- genRandomData(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta_int,
-#'                           seed = 123, gen_ints = TRUE, distribution = "gaussian")
+#'   # Generate coefficients
+#'   coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2)
 #'
-#' # Simple design without interactions using uniform covariates returned:
-#' sim_no_int <- genRandomData(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta_int,
-#'                             seed = 123, gen_ints = FALSE, distribution = "uniform")
-#'
-#' # When d = 0, no covariate or interaction terms are generated.
-#' p_no_cov <- R + (T - 1) + num_treats
-#' beta_no_cov <- rnorm(p_no_cov)
-#' sim_no_cov <- genRandomData(N, T, R, 0, sig_eps_sq, sig_eps_c_sq, beta_no_cov,
-#'                             seed = 123, gen_ints = TRUE, distribution = "gaussian")
+#'   # Simulate data using the coefficients
+#'   sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5, seed = 123)
 #' }
 #'
 #' @export
-genRandomData <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = NULL, 
-                          gen_ints = FALSE, distribution = "gaussian") {
-    if (!is.null(seed)) set.seed(seed)
-
-    res <- testGenRandomDataInputs(
-        beta=beta,
-        R=R,
-        T=T,
-        d=d,
-        N=N,
-        sig_eps_sq=sig_eps_sq,
-        sig_eps_c_sq=sig_eps_c_sq)
-
-    num_treats <- res$num_treats
-    p_expected <- res$p_expected
-
-    rm(res)
-
-    # Generate base effects and covariates (using specified distribution)
-    res_base <- generateBaseEffects(
-        N=N,
-        d=d,
-        T=T,
-        R=R,
-        distribution = distribution
-        )
-    cohort_fe <- res_base$cohort_fe
-    time_fe <- res_base$time_fe
-    X_long <- res_base$X_long
-    assignments <- res_base$assignments
-    cohort_inds <- res_base$cohort_inds
-
-    stopifnot(ncol(cohort_fe) == R)
-
-    # Base matrix: cohort FE, time FE, and covariates (if any)
-    X_base <- if (d > 0) {
-      cbind(cohort_fe, time_fe, X_long)
-    } else {
-      cbind(cohort_fe, time_fe)
-    }
-
-    indep_assignments <- genAssignments(N, R)
-
-    if (d > 0) {
-      res_ints <- generateFEInts(X_long, cohort_fe, time_fe, N, T, R, d)
-      X_ints1 <- cbind(X_base, res_ints$X_long_cohort, res_ints$X_long_time)
-    } else {
-      X_ints1 <- X_base
-    }
-
-    first_inds_test <- getFirstInds(R=R, T=T)
-    res_treat <- genTreatVarsSim(num_treats, N, T, R, assignments, cohort_inds,
-                                 N_UNTREATED = assignments[1],
-                                 first_inds_test = first_inds_test, d = d)
-    treat_mat_long <- res_treat$treat_mat_long
-    first_inds <- res_treat$first_inds
-
-    X_ints2 <- cbind(X_ints1, treat_mat_long)
-
-    if (d > 0) {
-        stopifnot(ncol(cohort_fe) == R)
-        X_long_treat <- genTreatInts(
-            treat_mat_long=treat_mat_long,
-            X_long=X_long,
-            n_treats=num_treats,
-            cohort_fe=cohort_fe,
-            N=N,
-            T=T,
-            R=R,
-            d=d,
-            N_UNTREATED = assignments[1]
-            )
-
-        X_final <- cbind(X_ints2, X_long_treat)
-    } else {
-      X_final <- X_ints2
-    }
-
-    if (ncol(X_final) != p_expected) {
-      stop("Constructed design matrix with interactions has incorrect number of columns.")
-    }
-
-    unit_res <- rnorm(N, mean = 0, sd = sqrt(sig_eps_c_sq))
-    y <- X_final %*% beta + rep(unit_res, each = T) + 
-      rnorm(N * T, mean = 0, sd = sqrt(sig_eps_sq))
-    y <- y - mean(y)
-
-    if (gen_ints){
-        X_ret <- X_final
-    } else{
-        # Return X with no interactions
-        # Expected number of columns: p = R + (T - 1) + d + num_treats
-        p_expected <- R + (T - 1) + d + num_treats
-
-        X_ret <- cbind(X_base, treat_mat_long)
-        if (ncol(X_ret) != p_expected) {
-          stop("Constructed design matrix without interactions has incorrect number of columns.")
-        }
-    }
-
-    # Prepare dataframe for `fetwfe()`
-
-    # We know that when gen_ints = FALSE, the design matrix X is:
-    # X = [cohort_fe, time_fe, X_long, treat_mat_long]
-    # The base part (cohort_fe, time_fe, X_long) has (R + (T-1) + d) columns.
-    base_cols <- R + (T - 1) + d
-
-    # The treatment dummy block is in columns (base_cols + 1) : (base_cols + num_treats)
-    treat_dummy <- cbind(X_base, treat_mat_long)[, (base_cols + 1):(base_cols + num_treats), drop = FALSE]
-    # For each row, the observed treatment indicator is 1 if any entry in treat_dummy is 1.
-    treatment_vec <- as.integer(apply(treat_dummy, 1, function(x) { any(x == 1) }))
-
-    # Extract the covariate columns from the base part: they are the last d columns of the base part.
-    if(d > 0){
-        cov_cols <- seq(from = (R + (T - 1) + 1), to = (R + (T - 1) + d))
-        covariates <- cbind(X_base, treat_mat_long)[, cov_cols, drop = FALSE]
-    }
-    
-
-    # Construct a data frame with the panel structure.
-    df_panel <- data.frame(
-    time = rep(1:T, times = N),
-    unit = rep(sprintf("unit%02d", 1:N), each = T),
-    treatment = treatment_vec,
-    y = as.numeric(y)
-    )
-
-    cov_names <- c()
-
-    if(d > 0){
-        # Add covariate columns with names "cov1", "cov2", ...
-        for (j in seq_len(d)) {
-            cov_name_j <- paste0("cov", j)
-            df_panel[[cov_name_j]] <- covariates[, j]
-            cov_names <- c(cov_names, cov_name_j)
-        }
-    }
-
-    stopifnot(length(cov_names) == d)
-
-    # Ensure that time is integer and unit is character.
-    df_panel$time <- as.integer(df_panel$time)
-    df_panel$unit <- as.character(df_panel$unit)
-    df_panel$treatment <- as.integer(df_panel$treatment)
-
-    # confirm that outputs satisfy input requirements of fetwfe()
-    # (Plug in default values for arguments not generated here)
-    checkFetwfeInputs(
-        pdata=df_panel,
-        time_var="time",
-        unit_var="unit",
-        treatment="treatment",
-        response="y",
-        covs=cov_names,
-        indep_counts=indep_assignments,
-        sig_eps_sq=sig_eps_sq,
-        sig_eps_c_sq=sig_eps_c_sq,
-        lambda.max=NA,
-        lambda.min=NA,
-        nlambda=100,
-        q=0.5,
-        verbose=FALSE,
-        alpha=0.05,
-        add_ridge=FALSE
-    )
-    
-    return(list(
-      pdata = df_panel,
-      X = X_ret,
-      y = y,
-      covs = cov_names,
-      time_var = "time",
-      unit_var = "unit",
-      treatment = "treatment",
-      response = "y",
-      coefs = beta,
-      first_inds = first_inds,
-      N_UNTREATED = assignments[1],
-      assignments = assignments,
-      indep_counts = indep_assignments,
-      p = p_expected,
-      N = N,
-      T = T,
-      R = R,
-      d = d,
-      sig_eps_sq = sig_eps_sq,
-      sig_eps_c_sq = sig_eps_c_sq
-    ))
+simulateData <- function(coefs_obj, N, sig_eps_sq, sig_eps_c_sq, seed = NULL,
+                         distribution = "gaussian") {
+  if (!inherits(coefs_obj, "FETWFE_coefs")) {
+    stop("coefs_obj must be an object of class 'FETWFE_coefs'")
+  }
+  if (!is.numeric(N) || length(N) != 1 || N <= 0) {
+    stop("N must be a positive numeric value")
+  }
+  if (!is.numeric(sig_eps_sq) || length(sig_eps_sq) != 1 || sig_eps_sq <= 0) {
+    stop("sig_eps_sq must be a positive numeric value")
+  }
+  if (!is.numeric(sig_eps_c_sq) || length(sig_eps_c_sq) != 1 || sig_eps_c_sq <= 0) {
+    stop("sig_eps_c_sq must be a positive numeric value")
+  }
+  
+  # Extract parameters from the coefs object
+  R <- coefs_obj$R
+  T <- coefs_obj$T
+  d <- coefs_obj$d
+  beta <- coefs_obj$beta
+  
+  sim_data <- simulateDataCore(N=N, T=T, R=R, d=d, sig_eps_sq=sig_eps_sq,
+    sig_eps_c_sq=sig_eps_c_sq, beta=beta, seed = seed, gen_ints = FALSE,
+    distribution = distribution)
+  
+  required_fields <- c("pdata", "X", "y", "covs", "time_var", "unit_var",
+                       "treatment", "response", "coefs", "first_inds", "N_UNTREATED",
+                       "assignments", "indep_counts", "p", "N", "T", "R", "d",
+                       "sig_eps_sq", "sig_eps_c_sq")
+  missing_fields <- setdiff(required_fields, names(sim_data))
+  if (length(missing_fields) > 0) {
+    stop(paste("simulateDataCore did not return expected components:",
+               paste(missing_fields, collapse = ", ")))
+  }
+  
+  obj <- sim_data
+  class(obj) <- "FETWFE_simulated"
+  return(obj)
 }
 
 #' Generate Coefficient Vector for Data Generation
 #'
-#' This function generates a coefficient vector \code{beta} along with a sparse auxiliary vector
-#' \code{theta} for simulation studies of the fused extended two-way fixed effects estimator. The
-#' returned \code{beta} is formatted to align with the design matrix created by \code{genRandomData()},
-#' and is a valid input for the \code{beta} argument of that function. The vector \code{theta} is sparse,
-#' with nonzero entries occurring with probability \code{density} and scaled by \code{eff_size}.
+#' This function generates a coefficient vector \code{beta} for simulation studies of the fused
+#' extended two-way fixed effects estimator. Itreturns an S3 object of class
+#' \code{"FETWFE_coefs"} containing \code{beta} along with simulation parameters \code{R},
+#' \code{T}, and \code{d}.
 #'
 #' @param R Integer. The number of treated cohorts (treatment is assumed to start in periods 2 to \code{R + 1}).
 #' @param T Integer. The total number of time periods.
@@ -673,10 +492,12 @@ genRandomData <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = NUL
 #' @param eff_size Numeric. The magnitude used to scale nonzero entries in \code{theta}. Each nonzero entry is
 #'   set to \code{eff_size} or \code{-eff_size} (with a 60 percent chance for a positive value).
 #'
-#' @return A list with two elements:
+#' @return An object of class \code{"FETWFE_coefs"}, which is a list containing:
 #' \describe{
-#'   \item{\code{beta}}{A numeric vector representing the full coefficient vector after the inverse fusion transform.}
-#'   \item{\code{theta}}{A numeric vector that is sparse, from which \code{beta} is derived.}
+#'   \item{beta}{A numeric vector representing the full coefficient vector after the inverse fusion transform.}
+#'   \item{R}{The provided number of treated cohorts.}
+#'   \item{T}{The provided number of time periods.}
+#'   \item{d}{The provided number of covariates.}
 #' }
 #'
 #' @details
@@ -696,17 +517,11 @@ genRandomData <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = NUL
 #'
 #' @examples
 #' \dontrun{
-#'   # Generate coefficients for a panel with 5 treated cohorts, 30 time periods,
-#'   # a density of 0.1 for nonzero coefficients, effect size 2, and 12 covariates.
-#'   coefs <- genCoefs(R = 5, T = 30, density = 0.1, eff_size = 2, d = 12)
+#'   # Generate coefficients
+#'   coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2)
 #'
-#'   # Use the generated beta vector in a simulation study:
-#'   simData <- genRandomData(
-#'     N = 120, T = 30, R = 5, d = 12,
-#'     sig_eps_sq = 5, sig_eps_c_sq = 5,
-#'     beta = coefs$beta,
-#'     seed = 123
-#'   )
+#'   # Simulate data using the coefficients
+#'   sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5, seed = 123)
 #' }
 #'
 #' @export
@@ -745,128 +560,167 @@ genCoefs <- function(R, T, d, density, eff_size){
     stopifnot(R >= 2)
     stopifnot(T >= 3)
     stopifnot(R <= T - 1)
+  
+  core_obj <- genCoefsCore(R, T, d, density, eff_size)
+  if (is.null(core_obj$beta)) {
+    stop("Internal error: genCoefsCore() did not return expected components.")
+  }
+  
+  # Create an S3 object of class "FETWFE_coefs"
+  obj <- list(beta = core_obj$beta, R = R, T = T, d = d)
+  class(obj) <- "FETWFE_coefs"
+  return(obj)
+}
 
-    num_treats <- getNumTreats(R=R, T=T)
-
-    p <- getP(R=R, T=T, d=d, num_treats=num_treats)
-
-    theta <- rep(0, p)
-
-    # Make sure at least one feature is selected
-    pass_condition <- FALSE
-    while(!pass_condition){
-        theta_inds <- which(as.logical(rbinom(n=p, size=1, prob=density)))
-        pass_condition <- length(theta_inds > 0)
-    }
-    
-    num_coefs <- length(theta_inds)
-    # Generate signs of coefficients in transformed space, and bias away from
-    # 0.5 (as described in paper)
-    signs <- rfunc(num_coefs, prob=0.6)
-
-    theta[theta_inds] <- eff_size*signs
-
-    # Now we have coefficients that are sparse in the appropriate feature space.
-    # The last step is to transform them to the original feature space. Since
-    # theta = D %*% beta, beta = solve(D) %*% theta.
-    beta <- rep(as.numeric(NA), p)
-
-    beta[1:R] <- genBackwardsInvFusionTransformMat(R) %*% theta[1:R]
-
-    stopifnot(all(is.na(beta[(R + 1):(R + T - 1)])))
-    beta[(R + 1):(R + T - 1)] <- genBackwardsInvFusionTransformMat(T - 1) %*%
-        theta[(R + 1):(R + T - 1)]
-
-    if(d > 0){
-        # Coefficients corresponding to X don't need to be transformed
-        stopifnot(all(is.na(beta[(R + T - 1 + 1):(R + T - 1 + d)])))
-        beta[(R + T - 1 + 1):(R + T - 1 + d)] <- theta[(R + T - 1 + 1):
-            (R + T - 1 + d)]
-
-        # Cohort-X interactions (one cohort at a time, with all interactions for
-        # X. So R blocks of size d.)
-
-        for(j in 1:d){
-            first_ind_j <- R + T - 1 + d + j
-            last_ind_j <- R + T - 1 + d + (R - 1)*d + j
-
-            inds_j <- seq(first_ind_j, last_ind_j, by=d)
-
-            stopifnot(length(inds_j) == R)
-            stopifnot(all(is.na(beta[inds_j])))
-
-            beta[inds_j] <- genBackwardsInvFusionTransformMat(R) %*% theta[inds_j]
-        }
-
-        stopifnot(all(!is.na(beta[1:(R + T - 1 + d + R*d)])))
-        stopifnot(all(is.na(beta[(R + T - 1 + d + R*d + 1):p])))
-
-        # Time-X interactions
-        for(j in 1:d){
-            first_ind_j <- R + T - 1 + d + R*d + j
-            last_ind_j <- R + T - 1 + d + R*d + (T - 2)*d + j
-
-            inds_j <- seq(first_ind_j, last_ind_j, by=d)
-            stopifnot(length(inds_j) == T - 1)
-            stopifnot(all(is.na(beta[inds_j])))
-
-            beta[inds_j] <- genBackwardsInvFusionTransformMat(T - 1) %*% theta[inds_j]
-        }
-
-        stopifnot(all(!is.na(beta[1:(R + T - 1 + d + R*d + (T - 1)*d)])))
-        stopifnot(all(is.na(beta[(R + T - 1 + d + R*d + (T - 1)*d + 1):p])))
-    }
-
-    # Base treatment effects: need to identify indices of first treatment
-    # effect for each cohort
-    first_inds <- getFirstInds(R=R, T=T)
-
-    treat_inds <- getTreatInds(R=R, T=T, d=d, num_treats=num_treats)
-
-    stopifnot(all(is.na(beta[treat_inds])))
-
-    beta[treat_inds] <- genInvTwoWayFusionTransformMat(num_treats,
-        first_inds, R) %*% theta[treat_inds]
-
-    stopifnot(all(!is.na(beta[1:(R + T - 1 + d + R*d + (T - 1)*d +
-        num_treats)])))
-
-    if(d > 0){
-
-        stopifnot(all(is.na(beta[(R + T - 1 + d + R*d + (T - 1)*d + num_treats +
-            1):p])))
-
-        # Treatment effect-X interactions
-        for(j in 1:d){
-            first_ind_j <- R + T - 1 + d + R*d + (T - 1)*d + num_treats + j
-            last_ind_j <- R + T - 1 + d + R*d + (T - 1)*d + num_treats +
-                (num_treats - 1)*d + j
-
-            inds_j <- seq(first_ind_j, last_ind_j, by=d)
-
-            stopifnot(length(inds_j) == num_treats)
-            stopifnot(all(is.na(beta[inds_j])))
-
-            beta[inds_j] <- genInvTwoWayFusionTransformMat(num_treats,
-                first_inds, R) %*% theta[inds_j]
-        }
-    }
-
-    stopifnot(all(!is.na(beta)))
-
-    # Confirm beta satisfies input requirements of genRandomData() (make
-    # up values for N, sig_eps_sq, and sig_eps_c_sq that meet requirements)
-
-    testGenRandomDataInputs(
-        beta=beta,
-        R=R,
-        T=T,
-        d=d,
-        N=R+1,
-        sig_eps_sq=1,
-        sig_eps_c_sq=1)
-
-    return(list(beta=beta, theta=theta))
+#' Run FETWFE on Simulated Data
+#'
+#' @description
+#' This function runs the fused extended two-way fixed effects estimator (\code{fetwfe()}) on simulated data.
+#' It accepts an object of class \code{"FETWFE_simulated"} (produced by \code{simulateData()}) and unpacks the
+#' necessary components to pass to \code{fetwfe()}.
+#'
+#' @param simulated_obj An object of class \code{"FETWFE_simulated"} containing the simulated panel data and design matrix.
+#' @param lambda.max (Optional.) Numeric. A penalty parameter `lambda` will be
+#' selected over a grid search by BIC in order to select a single model. The 
+#' largest `lambda` in the grid will be `lambda.max`. If no `lambda.max` is
+#' provided, one will be selected automatically. For `lambda <= 1`, the model
+#' will be sparse, and ideally all of the following are true at once: the
+#' smallest model (the one corresponding to `lambda.max`) selects close to 0
+#' features, the largest model (the one corresponding to `lambda.min`) selects
+#' close to `p` features, `nlambda` is large enough so that models are
+#' considered at every feasible model size, and `nlambda` is small enough so
+#' that the computation doesn't become infeasible. You may
+#' want to manually tweak `lambda.max`, `lambda.min`, and `nlambda` to try
+#' to achieve these goals, particularly if the selected model size is very
+#' close to the model corresponding to `lambda.max` or `lambda.min`, which could
+#' indicate that the range of `lambda` values was too narrow. You can use the
+#' function outputs `lambda.max_model_size`, `lambda.min_model_size`, and
+#' `lambda_star_model_size` to try to assess this. Default is NA.
+#' @param lambda.min (Optional.) Numeric. The smallest `lambda` penalty
+#' parameter that will be considered. See the description of `lambda.max` for
+#' details. Default is NA.
+#' @param nlambda (Optional.) Integer. The total number of `lambda` penalty
+#' parameters that will be considered. See the description of `lambda.max` for
+#' details. Default is 100.
+#' @param q (Optional.) Numeric; determines what `L_q` penalty is used for the
+#' fusion regularization. `q` = 1 is the lasso, and for 0 < `q` < 1, it is 
+#' possible to get standard errors and confidence intervals. `q` = 2 is ridge
+#' regression. See Faletto (2024) for details. Default is 0.5.
+#' @param verbose Logical; if TRUE, more details on the progress of the function will
+#' be printed as the function executes. Default is FALSE.
+#' @param alpha Numeric; function will calculate (1 - `alpha`) confidence intervals
+#' for the cohort average treatment effects that will be returned in `catt_df`.
+#' @param add_ridge (Optional.) Logical; if TRUE, adds a small amount of ridge
+#' regularization to the (untransformed) coefficients to stabilize estimation.
+#' Default is FALSE.
+#' @return A named list with the following elements: \item{att_hat}{The
+#' estimated overall average treatment effect for a randomly selected treated
+#' unit.} \item{att_se}{If `q < 1`, a standard error for the ATT. If
+#' `indep_counts` was provided, this standard error is asymptotically exact; if
+#' not, it is asymptotically conservative. If `q >= 1`, this will be NA.}
+#' \item{catt_hats}{A named vector containing the estimated average treatment
+#' effects for each cohort.} \item{catt_ses}{If `q < 1`, a named vector
+#' containing the (asymptotically exact, non-conservative) standard errors for
+#' the estimated average treatment effects within each cohort.}
+#' \item{cohort_probs}{A vector of the estimated probabilities of being in each
+#' cohort conditional on being treated, which was used in calculating `att_hat`.
+#' If `indep_counts` was provided, `cohort_probs` was calculated from that;
+#' otherwise, it was calculated from the counts of units in each treated
+#' cohort in `pdata`.} \item{catt_df}{A dataframe displaying the cohort names,
+#' average treatment effects, standard errors, and `1 - alpha` confidence
+#' interval bounds.} \item{beta_hat}{The full vector of estimated coefficients.}
+#' \item{treat_inds}{The indices of `beta_hat` corresponding to
+#' the treatment effects for each cohort at each time.}
+#' \item{treat_int_inds}{The indices of `beta_hat` corresponding to the
+#' interactions between the treatment effects for each cohort at each time and
+#' the covariates.} \item{sig_eps_sq}{Either the provided `sig_eps_sq` or
+#' the estimated one, if a value wasn't provided.} \item{sig_eps_c_sq}{Either
+#' the provided `sig_eps_c_sq` or the estimated one, if a value wasn't
+#' provided.} \item{lambda.max}{Either the provided `lambda.max` or the one
+#' that was used, if a value wasn't provided. (This is returned to help with
+#' getting a reasonable range of `lambda` values for grid search.)}
+#' \item{lambda.max_model_size}{The size of the selected model corresponding
+#' `lambda.max` (for `q <= 1`, this will be the smallest model size). As
+#' mentioned above, for `q <= 1` ideally this value is close to 0.}
+#' \item{lambda.min}{Either the provided `lambda.min` or the one
+#' that was used, if a value wasn't provided.} \item{lambda.min_model_size}{The
+#' size of the selected model corresponding `lambda.min` (for `q <= 1`, this
+#' will be the largest model size). As mentioned above, for `q <= 1` ideally
+#' this value is close to `p`.}\item{lambda_star}{The value of `lambda` chosen
+#' by BIC. If this value is close to `lambda.min` or `lambda.max`, that could
+#' suggest that the range of `lambda` values should be expanded.}
+#' \item{lambda_star_model_size}{The size of the model that was selected. If
+#' this value is close to `lambda.max_model_size` or `lambda.min_model_size`,
+#' That could suggest that the range of `lambda` values should be expanded.}
+#' \item{X_ints}{The design matrix created containing all
+#' interactions, time and cohort dummies, etc.} \item{y}{The vector of 
+#' responses, containing `nrow(X_ints)` entries.} \item{X_final}{The design
+#' matrix after applying the change in coordinates to fit the model and also
+#' multiplying on the left by the square root inverse of the estimated
+#' covariance matrix for each unit.} \item{y_final}{The final response after
+#' multiplying on the left by the square root inverse of the estimated
+#' covariance matrix for each unit.} \item{N}{The final number of units that
+#' were in the  data set used for estimation (after any units may have been
+#' removed because they were treated in the first time period).} \item{T}{The 
+#' number of time periods in the final data set.} \item{R}{The final number of
+#' treated cohorts that appear in the final data set.} \item{d}{The final number
+#' of covariates that appear in the final data set (after any covariates may
+#' have been removed because they contained missing values or all contained the
+#' same value for every unit).} \item{p}{The final number of columns in the full
+#' set of covariates used to estimate the model.}
+#'
+#' @details
+#' The function extracts the panel data and simulation parameters from the \code{FETWFE_simulated} object
+#' and passes them to \code{fetwfe()}. The estimation output is then returned without further modification.
+#'
+#' @examples
+#' \dontrun{
+#'   # Generate coefficients
+#'   coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2)
+#'
+#'   # Simulate data using the coefficients
+#'   sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5, seed = 123)
+#'
+#'   result <- fetwfeWithSimulatedData(sim_data, verbose = TRUE)
+#' }
+#'
+#' @export
+fetwfeWithSimulatedData <- function(simulated_obj, lambda.max = NA, lambda.min = NA, nlambda = 100,
+                                    q = 0.5, verbose = FALSE, alpha = 0.05, add_ridge = FALSE) {
+  if (!inherits(simulated_obj, "FETWFE_simulated")) {
+    stop("simulated_obj must be an object of class 'FETWFE_simulated'")
+  }
+  
+  pdata <- simulated_obj$pdata
+  time_var <- simulated_obj$time_var
+  unit_var <- simulated_obj$unit_var
+  treatment <- simulated_obj$treatment
+  response <- simulated_obj$response
+  covs <- simulated_obj$covs
+  sig_eps_sq <- simulated_obj$sig_eps_sq
+  sig_eps_c_sq <- simulated_obj$sig_eps_c_sq
+  indep_counts <- simulated_obj$indep_counts
+  
+  res <- fetwfe(
+    pdata = pdata,
+    time_var = time_var,
+    unit_var = unit_var,
+    treatment = treatment,
+    response = response,
+    covs = covs,
+    indep_counts = indep_counts,
+    sig_eps_sq = sig_eps_sq,
+    sig_eps_c_sq = sig_eps_c_sq,
+    lambda.max = lambda.max,
+    lambda.min = lambda.min,
+    nlambda = nlambda,
+    q = q,
+    verbose = verbose,
+    alpha = alpha,
+    add_ridge = add_ridge
+  )
+  
+  return(res)
 }
 
 
