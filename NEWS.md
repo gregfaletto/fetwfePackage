@@ -1,5 +1,9 @@
 # NEWS
 
+## Version 0.9.0 (2025-03-04)
+
+- Changed implementation of `genCoefs()` to a wrapper function that creates an object that can be piped into `simulateData()`, itself a new wrapper function for the function that was previously called `genRandomData()`. The output of `simulateData()` can then be piped into another new wrapper function, `fetwfeWithSimulatedData()`.
+
 ## Version 0.8.0 (2025-03-02)
 
 - Added argument `add_ridge` to `fetwfe()`, which adds a ridge regularization term to the (untransformed) coefficients in estimation, similarly to the elastic net.

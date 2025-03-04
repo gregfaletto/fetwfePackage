@@ -4,7 +4,7 @@
 \alias{genCoefs}
 \title{Generate Coefficient Vector for Data Generation}
 \usage{
-genCoefs(R, T, d, density, eff_size)
+genCoefs(R, T, d, density, eff_size, seed = NULL)
 }
 \arguments{
 \item{R}{Integer. The number of treated cohorts (treatment is assumed to start in periods 2 to \code{R + 1}).}

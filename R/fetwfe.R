@@ -462,7 +462,7 @@ simulateData <- function(coefs_obj, N, sig_eps_sq, sig_eps_c_sq,
   seed <- coefs_obj$seed
   
   sim_data <- simulateDataCore(N=N, T=T, R=R, d=d, sig_eps_sq=sig_eps_sq,
-    sig_eps_c_sq=sig_eps_c_sq, beta=beta, seed = seed, gen_ints = FALSE,
+    sig_eps_c_sq=sig_eps_c_sq, beta=beta, seed = seed, gen_ints = TRUE,
     distribution = distribution)
   
   required_fields <- c("pdata", "X", "y", "covs", "time_var", "unit_var",
