@@ -4,7 +4,7 @@
 \alias{getTes}
 \title{Compute True Treatment Effects}
 \usage{
-getTes(beta, R, T, d)
+getTes(coefs_obj)
 }
 \arguments{
 \item{beta}{Numeric vector. The full vector of estimated coefficients from the model.
@@ -42,16 +42,11 @@ is computed as the simple average of these cohort-specific effects.
 }
 \examples{
 \dontrun{
-# Suppose you have a fitted coefficient vector from the model:
-beta <- your_model$beta
-
-# Define the number of treated cohorts, time periods, and covariates:
-R <- 3   # e.g., three cohorts
-T <- 5   # e.g., five time periods
-d <- 2   # e.g., two covariates
+# Generate coefficients
+coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
 
 # Compute the true treatment effects:
-te_results <- getTes(beta, R, T, d)
+te_results <- getTes(coefs)
 
 # Overall average treatment effect on the treated:
 print(te_results$att_true)

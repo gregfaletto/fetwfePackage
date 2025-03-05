@@ -765,16 +765,11 @@ fetwfeWithSimulatedData <- function(simulated_obj, lambda.max = NA, lambda.min =
 #'
 #' @examples 
 #' \dontrun{
-#' # Suppose you have a fitted coefficient vector from the model:
-#' beta <- your_model$beta
-#'
-#' # Define the number of treated cohorts, time periods, and covariates:
-#' R <- 3   # e.g., three cohorts
-#' T <- 5   # e.g., five time periods
-#' d <- 2   # e.g., two covariates
+#' # Generate coefficients
+#' coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
 #'
 #' # Compute the true treatment effects:
-#' te_results <- getTes(beta, R, T, d)
+#' te_results <- getTes(coefs)
 #'
 #' # Overall average treatment effect on the treated:
 #' print(te_results$att_true)
@@ -784,7 +779,17 @@ fetwfeWithSimulatedData <- function(simulated_obj, lambda.max = NA, lambda.min =
 #' }
 #'
 #' @export
-getTes <- function(beta, R, T, d){
+getTes <- function(coefs_obj){
+
+    if (!inherits(coefs_obj, "FETWFE_coefs")) {
+        stop("coefs_obj must be an object of class 'FETWFE_coefs'")
+    }
+    
+    # Unpack components from the coefs object
+    beta <- coefs_obj$beta
+    R <- coefs_obj$R
+    T <- coefs_obj$T
+    d <- coefs_obj$d
 
     num_treats <- getNumTreats(R=R, T=T)
 

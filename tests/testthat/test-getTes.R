@@ -14,12 +14,8 @@ test_that("getTes returns a list with att_true and actual_cohort_tes", {
   T_val <- 30
   d_val <- 12
   
-  # Generate a valid beta vector using genCoefs()
-  res_coefs <- genCoefs(R = R_val, T = T_val, d = d_val, density = 0.1, eff_size = 2)
-  beta <- res_coefs$beta
-  
-  # Call getTes()
-  res <- getTes(beta, R = R_val, T = T_val, d = d_val)
+  # Call getTes() with the coefs object
+  res <- genCoefs(R = R_val, T = T_val, d = d_val, density = 0.1, eff_size = 2, seed = 234) |> getTes()
   
   expect_type(res, "list")
   expect_true("att_true" %in% names(res))
@@ -34,10 +30,7 @@ test_that("att_true equals mean(actual_cohort_tes)", {
   T_val <- 30
   d_val <- 12
   
-  res_coefs <- genCoefs(R = R_val, T = T_val, d = d_val, density = 0.1, eff_size = 2)
-  beta <- res_coefs$beta
-  
-  res <- getTes(beta, R = R_val, T = T_val, d = d_val)
+  res <- genCoefs(R = R_val, T = T_val, d = d_val, density = 0.1, eff_size = 2, seed = 234) |> getTes()
   
   expect_equal(res$att_true, as.numeric(mean(res$actual_cohort_tes)), tolerance = 1e-6)
 })
@@ -50,10 +43,10 @@ test_that("actual_cohort_tes matches expected output", {
   T_val <- 30
   d_val <- 12
   
-  res_coefs <- genCoefs(R = R_val, T = T_val, d = d_val, density = 0.1, eff_size = 2)
+  res_coefs <- genCoefs(R = R_val, T = T_val, d = d_val, density = 0.1, eff_size = 2, seed = 234)
   beta <- res_coefs$beta
   
-  res <- getTes(beta, R = R_val, T = T_val, d = d_val)
+  res <- getTes(res_coefs)
   
   # Compute number of treatment effects and determine the indices for treatment dummy coefficients.
   num_treats <- compute_num_treats(T_val, R_val)
@@ -76,8 +69,6 @@ test_that("actual_cohort_tes matches expected output", {
   )
   
   expect_equal(res$actual_cohort_tes, actual_cohort_tes_expected)
-  
-  # Also check again that att_true equals the mean of these expected cohort effects.
   expect_equal(res$att_true, as.numeric(mean(actual_cohort_tes_expected)), tolerance = 1e-6)
 })
 
@@ -89,12 +80,12 @@ test_that("getTes errors with invalid beta length", {
   T_val <- 30
   d_val <- 12
   
-  res_coefs <- genCoefs(R = R_val, T = T_val, d = d_val, density = 0.1, eff_size = 2)
-  beta <- res_coefs$beta
+  res_coefs <- genCoefs(R = R_val, T = T_val, d = d_val, density = 0.1, eff_size = 2, seed = 234)
   
-  # Remove one element from beta to make its length incorrect.
-  beta_short <- beta[-1]
+  # Create a faulty coefs object with incorrect beta length.
+  faulty_coefs <- res_coefs
+  faulty_coefs$beta <- faulty_coefs$beta[-1]
   
-  expect_error(getTes(beta_short, R = R_val, T = T_val, d = d_val),
+  expect_error(getTes(faulty_coefs),
                regexp = "length(beta) == p is not TRUE", fixed = TRUE)
 })
