@@ -24,8 +24,7 @@ from \eqn{[-\sqrt{3}, \sqrt{3}]}..}
 An object of class \code{"FETWFE_simulated"}, which is a list containing:
 \describe{
 \item{pdata}{A dataframe containing generated data that can be passed to \code{fetwfe()}.}
-\item{X}{The design matrix. When \code{gen_ints = TRUE}, \eqn{X} has \eqn{p} columns with
-interactions; when \code{gen_ints = FALSE}, \eqn{X} has no interactions.}
+\item{X}{The design matrix \eqn{X}, with \eqn{p} columns with interactions.}
 \item{y}{A numeric vector of length \eqn{N \times T} containing the generated responses.}
 \item{covs}{A character vector containing the names of the generated features (if \eqn{d > 0}),
 or simply an empty vector (if \eqn{d = 0})}
@@ -76,10 +75,10 @@ and their interactions.
 \examples{
 \dontrun{
   # Generate coefficients
-  coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2)
+  coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
 
   # Simulate data using the coefficients
-  sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5, seed = 123)
+  sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5)
 }
 
 }

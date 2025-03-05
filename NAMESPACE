@@ -3,6 +3,8 @@
 export(fetwfe)
 export(fetwfeWithSimulatedData)
 export(genCoefs)
+export(genCoefsCore)
 export(getTes)
 export(simulateData)
+export(simulateDataCore)
 import(glmnet)
