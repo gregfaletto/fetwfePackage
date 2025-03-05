@@ -54,7 +54,7 @@ The `genCoefs()` function creates an object of class `"FETWFE_coefs"` which incl
 
 ```{r}
 # Generate the coefficient object for simulation
-sim_coefs <- genCoefs(R = 3, T = 10, d = 2, density = 0.2, eff_size = 1.5, seed = 101)
+sim_coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 101)
 ```
 
 ## Step 2: Simulate Panel Data
@@ -68,20 +68,32 @@ Next, we simulate the data using the generated coefficient object with the `simu
 
 ```{r}
 # Simulate panel data based on the coefficients
-sim_data <- simulateData(sim_coefs, N = 50, sig_eps_sq = 1, sig_eps_c_sq = 0.5, distribution = "gaussian")
+sim_data <- simulateData(sim_coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5, distribution = "gaussian")
 ```
 
 ## Step 3: Run the FETWFE Estimator on Simulated Data
 
-We then run the estimator on the simulated data using `fetwfeWithSimulatedData()`. In this example, we leave `lambda.max` and `lambda.min` as NA and set other tuning parameters as needed. Using piping, the output from the previous step is seamlessly passed to the estimator.
+We then run the estimator on the simulated data using `fetwfeWithSimulatedData()`. Using piping, the output from the previous step is seamlessly passed to the estimator.
 
 ```{r}
 # Run the estimator using piping
 result <- sim_data |>
-  fetwfeWithSimulatedData(lambda.max = NA, lambda.min = NA, nlambda = 100, q = 0.5, verbose = TRUE)
+  fetwfeWithSimulatedData()
 
 # Display the estimated overall average treatment effect
 cat("Estimated Overall ATT from Simulated Data:", result$att_hat, "\n")
+
+# Calculate a 95% confidence interval
+low_att <- result$att_hat - qnorm(1 - 0.05 / 2) * result$att_se
+high_att <- result$att_hat + qnorm(1 - 0.05 / 2) * result$att_se
+
+cat("Estimated Overall ATT from Simulated Data:")
+cat(c(low_att, high_att))
+
+# Print the estimated cohort-specific treatment effects
+cat("Estimated cohort-specific treatment effects:")
+result$catt_df
+
 ```
 
 ## Step 4: Extract True Treatment Effects
@@ -105,9 +117,9 @@ Alternatively, you can chain the simulation functions together with the pipe ope
 
 ```{r}
 # A fully piped workflow from coefficient generation to estimation
-result_piped <- genCoefs(R = 3, T = 10, d = 2, density = 0.2, eff_size = 1.5, seed = 2020) |>
-  simulateData(N = 50, sig_eps_sq = 1, sig_eps_c_sq = 0.5, distribution = "gaussian") |>
-  fetwfeWithSimulatedData(lambda.max = NA, lambda.min = NA, nlambda = 100, q = 0.5, verbose = FALSE)
+result_piped <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 2025) |>
+  simulateData(N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5) |>
+  fetwfeWithSimulatedData()
 
 cat("Estimated Overall ATT from piped workflow:", result_piped$att_hat, "\n")
 ```
