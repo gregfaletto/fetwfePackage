@@ -4,7 +4,8 @@ bibentry(
   author  = person("Gregory", "Faletto"),
   year    = "2025",
   note    = "R package version 0.10.0",
-  url     = "https://cran.r-project.org/package=fetwfe"
+  url     = "https://cran.r-project.org/package=fetwfe",
+  doi      = "10.32614/CRAN.package.fetwfe"
 )
 
 
