@@ -2385,7 +2385,7 @@ checkFetwfeInputs <- function(
         stopifnot(is.character(covs))
         stopifnot(all(covs %in% colnames(pdata)))
         for(cov in covs){
-            stopifnot(is.numeric(pdata[[cov]]) | is.integer(pdata[[cov]]))
+            stopifnot(is.numeric(pdata[[cov]]) | is.integer(pdata[[cov]]) | is.factor(pdata[[cov]]))
         }
     }
     

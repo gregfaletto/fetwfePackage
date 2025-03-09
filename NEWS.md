@@ -2,7 +2,7 @@
 
 ## Version 0.10.1 (2025-03-08)
 
-- Update treatment of factor covariates provided to `fetwfe()`
+- Add support for factor covariates in `fetwfe()`
 
 ## Version 0.10.0 (2025-03-04)
 

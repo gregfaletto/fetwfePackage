@@ -876,3 +876,59 @@ test_that("data application works with ridge penalty", {
 
   })
 
+# ------------------------------------------------------------------------------
+# Test 28: Test that processFactors() converts factor covariates to dummies
+# ------------------------------------------------------------------------------
+test_that("processFactors processes factor covariates correctly", {
+  set.seed(987)
+  df <- data.frame(
+    cov1 = rnorm(10),
+    cov2 = factor(sample(c("A", "B", "C"), 10, replace = TRUE))
+  )
+  res <- processFactors(df, c("cov1", "cov2"))
+  
+  # The original factor "cov2" should be removed from pdata.
+  expect_false("cov2" %in% colnames(res$pdata))
+  
+  # The new covariate names (in res$covs) should not include "cov2" but should include dummy names.
+  expect_false("cov2" %in% res$covs)
+  expect_true(any(grepl("cov2_", res$covs)))
+  
+  # Also, check that the number of covariates is: 1 (for cov1) plus (nlevels(cov2)-1).
+  expected_dummies <- nlevels(df$cov2) - 1
+  expect_equal(length(res$covs), 1 + expected_dummies)
+})
+
+# ------------------------------------------------------------------------------
+# Test 29: Test that fetwfe() handles factor covariates appropriately
+# ------------------------------------------------------------------------------
+test_that("fetwfe handles factor covariates appropriately", {
+  df <- generate_panel_data(N = 30, T = 10, R = 9, seed = 123)
+  
+  # Convert cov2 into a factor with 3 levels.
+  set.seed(123)
+  df$cov2 <- factor(sample(c("A", "B", "C"), nrow(df), replace = TRUE))
+  
+  result <- fetwfe(
+    pdata     = df,
+    time_var  = "time",
+    unit_var  = "unit",
+    treatment = "treatment",
+    covs      = c("cov1", "cov2"),
+    response  = "y",
+    q         = 0.5,
+    verbose   = FALSE,
+    sig_eps_sq = 1,
+    sig_eps_c_sq = 1
+  )
+  
+  # Since cov1 is numeric (1 column) and cov2 is a factor with 3 levels,
+  # processFactors() should convert cov2 into 2 dummy columns.
+  # Thus, the total number of covariates 'd' should be 1 + 2 = 3.
+  expect_equal(result$d, 3)
+  
+  # (Optional) Run processFactors() separately and verify that the new dummy names are returned.
+  pf_res <- processFactors(df, c("cov1", "cov2"))
+  expect_false("cov2" %in% pf_res$covs)
+  expect_true(any(grepl("cov2_", pf_res$covs)))
+})
