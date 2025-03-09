@@ -2512,3 +2512,34 @@ genFullInvFusionTransformMat <- function(first_inds, T, R, d, num_treats) {
   
   return(full_D_inv)
 }
+
+
+# New helper function to process factor covariates
+processFactors <- function(pdata, covs) {
+  new_covs <- c()
+  # Loop over each variable in covs
+  for(v in covs) {
+    if(is.factor(pdata[[v]])) {
+      # Create dummy variables from the factor.
+      # The model.matrix() call produces an intercept and dummies; we drop the intercept
+      dummies <- stats::model.matrix(~ pdata[[v]] - 1)
+      # If there is more than one level, drop the first column to use it as baseline.
+      if(ncol(dummies) > 1) {
+        dummies <- dummies[, -1, drop = FALSE]
+      }
+      # Rename the dummy columns: for example, if v = "group", new names will be "group_level2", etc.
+      dummy_names <- paste(v, colnames(dummies), sep = "_")
+      colnames(dummies) <- dummy_names
+      # Remove the original factor column from pdata
+      pdata[[v]] <- NULL
+      # Bind the new dummy columns
+      pdata <- cbind(pdata, dummies)
+      # Record the new dummy variable names
+      new_covs <- c(new_covs, dummy_names)
+    } else {
+      # Leave non-factor columns unchanged.
+      new_covs <- c(new_covs, v)
+    }
+  }
+  return(list(pdata = pdata, covs = new_covs))
+}

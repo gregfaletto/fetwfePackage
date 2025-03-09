@@ -3,7 +3,7 @@ bibentry(
   title   = "fetwfe: Fused Extended Two-Way Fixed Effects",
   author  = person("Gregory", "Faletto"),
   year    = "2025",
-  note    = "R package version 0.10.0",
+  note    = "R package version 0.10.1",
   url     = "https://cran.r-project.org/package=fetwfe",
   doi      = "10.32614/CRAN.package.fetwfe"
 )

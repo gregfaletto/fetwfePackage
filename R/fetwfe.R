@@ -206,50 +206,59 @@ fetwfe <- function(
     unit_var,
     treatment,
     response,
-    covs=c(),
-    indep_counts=NA,
-    sig_eps_sq=NA,
-    sig_eps_c_sq=NA,
-    lambda.max=NA,
-    lambda.min=NA,
-    nlambda=100,
-    q=0.5,
-    verbose=FALSE,
-    alpha=0.05,
-    add_ridge=FALSE
+    covs = c(),
+    indep_counts = NA,
+    sig_eps_sq = NA,
+    sig_eps_c_sq = NA,
+    lambda.max = NA,
+    lambda.min = NA,
+    nlambda = 100,
+    q = 0.5,
+    verbose = FALSE,
+    alpha = 0.05,
+    add_ridge = FALSE
     ){
 
     # Check inputs
     indep_count_data_available <- checkFetwfeInputs(
-        pdata=pdata,
-        time_var=time_var,
-        unit_var=unit_var,
-        treatment=treatment,
-        response=response,
-        covs=covs,
-        indep_counts=indep_counts,
-        sig_eps_sq=sig_eps_sq,
-        sig_eps_c_sq=sig_eps_c_sq,
-        lambda.max=lambda.max,
-        lambda.min=lambda.min,
-        nlambda=nlambda,
-        q=q,
-        verbose=verbose,
-        alpha=alpha,
-        add_ridge=add_ridge
+        pdata = pdata,
+        time_var = time_var,
+        unit_var = unit_var,
+        treatment = treatment,
+        response = response,
+        covs = covs,
+        indep_counts = indep_counts,
+        sig_eps_sq = sig_eps_sq,
+        sig_eps_c_sq = sig_eps_c_sq,
+        lambda.max = lambda.max,
+        lambda.min = lambda.min,
+        nlambda = nlambda,
+        q = q,
+        verbose = verbose,
+        alpha = alpha,
+        add_ridge = add_ridge
     )
 
+    # Subset pdata to include only the key columns
     pdata <- pdata[, c(response, time_var, unit_var, treatment, covs)]
 
+    # Process any factor covariates:
+    if(length(covs) > 0) {
+      pf_res <- processFactors(pdata, covs)
+      pdata <- pf_res$pdata
+      covs <- pf_res$covs
+    }
+
+    # Proceed to generate design matrix and other objects
     res <- prepXints(
-        data=pdata,
-        time_var=time_var,
-        unit_var=unit_var,
-        treatment=treatment,
-        covs=covs,
-        response=response,
-        verbose=verbose
-        )
+        data = pdata,
+        time_var = time_var,
+        unit_var = unit_var,
+        treatment = treatment,
+        covs = covs,
+        response = response,
+        verbose = verbose
+    )
 
     X_ints <- res$X_ints
     y <- res$y
@@ -262,31 +271,26 @@ fetwfe <- function(
     first_inds <- res$first_inds
 
     rm(res)
-
+    
     R <- length(in_sample_counts) - 1
     stopifnot(R >= 1)
     stopifnot(R <= T - 1)
     if(R < 2){
         stop("Only one treated cohort detected in data. Currently fetwfe only supports data sets with at least two treated cohorts.")
     }
-
     stopifnot(N >= R + 1)
-
     stopifnot(sum(in_sample_counts) == N)
     stopifnot(all(in_sample_counts >= 0))
     stopifnot(is.integer(in_sample_counts))
-
     if(in_sample_counts[1] == 0){
         stop("No never-treated units detected in data to fit model; estimating treatment effects is not possible")
     }
     if(length(names(in_sample_counts)) != length(in_sample_counts)){
         stop("in_sample_counts must have all unique named entries (with names corresponding to the names of each cohort)")
     }
-
     if(length(names(in_sample_counts)) != length(unique(names(in_sample_counts)))){
         stop("in_sample_counts must have all unique named entries (with names corresponding to the names of each cohort)")
     }
-
     if(indep_count_data_available){
         if(sum(indep_counts) != N){
             stop("Number of units in independent cohort count data does not equal number of units in data to be used to fit model.")
@@ -297,26 +301,26 @@ fetwfe <- function(
     }
 
     res <- fetwfe_core(
-        X_ints=X_ints,
-        y=y,
-        in_sample_counts=in_sample_counts,
-        N=N,
-        T=T,
-        d=d,
-        p=p,
-        num_treats=num_treats,
-        first_inds=first_inds,
-        indep_counts=indep_counts,
-        sig_eps_sq=sig_eps_sq,
-        sig_eps_c_sq=sig_eps_c_sq,
-        lambda.max=lambda.max,
-        lambda.min=lambda.min,
-        nlambda=nlambda,
-        q=q,
-        verbose=verbose,
-        alpha=alpha,
-        add_ridge=add_ridge
-        )
+        X_ints = X_ints,
+        y = y,
+        in_sample_counts = in_sample_counts,
+        N = N,
+        T = T,
+        d = d,
+        p = p,
+        num_treats = num_treats,
+        first_inds = first_inds,
+        indep_counts = indep_counts,
+        sig_eps_sq = sig_eps_sq,
+        sig_eps_c_sq = sig_eps_c_sq,
+        lambda.max = lambda.max,
+        lambda.min = lambda.min,
+        nlambda = nlambda,
+        q = q,
+        verbose = verbose,
+        alpha = alpha,
+        add_ridge = add_ridge
+    )
 
     if(indep_count_data_available){
         if(q < 1){
@@ -334,37 +338,34 @@ fetwfe <- function(
     }
 
     return(list(
-        att_hat=att_hat,
-        att_se=att_se,
-        catt_hats=res$catt_hats,
-        catt_ses=res$catt_ses,
-        cohort_probs=cohort_probs,
-        catt_df=res$catt_df,
-        beta_hat=res$beta_hat,
-        treat_inds=res$treat_inds,
-        treat_int_inds=res$treat_int_inds,
-        sig_eps_sq=res$sig_eps_sq,
-        sig_eps_c_sq=res$sig_eps_c_sq,
+        att_hat = att_hat,
+        att_se = att_se,
+        catt_hats = res$catt_hats,
+        catt_ses = res$catt_ses,
+        cohort_probs = cohort_probs,
+        catt_df = res$catt_df,
+        beta_hat = res$beta_hat,
+        treat_inds = res$treat_inds,
+        treat_int_inds = res$treat_int_inds,
+        sig_eps_sq = res$sig_eps_sq,
+        sig_eps_c_sq = res$sig_eps_c_sq,
         lambda.max = res$lambda.max,
         lambda.max_model_size = res$lambda.max_model_size,
         lambda.min = res$lambda.min,
         lambda.min_model_size = res$lambda.min_model_size,
         lambda_star = res$lambda_star,
         lambda_star_model_size = res$lambda_star_model_size,
-        X_ints=res$X_ints,
-        y=res$y,
-        X_final=res$X_final,
-        y_final=res$y_final,
-        N=res$N,
-        T=res$T,
-        R=res$R,
-        d=res$d,
-        p=res$p
-        )
-    )
-
+        X_ints = res$X_ints,
+        y = res$y,
+        X_final = res$X_final,
+        y_final = res$y_final,
+        N = res$N,
+        T = res$T,
+        R = res$R,
+        d = res$d,
+        p = res$p
+    ))
 }
-
 
 #' Generate Random Panel Data for FETWFE Simulations
 #'

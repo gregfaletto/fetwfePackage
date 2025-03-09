@@ -1,5 +1,9 @@
 # NEWS
 
+## Version 0.10.1 (2025-03-08)
+
+- Update treatment of factor covariates provided to `fetwfe()`
+
 ## Version 0.10.0 (2025-03-04)
 
 - Add back in functions `genCoefsCore()` and `simulateDataCore()` for export, and add tests for them. (Though these more flexible functions are now available, emphasis for end users will still be on using wrapper functions `genCoefs()` and `simulateData()`.)
