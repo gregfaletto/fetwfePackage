@@ -33,7 +33,8 @@ or simply an empty vector (if \eqn{d = 0})}
 \item{treatment}{The name of the treatment variable in pdata}
 \item{response}{The name of the reponse varialbe in pdata}
 \item{coefs}{The coefficient vector \eqn{\beta} used for data generation.}
-\item{first_inds}{A vector of indices indicating the first treatment effect for each treated cohort.}
+\item{first_inds}{A vector of indices indicating the first treatment effect for each treated
+cohort.}
 \item{N_UNTREATED}{The number of never-treated units.}
 \item{assignments}{A vector of counts (of length \eqn{R+1}) indicating how many units fall into
 the never-treated group and each of the \eqn{R} treated cohorts.}
@@ -62,8 +63,8 @@ covariate-related columns or interactions are generated.
 \details{
 This function extracts simulation parameters from the \code{FETWFE_coefs} object and passes them,
 along with additional simulation parameters, to the internal function \code{simulateDataCore()}.
-It validates that all necessary components are returned and assigns the S3 class \code{"FETWFE_simulated"}
-to the output.
+It validates that all necessary components are returned and assigns the S3 class
+\code{"FETWFE_simulated"} to the output.
 
 The argument \code{distribution} controls the generation of covariates. For
 \code{"gaussian"}, covariates are drawn from \code{rnorm}; for \code{"uniform"},

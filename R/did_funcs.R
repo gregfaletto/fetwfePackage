@@ -1,4 +1,5 @@
 #' @import glmnet
+#' @importFrom Matrix bdiag
 
 prepXints <- function(
     data,
@@ -378,6 +379,10 @@ fetwfe_core <- function(
     #
     #
 
+    X_final_scaled <- my_scale(X_final)
+    scale_center <- attr(X_final_scaled, "scaled:center")
+    scale_scale  <- attr(X_final_scaled, "scaled:scale")
+
     if(add_ridge){
         # Add rows to X_final. First need to get D^{-1}:
         D_inverse <- genFullInvFusionTransformMat(
@@ -389,15 +394,16 @@ fetwfe_core <- function(
             )
 
         stopifnot(ncol(D_inverse) == ncol(X_final))
+        stopifnot(ncol(D_inverse) == ncol(X_final_scaled))
 
         # Now add rows
         lambda_ridge <- 0.00001 * (sig_eps_sq + sig_eps_c_sq) * sqrt(p / (N * T))
 
-        X_final <- rbind(X_final, sqrt(lambda_ridge) * D_inverse)
+        X_final_scaled <- rbind(X_final_scaled, sqrt(lambda_ridge) * D_inverse)
         y_final <- c(y_final, rep(0, nrow(D_inverse)))
 
-        stopifnot(nrow(X_final) == length(y_final))
-        stopifnot(nrow(X_final) == N * T + p)
+        stopifnot(nrow(X_final_scaled) == length(y_final))
+        stopifnot(nrow(X_final_scaled) == N * T + p)
     }
 
     #
@@ -454,7 +460,7 @@ fetwfe_core <- function(
 
     if(!is.na(lambda.max) & !is.na(lambda.min)){
         fit <- grpreg::gBridge(
-            X=X_final,
+            X=X_final_scaled,
             y=y_final,
             gamma=q,
             lambda.max=lambda.max,
@@ -463,7 +469,7 @@ fetwfe_core <- function(
             )
     } else if(!is.na(lambda.max)){
         fit <- grpreg::gBridge(
-            X=X_final,
+            X=X_final_scaled,
             y=y_final,
             gamma=q,
             lambda.max=lambda.max,
@@ -471,7 +477,7 @@ fetwfe_core <- function(
             )
     } else if(!is.na(lambda.min)){
         fit <- grpreg::gBridge(
-            X=X_final,
+            X=X_final_scaled,
             y=y_final,
             gamma=q,
             lambda.min=lambda.min,
@@ -479,7 +485,7 @@ fetwfe_core <- function(
             )
     } else{
         fit <- grpreg::gBridge(
-            X=X_final,
+            X=X_final_scaled,
             y=y_final,
             gamma=q,
             nlambda=nlambda
@@ -507,7 +513,9 @@ fetwfe_core <- function(
         T=T,
         p=p,
         X_mod=X_mod,
-        y=y
+        y=y,
+        scale_center=scale_center,
+        scale_scale=scale_scale
         )
 
     theta_hat <- res$theta_hat
@@ -2114,7 +2122,7 @@ genInvTwoWayFusionTransformMat <- function(n_vars, first_inds, R){
     return(D)
 }
 
-getBetaBIC <- function(fit, N, T, p, X_mod, y){
+getBetaBIC <- function(fit, N, T, p, X_mod, y, scale_center, scale_scale){
     stopifnot(length(y) == N*T)
     n_lambda <- ncol(fit$beta)
     BICs <- rep(as.numeric(NA), n_lambda)
@@ -2151,8 +2159,26 @@ getBetaBIC <- function(fit, N, T, p, X_mod, y){
     stopifnot(length(theta_hat) == p + 1)
     stopifnot(all(!is.na(theta_hat)))
 
+    #
+    # Rescale coefficients back to the original scale.
+    # The coefficient vector theta_hat is of length (p+1), with the first entry
+    # as the intercept.
+    # For predictors: original coefficient = beta_scaled / scale_j.
+    # The intercept is adjusted as: intercept_original =
+    # intercept_scaled - sum(center_j * (beta_scaled/scale_j)).
+    #
+    adjusted_theta_hat <- theta_hat
+    if(length(scale_scale) != p){
+        stop("Length of scale_scale does not match number of predictors (p).")
+    }
+    for(j in 2:(p+1)){
+        adjusted_theta_hat[j] <- theta_hat[j] / scale_scale[j-1]
+    }
+    adjusted_theta_hat[1] <- theta_hat[1] - sum(scale_center * (theta_hat[2:(p+1)] / scale_scale))
+    
+
     return(list(
-        theta_hat=theta_hat,
+        theta_hat=adjusted_theta_hat,
         lambda_star_ind=lambda_star_final_ind,
         lambda_star_model_size=model_sizes[lambda_star_final_ind]
         )
@@ -2454,7 +2480,7 @@ checkFetwfeInputs <- function(
 
 }
 
-#' Generate the full D^{-1} transformation matrix.
+#' Generate the full \eqn{D^{-1}} transformation matrix.
 #'
 #' @param first_inds A vector of indices corresponding to the first treatment effect for each treated cohort.
 #' @param T Total number of time periods.
@@ -2463,10 +2489,6 @@ checkFetwfeInputs <- function(
 #' @param num_treats Total number of base treatment effect parameters.
 #'
 #' @return A matrix of dimension p x p where p = R + (T - 1) + d + d*R + d*(T - 1) + num_treats + d*num_treats.
-#'
-#' @examples
-#' # Example: first_inds = c(1, 5, 8) for R = 3, T = 6, d = 2, num_treats = 10.
-#' D_inv <- genFullInvFusionTransformMat(first_inds = c(1, 5, 8), T = 6, R = 3, d = 2, num_treats = 10)
 genFullInvFusionTransformMat <- function(first_inds, T, R, d, num_treats) {
   # Load required package for block diagonal concatenation.
   if (!requireNamespace("Matrix", quietly = TRUE)) {
@@ -2542,4 +2564,29 @@ processFactors <- function(pdata, covs) {
     }
   }
   return(list(pdata = pdata, covs = new_covs))
+}
+
+my_scale <- function(x) {
+    # Compute column means and standard deviations
+  ctr <- colMeans(x)
+  sds <- apply(x, 2, sd)
+  
+  # Identify zero-variance columns
+  zero_sd <- (sds == 0)
+  
+  # For zero-variance columns, leave unchanged: set center=0, scale=1
+  ctr2 <- ctr
+  sds2 <- sds
+  ctr2[zero_sd] <- 0
+  sds2[zero_sd] <- 1
+
+  # Center and scale
+  scaled <- sweep(x, 2, ctr2, FUN = "-")
+  scaled <- sweep(scaled, 2, sds2, FUN = "/")
+
+  # Attach attributes so behavior mimics base::scale()
+  attr(scaled, "scaled:center") <- ctr2
+  attr(scaled, "scaled:scale")  <- sds2
+
+  return(scaled)
 }

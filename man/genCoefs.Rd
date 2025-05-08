@@ -7,25 +7,28 @@
 genCoefs(R, T, d, density, eff_size, seed = NULL)
 }
 \arguments{
-\item{R}{Integer. The number of treated cohorts (treatment is assumed to start in periods 2 to \code{R + 1}).}
+\item{R}{Integer. The number of treated cohorts (treatment is assumed to start in periods 2 to
+\code{R + 1}).}
 
 \item{T}{Integer. The total number of time periods.}
 
-\item{d}{Integer. The number of time-invariant covariates. If \code{d > 0}, additional terms corresponding
-to covariate main effects and interactions are included in \code{beta}.}
+\item{d}{Integer. The number of time-invariant covariates. If \code{d > 0}, additional terms
+corresponding to covariate main effects and interactions are included in \code{beta}.}
 
-\item{density}{Numeric in (0,1). The probability that any given entry in the initial sparse coefficient
-vector \code{theta} is nonzero.}
+\item{density}{Numeric in (0,1). The probability that any given entry in the initial sparse
+coefficient vector \code{theta} is nonzero.}
 
-\item{eff_size}{Numeric. The magnitude used to scale nonzero entries in \code{theta}. Each nonzero entry is
-set to \code{eff_size} or \code{-eff_size} (with a 60 percent chance for a positive value).}
+\item{eff_size}{Numeric. The magnitude used to scale nonzero entries in \code{theta}. Each
+nonzero entry is set to \code{eff_size} or \code{-eff_size} (with a 60 percent chance for a
+positive value).}
 
 \item{seed}{(Optional) Integer. Seed for reproducibility.}
 }
 \value{
 An object of class \code{"FETWFE_coefs"}, which is a list containing:
 \describe{
-\item{beta}{A numeric vector representing the full coefficient vector after the inverse fusion transform.}
+\item{beta}{A numeric vector representing the full coefficient vector after the inverse fusion
+transform.}
 \item{R}{The provided number of treated cohorts.}
 \item{T}{The provided number of time periods.}
 \item{d}{The provided number of covariates.}
@@ -46,11 +49,12 @@ where the number of treatment parameters is defined as
 
 The function operates in two steps:
 \enumerate{
-\item It first creates a sparse vector \code{theta} of length \eqn{p}, with nonzero entries occurring
-with probability \code{density}. Nonzero entries are set to \code{eff_size} or \code{-eff_size} (with a 60\\%
-chance for a positive value).
-\item The full coefficient vector \code{beta} is then computed by applying an inverse fusion transform to \code{theta}
-using internal routines (e.g., \code{genBackwardsInvFusionTransformMat()} and \code{genInvTwoWayFusionTransformMat()}).
+\item It first creates a sparse vector \code{theta} of length \eqn{p}, with nonzero entries
+occurring with probability \code{density}. Nonzero entries are set to \code{eff_size} or
+\code{-eff_size} (with a 60\\% chance for a positive value).
+\item The full coefficient vector \code{beta} is then computed by applying an inverse fusion
+transform to \code{theta} using internal routines (e.g.,
+\code{genBackwardsInvFusionTransformMat()} and \code{genInvTwoWayFusionTransformMat()}).
 }
 }
 \examples{

@@ -1,8 +1,12 @@
 # NEWS
 
+## Version 0.10.2 (2025-05-07)
+
+- Add centering and scaling of covariates before ridge penalty added.
+
 ## Version 0.10.1 (2025-03-08)
 
-- Add support for factor covariates in `fetwfe()`
+- Add support for factor covariates in `fetwfe()`.
 
 ## Version 0.10.0 (2025-03-04)
 

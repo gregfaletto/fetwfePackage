@@ -30,8 +30,8 @@ simulateDataCore(
 
 \item{sig_eps_c_sq}{Numeric. Variance of the unit-level random effects.}
 
-\item{beta}{Numeric vector. Coefficient vector for data generation. Its required length depends on
-the value of \code{gen_ints}:
+\item{beta}{Numeric vector. Coefficient vector for data generation. Its required length depends
+on the value of \code{gen_ints}:
 \itemize{
 \item If \code{gen_ints = TRUE} and \code{d > 0}, the expected length is
 \eqn{p = R + (T-1) + d + dR + d(T-1) + num\_treats + num\_treats \times d}, where
@@ -65,7 +65,8 @@ or simply an empty vector (if \eqn{d = 0})}
 \item{treatment}{The name of the treatment variable in pdata}
 \item{response}{The name of the reponse varialbe in pdata}
 \item{coefs}{The coefficient vector \eqn{\beta} used for data generation.}
-\item{first_inds}{A vector of indices indicating the first treatment effect for each treated cohort.}
+\item{first_inds}{A vector of indices indicating the first treatment effect for each treated
+cohort.}
 \item{N_UNTREATED}{The number of never-treated units.}
 \item{assignments}{A vector of counts (of length \eqn{R+1}) indicating how many units fall into
 the never-treated group and each of the \eqn{R} treated cohorts.}
@@ -91,15 +92,17 @@ as expected by \code{fetwfe()}. Moreover, the covariates are generated according
 specified \code{distribution}: by default, covariates are drawn from a normal distribution;
 if \code{distribution = "uniform"}, they are drawn uniformly from \eqn{[-\sqrt{3}, \sqrt{3}]}.
 
-When \eqn{d = 0} (i.e. no covariates), no covariate-related columns or interactions are generated.
+When \eqn{d = 0} (i.e. no covariates), no covariate-related columns or interactions are
+generated.
 }
 \details{
 When \code{gen_ints = TRUE}, the function constructs the design matrix by first generating
 base fixed effects and a long-format covariate matrix (via \code{generateBaseEffects()}), then
-appending interactions between the covariates and cohort/time fixed effects (via \code{generateFEInts()})
-and finally treatment indicator columns and treatment-covariate interactions
-(via \code{genTreatVarsSim()} and \code{genTreatInts()}). When \code{gen_ints = FALSE},
-the design matrix consists only of the base fixed effects, covariates, and treatment indicators.
+appending interactions between the covariates and cohort/time fixed effects (via
+\code{generateFEInts()}) and finally treatment indicator columns and treatment-covariate
+interactions (via \code{genTreatVarsSim()} and \code{genTreatInts()}). When
+\code{gen_ints = FALSE}, the design matrix consists only of the base fixed effects, covariates,
+and treatment indicators.
 
 The argument \code{distribution} controls the generation of covariates. For
 \code{"gaussian"}, covariates are drawn from \code{rnorm}; for \code{"uniform"},
@@ -122,7 +125,8 @@ and their interactions.
   # (Here, density controls sparsity and eff_size scales nonzero entries)
   coefs_core <- genCoefsCore(R = R, T = T, d = d, density = 0.2, eff_size = 2, seed = 123)
 
-  # Now simulate the data. Setting gen_ints = TRUE generates the full design matrix with interactions.
+  # Now simulate the data. Setting gen_ints = TRUE generates the full design
+  matrix with interactions.
   sim_data <- simulateDataCore(
     N = N,
     T = T,

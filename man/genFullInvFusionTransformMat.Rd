@@ -2,7 +2,7 @@
 % Please edit documentation in R/did_funcs.R
 \name{genFullInvFusionTransformMat}
 \alias{genFullInvFusionTransformMat}
-\title{Generate the full D^{-1} transformation matrix.}
+\title{Generate the full \eqn{D^{-1}} transformation matrix.}
 \usage{
 genFullInvFusionTransformMat(first_inds, T, R, d, num_treats)
 }
@@ -21,9 +21,5 @@ genFullInvFusionTransformMat(first_inds, T, R, d, num_treats)
 A matrix of dimension p x p where p = R + (T - 1) + d + d\emph{R + d}(T - 1) + num_treats + d*num_treats.
 }
 \description{
-Generate the full D^{-1} transformation matrix.
-}
-\examples{
-# Example: first_inds = c(1, 5, 8) for R = 3, T = 6, d = 2, num_treats = 10.
-D_inv <- genFullInvFusionTransformMat(first_inds = c(1, 5, 8), T = 6, R = 3, d = 2, num_treats = 10)
+Generate the full \eqn{D^{-1}} transformation matrix.
 }

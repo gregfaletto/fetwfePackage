@@ -7,22 +7,18 @@
 getTes(coefs_obj)
 }
 \arguments{
-\item{beta}{Numeric vector. The full vector of estimated coefficients from the model.
-Its length must equal the total number of parameters specified by \code{getP(R, T, d, num_treats)}.}
-
-\item{R}{Integer. The number of treated cohorts in the data. Must be at least 2.}
-
-\item{T}{Integer. The number of time periods in the panel data.}
-
-\item{d}{Integer. The number of covariates used in the model. Set \code{d = 0} if no covariates are used.}
+\item{coefs_obj}{An object of class \code{"FETWFE_coefs"} containing the coefficient vector
+and simulation parameters.}
 }
 \value{
 A named list with two elements:
 \describe{
-\item{att_true}{A numeric value representing the overall average treatment effect on the treated.
-It is computed as the (equal-weighted) mean of the cohort-specific treatment effects.}
-\item{actual_cohort_tes}{A numeric vector containing the true cohort-specific treatment effects,
-calculated by averaging the coefficients corresponding to the treatment dummies for each cohort.}
+\item{att_true}{A numeric value representing the overall average treatment effect on the
+treated. It is computed as the (equal-weighted) mean of the cohort-specific treatment
+effects.}
+\item{actual_cohort_tes}{A numeric vector containing the true cohort-specific treatment
+effects, calculated by averaging the coefficients corresponding to the treatment dummies
+for each cohort.}
 }
 }
 \description{

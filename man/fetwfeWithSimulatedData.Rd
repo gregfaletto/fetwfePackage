@@ -16,7 +16,8 @@ fetwfeWithSimulatedData(
 )
 }
 \arguments{
-\item{simulated_obj}{An object of class \code{"FETWFE_simulated"} containing the simulated panel data and design matrix.}
+\item{simulated_obj}{An object of class \code{"FETWFE_simulated"} containing the simulated panel
+data and design matrix.}
 
 \item{lambda.max}{(Optional.) Numeric. A penalty parameter \code{lambda} will be
 selected over a grid search by BIC in order to select a single model. The
@@ -116,13 +117,14 @@ same value for every unit).} \item{p}{The final number of columns in the full
 set of covariates used to estimate the model.}
 }
 \description{
-This function runs the fused extended two-way fixed effects estimator (\code{fetwfe()}) on simulated data.
-It accepts an object of class \code{"FETWFE_simulated"} (produced by \code{simulateData()}) and unpacks the
-necessary components to pass to \code{fetwfe()}.
+This function runs the fused extended two-way fixed effects estimator (\code{fetwfe()}) on
+simulated data. It accepts an object of class \code{"FETWFE_simulated"} (produced by
+\code{simulateData()}) and unpacks the necessary components to pass to \code{fetwfe()}.
 }
 \details{
-The function extracts the panel data and simulation parameters from the \code{FETWFE_simulated} object
-and passes them to \code{fetwfe()}. The estimation output is then returned without further modification.
+The function extracts the panel data and simulation parameters from the \code{FETWFE_simulated}
+object and passes them to \code{fetwfe()}. The estimation output is then returned without further
+modification.
 }
 \examples{
 \dontrun{

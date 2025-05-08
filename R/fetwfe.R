@@ -1,4 +1,5 @@
 #' @import glmnet
+#' @importFrom stats rbinom rmultinom rnorm runif sd
 
 #' @title Fused extended two-way fixed effects
 #'
@@ -402,7 +403,8 @@ fetwfe <- function(
 #'   \item{treatment}{The name of the treatment variable in pdata}
 #'   \item{response}{The name of the reponse varialbe in pdata}
 #'   \item{coefs}{The coefficient vector \eqn{\beta} used for data generation.}
-#'   \item{first_inds}{A vector of indices indicating the first treatment effect for each treated cohort.}
+#'   \item{first_inds}{A vector of indices indicating the first treatment effect for each treated
+#'         cohort.}
 #'   \item{N_UNTREATED}{The number of never-treated units.}
 #'   \item{assignments}{A vector of counts (of length \eqn{R+1}) indicating how many units fall into
 #'         the never-treated group and each of the \eqn{R} treated cohorts.}
@@ -419,8 +421,8 @@ fetwfe <- function(
 #' @details
 #' This function extracts simulation parameters from the \code{FETWFE_coefs} object and passes them,
 #' along with additional simulation parameters, to the internal function \code{simulateDataCore()}.
-#' It validates that all necessary components are returned and assigns the S3 class \code{"FETWFE_simulated"}
-#' to the output.
+#' It validates that all necessary components are returned and assigns the S3 class
+#' \code{"FETWFE_simulated"} to the output.
 #'
 #' The argument \code{distribution} controls the generation of covariates. For
 #' \code{"gaussian"}, covariates are drawn from \code{rnorm}; for \code{"uniform"},
@@ -489,19 +491,22 @@ simulateData <- function(coefs_obj, N, sig_eps_sq, sig_eps_c_sq,
 #' \code{"FETWFE_coefs"} containing \code{beta} along with simulation parameters \code{R},
 #' \code{T}, and \code{d}.
 #'
-#' @param R Integer. The number of treated cohorts (treatment is assumed to start in periods 2 to \code{R + 1}).
+#' @param R Integer. The number of treated cohorts (treatment is assumed to start in periods 2 to
+#'   \code{R + 1}).
 #' @param T Integer. The total number of time periods.
-#' @param d Integer. The number of time-invariant covariates. If \code{d > 0}, additional terms corresponding
-#'   to covariate main effects and interactions are included in \code{beta}.
-#' @param density Numeric in (0,1). The probability that any given entry in the initial sparse coefficient
-#'   vector \code{theta} is nonzero.
-#' @param eff_size Numeric. The magnitude used to scale nonzero entries in \code{theta}. Each nonzero entry is
-#'   set to \code{eff_size} or \code{-eff_size} (with a 60 percent chance for a positive value).
+#' @param d Integer. The number of time-invariant covariates. If \code{d > 0}, additional terms
+#'   corresponding to covariate main effects and interactions are included in \code{beta}.
+#' @param density Numeric in (0,1). The probability that any given entry in the initial sparse
+#'   coefficient vector \code{theta} is nonzero.
+#' @param eff_size Numeric. The magnitude used to scale nonzero entries in \code{theta}. Each
+#'   nonzero entry is set to \code{eff_size} or \code{-eff_size} (with a 60 percent chance for a
+#'   positive value).
 #' @param seed (Optional) Integer. Seed for reproducibility.
 #'
 #' @return An object of class \code{"FETWFE_coefs"}, which is a list containing:
 #' \describe{
-#'   \item{beta}{A numeric vector representing the full coefficient vector after the inverse fusion transform.}
+#'   \item{beta}{A numeric vector representing the full coefficient vector after the inverse fusion
+#'      transform.}
 #'   \item{R}{The provided number of treated cohorts.}
 #'   \item{T}{The provided number of time periods.}
 #'   \item{d}{The provided number of covariates.}
@@ -516,11 +521,12 @@ simulateData <- function(coefs_obj, N, sig_eps_sq, sig_eps_c_sq,
 #'
 #' The function operates in two steps:
 #' \enumerate{
-#'   \item It first creates a sparse vector \code{theta} of length \eqn{p}, with nonzero entries occurring
-#'   with probability \code{density}. Nonzero entries are set to \code{eff_size} or \code{-eff_size} (with a 60\%
-#'   chance for a positive value).
-#'   \item The full coefficient vector \code{beta} is then computed by applying an inverse fusion transform to \code{theta}
-#'   using internal routines (e.g., \code{genBackwardsInvFusionTransformMat()} and \code{genInvTwoWayFusionTransformMat()}).
+#'   \item It first creates a sparse vector \code{theta} of length \eqn{p}, with nonzero entries
+#'   occurring with probability \code{density}. Nonzero entries are set to \code{eff_size} or
+#'   \code{-eff_size} (with a 60\% chance for a positive value).
+#'   \item The full coefficient vector \code{beta} is then computed by applying an inverse fusion
+#'   transform to \code{theta} using internal routines (e.g.,
+#'   \code{genBackwardsInvFusionTransformMat()} and \code{genInvTwoWayFusionTransformMat()}).
 #' }
 #'
 #' @examples
@@ -584,11 +590,12 @@ genCoefs <- function(R, T, d, density, eff_size, seed=NULL){
 #' Run FETWFE on Simulated Data
 #'
 #' @description
-#' This function runs the fused extended two-way fixed effects estimator (\code{fetwfe()}) on simulated data.
-#' It accepts an object of class \code{"FETWFE_simulated"} (produced by \code{simulateData()}) and unpacks the
-#' necessary components to pass to \code{fetwfe()}.
+#' This function runs the fused extended two-way fixed effects estimator (\code{fetwfe()}) on
+#' simulated data. It accepts an object of class \code{"FETWFE_simulated"} (produced by
+#' \code{simulateData()}) and unpacks the necessary components to pass to \code{fetwfe()}.
 #'
-#' @param simulated_obj An object of class \code{"FETWFE_simulated"} containing the simulated panel data and design matrix.
+#' @param simulated_obj An object of class \code{"FETWFE_simulated"} containing the simulated panel
+#' data and design matrix.
 #' @param lambda.max (Optional.) Numeric. A penalty parameter `lambda` will be
 #' selected over a grid search by BIC in order to select a single model. The 
 #' largest `lambda` in the grid will be `lambda.max`. If no `lambda.max` is
@@ -679,8 +686,9 @@ genCoefs <- function(R, T, d, density, eff_size, seed=NULL){
 #' set of covariates used to estimate the model.}
 #'
 #' @details
-#' The function extracts the panel data and simulation parameters from the \code{FETWFE_simulated} object
-#' and passes them to \code{fetwfe()}. The estimation output is then returned without further modification.
+#' The function extracts the panel data and simulation parameters from the \code{FETWFE_simulated}
+#' object and passes them to \code{fetwfe()}. The estimation output is then returned without further
+#' modification.
 #'
 #' @examples
 #' \dontrun{
@@ -744,18 +752,17 @@ fetwfeWithSimulatedData <- function(simulated_obj, lambda.max = NA, lambda.min =
 #' of the cohort-specific treatment effects, and also returns the individual treatment 
 #' effects for each treated cohort.
 #'
-#' @param beta Numeric vector. The full vector of estimated coefficients from the model.
-#'   Its length must equal the total number of parameters specified by \code{getP(R, T, d, num_treats)}.
-#' @param R Integer. The number of treated cohorts in the data. Must be at least 2.
-#' @param T Integer. The number of time periods in the panel data.
-#' @param d Integer. The number of covariates used in the model. Set \code{d = 0} if no covariates are used.
+#' @param coefs_obj An object of class \code{"FETWFE_coefs"} containing the coefficient vector
+#' and simulation parameters.
 #'
 #' @return A named list with two elements:
 #' \describe{
-#'   \item{att_true}{A numeric value representing the overall average treatment effect on the treated.
-#'         It is computed as the (equal-weighted) mean of the cohort-specific treatment effects.}
-#'   \item{actual_cohort_tes}{A numeric vector containing the true cohort-specific treatment effects,
-#'         calculated by averaging the coefficients corresponding to the treatment dummies for each cohort.}
+#'   \item{att_true}{A numeric value representing the overall average treatment effect on the
+#'         treated. It is computed as the (equal-weighted) mean of the cohort-specific treatment
+#'         effects.}
+#'   \item{actual_cohort_tes}{A numeric vector containing the true cohort-specific treatment
+#'         effects, calculated by averaging the coefficients corresponding to the treatment dummies
+#'         for each cohort.}
 #' }
 #'
 #' @details 
@@ -829,7 +836,8 @@ getTes <- function(coefs_obj){
 #' specified \code{distribution}: by default, covariates are drawn from a normal distribution;
 #' if \code{distribution = "uniform"}, they are drawn uniformly from \eqn{[-\sqrt{3}, \sqrt{3}]}.
 #'
-#' When \eqn{d = 0} (i.e. no covariates), no covariate-related columns or interactions are generated.
+#' When \eqn{d = 0} (i.e. no covariates), no covariate-related columns or interactions are 
+#' generated.
 #'
 #' @param N Integer. Number of units in the panel.
 #' @param T Integer. Number of time periods.
@@ -837,8 +845,8 @@ getTes <- function(coefs_obj){
 #' @param d Integer. Number of time-invariant covariates.
 #' @param sig_eps_sq Numeric. Variance of the idiosyncratic (observation-level) noise.
 #' @param sig_eps_c_sq Numeric. Variance of the unit-level random effects.
-#' @param beta Numeric vector. Coefficient vector for data generation. Its required length depends on
-#'   the value of \code{gen_ints}:
+#' @param beta Numeric vector. Coefficient vector for data generation. Its required length depends
+#' on the value of \code{gen_ints}:
 #'   \itemize{
 #'     \item If \code{gen_ints = TRUE} and \code{d > 0}, the expected length is 
 #'       \eqn{p = R + (T-1) + d + dR + d(T-1) + num\_treats + num\_treats \times d}, where 
@@ -868,7 +876,8 @@ getTes <- function(coefs_obj){
 #'   \item{treatment}{The name of the treatment variable in pdata}
 #'   \item{response}{The name of the reponse varialbe in pdata}
 #'   \item{coefs}{The coefficient vector \eqn{\beta} used for data generation.}
-#'   \item{first_inds}{A vector of indices indicating the first treatment effect for each treated cohort.}
+#'   \item{first_inds}{A vector of indices indicating the first treatment effect for each treated
+#'   cohort.}
 #'   \item{N_UNTREATED}{The number of never-treated units.}
 #'   \item{assignments}{A vector of counts (of length \eqn{R+1}) indicating how many units fall into
 #'         the never-treated group and each of the \eqn{R} treated cohorts.}
@@ -885,10 +894,11 @@ getTes <- function(coefs_obj){
 #' @details
 #' When \code{gen_ints = TRUE}, the function constructs the design matrix by first generating
 #' base fixed effects and a long-format covariate matrix (via \code{generateBaseEffects()}), then
-#' appending interactions between the covariates and cohort/time fixed effects (via \code{generateFEInts()})
-#' and finally treatment indicator columns and treatment-covariate interactions
-#' (via \code{genTreatVarsSim()} and \code{genTreatInts()}). When \code{gen_ints = FALSE},
-#' the design matrix consists only of the base fixed effects, covariates, and treatment indicators.
+#' appending interactions between the covariates and cohort/time fixed effects (via
+#' \code{generateFEInts()}) and finally treatment indicator columns and treatment-covariate
+#' interactions (via \code{genTreatVarsSim()} and \code{genTreatInts()}). When
+#' \code{gen_ints = FALSE}, the design matrix consists only of the base fixed effects, covariates,
+#' and treatment indicators.
 #'
 #' The argument \code{distribution} controls the generation of covariates. For
 #' \code{"gaussian"}, covariates are drawn from \code{rnorm}; for \code{"uniform"},
@@ -911,7 +921,8 @@ getTes <- function(coefs_obj){
 #'   # (Here, density controls sparsity and eff_size scales nonzero entries)
 #'   coefs_core <- genCoefsCore(R = R, T = T, d = d, density = 0.2, eff_size = 2, seed = 123)
 #'
-#'   # Now simulate the data. Setting gen_ints = TRUE generates the full design matrix with interactions.
+#'   # Now simulate the data. Setting gen_ints = TRUE generates the full design
+#'   matrix with interactions.
 #'   sim_data <- simulateDataCore(
 #'     N = N,
 #'     T = T,
@@ -1129,23 +1140,29 @@ simulateDataCore <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = 
 #'
 #' This function generates a coefficient vector \code{beta} along with a sparse auxiliary vector
 #' \code{theta} for simulation studies of the fused extended two-way fixed effects estimator. The
-#' returned \code{beta} is formatted to align with the design matrix created by \code{genRandomData()},
-#' and is a valid input for the \code{beta} argument of that function. The vector \code{theta} is sparse,
-#' with nonzero entries occurring with probability \code{density} and scaled by \code{eff_size}.
+#' returned \code{beta} is formatted to align with the design matrix created by 
+#' \code{genRandomData()}, and is a valid input for the \code{beta} argument of that function. The
+#' vector \code{theta} is sparse, with nonzero entries occurring with probability \code{density} and
+#' scaled by \code{eff_size}.
 #'
-#' @param R Integer. The number of treated cohorts (treatment is assumed to start in periods 2 to \code{R + 1}).
+#' @param R Integer. The number of treated cohorts (treatment is assumed to start in periods 2 to 
+#' \code{R + 1}).
 #' @param T Integer. The total number of time periods.
-#' @param d Integer. The number of time-invariant covariates. If \code{d > 0}, additional terms corresponding
+#' @param d Integer. The number of time-invariant covariates. If \code{d > 0}, additional terms
+#' corresponding
 #'   to covariate main effects and interactions are included in \code{beta}.
-#' @param density Numeric in (0,1). The probability that any given entry in the initial sparse coefficient
+#' @param density Numeric in (0,1). The probability that any given entry in the initial sparse
+#' coefficient
 #'   vector \code{theta} is nonzero.
-#' @param eff_size Numeric. The magnitude used to scale nonzero entries in \code{theta}. Each nonzero entry is
+#' @param eff_size Numeric. The magnitude used to scale nonzero entries in \code{theta}. Each
+#' nonzero entry is
 #'   set to \code{eff_size} or \code{-eff_size} (with a 60 percent chance for a positive value).
 #' @param seed (Optional) Integer. Seed for reproducibility.
 #'
 #' @return A list with two elements:
 #' \describe{
-#'   \item{\code{beta}}{A numeric vector representing the full coefficient vector after the inverse fusion transform.}
+#'   \item{\code{beta}}{A numeric vector representing the full coefficient vector after the inverse
+#'   fusion transform.}
 #'   \item{\code{theta}}{A numeric vector that is sparse, from which \code{beta} is derived.}
 #' }
 #'
@@ -1157,11 +1174,13 @@ simulateDataCore <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = 
 #'
 #' The function operates in two steps:
 #' \enumerate{
-#'   \item It first creates a sparse vector \code{theta} of length \eqn{p}, with nonzero entries occurring
-#'   with probability \code{density}. Nonzero entries are set to \code{eff_size} or \code{-eff_size} (with a 60\%
-#'   chance for a positive value).
-#'   \item The full coefficient vector \code{beta} is then computed by applying an inverse fusion transform to \code{theta}
-#'   using internal routines (e.g., \code{genBackwardsInvFusionTransformMat()} and \code{genInvTwoWayFusionTransformMat()}).
+#'   \item It first creates a sparse vector \code{theta} of length \eqn{p}, with nonzero entries 
+#' occurring
+#'   with probability \code{density}. Nonzero entries are set to \code{eff_size} or \code{-eff_size}
+#'   (with a 60\% chance for a positive value).
+#'   \item The full coefficient vector \code{beta} is then computed by applying an inverse fusion
+#'   transform to \code{theta} using internal routines (e.g.,
+#'   \code{genBackwardsInvFusionTransformMat()} and \code{genInvTwoWayFusionTransformMat()}).
 #' }
 #'
 #' @examples
@@ -1175,7 +1194,8 @@ simulateDataCore <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = 
 #'   seed <- 789    # Seed for reproducibility
 #'
 #'   # Generate coefficients using genCoefsCore()
-#'   coefs_core <- genCoefsCore(R = R, T = T, d = d, density = density, eff_size = eff_size, seed = seed)
+#'   coefs_core <- genCoefsCore(R = R, T = T, d = d, density = density,
+#'   eff_size = eff_size, seed = seed)
 #'   beta <- coefs_core$beta
 #'   theta <- coefs_core$theta
 #'

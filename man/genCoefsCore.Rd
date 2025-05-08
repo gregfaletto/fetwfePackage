@@ -7,17 +7,21 @@
 genCoefsCore(R, T, d, density, eff_size, seed = NULL)
 }
 \arguments{
-\item{R}{Integer. The number of treated cohorts (treatment is assumed to start in periods 2 to \code{R + 1}).}
+\item{R}{Integer. The number of treated cohorts (treatment is assumed to start in periods 2 to
+\code{R + 1}).}
 
 \item{T}{Integer. The total number of time periods.}
 
-\item{d}{Integer. The number of time-invariant covariates. If \code{d > 0}, additional terms corresponding
+\item{d}{Integer. The number of time-invariant covariates. If \code{d > 0}, additional terms
+corresponding
 to covariate main effects and interactions are included in \code{beta}.}
 
-\item{density}{Numeric in (0,1). The probability that any given entry in the initial sparse coefficient
+\item{density}{Numeric in (0,1). The probability that any given entry in the initial sparse
+coefficient
 vector \code{theta} is nonzero.}
 
-\item{eff_size}{Numeric. The magnitude used to scale nonzero entries in \code{theta}. Each nonzero entry is
+\item{eff_size}{Numeric. The magnitude used to scale nonzero entries in \code{theta}. Each
+nonzero entry is
 set to \code{eff_size} or \code{-eff_size} (with a 60 percent chance for a positive value).}
 
 \item{seed}{(Optional) Integer. Seed for reproducibility.}
@@ -25,16 +29,18 @@ set to \code{eff_size} or \code{-eff_size} (with a 60 percent chance for a posit
 \value{
 A list with two elements:
 \describe{
-\item{\code{beta}}{A numeric vector representing the full coefficient vector after the inverse fusion transform.}
+\item{\code{beta}}{A numeric vector representing the full coefficient vector after the inverse
+fusion transform.}
 \item{\code{theta}}{A numeric vector that is sparse, from which \code{beta} is derived.}
 }
 }
 \description{
 This function generates a coefficient vector \code{beta} along with a sparse auxiliary vector
 \code{theta} for simulation studies of the fused extended two-way fixed effects estimator. The
-returned \code{beta} is formatted to align with the design matrix created by \code{genRandomData()},
-and is a valid input for the \code{beta} argument of that function. The vector \code{theta} is sparse,
-with nonzero entries occurring with probability \code{density} and scaled by \code{eff_size}.
+returned \code{beta} is formatted to align with the design matrix created by
+\code{genRandomData()}, and is a valid input for the \code{beta} argument of that function. The
+vector \code{theta} is sparse, with nonzero entries occurring with probability \code{density} and
+scaled by \code{eff_size}.
 }
 \details{
 The length of \code{beta} is given by
@@ -44,11 +50,13 @@ where the number of treatment parameters is defined as
 
 The function operates in two steps:
 \enumerate{
-\item It first creates a sparse vector \code{theta} of length \eqn{p}, with nonzero entries occurring
-with probability \code{density}. Nonzero entries are set to \code{eff_size} or \code{-eff_size} (with a 60\\%
-chance for a positive value).
-\item The full coefficient vector \code{beta} is then computed by applying an inverse fusion transform to \code{theta}
-using internal routines (e.g., \code{genBackwardsInvFusionTransformMat()} and \code{genInvTwoWayFusionTransformMat()}).
+\item It first creates a sparse vector \code{theta} of length \eqn{p}, with nonzero entries
+occurring
+with probability \code{density}. Nonzero entries are set to \code{eff_size} or \code{-eff_size}
+(with a 60\\% chance for a positive value).
+\item The full coefficient vector \code{beta} is then computed by applying an inverse fusion
+transform to \code{theta} using internal routines (e.g.,
+\code{genBackwardsInvFusionTransformMat()} and \code{genInvTwoWayFusionTransformMat()}).
 }
 }
 \examples{
@@ -62,7 +70,8 @@ using internal routines (e.g., \code{genBackwardsInvFusionTransformMat()} and \c
   seed <- 789    # Seed for reproducibility
 
   # Generate coefficients using genCoefsCore()
-  coefs_core <- genCoefsCore(R = R, T = T, d = d, density = density, eff_size = eff_size, seed = seed)
+  coefs_core <- genCoefsCore(R = R, T = T, d = d, density = density,
+  eff_size = eff_size, seed = seed)
   beta <- coefs_core$beta
   theta <- coefs_core$theta
 
