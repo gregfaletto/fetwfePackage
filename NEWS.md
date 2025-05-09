@@ -1,5 +1,9 @@
 # NEWS
 
+## Version 0.10.4 (2025-05-08)
+
+- Fix issue #1 [https://github.com/gregfaletto/fetwfePackage/issues/1](https://github.com/gregfaletto/fetwfePackage/issues/1).
+
 ## Version 0.10.3 (2025-05-08)
 
 - Fix bug from previous centering and scaling implementation.

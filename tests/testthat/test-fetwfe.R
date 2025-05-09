@@ -932,3 +932,40 @@ test_that("fetwfe handles factor covariates appropriately", {
   expect_false("cov2" %in% pf_res$covs)
   expect_true(any(grepl("cov2_", pf_res$covs)))
 })
+
+# ------------------------------------------------------------------------------
+# Test 30: Check that tibbles work
+# ------------------------------------------------------------------------------
+test_that("tibbles work as input to fewtfe", {
+  df <- generate_panel_data()  # uses N = 30, T = 10 by default
+  
+  result <- fetwfe(
+    pdata     = tibble::as_tibble(df),
+    time_var  = "time",
+    unit_var  = "unit",
+    treatment = "treatment",
+    covs      = c("cov1", "cov2"),
+    response  = "y",
+    q         = 0.5,
+    verbose   = FALSE
+  )
+  
+  expect_type(result, "list")
+  
+  # Check that the returned list contains the main expected names.
+  expected_names <- c("att_hat", "att_se", "catt_hats", "catt_ses", "catt_df",
+                      "beta_hat", "treat_inds", "treat_int_inds",
+                      "sig_eps_sq", "sig_eps_c_sq",
+                      "lambda.max", "lambda.max_model_size",
+                      "lambda.min", "lambda.min_model_size",
+                      "lambda_star", "lambda_star_model_size",
+                      "X_ints", "y", "X_final", "y_final",
+                      "N", "T", "R", "d", "p")
+  for (nm in expected_names) {
+    expect_true(nm %in% names(result))
+  }
+  
+  # Also check that catt_df is a data frame with the expected column names.
+  expect_s3_class(result$catt_df, "data.frame")
+  expect_true(all(c("Cohort", "Estimated TE", "SE", "ConfIntLow", "ConfIntHigh") %in% colnames(result$catt_df)))
+})

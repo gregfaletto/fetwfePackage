@@ -221,7 +221,7 @@ fetwfe <- function(
     ){
 
     # Check inputs
-    indep_count_data_available <- checkFetwfeInputs(
+    ret <- checkFetwfeInputs(
         pdata = pdata,
         time_var = time_var,
         unit_var = unit_var,
@@ -239,6 +239,11 @@ fetwfe <- function(
         alpha = alpha,
         add_ridge = add_ridge
     )
+
+    pdata <- ret$pdata
+    indep_count_data_available = ret$indep_count_data_available
+
+    rm(ret)
 
     # Subset pdata to include only the key columns
     pdata <- pdata[, c(response, time_var, unit_var, treatment, covs)]
