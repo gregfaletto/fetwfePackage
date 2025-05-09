@@ -1,5 +1,9 @@
 # NEWS
 
+## Version 0.10.3 (2025-05-08)
+
+- Fix bug from previous centering and scaling implementation.
+
 ## Version 0.10.2 (2025-05-07)
 
 - Add centering and scaling of covariates before ridge penalty added.

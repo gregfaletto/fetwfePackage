@@ -7,7 +7,8 @@
 genFullInvFusionTransformMat(first_inds, T, R, d, num_treats)
 }
 \arguments{
-\item{first_inds}{A vector of indices corresponding to the first treatment effect for each treated cohort.}
+\item{first_inds}{A vector of indices corresponding to the first treatment effect for each
+treated cohort.}
 
 \item{T}{Total number of time periods.}
 
@@ -18,7 +19,8 @@ genFullInvFusionTransformMat(first_inds, T, R, d, num_treats)
 \item{num_treats}{Total number of base treatment effect parameters.}
 }
 \value{
-A matrix of dimension p x p where p = R + (T - 1) + d + d\emph{R + d}(T - 1) + num_treats + d*num_treats.
+A matrix of dimension p x p where p = R + (T - 1) + d + d\emph{R + d}(T - 1) + num_treats +
+d*num_treats.
 }
 \description{
 Generate the full \eqn{D^{-1}} transformation matrix.

@@ -1,3 +1,25 @@
+#' Generate Base Fixed Effects and Covariates for Simulation
+#'
+#' Creates cohort fixed effects, time fixed effects, and a long-format covariate matrix
+#' for simulating panel data. Covariates are drawn based on the specified distribution.
+#'
+#' @param N Integer. Number of units in the panel.
+#' @param d Integer. Number of time-invariant covariates.
+#' @param T Integer. Number of time periods.
+#' @param R Integer. Number of treated cohorts.
+#' @param distribution Character. Distribution to generate covariates.
+#'   Defaults to \code{"gaussian"}. If set to \code{"uniform"}, covariates are drawn uniformly
+#'   from \eqn{[-\sqrt{3}, \sqrt{3}]}.
+#'
+#' @return A list containing:
+#'   \item{cohort_fe}{A matrix of cohort fixed effects (dummy variables).}
+#'   \item{time_fe}{A matrix of time fixed effects (dummy variables for periods 2 to T).}
+#'   \item{X_long}{A long-format matrix of covariates, repeated for each time period.}
+#'   \item{assignments}{A vector of counts indicating how many units fall into
+#'         the never-treated group and each of the R treated cohorts.}
+#'   \item{cohort_inds}{A list where each element contains the row indices in the
+#'         long-format matrices corresponding to the units in a specific treated cohort.}
+#' @keywords internal
 generateBaseEffects <- function(N, d, T, R, distribution = "gaussian"){
   ret <- genCohortTimeFE(N, T, R, d)
   
@@ -21,7 +43,28 @@ generateBaseEffects <- function(N, d, T, R, distribution = "gaussian"){
               cohort_inds = ret$inds))
 }
 
-
+#' Generate Cohort and Time Fixed Effects Matrices
+#'
+#' Internal function to create matrices of dummy variables for cohort and time fixed effects.
+#' Assumes observations are arranged unit by unit, with T observations per unit.
+#'
+#' @param N Integer. Number of units.
+#' @param T Integer. Number of time periods.
+#' @param R Integer. Number of treated cohorts.
+#' @param d Integer. Number of covariates (used to ensure minimum units per cohort).
+#'
+#' @return A list containing:
+#'   \item{cohort_fe}{An NT x R matrix of cohort dummy variables. The r-th column is 1
+#'     if an observation belongs to the r-th treated cohort, 0 otherwise.}
+#'   \item{time_fe}{An NT x (T-1) matrix of time dummy variables. The t-th column
+#'     (for t from 1 to T-1) corresponds to time period (t+1), and is 1 if an
+#'     observation is from that time period, 0 otherwise. Period 1 is the baseline.}
+#'   \item{assignments}{An integer vector of length R+1. The first element is the
+#'     count of never-treated units. Subsequent elements are counts of units in each
+#'     of the R treated cohorts.}
+#'   \item{inds}{A list of length R. Each element `inds[[r]]` contains the row indices
+#'     in the NT-row matrices that correspond to units in the r-th treated cohort.}
+#' @keywords internal
 genCohortTimeFE <- function(N, T, R, d){
     # The observations will be arranged row-wise as blocks of T, one unit at
     # a time. So the first T rows correspond to all observations from the first
@@ -81,6 +124,19 @@ genCohortTimeFE <- function(N, T, R, d){
         inds=inds))
 }
 
+#' Generate Random Cohort Assignments
+#'
+#' Assigns N units to R+1 groups (R treated cohorts + 1 never-treated group)
+#' ensuring each group has at least one unit.
+#'
+#' @param N Integer. Total number of units to assign.
+#' @param R Integer. Number of treated cohorts.
+#'
+#' @return An integer vector of length R+1, where the first element is the count
+#'   of never-treated units, and subsequent elements are counts for each treated cohort.
+#'   The sum of elements equals N.
+#' @importFrom stats rmultinom
+#' @keywords internal
 genAssignments <- function(N, R){
     # Make sure at least one observation in each cohort
     stopifnot(N >= R + 1)
@@ -96,6 +152,31 @@ genAssignments <- function(N, R){
     return(assignments)
 }
 
+#' Generate Treatment Variable Matrix for Simulations
+#'
+#' Creates a matrix of treatment dummy variables for simulated panel data.
+#' Treatment starts at period r+1 for cohort r.
+#'
+#' @param n_treats Integer. Total number of unique treatment (cohort x time) effects.
+#'   Calculated as \eqn{T \times R - R(R+1)/2}.
+#' @param N Integer. Number of units.
+#' @param T Integer. Number of time periods.
+#' @param R Integer. Number of treated cohorts.
+#' @param assignments Integer vector from \code{genAssignments}, indicating unit counts
+#'   per cohort (including never-treated).
+#' @param cohort_inds List from \code{genCohortTimeFE}, containing row indices for each cohort.
+#' @param N_UNTREATED Integer. Number of never-treated units.
+#' @param first_inds_test Integer vector. Pre-calculated indices of the first treatment
+#'   effect for each cohort (used for assertion).
+#' @param d Integer. Number of covariates (used for assertions within context, not directly in logic here).
+#'
+#' @return A list containing:
+#'   \item{treat_mat_long}{An NT x n_treats matrix of treatment dummy variables.
+#'     Each column corresponds to a specific cohort-time treatment indicator.}
+#'   \item{first_inds}{An integer vector of length R, where `first_inds[r]` is the
+#'     column index in `treat_mat_long` corresponding to the first treatment period
+#'     for cohort r.}
+#' @keywords internal
 genTreatVarsSim <- function(n_treats, N, T, R, assignments, cohort_inds,
     N_UNTREATED, first_inds_test, d){
     # Treatment indicators
@@ -181,6 +262,23 @@ genTreatVarsSim <- function(n_treats, N, T, R, assignments, cohort_inds,
     return(list(treat_mat_long=treat_mat_long, first_inds=first_inds))
 }
 
+#' Calculate True Cohort Average Treatment Effects from Coefficients
+#'
+#' Given a full coefficient vector and information about treatment effect indices,
+#' this function calculates the true average treatment effect for each cohort by
+#' averaging the relevant treatment effect coefficients.
+#'
+#' @param R Integer. Number of treated cohorts.
+#' @param first_inds Integer vector. `first_inds[r]` is the index (within the
+#'   block of treatment effect coefficients) of the first treatment effect for cohort `r`.
+#' @param treat_inds Integer vector. Indices in the full `coefs` vector that
+#'   correspond to the block of all treatment effect coefficients.
+#' @param coefs Numeric vector. The full true coefficient vector \eqn{\beta}.
+#' @param num_treats Integer. Total number of treatment effect parameters.
+#'
+#' @return A numeric vector of length R, where the r-th element is the true
+#'   average treatment effect for cohort r.
+#' @keywords internal
 getActualCohortTes <- function(R, first_inds, treat_inds, coefs, num_treats){
     actual_cohort_tes <- rep(as.numeric(NA), R)
 
@@ -198,7 +296,16 @@ getActualCohortTes <- function(R, first_inds, treat_inds, coefs, num_treats){
     return(actual_cohort_tes)
 }
 
-# Function for concisely picking a sign randomly
+#' Generate Random Signs
+#'
+#' Generates a vector of -1s and 1s, with a specified probability for 1.
+#'
+#' @param n Integer. Number of signs to generate.
+#' @param prob Numeric. Probability of generating a 1 (otherwise -1).
+#'
+#' @return An integer vector of length n containing -1s and 1s.
+#' @importFrom stats rbinom
+#' @keywords internal
 rfunc <- function(n, prob){
     # sample(c(-1, 1), size=n, replace=TRUE)
     vec <- rbinom(n=n, size=1, prob=prob)
@@ -207,6 +314,26 @@ rfunc <- function(n, prob){
     return(vec)
 }
 
+#' Test Inputs for Random Data Generation
+#'
+#' Validates parameters for the `simulateDataCore` function, ensuring consistency
+#' in dimensions and expected length of the beta coefficient vector.
+#' TODO: This function assumes `gen_ints = TRUE` (i.e., full design matrix with all interactions).
+#'
+#' @param beta Numeric vector. The true coefficient vector used for data generation.
+#' @param R Integer. Number of treated cohorts.
+#' @param T Integer. Number of time periods.
+#' @param d Integer. Number of time-invariant covariates.
+#' @param N Integer. Number of units.
+#' @param sig_eps_sq Numeric. Variance of idiosyncratic error.
+#' @param sig_eps_c_sq Numeric. Variance of unit-level random effect.
+#'
+#' @return A list containing:
+#'   \item{num_treats}{Integer. The calculated number of base treatment effects.}
+#'   \item{p_expected}{Integer. The expected length of the `beta` vector given R, T, d,
+#'     assuming a full design matrix with all interactions.}
+#' @seealso \code{\link{getNumTreats}}, \code{\link{getP}}
+#' @keywords internal
 testGenRandomDataInputs <- function(beta, R, T, d, N, sig_eps_sq, sig_eps_c_sq){
 
     stopifnot(R <= T - 1)
