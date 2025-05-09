@@ -3563,6 +3563,10 @@ checkFetwfeInputs <- function(
 
      # Check inputs
     stopifnot(is.data.frame(pdata))
+    # Check if pdata is a tibble; if so, convert to a dataframe
+    if("tbl_df" %in% class(pdata)){
+        pdata <- as.data.frame(pdata)
+    }
     stopifnot(nrow(pdata) >= 4) # bare minimum, 2 units at 2 times
 
     stopifnot(is.character(time_var))
@@ -3650,7 +3654,7 @@ checkFetwfeInputs <- function(
     stopifnot(is.logical(add_ridge))
     stopifnot(length(add_ridge) == 1)
 
-    return(indep_count_data_available)
+    return(list(pdata=pdata, indep_count_data_available=indep_count_data_available))
 
 }
 
