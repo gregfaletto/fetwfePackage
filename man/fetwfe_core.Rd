@@ -85,24 +85,18 @@ the untransformed coefficients to stabilize estimation. Default is \code{FALSE}.
 A list containing detailed estimation results:
 \item{in_sample_att_hat}{Estimated overall ATT using in-sample cohort probabilities.}
 \item{in_sample_att_se}{Standard error for \code{in_sample_att_hat}.}
-\item{in_sample_att_se_no_prob}{SE for \code{in_sample_att_hat} ignoring variability from
-estimating cohort probabilities.}
-\item{indep_att_hat}{Estimated overall ATT using \code{indep_counts} cohort probabilities (NA if
-\code{indep_counts} not provided).}
+\item{in_sample_att_se_no_prob}{SE for \code{in_sample_att_hat} ignoring variability from estimating cohort probabilities.}
+\item{indep_att_hat}{Estimated overall ATT using \code{indep_counts} cohort probabilities (NA if \code{indep_counts} not provided).}
 \item{indep_att_se}{Standard error for \code{indep_att_hat} (NA if not applicable).}
 \item{catt_hats}{A named vector of estimated CATTs for each cohort.}
 \item{catt_ses}{A named vector of SEs for \code{catt_hats} (NA if \code{q >= 1}).}
 \item{catt_df}{A data.frame summarizing CATTs, SEs, and confidence intervals.}
-\item{theta_hat}{The vector of estimated coefficients in the \emph{transformed} (fused) space,
-including the intercept as the first element.}
-\item{beta_hat}{The vector of estimated coefficients in the \emph{original} space (after
-untransforming \code{theta_hat}, excluding intercept).}
+\item{theta_hat}{The vector of estimated coefficients in the \emph{transformed} (fused) space, including the intercept as the first element.}
+\item{beta_hat}{The vector of estimated coefficients in the \emph{original} space (after untransforming \code{theta_hat}, excluding intercept).}
 \item{treat_inds}{Indices in \code{beta_hat} corresponding to base treatment effects.}
 \item{treat_int_inds}{Indices in \code{beta_hat} corresponding to treatment-covariate interactions.}
-\item{cohort_probs}{Estimated cohort probabilities conditional on being treated, from
-\code{in_sample_counts}.}
-\item{indep_cohort_probs}{Estimated cohort probabilities from \code{indep_counts} (NA if not
-provided).}
+\item{cohort_probs}{Estimated cohort probabilities conditional on being treated, from \code{in_sample_counts}.}
+\item{indep_cohort_probs}{Estimated cohort probabilities from \code{indep_counts} (NA if not provided).}
 \item{sig_eps_sq}{The (possibly estimated) variance of observation-level noise.}
 \item{sig_eps_c_sq}{The (possibly estimated) variance of unit-level random effects.}
 \item{lambda.max}{The maximum lambda value used in \code{grpreg}.}

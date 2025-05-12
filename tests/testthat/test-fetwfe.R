@@ -355,7 +355,7 @@ test_that("fetwfe errors when all units are treated in the first period", {
       response  = "y",
       verbose   = FALSE
     )),
-    "All units were treated in the first time period; estimating treatment effects is not possible"
+    "All units were treated in the first time period or no units remain after filtering; estimating treatment effects is not possible"
   )
 })
 
@@ -482,7 +482,9 @@ test_that("fetwfe warns when all covariates are removed due to constant values",
       response  = "y",
       verbose   = FALSE
     ),
-    "All covariates were removed after screening for missing values and constant values. Continuing with no covariates."  # expecting an error message including this substring
+    regexp = "All remaining covariates were removed because they were constant across units",
+    fixed  = TRUE,   # literal match
+    all    = FALSE   # accept extra warnings
   )
 })
 

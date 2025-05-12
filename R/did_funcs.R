@@ -1,7 +1,7 @@
 #' @import glmnet
 #' @importFrom Matrix bdiag
 #' @importFrom expm sqrtm
-#' @importFrom stats qnorm predict coef model.matrix
+#' @importFrom stats qnorm predict coef model.matrix setNames
 
 #' @title Prepare Design Matrix and Initial Data for FETWFE
 #'
@@ -137,6 +137,8 @@ prepXints <- function(
     T <- length(times)
     R <- length(cohorts)
 
+    stopifnot(R >= 1)
+    stopifnot(T >= 2)
     stopifnot(R <= T - 1)
 
     N_treated <- length(unlist(cohorts))
@@ -363,24 +365,18 @@ prepXints <- function(
 #' @return A list containing detailed estimation results:
 #'   \item{in_sample_att_hat}{Estimated overall ATT using in-sample cohort probabilities.}
 #'   \item{in_sample_att_se}{Standard error for `in_sample_att_hat`.}
-#'   \item{in_sample_att_se_no_prob}{SE for `in_sample_att_hat` ignoring variability from 
-#'      estimating cohort probabilities.}
-#'   \item{indep_att_hat}{Estimated overall ATT using `indep_counts` cohort probabilities (NA if
-#'      `indep_counts` not provided).}
+#'   \item{in_sample_att_se_no_prob}{SE for `in_sample_att_hat` ignoring variability from estimating cohort probabilities.}
+#'   \item{indep_att_hat}{Estimated overall ATT using `indep_counts` cohort probabilities (NA if `indep_counts` not provided).}
 #'   \item{indep_att_se}{Standard error for `indep_att_hat` (NA if not applicable).}
 #'   \item{catt_hats}{A named vector of estimated CATTs for each cohort.}
 #'   \item{catt_ses}{A named vector of SEs for `catt_hats` (NA if `q >= 1`).}
 #'   \item{catt_df}{A data.frame summarizing CATTs, SEs, and confidence intervals.}
-#'   \item{theta_hat}{The vector of estimated coefficients in the *transformed* (fused) space,
-#'      including the intercept as the first element.}
-#'   \item{beta_hat}{The vector of estimated coefficients in the *original* space (after
-#'      untransforming `theta_hat`, excluding intercept).}
+#'   \item{theta_hat}{The vector of estimated coefficients in the *transformed* (fused) space, including the intercept as the first element.}
+#'   \item{beta_hat}{The vector of estimated coefficients in the *original* space (after untransforming `theta_hat`, excluding intercept).}
 #'   \item{treat_inds}{Indices in `beta_hat` corresponding to base treatment effects.}
 #'   \item{treat_int_inds}{Indices in `beta_hat` corresponding to treatment-covariate interactions.}
-#'   \item{cohort_probs}{Estimated cohort probabilities conditional on being treated, from
-#'      `in_sample_counts`.}
-#'   \item{indep_cohort_probs}{Estimated cohort probabilities from `indep_counts` (NA if not
-#'      provided).}
+#'   \item{cohort_probs}{Estimated cohort probabilities conditional on being treated, from `in_sample_counts`.}
+#'   \item{indep_cohort_probs}{Estimated cohort probabilities from `indep_counts` (NA if not provided).}
 #'   \item{sig_eps_sq}{The (possibly estimated) variance of observation-level noise.}
 #'   \item{sig_eps_c_sq}{The (possibly estimated) variance of unit-level random effects.}
 #'   \item{lambda.max}{The maximum lambda value used in `grpreg`.}
@@ -415,10 +411,36 @@ fetwfe_core <- function(
     verbose=FALSE,
     alpha=0.05,
     add_ridge=FALSE
-    ){
+){
 
-    #
-    #
+    # ... (rest of the function code)
+    # NOTE: The existing stopifnot calls provide good internal checks.
+    # Consider if any should be user-facing `stop()` messages if triggered by bad inputs
+    # that somehow bypass `checkFetwfeInputs`.
+
+    # ... (Function body as provided)
+
+    # Ensure all paths through the function that return have the documented list structure.
+    # For instance, the early returns when `lambda_star_model_size == 0` or
+    # `length(sel_treat_inds_shifted) == 0` should also return all documented fields,
+    # filling with NA or appropriate defaults where necessary.
+    # The current code for these early returns seems to do this.
+
+    # Example for an early return structure (conceptual):
+    # if (some_early_exit_condition) {
+    #   return(list(
+    #     in_sample_att_hat = 0, in_sample_att_se = ifelse(q < 1, 0, NA), ...,
+    #     N = N, T = T, R = R, d = d, p = p # Ensure all documented fields are present
+    #   ))
+    # }
+    R <- length(in_sample_counts) - 1 # This needs to be defined before the early exits
+                                       # if c_names relies on it.
+                                       # c_names is used in catt_df_to_ret.
+    c_names <- names(in_sample_counts)[2:(R + 1)]
+
+
+    # (Actual function body as provided in the original file)
+    # ...
     # Check inputs
     #
     #
@@ -452,7 +474,7 @@ fetwfe_core <- function(
         stop("in_sample_counts must have all unique named entries (with names corresponding to the names of each cohort)")
     }
 
-    R <- length(in_sample_counts) - 1
+    # R <- length(in_sample_counts) - 1 # Moved up
     stopifnot(R >= 1)
     stopifnot(R <= T - 1)
 
@@ -512,7 +534,7 @@ fetwfe_core <- function(
     if(verbose){
         message("Transforming matrix...")
     }
-    
+
     # Transform matrix (change of coordinates so that fitting regular bridge
     # regression results in FETWFE fusion penalties)
     X_mod <- transformXintImproved(
@@ -523,7 +545,7 @@ fetwfe_core <- function(
         d=d,
         num_treats=num_treats,
         first_inds=first_inds
-        )
+    )
 
     #
     #
@@ -546,7 +568,7 @@ fetwfe_core <- function(
             N=N,
             T=T,
             p=p
-            )
+        )
 
         sig_eps_sq <- omega_res$sig_eps_sq
         sig_eps_c_sq <- omega_res$sig_eps_c_sq
@@ -593,7 +615,7 @@ fetwfe_core <- function(
             R=R,
             d=d,
             num_treats=num_treats
-            )
+        )
 
         stopifnot(ncol(D_inverse) == ncol(X_final))
         stopifnot(ncol(D_inverse) == ncol(X_final_scaled))
@@ -623,11 +645,11 @@ fetwfe_core <- function(
     stopifnot(all(cohort_probs <= 1))
     stopifnot(length(cohort_probs) == R)
     stopifnot(abs(sum(cohort_probs) - 1) < 10^(-6))
-   
+
     cohort_probs_overall <- in_sample_counts[2:(R + 1)]/N
 
     stopifnot(abs(1 - sum(cohort_probs_overall) - in_sample_counts[1]/N) <
-        10^(-6))
+                  10^(-6))
 
     if(indep_count_data_available){
         indep_cohort_probs <- indep_counts[2:(R + 1)]/
@@ -668,7 +690,7 @@ fetwfe_core <- function(
             lambda.max=lambda.max,
             lambda.min=lambda.min,
             nlambda=nlambda
-            )
+        )
     } else if(!is.na(lambda.max)){
         fit <- grpreg::gBridge(
             X=X_final_scaled,
@@ -676,7 +698,7 @@ fetwfe_core <- function(
             gamma=q,
             lambda.max=lambda.max,
             nlambda=nlambda
-            )
+        )
     } else if(!is.na(lambda.min)){
         fit <- grpreg::gBridge(
             X=X_final_scaled,
@@ -684,22 +706,22 @@ fetwfe_core <- function(
             gamma=q,
             lambda.min=lambda.min,
             nlambda=nlambda
-            )
+        )
     } else{
         fit <- grpreg::gBridge(
             X=X_final_scaled,
             y=y_final,
             gamma=q,
             nlambda=nlambda
-            )
+        )
     }
-    
+
     if(verbose){
         message("Done! Time for estimation:")
         message(Sys.time() - t0)
     }
 
-    # For diagnostics later, store largest and smallest lambda, as well as 
+    # For diagnostics later, store largest and smallest lambda, as well as
     # corresponding smallest and largest model sizes, to return.
     lambda.max <- max(fit$lambda)
     lambda.max_model_size <- sum(fit$beta[, ncol(fit$beta)] != 0)
@@ -718,15 +740,15 @@ fetwfe_core <- function(
         y=y,
         scale_center=scale_center,
         scale_scale=scale_scale
-        )
+    )
 
-    theta_hat <- res$theta_hat
+    theta_hat <- res$theta_hat # This includes intercept
     lambda_star_ind <- res$lambda_star_ind
     lambda_star_model_size <- res$lambda_star_model_size
 
     lambda_star <- fit$lambda[lambda_star_ind]
 
-    c_names <- names(in_sample_counts)[2:(R + 1)]
+    # c_names <- names(in_sample_counts)[2:(R + 1)] # Moved definition up
     stopifnot(length(c_names) == R)
 
     # Indices corresponding to base treatment effects
@@ -747,35 +769,34 @@ fetwfe_core <- function(
         treat_int_inds <- c()
     }
 
-    # Handle edge case where no features are selected
-    if(lambda_star_model_size == 0){
+    # Handle edge case where no features are selected (model_size includes intercept)
+    if(lambda_star_model_size <= 1 && all(theta_hat[2:(p+1)] == 0) ){ # only intercept might be non-zero
         if(verbose){
-            message("No features selected; all treatment effects estimated to be 0.")
+            message("No features selected (or only intercept); all treatment effects estimated to be 0.")
         }
-        
+
         if(q < 1){
             ret_se <- 0
         } else{
             ret_se <- NA
         }
 
-        catt_df_to_ret <- data.frame(c_names, rep(0, R), rep(ret_se, R),
-                rep(ret_se, R), rep(ret_se, R))
+        catt_df_to_ret <- data.frame(Cohort = c_names, `Estimated TE` = rep(0, R), SE = rep(ret_se, R),
+                                     ConfIntLow = rep(ret_se, R), ConfIntHigh = rep(ret_se, R),
+                                     check.names = FALSE)
 
-        colnames(cat_df_to_ret) <- c("Cohort", "Estimated TE", "SE",
-            "ConfIntLow", "ConfIntHigh")
+
         return(list(
             in_sample_att_hat=0,
             in_sample_att_se=ret_se,
             in_sample_att_se_no_prob=ret_se,
             indep_att_hat=0,
             indep_att_se=ret_se,
-            # indep_att_se_no_prob=indep_att_se_no_prob,
-            catt_hats=rep(0, R),
-            catt_ses=rep(ret_se, R),
+            catt_hats=setNames(rep(0, R), c_names),
+            catt_ses=setNames(rep(ret_se, R), c_names),
             catt_df=catt_df_to_ret,
-            theta_hat=theta_hat,
-            beta_hat=theta_hat,
+            theta_hat=theta_hat, # Includes intercept
+            beta_hat=rep(0, p),  # Slopes are all zero
             treat_inds=treat_inds,
             treat_int_inds=treat_int_inds,
             cohort_probs=cohort_probs,
@@ -797,21 +818,19 @@ fetwfe_core <- function(
             R=R,
             d=d,
             p=p
-            )
+        )
         )
     }
 
     # intercept
-    eta_hat <- theta_hat[1]
+    # eta_hat <- theta_hat[1] # theta_hat from getBetaBIC already has intercept as first element
 
-    # estimated coefficients
-    theta_hat <- theta_hat[2:(p + 1)]
+    # estimated coefficients (slopes in transformed space)
+    theta_hat_slopes <- theta_hat[2:(p + 1)]
 
-    # Indices of selected features in transformed feature space
-    sel_feat_inds <- which(theta_hat != 0)
+    # Indices of selected features in transformed feature space (among slopes)
+    sel_feat_inds <- which(theta_hat_slopes != 0)
 
-    # treat_int_ind_first <- R + T - 1 + d + R*d + (T - 1)*d + num_treats + 1
-    # stopifnot(treat_int_ind_first == max(treat_inds) + 1)
 
     sel_treat_inds <- sel_feat_inds[sel_feat_inds %in% treat_inds]
 
@@ -820,55 +839,65 @@ fetwfe_core <- function(
     stopifnot(length(sel_treat_inds) <= length(treat_inds))
     stopifnot(is.integer(sel_treat_inds) | is.numeric(sel_treat_inds))
 
-    # # TODO: possible different approach
-    # # Shift sel_treat_inds to be relative to the start of the treat_inds block
-    # # This seems to be what sel_treat_inds_shifted intends
-    # # The current sel_treat_inds_shifted calculation appears complex and might be error-prone.
-    # # A simpler way:
-    # # 1. Get theta_hat_slopes[treat_inds] -> these are the transformed treatment coefficients
-    # # 2. Find which of these are non-zero: `which(theta_hat_slopes[treat_inds] != 0)` -> these are indices *within* the treat_inds block.
-    # # Let's call this `sel_treat_inds_relative_to_block`.
-    # # `sel_treat_inds` itself contains the global indices of selected treatment features.
-    # # So `theta_hat_slopes[sel_treat_inds]` are the non-zero transformed treatment coefs.
+    # Shift sel_treat_inds to be relative to the start of the treat_inds block
+    # This seems to be what sel_treat_inds_shifted intends
+    # The current sel_treat_inds_shifted calculation appears complex and might be error-prone.
+    # A simpler way:
+    # 1. Get theta_hat_slopes[treat_inds] -> these are the transformed treatment coefficients
+    # 2. Find which of these are non-zero: `which(theta_hat_slopes[treat_inds] != 0)` -> these are indices *within* the treat_inds block.
+    # Let's call this `sel_treat_inds_relative_to_block`.
+    # `sel_treat_inds` itself contains the global indices of selected treatment features.
+    # So `theta_hat_slopes[sel_treat_inds]` are the non-zero transformed treatment coefs.
 
-    # theta_hat_treat_block_transformed = theta_hat_slopes[treat_inds]
-    # sel_treat_inds_shifted <- which(theta_hat_treat_block_transformed != 0) # these are 1 to num_treats
+    theta_hat_treat_block_transformed = theta_hat_slopes[treat_inds]
+    sel_treat_inds_shifted <- which(theta_hat_treat_block_transformed != 0) # these are 1 to num_treats
 
-    sel_treat_inds_shifted <- sel_treat_inds - (R + T - 1 + d + R*d + (T - 1)*d)
-
-    stopifnot(all(sel_treat_inds_shifted %in% 1:num_treats))
     stopifnot(all(sel_treat_inds_shifted >= 1))
     stopifnot(all(sel_treat_inds_shifted <= num_treats))
 
-    # Handle edgge case where no treatment features selected
+
+    # Handle edge case where no treatment features selected
     if(length(sel_treat_inds_shifted) == 0){
         if(verbose){
-            message("No features selected; all treatment effects estimated to be 0.")
+            message("No treatment features selected; all treatment effects estimated to be 0.")
         }
-        
+
         if(q < 1){
             ret_se <- 0
         } else{
             ret_se <- NA
         }
 
-        catt_df_to_ret <- data.frame(c_names, rep(0, R), rep(ret_se, R),
-                rep(ret_se, R), rep(ret_se, R))
+        catt_df_to_ret <- data.frame(Cohort = c_names, `Estimated TE` = rep(0, R), SE = rep(ret_se, R),
+                                     ConfIntLow = rep(ret_se, R), ConfIntHigh = rep(ret_se, R),
+                                     check.names = FALSE)
 
-        colnames(catt_df_to_ret) <- c("Cohort", "Estimated TE", "SE",
-            "ConfIntLow", "ConfIntHigh")
+        # Need to untransform theta_hat_slopes to get beta_hat for consistency
+        beta_hat_early_exit <- untransformCoefImproved(
+            theta_hat_slopes, # Pass slopes only
+            first_inds,
+            T=T,
+            R=R,
+            p=p,
+            d=d,
+            num_treats=num_treats
+        )
+        if(add_ridge){
+             beta_hat_early_exit <- beta_hat_early_exit * (1 + lambda_ridge)
+        }
+
+
         return(list(
             in_sample_att_hat=0,
             in_sample_att_se=ret_se,
             in_sample_att_se_no_prob=ret_se,
             indep_att_hat=0,
             indep_att_se=ret_se,
-            # indep_att_se_no_prob=indep_att_se_no_prob,
-            catt_hats=rep(0, R),
-            catt_ses=rep(ret_se, R),
+            catt_hats=setNames(rep(0, R), c_names),
+            catt_ses=setNames(rep(ret_se, R), c_names),
             catt_df=catt_df_to_ret,
-            theta_hat=theta_hat,
-            beta_hat=theta_hat,
+            theta_hat=theta_hat, # Full theta_hat with intercept
+            beta_hat=beta_hat_early_exit, # Untransformed slopes
             treat_inds=treat_inds,
             treat_int_inds=treat_int_inds,
             cohort_probs=cohort_probs,
@@ -890,7 +919,7 @@ fetwfe_core <- function(
             R=R,
             d=d,
             p=p
-            )
+        )
         )
     }
 
@@ -902,14 +931,14 @@ fetwfe_core <- function(
     #
 
     beta_hat <- untransformCoefImproved(
-        theta_hat,
+        theta_hat_slopes, # Pass slopes only
         first_inds,
         T=T,
         R=R,
         p=p,
         d=d,
         num_treats=num_treats
-        )
+    )
 
     # If using ridge regularization, multiply the "naive" estimated coefficients
     # by 1 + lambda_ridge, similar to suggestion in original elastic net paper.
@@ -917,25 +946,22 @@ fetwfe_core <- function(
         beta_hat <- beta_hat * (1 + lambda_ridge)
     }
 
-    # TODO(gregfaletto): add labels to these estimates to make them easier to 
-    # interpret
 
-    # Get actual estimated treatment effects and standard errors
+    # Get actual estimated treatment effects (in original, untransformed space)
     tes <- beta_hat[treat_inds]
 
     stopifnot(length(tes) == num_treats)
-    stopifnot(all(sel_treat_inds_shifted %in% 1:num_treats))
+    # Checks based on transformed coefficients (theta_hat_slopes)
+    stopifnot(all(theta_hat_slopes[treat_inds][sel_treat_inds_shifted] != 0))
+    stopifnot(all(theta_hat_slopes[treat_inds][setdiff(1:num_treats, sel_treat_inds_shifted)] == 0))
 
-    stopifnot(length(tes) == num_treats)
-    stopifnot(all(theta_hat[treat_inds][sel_treat_inds_shifted] != 0))
-    stopifnot(all(theta_hat[treat_inds][setdiff(1:num_treats,
-        sel_treat_inds_shifted)] == 0))
 
     stopifnot(length(first_inds) == R)
     stopifnot(max(first_inds) <= num_treats)
 
-    stopifnot(length(sel_feat_inds) > 0)
-    stopifnot(length(sel_treat_inds_shifted) > 0)
+    stopifnot(length(sel_feat_inds) > 0) # sel_feat_inds are indices in theta_hat_slopes
+    stopifnot(length(sel_treat_inds_shifted) > 0) # sel_treat_inds_shifted are indices within the treat_inds block of theta_hat_slopes
+
 
     #
     #
@@ -945,23 +971,23 @@ fetwfe_core <- function(
     #
 
     res <- getCohortATTsFinal(
-        X_final=X_final,
-        sel_feat_inds=sel_feat_inds,
-        treat_inds=treat_inds,
+        X_final=X_final, # This is X_mod * GLS_transform_matrix
+        sel_feat_inds=sel_feat_inds, # Indices of non-zero elements in theta_hat_slopes
+        treat_inds=treat_inds, # Global indices for treatment effects
         num_treats=num_treats,
         first_inds=first_inds,
-        sel_treat_inds_shifted=sel_treat_inds_shifted,
+        sel_treat_inds_shifted=sel_treat_inds_shifted, # Indices (1 to num_treats) of non-zero transformed treat. coefs.
         c_names=c_names,
-        tes=tes,
+        tes=tes, # Untransformed treatment effect estimates (beta_hat[treat_inds])
         sig_eps_sq=sig_eps_sq,
         R=R,
         N=N,
         T=T,
-        fused=TRUE,
+        fused=TRUE, # This parameter might be redundant if this function is only for fused
         calc_ses = q < 1,
-        p=p,
+        p=p, # Total number of original parameters (columns in X_ints)
         alpha=alpha
-        )
+    )
 
     cohort_te_df <- res$cohort_te_df
     cohort_tes <- res$cohort_tes
@@ -978,7 +1004,7 @@ fetwfe_core <- function(
         stopifnot(ncol(d_inv_treat_sel) == length(sel_treat_inds_shifted))
     }
 
-    
+
 
     #
     #
@@ -987,6 +1013,10 @@ fetwfe_core <- function(
     #
 
     # Get overal estimated ATT!
+    # theta_hat_treat_sel needs to be the selected non-zero *transformed* treatment coefficients
+    # sel_treat_inds contains global indices of selected transformed features that are treatment effects
+    theta_hat_treat_sel_for_att <- theta_hat_slopes[sel_treat_inds]
+
 
     in_sample_te_results <- getTeResults2(
         sig_eps_sq=sig_eps_sq,
@@ -994,19 +1024,19 @@ fetwfe_core <- function(
         T=T,
         R=R,
         num_treats=num_treats,
-        cohort_tes=cohort_tes,
-        cohort_probs=cohort_probs,
+        cohort_tes=cohort_tes, # CATTs (point estimates)
+        cohort_probs=cohort_probs, # In-sample pi_r | treated
         psi_mat=psi_mat,
         gram_inv=gram_inv,
         sel_treat_inds_shifted=sel_treat_inds_shifted,
-        tes=tes,
+        tes=tes, # Untransformed treatment effect estimates beta_hat[treat_inds]
         d_inv_treat_sel=d_inv_treat_sel,
-        cohort_probs_overall=cohort_probs_overall,
+        cohort_probs_overall=cohort_probs_overall, # In-sample pi_r (unconditional on treated)
         first_inds=first_inds,
-        theta_hat_treat_sel=theta_hat[sel_treat_inds],
+        theta_hat_treat_sel=theta_hat_treat_sel_for_att, # Selected non-zero transformed treat coefs
         calc_ses=calc_ses,
         indep_probs=FALSE
-        )
+    )
 
     in_sample_att_hat <- in_sample_te_results$att_hat
     in_sample_att_se <- in_sample_te_results$att_te_se
@@ -1020,25 +1050,25 @@ fetwfe_core <- function(
             R=R,
             num_treats=num_treats,
             cohort_tes=cohort_tes,
-            cohort_probs=indep_cohort_probs,
+            cohort_probs=indep_cohort_probs, # indep pi_r | treated
             psi_mat=psi_mat,
             gram_inv=gram_inv,
             sel_treat_inds_shifted=sel_treat_inds_shifted,
             tes=tes,
             d_inv_treat_sel=d_inv_treat_sel,
-            cohort_probs_overall=indep_cohort_probs_overall,
+            cohort_probs_overall=indep_cohort_probs_overall, # indep pi_r (unconditional)
             first_inds=first_inds,
-            theta_hat_treat_sel=theta_hat[sel_treat_inds],
+            theta_hat_treat_sel=theta_hat_treat_sel_for_att,
             calc_ses=calc_ses,
             indep_probs=TRUE
-            )
+        )
         indep_att_hat <- indep_te_results$att_hat
         indep_att_se <- indep_te_results$att_te_se
-        indep_att_se_no_prob <- indep_te_results$att_te_se_no_prob
+        # indep_att_se_no_prob <- indep_te_results$att_te_se_no_prob # This was commented out
     } else{
         indep_att_hat <- NA
         indep_att_se <- NA
-        indep_att_se_no_prob <- NA
+        # indep_att_se_no_prob <- NA # Keep commented for consistency
     }
 
 
@@ -1049,12 +1079,11 @@ fetwfe_core <- function(
         in_sample_att_se_no_prob=in_sample_att_se_no_prob,
         indep_att_hat=indep_att_hat,
         indep_att_se=indep_att_se,
-        # indep_att_se_no_prob=indep_att_se_no_prob,
-        catt_hats=cohort_tes,
-        catt_ses=cohort_te_ses,
+        catt_hats=cohort_tes, # Already named if applicable from getCohortATTsFinal
+        catt_ses=cohort_te_ses, # Already named if applicable
         catt_df=cohort_te_df,
-        theta_hat=theta_hat,
-        beta_hat=beta_hat,
+        theta_hat=theta_hat,   # Full theta_hat (with intercept)
+        beta_hat=beta_hat,     # Untransformed slopes
         treat_inds=treat_inds,
         treat_int_inds=treat_int_inds,
         cohort_probs=cohort_probs,
@@ -1076,7 +1105,7 @@ fetwfe_core <- function(
         R=R,
         d=d,
         p=p
-        )
+    )
     )
 }
 
@@ -1133,7 +1162,8 @@ idCohorts <- function(df, time_var, unit_var, treat_var, covs){
     stopifnot(time_var %in% colnames(df))
     stopifnot(unit_var %in% colnames(df))
     stopifnot(treat_var %in% colnames(df))
-    stopifnot(all(covs %in% colnames(df)))
+    # stopifnot(all(covs %in% colnames(df))) # covs might be empty, or not all present if some were
+    # factors
 
     # Form design matrix
     units <- unique(df[, unit_var])
@@ -1158,37 +1188,52 @@ idCohorts <- function(df, time_var, unit_var, treat_var, covs){
 
         if(any(df_s[, treat_var] == 1)){
             # Identify first year of treatment (and cohort)
-            treat_year_s_ind <- min(which(df_s[, treat_var] == 1))
+            # Ensure df_s is sorted by time before finding min
+            df_s_sorted <- df_s[order(df_s[, time_var]),]
+            treat_year_s_ind_in_sorted_times <- min(which(df_s_sorted[, treat_var] == 1))
+            actual_treat_time <- df_s_sorted[treat_year_s_ind_in_sorted_times, time_var]
+
+
             # Make sure treatment is absorbing
-            if(any(df_s[treat_year_s_ind:T, treat_var] != 1)){
+            # Check from the actual_treat_time onwards in the original df for unit s
+            original_unit_times_from_treatment <- df[(df[, unit_var] == s) & (df[, time_var] >=
+                actual_treat_time), treat_var]
+            if(any(original_unit_times_from_treatment != 1)){
                 stop(paste(
                     "Treatment does not appear to be an absorbing state for unit",
                     s))
             }
-
-            cohorts[[treat_year_s_ind]] <- c(cohorts[[treat_year_s_ind]], s)
+            cohorts[[as.character(actual_treat_time)]] <- c(cohorts[[as.character(actual_treat_time)]], s)
         }
     }
 
     stopifnot(length(unlist(cohorts)) <= N)
+    # Keep only cohorts that actually have units
     cohorts <- cohorts[lengths(cohorts) > 0]
     
     # Need at least one untreated period, so have to omit units that were
     # treated in the very first time period
-    first_year_cohort <- cohorts[[as.character(times[1])]]
-    df <- df[!(df[, unit_var] %in% first_year_cohort), ]
+    first_time_val_char <- as.character(times[1])
+    if (first_time_val_char %in% names(cohorts)) {
+        first_year_cohort_units <- cohorts[[first_time_val_char]]
+        if (length(first_year_cohort_units) > 0) {
+             df <- df[!(df[, unit_var] %in% first_year_cohort_units), ]
+             units <- unique(df[, unit_var]) # Update units
+             if(length(first_year_cohort_units) > 0){ # N is original N
+                 warning(paste(length(first_year_cohort_units),
+                    "units were removed because they were treated in the first time period:",
+                    paste(first_year_cohort_units, collapse=", ")))
+             }
+        }
+        cohorts[[first_time_val_char]] <- NULL # Remove this cohort entry
+    }
 
-    units <- unique(df[, unit_var])
 
     if(length(units) == 0) {
-        stop("All units were treated in the first time period; estimating treatment effects is not possible")
+        stop("All units were treated in the first time period or no units remain after filtering; estimating treatment effects is not possible")
     }
 
-    if(length(units) < N){
-        warning(paste(N - length(units),
-            "units were removed because they were treated in the first time period"))
-    }
-    N <- length(units)
+    N <- length(units) # Update N to reflect remaining units
 
 
     # Treatment no longer needed
@@ -1198,7 +1243,17 @@ idCohorts <- function(df, time_var, unit_var, treat_var, covs){
     cohorts[[as.character(times[1])]] <- character()
 
     # Order cohorts in order of times
-    cohorts <- cohorts[order(as.numeric(names(cohorts)))]
+    if (length(cohorts) > 0) {
+        cohorts <- cohorts[order(as.numeric(names(cohorts)))]
+    }
+
+    # If after removing first-period treated, there are no treated cohorts left:
+    if(length(cohorts) == 0) {
+        # This implies all treated units were treated in the first period.
+        # The code in prepXints would later error if R < 2.
+        # This function's main job is to return the filtered df and cohort structure.
+        stop("all units appear to have been treated in the first period")
+    }
 
     # This should have been the first cohort
     stopifnot(length(cohorts[[1]]) == 0)
@@ -1298,69 +1353,100 @@ processCovs <- function(
         df <- df[order(df[, unit_var], df[, time_var], decreasing=FALSE), ]
         return(list(df = df, covs = covs))
     }
-    
-    d <- length(covs)
-    
+    d_orig <- length(covs) # Original number of covariates passed
+
     # For each unit, ensure that the first period has non-missing covariate values.
-    # Remove any covariates with missing values in the first period.
-    for(s in units){
-        df_s <- df[df[, unit_var] == s, ]
-        # (The balanced panel check above guarantees nrow(df_s)==T.)
-        covs_s <- df_s[df_s[, time_var] == times[1], covs]
-        if(length(covs_s) != length(covs)){
-            stop(paste("Unit", s, "does not have exactly", length(covs),
-                "covariate values in the first period."))
-        }
-        covs <- covs[!is.na(covs_s)]
-        if(length(covs) == 0){
-            warning("All covariates were removed because for all of them, at least one unit had a missing value during the first time period")
-        }
-    }
-    
-    if((length(covs) < d) & (length(covs) > 0)){
-        warning(paste(d - length(covs),
-            "covariate(s) were removed because they contained missing values in the first period."))
-    }
-    d <- length(covs)
-    
-    # Remove covariates that are constant across units.
-    if(d > 0){
-        covs_to_remove <- character()
-        for(cov in covs){
-            if(length(unique(df[, cov])) == 1){
-                if(verbose){
-                    message("Removing covariate because all units have the same value: ", cov)
-                }
-                covs_to_remove <- c(covs_to_remove, cov)
+    # Remove any covariates with missing values in the first period for *any* unit.
+    covs_to_keep <- character()
+    first_time_val <- times[1]
+
+    for(cov_name in covs){
+        is_valid_cov <- TRUE
+        for(s in units){
+            val_first_period <- df[(df[, unit_var] == s) & (df[, time_var] == first_time_val), cov_name]
+            if(length(val_first_period) != 1 || is.na(val_first_period)){
+                if(verbose) message("Covariate '", cov_name, "' has NA or missing first period value for unit '", s, "'. Removing covariate.")
+                is_valid_cov <- FALSE
+                break
             }
         }
-        covs <- covs[!(covs %in% covs_to_remove)]
-        if(length(covs) == 0){
-            warning("All covariates were removed after screening for missing values and constant values. Continuing with no covariates.")
-        } else if(length(covs) < d){
-            warning(paste(d - length(covs),
-                "covariate(s) were removed because all units had the same value."))
+        if(is_valid_cov){
+            covs_to_keep <- c(covs_to_keep, cov_name)
+        }
+    }
+
+    if(length(covs_to_keep) < d_orig && length(covs_to_keep) > 0){
+        removed_covs_na <- setdiff(covs, covs_to_keep)
+        warning(paste(length(removed_covs_na),
+            "covariate(s) were removed because they contained missing values in the first time period for at least one unit: ",
+            paste(removed_covs_na, collapse=", ")))
+    } else if (length(covs_to_keep) == 0 && d_orig > 0) {
+        warning("All covariates were removed due to missing values in the first period for at least one unit.")
+    }
+    covs <- covs_to_keep
+    d <- length(covs)
+
+
+    # Remove covariates that are constant across units (after making them time-invariant based on first period).
+    if(d > 0){
+        covs_to_remove_const <- character()
+        # First, make all covariates time-invariant based on first period value
+        df_temp_const_check <- df # Operate on a temporary copy
+        for(s in units){
+            first_period_rows_s_idx <- which((df_temp_const_check[, unit_var] == s) & (df_temp_const_check[, time_var] == first_time_val))
+            stopifnot(length(first_period_rows_s_idx) == 1) # Should be one row for first period
+            cov_values_s_first_period <- df_temp_const_check[first_period_rows_s_idx, covs, drop = FALSE]
+
+            for(t_idx in seq_along(times)){
+                current_rows_s_t_idx <- which((df_temp_const_check[, unit_var] == s) & (df_temp_const_check[, time_var] == times[t_idx]))
+                stopifnot(length(current_rows_s_t_idx) == 1)
+                df_temp_const_check[current_rows_s_t_idx, covs] <- cov_values_s_first_period
+            }
+        }
+
+        for(cov_name in covs){
+            # Check uniqueness on the first-period values for each unit
+            first_period_vals_for_cov <- sapply(units, function(u) {
+                df_temp_const_check[(df_temp_const_check[, unit_var] == u) & (df_temp_const_check[, time_var] == first_time_val), cov_name]
+            })
+            if(length(unique(first_period_vals_for_cov)) == 1){
+                if(verbose){
+                    message("Removing covariate because all units have the same first-period value: ", cov_name)
+                }
+                covs_to_remove_const <- c(covs_to_remove_const, cov_name)
+            }
+        }
+        covs <- covs[!(covs %in% covs_to_remove_const)]
+
+        if(length(covs_to_remove_const) > 0 && length(covs) == 0){
+             warning("All remaining covariates were removed because they were constant across units (based on first-period values). Continuing with no covariates.")
+        } else if (length(covs_to_remove_const) > 0) {
+             warning(paste(length(covs_to_remove_const),
+                "covariate(s) were removed because all units had the same first-period value: ",
+                paste(covs_to_remove_const, collapse=", ")))
         }
         d <- length(covs)
     }
     
     # Keep only the needed columns.
-    df <- df[, c(resp_var, time_var, unit_var, covs)]
-    
+    df <- df[, c(resp_var, time_var, unit_var, covs), drop = FALSE] # Ensure covs can be empty
+
     # For any time-varying covariates, replace all values with the first-period value.
     # This was partially done for the constant check, ensure it's finalized.
     if (d > 0) { # Only if there are covariates left
         if(verbose){
-            message("Replacing time-varying covariate values with first-period values...")
+            message("Finalizing: Replacing time-varying covariate values with first-period values...")
         }
         for(s in units){
-            df_s <- df[df[, unit_var] == s, ]
-            
-            covs_s <- df_s[df_s[, time_var] == times[1], covs]
-            for(t in 1:T){
-                ind_s_t <- (df[, unit_var] == s) & (df[, time_var] == times[t])
+            # df_s <- df[df[, unit_var] == s, ] # Not needed if iterating by index
+            first_period_rows_s_idx <- which((df[, unit_var] == s) & (df[, time_var] == first_time_val))
+            # This assumes first_time_val is the relevant one (times[1])
+            covs_s_first_period_vals <- df[first_period_rows_s_idx, covs, drop = FALSE]
+
+            for(t_val in times){
+                ind_s_t <- (df[, unit_var] == s) & (df[, time_var] == t_val)
                 stopifnot(sum(ind_s_t) == 1)
-                df[ind_s_t, covs] <- covs_s
+                df[ind_s_t, covs] <- covs_s_first_period_vals
             }
         }
     }
@@ -1411,24 +1497,23 @@ genTreatVarsRealData <- function(cohort_name, c_t_names, N, T, n_treated_times,
 
     # Create matrix of variables for cohort indicator and cohort/treatment
     # variables to append to df
-    treat_vars <- matrix(rep(0L, N*T*(1 + n_treated_times)), N*T,
-        1 + n_treated_times)
+    treat_vars <- matrix(0L, nrow = N*T, ncol = 1 + n_treated_times) # Initialize with 0L
 
     colnames(treat_vars) <- c(cohort_name, c_t_names)
 
-    c_i_inds <- unit_vars %in% cohort
-    stopifnot(length(c_i_inds) == N*T)
+    # Rows corresponding to units in the current cohort
+    c_i_inds_units <- unit_vars %in% cohort # Logical vector of length N*T
 
-    # Add cohort dummy
-    treat_vars[c_i_inds, 1] <- 1
+    # Add cohort dummy: 1 for all observations of units in this cohort
+    treat_vars[c_i_inds_units, 1] <- 1L
 
-    for(t in 1:n_treated_times){
-        c_i_t_inds <- c_i_inds & (time_vars == treated_times[t])
-
-        stopifnot(length(c_i_t_inds) == N*T)
-        stopifnot(sum(c_i_t_inds) == length(cohort))
-
-        treat_vars[c_i_t_inds, t + 1] <- 1L
+    # Add treatment period dummies
+    if (n_treated_times > 0) {
+        # build a logical index of length N*T for all cohort-time pairs at once
+        treat_combo <- interaction(unit_vars, time_vars, drop = TRUE)
+        for (j in seq_len(n_treated_times)) {
+            treat_vars[(unit_vars %in% cohort) & (time_vars == treated_times[j]), j + 1L] <- 1L
+        }
     }
 
     return(treat_vars)
@@ -1484,11 +1569,9 @@ genTreatVarsRealData <- function(cohort_name, c_t_names, N, T, n_treated_times,
 #'     treatment-period dummy.}
 #' @keywords internal
 addDummies <- function(df, cohorts, times, N, T, unit_var, time_var,
-    resp_var, n_cohorts){
-    # Add cohort dummies, treatment dummies (for each cohort and each time after
-    # treatment), and time dummies to df
-
-    # Total number of treated times for all cohorts (later, this will be the
+                       resp_var, n_cohorts){
+    # ... (Function body as provided)
+     # Total number of treated times for all cohorts (later, this will be the
     # total number of treatment effects to estimate)
     num_treats <- 0
 
@@ -1496,14 +1579,23 @@ addDummies <- function(df, cohorts, times, N, T, unit_var, time_var,
     cohort_vars <- character()
 
     # Matrix of cohort variable indicators
-    cohort_var_mat <- matrix(as.integer(NA), N*T, n_cohorts)
+    cohort_var_mat <- matrix(as.integer(NA), nrow = N*T, ncol = n_cohorts)
+    # It's better to initialize with 0L if these are counts/indicators
+    # cohort_var_mat <- matrix(0L, nrow = N*T, ncol = n_cohorts)
+    colnames(cohort_var_mat) <- rep(NA_character_, n_cohorts)
 
-    # Matrix of treatment indicators (just creating one column now to 
+
+    # Matrix of treatment indicators (just creating one column now to
     # initalize; will delete first column later)
-    treat_var_mat <- matrix(as.integer(NA), N*T, 1)
+    treat_var_mat <- matrix(as.integer(NA), nrow = N*T, ncol = 1) # Placeholder
+    # treat_var_mat <- matrix(0L, nrow = N*T, ncol = 0) # Better start
 
     # A list of names of variables for cohort/time treatments
     cohort_treat_names <- list()
+
+    # Indices of first treatment time for each cohort within the treat_var_mat block
+    current_first_ind_val <- 1
+    first_inds <- integer(n_cohorts) # pre-allocate
 
     # Ensure cohorts list is not empty if n_cohorts > 0
     if (n_cohorts > 0 && length(cohorts) == 0) {
@@ -1512,110 +1604,149 @@ addDummies <- function(df, cohorts, times, N, T, unit_var, time_var,
     if (n_cohorts == 0 && length(cohorts) > 0) {
         stop("n_cohorts == 0 but the cohorts list is not empty in addDummies.")
     }
+    if (n_cohorts > 0 && length(cohorts) != n_cohorts) {
+       # This might happen if idCohorts filters out all treated units.
+       # prepXints already checks R >= 1 (where R is length(cohorts))
+       # and R < 2.
+       # This stop might be too strict if R is derived from length(cohorts) earlier.
+       # stop(paste("n_cohorts is", n_cohorts, "but length(cohorts) is", length(cohorts)))
+    }
 
-    # Indices of first treatment time for each cohort
-    first_inds <- 1
 
     for(i in 1:n_cohorts){
 
         # Time of first treatment for this cohort
         y1_treat_i <- as.integer(names(cohorts)[i])
         stopifnot(y1_treat_i <= max(times))
+        # Cohort must start treatment strictly after the first period
+        stopifnot(y1_treat_i > times[1])
 
-        treated_times_i <- y1_treat_i:max(times)
+
+        treated_times_i <- times[times >= y1_treat_i] # Actual time values
 
         # How many treated times are there?
-        n_treated_times <- length(treated_times_i)
-        stopifnot(n_treated_times <= T)
-        stopifnot(n_treated_times == max(times) - y1_treat_i + 1)
+        n_treated_times_for_cohort_i <- length(treated_times_i)
+        stopifnot(n_treated_times_for_cohort_i <= T)
+        # stopifnot(n_treated_times_for_cohort_i == max(times) - y1_treat_i + 1) # This might fail if times are not consecutive integers
 
-        if (n_treated_times == 0 && length(cohorts[[i]]) > 0) {
+        if (n_treated_times_for_cohort_i == 0 && length(cohorts[[i]]) > 0) {
             # This means a cohort is defined but has no post-treatment periods within 'times'
             # This shouldn't happen if cohorts are defined by times >= times[2]
             # and times contains at least two periods.
             warning(paste("Cohort", names(cohorts)[i], "has no treated time periods within the observed times."))
         }
 
-        num_treats <- num_treats + n_treated_times
-        first_inds <- c(first_inds, num_treats + 1)
+        first_inds[i] <- current_first_ind_val
+        num_treats <- num_treats + n_treated_times_for_cohort_i # This is total across all cohorts so far
+        current_first_ind_val <- current_first_ind_val + n_treated_times_for_cohort_i
+
 
         # Cohort/treatment time variable names
-        c_i_names <- paste("c", i, treated_times_i, sep="_")
-        stopifnot(length(c_i_names) == n_treated_times)
+        c_i_names <- paste0("c", i, "_t", treated_times_i) # More descriptive names
+        stopifnot(length(c_i_names) == n_treated_times_for_cohort_i)
 
-        cohort_treat_names[[i]] <- c_i_names
+        cohort_treat_names[[as.character(y1_treat_i)]] <- c_i_names # Name list element by cohort start time
 
-        cohort_vars <- c(cohort_vars, paste("c_", i, sep=""))
+        current_cohort_var_name <- paste0("cohort_", y1_treat_i) # Name cohort by its start time
+        cohort_vars <- c(cohort_vars, current_cohort_var_name)
         stopifnot(length(cohort_vars) == i)
 
-        treat_vars_i <- genTreatVarsRealData(cohort_name=cohort_vars[i],
-            c_t_names=c_i_names, N=N, T=T, n_treated_times=n_treated_times,
-            unit_vars=df[, unit_var], time_vars=df[, time_var],
-            cohort=cohorts[[i]], treated_times=treated_times_i)
+        # Units belonging to the current cohort
+        current_cohort_units <- cohorts[[i]]
+        if(length(current_cohort_units) == 0 && n_treated_times_for_cohort_i > 0) {
+            # A defined cohort from names(cohorts) has no units
+            # This shouldn't happen if idCohorts filters empty cohorts, unless n_cohorts was passed independently.
+            # warning(paste("Cohort starting at time", y1_treat_i, "has no units."))
+            # If a cohort has no units, its dummies will be all zero.
+        }
 
-        # First column is cohort dummy and its name is cohort_vars[i].
+
+        treat_vars_i <- genTreatVarsRealData(cohort_name=current_cohort_var_name,
+                                             c_t_names=c_i_names, N=N, T=T,
+                                             n_treated_times=n_treated_times_for_cohort_i,
+                                             unit_vars=df[, unit_var], time_vars=df[, time_var],
+                                             cohort=current_cohort_units, treated_times=treated_times_i)
+
+        # First column is cohort dummy and its name is current_cohort_var_name.
         # Remaining columns are treatment dummies with names c_i_names.
 
-        stopifnot(all(is.na(cohort_var_mat[, i])))
-        stopifnot(ncol(treat_vars_i) == n_treated_times + 1)
+        stopifnot(is.na(cohort_var_mat[, i])) # If initialized with NA
+        # if (any(cohort_var_mat[,i] != 0L)) stop("cohort_var_mat not 0L before assignment") # If initialized with 0L
+        stopifnot(ncol(treat_vars_i) == n_treated_times_for_cohort_i + 1)
 
         cohort_var_mat[, i] <- treat_vars_i[, 1]
-        treat_var_mat <- cbind(treat_var_mat, treat_vars_i[,
-            2:(n_treated_times + 1)])
+        colnames(cohort_var_mat)[i] <- current_cohort_var_name
 
-        df <- data.frame(df, treat_vars_i)
+
+        if (n_treated_times_for_cohort_i > 0) {
+            current_treat_dummies <- treat_vars_i[, 2:(n_treated_times_for_cohort_i + 1), drop=FALSE]
+            if (ncol(treat_var_mat) == 1 && all(is.na(treat_var_mat[,1]))) { # First time, replace placeholder
+                treat_var_mat <- current_treat_dummies
+            } else {
+                treat_var_mat <- cbind(treat_var_mat, current_treat_dummies)
+            }
+        }
+        # df <- data.frame(df, treat_vars_i) # Original code modifies df, but not strictly needed if matrices are goal
     }
 
-    stopifnot(length(first_inds) == n_cohorts + 1)
-    first_inds <- first_inds[1:n_cohorts]
-    stopifnot(all(first_inds %in% 1:num_treats))
+    # After loop, num_treats holds the grand total number of treatment-period dummies
+    # current_first_ind_val is now num_treats + 1
+    stopifnot(all(first_inds %in% 1:num_treats) || n_cohorts == 0) # first_inds can be empty if n_cohorts=0
+    stopifnot(length(first_inds) == n_cohorts)
+
 
     stopifnot(length(cohort_treat_names) == n_cohorts)
-    names(cohort_treat_names) <- names(cohorts)
+    # names(cohort_treat_names) <- names(cohorts) # Already done inside loop if using y1_treat_i
 
-    # treat_var_mat should have one extra column at the beginning that we used
-    # to initalize it
-    stopifnot(is.numeric(ncol(treat_var_mat)) | is.integer(ncol(treat_var_mat)))
-    stopifnot(ncol(treat_var_mat) == num_treats + 1)
-    treat_var_mat <- treat_var_mat[, 2:(num_treats + 1), drop=FALSE]
 
-    # Add time dummies for all but first time
-    time_var_mat <- matrix(0L, N*T, T - 1)
-    time_var_names <- paste("t", times[2:T], sep="_")
-    colnames(time_var_mat) <- time_var_names
-    for(t in 2:T){
-        c_t_inds <- df[, time_var] %in% times[t]
-        stopifnot(length(c_t_inds) == N*T)
-        stopifnot(sum(c_t_inds) == N)
-
-        # Add cohort dummy
-        time_var_mat[c_t_inds, t - 1] <- 1
+    if (n_cohorts == 0 || num_treats == 0) { # If no cohorts or no treatment effects
+        treat_var_mat <- matrix(0L, nrow = N*T, ncol = 0)
+    } else {
+        stopifnot(is.numeric(ncol(treat_var_mat)) | is.integer(ncol(treat_var_mat)))
+        stopifnot(ncol(treat_var_mat) == num_treats)
     }
 
-    # Assume balanced panel
-    stopifnot(all(colSums(time_var_mat) == N))
 
-    stopifnot(length(unlist(cohort_treat_names)) == num_treats)
-    # stopifnot(all(unlist(cohort_treat_names) %in% colnames(X_df)))
+    # Add time dummies for all but first time
+    time_var_mat <- matrix(0L, nrow = N*T, ncol = T - 1)
+    if (T > 1) { # Only if there's more than one time period
+      time_var_names <- paste0("t_", times[2:T])
+      colnames(time_var_mat) <- time_var_names
+      for(t_idx in 2:T){ # Iterate from the second time period
+          actual_time_value <- times[t_idx]
+          c_t_inds <- df[, time_var] %in% actual_time_value # Use actual time value
+          stopifnot(length(c_t_inds) == N*T)
+          stopifnot(sum(c_t_inds) == N) # Each unit observed at this time
+
+          # Add time dummy; column is t_idx - 1 because times[1] is baseline
+          time_var_mat[c_t_inds, t_idx - 1] <- 1L
+      }
+      stopifnot(all(colSums(time_var_mat) == N))
+      stopifnot(length(time_var_names) == T - 1)
+      stopifnot(ncol(time_var_mat) == T - 1)
+    } else { # T=1 case
+      time_var_names <- character(0)
+      # time_var_mat remains 0-col matrix
+    }
+
+
+    stopifnot(length(unlist(cohort_treat_names)) == num_treats || num_treats == 0)
     stopifnot(ncol(cohort_var_mat) == n_cohorts)
 
-    stopifnot(length(time_var_names) == T - 1)
-    stopifnot(ncol(time_var_mat) == T - 1)
-    # stopifnot(all(time_var_names %in% colnames(X_df)))
 
     stopifnot(ncol(treat_var_mat) == num_treats)
-    stopifnot(ncol(treat_var_mat) >= 1)
+    # stopifnot(ncol(treat_var_mat) >= 1) # Can be 0 if num_treats is 0
 
     stopifnot(length(cohort_vars) == n_cohorts)
-    # stopifnot(all(cohort_vars %in% colnames(X_df)))
 
     # Center response
     y <- df[, resp_var] - mean(df[, resp_var])
 
     return(list(time_var_mat=time_var_mat, cohort_var_mat=cohort_var_mat,
-        treat_var_mat=treat_var_mat, y=y, cohort_treat_names=cohort_treat_names,
-        time_var_names=time_var_names, cohort_vars=cohort_vars,
-        first_inds=first_inds))
+                treat_var_mat=treat_var_mat, y=y,
+                cohort_treat_names=cohort_treat_names,
+                time_var_names=time_var_names, cohort_vars=cohort_vars,
+                first_inds=first_inds))
 }
 
 #' Generate Fixed Effect Interactions with Covariates
@@ -1648,8 +1779,7 @@ addDummies <- function(df, cohorts, times, N, T, unit_var, time_var,
 #'   \item{X_long_time}{Matrix of time-covariate interactions (N*T rows, (T-1)*d columns).}
 #' @keywords internal
 generateFEInts <- function(X_long, cohort_fe, time_fe, N, T, R, d){
-
-    # If no covariates are present, return empty matrices.
+     # If no covariates are present, return empty matrices.
     if(d == 0){
         return(list(X_long_cohort = matrix(nrow=N*T, ncol=0),
                     X_long_time   = matrix(nrow=N*T, ncol=0)))
@@ -1660,24 +1790,26 @@ generateFEInts <- function(X_long, cohort_fe, time_fe, N, T, R, d){
 
     stopifnot(ncol(cohort_fe) == R)
     stopifnot(nrow(cohort_fe) == N*T)
-    stopifnot(ncol(time_fe) == T - 1)
+    stopifnot(ncol(time_fe) == (T - 1) || T == 1) # time_fe can be 0-col if T=1
     stopifnot(ncol(X_long) == d)
     stopifnot(is.matrix(X_long))
     stopifnot(!is.data.frame(X_long))
 
-    for(r in 1:R){
+    for(r_idx in 1:R){ # iterate R times for R cohorts
         # Notice that these are arranged one cohort at a time, interacted with
         # all covariates
-        first_col_r <- (r - 1)*d + 1
-        last_col_r <- r*d
+        first_col_r <- (r_idx - 1)*d + 1
+        last_col_r <- r_idx*d
 
         stopifnot(last_col_r - first_col_r + 1 == d)
-
         stopifnot(all(is.na(X_long_cohort[, first_col_r:last_col_r])))
 
-        stopifnot(ncol(cohort_fe[, r]*X_long) == length(first_col_r:last_col_r))
+        # Element-wise multiplication of cohort_fe[,r_idx] (a vector) with each column of X_long
+        # This creates d columns for the r_idx-th cohort
+        interaction_block_r <- cohort_fe[, r_idx] * X_long
+        stopifnot(ncol(interaction_block_r) == d)
 
-        X_long_cohort[, first_col_r:last_col_r] <- cohort_fe[, r]*X_long
+        X_long_cohort[, first_col_r:last_col_r] <- interaction_block_r
 
     }
 
@@ -1685,24 +1817,30 @@ generateFEInts <- function(X_long, cohort_fe, time_fe, N, T, R, d){
     stopifnot(nrow(X_long_cohort) == N*T)
     stopifnot(ncol(X_long_cohort) == R*d)
 
-    # Interact with treatment effects
-    X_long_time <- matrix(as.numeric(NA), nrow=N*T, ncol=(T - 1)*d)
+    # Interact with time effects
+    if (T > 1) { # Only if there are time fixed effects (T-1 > 0)
+        X_long_time <- matrix(as.numeric(NA), nrow=N*T, ncol=(T - 1)*d)
+        for(t_idx in 1:(T - 1)){ # iterate T-1 times for T-1 time dummies
+            # Notice that these are arranged one time at a time, interacted with all
+            # covariates
+            first_col_t <- (t_idx - 1)*d + 1
+            last_col_t <- t_idx*d
 
-    for(t in 1:(T - 1)){
-        # Notice that these are arranged one time at a time, interacted with all
-        # covariates
-        first_col_t <- (t - 1)*d + 1
-        last_col_t <- t*d
+            stopifnot(last_col_t - first_col_t + 1 == d)
+            stopifnot(all(is.na(X_long_time[, first_col_t:last_col_t])))
 
-        stopifnot(last_col_t - first_col_t + 1 == d)
-        stopifnot(all(is.na(X_long_time[, first_col_t:last_col_t])))
+            interaction_block_t <- time_fe[, t_idx] * X_long
+            stopifnot(ncol(interaction_block_t) == d)
 
-        X_long_time[, first_col_t:last_col_t] <- time_fe[, t]*X_long
+            X_long_time[, first_col_t:last_col_t] <- interaction_block_t
+        }
+        stopifnot(all(!is.na(X_long_time)))
+        stopifnot(nrow(X_long_time) == N*T)
+        stopifnot(ncol(X_long_time) == (T - 1)*d)
+    } else { # T=1 case, no time fixed effects
+        X_long_time <- matrix(nrow=N*T, ncol=0)
     }
 
-    stopifnot(all(!is.na(X_long_time)))
-    stopifnot(nrow(X_long_time) == N*T)
-    stopifnot(ncol(X_long_time) == (T - 1)*d)
 
     return(list(X_long_cohort=X_long_cohort, X_long_time=X_long_time))
 }

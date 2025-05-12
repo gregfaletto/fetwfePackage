@@ -1,5 +1,9 @@
 # NEWS
 
+## Version 0.11.0 (2025-05-11)
+
+- Various minor bug fixes and refactoring.
+
 ## Version 0.10.4 (2025-05-08)
 
 - Fix issue #1 [https://github.com/gregfaletto/fetwfePackage/issues/1](https://github.com/gregfaletto/fetwfePackage/issues/1).
