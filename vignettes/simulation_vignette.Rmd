@@ -29,28 +29,26 @@ library(fetwfe)
 
 # Introduction
 
-This vignette demonstrates how to perform simulation studies using the simulation functions provided in the `{fetwfe}` package. In particular, we will show how to:
+This vignette demonstrates how to perform simulation studies using the simulation functions provided in the `{fetwfe}` package. In particular, I will show how to:
   
 - Generate a coefficient object with `genCoefs()`,
 - Simulate a panel data set with `simulateData()`,
 - Run the FETWFE estimator on the simulated data using `fetwfeWithSimulatedData()`, and
 - Extract the true treatment effects with `getTes()`.
 
-We also illustrate how to use the native pipe operator (`|>`) to streamline the workflow.
-
 # Simulation Workflow Using Piping
 
-Below we create a complete simulation pipeline. First, we generate a coefficient object that contains the parameters for our simulation. Then, we simulate the panel data, and finally, we run the estimator on the simulated data. Separately, we also extract the true treatment effects for comparison.
+Below we create a complete simulation pipeline.
 
 ## Step 1: Generate Simulation Coefficients
 
 The `genCoefs()` function creates an object of class `"FETWFE_coefs"` which includes a coefficient vector along with the simulation parameters. For this example, we set:
   
-- **R** (number of treated cohorts) to 3,
-- **T** (number of time periods) to 10,
-- **d** (number of covariates) to 2,
-- **density** to 0.2 (controls sparsity), and
-- **eff_size** to 1.5.
+- **R** (number of treated cohorts) to 5,
+- **T** (number of time periods) to 30,
+- **d** (number of covariates) to 12,
+- **density** to 0.1 (controls sparsity), and
+- **eff_size** to 2.
 
 ```{r}
 # Generate the coefficient object for simulation
@@ -61,9 +59,9 @@ sim_coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed =
 
 Next, we simulate the data using the generated coefficient object with the `simulateData()` function. Here we specify:
 
-- **N** (number of units) as 50,
-- **sig_eps_sq** (observation-level noise variance) as 1,
-- **sig_eps_c_sq** (unit-level noise variance) as 0.5, and
+- **N** (number of units) as 120,
+- **sig_eps_sq** (observation-level noise variance) as 5,
+- **sig_eps_c_sq** (unit-level noise variance) as 5, and
 - use the default `"gaussian"` distribution for the covariates.
 
 ```{r}
@@ -73,13 +71,16 @@ sim_data <- simulateData(sim_coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5, d
 
 ## Step 3: Run the FETWFE Estimator on Simulated Data
 
-We then run the estimator on the simulated data using `fetwfeWithSimulatedData()`. Using piping, the output from the previous step is seamlessly passed to the estimator.
+We then run the estimator on the simulated data using `fetwfeWithSimulatedData()`.
 
 ```{r}
 # Run the estimator using piping
-result <- sim_data |>
-  fetwfeWithSimulatedData()
+result <- fetwfeWithSimulatedData(sim_data)
+```
 
+We can now extract the results in the same way that we can with the standard `fetwfe()` function.
+
+```{r}
 # Display the estimated overall average treatment effect
 cat("Estimated Overall ATT from Simulated Data:", result$att_hat, "\n")
 
@@ -101,8 +102,8 @@ result$catt_df
 For comparison, we can compute the true treatment effects using the original coefficient object. The `getTes()` function extracts both the overall average treatment effect and the cohort-specific effects.
 
 ```{r}
-# Extract the true treatment effects using piping
-true_tes <- sim_coefs |> getTes()
+# Extract the true treatment effects
+true_tes <- getTes(sim_coefs)
 
 # Print the true overall treatment effect
 cat("True Overall ATT:", true_tes$att_true, "\n")
@@ -113,15 +114,26 @@ print(true_tes$actual_cohort_tes)
 
 ## Combining the Workflow in One Pipeline
 
-Alternatively, you can chain the simulation functions together with the pipe operator. For example, the following code generates the coefficients, simulates the data, and runs the estimator all in one pipeline:
+You can also chain the simulation functions together with the pipe operator. For example, the following code generates the coefficients, simulates the data, and runs the estimator all in one pipeline:
 
 ```{r}
 # A fully piped workflow from coefficient generation to estimation
-result_piped <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 2025) |>
+
+coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 2025)
+
+result_piped <- coefs |>
   simulateData(N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5) |>
   fetwfeWithSimulatedData()
 
 cat("Estimated Overall ATT from piped workflow:", result_piped$att_hat, "\n")
+
+true_tes_piped <- coefs |> getTes()
+
+# Print the true overall treatment effect
+cat("True Overall ATT:", true_tes_piped$att_true, "\n")
+
+# Print the cohort-specific treatment effects
+print(true_tes_piped$actual_cohort_tes)
 ```
 
 # Conclusion
@@ -133,6 +145,6 @@ In this vignette, we demonstrated how to use the simulation functions in the `{f
 3. **Run the FETWFE estimator** via `fetwfeWithSimulatedData()`, and
 4. **Extract the true treatment effects** with `getTes()`.
 
-This pipeline makes it easy to iterate on simulation studies and assess the performance of the estimator under different conditions. Feel free to modify the parameters and experiment with different settings!
+This pipeline makes it easy to iterate on simulation studies and assess the performance of the estimator under different conditions.
 
-For additional details or help, please refer to the package documentation or contact the author.
+For additional details or help, please refer to the package documentation or contact me.
