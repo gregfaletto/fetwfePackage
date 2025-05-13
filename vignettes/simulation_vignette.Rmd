@@ -66,19 +66,31 @@ Next, we simulate the data using the generated coefficient object with the `simu
 
 ```{r}
 # Simulate panel data based on the coefficients
-sim_data <- simulateData(sim_coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5, distribution = "gaussian")
+sim_data <- simulateData(
+  sim_coefs,
+  N = 120,
+  sig_eps_sq = 5,
+  sig_eps_c_sq = 5,
+  distribution = "gaussian"
+  )
+```
+
+The dataframe is stored in `sim_data$pdata`, so we can take a quick look:
+
+```{r}
+head(sim_data$pdata)
 ```
 
 ## Step 3: Run the FETWFE Estimator on Simulated Data
 
-We then run the estimator on the simulated data using `fetwfeWithSimulatedData()`.
+We then run the estimator on the simulated data using `fetwfeWithSimulatedData()`. (We could manually unpack `sim_data` and pass the arguments appropriately to `fewtfe()`, but `fetwfeWithSimulatedData()` is a wrapper that takes care of this for us.)
 
 ```{r}
 # Run the estimator using piping
 result <- fetwfeWithSimulatedData(sim_data)
 ```
 
-We can now extract the results in the same way that we can with the standard `fetwfe()` function.
+We can now extract the results from `result` in the same way that we can with the standard `fetwfe()` function.
 
 ```{r}
 # Display the estimated overall average treatment effect
