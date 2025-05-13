@@ -124,6 +124,14 @@ cat("True Overall ATT:", true_tes$att_true, "\n")
 print(true_tes$actual_cohort_tes)
 ```
 
+We can use this to calculate metrics to evaluate our estimated treatment effect, like the squared error:
+
+```{r}
+squared_error <- (result$att_hat - true_tes$att_true)^2
+
+cat("Squared error of ATT estimate:", squared_error, "\n")
+```
+
 ## Combining the Workflow in One Pipeline
 
 You can also chain the simulation functions together with the pipe operator. For example, the following code generates the coefficients, simulates the data, and runs the estimator all in one pipeline:
@@ -144,19 +152,14 @@ true_tes_piped <- coefs |> getTes()
 # Print the true overall treatment effect
 cat("True Overall ATT:", true_tes_piped$att_true, "\n")
 
-# Print the cohort-specific treatment effects
-print(true_tes_piped$actual_cohort_tes)
+# Print the squared estimation error
+squared_error_piped = (result_piped$att_hat - true_tes_piped$att_true)^2
+
+cat("Squared estimation error:", squared_error_piped, "\n")
 ```
 
 # Conclusion
 
-In this vignette, we demonstrated how to use the simulation functions in the `{fetwfe}` package. By using piping, you can create a smooth workflow:
-  
-1. **Generate coefficients** with `genCoefs()`,
-2. **Simulate data** using `simulateData()`,
-3. **Run the FETWFE estimator** via `fetwfeWithSimulatedData()`, and
-4. **Extract the true treatment effects** with `getTes()`.
-
-This pipeline makes it easy to iterate on simulation studies and assess the performance of the estimator under different conditions.
+In this vignette, we walked through how to use the simulation functions in the `{fetwfe}` package. This pipeline makes it easy to iterate on simulation studies and assess the performance of the estimator under different conditions.
 
 For additional details or help, please refer to the package documentation or contact me.
