@@ -28,12 +28,11 @@
 #' response for each unit at each time. The response must be an integer or
 #' numeric value.
 #' @param covs (Optional.) Character; a vector containing the names of the 
-#' columns for covariates. All of these columns are expected to contain integer
-#' or numeric values (so if you use categorical values, encode them using e.g.
-#' binary indicators before passing the data to this function). If no covariates
-#' are provided, the treatment effect estimation will proceed, but it will only
-#' be valid under unconditional assumptions of parallel trends and no 
-#' anticipation. Default is c().
+#' columns for covariates. All of these columns are expected to contain integer,
+#' numeric, or factor values, and any categorical values will be automatically
+#' encoded as binary indicators. If no covariates are provided, the treatment
+#' effect estimation will proceed, but it will only be valid under unconditional
+#' versions of the parallel trends and no anticipation assumptions. Default is c().
 #' @param indep_counts (Optional.) Integer; a vector. If you have a sufficiently
 #' large number of units, you can optionally randomly split your data set in
 #' half (with `N` units in each data set). The data for half of the units should
@@ -50,14 +49,14 @@
 #' Default is NA (in which case conservative standard errors will be calculated
 #' if `q < 1`.)
 #' @param sig_eps_sq (Optional.) Numeric; the variance of the row-level IID
-#' noise assumed to apply to each observation. See Section 2 of Faletto (2024)
+#' noise assumed to apply to each observation. See Section 2 of Faletto (2025)
 #' for details. It is best to provide this variance if it is known (for example,
 #' if you are using simulated data). If this variance is unknown, this argument
 #' can be omitted, and the variance will be estimated using the estimator from
 #' Pesaran (2015, Section 26.5.1) with ridge regression. Default is NA.
 #' @param sig_eps_c_sq (Optional.) Numeric; the variance of the unit-level IID
 #' noise (random effects) assumed to apply to each observation. See Section 2 of
-#' Faletto (2024) for details. It is best to provide this variance if it is
+#' Faletto (2025) for details. It is best to provide this variance if it is
 #' known (for example, if you are using simulated data). If this variance is
 #' unknown, this argument can be omitted, and the variance will be estimated
 #' using the estimator from Pesaran (2015, Section 26.5.1) with ridge
@@ -65,7 +64,7 @@
 #' @param lambda.max (Optional.) Numeric. A penalty parameter `lambda` will be
 #' selected over a grid search by BIC in order to select a single model. The 
 #' largest `lambda` in the grid will be `lambda.max`. If no `lambda.max` is
-#' provided, one will be selected automatically. For `lambda <= 1`, the model
+#' provided, one will be selected automatically. When `q <= 1`, the model
 #' will be sparse, and ideally all of the following are true at once: the
 #' smallest model (the one corresponding to `lambda.max`) selects close to 0
 #' features, the largest model (the one corresponding to `lambda.min`) selects
@@ -75,8 +74,8 @@
 #' want to manually tweak `lambda.max`, `lambda.min`, and `nlambda` to try
 #' to achieve these goals, particularly if the selected model size is very
 #' close to the model corresponding to `lambda.max` or `lambda.min`, which could
-#' indicate that the range of `lambda` values was too narrow. You can use the
-#' function outputs `lambda.max_model_size`, `lambda.min_model_size`, and
+#' indicate that the range of `lambda` values was too narrow or coarse. You can
+#' use the function outputs `lambda.max_model_size`, `lambda.min_model_size`, and
 #' `lambda_star_model_size` to try to assess this. Default is NA.
 #' @param lambda.min (Optional.) Numeric. The smallest `lambda` penalty
 #' parameter that will be considered. See the description of `lambda.max` for
@@ -87,7 +86,7 @@
 #' @param q (Optional.) Numeric; determines what `L_q` penalty is used for the
 #' fusion regularization. `q` = 1 is the lasso, and for 0 < `q` < 1, it is 
 #' possible to get standard errors and confidence intervals. `q` = 2 is ridge
-#' regression. See Faletto (2024) for details. Default is 0.5.
+#' regression. See Faletto (2025) for details. Default is 0.5.
 #' @param verbose Logical; if TRUE, more details on the progress of the function will
 #' be printed as the function executes. Default is FALSE.
 #' @param alpha Numeric; function will calculate (1 - `alpha`) confidence intervals
@@ -152,7 +151,7 @@
 #' set of covariates used to estimate the model.}
 #' @author Gregory Faletto
 #' @references
-#' Faletto, G (2024). Fused Extended Two-Way Fixed Effects for
+#' Faletto, G (2025). Fused Extended Two-Way Fixed Effects for
 #' Difference-in-Differences with Staggered Adoptions.
 #' \emph{arXiv preprint arXiv:2312.05985}.
 #' \url{https://arxiv.org/abs/2312.05985}.
@@ -376,7 +375,7 @@ fetwfe <- function(
 #' Generate Random Panel Data for FETWFE Simulations
 #'
 #' @description
-#' Generates a random panel dataset for simulation studies of the fused extended two-way fixed
+#' Generates a random panel data set for simulation studies of the fused extended two-way fixed
 #' effects (FETWFE) estimator by taking an object of class  \code{"FETWFE_coefs"} (produced by
 #' \code{genCoefs()}) and using it to simulate data. The function creates a balanced panel
 #' with \eqn{N} units over \eqn{T} time periods, assigns treatment status across \eqn{R}
@@ -385,7 +384,8 @@ fetwfe <- function(
 #' generated according to the specified \code{distribution}: by default, covariates are drawn
 #' from a normal distribution; if \code{distribution = "uniform"}, they are drawn uniformly
 #' from \eqn{[-\sqrt{3}, \sqrt{3}]}. When \eqn{d = 0} (i.e. no covariates), no
-#' covariate-related columns or interactions are generated.
+#' covariate-related columns or interactions are generated. See the simulation studies section of
+#' Faletto (2025) for details.
 #'
 #' @param coefs_obj An object of class \code{"FETWFE_coefs"} containing the coefficient vector
 #' and simulation parameters.
@@ -431,10 +431,17 @@ fetwfe <- function(
 #'
 #' The argument \code{distribution} controls the generation of covariates. For
 #' \code{"gaussian"}, covariates are drawn from \code{rnorm}; for \code{"uniform"},
-#' they are drawn from \code{runif} on the interval \eqn{[-\sqrt{3}, \sqrt{3}]}.
+#' they are drawn from \code{runif} on the interval \eqn{[-\sqrt{3}, \sqrt{3}]} (which ensures that
+#' the covariates have unit variance regardless of which distribution is chosen).
 #'
 #' When \eqn{d = 0} (i.e. no covariates), the function omits any covariate-related columns
 #' and their interactions.
+#"
+#' @references
+#' Faletto, G (2025). Fused Extended Two-Way Fixed Effects for
+#' Difference-in-Differences with Staggered Adoptions.
+#' \emph{arXiv preprint arXiv:2312.05985}.
+#' \url{https://arxiv.org/abs/2312.05985}.
 #'
 #' @examples
 #' \dontrun{
@@ -494,7 +501,7 @@ simulateData <- function(coefs_obj, N, sig_eps_sq, sig_eps_c_sq,
 #' This function generates a coefficient vector \code{beta} for simulation studies of the fused
 #' extended two-way fixed effects estimator. Itreturns an S3 object of class
 #' \code{"FETWFE_coefs"} containing \code{beta} along with simulation parameters \code{R},
-#' \code{T}, and \code{d}.
+#' \code{T}, and \code{d}. See the simulation studies section of Faletto (2025) for details.
 #'
 #' @param R Integer. The number of treated cohorts (treatment is assumed to start in periods 2 to
 #'   \code{R + 1}).
@@ -533,6 +540,12 @@ simulateData <- function(coefs_obj, N, sig_eps_sq, sig_eps_c_sq,
 #'   transform to \code{theta} using internal routines (e.g.,
 #'   \code{genBackwardsInvFusionTransformMat()} and \code{genInvTwoWayFusionTransformMat()}).
 #' }
+#'
+#' @references
+#' Faletto, G (2025). Fused Extended Two-Way Fixed Effects for
+#' Difference-in-Differences with Staggered Adoptions.
+#' \emph{arXiv preprint arXiv:2312.05985}.
+#' \url{https://arxiv.org/abs/2312.05985}.
 #'
 #' @examples
 #' \dontrun{
@@ -596,8 +609,10 @@ genCoefs <- function(R, T, d, density, eff_size, seed=NULL){
 #'
 #' @description
 #' This function runs the fused extended two-way fixed effects estimator (\code{fetwfe()}) on
-#' simulated data. It accepts an object of class \code{"FETWFE_simulated"} (produced by
-#' \code{simulateData()}) and unpacks the necessary components to pass to \code{fetwfe()}.
+#' simulated data. It is simply a wrapper for \code{fetwfe()}: it accepts an object of class
+#' \code{"FETWFE_simulated"} (produced by \code{simulateData()}) and unpacks the necessary
+#' components to pass to \code{fetwfe()}. So the outputs match \code{fetwfe()}, and the needed inputs
+#' match their counterparts in \code{fetwfe()}.
 #'
 #' @param simulated_obj An object of class \code{"FETWFE_simulated"} containing the simulated panel
 #' data and design matrix.
@@ -626,7 +641,7 @@ genCoefs <- function(R, T, d, density, eff_size, seed=NULL){
 #' @param q (Optional.) Numeric; determines what `L_q` penalty is used for the
 #' fusion regularization. `q` = 1 is the lasso, and for 0 < `q` < 1, it is 
 #' possible to get standard errors and confidence intervals. `q` = 2 is ridge
-#' regression. See Faletto (2024) for details. Default is 0.5.
+#' regression. See Faletto (2025) for details. Default is 0.5.
 #' @param verbose Logical; if TRUE, more details on the progress of the function will
 #' be printed as the function executes. Default is FALSE.
 #' @param alpha Numeric; function will calculate (1 - `alpha`) confidence intervals
@@ -690,11 +705,6 @@ genCoefs <- function(R, T, d, density, eff_size, seed=NULL){
 #' same value for every unit).} \item{p}{The final number of columns in the full
 #' set of covariates used to estimate the model.}
 #'
-#' @details
-#' The function extracts the panel data and simulation parameters from the \code{FETWFE_simulated}
-#' object and passes them to \code{fetwfe()}. The estimation output is then returned without further
-#' modification.
-#'
 #' @examples
 #' \dontrun{
 #'   # Generate coefficients
@@ -750,12 +760,9 @@ fetwfeWithSimulatedData <- function(simulated_obj, lambda.max = NA, lambda.min =
 #'
 #' @description 
 #' This function extracts the true treatment effects from a full coefficient vector
-#' obtained by fitting a fused extended two-way fixed effects model. It is designed
-#' specifically for coefficients formatted by \code{genCoefs()} and/or coefficients
-#' estimted on data generated by \code{genRandomData()}. It calculates the 
-#' overall average treatment effect on the treated (ATT) as the equal-weighted average 
-#' of the cohort-specific treatment effects, and also returns the individual treatment 
-#' effects for each treated cohort.
+#' as generated by \code{genCoefs()}. It calculates the overall average treatment effect on the
+#' treated (ATT) as the equal-weighted average of the cohort-specific treatment effects, and also
+#' returns the individual treatment effects for each treated cohort.
 #'
 #' @param coefs_obj An object of class \code{"FETWFE_coefs"} containing the coefficient vector
 #' and simulation parameters.
@@ -830,7 +837,7 @@ getTes <- function(coefs_obj){
 #' Generate Random Panel Data for FETWFE Simulations
 #'
 #' @description
-#' Generates a random panel dataset for simulation studies of the fused extended two-way fixed
+#' Generates a random panel data set for simulation studies of the fused extended two-way fixed
 #' effects (FETWFE) estimator. The function creates a balanced panel with \eqn{N} units over \eqn{T}
 #' time periods, assigns treatment status across \eqn{R} treated cohorts (with equal marginal
 #' probabilities for treatment and non-treatment), and constructs a design matrix along with the
@@ -843,6 +850,8 @@ getTes <- function(coefs_obj){
 #'
 #' When \eqn{d = 0} (i.e. no covariates), no covariate-related columns or interactions are 
 #' generated.
+#'
+#' See the simulation studies section of Faletto (2025) for details.
 #'
 #' @param N Integer. Number of units in the panel.
 #' @param T Integer. Number of time periods.
@@ -911,6 +920,12 @@ getTes <- function(coefs_obj){
 #'
 #' When \eqn{d = 0} (i.e. no covariates), the function omits any covariate-related columns
 #' and their interactions.
+#"
+#' @references
+#' Faletto, G (2025). Fused Extended Two-Way Fixed Effects for
+#' Difference-in-Differences with Staggered Adoptions.
+#' \emph{arXiv preprint arXiv:2312.05985}.
+#' \url{https://arxiv.org/abs/2312.05985}.
 #'
 #' @examples
 #' \dontrun{
@@ -1148,20 +1163,18 @@ simulateDataCore <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = 
 #' returned \code{beta} is formatted to align with the design matrix created by 
 #' \code{genRandomData()}, and is a valid input for the \code{beta} argument of that function. The
 #' vector \code{theta} is sparse, with nonzero entries occurring with probability \code{density} and
-#' scaled by \code{eff_size}.
+#' scaled by \code{eff_size}. See the simulation studies section of Faletto (2025) for details.
 #'
 #' @param R Integer. The number of treated cohorts (treatment is assumed to start in periods 2 to 
 #' \code{R + 1}).
 #' @param T Integer. The total number of time periods.
 #' @param d Integer. The number of time-invariant covariates. If \code{d > 0}, additional terms
-#' corresponding
-#'   to covariate main effects and interactions are included in \code{beta}.
+#' corresponding to covariate main effects and interactions are included in \code{beta}.
 #' @param density Numeric in (0,1). The probability that any given entry in the initial sparse
-#' coefficient
-#'   vector \code{theta} is nonzero.
+#' coefficient vector \code{theta} is nonzero.
 #' @param eff_size Numeric. The magnitude used to scale nonzero entries in \code{theta}. Each
-#' nonzero entry is
-#'   set to \code{eff_size} or \code{-eff_size} (with a 60 percent chance for a positive value).
+#' nonzero entry is set to \code{eff_size} or \code{-eff_size} (with a 60 percent chance for a
+#' positive value).
 #' @param seed (Optional) Integer. Seed for reproducibility.
 #'
 #' @return A list with two elements:
@@ -1187,6 +1200,12 @@ simulateDataCore <- function(N, T, R, d, sig_eps_sq, sig_eps_c_sq, beta, seed = 
 #'   transform to \code{theta} using internal routines (e.g.,
 #'   \code{genBackwardsInvFusionTransformMat()} and \code{genInvTwoWayFusionTransformMat()}).
 #' }
+#'
+#' @references
+#' Faletto, G (2025). Fused Extended Two-Way Fixed Effects for
+#' Difference-in-Differences with Staggered Adoptions.
+#' \emph{arXiv preprint arXiv:2312.05985}.
+#' \url{https://arxiv.org/abs/2312.05985}.
 #'
 #' @examples
 #' \dontrun{

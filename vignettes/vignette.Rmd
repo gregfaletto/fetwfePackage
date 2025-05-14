@@ -234,7 +234,7 @@ This should be enough to get you started using `fetwfe()` on your own data. Plea
 
 # References
 
-- Faletto, G. (2024). Fused Extended Two-Way Fixed Effects for Difference-in-Differences with Staggered Adoptions. [arXiv preprint arXiv:2312.05985](https://arxiv.org/abs/2312.05985).
+- Faletto, G. (2025). Fused Extended Two-Way Fixed Effects for Difference-in-Differences with Staggered Adoptions. [arXiv preprint arXiv:2312.05985](https://arxiv.org/abs/2312.05985).
 - Goodman-Bacon, A. (2021). Difference-in-Differences with variation in treatment timing. *Journal of Econometrics*.
 - Flack, E., & Jee, E. (2020). bacondecomp: Goodman-Bacon Decomposition. R package version 0.1.1. [https://CRAN.R-project.org/package=bacondecomp](https://CRAN.R-project.org/package=bacondecomp).
 - Stevenson, B., & Wolfers, J. (2006). Bargaining in the shadow of the law: Divorce laws and family distress. *The Quarterly Journal of Economics*, 121(1), 267-288.

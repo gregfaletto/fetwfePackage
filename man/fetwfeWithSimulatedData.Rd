@@ -47,7 +47,7 @@ details. Default is 100.}
 \item{q}{(Optional.) Numeric; determines what \code{L_q} penalty is used for the
 fusion regularization. \code{q} = 1 is the lasso, and for 0 < \code{q} < 1, it is
 possible to get standard errors and confidence intervals. \code{q} = 2 is ridge
-regression. See Faletto (2024) for details. Default is 0.5.}
+regression. See Faletto (2025) for details. Default is 0.5.}
 
 \item{verbose}{Logical; if TRUE, more details on the progress of the function will
 be printed as the function executes. Default is FALSE.}
@@ -118,13 +118,10 @@ set of covariates used to estimate the model.}
 }
 \description{
 This function runs the fused extended two-way fixed effects estimator (\code{fetwfe()}) on
-simulated data. It accepts an object of class \code{"FETWFE_simulated"} (produced by
-\code{simulateData()}) and unpacks the necessary components to pass to \code{fetwfe()}.
-}
-\details{
-The function extracts the panel data and simulation parameters from the \code{FETWFE_simulated}
-object and passes them to \code{fetwfe()}. The estimation output is then returned without further
-modification.
+simulated data. It is simply a wrapper for \code{fetwfe()}: it accepts an object of class
+\code{"FETWFE_simulated"} (produced by \code{simulateData()}) and unpacks the necessary
+components to pass to \code{fetwfe()}. So the outputs match \code{fetwfe()}, and the needed inputs
+match their counterparts in \code{fetwfe()}.
 }
 \examples{
 \dontrun{

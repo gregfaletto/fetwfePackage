@@ -81,7 +81,7 @@ the never-treated group and each of the \eqn{R} treated cohorts.}
 }
 }
 \description{
-Generates a random panel dataset for simulation studies of the fused extended two-way fixed
+Generates a random panel data set for simulation studies of the fused extended two-way fixed
 effects (FETWFE) estimator. The function creates a balanced panel with \eqn{N} units over \eqn{T}
 time periods, assigns treatment status across \eqn{R} treated cohorts (with equal marginal
 probabilities for treatment and non-treatment), and constructs a design matrix along with the
@@ -94,6 +94,8 @@ if \code{distribution = "uniform"}, they are drawn uniformly from \eqn{[-\sqrt{3
 
 When \eqn{d = 0} (i.e. no covariates), no covariate-related columns or interactions are
 generated.
+
+See the simulation studies section of Faletto (2025) for details.
 }
 \details{
 When \code{gen_ints = TRUE}, the function constructs the design matrix by first generating
@@ -144,4 +146,10 @@ and their interactions.
   str(sim_data)
 }
 
+}
+\references{
+Faletto, G (2025). Fused Extended Two-Way Fixed Effects for
+Difference-in-Differences with Staggered Adoptions.
+\emph{arXiv preprint arXiv:2312.05985}.
+\url{https://arxiv.org/abs/2312.05985}.
 }

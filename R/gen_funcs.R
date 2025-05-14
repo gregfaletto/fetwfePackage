@@ -20,6 +20,7 @@
 #'   \item{cohort_inds}{A list where each element contains the row indices in the
 #'         long-format matrices corresponding to the units in a specific treated cohort.}
 #' @keywords internal
+#' @noRd
 generateBaseEffects <- function(N, d, T, R, distribution = "gaussian"){
   ret <- genCohortTimeFE(N, T, R, d)
   
@@ -65,6 +66,7 @@ generateBaseEffects <- function(N, d, T, R, distribution = "gaussian"){
 #'   \item{inds}{A list of length R. Each element `inds[[r]]` contains the row indices
 #'     in the NT-row matrices that correspond to units in the r-th treated cohort.}
 #' @keywords internal
+#' @noRd
 genCohortTimeFE <- function(N, T, R, d){
     # The observations will be arranged row-wise as blocks of T, one unit at
     # a time. So the first T rows correspond to all observations from the first
@@ -137,6 +139,7 @@ genCohortTimeFE <- function(N, T, R, d){
 #'   The sum of elements equals N.
 #' @importFrom stats rmultinom
 #' @keywords internal
+#' @noRd
 genAssignments <- function(N, R){
     # Make sure at least one observation in each cohort
     stopifnot(N >= R + 1)
@@ -177,6 +180,7 @@ genAssignments <- function(N, R){
 #'     column index in `treat_mat_long` corresponding to the first treatment period
 #'     for cohort r.}
 #' @keywords internal
+#' @noRd
 genTreatVarsSim <- function(n_treats, N, T, R, assignments, cohort_inds,
     N_UNTREATED, first_inds_test, d){
     # Treatment indicators
@@ -279,6 +283,7 @@ genTreatVarsSim <- function(n_treats, N, T, R, assignments, cohort_inds,
 #' @return A numeric vector of length R, where the r-th element is the true
 #'   average treatment effect for cohort r.
 #' @keywords internal
+#' @noRd
 getActualCohortTes <- function(R, first_inds, treat_inds, coefs, num_treats){
     actual_cohort_tes <- rep(as.numeric(NA), R)
 
@@ -306,6 +311,7 @@ getActualCohortTes <- function(R, first_inds, treat_inds, coefs, num_treats){
 #' @return An integer vector of length n containing -1s and 1s.
 #' @importFrom stats rbinom
 #' @keywords internal
+#' @noRd
 rfunc <- function(n, prob){
     # sample(c(-1, 1), size=n, replace=TRUE)
     vec <- rbinom(n=n, size=1, prob=prob)
@@ -334,6 +340,7 @@ rfunc <- function(n, prob){
 #'     assuming a full design matrix with all interactions.}
 #' @seealso \code{\link{getNumTreats}}, \code{\link{getP}}
 #' @keywords internal
+#' @noRd
 testGenRandomDataInputs <- function(beta, R, T, d, N, sig_eps_sq, sig_eps_c_sq){
 
     stopifnot(R <= T - 1)

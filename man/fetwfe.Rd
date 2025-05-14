@@ -50,12 +50,11 @@ response for each unit at each time. The response must be an integer or
 numeric value.}
 
 \item{covs}{(Optional.) Character; a vector containing the names of the
-columns for covariates. All of these columns are expected to contain integer
-or numeric values (so if you use categorical values, encode them using e.g.
-binary indicators before passing the data to this function). If no covariates
-are provided, the treatment effect estimation will proceed, but it will only
-be valid under unconditional assumptions of parallel trends and no
-anticipation. Default is c().}
+columns for covariates. All of these columns are expected to contain integer,
+numeric, or factor values, and any categorical values will be automatically
+encoded as binary indicators. If no covariates are provided, the treatment
+effect estimation will proceed, but it will only be valid under unconditional
+versions of the parallel trends and no anticipation assumptions. Default is c().}
 
 \item{indep_counts}{(Optional.) Integer; a vector. If you have a sufficiently
 large number of units, you can optionally randomly split your data set in
@@ -74,7 +73,7 @@ Default is NA (in which case conservative standard errors will be calculated
 if \code{q < 1}.)}
 
 \item{sig_eps_sq}{(Optional.) Numeric; the variance of the row-level IID
-noise assumed to apply to each observation. See Section 2 of Faletto (2024)
+noise assumed to apply to each observation. See Section 2 of Faletto (2025)
 for details. It is best to provide this variance if it is known (for example,
 if you are using simulated data). If this variance is unknown, this argument
 can be omitted, and the variance will be estimated using the estimator from
@@ -82,7 +81,7 @@ Pesaran (2015, Section 26.5.1) with ridge regression. Default is NA.}
 
 \item{sig_eps_c_sq}{(Optional.) Numeric; the variance of the unit-level IID
 noise (random effects) assumed to apply to each observation. See Section 2 of
-Faletto (2024) for details. It is best to provide this variance if it is
+Faletto (2025) for details. It is best to provide this variance if it is
 known (for example, if you are using simulated data). If this variance is
 unknown, this argument can be omitted, and the variance will be estimated
 using the estimator from Pesaran (2015, Section 26.5.1) with ridge
@@ -91,7 +90,7 @@ regression. Default is NA.}
 \item{lambda.max}{(Optional.) Numeric. A penalty parameter \code{lambda} will be
 selected over a grid search by BIC in order to select a single model. The
 largest \code{lambda} in the grid will be \code{lambda.max}. If no \code{lambda.max} is
-provided, one will be selected automatically. For \code{lambda <= 1}, the model
+provided, one will be selected automatically. When \code{q <= 1}, the model
 will be sparse, and ideally all of the following are true at once: the
 smallest model (the one corresponding to \code{lambda.max}) selects close to 0
 features, the largest model (the one corresponding to \code{lambda.min}) selects
@@ -101,8 +100,8 @@ that the computation doesn't become infeasible. You may
 want to manually tweak \code{lambda.max}, \code{lambda.min}, and \code{nlambda} to try
 to achieve these goals, particularly if the selected model size is very
 close to the model corresponding to \code{lambda.max} or \code{lambda.min}, which could
-indicate that the range of \code{lambda} values was too narrow. You can use the
-function outputs \code{lambda.max_model_size}, \code{lambda.min_model_size}, and
+indicate that the range of \code{lambda} values was too narrow or coarse. You can
+use the function outputs \code{lambda.max_model_size}, \code{lambda.min_model_size}, and
 \code{lambda_star_model_size} to try to assess this. Default is NA.}
 
 \item{lambda.min}{(Optional.) Numeric. The smallest \code{lambda} penalty
@@ -116,7 +115,7 @@ details. Default is 100.}
 \item{q}{(Optional.) Numeric; determines what \code{L_q} penalty is used for the
 fusion regularization. \code{q} = 1 is the lasso, and for 0 < \code{q} < 1, it is
 possible to get standard errors and confidence intervals. \code{q} = 2 is ridge
-regression. See Faletto (2024) for details. Default is 0.5.}
+regression. See Faletto (2025) for details. Default is 0.5.}
 
 \item{verbose}{Logical; if TRUE, more details on the progress of the function will
 be printed as the function executes. Default is FALSE.}
@@ -233,7 +232,7 @@ catt_df_pct[["ConfIntHigh"]] <- 100 * catt_df_pct[["ConfIntHigh"]]
 catt_df_pct
 }
 \references{
-Faletto, G (2024). Fused Extended Two-Way Fixed Effects for
+Faletto, G (2025). Fused Extended Two-Way Fixed Effects for
 Difference-in-Differences with Staggered Adoptions.
 \emph{arXiv preprint arXiv:2312.05985}.
 \url{https://arxiv.org/abs/2312.05985}.

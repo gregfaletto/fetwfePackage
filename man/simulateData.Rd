@@ -49,7 +49,7 @@ the never-treated group and each of the \eqn{R} treated cohorts.}
 }
 }
 \description{
-Generates a random panel dataset for simulation studies of the fused extended two-way fixed
+Generates a random panel data set for simulation studies of the fused extended two-way fixed
 effects (FETWFE) estimator by taking an object of class  \code{"FETWFE_coefs"} (produced by
 \code{genCoefs()}) and using it to simulate data. The function creates a balanced panel
 with \eqn{N} units over \eqn{T} time periods, assigns treatment status across \eqn{R}
@@ -58,7 +58,8 @@ constructs a design matrix along with the corresponding outcome. The covariates 
 generated according to the specified \code{distribution}: by default, covariates are drawn
 from a normal distribution; if \code{distribution = "uniform"}, they are drawn uniformly
 from \eqn{[-\sqrt{3}, \sqrt{3}]}. When \eqn{d = 0} (i.e. no covariates), no
-covariate-related columns or interactions are generated.
+covariate-related columns or interactions are generated. See the simulation studies section of
+Faletto (2025) for details.
 }
 \details{
 This function extracts simulation parameters from the \code{FETWFE_coefs} object and passes them,
@@ -68,7 +69,8 @@ It validates that all necessary components are returned and assigns the S3 class
 
 The argument \code{distribution} controls the generation of covariates. For
 \code{"gaussian"}, covariates are drawn from \code{rnorm}; for \code{"uniform"},
-they are drawn from \code{runif} on the interval \eqn{[-\sqrt{3}, \sqrt{3}]}.
+they are drawn from \code{runif} on the interval \eqn{[-\sqrt{3}, \sqrt{3}]} (which ensures that
+the covariates have unit variance regardless of which distribution is chosen).
 
 When \eqn{d = 0} (i.e. no covariates), the function omits any covariate-related columns
 and their interactions.
@@ -82,4 +84,10 @@ and their interactions.
   sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5)
 }
 
+}
+\references{
+Faletto, G (2025). Fused Extended Two-Way Fixed Effects for
+Difference-in-Differences with Staggered Adoptions.
+\emph{arXiv preprint arXiv:2312.05985}.
+\url{https://arxiv.org/abs/2312.05985}.
 }

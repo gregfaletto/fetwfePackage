@@ -13,16 +13,14 @@ genCoefsCore(R, T, d, density, eff_size, seed = NULL)
 \item{T}{Integer. The total number of time periods.}
 
 \item{d}{Integer. The number of time-invariant covariates. If \code{d > 0}, additional terms
-corresponding
-to covariate main effects and interactions are included in \code{beta}.}
+corresponding to covariate main effects and interactions are included in \code{beta}.}
 
 \item{density}{Numeric in (0,1). The probability that any given entry in the initial sparse
-coefficient
-vector \code{theta} is nonzero.}
+coefficient vector \code{theta} is nonzero.}
 
 \item{eff_size}{Numeric. The magnitude used to scale nonzero entries in \code{theta}. Each
-nonzero entry is
-set to \code{eff_size} or \code{-eff_size} (with a 60 percent chance for a positive value).}
+nonzero entry is set to \code{eff_size} or \code{-eff_size} (with a 60 percent chance for a
+positive value).}
 
 \item{seed}{(Optional) Integer. Seed for reproducibility.}
 }
@@ -40,7 +38,7 @@ This function generates a coefficient vector \code{beta} along with a sparse aux
 returned \code{beta} is formatted to align with the design matrix created by
 \code{genRandomData()}, and is a valid input for the \code{beta} argument of that function. The
 vector \code{theta} is sparse, with nonzero entries occurring with probability \code{density} and
-scaled by \code{eff_size}.
+scaled by \code{eff_size}. See the simulation studies section of Faletto (2025) for details.
 }
 \details{
 The length of \code{beta} is given by
@@ -85,4 +83,10 @@ transform to \code{theta} using internal routines (e.g.,
   cat("Length of beta:", length(beta), "\nExpected length:", p_expected, "\n")
 }
 
+}
+\references{
+Faletto, G (2025). Fused Extended Two-Way Fixed Effects for
+Difference-in-Differences with Staggered Adoptions.
+\emph{arXiv preprint arXiv:2312.05985}.
+\url{https://arxiv.org/abs/2312.05985}.
 }

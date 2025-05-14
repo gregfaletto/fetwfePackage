@@ -69,6 +69,7 @@
 #'     the block of treatment effect parameters in `X_ints` (and subsequently in
 #'     `beta_hat`) for each respective cohort's first treatment period.}
 #' @keywords internal
+#' @noRd
 prepXints <- function(
     data,
     time_var,
@@ -391,6 +392,7 @@ prepXints <- function(
 #'   \item{y_final}{The response vector after GLS weighting.}
 #'   \item{N, T, R, d, p}{Dimensions used in estimation.}
 #' @keywords internal
+#' @noRd
 fetwfe_core <- function(
     X_ints,
     y,
@@ -1158,6 +1160,7 @@ fetwfe_core <- function(
 #'   \item{times}{A numeric or integer vector of unique, sorted time periods
 #'     present in the original data.}
 #' @keywords internal
+#' @noRd
 idCohorts <- function(df, time_var, unit_var, treat_var, covs){
     stopifnot(time_var %in% colnames(df))
     stopifnot(unit_var %in% colnames(df))
@@ -1314,6 +1317,7 @@ idCohorts <- function(df, time_var, unit_var, treat_var, covs){
 #'   \item{covs}{The updated character vector of valid covariate names remaining
 #'     after processing.}
 #' @keywords internal
+#' @noRd
 processCovs <- function(
     df,
     units,
@@ -1492,6 +1496,7 @@ processCovs <- function(
 #'   `cohort_name`. Subsequent `n_treated_times` columns are treatment-period
 #'   dummies named according to `c_t_names`.
 #' @keywords internal
+#' @noRd
 genTreatVarsRealData <- function(cohort_name, c_t_names, N, T, n_treated_times,
     unit_vars, time_vars, cohort, treated_times){
 
@@ -1568,6 +1573,7 @@ genTreatVarsRealData <- function(cohort_name, c_t_names, N, T, n_treated_times,
 #'     column index within `treat_var_mat` that corresponds to its first
 #'     treatment-period dummy.}
 #' @keywords internal
+#' @noRd
 addDummies <- function(df, cohorts, times, N, T, unit_var, time_var,
                        resp_var, n_cohorts){
     # ... (Function body as provided)
@@ -1778,6 +1784,7 @@ addDummies <- function(df, cohorts, times, N, T, unit_var, time_var,
 #'   \item{X_long_cohort}{Matrix of cohort-covariate interactions (N*T rows, R*d columns).}
 #'   \item{X_long_time}{Matrix of time-covariate interactions (N*T rows, (T-1)*d columns).}
 #' @keywords internal
+#' @noRd
 generateFEInts <- function(X_long, cohort_fe, time_fe, N, T, R, d){
      # If no covariates are present, return empty matrices.
     if(d == 0){
@@ -1881,6 +1888,7 @@ generateFEInts <- function(X_long, cohort_fe, time_fe, N, T, R, d){
 #' @return A matrix of treatment-covariate interactions (N*T rows, d*`n_treats`
 #'   columns). Returns an empty matrix if `d=0`.
 #' @keywords internal
+#' @noRd
 genTreatInts <- function(treat_mat_long, X_long, n_treats, cohort_fe, N, T, R,
     d, N_UNTREATED){
 
@@ -1989,6 +1997,7 @@ genTreatInts <- function(treat_mat_long, X_long, n_treats, cohort_fe, N, T, R,
 #'
 #' @return The complete design matrix `X_ints` (`N*T` rows, `p` columns).
 #' @keywords internal
+#' @noRd
 genXintsData <- function(cohort_fe, time_fe, X_long, treat_mat_long, N, R, T,
     d, N_UNTREATED, p){
 
@@ -2110,6 +2119,7 @@ genXintsData <- function(cohort_fe, time_fe, X_long, treat_mat_long, N, R, T,
 #' @return An integer vector of length `R`, where `f_inds[r]` is the 1-based
 #'   starting index of the `r`-th cohort's treatment effects in the combined block.
 #' @keywords internal
+#' @noRd
 getFirstInds <- function(R, T){
     # Let's identify the indices of the first treatment effects for each cohort.
     # The first one is index 1, then the second one is index (T - 1) + 1 = T,
@@ -3566,6 +3576,7 @@ getTeResults2 <- function(
 #'   Cohort R (starts period R+1): T-R effects
 #'   Summing these gives `R*T - (1 + 2 + ... + R) = R*T - R(R+1)/2`.
 #' @keywords internal
+#' @noRd
 getNumTreats <- function(R, T){
     return(T * R - (R * (R + 1)) / 2)
 }
@@ -3593,6 +3604,7 @@ getNumTreats <- function(R, T){
 #'   total number of columns in the preceding blocks (`base_cols`) and returns
 #'   `base_cols + 1` through `base_cols + num_treats`.
 #' @keywords internal
+#' @noRd
 getTreatInds <- function(R, T, d, num_treats){
     base_cols <- if (d > 0) {
       R + (T - 1) + d + d * R + d * (T - 1)
@@ -3634,6 +3646,7 @@ getTreatInds <- function(R, T, d, num_treats){
 #'   The formula is `p = R + (T-1) + d + d*R + d*(T-1) + num_treats + num_treats*d`.
 #'   If `d=0`, terms involving `d` become zero.
 #' @keywords internal
+#' @noRd
 getP <- function(R, T, d, num_treats){
     return(R + (T - 1) + d + d * R + d * (T - 1) + num_treats + num_treats * d)
 }
@@ -3807,6 +3820,7 @@ checkFetwfeInputs <- function(
 #'
 #' @return A matrix of dimension p x p where p = R + (T - 1) + d + d*R + d*(T - 1) + num_treats +
 #' d*num_treats.
+#' @noRd
 genFullInvFusionTransformMat <- function(first_inds, T, R, d, num_treats) {
   # Load required package for block diagonal concatenation.
   if (!requireNamespace("Matrix", quietly = TRUE)) {

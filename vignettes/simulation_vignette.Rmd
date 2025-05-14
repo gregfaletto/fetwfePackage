@@ -31,10 +31,12 @@ library(fetwfe)
 
 This vignette demonstrates how to perform simulation studies using the simulation functions provided in the `{fetwfe}` package. In particular, I will show how to:
   
-- Generate a coefficient object with `genCoefs()`,
-- Simulate a panel data set with `simulateData()`,
-- Run the FETWFE estimator on the simulated data using `fetwfeWithSimulatedData()`, and
-- Extract the true treatment effects with `getTes()`.
+- **Generate a vector of coefficients with `genCoefs()`.** These coefficients are used to generate responses for each unit in a panel at each time that align with standard difference-in-differences assumptions like conditional parallel trends, as well as the sparsity assumptions made by FETWFE.
+- **Simulate a panel data set with `simulateData()`. **
+- **Run the FETWFE estimator on the simulated data using `fetwfeWithSimulatedData()`.**
+- **Extract the true treatment effects with `getTes()`.**
+
+The procedure here follows the process outlines in the simulation studies section of [the paper](https://arxiv.org/abs/2312.05985), so you may want to briefly skim the setup of those simulation studies to better understand what these functions are doing.
 
 # Simulation Workflow Using Piping
 
@@ -50,14 +52,19 @@ The `genCoefs()` function creates an object of class `"FETWFE_coefs"` which incl
 - **density** to 0.1 (controls sparsity), and
 - **eff_size** to 2.
 
+
 ```{r}
 # Generate the coefficient object for simulation
 sim_coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 101)
 ```
 
+(Again, for more details on the meaning of these parameters, see the simulation study section of [the paper](https://arxiv.org/abs/2312.05985).)
+
+
+
 ## Step 2: Simulate Panel Data
 
-Next, we simulate the data using the generated coefficient object with the `simulateData()` function. Here we specify:
+Next, we simulate a panel data set using the generated coefficient object with the `simulateData()` function. This data set will generate cohort assignments and time-invariant covariates for `N` units, and then generate outcomes for them at `T` times using the coefficients generated from `genCoefs()`. Here we specify:
 
 - **N** (number of units) as 120,
 - **sig_eps_sq** (observation-level noise variance) as 5,
@@ -75,7 +82,7 @@ sim_data <- simulateData(
   )
 ```
 
-The dataframe is stored in `sim_data$pdata`, so we can take a quick look:
+The dataframe is stored in `sim_data$pdata`, so we can take a quick look at the results:
 
 ```{r}
 head(sim_data$pdata)
@@ -83,10 +90,9 @@ head(sim_data$pdata)
 
 ## Step 3: Run the FETWFE Estimator on Simulated Data
 
-We then run the estimator on the simulated data using `fetwfeWithSimulatedData()`. (We could manually unpack `sim_data` and pass the arguments appropriately to `fewtfe()`, but `fetwfeWithSimulatedData()` is a wrapper that takes care of this for us.)
+We then run the estimator on the simulated data using `fetwfeWithSimulatedData()`. (We could get the same results by manually unpacking `sim_data` and passing the arguments appropriately to `fewtfe()`. `fetwfeWithSimulatedData()` is just a wrapper function that takes care of this for us.)
 
 ```{r}
-# Run the estimator using piping
 result <- fetwfeWithSimulatedData(sim_data)
 ```
 
@@ -111,7 +117,7 @@ result$catt_df
 
 ## Step 4: Extract True Treatment Effects
 
-For comparison, we can compute the true treatment effects using the original coefficient object. The `getTes()` function extracts both the overall average treatment effect and the cohort-specific effects.
+To evaluate the estimated ATT, we can compute the true treatment effects using the original coefficient object. The `getTes()` function extracts both the overall average treatment effect and the cohort-specific effects.
 
 ```{r}
 # Extract the true treatment effects
@@ -124,7 +130,7 @@ cat("True Overall ATT:", true_tes$att_true, "\n")
 print(true_tes$actual_cohort_tes)
 ```
 
-We can use this to calculate metrics to evaluate our estimated treatment effect, like the squared error:
+We can use this to calculate metrics to evaluate our estimated treatment effect, like squared error:
 
 ```{r}
 squared_error <- (result$att_hat - true_tes$att_true)^2
@@ -137,8 +143,6 @@ cat("Squared error of ATT estimate:", squared_error, "\n")
 You can also chain the simulation functions together with the pipe operator. For example, the following code generates the coefficients, simulates the data, and runs the estimator all in one pipeline:
 
 ```{r}
-# A fully piped workflow from coefficient generation to estimation
-
 coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 2025)
 
 result_piped <- coefs |>
@@ -160,6 +164,6 @@ cat("Squared estimation error:", squared_error_piped, "\n")
 
 # Conclusion
 
-In this vignette, we walked through how to use the simulation functions in the `{fetwfe}` package. This pipeline makes it easy to iterate on simulation studies and assess the performance of the estimator under different conditions.
+In this vignette, we walked through how to use the simulation functions in the `{fetwfe}` package to simulate data and run simulations similar to the ones in the simulation studies section of [the FETWFE paper](https://arxiv.org/abs/2312.05985). This pipeline makes it easy to iterate on simulation studies and assess the performance of the estimator under different conditions.
 
 For additional details or help, please refer to the package documentation or contact me.

@@ -39,7 +39,7 @@ transform.}
 This function generates a coefficient vector \code{beta} for simulation studies of the fused
 extended two-way fixed effects estimator. Itreturns an S3 object of class
 \code{"FETWFE_coefs"} containing \code{beta} along with simulation parameters \code{R},
-\code{T}, and \code{d}.
+\code{T}, and \code{d}. See the simulation studies section of Faletto (2025) for details.
 }
 \details{
 The length of \code{beta} is given by
@@ -66,4 +66,10 @@ transform to \code{theta} using internal routines (e.g.,
   sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5)
 }
 
+}
+\references{
+Faletto, G (2025). Fused Extended Two-Way Fixed Effects for
+Difference-in-Differences with Staggered Adoptions.
+\emph{arXiv preprint arXiv:2312.05985}.
+\url{https://arxiv.org/abs/2312.05985}.
 }
