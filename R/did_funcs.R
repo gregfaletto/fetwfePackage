@@ -71,194 +71,194 @@
 #' @keywords internal
 #' @noRd
 prepXints <- function(
-  data,
-  time_var,
-  unit_var,
-  treatment,
-  covs,
-  response,
-  verbose = FALSE
+	data,
+	time_var,
+	unit_var,
+	treatment,
+	covs,
+	response,
+	verbose = FALSE
 ) {
-  # Check inputs
-  stopifnot(is.data.frame(data))
-  stopifnot(nrow(data) >= 4) # bare minimum, 2 units at 2 times
+	# Check inputs
+	stopifnot(is.data.frame(data))
+	stopifnot(nrow(data) >= 4) # bare minimum, 2 units at 2 times
 
-  stopifnot(is.character(time_var))
-  stopifnot(length(time_var) == 1)
-  stopifnot(time_var %in% colnames(data))
-  stopifnot(is.integer(data[[time_var]]))
+	stopifnot(is.character(time_var))
+	stopifnot(length(time_var) == 1)
+	stopifnot(time_var %in% colnames(data))
+	stopifnot(is.integer(data[[time_var]]))
 
-  stopifnot(is.character(unit_var))
-  stopifnot(length(unit_var) == 1)
-  stopifnot(unit_var %in% colnames(data))
-  stopifnot(is.character(data[[unit_var]]))
+	stopifnot(is.character(unit_var))
+	stopifnot(length(unit_var) == 1)
+	stopifnot(unit_var %in% colnames(data))
+	stopifnot(is.character(data[[unit_var]]))
 
-  stopifnot(is.character(treatment))
-  stopifnot(length(treatment) == 1)
-  stopifnot(treatment %in% colnames(data))
-  stopifnot(is.integer(data[[treatment]]))
-  stopifnot(all(data[, treatment] %in% c(0, 1)))
+	stopifnot(is.character(treatment))
+	stopifnot(length(treatment) == 1)
+	stopifnot(treatment %in% colnames(data))
+	stopifnot(is.integer(data[[treatment]]))
+	stopifnot(all(data[, treatment] %in% c(0, 1)))
 
-  if (length(covs) > 0) {
-    stopifnot(is.character(covs))
-    stopifnot(all(covs %in% colnames(data)))
-    for (cov in covs) {
-      stopifnot(is.numeric(data[[cov]]) | is.integer(data[[cov]]))
-    }
-  }
+	if (length(covs) > 0) {
+		stopifnot(is.character(covs))
+		stopifnot(all(covs %in% colnames(data)))
+		for (cov in covs) {
+			stopifnot(is.numeric(data[[cov]]) | is.integer(data[[cov]]))
+		}
+	}
 
-  stopifnot(is.character(response))
-  stopifnot(length(response) == 1)
-  stopifnot(response %in% colnames(data))
-  stopifnot(is.numeric(data[[response]]) | is.integer(data[[response]]))
+	stopifnot(is.character(response))
+	stopifnot(length(response) == 1)
+	stopifnot(response %in% colnames(data))
+	stopifnot(is.numeric(data[[response]]) | is.integer(data[[response]]))
 
-  stopifnot(is.logical(verbose))
-  stopifnot(length(verbose) == 1)
+	stopifnot(is.logical(verbose))
+	stopifnot(length(verbose) == 1)
 
-  # Identify cohorts, units, and times; remove units that were treated in
-  # first period; remove treatment variable after identifying cohorts
-  ret <- idCohorts(
-    df = data,
-    time_var = time_var,
-    unit_var = unit_var,
-    treat_var = treatment,
-    covs = covs
-  )
+	# Identify cohorts, units, and times; remove units that were treated in
+	# first period; remove treatment variable after identifying cohorts
+	ret <- idCohorts(
+		df = data,
+		time_var = time_var,
+		unit_var = unit_var,
+		treat_var = treatment,
+		covs = covs
+	)
 
-  data <- ret$df
-  cohorts <- ret$cohorts
-  units <- ret$units
-  times <- ret$times
+	data <- ret$df
+	cohorts <- ret$cohorts
+	units <- ret$units
+	times <- ret$times
 
-  rm(ret)
+	rm(ret)
 
-  N <- length(units)
-  T <- length(times)
-  R <- length(cohorts)
+	N <- length(units)
+	T <- length(times)
+	R <- length(cohorts)
 
-  stopifnot(R >= 1)
-  stopifnot(T >= 2)
-  stopifnot(R <= T - 1)
+	stopifnot(R >= 1)
+	stopifnot(T >= 2)
+	stopifnot(R <= T - 1)
 
-  N_treated <- length(unlist(cohorts))
+	N_treated <- length(unlist(cohorts))
 
-  stopifnot(N_treated <= N)
+	stopifnot(N_treated <= N)
 
-  N_UNTREATED <- N - N_treated
+	N_UNTREATED <- N - N_treated
 
-  # Get in-sample counts of units in each cohort
-  in_sample_counts <- rep(as.numeric(NA), R + 1)
+	# Get in-sample counts of units in each cohort
+	in_sample_counts <- rep(as.numeric(NA), R + 1)
 
-  for (r in 1:R) {
-    in_sample_counts[r + 1] <- length(cohorts[[r]])
-  }
+	for (r in 1:R) {
+		in_sample_counts[r + 1] <- length(cohorts[[r]])
+	}
 
-  in_sample_counts[1] <- N - N_treated
+	in_sample_counts[1] <- N - N_treated
 
-  stopifnot(all(in_sample_counts == round(in_sample_counts)))
-  in_sample_counts <- as.integer(in_sample_counts)
-  stopifnot(all(!is.na(in_sample_counts)))
-  stopifnot(sum(in_sample_counts) == N)
+	stopifnot(all(in_sample_counts == round(in_sample_counts)))
+	in_sample_counts <- as.integer(in_sample_counts)
+	stopifnot(all(!is.na(in_sample_counts)))
+	stopifnot(sum(in_sample_counts) == N)
 
-  if (in_sample_counts[1] == 0) {
-    warning(
-      "No untreated units found. It will not be possible to estimate treatment effects on this data set."
-    )
-  }
+	if (in_sample_counts[1] == 0) {
+		warning(
+			"No untreated units found. It will not be possible to estimate treatment effects on this data set."
+		)
+	}
 
-  names(in_sample_counts) <- c("Never_treated", names(cohorts))
+	names(in_sample_counts) <- c("Never_treated", names(cohorts))
 
-  # Replace time-varying covariates with value in first (pre-treated) period;
-  # remove covariates with any missing values in this period
-  ret <- processCovs(
-    df = data,
-    units = units,
-    unit_var = unit_var,
-    times = times,
-    time_var = time_var,
-    covs = covs,
-    resp_var = response,
-    T = T,
-    verbose = verbose
-  )
+	# Replace time-varying covariates with value in first (pre-treated) period;
+	# remove covariates with any missing values in this period
+	ret <- processCovs(
+		df = data,
+		units = units,
+		unit_var = unit_var,
+		times = times,
+		time_var = time_var,
+		covs = covs,
+		resp_var = response,
+		T = T,
+		verbose = verbose
+	)
 
-  data <- ret$df
-  covs <- ret$covs
+	data <- ret$df
+	covs <- ret$covs
 
-  rm(ret)
+	rm(ret)
 
-  d <- length(covs)
+	d <- length(covs)
 
-  stopifnot(all(!is.na(data)))
-  stopifnot(nrow(data) == N * T)
+	stopifnot(all(!is.na(data)))
+	stopifnot(nrow(data) == N * T)
 
-  # Add cohort dummies, time dummies, and treatment variables. (Names of
-  # cohorts must be same as times of treatment.) Also, center response.
-  ret <- addDummies(
-    df = data,
-    cohorts = cohorts,
-    times = times,
-    N = N,
-    T = T,
-    unit_var = unit_var,
-    time_var = time_var,
-    resp_var = response,
-    n_cohorts = R
-  )
+	# Add cohort dummies, time dummies, and treatment variables. (Names of
+	# cohorts must be same as times of treatment.) Also, center response.
+	ret <- addDummies(
+		df = data,
+		cohorts = cohorts,
+		times = times,
+		N = N,
+		T = T,
+		unit_var = unit_var,
+		time_var = time_var,
+		resp_var = response,
+		n_cohorts = R
+	)
 
-  y <- ret$y # response
-  cohort_treat_names <- ret$cohort_treat_names # List of names of treatment
-  # dummies for each cohort
-  time_var_names <- ret$time_var_names # Names of time dummies
-  cohort_vars <- ret$cohort_vars # Names of cohort dummies
-  first_inds <- ret$first_inds # Among blocks of treatment variables, indices
-  # of first treatment effects corresponding to each cohort
-  cohort_var_mat <- ret$cohort_var_mat # Cohort dummies; R columns total
-  time_var_mat <- ret$time_var_mat # Time dummies; T - 1 columns total
-  treat_var_mat <- ret$treat_var_mat # Treatment dummies
+	y <- ret$y # response
+	cohort_treat_names <- ret$cohort_treat_names # List of names of treatment
+	# dummies for each cohort
+	time_var_names <- ret$time_var_names # Names of time dummies
+	cohort_vars <- ret$cohort_vars # Names of cohort dummies
+	first_inds <- ret$first_inds # Among blocks of treatment variables, indices
+	# of first treatment effects corresponding to each cohort
+	cohort_var_mat <- ret$cohort_var_mat # Cohort dummies; R columns total
+	time_var_mat <- ret$time_var_mat # Time dummies; T - 1 columns total
+	treat_var_mat <- ret$treat_var_mat # Treatment dummies
 
-  num_treats <- ncol(treat_var_mat)
+	num_treats <- ncol(treat_var_mat)
 
-  stopifnot(num_treats == length(unlist(cohort_treat_names)))
-  stopifnot(all(covs %in% colnames(data)))
+	stopifnot(num_treats == length(unlist(cohort_treat_names)))
+	stopifnot(all(covs %in% colnames(data)))
 
-  stopifnot(is.numeric(ncol(treat_var_mat)) | is.integer(ncol(treat_var_mat)))
-  stopifnot(ncol(treat_var_mat) >= 1)
+	stopifnot(is.numeric(ncol(treat_var_mat)) | is.integer(ncol(treat_var_mat)))
+	stopifnot(ncol(treat_var_mat) >= 1)
 
-  covariate_mat <- as.matrix(data[, covs]) # Covariates
+	covariate_mat <- as.matrix(data[, covs]) # Covariates
 
-  rm(ret)
-  rm(data)
+	rm(ret)
+	rm(data)
 
-  #### Create matrix with all interactions
-  p <- getP(R = R, T = T, d = d, num_treats = num_treats)
+	#### Create matrix with all interactions
+	p <- getP(R = R, T = T, d = d, num_treats = num_treats)
 
-  stopifnot(ncol(cohort_var_mat) == R)
+	stopifnot(ncol(cohort_var_mat) == R)
 
-  X_ints <- genXintsData(
-    cohort_fe = cohort_var_mat,
-    time_fe = time_var_mat,
-    X_long = covariate_mat,
-    treat_mat_long = treat_var_mat,
-    N = N,
-    R = R,
-    T = T,
-    d = d,
-    N_UNTREATED = N_UNTREATED,
-    p = p
-  )
+	X_ints <- genXintsData(
+		cohort_fe = cohort_var_mat,
+		time_fe = time_var_mat,
+		X_long = covariate_mat,
+		treat_mat_long = treat_var_mat,
+		N = N,
+		R = R,
+		T = T,
+		d = d,
+		N_UNTREATED = N_UNTREATED,
+		p = p
+	)
 
-  return(list(
-    X_ints = X_ints,
-    y = y,
-    N = N,
-    T = T,
-    d = d,
-    p = p,
-    in_sample_counts = in_sample_counts,
-    num_treats = num_treats,
-    first_inds = first_inds
-  ))
+	return(list(
+		X_ints = X_ints,
+		y = y,
+		N = N,
+		T = T,
+		d = d,
+		p = p,
+		in_sample_counts = in_sample_counts,
+		num_treats = num_treats,
+		first_inds = first_inds
+	))
 }
 
 #' Core Estimation Logic for Fused Extended Two-Way Fixed Effects
@@ -392,747 +392,752 @@ prepXints <- function(
 #' @keywords internal
 #' @noRd
 fetwfe_core <- function(
-  X_ints,
-  y,
-  in_sample_counts,
-  N,
-  T,
-  d,
-  p,
-  num_treats,
-  first_inds,
-  indep_counts = NA,
-  sig_eps_sq = NA,
-  sig_eps_c_sq = NA,
-  lambda.max = NA,
-  lambda.min = NA,
-  nlambda = 100,
-  q = 0.5,
-  verbose = FALSE,
-  alpha = 0.05,
-  add_ridge = FALSE
+	X_ints,
+	y,
+	in_sample_counts,
+	N,
+	T,
+	d,
+	p,
+	num_treats,
+	first_inds,
+	indep_counts = NA,
+	sig_eps_sq = NA,
+	sig_eps_c_sq = NA,
+	lambda.max = NA,
+	lambda.min = NA,
+	nlambda = 100,
+	q = 0.5,
+	verbose = FALSE,
+	alpha = 0.05,
+	add_ridge = FALSE
 ) {
-  # ... (rest of the function code)
-  # NOTE: The existing stopifnot calls provide good internal checks.
-  # Consider if any should be user-facing `stop()` messages if triggered by bad inputs
-  # that somehow bypass `checkFetwfeInputs`.
-
-  # ... (Function body as provided)
-
-  # Ensure all paths through the function that return have the documented list structure.
-  # For instance, the early returns when `lambda_star_model_size == 0` or
-  # `length(sel_treat_inds_shifted) == 0` should also return all documented fields,
-  # filling with NA or appropriate defaults where necessary.
-  # The current code for these early returns seems to do this.
-
-  # Example for an early return structure (conceptual):
-  # if (some_early_exit_condition) {
-  #   return(list(
-  #     in_sample_att_hat = 0, in_sample_att_se = ifelse(q < 1, 0, NA), ...,
-  #     N = N, T = T, R = R, d = d, p = p # Ensure all documented fields are present
-  #   ))
-  # }
-  R <- length(in_sample_counts) - 1 # This needs to be defined before the early exits
-  # if c_names relies on it.
-  # c_names is used in catt_df_to_ret.
-  c_names <- names(in_sample_counts)[2:(R + 1)]
-
-  # (Actual function body as provided in the original file)
-  # ...
-  # Check inputs
-  #
-  #
-
-  stopifnot(N >= 2) # bare minimum, 2 units at 2 times
-
-  stopifnot(T >= 2) # bare minimum, 2 units at 2 times
-
-  if (any(!is.na(sig_eps_sq))) {
-    stopifnot(is.numeric(sig_eps_sq) | is.integer(sig_eps_sq))
-    stopifnot(length(sig_eps_sq) == 1)
-    stopifnot(sig_eps_sq >= 0)
-  }
-
-  if (any(!is.na(sig_eps_c_sq))) {
-    stopifnot(is.numeric(sig_eps_c_sq) | is.integer(sig_eps_c_sq))
-    stopifnot(length(sig_eps_c_sq) == 1)
-    stopifnot(sig_eps_c_sq >= 0)
-  }
-
-  stopifnot(sum(in_sample_counts) == N)
-  stopifnot(all(in_sample_counts >= 0))
-  if (in_sample_counts[1] == 0) {
-    stop(
-      "No never-treated units detected in data to fit model; estimating treatment effects is not possible"
-    )
-  }
-  if (length(names(in_sample_counts)) != length(in_sample_counts)) {
-    stop(
-      "in_sample_counts must have all unique named entries (with names corresponding to the names of each cohort)"
-    )
-  }
-
-  if (
-    length(names(in_sample_counts)) != length(unique(names(in_sample_counts)))
-  ) {
-    stop(
-      "in_sample_counts must have all unique named entries (with names corresponding to the names of each cohort)"
-    )
-  }
-
-  # R <- length(in_sample_counts) - 1 # Moved up
-  stopifnot(R >= 1)
-  stopifnot(R <= T - 1)
-
-  indep_count_data_available <- FALSE
-  if (any(!is.na(indep_counts))) {
-    if (sum(indep_counts) != N) {
-      stop(
-        "Number of units in independent cohort count data does not equal number of units in data to be used to fit model."
-      )
-    }
-    if (length(indep_counts) != length(in_sample_counts)) {
-      stop(
-        "Number of counts in independent counts does not match number of cohorts in data to be used to fit model."
-      )
-    }
-    if (any(indep_counts <= 0)) {
-      stop("At least one cohort in the independent count data has 0 members")
-    }
-    indep_count_data_available <- TRUE
-  }
-
-  if (any(!is.na(lambda.max))) {
-    stopifnot(is.numeric(lambda.max) | is.integer(lambda.max))
-    stopifnot(length(lambda.max) == 1)
-    stopifnot(lambda.max >= 0)
-  }
-
-  if (any(!is.na(lambda.min))) {
-    stopifnot(is.numeric(lambda.min) | is.integer(lambda.min))
-    stopifnot(length(lambda.min) == 1)
-    stopifnot(lambda.min >= 0)
-    if (any(!is.na(lambda.max))) {
-      stopifnot(lambda.max >= lambda.min)
-    }
-  }
-
-  stopifnot(is.numeric(q) | is.integer(q))
-  stopifnot(length(q) == 1)
-  stopifnot(q > 0)
-  stopifnot(q <= 2)
-
-  stopifnot(is.logical(verbose))
-  stopifnot(length(verbose) == 1)
-
-  stopifnot(is.numeric(alpha))
-  stopifnot(length(alpha) == 1)
-  stopifnot(alpha > 0)
-  stopifnot(alpha < 1)
-
-  stopifnot(is.logical(add_ridge))
-  stopifnot(length(add_ridge) == 1)
-
-  #
-  #
-  # Step 1: change coordinates of data so that regular bridge regression
-  # penalty applied to transformed dataframe results in FETWFE penalty applied
-  # to original data
-  #
-  #
-
-  if (verbose) {
-    message("Transforming matrix...")
-  }
-
-  # Transform matrix (change of coordinates so that fitting regular bridge
-  # regression results in FETWFE fusion penalties)
-  X_mod <- transformXintImproved(
-    X_ints,
-    N = N,
-    T = T,
-    R = R,
-    d = d,
-    num_treats = num_treats,
-    first_inds = first_inds
-  )
-
-  #
-  #
-  # Step 2: get (known or estimated) covariance matrix within observations
-  # (due to umit-level random effects) and pre-multiply X and y by
-  # inverse square root matrix
-  #
-  #
-
-  if (verbose) {
-    message("Getting omega sqrt inverse estimate...")
-    t0 <- Sys.time()
-  }
-
-  if (is.na(sig_eps_sq) | is.na(sig_eps_c_sq)) {
-    # Get omega_sqrt_inv matrix to multiply y and X_mod by on the left
-    omega_res <- estOmegaSqrtInv(
-      y,
-      X_ints,
-      N = N,
-      T = T,
-      p = p
-    )
-
-    sig_eps_sq <- omega_res$sig_eps_sq
-    sig_eps_c_sq <- omega_res$sig_eps_c_sq
-
-    rm(omega_res)
-
-    if (verbose) {
-      message("Done! Time to estimate noise variances:")
-      message(Sys.time() - t0)
-      t0 <- Sys.time()
-    }
-  }
-
-  stopifnot(!is.na(sig_eps_sq) & !is.na(sig_eps_c_sq))
-
-  Omega <- diag(rep(sig_eps_sq, T)) + matrix(sig_eps_c_sq, T, T)
-
-  Omega_sqrt_inv <- expm::sqrtm(solve(Omega))
-
-  if (verbose) {
-    message("Time to get sqrt inverse matrix:")
-    message(Sys.time() - t0)
-  }
-
-  y_final <- kronecker(diag(N), sqrt(sig_eps_sq) * Omega_sqrt_inv) %*% y
-  X_final <- kronecker(diag(N), sqrt(sig_eps_sq) * Omega_sqrt_inv) %*% X_mod
-
-  #
-  #
-  # Optional: if using ridge regularization on untransformed coefficients,
-  # add those rows now
-  #
-  #
-
-  X_final_scaled <- my_scale(X_final)
-  scale_center <- attr(X_final_scaled, "scaled:center")
-  scale_scale <- attr(X_final_scaled, "scaled:scale")
-
-  if (add_ridge) {
-    # Add rows to X_final. First need to get D^{-1}:
-    D_inverse <- genFullInvFusionTransformMat(
-      first_inds = first_inds,
-      T = T,
-      R = R,
-      d = d,
-      num_treats = num_treats
-    )
-
-    stopifnot(ncol(D_inverse) == ncol(X_final))
-    stopifnot(ncol(D_inverse) == ncol(X_final_scaled))
-
-    # Now add rows
-    lambda_ridge <- 0.00001 * (sig_eps_sq + sig_eps_c_sq) * sqrt(p / (N * T))
-
-    X_final_scaled <- rbind(X_final_scaled, sqrt(lambda_ridge) * D_inverse)
-    y_final <- c(y_final, rep(0, nrow(D_inverse)))
-
-    stopifnot(nrow(X_final_scaled) == length(y_final))
-    stopifnot(nrow(X_final_scaled) == N * T + p)
-  }
-
-  #
-  #
-  # Step 3: get cohort-specific sample proportions (estimated treatment
-  # probabilities)
-  #
-  #
-
-  cohort_probs <- in_sample_counts[2:(R + 1)] /
-    sum(in_sample_counts[2:(R + 1)])
-
-  stopifnot(all(!is.na(cohort_probs)))
-  stopifnot(all(cohort_probs >= 0))
-  stopifnot(all(cohort_probs <= 1))
-  stopifnot(length(cohort_probs) == R)
-  stopifnot(abs(sum(cohort_probs) - 1) < 10^(-6))
-
-  cohort_probs_overall <- in_sample_counts[2:(R + 1)] / N
-
-  stopifnot(
-    abs(1 - sum(cohort_probs_overall) - in_sample_counts[1] / N) < 10^(-6)
-  )
-
-  if (indep_count_data_available) {
-    indep_cohort_probs <- indep_counts[2:(R + 1)] /
-      sum(indep_counts[2:(R + 1)])
-
-    stopifnot(all(!is.na(indep_cohort_probs)))
-    stopifnot(all(indep_cohort_probs >= 0))
-    stopifnot(all(indep_cohort_probs <= 1))
-    stopifnot(length(indep_cohort_probs) == R)
-    stopifnot(abs(sum(indep_cohort_probs) - 1) < 10^(-6))
-
-    indep_cohort_probs_overall <- indep_counts[2:(R + 1)] / N
-
-    stopifnot(
-      abs(
-        1 -
-          sum(
-            indep_cohort_probs_overall
-          ) -
-          indep_counts[1] / N
-      ) <
-        10^(-6)
-    )
-  } else {
-    indep_cohort_probs <- NA
-    indep_cohort_probs_overall <- NA
-  }
-
-  #
-  #
-  # Step 4: estimate bridge regression and extract fitted coefficients
-  #
-  #
-
-  # Estimate bridge regression
-  if (verbose) {
-    message("Estimating bridge regression...")
-    t0 <- Sys.time()
-  }
-
-  if (!is.na(lambda.max) & !is.na(lambda.min)) {
-    fit <- grpreg::gBridge(
-      X = X_final_scaled,
-      y = y_final,
-      gamma = q,
-      lambda.max = lambda.max,
-      lambda.min = lambda.min,
-      nlambda = nlambda
-    )
-  } else if (!is.na(lambda.max)) {
-    fit <- grpreg::gBridge(
-      X = X_final_scaled,
-      y = y_final,
-      gamma = q,
-      lambda.max = lambda.max,
-      nlambda = nlambda
-    )
-  } else if (!is.na(lambda.min)) {
-    fit <- grpreg::gBridge(
-      X = X_final_scaled,
-      y = y_final,
-      gamma = q,
-      lambda.min = lambda.min,
-      nlambda = nlambda
-    )
-  } else {
-    fit <- grpreg::gBridge(
-      X = X_final_scaled,
-      y = y_final,
-      gamma = q,
-      nlambda = nlambda
-    )
-  }
-
-  if (verbose) {
-    message("Done! Time for estimation:")
-    message(Sys.time() - t0)
-  }
-
-  # For diagnostics later, store largest and smallest lambda, as well as
-  # corresponding smallest and largest model sizes, to return.
-  lambda.max <- max(fit$lambda)
-  lambda.max_model_size <- sum(fit$beta[, ncol(fit$beta)] != 0)
-
-  lambda.min <- min(fit$lambda)
-  lambda.min_model_size <- sum(fit$beta[, 1] != 0)
-
-  # Select a single set of fitted coefficients by using BIC to choose among
-  # the penalties that were fitted
-  res <- getBetaBIC(
-    fit,
-    N = N,
-    T = T,
-    p = p,
-    X_mod = X_mod,
-    y = y,
-    scale_center = scale_center,
-    scale_scale = scale_scale
-  )
-
-  theta_hat <- res$theta_hat # This includes intercept
-  lambda_star_ind <- res$lambda_star_ind
-  lambda_star_model_size <- res$lambda_star_model_size
-
-  lambda_star <- fit$lambda[lambda_star_ind]
-
-  # c_names <- names(in_sample_counts)[2:(R + 1)] # Moved definition up
-  stopifnot(length(c_names) == R)
-
-  # Indices corresponding to base treatment effects
-  treat_inds <- getTreatInds(R = R, T = T, d = d, num_treats = num_treats)
-
-  if (d > 0) {
-    stopifnot(max(treat_inds) + 1 <= p)
-    stopifnot(
-      max(treat_inds) == R + T - 1 + d + R * d + (T - 1) * d + num_treats
-    )
-
-    treat_int_inds <- (max(treat_inds) + 1):p
-
-    stopifnot(length(treat_int_inds) == num_treats * d)
-  } else {
-    stopifnot(max(treat_inds) <= p)
-    stopifnot(max(treat_inds) == R + T - 1 + num_treats)
-
-    treat_int_inds <- c()
-  }
-
-  # Handle edge case where no features are selected (model_size includes intercept)
-  if (lambda_star_model_size <= 1 && all(theta_hat[2:(p + 1)] == 0)) {
-    # only intercept might be non-zero
-    if (verbose) {
-      message(
-        "No features selected (or only intercept); all treatment effects estimated to be 0."
-      )
-    }
-
-    if (q < 1) {
-      ret_se <- 0
-    } else {
-      ret_se <- NA
-    }
-
-    catt_df_to_ret <- data.frame(
-      Cohort = c_names,
-      `Estimated TE` = rep(0, R),
-      SE = rep(ret_se, R),
-      ConfIntLow = rep(ret_se, R),
-      ConfIntHigh = rep(ret_se, R),
-      check.names = FALSE
-    )
-
-    return(list(
-      in_sample_att_hat = 0,
-      in_sample_att_se = ret_se,
-      in_sample_att_se_no_prob = ret_se,
-      indep_att_hat = 0,
-      indep_att_se = ret_se,
-      catt_hats = setNames(rep(0, R), c_names),
-      catt_ses = setNames(rep(ret_se, R), c_names),
-      catt_df = catt_df_to_ret,
-      theta_hat = theta_hat, # Includes intercept
-      beta_hat = rep(0, p), # Slopes are all zero
-      treat_inds = treat_inds,
-      treat_int_inds = treat_int_inds,
-      cohort_probs = cohort_probs,
-      indep_cohort_probs = indep_cohort_probs,
-      sig_eps_sq = sig_eps_sq,
-      sig_eps_c_sq = sig_eps_c_sq,
-      lambda.max = lambda.max,
-      lambda.max_model_size = lambda.max_model_size,
-      lambda.min = lambda.min,
-      lambda.min_model_size = lambda.min_model_size,
-      lambda_star = lambda_star,
-      lambda_star_model_size = lambda_star_model_size,
-      X_ints = X_ints,
-      y = y,
-      X_final = X_final,
-      y_final = y_final,
-      N = N,
-      T = T,
-      R = R,
-      d = d,
-      p = p
-    ))
-  }
-
-  # intercept
-  # eta_hat <- theta_hat[1] # theta_hat from getBetaBIC already has intercept as first element
-
-  # estimated coefficients (slopes in transformed space)
-  theta_hat_slopes <- theta_hat[2:(p + 1)]
-
-  # Indices of selected features in transformed feature space (among slopes)
-  sel_feat_inds <- which(theta_hat_slopes != 0)
-
-  sel_treat_inds <- sel_feat_inds[sel_feat_inds %in% treat_inds]
-
-  stopifnot(length(sel_treat_inds) == length(unique(sel_treat_inds)))
-  stopifnot(length(sel_treat_inds) <= length(sel_feat_inds))
-  stopifnot(length(sel_treat_inds) <= length(treat_inds))
-  stopifnot(is.integer(sel_treat_inds) | is.numeric(sel_treat_inds))
-
-  # Shift sel_treat_inds to be relative to the start of the treat_inds block
-  # This seems to be what sel_treat_inds_shifted intends
-  # The current sel_treat_inds_shifted calculation appears complex and might be error-prone.
-  # A simpler way:
-  # 1. Get theta_hat_slopes[treat_inds] -> these are the transformed treatment coefficients
-  # 2. Find which of these are non-zero: `which(theta_hat_slopes[treat_inds] != 0)` -> these are indices *within* the treat_inds block.
-  # Let's call this `sel_treat_inds_relative_to_block`.
-  # `sel_treat_inds` itself contains the global indices of selected treatment features.
-  # So `theta_hat_slopes[sel_treat_inds]` are the non-zero transformed treatment coefs.
-
-  theta_hat_treat_block_transformed = theta_hat_slopes[treat_inds]
-  sel_treat_inds_shifted <- which(theta_hat_treat_block_transformed != 0) # these are 1 to num_treats
-
-  stopifnot(all(sel_treat_inds_shifted >= 1))
-  stopifnot(all(sel_treat_inds_shifted <= num_treats))
-
-  # Handle edge case where no treatment features selected
-  if (length(sel_treat_inds_shifted) == 0) {
-    if (verbose) {
-      message(
-        "No treatment features selected; all treatment effects estimated to be 0."
-      )
-    }
-
-    if (q < 1) {
-      ret_se <- 0
-    } else {
-      ret_se <- NA
-    }
-
-    catt_df_to_ret <- data.frame(
-      Cohort = c_names,
-      `Estimated TE` = rep(0, R),
-      SE = rep(ret_se, R),
-      ConfIntLow = rep(ret_se, R),
-      ConfIntHigh = rep(ret_se, R),
-      check.names = FALSE
-    )
-
-    # Need to untransform theta_hat_slopes to get beta_hat for consistency
-    beta_hat_early_exit <- untransformCoefImproved(
-      theta_hat_slopes, # Pass slopes only
-      first_inds,
-      T = T,
-      R = R,
-      p = p,
-      d = d,
-      num_treats = num_treats
-    )
-    if (add_ridge) {
-      beta_hat_early_exit <- beta_hat_early_exit * (1 + lambda_ridge)
-    }
-
-    return(list(
-      in_sample_att_hat = 0,
-      in_sample_att_se = ret_se,
-      in_sample_att_se_no_prob = ret_se,
-      indep_att_hat = 0,
-      indep_att_se = ret_se,
-      catt_hats = setNames(rep(0, R), c_names),
-      catt_ses = setNames(rep(ret_se, R), c_names),
-      catt_df = catt_df_to_ret,
-      theta_hat = theta_hat, # Full theta_hat with intercept
-      beta_hat = beta_hat_early_exit, # Untransformed slopes
-      treat_inds = treat_inds,
-      treat_int_inds = treat_int_inds,
-      cohort_probs = cohort_probs,
-      indep_cohort_probs = indep_cohort_probs,
-      sig_eps_sq = sig_eps_sq,
-      sig_eps_c_sq = sig_eps_c_sq,
-      lambda.max = lambda.max,
-      lambda.max_model_size = lambda.max_model_size,
-      lambda.min = lambda.min,
-      lambda.min_model_size = lambda.min_model_size,
-      lambda_star = lambda_star,
-      lambda_star_model_size = lambda_star_model_size,
-      X_ints = X_ints,
-      y = y,
-      X_final = X_final,
-      y_final = y_final,
-      N = N,
-      T = T,
-      R = R,
-      d = d,
-      p = p
-    ))
-  }
-
-  #
-  #
-  # Step 5: transform estimated coefficients back to original feature
-  # space
-  #
-  #
-
-  beta_hat <- untransformCoefImproved(
-    theta_hat_slopes, # Pass slopes only
-    first_inds,
-    T = T,
-    R = R,
-    p = p,
-    d = d,
-    num_treats = num_treats
-  )
-
-  # If using ridge regularization, multiply the "naive" estimated coefficients
-  # by 1 + lambda_ridge, similar to suggestion in original elastic net paper.
-  if (add_ridge) {
-    beta_hat <- beta_hat * (1 + lambda_ridge)
-  }
-
-  # Get actual estimated treatment effects (in original, untransformed space)
-  tes <- beta_hat[treat_inds]
-
-  stopifnot(length(tes) == num_treats)
-  # Checks based on transformed coefficients (theta_hat_slopes)
-  stopifnot(all(theta_hat_slopes[treat_inds][sel_treat_inds_shifted] != 0))
-  stopifnot(all(
-    theta_hat_slopes[treat_inds][setdiff(
-      1:num_treats,
-      sel_treat_inds_shifted
-    )] ==
-      0
-  ))
-
-  stopifnot(length(first_inds) == R)
-  stopifnot(max(first_inds) <= num_treats)
-
-  stopifnot(length(sel_feat_inds) > 0) # sel_feat_inds are indices in theta_hat_slopes
-  stopifnot(length(sel_treat_inds_shifted) > 0) # sel_treat_inds_shifted are indices within the treat_inds block of theta_hat_slopes
-
-  #
-  #
-  # Step 6: calculate cohort-specific treatment effects and standard
-  # errors
-  #
-  #
-
-  res <- getCohortATTsFinal(
-    X_final = X_final, # This is X_mod * GLS_transform_matrix
-    sel_feat_inds = sel_feat_inds, # Indices of non-zero elements in theta_hat_slopes
-    treat_inds = treat_inds, # Global indices for treatment effects
-    num_treats = num_treats,
-    first_inds = first_inds,
-    sel_treat_inds_shifted = sel_treat_inds_shifted, # Indices (1 to num_treats) of non-zero transformed treat. coefs.
-    c_names = c_names,
-    tes = tes, # Untransformed treatment effect estimates (beta_hat[treat_inds])
-    sig_eps_sq = sig_eps_sq,
-    R = R,
-    N = N,
-    T = T,
-    fused = TRUE, # This parameter might be redundant if this function is only for fused
-    calc_ses = q < 1,
-    p = p, # Total number of original parameters (columns in X_ints)
-    alpha = alpha
-  )
-
-  cohort_te_df <- res$cohort_te_df
-  cohort_tes <- res$cohort_tes
-  cohort_te_ses <- res$cohort_te_ses
-  psi_mat <- res$psi_mat
-  gram_inv <- res$gram_inv
-  d_inv_treat_sel <- res$d_inv_treat_sel
-  calc_ses <- res$calc_ses
-
-  rm(res)
-
-  if (calc_ses) {
-    stopifnot(nrow(d_inv_treat_sel) == num_treats)
-    stopifnot(ncol(d_inv_treat_sel) == length(sel_treat_inds_shifted))
-  }
-
-  #
-  #
-  # Step 7: calculate overall average treatment effect on treated units
-  #
-  #
-
-  # Get overal estimated ATT!
-  # theta_hat_treat_sel needs to be the selected non-zero *transformed* treatment coefficients
-  # sel_treat_inds contains global indices of selected transformed features that are treatment effects
-  theta_hat_treat_sel_for_att <- theta_hat_slopes[sel_treat_inds]
-
-  in_sample_te_results <- getTeResults2(
-    sig_eps_sq = sig_eps_sq,
-    N = N,
-    T = T,
-    R = R,
-    num_treats = num_treats,
-    cohort_tes = cohort_tes, # CATTs (point estimates)
-    cohort_probs = cohort_probs, # In-sample pi_r | treated
-    psi_mat = psi_mat,
-    gram_inv = gram_inv,
-    sel_treat_inds_shifted = sel_treat_inds_shifted,
-    tes = tes, # Untransformed treatment effect estimates beta_hat[treat_inds]
-    d_inv_treat_sel = d_inv_treat_sel,
-    cohort_probs_overall = cohort_probs_overall, # In-sample pi_r (unconditional on treated)
-    first_inds = first_inds,
-    theta_hat_treat_sel = theta_hat_treat_sel_for_att, # Selected non-zero transformed treat coefs
-    calc_ses = calc_ses,
-    indep_probs = FALSE
-  )
-
-  in_sample_att_hat <- in_sample_te_results$att_hat
-  in_sample_att_se <- in_sample_te_results$att_te_se
-  in_sample_att_se_no_prob <- in_sample_te_results$att_te_se_no_prob
-
-  if (indep_count_data_available) {
-    indep_te_results <- getTeResults2(
-      sig_eps_sq = sig_eps_sq,
-      N = N,
-      T = T,
-      R = R,
-      num_treats = num_treats,
-      cohort_tes = cohort_tes,
-      cohort_probs = indep_cohort_probs, # indep pi_r | treated
-      psi_mat = psi_mat,
-      gram_inv = gram_inv,
-      sel_treat_inds_shifted = sel_treat_inds_shifted,
-      tes = tes,
-      d_inv_treat_sel = d_inv_treat_sel,
-      cohort_probs_overall = indep_cohort_probs_overall, # indep pi_r (unconditional)
-      first_inds = first_inds,
-      theta_hat_treat_sel = theta_hat_treat_sel_for_att,
-      calc_ses = calc_ses,
-      indep_probs = TRUE
-    )
-    indep_att_hat <- indep_te_results$att_hat
-    indep_att_se <- indep_te_results$att_te_se
-    # indep_att_se_no_prob <- indep_te_results$att_te_se_no_prob # This was commented out
-  } else {
-    indep_att_hat <- NA
-    indep_att_se <- NA
-    # indep_att_se_no_prob <- NA # Keep commented for consistency
-  }
-
-  return(list(
-    in_sample_att_hat = in_sample_att_hat,
-    in_sample_att_se = in_sample_att_se,
-    in_sample_att_se_no_prob = in_sample_att_se_no_prob,
-    indep_att_hat = indep_att_hat,
-    indep_att_se = indep_att_se,
-    catt_hats = cohort_tes, # Already named if applicable from getCohortATTsFinal
-    catt_ses = cohort_te_ses, # Already named if applicable
-    catt_df = cohort_te_df,
-    theta_hat = theta_hat, # Full theta_hat (with intercept)
-    beta_hat = beta_hat, # Untransformed slopes
-    treat_inds = treat_inds,
-    treat_int_inds = treat_int_inds,
-    cohort_probs = cohort_probs,
-    indep_cohort_probs = indep_cohort_probs,
-    sig_eps_sq = sig_eps_sq,
-    sig_eps_c_sq = sig_eps_c_sq,
-    lambda.max = lambda.max,
-    lambda.max_model_size = lambda.max_model_size,
-    lambda.min = lambda.min,
-    lambda.min_model_size = lambda.min_model_size,
-    lambda_star = lambda_star,
-    lambda_star_model_size = lambda_star_model_size,
-    X_ints = X_ints,
-    y = y,
-    X_final = X_final,
-    y_final = y_final,
-    N = N,
-    T = T,
-    R = R,
-    d = d,
-    p = p
-  ))
+	# ... (rest of the function code)
+	# NOTE: The existing stopifnot calls provide good internal checks.
+	# Consider if any should be user-facing `stop()` messages if triggered by bad inputs
+	# that somehow bypass `checkFetwfeInputs`.
+
+	# ... (Function body as provided)
+
+	# Ensure all paths through the function that return have the documented list structure.
+	# For instance, the early returns when `lambda_star_model_size == 0` or
+	# `length(sel_treat_inds_shifted) == 0` should also return all documented fields,
+	# filling with NA or appropriate defaults where necessary.
+	# The current code for these early returns seems to do this.
+
+	# Example for an early return structure (conceptual):
+	# if (some_early_exit_condition) {
+	#   return(list(
+	#     in_sample_att_hat = 0, in_sample_att_se = ifelse(q < 1, 0, NA), ...,
+	#     N = N, T = T, R = R, d = d, p = p # Ensure all documented fields are present
+	#   ))
+	# }
+	R <- length(in_sample_counts) - 1 # This needs to be defined before the early exits
+	# if c_names relies on it.
+	# c_names is used in catt_df_to_ret.
+	c_names <- names(in_sample_counts)[2:(R + 1)]
+
+	# (Actual function body as provided in the original file)
+	# ...
+	# Check inputs
+	#
+	#
+
+	stopifnot(N >= 2) # bare minimum, 2 units at 2 times
+
+	stopifnot(T >= 2) # bare minimum, 2 units at 2 times
+
+	if (any(!is.na(sig_eps_sq))) {
+		stopifnot(is.numeric(sig_eps_sq) | is.integer(sig_eps_sq))
+		stopifnot(length(sig_eps_sq) == 1)
+		stopifnot(sig_eps_sq >= 0)
+	}
+
+	if (any(!is.na(sig_eps_c_sq))) {
+		stopifnot(is.numeric(sig_eps_c_sq) | is.integer(sig_eps_c_sq))
+		stopifnot(length(sig_eps_c_sq) == 1)
+		stopifnot(sig_eps_c_sq >= 0)
+	}
+
+	stopifnot(sum(in_sample_counts) == N)
+	stopifnot(all(in_sample_counts >= 0))
+	if (in_sample_counts[1] == 0) {
+		stop(
+			"No never-treated units detected in data to fit model; estimating treatment effects is not possible"
+		)
+	}
+	if (length(names(in_sample_counts)) != length(in_sample_counts)) {
+		stop(
+			"in_sample_counts must have all unique named entries (with names corresponding to the names of each cohort)"
+		)
+	}
+
+	if (
+		length(names(in_sample_counts)) !=
+			length(unique(names(in_sample_counts)))
+	) {
+		stop(
+			"in_sample_counts must have all unique named entries (with names corresponding to the names of each cohort)"
+		)
+	}
+
+	# R <- length(in_sample_counts) - 1 # Moved up
+	stopifnot(R >= 1)
+	stopifnot(R <= T - 1)
+
+	indep_count_data_available <- FALSE
+	if (any(!is.na(indep_counts))) {
+		if (sum(indep_counts) != N) {
+			stop(
+				"Number of units in independent cohort count data does not equal number of units in data to be used to fit model."
+			)
+		}
+		if (length(indep_counts) != length(in_sample_counts)) {
+			stop(
+				"Number of counts in independent counts does not match number of cohorts in data to be used to fit model."
+			)
+		}
+		if (any(indep_counts <= 0)) {
+			stop(
+				"At least one cohort in the independent count data has 0 members"
+			)
+		}
+		indep_count_data_available <- TRUE
+	}
+
+	if (any(!is.na(lambda.max))) {
+		stopifnot(is.numeric(lambda.max) | is.integer(lambda.max))
+		stopifnot(length(lambda.max) == 1)
+		stopifnot(lambda.max >= 0)
+	}
+
+	if (any(!is.na(lambda.min))) {
+		stopifnot(is.numeric(lambda.min) | is.integer(lambda.min))
+		stopifnot(length(lambda.min) == 1)
+		stopifnot(lambda.min >= 0)
+		if (any(!is.na(lambda.max))) {
+			stopifnot(lambda.max >= lambda.min)
+		}
+	}
+
+	stopifnot(is.numeric(q) | is.integer(q))
+	stopifnot(length(q) == 1)
+	stopifnot(q > 0)
+	stopifnot(q <= 2)
+
+	stopifnot(is.logical(verbose))
+	stopifnot(length(verbose) == 1)
+
+	stopifnot(is.numeric(alpha))
+	stopifnot(length(alpha) == 1)
+	stopifnot(alpha > 0)
+	stopifnot(alpha < 1)
+
+	stopifnot(is.logical(add_ridge))
+	stopifnot(length(add_ridge) == 1)
+
+	#
+	#
+	# Step 1: change coordinates of data so that regular bridge regression
+	# penalty applied to transformed dataframe results in FETWFE penalty applied
+	# to original data
+	#
+	#
+
+	if (verbose) {
+		message("Transforming matrix...")
+	}
+
+	# Transform matrix (change of coordinates so that fitting regular bridge
+	# regression results in FETWFE fusion penalties)
+	X_mod <- transformXintImproved(
+		X_ints,
+		N = N,
+		T = T,
+		R = R,
+		d = d,
+		num_treats = num_treats,
+		first_inds = first_inds
+	)
+
+	#
+	#
+	# Step 2: get (known or estimated) covariance matrix within observations
+	# (due to umit-level random effects) and pre-multiply X and y by
+	# inverse square root matrix
+	#
+	#
+
+	if (verbose) {
+		message("Getting omega sqrt inverse estimate...")
+		t0 <- Sys.time()
+	}
+
+	if (is.na(sig_eps_sq) | is.na(sig_eps_c_sq)) {
+		# Get omega_sqrt_inv matrix to multiply y and X_mod by on the left
+		omega_res <- estOmegaSqrtInv(
+			y,
+			X_ints,
+			N = N,
+			T = T,
+			p = p
+		)
+
+		sig_eps_sq <- omega_res$sig_eps_sq
+		sig_eps_c_sq <- omega_res$sig_eps_c_sq
+
+		rm(omega_res)
+
+		if (verbose) {
+			message("Done! Time to estimate noise variances:")
+			message(Sys.time() - t0)
+			t0 <- Sys.time()
+		}
+	}
+
+	stopifnot(!is.na(sig_eps_sq) & !is.na(sig_eps_c_sq))
+
+	Omega <- diag(rep(sig_eps_sq, T)) + matrix(sig_eps_c_sq, T, T)
+
+	Omega_sqrt_inv <- expm::sqrtm(solve(Omega))
+
+	if (verbose) {
+		message("Time to get sqrt inverse matrix:")
+		message(Sys.time() - t0)
+	}
+
+	y_final <- kronecker(diag(N), sqrt(sig_eps_sq) * Omega_sqrt_inv) %*% y
+	X_final <- kronecker(diag(N), sqrt(sig_eps_sq) * Omega_sqrt_inv) %*% X_mod
+
+	#
+	#
+	# Optional: if using ridge regularization on untransformed coefficients,
+	# add those rows now
+	#
+	#
+
+	X_final_scaled <- my_scale(X_final)
+	scale_center <- attr(X_final_scaled, "scaled:center")
+	scale_scale <- attr(X_final_scaled, "scaled:scale")
+
+	if (add_ridge) {
+		# Add rows to X_final. First need to get D^{-1}:
+		D_inverse <- genFullInvFusionTransformMat(
+			first_inds = first_inds,
+			T = T,
+			R = R,
+			d = d,
+			num_treats = num_treats
+		)
+
+		stopifnot(ncol(D_inverse) == ncol(X_final))
+		stopifnot(ncol(D_inverse) == ncol(X_final_scaled))
+
+		# Now add rows
+		lambda_ridge <- 0.00001 *
+			(sig_eps_sq + sig_eps_c_sq) *
+			sqrt(p / (N * T))
+
+		X_final_scaled <- rbind(X_final_scaled, sqrt(lambda_ridge) * D_inverse)
+		y_final <- c(y_final, rep(0, nrow(D_inverse)))
+
+		stopifnot(nrow(X_final_scaled) == length(y_final))
+		stopifnot(nrow(X_final_scaled) == N * T + p)
+	}
+
+	#
+	#
+	# Step 3: get cohort-specific sample proportions (estimated treatment
+	# probabilities)
+	#
+	#
+
+	cohort_probs <- in_sample_counts[2:(R + 1)] /
+		sum(in_sample_counts[2:(R + 1)])
+
+	stopifnot(all(!is.na(cohort_probs)))
+	stopifnot(all(cohort_probs >= 0))
+	stopifnot(all(cohort_probs <= 1))
+	stopifnot(length(cohort_probs) == R)
+	stopifnot(abs(sum(cohort_probs) - 1) < 10^(-6))
+
+	cohort_probs_overall <- in_sample_counts[2:(R + 1)] / N
+
+	stopifnot(
+		abs(1 - sum(cohort_probs_overall) - in_sample_counts[1] / N) < 10^(-6)
+	)
+
+	if (indep_count_data_available) {
+		indep_cohort_probs <- indep_counts[2:(R + 1)] /
+			sum(indep_counts[2:(R + 1)])
+
+		stopifnot(all(!is.na(indep_cohort_probs)))
+		stopifnot(all(indep_cohort_probs >= 0))
+		stopifnot(all(indep_cohort_probs <= 1))
+		stopifnot(length(indep_cohort_probs) == R)
+		stopifnot(abs(sum(indep_cohort_probs) - 1) < 10^(-6))
+
+		indep_cohort_probs_overall <- indep_counts[2:(R + 1)] / N
+
+		stopifnot(
+			abs(
+				1 -
+					sum(
+						indep_cohort_probs_overall
+					) -
+					indep_counts[1] / N
+			) <
+				10^(-6)
+		)
+	} else {
+		indep_cohort_probs <- NA
+		indep_cohort_probs_overall <- NA
+	}
+
+	#
+	#
+	# Step 4: estimate bridge regression and extract fitted coefficients
+	#
+	#
+
+	# Estimate bridge regression
+	if (verbose) {
+		message("Estimating bridge regression...")
+		t0 <- Sys.time()
+	}
+
+	if (!is.na(lambda.max) & !is.na(lambda.min)) {
+		fit <- grpreg::gBridge(
+			X = X_final_scaled,
+			y = y_final,
+			gamma = q,
+			lambda.max = lambda.max,
+			lambda.min = lambda.min,
+			nlambda = nlambda
+		)
+	} else if (!is.na(lambda.max)) {
+		fit <- grpreg::gBridge(
+			X = X_final_scaled,
+			y = y_final,
+			gamma = q,
+			lambda.max = lambda.max,
+			nlambda = nlambda
+		)
+	} else if (!is.na(lambda.min)) {
+		fit <- grpreg::gBridge(
+			X = X_final_scaled,
+			y = y_final,
+			gamma = q,
+			lambda.min = lambda.min,
+			nlambda = nlambda
+		)
+	} else {
+		fit <- grpreg::gBridge(
+			X = X_final_scaled,
+			y = y_final,
+			gamma = q,
+			nlambda = nlambda
+		)
+	}
+
+	if (verbose) {
+		message("Done! Time for estimation:")
+		message(Sys.time() - t0)
+	}
+
+	# For diagnostics later, store largest and smallest lambda, as well as
+	# corresponding smallest and largest model sizes, to return.
+	lambda.max <- max(fit$lambda)
+	lambda.max_model_size <- sum(fit$beta[, ncol(fit$beta)] != 0)
+
+	lambda.min <- min(fit$lambda)
+	lambda.min_model_size <- sum(fit$beta[, 1] != 0)
+
+	# Select a single set of fitted coefficients by using BIC to choose among
+	# the penalties that were fitted
+	res <- getBetaBIC(
+		fit,
+		N = N,
+		T = T,
+		p = p,
+		X_mod = X_mod,
+		y = y,
+		scale_center = scale_center,
+		scale_scale = scale_scale
+	)
+
+	theta_hat <- res$theta_hat # This includes intercept
+	lambda_star_ind <- res$lambda_star_ind
+	lambda_star_model_size <- res$lambda_star_model_size
+
+	lambda_star <- fit$lambda[lambda_star_ind]
+
+	# c_names <- names(in_sample_counts)[2:(R + 1)] # Moved definition up
+	stopifnot(length(c_names) == R)
+
+	# Indices corresponding to base treatment effects
+	treat_inds <- getTreatInds(R = R, T = T, d = d, num_treats = num_treats)
+
+	if (d > 0) {
+		stopifnot(max(treat_inds) + 1 <= p)
+		stopifnot(
+			max(treat_inds) == R + T - 1 + d + R * d + (T - 1) * d + num_treats
+		)
+
+		treat_int_inds <- (max(treat_inds) + 1):p
+
+		stopifnot(length(treat_int_inds) == num_treats * d)
+	} else {
+		stopifnot(max(treat_inds) <= p)
+		stopifnot(max(treat_inds) == R + T - 1 + num_treats)
+
+		treat_int_inds <- c()
+	}
+
+	# Handle edge case where no features are selected (model_size includes intercept)
+	if (lambda_star_model_size <= 1 && all(theta_hat[2:(p + 1)] == 0)) {
+		# only intercept might be non-zero
+		if (verbose) {
+			message(
+				"No features selected (or only intercept); all treatment effects estimated to be 0."
+			)
+		}
+
+		if (q < 1) {
+			ret_se <- 0
+		} else {
+			ret_se <- NA
+		}
+
+		catt_df_to_ret <- data.frame(
+			Cohort = c_names,
+			`Estimated TE` = rep(0, R),
+			SE = rep(ret_se, R),
+			ConfIntLow = rep(ret_se, R),
+			ConfIntHigh = rep(ret_se, R),
+			check.names = FALSE
+		)
+
+		return(list(
+			in_sample_att_hat = 0,
+			in_sample_att_se = ret_se,
+			in_sample_att_se_no_prob = ret_se,
+			indep_att_hat = 0,
+			indep_att_se = ret_se,
+			catt_hats = setNames(rep(0, R), c_names),
+			catt_ses = setNames(rep(ret_se, R), c_names),
+			catt_df = catt_df_to_ret,
+			theta_hat = theta_hat, # Includes intercept
+			beta_hat = rep(0, p), # Slopes are all zero
+			treat_inds = treat_inds,
+			treat_int_inds = treat_int_inds,
+			cohort_probs = cohort_probs,
+			indep_cohort_probs = indep_cohort_probs,
+			sig_eps_sq = sig_eps_sq,
+			sig_eps_c_sq = sig_eps_c_sq,
+			lambda.max = lambda.max,
+			lambda.max_model_size = lambda.max_model_size,
+			lambda.min = lambda.min,
+			lambda.min_model_size = lambda.min_model_size,
+			lambda_star = lambda_star,
+			lambda_star_model_size = lambda_star_model_size,
+			X_ints = X_ints,
+			y = y,
+			X_final = X_final,
+			y_final = y_final,
+			N = N,
+			T = T,
+			R = R,
+			d = d,
+			p = p
+		))
+	}
+
+	# intercept
+	# eta_hat <- theta_hat[1] # theta_hat from getBetaBIC already has intercept as first element
+
+	# estimated coefficients (slopes in transformed space)
+	theta_hat_slopes <- theta_hat[2:(p + 1)]
+
+	# Indices of selected features in transformed feature space (among slopes)
+	sel_feat_inds <- which(theta_hat_slopes != 0)
+
+	sel_treat_inds <- sel_feat_inds[sel_feat_inds %in% treat_inds]
+
+	stopifnot(length(sel_treat_inds) == length(unique(sel_treat_inds)))
+	stopifnot(length(sel_treat_inds) <= length(sel_feat_inds))
+	stopifnot(length(sel_treat_inds) <= length(treat_inds))
+	stopifnot(is.integer(sel_treat_inds) | is.numeric(sel_treat_inds))
+
+	# Shift sel_treat_inds to be relative to the start of the treat_inds block
+	# This seems to be what sel_treat_inds_shifted intends
+	# The current sel_treat_inds_shifted calculation appears complex and might be error-prone.
+	# A simpler way:
+	# 1. Get theta_hat_slopes[treat_inds] -> these are the transformed treatment coefficients
+	# 2. Find which of these are non-zero: `which(theta_hat_slopes[treat_inds] != 0)` -> these are indices *within* the treat_inds block.
+	# Let's call this `sel_treat_inds_relative_to_block`.
+	# `sel_treat_inds` itself contains the global indices of selected treatment features.
+	# So `theta_hat_slopes[sel_treat_inds]` are the non-zero transformed treatment coefs.
+
+	theta_hat_treat_block_transformed = theta_hat_slopes[treat_inds]
+	sel_treat_inds_shifted <- which(theta_hat_treat_block_transformed != 0) # these are 1 to num_treats
+
+	stopifnot(all(sel_treat_inds_shifted >= 1))
+	stopifnot(all(sel_treat_inds_shifted <= num_treats))
+
+	# Handle edge case where no treatment features selected
+	if (length(sel_treat_inds_shifted) == 0) {
+		if (verbose) {
+			message(
+				"No treatment features selected; all treatment effects estimated to be 0."
+			)
+		}
+
+		if (q < 1) {
+			ret_se <- 0
+		} else {
+			ret_se <- NA
+		}
+
+		catt_df_to_ret <- data.frame(
+			Cohort = c_names,
+			`Estimated TE` = rep(0, R),
+			SE = rep(ret_se, R),
+			ConfIntLow = rep(ret_se, R),
+			ConfIntHigh = rep(ret_se, R),
+			check.names = FALSE
+		)
+
+		# Need to untransform theta_hat_slopes to get beta_hat for consistency
+		beta_hat_early_exit <- untransformCoefImproved(
+			theta_hat_slopes, # Pass slopes only
+			first_inds,
+			T = T,
+			R = R,
+			p = p,
+			d = d,
+			num_treats = num_treats
+		)
+		if (add_ridge) {
+			beta_hat_early_exit <- beta_hat_early_exit * (1 + lambda_ridge)
+		}
+
+		return(list(
+			in_sample_att_hat = 0,
+			in_sample_att_se = ret_se,
+			in_sample_att_se_no_prob = ret_se,
+			indep_att_hat = 0,
+			indep_att_se = ret_se,
+			catt_hats = setNames(rep(0, R), c_names),
+			catt_ses = setNames(rep(ret_se, R), c_names),
+			catt_df = catt_df_to_ret,
+			theta_hat = theta_hat, # Full theta_hat with intercept
+			beta_hat = beta_hat_early_exit, # Untransformed slopes
+			treat_inds = treat_inds,
+			treat_int_inds = treat_int_inds,
+			cohort_probs = cohort_probs,
+			indep_cohort_probs = indep_cohort_probs,
+			sig_eps_sq = sig_eps_sq,
+			sig_eps_c_sq = sig_eps_c_sq,
+			lambda.max = lambda.max,
+			lambda.max_model_size = lambda.max_model_size,
+			lambda.min = lambda.min,
+			lambda.min_model_size = lambda.min_model_size,
+			lambda_star = lambda_star,
+			lambda_star_model_size = lambda_star_model_size,
+			X_ints = X_ints,
+			y = y,
+			X_final = X_final,
+			y_final = y_final,
+			N = N,
+			T = T,
+			R = R,
+			d = d,
+			p = p
+		))
+	}
+
+	#
+	#
+	# Step 5: transform estimated coefficients back to original feature
+	# space
+	#
+	#
+
+	beta_hat <- untransformCoefImproved(
+		theta_hat_slopes, # Pass slopes only
+		first_inds,
+		T = T,
+		R = R,
+		p = p,
+		d = d,
+		num_treats = num_treats
+	)
+
+	# If using ridge regularization, multiply the "naive" estimated coefficients
+	# by 1 + lambda_ridge, similar to suggestion in original elastic net paper.
+	if (add_ridge) {
+		beta_hat <- beta_hat * (1 + lambda_ridge)
+	}
+
+	# Get actual estimated treatment effects (in original, untransformed space)
+	tes <- beta_hat[treat_inds]
+
+	stopifnot(length(tes) == num_treats)
+	# Checks based on transformed coefficients (theta_hat_slopes)
+	stopifnot(all(theta_hat_slopes[treat_inds][sel_treat_inds_shifted] != 0))
+	stopifnot(all(
+		theta_hat_slopes[treat_inds][setdiff(
+			1:num_treats,
+			sel_treat_inds_shifted
+		)] ==
+			0
+	))
+
+	stopifnot(length(first_inds) == R)
+	stopifnot(max(first_inds) <= num_treats)
+
+	stopifnot(length(sel_feat_inds) > 0) # sel_feat_inds are indices in theta_hat_slopes
+	stopifnot(length(sel_treat_inds_shifted) > 0) # sel_treat_inds_shifted are indices within the treat_inds block of theta_hat_slopes
+
+	#
+	#
+	# Step 6: calculate cohort-specific treatment effects and standard
+	# errors
+	#
+	#
+
+	res <- getCohortATTsFinal(
+		X_final = X_final, # This is X_mod * GLS_transform_matrix
+		sel_feat_inds = sel_feat_inds, # Indices of non-zero elements in theta_hat_slopes
+		treat_inds = treat_inds, # Global indices for treatment effects
+		num_treats = num_treats,
+		first_inds = first_inds,
+		sel_treat_inds_shifted = sel_treat_inds_shifted, # Indices (1 to num_treats) of non-zero transformed treat. coefs.
+		c_names = c_names,
+		tes = tes, # Untransformed treatment effect estimates (beta_hat[treat_inds])
+		sig_eps_sq = sig_eps_sq,
+		R = R,
+		N = N,
+		T = T,
+		fused = TRUE, # This parameter might be redundant if this function is only for fused
+		calc_ses = q < 1,
+		p = p, # Total number of original parameters (columns in X_ints)
+		alpha = alpha
+	)
+
+	cohort_te_df <- res$cohort_te_df
+	cohort_tes <- res$cohort_tes
+	cohort_te_ses <- res$cohort_te_ses
+	psi_mat <- res$psi_mat
+	gram_inv <- res$gram_inv
+	d_inv_treat_sel <- res$d_inv_treat_sel
+	calc_ses <- res$calc_ses
+
+	rm(res)
+
+	if (calc_ses) {
+		stopifnot(nrow(d_inv_treat_sel) == num_treats)
+		stopifnot(ncol(d_inv_treat_sel) == length(sel_treat_inds_shifted))
+	}
+
+	#
+	#
+	# Step 7: calculate overall average treatment effect on treated units
+	#
+	#
+
+	# Get overal estimated ATT!
+	# theta_hat_treat_sel needs to be the selected non-zero *transformed* treatment coefficients
+	# sel_treat_inds contains global indices of selected transformed features that are treatment effects
+	theta_hat_treat_sel_for_att <- theta_hat_slopes[sel_treat_inds]
+
+	in_sample_te_results <- getTeResults2(
+		sig_eps_sq = sig_eps_sq,
+		N = N,
+		T = T,
+		R = R,
+		num_treats = num_treats,
+		cohort_tes = cohort_tes, # CATTs (point estimates)
+		cohort_probs = cohort_probs, # In-sample pi_r | treated
+		psi_mat = psi_mat,
+		gram_inv = gram_inv,
+		sel_treat_inds_shifted = sel_treat_inds_shifted,
+		tes = tes, # Untransformed treatment effect estimates beta_hat[treat_inds]
+		d_inv_treat_sel = d_inv_treat_sel,
+		cohort_probs_overall = cohort_probs_overall, # In-sample pi_r (unconditional on treated)
+		first_inds = first_inds,
+		theta_hat_treat_sel = theta_hat_treat_sel_for_att, # Selected non-zero transformed treat coefs
+		calc_ses = calc_ses,
+		indep_probs = FALSE
+	)
+
+	in_sample_att_hat <- in_sample_te_results$att_hat
+	in_sample_att_se <- in_sample_te_results$att_te_se
+	in_sample_att_se_no_prob <- in_sample_te_results$att_te_se_no_prob
+
+	if (indep_count_data_available) {
+		indep_te_results <- getTeResults2(
+			sig_eps_sq = sig_eps_sq,
+			N = N,
+			T = T,
+			R = R,
+			num_treats = num_treats,
+			cohort_tes = cohort_tes,
+			cohort_probs = indep_cohort_probs, # indep pi_r | treated
+			psi_mat = psi_mat,
+			gram_inv = gram_inv,
+			sel_treat_inds_shifted = sel_treat_inds_shifted,
+			tes = tes,
+			d_inv_treat_sel = d_inv_treat_sel,
+			cohort_probs_overall = indep_cohort_probs_overall, # indep pi_r (unconditional)
+			first_inds = first_inds,
+			theta_hat_treat_sel = theta_hat_treat_sel_for_att,
+			calc_ses = calc_ses,
+			indep_probs = TRUE
+		)
+		indep_att_hat <- indep_te_results$att_hat
+		indep_att_se <- indep_te_results$att_te_se
+		# indep_att_se_no_prob <- indep_te_results$att_te_se_no_prob # This was commented out
+	} else {
+		indep_att_hat <- NA
+		indep_att_se <- NA
+		# indep_att_se_no_prob <- NA # Keep commented for consistency
+	}
+
+	return(list(
+		in_sample_att_hat = in_sample_att_hat,
+		in_sample_att_se = in_sample_att_se,
+		in_sample_att_se_no_prob = in_sample_att_se_no_prob,
+		indep_att_hat = indep_att_hat,
+		indep_att_se = indep_att_se,
+		catt_hats = cohort_tes, # Already named if applicable from getCohortATTsFinal
+		catt_ses = cohort_te_ses, # Already named if applicable
+		catt_df = cohort_te_df,
+		theta_hat = theta_hat, # Full theta_hat (with intercept)
+		beta_hat = beta_hat, # Untransformed slopes
+		treat_inds = treat_inds,
+		treat_int_inds = treat_int_inds,
+		cohort_probs = cohort_probs,
+		indep_cohort_probs = indep_cohort_probs,
+		sig_eps_sq = sig_eps_sq,
+		sig_eps_c_sq = sig_eps_c_sq,
+		lambda.max = lambda.max,
+		lambda.max_model_size = lambda.max_model_size,
+		lambda.min = lambda.min,
+		lambda.min_model_size = lambda.min_model_size,
+		lambda_star = lambda_star,
+		lambda_star_model_size = lambda_star_model_size,
+		X_ints = X_ints,
+		y = y,
+		X_final = X_final,
+		y_final = y_final,
+		N = N,
+		T = T,
+		R = R,
+		d = d,
+		p = p
+	))
 }
 
 
@@ -1186,129 +1191,129 @@ fetwfe_core <- function(
 #' @keywords internal
 #' @noRd
 idCohorts <- function(df, time_var, unit_var, treat_var, covs) {
-  stopifnot(time_var %in% colnames(df))
-  stopifnot(unit_var %in% colnames(df))
-  stopifnot(treat_var %in% colnames(df))
-  # stopifnot(all(covs %in% colnames(df))) # covs might be empty, or not all present if some were
-  # factors
+	stopifnot(time_var %in% colnames(df))
+	stopifnot(unit_var %in% colnames(df))
+	stopifnot(treat_var %in% colnames(df))
+	# stopifnot(all(covs %in% colnames(df))) # covs might be empty, or not all present if some were
+	# factors
 
-  # Form design matrix
-  units <- unique(df[, unit_var])
-  N <- length(units)
-  times <- sort(unique(df[, time_var]))
-  T <- length(times)
+	# Form design matrix
+	units <- unique(df[, unit_var])
+	N <- length(units)
+	times <- sort(unique(df[, time_var]))
+	T <- length(times)
 
-  # Variable to identify cohorts
-  cohorts <- list()
-  for (t in 1:T) {
-    cohorts[[t]] <- character()
-  }
-  names(cohorts) <- times
+	# Variable to identify cohorts
+	cohorts <- list()
+	for (t in 1:T) {
+		cohorts[[t]] <- character()
+	}
+	names(cohorts) <- times
 
-  for (s in units) {
-    df_s <- df[df[, unit_var] == s, ]
-    # Assume this is a balanced panel
-    if (nrow(df_s) != T) {
-      stop(paste(
-        "Panel does not appear to be balanced (unit",
-        s,
-        "does not have exactly T observations for T =",
-        T
-      ))
-    }
+	for (s in units) {
+		df_s <- df[df[, unit_var] == s, ]
+		# Assume this is a balanced panel
+		if (nrow(df_s) != T) {
+			stop(paste(
+				"Panel does not appear to be balanced (unit",
+				s,
+				"does not have exactly T observations for T =",
+				T
+			))
+		}
 
-    if (any(df_s[, treat_var] == 1)) {
-      # Identify first year of treatment (and cohort)
-      # Ensure df_s is sorted by time before finding min
-      df_s_sorted <- df_s[order(df_s[, time_var]), ]
-      treat_year_s_ind_in_sorted_times <- min(which(
-        df_s_sorted[, treat_var] == 1
-      ))
-      actual_treat_time <- df_s_sorted[
-        treat_year_s_ind_in_sorted_times,
-        time_var
-      ]
+		if (any(df_s[, treat_var] == 1)) {
+			# Identify first year of treatment (and cohort)
+			# Ensure df_s is sorted by time before finding min
+			df_s_sorted <- df_s[order(df_s[, time_var]), ]
+			treat_year_s_ind_in_sorted_times <- min(which(
+				df_s_sorted[, treat_var] == 1
+			))
+			actual_treat_time <- df_s_sorted[
+				treat_year_s_ind_in_sorted_times,
+				time_var
+			]
 
-      # Make sure treatment is absorbing
-      # Check from the actual_treat_time onwards in the original df for unit s
-      original_unit_times_from_treatment <- df[
-        (df[, unit_var] == s) & (df[, time_var] >= actual_treat_time),
-        treat_var
-      ]
-      if (any(original_unit_times_from_treatment != 1)) {
-        stop(paste(
-          "Treatment does not appear to be an absorbing state for unit",
-          s
-        ))
-      }
-      cohorts[[as.character(actual_treat_time)]] <- c(
-        cohorts[[as.character(actual_treat_time)]],
-        s
-      )
-    }
-  }
+			# Make sure treatment is absorbing
+			# Check from the actual_treat_time onwards in the original df for unit s
+			original_unit_times_from_treatment <- df[
+				(df[, unit_var] == s) & (df[, time_var] >= actual_treat_time),
+				treat_var
+			]
+			if (any(original_unit_times_from_treatment != 1)) {
+				stop(paste(
+					"Treatment does not appear to be an absorbing state for unit",
+					s
+				))
+			}
+			cohorts[[as.character(actual_treat_time)]] <- c(
+				cohorts[[as.character(actual_treat_time)]],
+				s
+			)
+		}
+	}
 
-  stopifnot(length(unlist(cohorts)) <= N)
-  # Keep only cohorts that actually have units
-  cohorts <- cohorts[lengths(cohorts) > 0]
+	stopifnot(length(unlist(cohorts)) <= N)
+	# Keep only cohorts that actually have units
+	cohorts <- cohorts[lengths(cohorts) > 0]
 
-  # Need at least one untreated period, so have to omit units that were
-  # treated in the very first time period
-  first_time_val_char <- as.character(times[1])
-  if (first_time_val_char %in% names(cohorts)) {
-    first_year_cohort_units <- cohorts[[first_time_val_char]]
-    if (length(first_year_cohort_units) > 0) {
-      df <- df[!(df[, unit_var] %in% first_year_cohort_units), ]
-      units <- unique(df[, unit_var]) # Update units
-      if (length(first_year_cohort_units) > 0) {
-        # N is original N
-        warning(paste(
-          length(first_year_cohort_units),
-          "units were removed because they were treated in the first time period:",
-          paste(first_year_cohort_units, collapse = ", ")
-        ))
-      }
-    }
-    cohorts[[first_time_val_char]] <- NULL # Remove this cohort entry
-  }
+	# Need at least one untreated period, so have to omit units that were
+	# treated in the very first time period
+	first_time_val_char <- as.character(times[1])
+	if (first_time_val_char %in% names(cohorts)) {
+		first_year_cohort_units <- cohorts[[first_time_val_char]]
+		if (length(first_year_cohort_units) > 0) {
+			df <- df[!(df[, unit_var] %in% first_year_cohort_units), ]
+			units <- unique(df[, unit_var]) # Update units
+			if (length(first_year_cohort_units) > 0) {
+				# N is original N
+				warning(paste(
+					length(first_year_cohort_units),
+					"units were removed because they were treated in the first time period:",
+					paste(first_year_cohort_units, collapse = ", ")
+				))
+			}
+		}
+		cohorts[[first_time_val_char]] <- NULL # Remove this cohort entry
+	}
 
-  if (length(units) == 0) {
-    stop(
-      "All units were treated in the first time period or no units remain after filtering; estimating treatment effects is not possible"
-    )
-  }
+	if (length(units) == 0) {
+		stop(
+			"All units were treated in the first time period or no units remain after filtering; estimating treatment effects is not possible"
+		)
+	}
 
-  N <- length(units) # Update N to reflect remaining units
+	N <- length(units) # Update N to reflect remaining units
 
-  # Treatment no longer needed
-  df <- df[, colnames(df) != treat_var]
+	# Treatment no longer needed
+	df <- df[, colnames(df) != treat_var]
 
-  # Make sure there is an empty cohort for the first time
-  cohorts[[as.character(times[1])]] <- character()
+	# Make sure there is an empty cohort for the first time
+	cohorts[[as.character(times[1])]] <- character()
 
-  # Order cohorts in order of times
-  if (length(cohorts) > 0) {
-    cohorts <- cohorts[order(as.numeric(names(cohorts)))]
-  }
+	# Order cohorts in order of times
+	if (length(cohorts) > 0) {
+		cohorts <- cohorts[order(as.numeric(names(cohorts)))]
+	}
 
-  # If after removing first-period treated, there are no treated cohorts left:
-  if (length(cohorts) == 0) {
-    # This implies all treated units were treated in the first period.
-    # The code in prepXints would later error if R < 2.
-    # This function's main job is to return the filtered df and cohort structure.
-    stop("all units appear to have been treated in the first period")
-  }
+	# If after removing first-period treated, there are no treated cohorts left:
+	if (length(cohorts) == 0) {
+		# This implies all treated units were treated in the first period.
+		# The code in prepXints would later error if R < 2.
+		# This function's main job is to return the filtered df and cohort structure.
+		stop("all units appear to have been treated in the first period")
+	}
 
-  # This should have been the first cohort
-  stopifnot(length(cohorts[[1]]) == 0)
+	# This should have been the first cohort
+	stopifnot(length(cohorts[[1]]) == 0)
 
-  cohorts <- cohorts[-1]
+	cohorts <- cohorts[-1]
 
-  stopifnot(all(lengths(cohorts) >= 1))
-  stopifnot(length(cohorts) <= T)
-  stopifnot(length(unlist(cohorts)) <= N)
+	stopifnot(all(lengths(cohorts) >= 1))
+	stopifnot(length(cohorts) <= T)
+	stopifnot(length(unlist(cohorts)) <= N)
 
-  return(list(df = df, cohorts = cohorts, units = units, times = times))
+	return(list(df = df, cohorts = cohorts, units = units, times = times))
 }
 
 
@@ -1360,192 +1365,192 @@ idCohorts <- function(df, time_var, unit_var, treat_var, covs) {
 #' @keywords internal
 #' @noRd
 processCovs <- function(
-  df,
-  units,
-  unit_var,
-  times,
-  time_var,
-  covs,
-  resp_var,
-  T,
-  verbose = FALSE
+	df,
+	units,
+	unit_var,
+	times,
+	time_var,
+	covs,
+	resp_var,
+	T,
+	verbose = FALSE
 ) {
-  # Always check that every unit has exactly T observations.
-  for (s in units) {
-    df_s <- df[df[, unit_var] == s, ]
-    if (nrow(df_s) != T) {
-      stop(paste("Unit", s, "does not have exactly", T, "observations."))
-    }
-  }
+	# Always check that every unit has exactly T observations.
+	for (s in units) {
+		df_s <- df[df[, unit_var] == s, ]
+		if (nrow(df_s) != T) {
+			stop(paste("Unit", s, "does not have exactly", T, "observations."))
+		}
+	}
 
-  # If no covariates are provided, simply return the ordered data frame.
-  if (length(covs) == 0) {
-    if (verbose) {
-      message("No covariates provided; skipping covariate processing.")
-    }
-    # # TODO: change to consider
-    # # Ensure df contains only necessary columns if covs is empty.
-    # # This selection should ideally happen once, consistently.
-    # # prepXints selects columns from the original pdata:
-    # # pdata <- pdata[, c(response, time_var, unit_var, treatment, covs)]
-    # # Then idCohorts gets this. Then processCovs.
-    # # If covs is empty, df will contain response, time_var, unit_var.
-    # df_ordered <- df[order(df[, unit_var], df[, time_var], decreasing=FALSE), ]
-    # return(list(df = df_ordered, covs = covs))
+	# If no covariates are provided, simply return the ordered data frame.
+	if (length(covs) == 0) {
+		if (verbose) {
+			message("No covariates provided; skipping covariate processing.")
+		}
+		# # TODO: change to consider
+		# # Ensure df contains only necessary columns if covs is empty.
+		# # This selection should ideally happen once, consistently.
+		# # prepXints selects columns from the original pdata:
+		# # pdata <- pdata[, c(response, time_var, unit_var, treatment, covs)]
+		# # Then idCohorts gets this. Then processCovs.
+		# # If covs is empty, df will contain response, time_var, unit_var.
+		# df_ordered <- df[order(df[, unit_var], df[, time_var], decreasing=FALSE), ]
+		# return(list(df = df_ordered, covs = covs))
 
-    df <- df[, c(resp_var, time_var, unit_var)]
-    df <- df[order(df[, unit_var], df[, time_var], decreasing = FALSE), ]
-    return(list(df = df, covs = covs))
-  }
-  d_orig <- length(covs) # Original number of covariates passed
+		df <- df[, c(resp_var, time_var, unit_var)]
+		df <- df[order(df[, unit_var], df[, time_var], decreasing = FALSE), ]
+		return(list(df = df, covs = covs))
+	}
+	d_orig <- length(covs) # Original number of covariates passed
 
-  # For each unit, ensure that the first period has non-missing covariate values.
-  # Remove any covariates with missing values in the first period for *any* unit.
-  covs_to_keep <- character()
-  first_time_val <- times[1]
+	# For each unit, ensure that the first period has non-missing covariate values.
+	# Remove any covariates with missing values in the first period for *any* unit.
+	covs_to_keep <- character()
+	first_time_val <- times[1]
 
-  for (cov_name in covs) {
-    is_valid_cov <- TRUE
-    for (s in units) {
-      val_first_period <- df[
-        (df[, unit_var] == s) & (df[, time_var] == first_time_val),
-        cov_name
-      ]
-      if (length(val_first_period) != 1 || is.na(val_first_period)) {
-        if (verbose)
-          message(
-            "Covariate '",
-            cov_name,
-            "' has NA or missing first period value for unit '",
-            s,
-            "'. Removing covariate."
-          )
-        is_valid_cov <- FALSE
-        break
-      }
-    }
-    if (is_valid_cov) {
-      covs_to_keep <- c(covs_to_keep, cov_name)
-    }
-  }
+	for (cov_name in covs) {
+		is_valid_cov <- TRUE
+		for (s in units) {
+			val_first_period <- df[
+				(df[, unit_var] == s) & (df[, time_var] == first_time_val),
+				cov_name
+			]
+			if (length(val_first_period) != 1 || is.na(val_first_period)) {
+				if (verbose)
+					message(
+						"Covariate '",
+						cov_name,
+						"' has NA or missing first period value for unit '",
+						s,
+						"'. Removing covariate."
+					)
+				is_valid_cov <- FALSE
+				break
+			}
+		}
+		if (is_valid_cov) {
+			covs_to_keep <- c(covs_to_keep, cov_name)
+		}
+	}
 
-  if (length(covs_to_keep) < d_orig && length(covs_to_keep) > 0) {
-    removed_covs_na <- setdiff(covs, covs_to_keep)
-    warning(paste(
-      length(removed_covs_na),
-      "covariate(s) were removed because they contained missing values in the first time period for at least one unit: ",
-      paste(removed_covs_na, collapse = ", ")
-    ))
-  } else if (length(covs_to_keep) == 0 && d_orig > 0) {
-    warning(
-      "All covariates were removed due to missing values in the first period for at least one unit."
-    )
-  }
-  covs <- covs_to_keep
-  d <- length(covs)
+	if (length(covs_to_keep) < d_orig && length(covs_to_keep) > 0) {
+		removed_covs_na <- setdiff(covs, covs_to_keep)
+		warning(paste(
+			length(removed_covs_na),
+			"covariate(s) were removed because they contained missing values in the first time period for at least one unit: ",
+			paste(removed_covs_na, collapse = ", ")
+		))
+	} else if (length(covs_to_keep) == 0 && d_orig > 0) {
+		warning(
+			"All covariates were removed due to missing values in the first period for at least one unit."
+		)
+	}
+	covs <- covs_to_keep
+	d <- length(covs)
 
-  # Remove covariates that are constant across units (after making them time-invariant based on first period).
-  if (d > 0) {
-    covs_to_remove_const <- character()
-    # First, make all covariates time-invariant based on first period value
-    df_temp_const_check <- df # Operate on a temporary copy
-    for (s in units) {
-      first_period_rows_s_idx <- which(
-        (df_temp_const_check[, unit_var] == s) &
-          (df_temp_const_check[, time_var] == first_time_val)
-      )
-      stopifnot(length(first_period_rows_s_idx) == 1) # Should be one row for first period
-      cov_values_s_first_period <- df_temp_const_check[
-        first_period_rows_s_idx,
-        covs,
-        drop = FALSE
-      ]
+	# Remove covariates that are constant across units (after making them time-invariant based on first period).
+	if (d > 0) {
+		covs_to_remove_const <- character()
+		# First, make all covariates time-invariant based on first period value
+		df_temp_const_check <- df # Operate on a temporary copy
+		for (s in units) {
+			first_period_rows_s_idx <- which(
+				(df_temp_const_check[, unit_var] == s) &
+					(df_temp_const_check[, time_var] == first_time_val)
+			)
+			stopifnot(length(first_period_rows_s_idx) == 1) # Should be one row for first period
+			cov_values_s_first_period <- df_temp_const_check[
+				first_period_rows_s_idx,
+				covs,
+				drop = FALSE
+			]
 
-      for (t_idx in seq_along(times)) {
-        current_rows_s_t_idx <- which(
-          (df_temp_const_check[, unit_var] == s) &
-            (df_temp_const_check[, time_var] == times[t_idx])
-        )
-        stopifnot(length(current_rows_s_t_idx) == 1)
-        df_temp_const_check[
-          current_rows_s_t_idx,
-          covs
-        ] <- cov_values_s_first_period
-      }
-    }
+			for (t_idx in seq_along(times)) {
+				current_rows_s_t_idx <- which(
+					(df_temp_const_check[, unit_var] == s) &
+						(df_temp_const_check[, time_var] == times[t_idx])
+				)
+				stopifnot(length(current_rows_s_t_idx) == 1)
+				df_temp_const_check[
+					current_rows_s_t_idx,
+					covs
+				] <- cov_values_s_first_period
+			}
+		}
 
-    for (cov_name in covs) {
-      # Check uniqueness on the first-period values for each unit
-      first_period_vals_for_cov <- sapply(units, function(u) {
-        df_temp_const_check[
-          (df_temp_const_check[, unit_var] == u) &
-            (df_temp_const_check[, time_var] == first_time_val),
-          cov_name
-        ]
-      })
-      if (length(unique(first_period_vals_for_cov)) == 1) {
-        if (verbose) {
-          message(
-            "Removing covariate because all units have the same first-period value: ",
-            cov_name
-          )
-        }
-        covs_to_remove_const <- c(covs_to_remove_const, cov_name)
-      }
-    }
-    covs <- covs[!(covs %in% covs_to_remove_const)]
+		for (cov_name in covs) {
+			# Check uniqueness on the first-period values for each unit
+			first_period_vals_for_cov <- sapply(units, function(u) {
+				df_temp_const_check[
+					(df_temp_const_check[, unit_var] == u) &
+						(df_temp_const_check[, time_var] == first_time_val),
+					cov_name
+				]
+			})
+			if (length(unique(first_period_vals_for_cov)) == 1) {
+				if (verbose) {
+					message(
+						"Removing covariate because all units have the same first-period value: ",
+						cov_name
+					)
+				}
+				covs_to_remove_const <- c(covs_to_remove_const, cov_name)
+			}
+		}
+		covs <- covs[!(covs %in% covs_to_remove_const)]
 
-    if (length(covs_to_remove_const) > 0 && length(covs) == 0) {
-      warning(
-        "All remaining covariates were removed because they were constant across units (based on first-period values). Continuing with no covariates."
-      )
-    } else if (length(covs_to_remove_const) > 0) {
-      warning(paste(
-        length(covs_to_remove_const),
-        "covariate(s) were removed because all units had the same first-period value: ",
-        paste(covs_to_remove_const, collapse = ", ")
-      ))
-    }
-    d <- length(covs)
-  }
+		if (length(covs_to_remove_const) > 0 && length(covs) == 0) {
+			warning(
+				"All remaining covariates were removed because they were constant across units (based on first-period values). Continuing with no covariates."
+			)
+		} else if (length(covs_to_remove_const) > 0) {
+			warning(paste(
+				length(covs_to_remove_const),
+				"covariate(s) were removed because all units had the same first-period value: ",
+				paste(covs_to_remove_const, collapse = ", ")
+			))
+		}
+		d <- length(covs)
+	}
 
-  # Keep only the needed columns.
-  df <- df[, c(resp_var, time_var, unit_var, covs), drop = FALSE] # Ensure covs can be empty
+	# Keep only the needed columns.
+	df <- df[, c(resp_var, time_var, unit_var, covs), drop = FALSE] # Ensure covs can be empty
 
-  # For any time-varying covariates, replace all values with the first-period value.
-  # This was partially done for the constant check, ensure it's finalized.
-  if (d > 0) {
-    # Only if there are covariates left
-    if (verbose) {
-      message(
-        "Finalizing: Replacing time-varying covariate values with first-period values..."
-      )
-    }
-    for (s in units) {
-      # df_s <- df[df[, unit_var] == s, ] # Not needed if iterating by index
-      first_period_rows_s_idx <- which(
-        (df[, unit_var] == s) & (df[, time_var] == first_time_val)
-      )
-      # This assumes first_time_val is the relevant one (times[1])
-      covs_s_first_period_vals <- df[
-        first_period_rows_s_idx,
-        covs,
-        drop = FALSE
-      ]
+	# For any time-varying covariates, replace all values with the first-period value.
+	# This was partially done for the constant check, ensure it's finalized.
+	if (d > 0) {
+		# Only if there are covariates left
+		if (verbose) {
+			message(
+				"Finalizing: Replacing time-varying covariate values with first-period values..."
+			)
+		}
+		for (s in units) {
+			# df_s <- df[df[, unit_var] == s, ] # Not needed if iterating by index
+			first_period_rows_s_idx <- which(
+				(df[, unit_var] == s) & (df[, time_var] == first_time_val)
+			)
+			# This assumes first_time_val is the relevant one (times[1])
+			covs_s_first_period_vals <- df[
+				first_period_rows_s_idx,
+				covs,
+				drop = FALSE
+			]
 
-      for (t_val in times) {
-        ind_s_t <- (df[, unit_var] == s) & (df[, time_var] == t_val)
-        stopifnot(sum(ind_s_t) == 1)
-        df[ind_s_t, covs] <- covs_s_first_period_vals
-      }
-    }
-  }
+			for (t_val in times) {
+				ind_s_t <- (df[, unit_var] == s) & (df[, time_var] == t_val)
+				stopifnot(sum(ind_s_t) == 1)
+				df[ind_s_t, covs] <- covs_s_first_period_vals
+			}
+		}
+	}
 
-  # Sort rows: first T rows should be the observations for the first unit, and
-  # so on
-  df <- df[order(df[, unit_var], df[, time_var], decreasing = FALSE), ]
+	# Sort rows: first T rows should be the observations for the first unit, and
+	# so on
+	df <- df[order(df[, unit_var], df[, time_var], decreasing = FALSE), ]
 
-  return(list(df = df, covs = covs))
+	return(list(df = df, covs = covs))
 }
 
 
@@ -1584,41 +1589,41 @@ processCovs <- function(
 #' @keywords internal
 #' @noRd
 genTreatVarsRealData <- function(
-  cohort_name,
-  c_t_names,
-  N,
-  T,
-  n_treated_times,
-  unit_vars,
-  time_vars,
-  cohort,
-  treated_times
+	cohort_name,
+	c_t_names,
+	N,
+	T,
+	n_treated_times,
+	unit_vars,
+	time_vars,
+	cohort,
+	treated_times
 ) {
-  # Create matrix of variables for cohort indicator and cohort/treatment
-  # variables to append to df
-  treat_vars <- matrix(0L, nrow = N * T, ncol = 1 + n_treated_times) # Initialize with 0L
+	# Create matrix of variables for cohort indicator and cohort/treatment
+	# variables to append to df
+	treat_vars <- matrix(0L, nrow = N * T, ncol = 1 + n_treated_times) # Initialize with 0L
 
-  colnames(treat_vars) <- c(cohort_name, c_t_names)
+	colnames(treat_vars) <- c(cohort_name, c_t_names)
 
-  # Rows corresponding to units in the current cohort
-  c_i_inds_units <- unit_vars %in% cohort # Logical vector of length N*T
+	# Rows corresponding to units in the current cohort
+	c_i_inds_units <- unit_vars %in% cohort # Logical vector of length N*T
 
-  # Add cohort dummy: 1 for all observations of units in this cohort
-  treat_vars[c_i_inds_units, 1] <- 1L
+	# Add cohort dummy: 1 for all observations of units in this cohort
+	treat_vars[c_i_inds_units, 1] <- 1L
 
-  # Add treatment period dummies
-  if (n_treated_times > 0) {
-    # build a logical index of length N*T for all cohort-time pairs at once
-    treat_combo <- interaction(unit_vars, time_vars, drop = TRUE)
-    for (j in seq_len(n_treated_times)) {
-      treat_vars[
-        (unit_vars %in% cohort) & (time_vars == treated_times[j]),
-        j + 1L
-      ] <- 1L
-    }
-  }
+	# Add treatment period dummies
+	if (n_treated_times > 0) {
+		# build a logical index of length N*T for all cohort-time pairs at once
+		treat_combo <- interaction(unit_vars, time_vars, drop = TRUE)
+		for (j in seq_len(n_treated_times)) {
+			treat_vars[
+				(unit_vars %in% cohort) & (time_vars == treated_times[j]),
+				j + 1L
+			] <- 1L
+		}
+	}
 
-  return(treat_vars)
+	return(treat_vars)
 }
 
 # Names of cohorts must be the same as time of treatment
@@ -1672,205 +1677,212 @@ genTreatVarsRealData <- function(
 #' @keywords internal
 #' @noRd
 addDummies <- function(
-  df,
-  cohorts,
-  times,
-  N,
-  T,
-  unit_var,
-  time_var,
-  resp_var,
-  n_cohorts
+	df,
+	cohorts,
+	times,
+	N,
+	T,
+	unit_var,
+	time_var,
+	resp_var,
+	n_cohorts
 ) {
-  # ... (Function body as provided)
-  # Total number of treated times for all cohorts (later, this will be the
-  # total number of treatment effects to estimate)
-  num_treats <- 0
+	# ... (Function body as provided)
+	# Total number of treated times for all cohorts (later, this will be the
+	# total number of treatment effects to estimate)
+	num_treats <- 0
 
-  # A list of names of indicator variables for cohorts
-  cohort_vars <- character()
+	# A list of names of indicator variables for cohorts
+	cohort_vars <- character()
 
-  # Matrix of cohort variable indicators
-  cohort_var_mat <- matrix(as.integer(NA), nrow = N * T, ncol = n_cohorts)
-  # It's better to initialize with 0L if these are counts/indicators
-  # cohort_var_mat <- matrix(0L, nrow = N*T, ncol = n_cohorts)
-  colnames(cohort_var_mat) <- rep(NA_character_, n_cohorts)
+	# Matrix of cohort variable indicators
+	cohort_var_mat <- matrix(as.integer(NA), nrow = N * T, ncol = n_cohorts)
+	# It's better to initialize with 0L if these are counts/indicators
+	# cohort_var_mat <- matrix(0L, nrow = N*T, ncol = n_cohorts)
+	colnames(cohort_var_mat) <- rep(NA_character_, n_cohorts)
 
-  # Matrix of treatment indicators (just creating one column now to
-  # initalize; will delete first column later)
-  treat_var_mat <- matrix(as.integer(NA), nrow = N * T, ncol = 1) # Placeholder
-  # treat_var_mat <- matrix(0L, nrow = N*T, ncol = 0) # Better start
+	# Matrix of treatment indicators (just creating one column now to
+	# initalize; will delete first column later)
+	treat_var_mat <- matrix(as.integer(NA), nrow = N * T, ncol = 1) # Placeholder
+	# treat_var_mat <- matrix(0L, nrow = N*T, ncol = 0) # Better start
 
-  # A list of names of variables for cohort/time treatments
-  cohort_treat_names <- list()
+	# A list of names of variables for cohort/time treatments
+	cohort_treat_names <- list()
 
-  # Indices of first treatment time for each cohort within the treat_var_mat block
-  current_first_ind_val <- 1
-  first_inds <- integer(n_cohorts) # pre-allocate
+	# Indices of first treatment time for each cohort within the treat_var_mat block
+	current_first_ind_val <- 1
+	first_inds <- integer(n_cohorts) # pre-allocate
 
-  # Ensure cohorts list is not empty if n_cohorts > 0
-  if (n_cohorts > 0 && length(cohorts) == 0) {
-    stop("n_cohorts > 0 but the cohorts list is empty in addDummies.")
-  }
-  if (n_cohorts == 0 && length(cohorts) > 0) {
-    stop("n_cohorts == 0 but the cohorts list is not empty in addDummies.")
-  }
-  if (n_cohorts > 0 && length(cohorts) != n_cohorts) {
-    # This might happen if idCohorts filters out all treated units.
-    # prepXints already checks R >= 1 (where R is length(cohorts))
-    # and R < 2.
-    # This stop might be too strict if R is derived from length(cohorts) earlier.
-    # stop(paste("n_cohorts is", n_cohorts, "but length(cohorts) is", length(cohorts)))
-  }
+	# Ensure cohorts list is not empty if n_cohorts > 0
+	if (n_cohorts > 0 && length(cohorts) == 0) {
+		stop("n_cohorts > 0 but the cohorts list is empty in addDummies.")
+	}
+	if (n_cohorts == 0 && length(cohorts) > 0) {
+		stop("n_cohorts == 0 but the cohorts list is not empty in addDummies.")
+	}
+	if (n_cohorts > 0 && length(cohorts) != n_cohorts) {
+		# This might happen if idCohorts filters out all treated units.
+		# prepXints already checks R >= 1 (where R is length(cohorts))
+		# and R < 2.
+		# This stop might be too strict if R is derived from length(cohorts) earlier.
+		# stop(paste("n_cohorts is", n_cohorts, "but length(cohorts) is", length(cohorts)))
+	}
 
-  for (i in 1:n_cohorts) {
-    # Time of first treatment for this cohort
-    y1_treat_i <- as.integer(names(cohorts)[i])
-    stopifnot(y1_treat_i <= max(times))
-    # Cohort must start treatment strictly after the first period
-    stopifnot(y1_treat_i > times[1])
+	for (i in 1:n_cohorts) {
+		# Time of first treatment for this cohort
+		y1_treat_i <- as.integer(names(cohorts)[i])
+		stopifnot(y1_treat_i <= max(times))
+		# Cohort must start treatment strictly after the first period
+		stopifnot(y1_treat_i > times[1])
 
-    treated_times_i <- times[times >= y1_treat_i] # Actual time values
+		treated_times_i <- times[times >= y1_treat_i] # Actual time values
 
-    # How many treated times are there?
-    n_treated_times_for_cohort_i <- length(treated_times_i)
-    stopifnot(n_treated_times_for_cohort_i <= T)
-    # stopifnot(n_treated_times_for_cohort_i == max(times) - y1_treat_i + 1) # This might fail if times are not consecutive integers
+		# How many treated times are there?
+		n_treated_times_for_cohort_i <- length(treated_times_i)
+		stopifnot(n_treated_times_for_cohort_i <= T)
+		# stopifnot(n_treated_times_for_cohort_i == max(times) - y1_treat_i + 1) # This might fail if times are not consecutive integers
 
-    if (n_treated_times_for_cohort_i == 0 && length(cohorts[[i]]) > 0) {
-      # This means a cohort is defined but has no post-treatment periods within 'times'
-      # This shouldn't happen if cohorts are defined by times >= times[2]
-      # and times contains at least two periods.
-      warning(paste(
-        "Cohort",
-        names(cohorts)[i],
-        "has no treated time periods within the observed times."
-      ))
-    }
+		if (n_treated_times_for_cohort_i == 0 && length(cohorts[[i]]) > 0) {
+			# This means a cohort is defined but has no post-treatment periods within 'times'
+			# This shouldn't happen if cohorts are defined by times >= times[2]
+			# and times contains at least two periods.
+			warning(paste(
+				"Cohort",
+				names(cohorts)[i],
+				"has no treated time periods within the observed times."
+			))
+		}
 
-    first_inds[i] <- current_first_ind_val
-    num_treats <- num_treats + n_treated_times_for_cohort_i # This is total across all cohorts so far
-    current_first_ind_val <- current_first_ind_val +
-      n_treated_times_for_cohort_i
+		first_inds[i] <- current_first_ind_val
+		num_treats <- num_treats + n_treated_times_for_cohort_i # This is total across all cohorts so far
+		current_first_ind_val <- current_first_ind_val +
+			n_treated_times_for_cohort_i
 
-    # Cohort/treatment time variable names
-    c_i_names <- paste0("c", i, "_t", treated_times_i) # More descriptive names
-    stopifnot(length(c_i_names) == n_treated_times_for_cohort_i)
+		# Cohort/treatment time variable names
+		c_i_names <- paste0("c", i, "_t", treated_times_i) # More descriptive names
+		stopifnot(length(c_i_names) == n_treated_times_for_cohort_i)
 
-    cohort_treat_names[[as.character(y1_treat_i)]] <- c_i_names # Name list element by cohort start time
+		cohort_treat_names[[as.character(y1_treat_i)]] <- c_i_names # Name list element by cohort start time
 
-    current_cohort_var_name <- paste0("cohort_", y1_treat_i) # Name cohort by its start time
-    cohort_vars <- c(cohort_vars, current_cohort_var_name)
-    stopifnot(length(cohort_vars) == i)
+		current_cohort_var_name <- paste0("cohort_", y1_treat_i) # Name cohort by its start time
+		cohort_vars <- c(cohort_vars, current_cohort_var_name)
+		stopifnot(length(cohort_vars) == i)
 
-    # Units belonging to the current cohort
-    current_cohort_units <- cohorts[[i]]
-    if (length(current_cohort_units) == 0 && n_treated_times_for_cohort_i > 0) {
-      # A defined cohort from names(cohorts) has no units
-      # This shouldn't happen if idCohorts filters empty cohorts, unless n_cohorts was passed independently.
-      # warning(paste("Cohort starting at time", y1_treat_i, "has no units."))
-      # If a cohort has no units, its dummies will be all zero.
-    }
+		# Units belonging to the current cohort
+		current_cohort_units <- cohorts[[i]]
+		if (
+			length(current_cohort_units) == 0 &&
+				n_treated_times_for_cohort_i > 0
+		) {
+			# A defined cohort from names(cohorts) has no units
+			# This shouldn't happen if idCohorts filters empty cohorts, unless n_cohorts was passed independently.
+			# warning(paste("Cohort starting at time", y1_treat_i, "has no units."))
+			# If a cohort has no units, its dummies will be all zero.
+		}
 
-    treat_vars_i <- genTreatVarsRealData(
-      cohort_name = current_cohort_var_name,
-      c_t_names = c_i_names,
-      N = N,
-      T = T,
-      n_treated_times = n_treated_times_for_cohort_i,
-      unit_vars = df[, unit_var],
-      time_vars = df[, time_var],
-      cohort = current_cohort_units,
-      treated_times = treated_times_i
-    )
+		treat_vars_i <- genTreatVarsRealData(
+			cohort_name = current_cohort_var_name,
+			c_t_names = c_i_names,
+			N = N,
+			T = T,
+			n_treated_times = n_treated_times_for_cohort_i,
+			unit_vars = df[, unit_var],
+			time_vars = df[, time_var],
+			cohort = current_cohort_units,
+			treated_times = treated_times_i
+		)
 
-    # First column is cohort dummy and its name is current_cohort_var_name.
-    # Remaining columns are treatment dummies with names c_i_names.
+		# First column is cohort dummy and its name is current_cohort_var_name.
+		# Remaining columns are treatment dummies with names c_i_names.
 
-    stopifnot(is.na(cohort_var_mat[, i])) # If initialized with NA
-    # if (any(cohort_var_mat[,i] != 0L)) stop("cohort_var_mat not 0L before assignment") # If initialized with 0L
-    stopifnot(ncol(treat_vars_i) == n_treated_times_for_cohort_i + 1)
+		stopifnot(is.na(cohort_var_mat[, i])) # If initialized with NA
+		# if (any(cohort_var_mat[,i] != 0L)) stop("cohort_var_mat not 0L before assignment") # If initialized with 0L
+		stopifnot(ncol(treat_vars_i) == n_treated_times_for_cohort_i + 1)
 
-    cohort_var_mat[, i] <- treat_vars_i[, 1]
-    colnames(cohort_var_mat)[i] <- current_cohort_var_name
+		cohort_var_mat[, i] <- treat_vars_i[, 1]
+		colnames(cohort_var_mat)[i] <- current_cohort_var_name
 
-    if (n_treated_times_for_cohort_i > 0) {
-      current_treat_dummies <- treat_vars_i[,
-        2:(n_treated_times_for_cohort_i + 1),
-        drop = FALSE
-      ]
-      if (ncol(treat_var_mat) == 1 && all(is.na(treat_var_mat[, 1]))) {
-        # First time, replace placeholder
-        treat_var_mat <- current_treat_dummies
-      } else {
-        treat_var_mat <- cbind(treat_var_mat, current_treat_dummies)
-      }
-    }
-    # df <- data.frame(df, treat_vars_i) # Original code modifies df, but not strictly needed if matrices are goal
-  }
+		if (n_treated_times_for_cohort_i > 0) {
+			current_treat_dummies <- treat_vars_i[,
+				2:(n_treated_times_for_cohort_i + 1),
+				drop = FALSE
+			]
+			if (ncol(treat_var_mat) == 1 && all(is.na(treat_var_mat[, 1]))) {
+				# First time, replace placeholder
+				treat_var_mat <- current_treat_dummies
+			} else {
+				treat_var_mat <- cbind(treat_var_mat, current_treat_dummies)
+			}
+		}
+		# df <- data.frame(df, treat_vars_i) # Original code modifies df, but not strictly needed if matrices are goal
+	}
 
-  # After loop, num_treats holds the grand total number of treatment-period dummies
-  # current_first_ind_val is now num_treats + 1
-  stopifnot(all(first_inds %in% 1:num_treats) || n_cohorts == 0) # first_inds can be empty if n_cohorts=0
-  stopifnot(length(first_inds) == n_cohorts)
+	# After loop, num_treats holds the grand total number of treatment-period dummies
+	# current_first_ind_val is now num_treats + 1
+	stopifnot(all(first_inds %in% 1:num_treats) || n_cohorts == 0) # first_inds can be empty if n_cohorts=0
+	stopifnot(length(first_inds) == n_cohorts)
 
-  stopifnot(length(cohort_treat_names) == n_cohorts)
-  # names(cohort_treat_names) <- names(cohorts) # Already done inside loop if using y1_treat_i
+	stopifnot(length(cohort_treat_names) == n_cohorts)
+	# names(cohort_treat_names) <- names(cohorts) # Already done inside loop if using y1_treat_i
 
-  if (n_cohorts == 0 || num_treats == 0) {
-    # If no cohorts or no treatment effects
-    treat_var_mat <- matrix(0L, nrow = N * T, ncol = 0)
-  } else {
-    stopifnot(is.numeric(ncol(treat_var_mat)) | is.integer(ncol(treat_var_mat)))
-    stopifnot(ncol(treat_var_mat) == num_treats)
-  }
+	if (n_cohorts == 0 || num_treats == 0) {
+		# If no cohorts or no treatment effects
+		treat_var_mat <- matrix(0L, nrow = N * T, ncol = 0)
+	} else {
+		stopifnot(
+			is.numeric(ncol(treat_var_mat)) | is.integer(ncol(treat_var_mat))
+		)
+		stopifnot(ncol(treat_var_mat) == num_treats)
+	}
 
-  # Add time dummies for all but first time
-  time_var_mat <- matrix(0L, nrow = N * T, ncol = T - 1)
-  if (T > 1) {
-    # Only if there's more than one time period
-    time_var_names <- paste0("t_", times[2:T])
-    colnames(time_var_mat) <- time_var_names
-    for (t_idx in 2:T) {
-      # Iterate from the second time period
-      actual_time_value <- times[t_idx]
-      c_t_inds <- df[, time_var] %in% actual_time_value # Use actual time value
-      stopifnot(length(c_t_inds) == N * T)
-      stopifnot(sum(c_t_inds) == N) # Each unit observed at this time
+	# Add time dummies for all but first time
+	time_var_mat <- matrix(0L, nrow = N * T, ncol = T - 1)
+	if (T > 1) {
+		# Only if there's more than one time period
+		time_var_names <- paste0("t_", times[2:T])
+		colnames(time_var_mat) <- time_var_names
+		for (t_idx in 2:T) {
+			# Iterate from the second time period
+			actual_time_value <- times[t_idx]
+			c_t_inds <- df[, time_var] %in% actual_time_value # Use actual time value
+			stopifnot(length(c_t_inds) == N * T)
+			stopifnot(sum(c_t_inds) == N) # Each unit observed at this time
 
-      # Add time dummy; column is t_idx - 1 because times[1] is baseline
-      time_var_mat[c_t_inds, t_idx - 1] <- 1L
-    }
-    stopifnot(all(colSums(time_var_mat) == N))
-    stopifnot(length(time_var_names) == T - 1)
-    stopifnot(ncol(time_var_mat) == T - 1)
-  } else {
-    # T=1 case
-    time_var_names <- character(0)
-    # time_var_mat remains 0-col matrix
-  }
+			# Add time dummy; column is t_idx - 1 because times[1] is baseline
+			time_var_mat[c_t_inds, t_idx - 1] <- 1L
+		}
+		stopifnot(all(colSums(time_var_mat) == N))
+		stopifnot(length(time_var_names) == T - 1)
+		stopifnot(ncol(time_var_mat) == T - 1)
+	} else {
+		# T=1 case
+		time_var_names <- character(0)
+		# time_var_mat remains 0-col matrix
+	}
 
-  stopifnot(length(unlist(cohort_treat_names)) == num_treats || num_treats == 0)
-  stopifnot(ncol(cohort_var_mat) == n_cohorts)
+	stopifnot(
+		length(unlist(cohort_treat_names)) == num_treats || num_treats == 0
+	)
+	stopifnot(ncol(cohort_var_mat) == n_cohorts)
 
-  stopifnot(ncol(treat_var_mat) == num_treats)
-  # stopifnot(ncol(treat_var_mat) >= 1) # Can be 0 if num_treats is 0
+	stopifnot(ncol(treat_var_mat) == num_treats)
+	# stopifnot(ncol(treat_var_mat) >= 1) # Can be 0 if num_treats is 0
 
-  stopifnot(length(cohort_vars) == n_cohorts)
+	stopifnot(length(cohort_vars) == n_cohorts)
 
-  # Center response
-  y <- df[, resp_var] - mean(df[, resp_var])
+	# Center response
+	y <- df[, resp_var] - mean(df[, resp_var])
 
-  return(list(
-    time_var_mat = time_var_mat,
-    cohort_var_mat = cohort_var_mat,
-    treat_var_mat = treat_var_mat,
-    y = y,
-    cohort_treat_names = cohort_treat_names,
-    time_var_names = time_var_names,
-    cohort_vars = cohort_vars,
-    first_inds = first_inds
-  ))
+	return(list(
+		time_var_mat = time_var_mat,
+		cohort_var_mat = cohort_var_mat,
+		treat_var_mat = treat_var_mat,
+		y = y,
+		cohort_treat_names = cohort_treat_names,
+		time_var_names = time_var_names,
+		cohort_vars = cohort_vars,
+		first_inds = first_inds
+	))
 }
 
 #' Generate Fixed Effect Interactions with Covariates
@@ -1904,74 +1916,74 @@ addDummies <- function(
 #' @keywords internal
 #' @noRd
 generateFEInts <- function(X_long, cohort_fe, time_fe, N, T, R, d) {
-  # If no covariates are present, return empty matrices.
-  if (d == 0) {
-    return(list(
-      X_long_cohort = matrix(nrow = N * T, ncol = 0),
-      X_long_time = matrix(nrow = N * T, ncol = 0)
-    ))
-  }
+	# If no covariates are present, return empty matrices.
+	if (d == 0) {
+		return(list(
+			X_long_cohort = matrix(nrow = N * T, ncol = 0),
+			X_long_time = matrix(nrow = N * T, ncol = 0)
+		))
+	}
 
-  # Interact with cohort effects
-  X_long_cohort <- matrix(as.numeric(NA), nrow = N * T, ncol = R * d)
+	# Interact with cohort effects
+	X_long_cohort <- matrix(as.numeric(NA), nrow = N * T, ncol = R * d)
 
-  stopifnot(ncol(cohort_fe) == R)
-  stopifnot(nrow(cohort_fe) == N * T)
-  stopifnot(ncol(time_fe) == (T - 1) || T == 1) # time_fe can be 0-col if T=1
-  stopifnot(ncol(X_long) == d)
-  stopifnot(is.matrix(X_long))
-  stopifnot(!is.data.frame(X_long))
+	stopifnot(ncol(cohort_fe) == R)
+	stopifnot(nrow(cohort_fe) == N * T)
+	stopifnot(ncol(time_fe) == (T - 1) || T == 1) # time_fe can be 0-col if T=1
+	stopifnot(ncol(X_long) == d)
+	stopifnot(is.matrix(X_long))
+	stopifnot(!is.data.frame(X_long))
 
-  for (r_idx in 1:R) {
-    # iterate R times for R cohorts
-    # Notice that these are arranged one cohort at a time, interacted with
-    # all covariates
-    first_col_r <- (r_idx - 1) * d + 1
-    last_col_r <- r_idx * d
+	for (r_idx in 1:R) {
+		# iterate R times for R cohorts
+		# Notice that these are arranged one cohort at a time, interacted with
+		# all covariates
+		first_col_r <- (r_idx - 1) * d + 1
+		last_col_r <- r_idx * d
 
-    stopifnot(last_col_r - first_col_r + 1 == d)
-    stopifnot(all(is.na(X_long_cohort[, first_col_r:last_col_r])))
+		stopifnot(last_col_r - first_col_r + 1 == d)
+		stopifnot(all(is.na(X_long_cohort[, first_col_r:last_col_r])))
 
-    # Element-wise multiplication of cohort_fe[,r_idx] (a vector) with each column of X_long
-    # This creates d columns for the r_idx-th cohort
-    interaction_block_r <- cohort_fe[, r_idx] * X_long
-    stopifnot(ncol(interaction_block_r) == d)
+		# Element-wise multiplication of cohort_fe[,r_idx] (a vector) with each column of X_long
+		# This creates d columns for the r_idx-th cohort
+		interaction_block_r <- cohort_fe[, r_idx] * X_long
+		stopifnot(ncol(interaction_block_r) == d)
 
-    X_long_cohort[, first_col_r:last_col_r] <- interaction_block_r
-  }
+		X_long_cohort[, first_col_r:last_col_r] <- interaction_block_r
+	}
 
-  stopifnot(all(!is.na(X_long_cohort)))
-  stopifnot(nrow(X_long_cohort) == N * T)
-  stopifnot(ncol(X_long_cohort) == R * d)
+	stopifnot(all(!is.na(X_long_cohort)))
+	stopifnot(nrow(X_long_cohort) == N * T)
+	stopifnot(ncol(X_long_cohort) == R * d)
 
-  # Interact with time effects
-  if (T > 1) {
-    # Only if there are time fixed effects (T-1 > 0)
-    X_long_time <- matrix(as.numeric(NA), nrow = N * T, ncol = (T - 1) * d)
-    for (t_idx in 1:(T - 1)) {
-      # iterate T-1 times for T-1 time dummies
-      # Notice that these are arranged one time at a time, interacted with all
-      # covariates
-      first_col_t <- (t_idx - 1) * d + 1
-      last_col_t <- t_idx * d
+	# Interact with time effects
+	if (T > 1) {
+		# Only if there are time fixed effects (T-1 > 0)
+		X_long_time <- matrix(as.numeric(NA), nrow = N * T, ncol = (T - 1) * d)
+		for (t_idx in 1:(T - 1)) {
+			# iterate T-1 times for T-1 time dummies
+			# Notice that these are arranged one time at a time, interacted with all
+			# covariates
+			first_col_t <- (t_idx - 1) * d + 1
+			last_col_t <- t_idx * d
 
-      stopifnot(last_col_t - first_col_t + 1 == d)
-      stopifnot(all(is.na(X_long_time[, first_col_t:last_col_t])))
+			stopifnot(last_col_t - first_col_t + 1 == d)
+			stopifnot(all(is.na(X_long_time[, first_col_t:last_col_t])))
 
-      interaction_block_t <- time_fe[, t_idx] * X_long
-      stopifnot(ncol(interaction_block_t) == d)
+			interaction_block_t <- time_fe[, t_idx] * X_long
+			stopifnot(ncol(interaction_block_t) == d)
 
-      X_long_time[, first_col_t:last_col_t] <- interaction_block_t
-    }
-    stopifnot(all(!is.na(X_long_time)))
-    stopifnot(nrow(X_long_time) == N * T)
-    stopifnot(ncol(X_long_time) == (T - 1) * d)
-  } else {
-    # T=1 case, no time fixed effects
-    X_long_time <- matrix(nrow = N * T, ncol = 0)
-  }
+			X_long_time[, first_col_t:last_col_t] <- interaction_block_t
+		}
+		stopifnot(all(!is.na(X_long_time)))
+		stopifnot(nrow(X_long_time) == N * T)
+		stopifnot(ncol(X_long_time) == (T - 1) * d)
+	} else {
+		# T=1 case, no time fixed effects
+		X_long_time <- matrix(nrow = N * T, ncol = 0)
+	}
 
-  return(list(X_long_cohort = X_long_cohort, X_long_time = X_long_time))
+	return(list(X_long_cohort = X_long_cohort, X_long_time = X_long_time))
 }
 
 #' Generate Treatment-Covariate Interactions
@@ -2012,90 +2024,90 @@ generateFEInts <- function(X_long, cohort_fe, time_fe, N, T, R, d) {
 #' @keywords internal
 #' @noRd
 genTreatInts <- function(
-  treat_mat_long,
-  X_long,
-  n_treats,
-  cohort_fe,
-  N,
-  T,
-  R,
-  d,
-  N_UNTREATED
+	treat_mat_long,
+	X_long,
+	n_treats,
+	cohort_fe,
+	N,
+	T,
+	R,
+	d,
+	N_UNTREATED
 ) {
-  # If there are no covariates, return an empty matrix.
-  if (d == 0) {
-    return(matrix(nrow = N * T, ncol = 0))
-  }
+	# If there are no covariates, return an empty matrix.
+	if (d == 0) {
+		return(matrix(nrow = N * T, ncol = 0))
+	}
 
-  stopifnot(ncol(cohort_fe) == R)
-  stopifnot(ncol(treat_mat_long) == n_treats)
+	stopifnot(ncol(cohort_fe) == R)
+	stopifnot(ncol(treat_mat_long) == n_treats)
 
-  stopifnot(is.numeric(d) || is.integer(d))
-  stopifnot(d >= 1)
+	stopifnot(is.numeric(d) || is.integer(d))
+	stopifnot(d >= 1)
 
-  stopifnot(is.numeric(n_treats) || is.integer(n_treats))
-  stopifnot(n_treats >= 1)
+	stopifnot(is.numeric(n_treats) || is.integer(n_treats))
+	stopifnot(n_treats >= 1)
 
-  stopifnot(is.numeric(N) || is.integer(N))
-  stopifnot(N >= 2)
+	stopifnot(is.numeric(N) || is.integer(N))
+	stopifnot(N >= 2)
 
-  stopifnot(is.numeric(T) || is.integer(T))
-  stopifnot(T >= 2)
-  # Interact with covariates
-  X_long_treat <- matrix(as.numeric(NA), nrow = N * T, ncol = d * n_treats)
+	stopifnot(is.numeric(T) || is.integer(T))
+	stopifnot(T >= 2)
+	# Interact with covariates
+	X_long_treat <- matrix(as.numeric(NA), nrow = N * T, ncol = d * n_treats)
 
-  # First need to center covariates with respect to cohort means
-  X_long_centered <- matrix(as.numeric(NA), nrow = N * T, ncol = d)
+	# First need to center covariates with respect to cohort means
+	X_long_centered <- matrix(as.numeric(NA), nrow = N * T, ncol = d)
 
-  # Never treated group
-  unt_row_inds <- which(rowSums(cohort_fe) == 0)
+	# Never treated group
+	unt_row_inds <- which(rowSums(cohort_fe) == 0)
 
-  # Assume balanced panel
-  stopifnot(length(unt_row_inds) == N_UNTREATED * T)
+	# Assume balanced panel
+	stopifnot(length(unt_row_inds) == N_UNTREATED * T)
 
-  stopifnot(all(is.na(X_long_centered[unt_row_inds, ])))
+	stopifnot(all(is.na(X_long_centered[unt_row_inds, ])))
 
-  X_long_centered[unt_row_inds, ] <- scale(
-    X_long[unt_row_inds, , drop = FALSE],
-    center = TRUE,
-    scale = FALSE
-  )
+	X_long_centered[unt_row_inds, ] <- scale(
+		X_long[unt_row_inds, , drop = FALSE],
+		center = TRUE,
+		scale = FALSE
+	)
 
-  for (r in 1:R) {
-    # Notice that these are arranged column-wise one cohort at a time,
-    # interacted with all treatment effects
+	for (r in 1:R) {
+		# Notice that these are arranged column-wise one cohort at a time,
+		# interacted with all treatment effects
 
-    cohort_r_inds <- which(cohort_fe[, r] == 1)
+		cohort_r_inds <- which(cohort_fe[, r] == 1)
 
-    new_mat <- scale(
-      X_long[cohort_r_inds, , drop = FALSE],
-      center = TRUE,
-      scale = FALSE
-    )
+		new_mat <- scale(
+			X_long[cohort_r_inds, , drop = FALSE],
+			center = TRUE,
+			scale = FALSE
+		)
 
-    stopifnot(all(!is.na(new_mat)))
-    stopifnot(all(is.na(X_long_centered[cohort_r_inds, ])))
+		stopifnot(all(!is.na(new_mat)))
+		stopifnot(all(is.na(X_long_centered[cohort_r_inds, ])))
 
-    X_long_centered[cohort_r_inds, ] <- new_mat
-  }
-  # Final index should correspond to last row
-  stopifnot(all(!is.na(X_long_centered)))
+		X_long_centered[cohort_r_inds, ] <- new_mat
+	}
+	# Final index should correspond to last row
+	stopifnot(all(!is.na(X_long_centered)))
 
-  for (i in 1:n_treats) {
-    first_col_i <- (i - 1) * d + 1
-    last_col_i <- i * d
+	for (i in 1:n_treats) {
+		first_col_i <- (i - 1) * d + 1
+		last_col_i <- i * d
 
-    stopifnot(all(is.na(X_long_treat[, first_col_i:last_col_i])))
+		stopifnot(all(is.na(X_long_treat[, first_col_i:last_col_i])))
 
-    X_long_treat[, first_col_i:last_col_i] <- treat_mat_long[, i] *
-      X_long_centered
-  }
+		X_long_treat[, first_col_i:last_col_i] <- treat_mat_long[, i] *
+			X_long_centered
+	}
 
-  stopifnot(all(!is.na(X_long_treat)))
-  stopifnot(nrow(X_long_treat) == N * T)
-  stopifnot(ncol(X_long_treat) == n_treats * d)
+	stopifnot(all(!is.na(X_long_treat)))
+	stopifnot(nrow(X_long_treat) == N * T)
+	stopifnot(ncol(X_long_treat) == n_treats * d)
 
-  return(X_long_treat)
+	return(X_long_treat)
 }
 
 #' Generate Full Design Matrix with Interactions (`X_ints`)
@@ -2135,90 +2147,92 @@ genTreatInts <- function(
 #' @keywords internal
 #' @noRd
 genXintsData <- function(
-  cohort_fe,
-  time_fe,
-  X_long,
-  treat_mat_long,
-  N,
-  R,
-  T,
-  d,
-  N_UNTREATED,
-  p
+	cohort_fe,
+	time_fe,
+	X_long,
+	treat_mat_long,
+	N,
+	R,
+	T,
+	d,
+	N_UNTREATED,
+	p
 ) {
-  # X_long may be an empty matrix if d == 0.
-  X_int <- cbind(cohort_fe, time_fe, X_long)
-  stopifnot(ncol(X_int) == R + T - 1 + d)
+	# X_long may be an empty matrix if d == 0.
+	X_int <- cbind(cohort_fe, time_fe, X_long)
+	stopifnot(ncol(X_int) == R + T - 1 + d)
 
-  # Generate interactions of X with time and cohort fixed effects
-  # Note: columns of X_long_cohort are arranged in blocks of size d for one
-  # cohort at a time (that is, the first d columns are the interactions of
-  # all d features with the indicator variables for the first block, and
-  # so on). Similarly, the columns of X_long_time are arranged in T - 1
-  # blocks of size d.
-  stopifnot(ncol(cohort_fe) == R)
-  res <- generateFEInts(X_long, cohort_fe, time_fe, N, T, R, d)
+	# Generate interactions of X with time and cohort fixed effects
+	# Note: columns of X_long_cohort are arranged in blocks of size d for one
+	# cohort at a time (that is, the first d columns are the interactions of
+	# all d features with the indicator variables for the first block, and
+	# so on). Similarly, the columns of X_long_time are arranged in T - 1
+	# blocks of size d.
+	stopifnot(ncol(cohort_fe) == R)
+	res <- generateFEInts(X_long, cohort_fe, time_fe, N, T, R, d)
 
-  X_long_cohort <- res$X_long_cohort
-  X_long_time <- res$X_long_time
+	X_long_cohort <- res$X_long_cohort
+	X_long_time <- res$X_long_time
 
-  X_int <- cbind(X_int, X_long_cohort, X_long_time, treat_mat_long)
+	X_int <- cbind(X_int, X_long_cohort, X_long_time, treat_mat_long)
 
-  rm(res)
+	rm(res)
 
-  stopifnot(is.integer(ncol(treat_mat_long)) | is.numeric(ncol(treat_mat_long)))
-  stopifnot(ncol(treat_mat_long) >= 1)
+	stopifnot(
+		is.integer(ncol(treat_mat_long)) | is.numeric(ncol(treat_mat_long))
+	)
+	stopifnot(ncol(treat_mat_long) >= 1)
 
-  stopifnot(ncol(cohort_fe) == R)
+	stopifnot(ncol(cohort_fe) == R)
 
-  # Generate interactions between treatment effects and X (if any)
-  X_long_treat <- genTreatInts(
-    treat_mat_long = treat_mat_long,
-    X_long = X_long,
-    n_treats = ncol(treat_mat_long),
-    cohort_fe = cohort_fe,
-    N = N,
-    T = T,
-    R = R,
-    d = d,
-    N_UNTREATED = N_UNTREATED
-  )
+	# Generate interactions between treatment effects and X (if any)
+	X_long_treat <- genTreatInts(
+		treat_mat_long = treat_mat_long,
+		X_long = X_long,
+		n_treats = ncol(treat_mat_long),
+		cohort_fe = cohort_fe,
+		N = N,
+		T = T,
+		R = R,
+		d = d,
+		N_UNTREATED = N_UNTREATED
+	)
 
-  # The first R columns are the cohort fixed effects in order
-  # Next T are time fixed effects in order
-  # Next d are X
-  # Next d*R are cohort effects interacted with X. (The first d of these
-  # are first cohort effects interacted with X, and so on until the Rth
-  # cohort.)
-  # Next d*T are time effects interacted with X (similarly to the above,
-  # the first d are first time effects interacted with X, and so on until
-  # the Tth time).
-  # Next num_treats = R*T - R*(R + 1)/2 columns are base treatment effects
-  # (for each cohort and time)
-  # Finally, the next num_treats*d are interactions of all of these
-  # treatment effects over time--first d are the first column of
-  # treat_mat_long interacted with all of the columns of X, and so on.
-  X_int <- cbind(X_int, X_long_treat)
+	# The first R columns are the cohort fixed effects in order
+	# Next T are time fixed effects in order
+	# Next d are X
+	# Next d*R are cohort effects interacted with X. (The first d of these
+	# are first cohort effects interacted with X, and so on until the Rth
+	# cohort.)
+	# Next d*T are time effects interacted with X (similarly to the above,
+	# the first d are first time effects interacted with X, and so on until
+	# the Tth time).
+	# Next num_treats = R*T - R*(R + 1)/2 columns are base treatment effects
+	# (for each cohort and time)
+	# Finally, the next num_treats*d are interactions of all of these
+	# treatment effects over time--first d are the first column of
+	# treat_mat_long interacted with all of the columns of X, and so on.
+	X_int <- cbind(X_int, X_long_treat)
 
-  if (ncol(X_int) != p) {
-    stop(paste(
-      "ncol(X_int) =",
-      ncol(X_int),
-      ", p =",
-      p,
-      ", R =",
-      R,
-      ", T =",
-      T,
-      ", d =",
-      d
-    ))
-  }
+	if (ncol(X_int) != p) {
+		stop(paste(
+			"ncol(X_int) =",
+			ncol(X_int),
+			", p =",
+			p,
+			", R =",
+			R,
+			", T =",
+			T,
+			", d =",
+			d
+		))
+	}
 
-  stopifnot(ncol(X_int) == p)
-  stopifnot(nrow(X_int) == N * T)
+	stopifnot(ncol(X_int) == p)
+	stopifnot(nrow(X_int) == N * T)
 
-  return(X_int)
+	return(X_int)
 }
 
 #-------------------------------------------------------------------------------
@@ -2276,63 +2290,63 @@ genXintsData <- function(
 #' @keywords internal
 #' @noRd
 getFirstInds <- function(R, T) {
-  # Let's identify the indices of the first treatment effects for each cohort.
-  # The first one is index 1, then the second one is index (T - 1) + 1 = T,
-  # then the third one is (T - 1) + (T - 2) + 1 = 2*T - 2. In general, for
-  # r > 1 the rth one will occur at index
-  #
-  # (T - 1) + (T - 2) + ... + (T - (r - 1)) + 1
-  # = 1 + (r - 1)*(T - 1 + T - r + 1)/2
-  # = 1 + (r - 1)*(2*T - r)/2.
-  #
-  # (Looks like the formula works for r = 1 too.)
+	# Let's identify the indices of the first treatment effects for each cohort.
+	# The first one is index 1, then the second one is index (T - 1) + 1 = T,
+	# then the third one is (T - 1) + (T - 2) + 1 = 2*T - 2. In general, for
+	# r > 1 the rth one will occur at index
+	#
+	# (T - 1) + (T - 2) + ... + (T - (r - 1)) + 1
+	# = 1 + (r - 1)*(T - 1 + T - r + 1)/2
+	# = 1 + (r - 1)*(2*T - r)/2.
+	#
+	# (Looks like the formula works for r = 1 too.)
 
-  n_treats <- getNumTreats(R = R, T = T)
+	n_treats <- getNumTreats(R = R, T = T)
 
-  f_inds <- integer(R)
-  if (R == 0) return(f_inds) # No cohorts, no first_inds
+	f_inds <- integer(R)
+	if (R == 0) return(f_inds) # No cohorts, no first_inds
 
-  for (r in 1:R) {
-    f_inds[r] <- 1 + (r - 1) * (2 * T - r) / 2
-  }
-  stopifnot(all(f_inds <= n_treats))
-  stopifnot(f_inds[1] == 1)
-  # Last cohort has T - R treatment effects to estimate. So last first_ind
-  # should be at position num_treats - (T - R) + 1 = num_treats - T + R + 1.
-  stopifnot(f_inds[R] == n_treats - T + R + 1)
+	for (r in 1:R) {
+		f_inds[r] <- 1 + (r - 1) * (2 * T - r) / 2
+	}
+	stopifnot(all(f_inds <= n_treats))
+	stopifnot(f_inds[1] == 1)
+	# Last cohort has T - R treatment effects to estimate. So last first_ind
+	# should be at position num_treats - (T - R) + 1 = num_treats - T + R + 1.
+	stopifnot(f_inds[R] == n_treats - T + R + 1)
 
-  # Additional checks from Gemini below
+	# Additional checks from Gemini below
 
-  stopifnot(all(f_inds <= n_treats) || R == 0)
-  if (R > 0) stopifnot(f_inds[1] == 1)
+	stopifnot(all(f_inds <= n_treats) || R == 0)
+	if (R > 0) stopifnot(f_inds[1] == 1)
 
-  # Last first_ind: f_inds[R] = 1 + sum_{j=1}^{R-1} (T-j)
-  # Total effects = sum_{j=1}^{R} (T-j) = n_treats
-  # Last block of effects for cohort R has T-R effects.
-  # So f_inds[R] should be n_treats - (T-R) + 1.
-  if (R > 0) {
-    stopifnot(f_inds[R] == n_treats - (T - R) + 1)
-  }
+	# Last first_ind: f_inds[R] = 1 + sum_{j=1}^{R-1} (T-j)
+	# Total effects = sum_{j=1}^{R} (T-j) = n_treats
+	# Last block of effects for cohort R has T-R effects.
+	# So f_inds[R] should be n_treats - (T-R) + 1.
+	if (R > 0) {
+		stopifnot(f_inds[R] == n_treats - (T - R) + 1)
+	}
 
-  # The original formula was: `1 + (r - 1)*(2*T - r)/2`
-  # Let's re-check the paper's formula logic, it implies number of effects for cohort `k` (1-indexed) is `T-k`.
-  # sum_{j=1}^{r-1} (T-j) = (r-1)T - (r-1)r/2. So f_inds[r] = 1 + (r-1)T - r(r-1)/2.
-  # (r-1)*(2T-r)/2 = (r-1)T - r(r-1)/2. Yes, they are the same.
+	# The original formula was: `1 + (r - 1)*(2*T - r)/2`
+	# Let's re-check the paper's formula logic, it implies number of effects for cohort `k` (1-indexed) is `T-k`.
+	# sum_{j=1}^{r-1} (T-j) = (r-1)T - (r-1)r/2. So f_inds[r] = 1 + (r-1)T - r(r-1)/2.
+	# (r-1)*(2T-r)/2 = (r-1)T - r(r-1)/2. Yes, they are the same.
 
-  # Using the paper's original loop for safety, assuming it's correct with getNumTreats
-  f_inds_paper <- integer(R)
-  if (R > 0) {
-    for (r_val in 1:R) {
-      # r_val is 1-indexed cohort number
-      f_inds_paper[r_val] <- 1 + (r_val - 1) * (2 * T - r_val) / 2 # This is not sum of T-k, but related to cumulative sum for triangular numbers.
-      # This formula is sum_{k=0}^{r-2} (T-1-k) if T-1 is max effects
-      # Or sum_{j=0}^{r-1-1} ( (T-1) - j )
-      # Let's use the direct sum formulation which is clearer.
-    }
-    stopifnot(f_inds == f_inds_paper) # Verify my derivation matches paper's formula
-  }
+	# Using the paper's original loop for safety, assuming it's correct with getNumTreats
+	f_inds_paper <- integer(R)
+	if (R > 0) {
+		for (r_val in 1:R) {
+			# r_val is 1-indexed cohort number
+			f_inds_paper[r_val] <- 1 + (r_val - 1) * (2 * T - r_val) / 2 # This is not sum of T-k, but related to cumulative sum for triangular numbers.
+			# This formula is sum_{k=0}^{r-2} (T-1-k) if T-1 is max effects
+			# Or sum_{j=0}^{r-1-1} ( (T-1) - j )
+			# Let's use the direct sum formulation which is clearer.
+		}
+		stopifnot(f_inds == f_inds_paper) # Verify my derivation matches paper's formula
+	}
 
-  return(f_inds)
+	return(f_inds)
 }
 
 #' Transform Design Matrix for Fusion Penalties (`transformXintImproved`)
@@ -2379,132 +2393,134 @@ getFirstInds <- function(R, T) {
 #' @keywords internal
 #' @noRd
 transformXintImproved <- function(
-  X_int,
-  N,
-  T,
-  R,
-  d,
-  num_treats,
-  first_inds = NA
+	X_int,
+	N,
+	T,
+	R,
+	d,
+	num_treats,
+	first_inds = NA
 ) {
-  p <- getP(R = R, T = T, d = d, num_treats = num_treats)
-  stopifnot(p == ncol(X_int))
-  X_mod <- matrix(as.numeric(NA), nrow = N * T, ncol = p)
-  stopifnot(nrow(X_int) == N * T)
+	p <- getP(R = R, T = T, d = d, num_treats = num_treats)
+	stopifnot(p == ncol(X_int))
+	X_mod <- matrix(as.numeric(NA), nrow = N * T, ncol = p)
+	stopifnot(nrow(X_int) == N * T)
 
-  # Transform cohort fixed effects
-  X_mod[, 1:R] <- X_int[, 1:R] %*% genBackwardsInvFusionTransformMat(R)
+	# Transform cohort fixed effects
+	X_mod[, 1:R] <- X_int[, 1:R] %*% genBackwardsInvFusionTransformMat(R)
 
-  # Transform time fixed effects
-  X_mod[, (R + 1):(R + T - 1)] <- X_int[, (R + 1):(R + T - 1)] %*%
-    genBackwardsInvFusionTransformMat(T - 1)
+	# Transform time fixed effects
+	X_mod[, (R + 1):(R + T - 1)] <- X_int[, (R + 1):(R + T - 1)] %*%
+		genBackwardsInvFusionTransformMat(T - 1)
 
-  # Copy X (the main covariate block; may be empty when d==0)
-  if (d > 0) {
-    stopifnot(all(is.na(X_mod[, (R + T - 1 + 1):(R + T - 1 + d)])))
-    X_mod[, (R + T - 1 + 1):(R + T - 1 + d)] <- X_int[,
-      (R + T - 1 + 1):(R + T - 1 + d)
-    ]
+	# Copy X (the main covariate block; may be empty when d==0)
+	if (d > 0) {
+		stopifnot(all(is.na(X_mod[, (R + T - 1 + 1):(R + T - 1 + d)])))
+		X_mod[, (R + T - 1 + 1):(R + T - 1 + d)] <- X_int[,
+			(R + T - 1 + 1):(R + T - 1 + d)
+		]
 
-    stopifnot(all(!is.na(X_mod[, 1:(R + T - 1 + d)])))
-    stopifnot(all(is.na(X_mod[, (R + T - 1 + d + 1):p])))
-  }
+		stopifnot(all(!is.na(X_mod[, 1:(R + T - 1 + d)])))
+		stopifnot(all(is.na(X_mod[, (R + T - 1 + d + 1):p])))
+	}
 
-  # For cohort effects interacted with X: we have d*R columns to deal with.
-  # For each individual feature, this will be handled using
-  # genTransformedMatFusion.
-  if (any(is.na(first_inds))) {
-    first_inds <- getFirstInds(R = R, T = T)
-  }
+	# For cohort effects interacted with X: we have d*R columns to deal with.
+	# For each individual feature, this will be handled using
+	# genTransformedMatFusion.
+	if (any(is.na(first_inds))) {
+		first_inds <- getFirstInds(R = R, T = T)
+	}
 
-  if (d > 0) {
-    for (j in 1:d) {
-      # Get indices corresponding to interactions between feature j and cohort
-      # fixed effects--these are the first feature, the (1 + d)th feature, and
-      # so on R times
-      feat_1 <- R + T - 1 + d + j
-      feat_R <- R + T - 1 + d + (R - 1) * d + j
-      feat_inds_j <- seq(feat_1, feat_R, by = d)
-      stopifnot(length(feat_inds_j) == R)
+	if (d > 0) {
+		for (j in 1:d) {
+			# Get indices corresponding to interactions between feature j and cohort
+			# fixed effects--these are the first feature, the (1 + d)th feature, and
+			# so on R times
+			feat_1 <- R + T - 1 + d + j
+			feat_R <- R + T - 1 + d + (R - 1) * d + j
+			feat_inds_j <- seq(feat_1, feat_R, by = d)
+			stopifnot(length(feat_inds_j) == R)
 
-      stopifnot(all(is.na(X_mod[, feat_inds_j])))
+			stopifnot(all(is.na(X_mod[, feat_inds_j])))
 
-      X_mod[, feat_inds_j] <- X_int[, feat_inds_j] %*%
-        genBackwardsInvFusionTransformMat(R)
-    }
-    stopifnot(all(!is.na(X_mod[, 1:(R + T - 1 + d + R * d)])))
-    stopifnot(all(is.na(X_mod[, (R + T - 1 + d + R * d + 1):p])))
+			X_mod[, feat_inds_j] <- X_int[, feat_inds_j] %*%
+				genBackwardsInvFusionTransformMat(R)
+		}
+		stopifnot(all(!is.na(X_mod[, 1:(R + T - 1 + d + R * d)])))
+		stopifnot(all(is.na(X_mod[, (R + T - 1 + d + R * d + 1):p])))
 
-    # Similar for time effects interacted with X
+		# Similar for time effects interacted with X
 
-    for (j in 1:d) {
-      # Get indices corresponding to interactions between feature j and time
-      # fixed effects--these are the first feature, the (1 + d)th feature, and
-      # so on T - 1 times
-      feat_1 <- R + T - 1 + d + R * d + j
-      feat_T_minus_1 <- R + T - 1 + d + R * d + (T - 2) * d + j
-      feat_inds_j <- seq(feat_1, feat_T_minus_1, by = d)
-      stopifnot(length(feat_inds_j) == T - 1)
+		for (j in 1:d) {
+			# Get indices corresponding to interactions between feature j and time
+			# fixed effects--these are the first feature, the (1 + d)th feature, and
+			# so on T - 1 times
+			feat_1 <- R + T - 1 + d + R * d + j
+			feat_T_minus_1 <- R + T - 1 + d + R * d + (T - 2) * d + j
+			feat_inds_j <- seq(feat_1, feat_T_minus_1, by = d)
+			stopifnot(length(feat_inds_j) == T - 1)
 
-      stopifnot(all(is.na(X_mod[, feat_inds_j])))
-      X_mod[, feat_inds_j] <- X_int[, feat_inds_j] %*%
-        genBackwardsInvFusionTransformMat(T - 1)
-    }
-    stopifnot(all(!is.na(X_mod[, 1:(R + T - 1 + d + R * d + (T - 1) * d)])))
-    stopifnot(all(is.na(X_mod[, (R + T - 1 + d + R * d + (T - 1) * d + 1):p])))
-  }
+			stopifnot(all(is.na(X_mod[, feat_inds_j])))
+			X_mod[, feat_inds_j] <- X_int[, feat_inds_j] %*%
+				genBackwardsInvFusionTransformMat(T - 1)
+		}
+		stopifnot(all(!is.na(X_mod[, 1:(R + T - 1 + d + R * d + (T - 1) * d)])))
+		stopifnot(all(is.na(X_mod[,
+			(R + T - 1 + d + R * d + (T - 1) * d + 1):p
+		])))
+	}
 
-  # Now base treatment effects. For each cohort, will penalize base term, then
-  # fuse remaining terms toward it. Also, for each cohort, will penalize base
-  # treatment effect of this cohort to base of previous cohort. New function
-  # genTransformedMatTwoWayFusion does this.
+	# Now base treatment effects. For each cohort, will penalize base term, then
+	# fuse remaining terms toward it. Also, for each cohort, will penalize base
+	# treatment effect of this cohort to base of previous cohort. New function
+	# genTransformedMatTwoWayFusion does this.
 
-  feat_inds <- (R + T - 1 + d + R * d + (T - 1) * d + 1):(R +
-    T -
-    1 +
-    d +
-    R * d +
-    (T - 1) * d +
-    num_treats)
+	feat_inds <- (R + T - 1 + d + R * d + (T - 1) * d + 1):(R +
+		T -
+		1 +
+		d +
+		R * d +
+		(T - 1) * d +
+		num_treats)
 
-  # Now ready to generate the appropriate transformed matrix
-  stopifnot(all(is.na(X_mod[, feat_inds])))
+	# Now ready to generate the appropriate transformed matrix
+	stopifnot(all(is.na(X_mod[, feat_inds])))
 
-  X_mod[, feat_inds] <- X_int[, feat_inds] %*%
-    genInvTwoWayFusionTransformMat(num_treats, first_inds, R)
+	X_mod[, feat_inds] <- X_int[, feat_inds] %*%
+		genInvTwoWayFusionTransformMat(num_treats, first_inds, R)
 
-  # stopifnot(all(!is.na(X_mod[, 1:(R + T - 1 + d + R*d + (T - 1)*d + num_treats)])))
-  # stopifnot(all(is.na(X_mod[, (R + T - 1 + d + R*d + (T - 1)*d + num_treats + 1):p])))
+	# stopifnot(all(!is.na(X_mod[, 1:(R + T - 1 + d + R*d + (T - 1)*d + num_treats)])))
+	# stopifnot(all(is.na(X_mod[, (R + T - 1 + d + R*d + (T - 1)*d + num_treats + 1):p])))
 
-  if (d > 0) {
-    # Lastly, penalize interactions between each treatment effect and each feature.
-    # Feature-wise, we can do this with genTransformedMatTwoWayFusion, in the same
-    # way that we did for previous interactions with X.
-    for (j in 1:d) {
-      # Recall that we have arranged the last d*num_Feats features in X_int
-      # as follows: the first d are the first column of treat_mat_long interacted
-      # with all of the columns of X, and so on. So, the columns that interact
-      # the jth feature with all of the treatment effects are columns j, j + 1*d,
-      # j + 2*d, ..., j + (num_treats - 1)*d.
-      inds_j <- seq(j, j + (num_treats - 1) * d, by = d)
-      stopifnot(length(inds_j) == num_treats)
-      inds_j <- inds_j + R + T - 1 + d + R * d + (T - 1) * d + num_treats
+	if (d > 0) {
+		# Lastly, penalize interactions between each treatment effect and each feature.
+		# Feature-wise, we can do this with genTransformedMatTwoWayFusion, in the same
+		# way that we did for previous interactions with X.
+		for (j in 1:d) {
+			# Recall that we have arranged the last d*num_Feats features in X_int
+			# as follows: the first d are the first column of treat_mat_long interacted
+			# with all of the columns of X, and so on. So, the columns that interact
+			# the jth feature with all of the treatment effects are columns j, j + 1*d,
+			# j + 2*d, ..., j + (num_treats - 1)*d.
+			inds_j <- seq(j, j + (num_treats - 1) * d, by = d)
+			stopifnot(length(inds_j) == num_treats)
+			inds_j <- inds_j + R + T - 1 + d + R * d + (T - 1) * d + num_treats
 
-      # Now ready to generate the appropriate transformed matrix
-      stopifnot(all(is.na(X_mod[, inds_j])))
+			# Now ready to generate the appropriate transformed matrix
+			stopifnot(all(is.na(X_mod[, inds_j])))
 
-      X_mod[, inds_j] <- X_int[, inds_j] %*%
-        genInvTwoWayFusionTransformMat(num_treats, first_inds, R)
+			X_mod[, inds_j] <- X_int[, inds_j] %*%
+				genInvTwoWayFusionTransformMat(num_treats, first_inds, R)
 
-      stopifnot(all(!is.na(X_mod[, inds_j])))
-    }
-  }
+			stopifnot(all(!is.na(X_mod[, inds_j])))
+		}
+	}
 
-  stopifnot(all(!is.na(X_mod)))
-  stopifnot(ncol(X_mod) == p)
-  stopifnot(nrow(X_mod) == N * T)
+	stopifnot(all(!is.na(X_mod)))
+	stopifnot(ncol(X_mod) == p)
+	stopifnot(nrow(X_mod) == N * T)
 
-  return(X_mod)
+	return(X_mod)
 }
 
 # untransformCoefImproved
@@ -2536,138 +2552,150 @@ transformXintImproved <- function(
 #' @keywords internal
 #' @noRd
 untransformCoefImproved <- function(
-  beta_hat_mod,
-  T,
-  R,
-  p,
-  d,
-  num_treats,
-  first_inds = NA
+	beta_hat_mod,
+	T,
+	R,
+	p,
+	d,
+	num_treats,
+	first_inds = NA
 ) {
-  stopifnot(length(beta_hat_mod) == p)
-  beta_hat <- rep(as.numeric(NA), p)
+	stopifnot(length(beta_hat_mod) == p)
+	beta_hat <- rep(as.numeric(NA), p)
 
-  if (any(is.na(first_inds))) {
-    first_inds <- getFirstInds(R = R, T = T)
-  }
+	if (any(is.na(first_inds))) {
+		first_inds <- getFirstInds(R = R, T = T)
+	}
 
-  # First handle R cohort fixed effects effects
-  beta_hat[1:R] <- genBackwardsInvFusionTransformMat(R) %*% beta_hat_mod[1:R]
+	# First handle R cohort fixed effects effects
+	beta_hat[1:R] <- genBackwardsInvFusionTransformMat(R) %*% beta_hat_mod[1:R]
 
-  stopifnot(all(!is.na(beta_hat[1:R])))
-  stopifnot(all(is.na(beta_hat[(R + 1):p])))
+	stopifnot(all(!is.na(beta_hat[1:R])))
+	stopifnot(all(is.na(beta_hat[(R + 1):p])))
 
-  # Next, T - 1 time fixed effects
-  beta_hat[(R + 1):(R + T - 1)] <- genBackwardsInvFusionTransformMat(T - 1) %*%
-    beta_hat_mod[(R + 1):(R + T - 1)]
+	# Next, T - 1 time fixed effects
+	beta_hat[(R + 1):(R + T - 1)] <- genBackwardsInvFusionTransformMat(
+		T - 1
+	) %*%
+		beta_hat_mod[(R + 1):(R + T - 1)]
 
-  stopifnot(all(!is.na(beta_hat[1:(R + T - 1)])))
-  stopifnot(all(is.na(beta_hat[(R + T):p])))
+	stopifnot(all(!is.na(beta_hat[1:(R + T - 1)])))
+	stopifnot(all(is.na(beta_hat[(R + T):p])))
 
-  # Coefficients for X (if any)
-  if (d > 0) {
-    beta_hat[(R + T):(R + T - 1 + d)] <- beta_hat_mod[(R + T):(R + T - 1 + d)]
+	# Coefficients for X (if any)
+	if (d > 0) {
+		beta_hat[(R + T):(R + T - 1 + d)] <- beta_hat_mod[
+			(R + T):(R + T - 1 + d)
+		]
 
-    stopifnot(all(!is.na(beta_hat[1:(R + T - 1 + d)])))
-    stopifnot(all(is.na(beta_hat[(R + T + d):p])))
+		stopifnot(all(!is.na(beta_hat[1:(R + T - 1 + d)])))
+		stopifnot(all(is.na(beta_hat[(R + T + d):p])))
 
-    # Next, coefficients for cohort effects interacted with X. For each individual
-    # feature, this will be handled using untransformVecFusion.
-    for (j in 1:d) {
-      # Get indices corresponding to interactions between feature j and cohort
-      # fixed effects--these are the first feature, the (1 + d)th feature, and
-      # so on R times
-      feat_1 <- R + T - 1 + d + j
-      feat_R <- R + T - 1 + d + (R - 1) * d + j
-      feat_inds_j <- seq(feat_1, feat_R, by = d)
-      stopifnot(length(feat_inds_j) == R)
+		# Next, coefficients for cohort effects interacted with X. For each individual
+		# feature, this will be handled using untransformVecFusion.
+		for (j in 1:d) {
+			# Get indices corresponding to interactions between feature j and cohort
+			# fixed effects--these are the first feature, the (1 + d)th feature, and
+			# so on R times
+			feat_1 <- R + T - 1 + d + j
+			feat_R <- R + T - 1 + d + (R - 1) * d + j
+			feat_inds_j <- seq(feat_1, feat_R, by = d)
+			stopifnot(length(feat_inds_j) == R)
 
-      stopifnot(all(is.na(beta_hat[feat_inds_j])))
+			stopifnot(all(is.na(beta_hat[feat_inds_j])))
 
-      beta_hat[feat_inds_j] <- genBackwardsInvFusionTransformMat(R) %*%
-        beta_hat_mod[feat_inds_j]
-      stopifnot(all(!is.na(beta_hat[feat_inds_j])))
-    }
-    stopifnot(all(!is.na(beta_hat[1:(R + T - 1 + d + R * d)])))
-    stopifnot(all(is.na(beta_hat[(R + T - 1 + d + R * d + 1):p])))
+			beta_hat[feat_inds_j] <- genBackwardsInvFusionTransformMat(R) %*%
+				beta_hat_mod[feat_inds_j]
+			stopifnot(all(!is.na(beta_hat[feat_inds_j])))
+		}
+		stopifnot(all(!is.na(beta_hat[1:(R + T - 1 + d + R * d)])))
+		stopifnot(all(is.na(beta_hat[(R + T - 1 + d + R * d + 1):p])))
 
-    # Similar for time effects interacted with X
+		# Similar for time effects interacted with X
 
-    for (j in 1:d) {
-      # Get indices corresponding to interactions between feature j and time
-      # fixed effects--these are the first feature, the (1 + d)th feature, and
-      # so on T - 1 times
-      feat_1 <- R + T - 1 + d + R * d + j
-      feat_T_minus_1 <- R + T - 1 + d + R * d + (T - 2) * d + j
-      feat_inds_j <- seq(feat_1, feat_T_minus_1, by = d)
-      stopifnot(length(feat_inds_j) == T - 1)
+		for (j in 1:d) {
+			# Get indices corresponding to interactions between feature j and time
+			# fixed effects--these are the first feature, the (1 + d)th feature, and
+			# so on T - 1 times
+			feat_1 <- R + T - 1 + d + R * d + j
+			feat_T_minus_1 <- R + T - 1 + d + R * d + (T - 2) * d + j
+			feat_inds_j <- seq(feat_1, feat_T_minus_1, by = d)
+			stopifnot(length(feat_inds_j) == T - 1)
 
-      stopifnot(all(is.na(beta_hat[feat_inds_j])))
+			stopifnot(all(is.na(beta_hat[feat_inds_j])))
 
-      beta_hat[feat_inds_j] <- genBackwardsInvFusionTransformMat(T - 1) %*%
-        beta_hat_mod[feat_inds_j]
-      stopifnot(all(!is.na(beta_hat[feat_inds_j])))
-    }
-    stopifnot(all(!is.na(beta_hat[1:(R + T - 1 + d + R * d + (T - 1) * d)])))
-    stopifnot(all(is.na(beta_hat[(R + T - 1 + d + R * d + (T - 1) * d + 1):p])))
-  }
+			beta_hat[feat_inds_j] <- genBackwardsInvFusionTransformMat(
+				T - 1
+			) %*%
+				beta_hat_mod[feat_inds_j]
+			stopifnot(all(!is.na(beta_hat[feat_inds_j])))
+		}
+		stopifnot(all(
+			!is.na(beta_hat[1:(R + T - 1 + d + R * d + (T - 1) * d)])
+		))
+		stopifnot(all(is.na(beta_hat[
+			(R + T - 1 + d + R * d + (T - 1) * d + 1):p
+		])))
+	}
 
-  # Now base treatment effects.
+	# Now base treatment effects.
 
-  feat_inds <- (R + T - 1 + d + R * d + (T - 1) * d + 1):(R +
-    T -
-    1 +
-    d +
-    R * d +
-    (T - 1) * d +
-    num_treats)
+	feat_inds <- (R + T - 1 + d + R * d + (T - 1) * d + 1):(R +
+		T -
+		1 +
+		d +
+		R * d +
+		(T - 1) * d +
+		num_treats)
 
-  stopifnot(all(is.na(beta_hat[feat_inds])))
+	stopifnot(all(is.na(beta_hat[feat_inds])))
 
-  beta_hat[feat_inds] <- genInvTwoWayFusionTransformMat(
-    num_treats,
-    first_inds,
-    R
-  ) %*%
-    beta_hat_mod[feat_inds]
+	beta_hat[feat_inds] <- genInvTwoWayFusionTransformMat(
+		num_treats,
+		first_inds,
+		R
+	) %*%
+		beta_hat_mod[feat_inds]
 
-  if (d > 0) {
-    stopifnot(all(
-      !is.na(beta_hat[1:(R + T - 1 + d + R * d + (T - 1) * d + num_treats)])
-    ))
-    stopifnot(all(is.na(beta_hat[
-      (R + T - 1 + d + R * d + (T - 1) * d + num_treats + 1):p
-    ])))
-    # Lastly, interactions between each treatment effect and each feature.
-    # Feature-wise, we can do this with untransformTwoWayFusionCoefs, in the same
-    # way that we did for previous interactions with X.
-    for (j in 1:d) {
-      # Recall that we have arranged the last d*num_Feats features in X_int
-      # as follows: the first d are the first column of treat_mat_long interacted
-      # with all of the columns of X, and so on. So, the columns that interact
-      # the jth feature with all of the treatment effects are columns j, j + 1*d,
-      # j + 2*d, ..., j + (num_treats - 1)*d.
-      inds_j <- seq(j, j + (num_treats - 1) * d, by = d)
-      stopifnot(length(inds_j) == num_treats)
-      inds_j <- inds_j + R + T - 1 + d + R * d + (T - 1) * d + num_treats
+	if (d > 0) {
+		stopifnot(all(
+			!is.na(beta_hat[
+				1:(R + T - 1 + d + R * d + (T - 1) * d + num_treats)
+			])
+		))
+		stopifnot(all(is.na(beta_hat[
+			(R + T - 1 + d + R * d + (T - 1) * d + num_treats + 1):p
+		])))
+		# Lastly, interactions between each treatment effect and each feature.
+		# Feature-wise, we can do this with untransformTwoWayFusionCoefs, in the same
+		# way that we did for previous interactions with X.
+		for (j in 1:d) {
+			# Recall that we have arranged the last d*num_Feats features in X_int
+			# as follows: the first d are the first column of treat_mat_long interacted
+			# with all of the columns of X, and so on. So, the columns that interact
+			# the jth feature with all of the treatment effects are columns j, j + 1*d,
+			# j + 2*d, ..., j + (num_treats - 1)*d.
+			inds_j <- seq(j, j + (num_treats - 1) * d, by = d)
+			stopifnot(length(inds_j) == num_treats)
+			inds_j <- inds_j + R + T - 1 + d + R * d + (T - 1) * d + num_treats
 
-      # Now ready to untransform the estimated coefficients
-      stopifnot(all(is.na(beta_hat[inds_j])))
+			# Now ready to untransform the estimated coefficients
+			stopifnot(all(is.na(beta_hat[inds_j])))
 
-      beta_hat[inds_j] <- genInvTwoWayFusionTransformMat(
-        num_treats,
-        first_inds,
-        R
-      ) %*%
-        beta_hat_mod[inds_j]
+			beta_hat[inds_j] <- genInvTwoWayFusionTransformMat(
+				num_treats,
+				first_inds,
+				R
+			) %*%
+				beta_hat_mod[inds_j]
 
-      stopifnot(all(!is.na(beta_hat[inds_j])))
-    }
-  }
+			stopifnot(all(!is.na(beta_hat[inds_j])))
+		}
+	}
 
-  stopifnot(all(!is.na(beta_hat)))
+	stopifnot(all(!is.na(beta_hat)))
 
-  return(beta_hat)
+	return(beta_hat)
 }
 
 # sse_bridge
@@ -2689,19 +2717,19 @@ untransformCoefImproved <- function(
 #' @keywords internal
 #' @noRd
 sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
-  stopifnot(length(eta_hat) == 1)
-  stopifnot(length(beta_hat) == ncol(X_mod))
+	stopifnot(length(eta_hat) == 1)
+	stopifnot(length(beta_hat) == ncol(X_mod))
 
-  y_hat <- X_mod %*% beta_hat + eta_hat
-  stopifnot(length(y_hat) == N * T)
-  stopifnot(all(!is.na(y_hat)))
+	y_hat <- X_mod %*% beta_hat + eta_hat
+	stopifnot(length(y_hat) == N * T)
+	stopifnot(all(!is.na(y_hat)))
 
-  ret <- sum((y - y_hat)^2) / (N * T)
+	ret <- sum((y - y_hat)^2) / (N * T)
 
-  stopifnot(!is.na(ret))
-  stopifnot(ret >= 0)
+	stopifnot(!is.na(ret))
+	stopifnot(ret >= 0)
 
-  return(ret)
+	return(ret)
 }
 
 
@@ -2729,24 +2757,24 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #' @keywords internal
 #' @noRd
 genBackwardsFusionTransformMat <- function(n_vars) {
-  # Generates D matrix in relation theta = D beta, where D beta is what
-  # we want to penalize (for a single set of coefficients where we want to
-  # penalize last coefficient directly and penalize remaining coefficints
-  # towards the next coefficient)
-  D <- matrix(0, n_vars, n_vars)
+	# Generates D matrix in relation theta = D beta, where D beta is what
+	# we want to penalize (for a single set of coefficients where we want to
+	# penalize last coefficient directly and penalize remaining coefficints
+	# towards the next coefficient)
+	D <- matrix(0, n_vars, n_vars)
 
-  for (i in 1:n_vars) {
-    for (j in 1:n_vars) {
-      if (i == j) {
-        D[i, j] <- 1
-      }
-      if (j == i + 1) {
-        D[i, j] <- -1
-      }
-    }
-  }
+	for (i in 1:n_vars) {
+		for (j in 1:n_vars) {
+			if (i == j) {
+				D[i, j] <- 1
+			}
+			if (j == i + 1) {
+				D[i, j] <- -1
+			}
+		}
+	}
 
-  return(D)
+	return(D)
 }
 
 # genBackwardsInvFusionTransformMat
@@ -2772,20 +2800,20 @@ genBackwardsFusionTransformMat <- function(n_vars) {
 #' @keywords internal
 #' @noRd
 genBackwardsInvFusionTransformMat <- function(n_vars) {
-  # Generates inverse of D matrix in relation theta = D beta, where D beta is
-  # what we want to penalize (for a single set of coefficients where we want
-  # to penalize last coefficient directly and penalize remaining coefficints
-  # towards the next coefficient)
-  D_inv <- matrix(0, n_vars, n_vars)
+	# Generates inverse of D matrix in relation theta = D beta, where D beta is
+	# what we want to penalize (for a single set of coefficients where we want
+	# to penalize last coefficient directly and penalize remaining coefficints
+	# towards the next coefficient)
+	D_inv <- matrix(0, n_vars, n_vars)
 
-  diag(D_inv) <- 1
+	diag(D_inv) <- 1
 
-  D_inv[upper.tri(D_inv)] <- 1
+	D_inv[upper.tri(D_inv)] <- 1
 
-  stopifnot(nrow(D_inv) == n_vars)
-  stopifnot(ncol(D_inv) == n_vars)
+	stopifnot(nrow(D_inv) == n_vars)
+	stopifnot(ncol(D_inv) == n_vars)
 
-  return(D_inv)
+	return(D_inv)
 }
 
 # genInvFusionTransformMat
@@ -2814,17 +2842,17 @@ genBackwardsInvFusionTransformMat <- function(n_vars) {
 #' @keywords internal
 #' @noRd
 genInvFusionTransformMat <- function(n_vars) {
-  # Generates inverse of D matrix in relation theta = D beta, where D beta is
-  # what we want to penalize (for a single set of coefficients where we want
-  # to penalize first coefficient directly and penalize remaining coefficints
-  # towards the previous coefficient)
-  D_inv <- matrix(0, n_vars, n_vars)
+	# Generates inverse of D matrix in relation theta = D beta, where D beta is
+	# what we want to penalize (for a single set of coefficients where we want
+	# to penalize first coefficient directly and penalize remaining coefficints
+	# towards the previous coefficient)
+	D_inv <- matrix(0, n_vars, n_vars)
 
-  diag(D_inv) <- 1
+	diag(D_inv) <- 1
 
-  D_inv[lower.tri(D_inv)] <- 1
+	D_inv[lower.tri(D_inv)] <- 1
 
-  return(D_inv)
+	return(D_inv)
 }
 
 
@@ -2854,52 +2882,52 @@ genInvFusionTransformMat <- function(n_vars) {
 #' @keywords internal
 #' @noRd
 estOmegaSqrtInv <- function(y, X_ints, N, T, p) {
-  if (N * (T - 1) - p <= 0) {
-    stop("Not enough units available to estimate the noise variance.")
-  }
-  stopifnot(N > 1)
+	if (N * (T - 1) - p <= 0) {
+		stop("Not enough units available to estimate the noise variance.")
+	}
+	stopifnot(N > 1)
 
-  # Estimate standard deviations
-  y_fe <- y
-  X_ints_fe <- X_ints
-  for (i in 1:N) {
-    inds_i <- ((i - 1) * T + 1):(i * T)
-    stopifnot(length(inds_i) == T)
-    y_fe[inds_i] <- y[inds_i] - mean(y[inds_i])
-    X_ints[inds_i, ] <- X_ints[inds_i, ] - colMeans(X_ints[inds_i, ])
-  }
+	# Estimate standard deviations
+	y_fe <- y
+	X_ints_fe <- X_ints
+	for (i in 1:N) {
+		inds_i <- ((i - 1) * T + 1):(i * T)
+		stopifnot(length(inds_i) == T)
+		y_fe[inds_i] <- y[inds_i] - mean(y[inds_i])
+		X_ints[inds_i, ] <- X_ints[inds_i, ] - colMeans(X_ints[inds_i, ])
+	}
 
-  lin_mod_fe <- glmnet::cv.glmnet(x = X_ints_fe, y = y_fe, alpha = 0)
+	lin_mod_fe <- glmnet::cv.glmnet(x = X_ints_fe, y = y_fe, alpha = 0)
 
-  # Get residuals
-  y_hat_fe <- stats::predict(lin_mod_fe, s = "lambda.min", newx = X_ints_fe)
+	# Get residuals
+	y_hat_fe <- stats::predict(lin_mod_fe, s = "lambda.min", newx = X_ints_fe)
 
-  # Get coefficients
-  beta_hat_fe <- stats::coef(lin_mod_fe, s = "lambda.min")[2:(p + 1)]
+	# Get coefficients
+	beta_hat_fe <- stats::coef(lin_mod_fe, s = "lambda.min")[2:(p + 1)]
 
-  resids <- y_fe - y_hat_fe
+	resids <- y_fe - y_hat_fe
 
-  tau <- rep(1, T)
-  M <- diag(rep(1, T)) - outer(tau, tau) / T
+	tau <- rep(1, T)
+	M <- diag(rep(1, T)) - outer(tau, tau) / T
 
-  sigma_hat_sq <- 0
-  alpha_hat <- rep(as.numeric(NA), N)
+	sigma_hat_sq <- 0
+	alpha_hat <- rep(as.numeric(NA), N)
 
-  for (i in 1:N) {
-    inds_i <- ((i - 1) * T + 1):(i * T)
-    sigma_hat_sq <- sigma_hat_sq +
-      as.numeric(resids[inds_i] %*% M %*% resids[inds_i])
-    alpha_hat[i] <- mean(y_hat_fe[inds_i]) -
-      colMeans(X_ints_fe[inds_i, ] %*% beta_hat_fe)
-  }
+	for (i in 1:N) {
+		inds_i <- ((i - 1) * T + 1):(i * T)
+		sigma_hat_sq <- sigma_hat_sq +
+			as.numeric(resids[inds_i] %*% M %*% resids[inds_i])
+		alpha_hat[i] <- mean(y_hat_fe[inds_i]) -
+			colMeans(X_ints_fe[inds_i, ] %*% beta_hat_fe)
+	}
 
-  stopifnot(all(!is.na(alpha_hat)))
+	stopifnot(all(!is.na(alpha_hat)))
 
-  sigma_hat_sq <- sigma_hat_sq / (N * (T - 1) - p)
+	sigma_hat_sq <- sigma_hat_sq / (N * (T - 1) - p)
 
-  sigma_c_sq_hat <- sum((alpha_hat - mean(alpha_hat))^2) / (N - 1)
+	sigma_c_sq_hat <- sum((alpha_hat - mean(alpha_hat))^2) / (N - 1)
 
-  return(list(sig_eps_sq = sigma_hat_sq, sig_eps_c_sq = sigma_c_sq_hat))
+	return(list(sig_eps_sq = sigma_hat_sq, sig_eps_c_sq = sigma_c_sq_hat))
 }
 
 # getSecondVarTermDataApp
@@ -2944,103 +2972,107 @@ estOmegaSqrtInv <- function(y, X_ints, N, T, p) {
 #' @keywords internal
 #' @noRd
 getSecondVarTermDataApp <- function(
-  cohort_probs,
-  psi_mat,
-  sel_treat_inds_shifted,
-  tes,
-  d_inv_treat_sel,
-  cohort_probs_overall,
-  first_inds,
-  theta_hat_treat_sel,
-  num_treats,
-  N,
-  T,
-  R
+	cohort_probs,
+	psi_mat,
+	sel_treat_inds_shifted,
+	tes,
+	d_inv_treat_sel,
+	cohort_probs_overall,
+	first_inds,
+	theta_hat_treat_sel,
+	num_treats,
+	N,
+	T,
+	R
 ) {
-  stopifnot(ncol(d_inv_treat_sel) == length(sel_treat_inds_shifted))
-  stopifnot(length(theta_hat_treat_sel) == length(sel_treat_inds_shifted))
-  Sigma_pi_hat <- -outer(
-    cohort_probs_overall[1:(R)],
-    cohort_probs_overall[1:(R)]
-  )
-  diag(Sigma_pi_hat) <- cohort_probs_overall[1:(R)] *
-    (1 - cohort_probs_overall[1:(R)])
+	stopifnot(ncol(d_inv_treat_sel) == length(sel_treat_inds_shifted))
+	stopifnot(length(theta_hat_treat_sel) == length(sel_treat_inds_shifted))
+	Sigma_pi_hat <- -outer(
+		cohort_probs_overall[1:(R)],
+		cohort_probs_overall[1:(R)]
+	)
+	diag(Sigma_pi_hat) <- cohort_probs_overall[1:(R)] *
+		(1 - cohort_probs_overall[1:(R)])
 
-  stopifnot(nrow(Sigma_pi_hat) == R)
-  stopifnot(ncol(Sigma_pi_hat) == R)
+	stopifnot(nrow(Sigma_pi_hat) == R)
+	stopifnot(ncol(Sigma_pi_hat) == R)
 
-  # Jacobian
-  jacobian_mat <- matrix(
-    as.numeric(NA),
-    nrow = R,
-    ncol = length(sel_treat_inds_shifted)
-  )
+	# Jacobian
+	jacobian_mat <- matrix(
+		as.numeric(NA),
+		nrow = R,
+		ncol = length(sel_treat_inds_shifted)
+	)
 
-  sel_inds <- list()
+	sel_inds <- list()
 
-  for (r in 1:R) {
-    first_ind_r <- first_inds[r]
+	for (r in 1:R) {
+		first_ind_r <- first_inds[r]
 
-    if (r < R) {
-      last_ind_r <- first_inds[r + 1] - 1
-    } else {
-      last_ind_r <- num_treats
-    }
-    stopifnot(last_ind_r >= first_ind_r)
-    sel_inds[[r]] <- first_ind_r:last_ind_r
-    if (r > 1) {
-      stopifnot(min(sel_inds[[r]]) > max(sel_inds[[r - 1]]))
-      stopifnot(length(sel_inds[[r]]) < length(sel_inds[[r - 1]]))
-    }
-  }
-  stopifnot(all.equal(unlist(sel_inds), 1:num_treats))
+		if (r < R) {
+			last_ind_r <- first_inds[r + 1] - 1
+		} else {
+			last_ind_r <- num_treats
+		}
+		stopifnot(last_ind_r >= first_ind_r)
+		sel_inds[[r]] <- first_ind_r:last_ind_r
+		if (r > 1) {
+			stopifnot(min(sel_inds[[r]]) > max(sel_inds[[r - 1]]))
+			stopifnot(length(sel_inds[[r]]) < length(sel_inds[[r - 1]]))
+		}
+	}
+	stopifnot(all.equal(unlist(sel_inds), 1:num_treats))
 
-  for (r in 1:R) {
-    cons_r <- (sum(cohort_probs_overall) -
-      cohort_probs_overall[r]) /
-      sum(cohort_probs_overall)^2
+	for (r in 1:R) {
+		cons_r <- (sum(cohort_probs_overall) -
+			cohort_probs_overall[r]) /
+			sum(cohort_probs_overall)^2
 
-    if (length(sel_treat_inds_shifted) > 1) {
-      jacobian_mat[r, ] <- cons_r *
-        colMeans(d_inv_treat_sel[sel_inds[[r]], , drop = FALSE])
-    } else {
-      jacobian_mat[r, ] <- cons_r *
-        mean(d_inv_treat_sel[sel_inds[[r]], , drop = FALSE])
-    }
-    for (r_double_prime in setdiff(1:R, r)) {
-      cons_r_double_prime <- (sum(cohort_probs_overall) -
-        cohort_probs_overall[r_double_prime]) /
-        sum(cohort_probs_overall)^2
+		if (length(sel_treat_inds_shifted) > 1) {
+			jacobian_mat[r, ] <- cons_r *
+				colMeans(d_inv_treat_sel[sel_inds[[r]], , drop = FALSE])
+		} else {
+			jacobian_mat[r, ] <- cons_r *
+				mean(d_inv_treat_sel[sel_inds[[r]], , drop = FALSE])
+		}
+		for (r_double_prime in setdiff(1:R, r)) {
+			cons_r_double_prime <- (sum(cohort_probs_overall) -
+				cohort_probs_overall[r_double_prime]) /
+				sum(cohort_probs_overall)^2
 
-      if (length(sel_treat_inds_shifted) > 1) {
-        jacobian_mat[r, ] <- jacobian_mat[r, ] -
-          cons_r_double_prime *
-            colMeans(d_inv_treat_sel[
-              sel_inds[[r_double_prime]],
-              ,
-              drop = FALSE
-            ])
-      } else {
-        jacobian_mat[r, ] <- jacobian_mat[r, ] -
-          cons_r_double_prime *
-            mean(d_inv_treat_sel[sel_inds[[r_double_prime]], , drop = FALSE])
-      }
-    }
-  }
+			if (length(sel_treat_inds_shifted) > 1) {
+				jacobian_mat[r, ] <- jacobian_mat[r, ] -
+					cons_r_double_prime *
+						colMeans(d_inv_treat_sel[
+							sel_inds[[r_double_prime]],
+							,
+							drop = FALSE
+						])
+			} else {
+				jacobian_mat[r, ] <- jacobian_mat[r, ] -
+					cons_r_double_prime *
+						mean(d_inv_treat_sel[
+							sel_inds[[r_double_prime]],
+							,
+							drop = FALSE
+						])
+			}
+		}
+	}
 
-  stopifnot(all(!is.na(jacobian_mat)))
+	stopifnot(all(!is.na(jacobian_mat)))
 
-  att_var_2 <- T *
-    as.numeric(
-      t(theta_hat_treat_sel) %*%
-        t(jacobian_mat) %*%
-        Sigma_pi_hat %*%
-        jacobian_mat %*%
-        theta_hat_treat_sel
-    ) /
-    (N * T)
+	att_var_2 <- T *
+		as.numeric(
+			t(theta_hat_treat_sel) %*%
+				t(jacobian_mat) %*%
+				Sigma_pi_hat %*%
+				jacobian_mat %*%
+				theta_hat_treat_sel
+		) /
+		(N * T)
 
-  return(att_var_2)
+	return(att_var_2)
 }
 
 # getCohortATTsFinal
@@ -3092,226 +3124,233 @@ getSecondVarTermDataApp <- function(
 #' @keywords internal
 #' @noRd
 getCohortATTsFinal <- function(
-  X_final,
-  sel_feat_inds,
-  treat_inds,
-  num_treats,
-  first_inds,
-  sel_treat_inds_shifted,
-  c_names,
-  tes,
-  sig_eps_sq,
-  R,
-  N,
-  T,
-  fused,
-  calc_ses,
-  p,
-  alpha = 0.05
+	X_final,
+	sel_feat_inds,
+	treat_inds,
+	num_treats,
+	first_inds,
+	sel_treat_inds_shifted,
+	c_names,
+	tes,
+	sig_eps_sq,
+	R,
+	N,
+	T,
+	fused,
+	calc_ses,
+	p,
+	alpha = 0.05
 ) {
-  stopifnot(max(sel_treat_inds_shifted) <= num_treats)
-  stopifnot(min(sel_treat_inds_shifted) >= 1)
-  stopifnot(length(tes) == num_treats)
-  stopifnot(all(!is.na(tes)))
+	stopifnot(max(sel_treat_inds_shifted) <= num_treats)
+	stopifnot(min(sel_treat_inds_shifted) >= 1)
+	stopifnot(length(tes) == num_treats)
+	stopifnot(all(!is.na(tes)))
 
-  stopifnot(nrow(X_final) == N * T)
-  X_to_pass <- X_final
+	stopifnot(nrow(X_final) == N * T)
+	X_to_pass <- X_final
 
-  # Start by getting Gram matrix needed for standard errors
-  if (calc_ses) {
-    res <- getGramInv(
-      N = N,
-      T = T,
-      X_final = X_to_pass,
-      sel_feat_inds = sel_feat_inds,
-      treat_inds = treat_inds,
-      num_treats = num_treats,
-      sel_treat_inds_shifted = sel_treat_inds_shifted,
-      calc_ses = calc_ses
-    )
+	# Start by getting Gram matrix needed for standard errors
+	if (calc_ses) {
+		res <- getGramInv(
+			N = N,
+			T = T,
+			X_final = X_to_pass,
+			sel_feat_inds = sel_feat_inds,
+			treat_inds = treat_inds,
+			num_treats = num_treats,
+			sel_treat_inds_shifted = sel_treat_inds_shifted,
+			calc_ses = calc_ses
+		)
 
-    gram_inv <- res$gram_inv
-    calc_ses <- res$calc_ses
-  } else {
-    gram_inv <- NA
-  }
+		gram_inv <- res$gram_inv
+		calc_ses <- res$calc_ses
+	} else {
+		gram_inv <- NA
+	}
 
-  if (fused) {
-    # Get the parts of D_inv that have to do with treatment effects
-    d_inv_treat <- genInvTwoWayFusionTransformMat(num_treats, first_inds, R)
-  }
+	if (fused) {
+		# Get the parts of D_inv that have to do with treatment effects
+		d_inv_treat <- genInvTwoWayFusionTransformMat(num_treats, first_inds, R)
+	}
 
-  # First, each cohort
-  cohort_tes <- rep(as.numeric(NA), R)
-  cohort_te_ses <- rep(as.numeric(NA), R)
+	# First, each cohort
+	cohort_tes <- rep(as.numeric(NA), R)
+	cohort_te_ses <- rep(as.numeric(NA), R)
 
-  psi_mat <- matrix(0, length(sel_treat_inds_shifted), R)
+	psi_mat <- matrix(0, length(sel_treat_inds_shifted), R)
 
-  d_inv_treat_sel <- matrix(0, nrow = 0, ncol = length(sel_treat_inds_shifted))
+	d_inv_treat_sel <- matrix(
+		0,
+		nrow = 0,
+		ncol = length(sel_treat_inds_shifted)
+	)
 
-  for (r in 1:R) {
-    # Get indices corresponding to rth treatment
-    first_ind_r <- first_inds[r]
-    if (r < R) {
-      last_ind_r <- first_inds[r + 1] - 1
-    } else {
-      last_ind_r <- num_treats
-    }
+	for (r in 1:R) {
+		# Get indices corresponding to rth treatment
+		first_ind_r <- first_inds[r]
+		if (r < R) {
+			last_ind_r <- first_inds[r + 1] - 1
+		} else {
+			last_ind_r <- num_treats
+		}
 
-    stopifnot(last_ind_r >= first_ind_r)
-    stopifnot(all(first_ind_r:last_ind_r %in% 1:num_treats))
+		stopifnot(last_ind_r >= first_ind_r)
+		stopifnot(all(first_ind_r:last_ind_r %in% 1:num_treats))
 
-    cohort_tes[r] <- mean(tes[first_ind_r:last_ind_r])
+		cohort_tes[r] <- mean(tes[first_ind_r:last_ind_r])
 
-    if (calc_ses) {
-      # Calculate standard errors
+		if (calc_ses) {
+			# Calculate standard errors
 
-      if (fused) {
-        res_r <- getPsiRFused(
-          first_ind_r,
-          last_ind_r,
-          sel_treat_inds_shifted,
-          d_inv_treat
-        )
+			if (fused) {
+				res_r <- getPsiRFused(
+					first_ind_r,
+					last_ind_r,
+					sel_treat_inds_shifted,
+					d_inv_treat
+				)
 
-        psi_r <- res_r$psi_r
+				psi_r <- res_r$psi_r
 
-        stopifnot(
-          nrow(res_r$d_inv_treat_sel) ==
-            last_ind_r -
-              first_ind_r +
-              1
-        )
-        stopifnot(ncol(res_r$d_inv_treat_sel) == length(sel_treat_inds_shifted))
+				stopifnot(
+					nrow(res_r$d_inv_treat_sel) ==
+						last_ind_r -
+							first_ind_r +
+							1
+				)
+				stopifnot(
+					ncol(res_r$d_inv_treat_sel) ==
+						length(sel_treat_inds_shifted)
+				)
 
-        stopifnot(is.matrix(res_r$d_inv_treat_sel))
+				stopifnot(is.matrix(res_r$d_inv_treat_sel))
 
-        d_inv_treat_sel <- rbind(d_inv_treat_sel, res_r$d_inv_treat_sel)
+				d_inv_treat_sel <- rbind(d_inv_treat_sel, res_r$d_inv_treat_sel)
 
-        if (nrow(d_inv_treat_sel) != last_ind_r) {
-          err_mes <- paste(
-            "nrow(d_inv_treat_sel) == last_ind_r is not TRUE. ",
-            "nrow(d_inv_treat_sel): ",
-            nrow(d_inv_treat_sel),
-            ". num_treats: ",
-            num_treats,
-            ". R: ",
-            R,
-            ". first_inds: ",
-            paste(first_inds, collapse = ", "),
-            ". r: ",
-            r,
-            ". first_ind_r: ",
-            first_ind_r,
-            ". last_ind_r: ",
-            last_ind_r,
-            ". nrow(res_r$d_inv_treat_sel):",
-            nrow(res_r$d_inv_treat_sel)
-          )
-          stop(err_mes)
-        }
+				if (nrow(d_inv_treat_sel) != last_ind_r) {
+					err_mes <- paste(
+						"nrow(d_inv_treat_sel) == last_ind_r is not TRUE. ",
+						"nrow(d_inv_treat_sel): ",
+						nrow(d_inv_treat_sel),
+						". num_treats: ",
+						num_treats,
+						". R: ",
+						R,
+						". first_inds: ",
+						paste(first_inds, collapse = ", "),
+						". r: ",
+						r,
+						". first_ind_r: ",
+						first_ind_r,
+						". last_ind_r: ",
+						last_ind_r,
+						". nrow(res_r$d_inv_treat_sel):",
+						nrow(res_r$d_inv_treat_sel)
+					)
+					stop(err_mes)
+				}
 
-        rm(res_r)
-      } else {
-        psi_r <- getPsiRUnfused(
-          first_ind_r,
-          last_ind_r,
-          sel_treat_inds_shifted,
-          gram_inv
-        )
-      }
+				rm(res_r)
+			} else {
+				psi_r <- getPsiRUnfused(
+					first_ind_r,
+					last_ind_r,
+					sel_treat_inds_shifted,
+					gram_inv
+				)
+			}
 
-      stopifnot(length(psi_r) == length(sel_treat_inds_shifted))
+			stopifnot(length(psi_r) == length(sel_treat_inds_shifted))
 
-      psi_mat[, r] <- psi_r
-      # Get standard errors
+			psi_mat[, r] <- psi_r
+			# Get standard errors
 
-      cohort_te_ses[r] <- sqrt(
-        sig_eps_sq *
-          as.numeric(
-            t(psi_r) %*%
-              gram_inv %*%
-              psi_r
-          ) /
-          (N * T)
-      )
-    }
-  }
+			cohort_te_ses[r] <- sqrt(
+				sig_eps_sq *
+					as.numeric(
+						t(psi_r) %*%
+							gram_inv %*%
+							psi_r
+					) /
+					(N * T)
+			)
+		}
+	}
 
-  if (fused & calc_ses) {
-    if (nrow(d_inv_treat_sel) != num_treats) {
-      err_mes <- paste(
-        "nrow(d_inv_treat_sel) == num_treats is not TRUE. ",
-        "nrow(d_inv_treat_sel): ",
-        nrow(d_inv_treat_sel),
-        ". num_treats: ",
-        num_treats,
-        ". R: ",
-        R,
-        ". first_inds: ",
-        paste(first_inds, collapse = ", "),
-        "."
-      )
-      stop(err_mes)
-    }
-  }
+	if (fused & calc_ses) {
+		if (nrow(d_inv_treat_sel) != num_treats) {
+			err_mes <- paste(
+				"nrow(d_inv_treat_sel) == num_treats is not TRUE. ",
+				"nrow(d_inv_treat_sel): ",
+				nrow(d_inv_treat_sel),
+				". num_treats: ",
+				num_treats,
+				". R: ",
+				R,
+				". first_inds: ",
+				paste(first_inds, collapse = ", "),
+				"."
+			)
+			stop(err_mes)
+		}
+	}
 
-  stopifnot(length(c_names) == R)
-  stopifnot(length(cohort_tes) == R)
+	stopifnot(length(c_names) == R)
+	stopifnot(length(cohort_tes) == R)
 
-  if (calc_ses & all(!is.na(gram_inv))) {
-    stopifnot(length(cohort_te_ses) == R)
+	if (calc_ses & all(!is.na(gram_inv))) {
+		stopifnot(length(cohort_te_ses) == R)
 
-    cohort_te_df <- data.frame(
-      c_names,
-      cohort_tes,
-      cohort_te_ses,
-      cohort_tes - stats::qnorm(1 - alpha / 2) * cohort_te_ses,
-      cohort_tes + stats::qnorm(1 - alpha / 2) * cohort_te_ses
-    )
+		cohort_te_df <- data.frame(
+			c_names,
+			cohort_tes,
+			cohort_te_ses,
+			cohort_tes - stats::qnorm(1 - alpha / 2) * cohort_te_ses,
+			cohort_tes + stats::qnorm(1 - alpha / 2) * cohort_te_ses
+		)
 
-    names(cohort_te_ses) <- c_names
-    names(cohort_tes) <- c_names
-  } else {
-    cohort_te_df <- data.frame(
-      c_names,
-      cohort_tes,
-      rep(NA, R),
-      rep(NA, R),
-      rep(NA, R)
-    )
-  }
+		names(cohort_te_ses) <- c_names
+		names(cohort_tes) <- c_names
+	} else {
+		cohort_te_df <- data.frame(
+			c_names,
+			cohort_tes,
+			rep(NA, R),
+			rep(NA, R),
+			rep(NA, R)
+		)
+	}
 
-  colnames(cohort_te_df) <- c(
-    "Cohort",
-    "Estimated TE",
-    "SE",
-    "ConfIntLow",
-    "ConfIntHigh"
-  )
+	colnames(cohort_te_df) <- c(
+		"Cohort",
+		"Estimated TE",
+		"SE",
+		"ConfIntLow",
+		"ConfIntHigh"
+	)
 
-  if (fused) {
-    stopifnot(is.matrix(d_inv_treat_sel))
-    ret <- list(
-      cohort_te_df = cohort_te_df,
-      cohort_tes = cohort_tes,
-      cohort_te_ses = cohort_te_ses,
-      psi_mat = psi_mat,
-      gram_inv = gram_inv,
-      d_inv_treat_sel = d_inv_treat_sel,
-      calc_ses = calc_ses
-    )
-  } else {
-    ret <- list(
-      cohort_te_df = cohort_te_df,
-      cohort_tes = cohort_tes,
-      cohort_te_ses = cohort_te_ses,
-      psi_mat = psi_mat,
-      gram_inv = gram_inv,
-      calc_ses = calc_ses
-    )
-  }
-  return(ret)
+	if (fused) {
+		stopifnot(is.matrix(d_inv_treat_sel))
+		ret <- list(
+			cohort_te_df = cohort_te_df,
+			cohort_tes = cohort_tes,
+			cohort_te_ses = cohort_te_ses,
+			psi_mat = psi_mat,
+			gram_inv = gram_inv,
+			d_inv_treat_sel = d_inv_treat_sel,
+			calc_ses = calc_ses
+		)
+	} else {
+		ret <- list(
+			cohort_te_df = cohort_te_df,
+			cohort_tes = cohort_tes,
+			cohort_te_ses = cohort_te_ses,
+			psi_mat = psi_mat,
+			gram_inv = gram_inv,
+			calc_ses = calc_ses
+		)
+	}
+	return(ret)
 }
 
 # getPsiRUnfused
@@ -3343,37 +3382,37 @@ getCohortATTsFinal <- function(
 #' @keywords internal
 #' @noRd
 getPsiRUnfused <- function(
-  first_ind_r,
-  last_ind_r,
-  sel_treat_inds_shifted,
-  gram_inv
+	first_ind_r,
+	last_ind_r,
+	sel_treat_inds_shifted,
+	gram_inv
 ) {
-  which_inds_ir <- sel_treat_inds_shifted %in% (first_ind_r:last_ind_r)
+	which_inds_ir <- sel_treat_inds_shifted %in% (first_ind_r:last_ind_r)
 
-  psi_r <- rep(0, length(sel_treat_inds_shifted))
+	psi_r <- rep(0, length(sel_treat_inds_shifted))
 
-  if (sum(which_inds_ir) > 0) {
-    inds_r <- which(which_inds_ir)
+	if (sum(which_inds_ir) > 0) {
+		inds_r <- which(which_inds_ir)
 
-    stopifnot(is.integer(inds_r) | is.numeric(inds_r))
-    stopifnot(identical(inds_r, as.integer(round(inds_r))))
-    stopifnot(length(inds_r) >= 1)
-    stopifnot(length(inds_r) == length(unique(inds_r)))
-    stopifnot(length(inds_r) <= length(sel_treat_inds_shifted))
-    stopifnot(all(inds_r %in% 1:length(sel_treat_inds_shifted)))
+		stopifnot(is.integer(inds_r) | is.numeric(inds_r))
+		stopifnot(identical(inds_r, as.integer(round(inds_r))))
+		stopifnot(length(inds_r) >= 1)
+		stopifnot(length(inds_r) == length(unique(inds_r)))
+		stopifnot(length(inds_r) <= length(sel_treat_inds_shifted))
+		stopifnot(all(inds_r %in% 1:length(sel_treat_inds_shifted)))
 
-    stopifnot(max(inds_r) <= nrow(gram_inv))
-    stopifnot(max(inds_r) <= ncol(gram_inv))
-    stopifnot(min(inds_r) >= 0)
+		stopifnot(max(inds_r) <= nrow(gram_inv))
+		stopifnot(max(inds_r) <= ncol(gram_inv))
+		stopifnot(min(inds_r) >= 0)
 
-    psi_r[inds_r] <- 1
+		psi_r[inds_r] <- 1
 
-    stopifnot(sum(psi_r) > 0)
+		stopifnot(sum(psi_r) > 0)
 
-    psi_r <- psi_r / sum(psi_r)
-  }
+		psi_r <- psi_r / sum(psi_r)
+	}
 
-  return(psi_r)
+	return(psi_r)
 }
 
 # genInvTwoWayFusionTransformMat
@@ -3409,33 +3448,33 @@ getPsiRUnfused <- function(
 #' @keywords internal
 #' @noRd
 genInvTwoWayFusionTransformMat <- function(n_vars, first_inds, R) {
-  stopifnot(length(n_vars) == 1)
-  stopifnot(length(first_inds) == R)
-  D <- matrix(0, n_vars, n_vars)
+	stopifnot(length(n_vars) == 1)
+	stopifnot(length(first_inds) == R)
+	D <- matrix(0, n_vars, n_vars)
 
-  diag(D) <- 1
+	diag(D) <- 1
 
-  if (R < 2) {
-    stop(
-      "Only one treated cohort detected in data. Currently fetwfe only supports data sets with at least two treated cohorts."
-    )
-  }
+	if (R < 2) {
+		stop(
+			"Only one treated cohort detected in data. Currently fetwfe only supports data sets with at least two treated cohorts."
+		)
+	}
 
-  for (j in 1:(R - 1)) {
-    index_j <- first_inds[j]
-    next_index <- first_inds[j + 1]
+	for (j in 1:(R - 1)) {
+		index_j <- first_inds[j]
+		next_index <- first_inds[j + 1]
 
-    D[index_j:n_vars, index_j] <- 1
-    D[next_index:n_vars, next_index] <- 1
+		D[index_j:n_vars, index_j] <- 1
+		D[next_index:n_vars, next_index] <- 1
 
-    if (index_j + 1 <= next_index - 1) {
-      for (k in (index_j + 1):(next_index - 1)) {
-        D[k, (index_j + 1):k] <- 1
-      }
-    }
-  }
+		if (index_j + 1 <= next_index - 1) {
+			for (k in (index_j + 1):(next_index - 1)) {
+				D[k, (index_j + 1):k] <- 1
+			}
+		}
+	}
 
-  return(D)
+	return(D)
 }
 
 # getBetaBIC
@@ -3481,78 +3520,78 @@ genInvTwoWayFusionTransformMat <- function(n_vars, first_inds, R) {
 #' @keywords internal
 #' @noRd
 getBetaBIC <- function(fit, N, T, p, X_mod, y, scale_center, scale_scale) {
-  stopifnot(length(y) == N * T)
-  n_lambda <- ncol(fit$beta)
-  BICs <- rep(as.numeric(NA), n_lambda)
-  model_sizes <- rep(as.integer(NA), n_lambda)
+	stopifnot(length(y) == N * T)
+	n_lambda <- ncol(fit$beta)
+	BICs <- rep(as.numeric(NA), n_lambda)
+	model_sizes <- rep(as.integer(NA), n_lambda)
 
-  stopifnot(nrow(fit$beta) == p + 1)
+	stopifnot(nrow(fit$beta) == p + 1)
 
-  for (k in 1:n_lambda) {
-    ## --- extract coefficients on the scaled data -------------
-    eta_s <- fit$beta[1, k] # intercept (scaled space)
-    beta_s <- fit$beta[2:(p + 1), k] # slopes    (scaled space)
+	for (k in 1:n_lambda) {
+		## --- extract coefficients on the scaled data -------------
+		eta_s <- fit$beta[1, k] # intercept (scaled space)
+		beta_s <- fit$beta[2:(p + 1), k] # slopes    (scaled space)
 
-    ## --- convert to original scale ---------------------------
-    beta_hat_k <- beta_s / scale_scale
-    eta_hat_k <- eta_s - sum(scale_center * beta_hat_k)
+		## --- convert to original scale ---------------------------
+		beta_hat_k <- beta_s / scale_scale
+		eta_hat_k <- eta_s - sum(scale_center * beta_hat_k)
 
-    # Residual sum of squares
-    mse_hat <- sse_bridge(
-      eta_hat_k,
-      beta_hat_k,
-      y = y,
-      X_mod = X_mod,
-      N = N,
-      T = T
-    )
-    # Number of fitted coefficients
-    s <- sum(fit$beta[, k] != 0)
-    model_sizes[k] <- s
+		# Residual sum of squares
+		mse_hat <- sse_bridge(
+			eta_hat_k,
+			beta_hat_k,
+			y = y,
+			X_mod = X_mod,
+			N = N,
+			T = T
+		)
+		# Number of fitted coefficients
+		s <- sum(fit$beta[, k] != 0)
+		model_sizes[k] <- s
 
-    stopifnot(is.na(BICs[k]))
-    BICs[k] <- N * T * log(mse_hat) + s * log(N * T)
-  }
+		stopifnot(is.na(BICs[k]))
+		BICs[k] <- N * T * log(mse_hat) + s * log(N * T)
+	}
 
-  lambda_star_ind <- which(BICs == min(BICs))
-  if (length(lambda_star_ind) == 1) {
-    lambda_star_final_ind <- lambda_star_ind
-    theta_hat <- fit$beta[, lambda_star_final_ind]
-  } else {
-    # Choose smallest model size among models with equal BIC
-    model_sizes_star <- model_sizes[lambda_star_ind]
-    min_model_size_ind <- which(model_sizes_star == min(model_sizes_star))
-    lambda_star_final_ind <- lambda_star_ind[min_model_size_ind][1]
-    stopifnot(length(lambda_star_final_ind) == 1)
-    theta_hat <- fit$beta[, lambda_star_final_ind]
-  }
-  stopifnot(length(lambda_star_final_ind) == 1)
-  stopifnot(length(theta_hat) == p + 1)
-  stopifnot(all(!is.na(theta_hat)))
+	lambda_star_ind <- which(BICs == min(BICs))
+	if (length(lambda_star_ind) == 1) {
+		lambda_star_final_ind <- lambda_star_ind
+		theta_hat <- fit$beta[, lambda_star_final_ind]
+	} else {
+		# Choose smallest model size among models with equal BIC
+		model_sizes_star <- model_sizes[lambda_star_ind]
+		min_model_size_ind <- which(model_sizes_star == min(model_sizes_star))
+		lambda_star_final_ind <- lambda_star_ind[min_model_size_ind][1]
+		stopifnot(length(lambda_star_final_ind) == 1)
+		theta_hat <- fit$beta[, lambda_star_final_ind]
+	}
+	stopifnot(length(lambda_star_final_ind) == 1)
+	stopifnot(length(theta_hat) == p + 1)
+	stopifnot(all(!is.na(theta_hat)))
 
-  #
-  # Rescale coefficients back to the original scale.
-  # The coefficient vector theta_hat is of length (p+1), with the first entry
-  # as the intercept.
-  # For predictors: original coefficient = beta_scaled / scale_j.
-  # The intercept is adjusted as: intercept_original =
-  # intercept_scaled - sum(center_j * (beta_scaled/scale_j)).
-  #
-  adjusted_theta_hat <- theta_hat
-  if (length(scale_scale) != p) {
-    stop("Length of scale_scale does not match number of predictors (p).")
-  }
-  for (j in 2:(p + 1)) {
-    adjusted_theta_hat[j] <- theta_hat[j] / scale_scale[j - 1]
-  }
-  adjusted_theta_hat[1] <- theta_hat[1] -
-    sum(scale_center * (theta_hat[2:(p + 1)] / scale_scale))
+	#
+	# Rescale coefficients back to the original scale.
+	# The coefficient vector theta_hat is of length (p+1), with the first entry
+	# as the intercept.
+	# For predictors: original coefficient = beta_scaled / scale_j.
+	# The intercept is adjusted as: intercept_original =
+	# intercept_scaled - sum(center_j * (beta_scaled/scale_j)).
+	#
+	adjusted_theta_hat <- theta_hat
+	if (length(scale_scale) != p) {
+		stop("Length of scale_scale does not match number of predictors (p).")
+	}
+	for (j in 2:(p + 1)) {
+		adjusted_theta_hat[j] <- theta_hat[j] / scale_scale[j - 1]
+	}
+	adjusted_theta_hat[1] <- theta_hat[1] -
+		sum(scale_center * (theta_hat[2:(p + 1)] / scale_scale))
 
-  return(list(
-    theta_hat = adjusted_theta_hat,
-    lambda_star_ind = lambda_star_final_ind,
-    lambda_star_model_size = model_sizes[lambda_star_final_ind]
-  ))
+	return(list(
+		theta_hat = adjusted_theta_hat,
+		lambda_star_ind = lambda_star_final_ind,
+		lambda_star_model_size = model_sizes[lambda_star_final_ind]
+	))
 }
 
 # getGramInv
@@ -3597,52 +3636,52 @@ getBetaBIC <- function(fit, N, T, p, X_mod, y, scale_center, scale_scale) {
 #' @keywords internal
 #' @noRd
 getGramInv <- function(
-  N,
-  T,
-  X_final,
-  sel_feat_inds,
-  treat_inds,
-  num_treats,
-  sel_treat_inds_shifted,
-  calc_ses
+	N,
+	T,
+	X_final,
+	sel_feat_inds,
+	treat_inds,
+	num_treats,
+	sel_treat_inds_shifted,
+	calc_ses
 ) {
-  stopifnot(nrow(X_final) == N * T)
-  X_sel <- X_final[, sel_feat_inds, drop = FALSE]
-  X_sel_centered <- scale(X_sel, center = TRUE, scale = FALSE)
+	stopifnot(nrow(X_final) == N * T)
+	X_sel <- X_final[, sel_feat_inds, drop = FALSE]
+	X_sel_centered <- scale(X_sel, center = TRUE, scale = FALSE)
 
-  gram <- 1 / (N * T) * (t(X_sel_centered) %*% X_sel_centered)
+	gram <- 1 / (N * T) * (t(X_sel_centered) %*% X_sel_centered)
 
-  stopifnot(nrow(gram) == length(sel_feat_inds))
-  stopifnot(ncol(gram) == length(sel_feat_inds))
+	stopifnot(nrow(gram) == length(sel_feat_inds))
+	stopifnot(ncol(gram) == length(sel_feat_inds))
 
-  min_gram_eigen <- min(
-    eigen(gram, symmetric = TRUE, only.values = TRUE)$values
-  )
+	min_gram_eigen <- min(
+		eigen(gram, symmetric = TRUE, only.values = TRUE)$values
+	)
 
-  if (min_gram_eigen < 10^(-12)) {
-    warning(
-      "Gram matrix corresponding to selected features is not invertible. Assumptions needed for inference are not satisfied. Standard errors will not be calculated."
-    )
-    return(list(gram_inv = NA, calc_ses = FALSE))
-  }
+	if (min_gram_eigen < 10^(-12)) {
+		warning(
+			"Gram matrix corresponding to selected features is not invertible. Assumptions needed for inference are not satisfied. Standard errors will not be calculated."
+		)
+		return(list(gram_inv = NA, calc_ses = FALSE))
+	}
 
-  gram_inv <- solve(gram)
+	gram_inv <- solve(gram)
 
-  # Get only the parts of gram_inv that have to do with treatment effects
-  sel_treat_inds <- sel_feat_inds %in% treat_inds
+	# Get only the parts of gram_inv that have to do with treatment effects
+	sel_treat_inds <- sel_feat_inds %in% treat_inds
 
-  stopifnot(is.logical(sel_treat_inds))
-  stopifnot(sum(sel_treat_inds) <= length(sel_feat_inds))
-  stopifnot(length(sel_feat_inds) == length(sel_feat_inds))
+	stopifnot(is.logical(sel_treat_inds))
+	stopifnot(sum(sel_treat_inds) <= length(sel_feat_inds))
+	stopifnot(length(sel_feat_inds) == length(sel_feat_inds))
 
-  gram_inv <- gram_inv[sel_treat_inds, sel_treat_inds]
+	gram_inv <- gram_inv[sel_treat_inds, sel_treat_inds]
 
-  stopifnot(nrow(gram_inv) <= num_treats)
-  stopifnot(nrow(gram_inv) <= length(sel_feat_inds))
-  stopifnot(nrow(gram_inv) == ncol(gram_inv))
-  stopifnot(nrow(gram_inv) == length(sel_treat_inds_shifted))
+	stopifnot(nrow(gram_inv) <= num_treats)
+	stopifnot(nrow(gram_inv) <= length(sel_feat_inds))
+	stopifnot(nrow(gram_inv) == ncol(gram_inv))
+	stopifnot(nrow(gram_inv) == length(sel_treat_inds_shifted))
 
-  return(list(gram_inv = gram_inv, calc_ses = calc_ses))
+	return(list(gram_inv = gram_inv, calc_ses = calc_ses))
 }
 
 # getPsiRFused
@@ -3678,56 +3717,59 @@ getGramInv <- function(
 #' @keywords internal
 #' @noRd
 getPsiRFused <- function(
-  first_ind_r,
-  last_ind_r,
-  sel_treat_inds_shifted,
-  d_inv_treat
+	first_ind_r,
+	last_ind_r,
+	sel_treat_inds_shifted,
+	d_inv_treat
 ) {
-  stopifnot(length(sel_treat_inds_shifted) >= 0)
-  stopifnot(last_ind_r >= first_ind_r)
-  # Get psi vector: the part of D inverse that we need to look at is the
-  # block corresponding to the treatment effect estimates, which is the
-  # num_treats x num_treats matrix yielded by
-  # genInvTwoWayFusionTransformMat(num_treats, first_inds).
+	stopifnot(length(sel_treat_inds_shifted) >= 0)
+	stopifnot(last_ind_r >= first_ind_r)
+	# Get psi vector: the part of D inverse that we need to look at is the
+	# block corresponding to the treatment effect estimates, which is the
+	# num_treats x num_treats matrix yielded by
+	# genInvTwoWayFusionTransformMat(num_treats, first_inds).
 
-  # Correct rows of matrix
+	# Correct rows of matrix
 
-  if (last_ind_r > first_ind_r) {
-    if (length(sel_treat_inds_shifted) > 1) {
-      psi_r <- colMeans(d_inv_treat[
-        first_ind_r:last_ind_r,
-        sel_treat_inds_shifted
-      ])
-    } else {
-      psi_r <- mean(d_inv_treat[first_ind_r:last_ind_r, sel_treat_inds_shifted])
-    }
-    if (length(sel_treat_inds_shifted) == 1) {
-      # Need to coerce this object to be a matrix with one column so it
-      # works smoothly with rbind() later
-      d_inv_treat_sel <- matrix(
-        d_inv_treat[first_ind_r:last_ind_r, sel_treat_inds_shifted],
-        ncol = 1
-      )
-    } else {
-      d_inv_treat_sel <- d_inv_treat[
-        first_ind_r:last_ind_r,
-        sel_treat_inds_shifted
-      ]
-    }
-  } else {
-    psi_r <- d_inv_treat[first_ind_r:last_ind_r, sel_treat_inds_shifted]
-    # Since first_ind_r and last_ind_r are the same, need to coerce this
-    # object to be a matrix with one row so that it works smoothly with
-    # rbind() later
-    d_inv_treat_sel <- matrix(
-      d_inv_treat[first_ind_r:last_ind_r, sel_treat_inds_shifted],
-      nrow = 1
-    )
-  }
+	if (last_ind_r > first_ind_r) {
+		if (length(sel_treat_inds_shifted) > 1) {
+			psi_r <- colMeans(d_inv_treat[
+				first_ind_r:last_ind_r,
+				sel_treat_inds_shifted
+			])
+		} else {
+			psi_r <- mean(d_inv_treat[
+				first_ind_r:last_ind_r,
+				sel_treat_inds_shifted
+			])
+		}
+		if (length(sel_treat_inds_shifted) == 1) {
+			# Need to coerce this object to be a matrix with one column so it
+			# works smoothly with rbind() later
+			d_inv_treat_sel <- matrix(
+				d_inv_treat[first_ind_r:last_ind_r, sel_treat_inds_shifted],
+				ncol = 1
+			)
+		} else {
+			d_inv_treat_sel <- d_inv_treat[
+				first_ind_r:last_ind_r,
+				sel_treat_inds_shifted
+			]
+		}
+	} else {
+		psi_r <- d_inv_treat[first_ind_r:last_ind_r, sel_treat_inds_shifted]
+		# Since first_ind_r and last_ind_r are the same, need to coerce this
+		# object to be a matrix with one row so that it works smoothly with
+		# rbind() later
+		d_inv_treat_sel <- matrix(
+			d_inv_treat[first_ind_r:last_ind_r, sel_treat_inds_shifted],
+			nrow = 1
+		)
+	}
 
-  stopifnot(is.matrix(d_inv_treat_sel))
+	stopifnot(is.matrix(d_inv_treat_sel))
 
-  return(list(psi_r = psi_r, d_inv_treat_sel = d_inv_treat_sel))
+	return(list(psi_r = psi_r, d_inv_treat_sel = d_inv_treat_sel))
 }
 
 # getTeResults2
@@ -3785,76 +3827,76 @@ getPsiRFused <- function(
 #' @keywords internal
 #' @noRd
 getTeResults2 <- function(
-  # model,
-  sig_eps_sq,
-  N,
-  T,
-  R,
-  num_treats,
-  cohort_tes,
-  cohort_probs,
-  psi_mat,
-  gram_inv,
-  sel_treat_inds_shifted,
-  tes,
-  d_inv_treat_sel,
-  cohort_probs_overall,
-  first_inds,
-  theta_hat_treat_sel,
-  calc_ses,
-  indep_probs = FALSE
+	# model,
+	sig_eps_sq,
+	N,
+	T,
+	R,
+	num_treats,
+	cohort_tes,
+	cohort_probs,
+	psi_mat,
+	gram_inv,
+	sel_treat_inds_shifted,
+	tes,
+	d_inv_treat_sel,
+	cohort_probs_overall,
+	first_inds,
+	theta_hat_treat_sel,
+	calc_ses,
+	indep_probs = FALSE
 ) {
-  att_hat <- as.numeric(cohort_tes %*% cohort_probs)
+	att_hat <- as.numeric(cohort_tes %*% cohort_probs)
 
-  if (calc_ses) {
-    # Get ATT standard error
-    # first variance term: convergence of theta
-    psi_att <- psi_mat %*% cohort_probs
+	if (calc_ses) {
+		# Get ATT standard error
+		# first variance term: convergence of theta
+		psi_att <- psi_mat %*% cohort_probs
 
-    att_var_1 <- sig_eps_sq *
-      as.numeric(t(psi_att) %*% gram_inv %*% psi_att) /
-      (N * T)
+		att_var_1 <- sig_eps_sq *
+			as.numeric(t(psi_att) %*% gram_inv %*% psi_att) /
+			(N * T)
 
-    # Second variance term: convergence of cohort membership probabilities
-    att_var_2 <- getSecondVarTermDataApp(
-      cohort_probs = cohort_probs,
-      psi_mat = psi_mat,
-      sel_treat_inds_shifted = sel_treat_inds_shifted,
-      tes = tes,
-      d_inv_treat_sel = d_inv_treat_sel,
-      cohort_probs_overall = cohort_probs_overall,
-      first_inds = first_inds,
-      theta_hat_treat_sel = theta_hat_treat_sel,
-      num_treats = num_treats,
-      N = N,
-      T = T,
-      R = R
-    )
+		# Second variance term: convergence of cohort membership probabilities
+		att_var_2 <- getSecondVarTermDataApp(
+			cohort_probs = cohort_probs,
+			psi_mat = psi_mat,
+			sel_treat_inds_shifted = sel_treat_inds_shifted,
+			tes = tes,
+			d_inv_treat_sel = d_inv_treat_sel,
+			cohort_probs_overall = cohort_probs_overall,
+			first_inds = first_inds,
+			theta_hat_treat_sel = theta_hat_treat_sel,
+			num_treats = num_treats,
+			N = N,
+			T = T,
+			R = R
+		)
 
-    if (indep_probs) {
-      att_te_se <- sqrt(att_var_1 + att_var_2)
-    } else {
-      att_te_se <- sqrt(
-        att_var_1 +
-          att_var_2 +
-          2 *
-            sqrt(
-              att_var_1 * att_var_2
-            )
-      )
-    }
+		if (indep_probs) {
+			att_te_se <- sqrt(att_var_1 + att_var_2)
+		} else {
+			att_te_se <- sqrt(
+				att_var_1 +
+					att_var_2 +
+					2 *
+						sqrt(
+							att_var_1 * att_var_2
+						)
+			)
+		}
 
-    att_te_se_no_prob <- sqrt(att_var_1)
-  } else {
-    att_te_se <- NA
-    att_te_se_no_prob <- NA
-  }
+		att_te_se_no_prob <- sqrt(att_var_1)
+	} else {
+		att_te_se <- NA
+		att_te_se_no_prob <- NA
+	}
 
-  return(list(
-    att_hat = att_hat,
-    att_te_se = att_te_se,
-    att_te_se_no_prob = att_te_se_no_prob
-  ))
+	return(list(
+		att_hat = att_hat,
+		att_te_se = att_te_se,
+		att_te_se_no_prob = att_te_se_no_prob
+	))
 }
 
 # getNumTreats
@@ -3878,7 +3920,7 @@ getTeResults2 <- function(
 #' @keywords internal
 #' @noRd
 getNumTreats <- function(R, T) {
-  return(T * R - (R * (R + 1)) / 2)
+	return(T * R - (R * (R + 1)) / 2)
 }
 
 # getTreatInds
@@ -3906,24 +3948,24 @@ getNumTreats <- function(R, T) {
 #' @keywords internal
 #' @noRd
 getTreatInds <- function(R, T, d, num_treats) {
-  base_cols <- if (d > 0) {
-    R + (T - 1) + d + d * R + d * (T - 1)
-  } else {
-    R + (T - 1)
-  }
+	base_cols <- if (d > 0) {
+		R + (T - 1) + d + d * R + d * (T - 1)
+	} else {
+		R + (T - 1)
+	}
 
-  treat_inds <- seq(from = base_cols + 1, length.out = num_treats)
+	treat_inds <- seq(from = base_cols + 1, length.out = num_treats)
 
-  stopifnot(length(treat_inds) == num_treats)
-  if (d > 0) {
-    stopifnot(
-      max(treat_inds) == R + T - 1 + d + R * d + (T - 1) * d + num_treats
-    )
-  } else {
-    stopifnot(max(treat_inds) == R + T - 1 + num_treats)
-  }
+	stopifnot(length(treat_inds) == num_treats)
+	if (d > 0) {
+		stopifnot(
+			max(treat_inds) == R + T - 1 + d + R * d + (T - 1) * d + num_treats
+		)
+	} else {
+		stopifnot(max(treat_inds) == R + T - 1 + num_treats)
+	}
 
-  return(treat_inds)
+	return(treat_inds)
 }
 
 # getP
@@ -3950,7 +3992,7 @@ getTreatInds <- function(R, T, d, num_treats) {
 #' @keywords internal
 #' @noRd
 getP <- function(R, T, d, num_treats) {
-  return(R + (T - 1) + d + d * R + d * (T - 1) + num_treats + num_treats * d)
+	return(R + (T - 1) + d + d * R + d * (T - 1) + num_treats + num_treats * d)
 }
 
 # checkFetwfeInputs
@@ -3996,125 +4038,127 @@ getP <- function(R, T, d, num_treats) {
 #' @keywords internal
 #' @noRd
 checkFetwfeInputs <- function(
-  pdata,
-  time_var,
-  unit_var,
-  treatment,
-  response,
-  covs = c(),
-  indep_counts = NA,
-  sig_eps_sq = NA,
-  sig_eps_c_sq = NA,
-  lambda.max = NA,
-  lambda.min = NA,
-  nlambda = 100,
-  q = 0.5,
-  verbose = FALSE,
-  alpha = 0.05,
-  add_ridge = FALSE
+	pdata,
+	time_var,
+	unit_var,
+	treatment,
+	response,
+	covs = c(),
+	indep_counts = NA,
+	sig_eps_sq = NA,
+	sig_eps_c_sq = NA,
+	lambda.max = NA,
+	lambda.min = NA,
+	nlambda = 100,
+	q = 0.5,
+	verbose = FALSE,
+	alpha = 0.05,
+	add_ridge = FALSE
 ) {
-  # Check inputs
-  stopifnot(is.data.frame(pdata))
-  # Check if pdata is a tibble; if so, convert to a dataframe
-  if ("tbl_df" %in% class(pdata)) {
-    pdata <- as.data.frame(pdata)
-  }
-  stopifnot(nrow(pdata) >= 4) # bare minimum, 2 units at 2 times
+	# Check inputs
+	stopifnot(is.data.frame(pdata))
+	# Check if pdata is a tibble; if so, convert to a dataframe
+	if ("tbl_df" %in% class(pdata)) {
+		pdata <- as.data.frame(pdata)
+	}
+	stopifnot(nrow(pdata) >= 4) # bare minimum, 2 units at 2 times
 
-  stopifnot(is.character(time_var))
-  stopifnot(length(time_var) == 1)
-  stopifnot(time_var %in% colnames(pdata))
-  stopifnot(is.integer(pdata[[time_var]]))
+	stopifnot(is.character(time_var))
+	stopifnot(length(time_var) == 1)
+	stopifnot(time_var %in% colnames(pdata))
+	stopifnot(is.integer(pdata[[time_var]]))
 
-  stopifnot(is.character(unit_var))
-  stopifnot(length(unit_var) == 1)
-  stopifnot(unit_var %in% colnames(pdata))
-  stopifnot(is.character(pdata[[unit_var]]))
+	stopifnot(is.character(unit_var))
+	stopifnot(length(unit_var) == 1)
+	stopifnot(unit_var %in% colnames(pdata))
+	stopifnot(is.character(pdata[[unit_var]]))
 
-  stopifnot(is.character(treatment))
-  stopifnot(length(treatment) == 1)
-  stopifnot(treatment %in% colnames(pdata))
-  stopifnot(is.integer(pdata[[treatment]]))
-  stopifnot(all(pdata[, treatment] %in% c(0, 1)))
+	stopifnot(is.character(treatment))
+	stopifnot(length(treatment) == 1)
+	stopifnot(treatment %in% colnames(pdata))
+	stopifnot(is.integer(pdata[[treatment]]))
+	stopifnot(all(pdata[, treatment] %in% c(0, 1)))
 
-  if (length(covs) > 0) {
-    stopifnot(is.character(covs))
-    stopifnot(all(covs %in% colnames(pdata)))
-    for (cov in covs) {
-      stopifnot(
-        is.numeric(pdata[[cov]]) |
-          is.integer(pdata[[cov]]) |
-          is.factor(pdata[[cov]])
-      )
-    }
-  }
+	if (length(covs) > 0) {
+		stopifnot(is.character(covs))
+		stopifnot(all(covs %in% colnames(pdata)))
+		for (cov in covs) {
+			stopifnot(
+				is.numeric(pdata[[cov]]) |
+					is.integer(pdata[[cov]]) |
+					is.factor(pdata[[cov]])
+			)
+		}
+	}
 
-  stopifnot(is.character(response))
-  stopifnot(length(response) == 1)
-  stopifnot(response %in% colnames(pdata))
-  stopifnot(is.numeric(pdata[[response]]) | is.integer(pdata[[response]]))
+	stopifnot(is.character(response))
+	stopifnot(length(response) == 1)
+	stopifnot(response %in% colnames(pdata))
+	stopifnot(is.numeric(pdata[[response]]) | is.integer(pdata[[response]]))
 
-  indep_count_data_available <- FALSE
-  if (any(!is.na(indep_counts))) {
-    stopifnot(is.integer(indep_counts))
-    if (any(indep_counts <= 0)) {
-      stop("At least one cohort in the independent count data has 0 members")
-    }
-    indep_count_data_available <- TRUE
-  }
+	indep_count_data_available <- FALSE
+	if (any(!is.na(indep_counts))) {
+		stopifnot(is.integer(indep_counts))
+		if (any(indep_counts <= 0)) {
+			stop(
+				"At least one cohort in the independent count data has 0 members"
+			)
+		}
+		indep_count_data_available <- TRUE
+	}
 
-  if (any(!is.na(sig_eps_sq))) {
-    stopifnot(is.numeric(sig_eps_sq) | is.integer(sig_eps_sq))
-    stopifnot(length(sig_eps_sq) == 1)
-    stopifnot(sig_eps_sq >= 0)
-  }
+	if (any(!is.na(sig_eps_sq))) {
+		stopifnot(is.numeric(sig_eps_sq) | is.integer(sig_eps_sq))
+		stopifnot(length(sig_eps_sq) == 1)
+		stopifnot(sig_eps_sq >= 0)
+	}
 
-  if (any(!is.na(sig_eps_c_sq))) {
-    stopifnot(is.numeric(sig_eps_c_sq) | is.integer(sig_eps_c_sq))
-    stopifnot(length(sig_eps_c_sq) == 1)
-    stopifnot(sig_eps_c_sq >= 0)
-  }
+	if (any(!is.na(sig_eps_c_sq))) {
+		stopifnot(is.numeric(sig_eps_c_sq) | is.integer(sig_eps_c_sq))
+		stopifnot(length(sig_eps_c_sq) == 1)
+		stopifnot(sig_eps_c_sq >= 0)
+	}
 
-  if (any(!is.na(lambda.max))) {
-    stopifnot(is.numeric(lambda.max) | is.integer(lambda.max))
-    stopifnot(length(lambda.max) == 1)
-    stopifnot(lambda.max > 0)
-  }
+	if (any(!is.na(lambda.max))) {
+		stopifnot(is.numeric(lambda.max) | is.integer(lambda.max))
+		stopifnot(length(lambda.max) == 1)
+		stopifnot(lambda.max > 0)
+	}
 
-  if (any(!is.na(lambda.min))) {
-    stopifnot(is.numeric(lambda.min) | is.integer(lambda.min))
-    stopifnot(length(lambda.min) == 1)
-    stopifnot(lambda.min >= 0)
-    if (any(!is.na(lambda.max))) {
-      stopifnot(lambda.max > lambda.min)
-    }
-  }
+	if (any(!is.na(lambda.min))) {
+		stopifnot(is.numeric(lambda.min) | is.integer(lambda.min))
+		stopifnot(length(lambda.min) == 1)
+		stopifnot(lambda.min >= 0)
+		if (any(!is.na(lambda.max))) {
+			stopifnot(lambda.max > lambda.min)
+		}
+	}
 
-  stopifnot(is.numeric(q) | is.integer(q))
-  stopifnot(length(q) == 1)
-  stopifnot(q > 0)
-  stopifnot(q <= 2)
+	stopifnot(is.numeric(q) | is.integer(q))
+	stopifnot(length(q) == 1)
+	stopifnot(q > 0)
+	stopifnot(q <= 2)
 
-  stopifnot(is.logical(verbose))
-  stopifnot(length(verbose) == 1)
+	stopifnot(is.logical(verbose))
+	stopifnot(length(verbose) == 1)
 
-  stopifnot(is.numeric(alpha))
-  stopifnot(length(alpha) == 1)
-  stopifnot(alpha > 0)
-  stopifnot(alpha < 1)
-  if (alpha > 0.5) {
-    warning(
-      "Provided alpha > 0.5; are you sure you didn't mean to enter a smaller alpha? The confidence level will be 1 - alpha."
-    )
-  }
+	stopifnot(is.numeric(alpha))
+	stopifnot(length(alpha) == 1)
+	stopifnot(alpha > 0)
+	stopifnot(alpha < 1)
+	if (alpha > 0.5) {
+		warning(
+			"Provided alpha > 0.5; are you sure you didn't mean to enter a smaller alpha? The confidence level will be 1 - alpha."
+		)
+	}
 
-  stopifnot(is.logical(add_ridge))
-  stopifnot(length(add_ridge) == 1)
+	stopifnot(is.logical(add_ridge))
+	stopifnot(length(add_ridge) == 1)
 
-  return(list(
-    pdata = pdata,
-    indep_count_data_available = indep_count_data_available
-  ))
+	return(list(
+		pdata = pdata,
+		indep_count_data_available = indep_count_data_available
+	))
 }
 
 #' Generate the full \eqn{D^{-1}} transformation matrix.
@@ -4130,55 +4174,55 @@ checkFetwfeInputs <- function(
 #' d*num_treats.
 #' @noRd
 genFullInvFusionTransformMat <- function(first_inds, T, R, d, num_treats) {
-  # Load required package for block diagonal concatenation.
-  if (!requireNamespace("Matrix", quietly = TRUE)) {
-    stop("The 'Matrix' package is required but not installed.")
-  }
+	# Load required package for block diagonal concatenation.
+	if (!requireNamespace("Matrix", quietly = TRUE)) {
+		stop("The 'Matrix' package is required but not installed.")
+	}
 
-  # Block 1: Cohort fixed effects block, size R x R.
-  block1 <- genBackwardsInvFusionTransformMat(R)
+	# Block 1: Cohort fixed effects block, size R x R.
+	block1 <- genBackwardsInvFusionTransformMat(R)
 
-  # Block 2: Time fixed effects block, size (T - 1) x (T - 1).
-  block2 <- genBackwardsInvFusionTransformMat(T - 1)
+	# Block 2: Time fixed effects block, size (T - 1) x (T - 1).
+	block2 <- genBackwardsInvFusionTransformMat(T - 1)
 
-  # Block 3: Covariate main effects, identity of dimension d.
-  block3 <- if (d > 0) diag(d) else NULL
+	# Block 3: Covariate main effects, identity of dimension d.
+	block3 <- if (d > 0) diag(d) else NULL
 
-  # Block 4: Cohort-X interactions: I_d \otimes genBackwardsInvFusionTransformMat(R)
-  block4 <- if (d > 0)
-    kronecker(diag(d), genBackwardsInvFusionTransformMat(R)) else NULL
+	# Block 4: Cohort-X interactions: I_d \otimes genBackwardsInvFusionTransformMat(R)
+	block4 <- if (d > 0)
+		kronecker(diag(d), genBackwardsInvFusionTransformMat(R)) else NULL
 
-  # Block 5: Time-X interactions: I_d \otimes genBackwardsInvFusionTransformMat(T - 1)
-  block5 <- if (d > 0)
-    kronecker(diag(d), genBackwardsInvFusionTransformMat(T - 1)) else NULL
+	# Block 5: Time-X interactions: I_d \otimes genBackwardsInvFusionTransformMat(T - 1)
+	block5 <- if (d > 0)
+		kronecker(diag(d), genBackwardsInvFusionTransformMat(T - 1)) else NULL
 
-  # Block 6: Base treatment effects: genInvTwoWayFusionTransformMat(num_treats, first_inds, R)
-  block6 <- genInvTwoWayFusionTransformMat(num_treats, first_inds, R)
+	# Block 6: Base treatment effects: genInvTwoWayFusionTransformMat(num_treats, first_inds, R)
+	block6 <- genInvTwoWayFusionTransformMat(num_treats, first_inds, R)
 
-  # Block 7: Treatment-X interactions: I_d \otimes genInvTwoWayFusionTransformMat(num_treats, first_inds, R)
-  block7 <- if (d > 0)
-    kronecker(
-      diag(d),
-      genInvTwoWayFusionTransformMat(num_treats, first_inds, R)
-    ) else NULL
+	# Block 7: Treatment-X interactions: I_d \otimes genInvTwoWayFusionTransformMat(num_treats, first_inds, R)
+	block7 <- if (d > 0)
+		kronecker(
+			diag(d),
+			genInvTwoWayFusionTransformMat(num_treats, first_inds, R)
+		) else NULL
 
-  # Combine blocks into a block-diagonal matrix.
-  # Use Matrix::bdiag which returns a sparse matrix; convert to dense if needed.
-  blocks <- list(block1, block2)
-  if (!is.null(block3)) blocks <- c(blocks, list(block3))
-  if (!is.null(block4)) blocks <- c(blocks, list(block4))
-  if (!is.null(block5)) blocks <- c(blocks, list(block5))
-  blocks <- c(blocks, list(block6))
-  if (!is.null(block7)) blocks <- c(blocks, list(block7))
+	# Combine blocks into a block-diagonal matrix.
+	# Use Matrix::bdiag which returns a sparse matrix; convert to dense if needed.
+	blocks <- list(block1, block2)
+	if (!is.null(block3)) blocks <- c(blocks, list(block3))
+	if (!is.null(block4)) blocks <- c(blocks, list(block4))
+	if (!is.null(block5)) blocks <- c(blocks, list(block5))
+	blocks <- c(blocks, list(block6))
+	if (!is.null(block7)) blocks <- c(blocks, list(block7))
 
-  full_D_inv <- as.matrix(Matrix::bdiag(blocks))
+	full_D_inv <- as.matrix(Matrix::bdiag(blocks))
 
-  p <- getP(R = R, T = T, d = d, num_treats = num_treats)
+	p <- getP(R = R, T = T, d = d, num_treats = num_treats)
 
-  stopifnot(nrow(full_D_inv) == p)
-  stopifnot(ncol(full_D_inv) == p)
+	stopifnot(nrow(full_D_inv) == p)
+	stopifnot(ncol(full_D_inv) == p)
 
-  return(full_D_inv)
+	return(full_D_inv)
 }
 
 
@@ -4220,32 +4264,32 @@ genFullInvFusionTransformMat <- function(first_inds, T, R, d, num_treats) {
 #' @keywords internal
 #' @noRd
 processFactors <- function(pdata, covs) {
-  new_covs <- c()
-  # Loop over each variable in covs
-  for (v in covs) {
-    if (is.factor(pdata[[v]])) {
-      # Create dummy variables from the factor.
-      # The model.matrix() call produces an intercept and dummies; we drop the intercept
-      dummies <- stats::model.matrix(~ pdata[[v]] - 1)
-      # If there is more than one level, drop the first column to use it as baseline.
-      if (ncol(dummies) > 1) {
-        dummies <- dummies[, -1, drop = FALSE]
-      }
-      # Rename the dummy columns: for example, if v = "group", new names will be "group_level2", etc.
-      dummy_names <- paste(v, colnames(dummies), sep = "_")
-      colnames(dummies) <- dummy_names
-      # Remove the original factor column from pdata
-      pdata[[v]] <- NULL
-      # Bind the new dummy columns
-      pdata <- cbind(pdata, dummies)
-      # Record the new dummy variable names
-      new_covs <- c(new_covs, dummy_names)
-    } else {
-      # Leave non-factor columns unchanged.
-      new_covs <- c(new_covs, v)
-    }
-  }
-  return(list(pdata = pdata, covs = new_covs))
+	new_covs <- c()
+	# Loop over each variable in covs
+	for (v in covs) {
+		if (is.factor(pdata[[v]])) {
+			# Create dummy variables from the factor.
+			# The model.matrix() call produces an intercept and dummies; we drop the intercept
+			dummies <- stats::model.matrix(~ pdata[[v]] - 1)
+			# If there is more than one level, drop the first column to use it as baseline.
+			if (ncol(dummies) > 1) {
+				dummies <- dummies[, -1, drop = FALSE]
+			}
+			# Rename the dummy columns: for example, if v = "group", new names will be "group_level2", etc.
+			dummy_names <- paste(v, colnames(dummies), sep = "_")
+			colnames(dummies) <- dummy_names
+			# Remove the original factor column from pdata
+			pdata[[v]] <- NULL
+			# Bind the new dummy columns
+			pdata <- cbind(pdata, dummies)
+			# Record the new dummy variable names
+			new_covs <- c(new_covs, dummy_names)
+		} else {
+			# Leave non-factor columns unchanged.
+			new_covs <- c(new_covs, v)
+		}
+	}
+	return(list(pdata = pdata, covs = new_covs))
 }
 
 # my_scale
@@ -4289,25 +4333,25 @@ processFactors <- function(pdata, covs) {
 #' @keywords internal
 #' @noRd
 my_scale <- function(x) {
-  # Compute column means and standard deviations
-  ctr <- colMeans(x)
-  sds <- apply(x, 2, sd)
+	# Compute column means and standard deviations
+	ctr <- colMeans(x)
+	sds <- apply(x, 2, sd)
 
-  # Identify zero-variance columns
-  zero_sd <- (sds == 0)
+	# Identify zero-variance columns
+	zero_sd <- (sds == 0)
 
-  # For zero-variance columns, set scale=1 to avoid dividing by 0
-  ctr2 <- ctr
-  sds2 <- sds
-  sds2[zero_sd] <- 1
+	# For zero-variance columns, set scale=1 to avoid dividing by 0
+	ctr2 <- ctr
+	sds2 <- sds
+	sds2[zero_sd] <- 1
 
-  # Center and scale
-  scaled <- sweep(x, 2, ctr2, FUN = "-")
-  scaled <- sweep(scaled, 2, sds2, FUN = "/")
+	# Center and scale
+	scaled <- sweep(x, 2, ctr2, FUN = "-")
+	scaled <- sweep(scaled, 2, sds2, FUN = "/")
 
-  # Attach attributes so behavior mimics base::scale()
-  attr(scaled, "scaled:center") <- ctr2
-  attr(scaled, "scaled:scale") <- sds2
+	# Attach attributes so behavior mimics base::scale()
+	attr(scaled, "scaled:center") <- ctr2
+	attr(scaled, "scaled:scale") <- sds2
 
-  return(scaled)
+	return(scaled)
 }

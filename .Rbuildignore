@@ -5,3 +5,4 @@
 ^Meta$
 ^CRAN-SUBMISSION$
 ^cran-comments\.md$
+^air\.toml$

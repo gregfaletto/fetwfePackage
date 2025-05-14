@@ -201,188 +201,189 @@
 #' catt_df_pct
 #' @export
 fetwfe <- function(
-  pdata,
-  time_var,
-  unit_var,
-  treatment,
-  response,
-  covs = c(),
-  indep_counts = NA,
-  sig_eps_sq = NA,
-  sig_eps_c_sq = NA,
-  lambda.max = NA,
-  lambda.min = NA,
-  nlambda = 100,
-  q = 0.5,
-  verbose = FALSE,
-  alpha = 0.05,
-  add_ridge = FALSE
+	pdata,
+	time_var,
+	unit_var,
+	treatment,
+	response,
+	covs = c(),
+	indep_counts = NA,
+	sig_eps_sq = NA,
+	sig_eps_c_sq = NA,
+	lambda.max = NA,
+	lambda.min = NA,
+	nlambda = 100,
+	q = 0.5,
+	verbose = FALSE,
+	alpha = 0.05,
+	add_ridge = FALSE
 ) {
-  # Check inputs
-  ret <- checkFetwfeInputs(
-    pdata = pdata,
-    time_var = time_var,
-    unit_var = unit_var,
-    treatment = treatment,
-    response = response,
-    covs = covs,
-    indep_counts = indep_counts,
-    sig_eps_sq = sig_eps_sq,
-    sig_eps_c_sq = sig_eps_c_sq,
-    lambda.max = lambda.max,
-    lambda.min = lambda.min,
-    nlambda = nlambda,
-    q = q,
-    verbose = verbose,
-    alpha = alpha,
-    add_ridge = add_ridge
-  )
+	# Check inputs
+	ret <- checkFetwfeInputs(
+		pdata = pdata,
+		time_var = time_var,
+		unit_var = unit_var,
+		treatment = treatment,
+		response = response,
+		covs = covs,
+		indep_counts = indep_counts,
+		sig_eps_sq = sig_eps_sq,
+		sig_eps_c_sq = sig_eps_c_sq,
+		lambda.max = lambda.max,
+		lambda.min = lambda.min,
+		nlambda = nlambda,
+		q = q,
+		verbose = verbose,
+		alpha = alpha,
+		add_ridge = add_ridge
+	)
 
-  pdata <- ret$pdata
-  indep_count_data_available = ret$indep_count_data_available
+	pdata <- ret$pdata
+	indep_count_data_available = ret$indep_count_data_available
 
-  rm(ret)
+	rm(ret)
 
-  # Subset pdata to include only the key columns
-  pdata <- pdata[, c(response, time_var, unit_var, treatment, covs)]
+	# Subset pdata to include only the key columns
+	pdata <- pdata[, c(response, time_var, unit_var, treatment, covs)]
 
-  # Process any factor covariates:
-  if (length(covs) > 0) {
-    pf_res <- processFactors(pdata, covs)
-    pdata <- pf_res$pdata
-    covs <- pf_res$covs
-  }
+	# Process any factor covariates:
+	if (length(covs) > 0) {
+		pf_res <- processFactors(pdata, covs)
+		pdata <- pf_res$pdata
+		covs <- pf_res$covs
+	}
 
-  # Proceed to generate design matrix and other objects
-  res <- prepXints(
-    data = pdata,
-    time_var = time_var,
-    unit_var = unit_var,
-    treatment = treatment,
-    covs = covs,
-    response = response,
-    verbose = verbose
-  )
+	# Proceed to generate design matrix and other objects
+	res <- prepXints(
+		data = pdata,
+		time_var = time_var,
+		unit_var = unit_var,
+		treatment = treatment,
+		covs = covs,
+		response = response,
+		verbose = verbose
+	)
 
-  X_ints <- res$X_ints
-  y <- res$y
-  N <- res$N
-  T <- res$T
-  d <- res$d
-  p <- res$p
-  in_sample_counts <- res$in_sample_counts
-  num_treats <- res$num_treats
-  first_inds <- res$first_inds
+	X_ints <- res$X_ints
+	y <- res$y
+	N <- res$N
+	T <- res$T
+	d <- res$d
+	p <- res$p
+	in_sample_counts <- res$in_sample_counts
+	num_treats <- res$num_treats
+	first_inds <- res$first_inds
 
-  rm(res)
+	rm(res)
 
-  R <- length(in_sample_counts) - 1
-  stopifnot(R >= 1)
-  stopifnot(R <= T - 1)
-  if (R < 2) {
-    stop(
-      "Only one treated cohort detected in data. Currently fetwfe only supports data sets with at least two treated cohorts."
-    )
-  }
-  stopifnot(N >= R + 1)
-  stopifnot(sum(in_sample_counts) == N)
-  stopifnot(all(in_sample_counts >= 0))
-  stopifnot(is.integer(in_sample_counts))
-  if (in_sample_counts[1] == 0) {
-    stop(
-      "No never-treated units detected in data to fit model; estimating treatment effects is not possible"
-    )
-  }
-  if (length(names(in_sample_counts)) != length(in_sample_counts)) {
-    stop(
-      "in_sample_counts must have all unique named entries (with names corresponding to the names of each cohort)"
-    )
-  }
-  if (
-    length(names(in_sample_counts)) != length(unique(names(in_sample_counts)))
-  ) {
-    stop(
-      "in_sample_counts must have all unique named entries (with names corresponding to the names of each cohort)"
-    )
-  }
-  if (indep_count_data_available) {
-    if (sum(indep_counts) != N) {
-      stop(
-        "Number of units in independent cohort count data does not equal number of units in data to be used to fit model."
-      )
-    }
-    if (length(indep_counts) != length(in_sample_counts)) {
-      stop(
-        "Number of counts in independent counts does not match number of cohorts in data to be used to fit model."
-      )
-    }
-  }
+	R <- length(in_sample_counts) - 1
+	stopifnot(R >= 1)
+	stopifnot(R <= T - 1)
+	if (R < 2) {
+		stop(
+			"Only one treated cohort detected in data. Currently fetwfe only supports data sets with at least two treated cohorts."
+		)
+	}
+	stopifnot(N >= R + 1)
+	stopifnot(sum(in_sample_counts) == N)
+	stopifnot(all(in_sample_counts >= 0))
+	stopifnot(is.integer(in_sample_counts))
+	if (in_sample_counts[1] == 0) {
+		stop(
+			"No never-treated units detected in data to fit model; estimating treatment effects is not possible"
+		)
+	}
+	if (length(names(in_sample_counts)) != length(in_sample_counts)) {
+		stop(
+			"in_sample_counts must have all unique named entries (with names corresponding to the names of each cohort)"
+		)
+	}
+	if (
+		length(names(in_sample_counts)) !=
+			length(unique(names(in_sample_counts)))
+	) {
+		stop(
+			"in_sample_counts must have all unique named entries (with names corresponding to the names of each cohort)"
+		)
+	}
+	if (indep_count_data_available) {
+		if (sum(indep_counts) != N) {
+			stop(
+				"Number of units in independent cohort count data does not equal number of units in data to be used to fit model."
+			)
+		}
+		if (length(indep_counts) != length(in_sample_counts)) {
+			stop(
+				"Number of counts in independent counts does not match number of cohorts in data to be used to fit model."
+			)
+		}
+	}
 
-  res <- fetwfe_core(
-    X_ints = X_ints,
-    y = y,
-    in_sample_counts = in_sample_counts,
-    N = N,
-    T = T,
-    d = d,
-    p = p,
-    num_treats = num_treats,
-    first_inds = first_inds,
-    indep_counts = indep_counts,
-    sig_eps_sq = sig_eps_sq,
-    sig_eps_c_sq = sig_eps_c_sq,
-    lambda.max = lambda.max,
-    lambda.min = lambda.min,
-    nlambda = nlambda,
-    q = q,
-    verbose = verbose,
-    alpha = alpha,
-    add_ridge = add_ridge
-  )
+	res <- fetwfe_core(
+		X_ints = X_ints,
+		y = y,
+		in_sample_counts = in_sample_counts,
+		N = N,
+		T = T,
+		d = d,
+		p = p,
+		num_treats = num_treats,
+		first_inds = first_inds,
+		indep_counts = indep_counts,
+		sig_eps_sq = sig_eps_sq,
+		sig_eps_c_sq = sig_eps_c_sq,
+		lambda.max = lambda.max,
+		lambda.min = lambda.min,
+		nlambda = nlambda,
+		q = q,
+		verbose = verbose,
+		alpha = alpha,
+		add_ridge = add_ridge
+	)
 
-  if (indep_count_data_available) {
-    if (q < 1) {
-      stopifnot(!is.na(res$indep_att_hat))
-      stopifnot(!is.na(res$indep_att_se))
-    }
-    stopifnot(all(!is.na(res$indep_cohort_probs)))
-    att_hat <- res$indep_att_hat
-    att_se <- res$indep_att_se
-    cohort_probs <- res$indep_cohort_probs
-  } else {
-    att_hat <- res$in_sample_att_hat
-    att_se <- res$in_sample_att_se
-    cohort_probs <- res$cohort_probs
-  }
+	if (indep_count_data_available) {
+		if (q < 1) {
+			stopifnot(!is.na(res$indep_att_hat))
+			stopifnot(!is.na(res$indep_att_se))
+		}
+		stopifnot(all(!is.na(res$indep_cohort_probs)))
+		att_hat <- res$indep_att_hat
+		att_se <- res$indep_att_se
+		cohort_probs <- res$indep_cohort_probs
+	} else {
+		att_hat <- res$in_sample_att_hat
+		att_se <- res$in_sample_att_se
+		cohort_probs <- res$cohort_probs
+	}
 
-  return(list(
-    att_hat = att_hat,
-    att_se = att_se,
-    catt_hats = res$catt_hats,
-    catt_ses = res$catt_ses,
-    cohort_probs = cohort_probs,
-    catt_df = res$catt_df,
-    beta_hat = res$beta_hat,
-    treat_inds = res$treat_inds,
-    treat_int_inds = res$treat_int_inds,
-    sig_eps_sq = res$sig_eps_sq,
-    sig_eps_c_sq = res$sig_eps_c_sq,
-    lambda.max = res$lambda.max,
-    lambda.max_model_size = res$lambda.max_model_size,
-    lambda.min = res$lambda.min,
-    lambda.min_model_size = res$lambda.min_model_size,
-    lambda_star = res$lambda_star,
-    lambda_star_model_size = res$lambda_star_model_size,
-    X_ints = res$X_ints,
-    y = res$y,
-    X_final = res$X_final,
-    y_final = res$y_final,
-    N = res$N,
-    T = res$T,
-    R = res$R,
-    d = res$d,
-    p = res$p
-  ))
+	return(list(
+		att_hat = att_hat,
+		att_se = att_se,
+		catt_hats = res$catt_hats,
+		catt_ses = res$catt_ses,
+		cohort_probs = cohort_probs,
+		catt_df = res$catt_df,
+		beta_hat = res$beta_hat,
+		treat_inds = res$treat_inds,
+		treat_int_inds = res$treat_int_inds,
+		sig_eps_sq = res$sig_eps_sq,
+		sig_eps_c_sq = res$sig_eps_c_sq,
+		lambda.max = res$lambda.max,
+		lambda.max_model_size = res$lambda.max_model_size,
+		lambda.min = res$lambda.min,
+		lambda.min_model_size = res$lambda.min_model_size,
+		lambda_star = res$lambda_star,
+		lambda_star_model_size = res$lambda_star_model_size,
+		X_ints = res$X_ints,
+		y = res$y,
+		X_final = res$X_final,
+		y_final = res$y_final,
+		N = res$N,
+		T = res$T,
+		R = res$R,
+		d = res$d,
+		p = res$p
+	))
 }
 
 #' Generate Random Panel Data for FETWFE Simulations
@@ -467,82 +468,84 @@ fetwfe <- function(
 #'
 #' @export
 simulateData <- function(
-  coefs_obj,
-  N,
-  sig_eps_sq,
-  sig_eps_c_sq,
-  distribution = "gaussian"
+	coefs_obj,
+	N,
+	sig_eps_sq,
+	sig_eps_c_sq,
+	distribution = "gaussian"
 ) {
-  if (!inherits(coefs_obj, "FETWFE_coefs")) {
-    stop("coefs_obj must be an object of class 'FETWFE_coefs'")
-  }
-  if (!is.numeric(N) || length(N) != 1 || N <= 0) {
-    stop("N must be a positive numeric value")
-  }
-  if (!is.numeric(sig_eps_sq) || length(sig_eps_sq) != 1 || sig_eps_sq <= 0) {
-    stop("sig_eps_sq must be a positive numeric value")
-  }
-  if (
-    !is.numeric(sig_eps_c_sq) || length(sig_eps_c_sq) != 1 || sig_eps_c_sq <= 0
-  ) {
-    stop("sig_eps_c_sq must be a positive numeric value")
-  }
+	if (!inherits(coefs_obj, "FETWFE_coefs")) {
+		stop("coefs_obj must be an object of class 'FETWFE_coefs'")
+	}
+	if (!is.numeric(N) || length(N) != 1 || N <= 0) {
+		stop("N must be a positive numeric value")
+	}
+	if (!is.numeric(sig_eps_sq) || length(sig_eps_sq) != 1 || sig_eps_sq <= 0) {
+		stop("sig_eps_sq must be a positive numeric value")
+	}
+	if (
+		!is.numeric(sig_eps_c_sq) ||
+			length(sig_eps_c_sq) != 1 ||
+			sig_eps_c_sq <= 0
+	) {
+		stop("sig_eps_c_sq must be a positive numeric value")
+	}
 
-  # Extract parameters from the coefs object
-  R <- coefs_obj$R
-  T <- coefs_obj$T
-  d <- coefs_obj$d
-  beta <- coefs_obj$beta
-  seed <- coefs_obj$seed
+	# Extract parameters from the coefs object
+	R <- coefs_obj$R
+	T <- coefs_obj$T
+	d <- coefs_obj$d
+	beta <- coefs_obj$beta
+	seed <- coefs_obj$seed
 
-  sim_data <- simulateDataCore(
-    N = N,
-    T = T,
-    R = R,
-    d = d,
-    sig_eps_sq = sig_eps_sq,
-    sig_eps_c_sq = sig_eps_c_sq,
-    beta = beta,
-    seed = seed,
-    gen_ints = TRUE,
-    distribution = distribution
-  )
+	sim_data <- simulateDataCore(
+		N = N,
+		T = T,
+		R = R,
+		d = d,
+		sig_eps_sq = sig_eps_sq,
+		sig_eps_c_sq = sig_eps_c_sq,
+		beta = beta,
+		seed = seed,
+		gen_ints = TRUE,
+		distribution = distribution
+	)
 
-  required_fields <- c(
-    "pdata",
-    "X",
-    "y",
-    "covs",
-    "time_var",
-    "unit_var",
-    "treatment",
-    "response",
-    "coefs",
-    "first_inds",
-    "N_UNTREATED",
-    "assignments",
-    "indep_counts",
-    "p",
-    "N",
-    "T",
-    "R",
-    "d",
-    "sig_eps_sq",
-    "sig_eps_c_sq"
-  )
-  missing_fields <- setdiff(required_fields, names(sim_data))
-  if (length(missing_fields) > 0) {
-    stop(paste(
-      "simulateDataCore did not return expected components:",
-      paste(missing_fields, collapse = ", ")
-    ))
-  }
+	required_fields <- c(
+		"pdata",
+		"X",
+		"y",
+		"covs",
+		"time_var",
+		"unit_var",
+		"treatment",
+		"response",
+		"coefs",
+		"first_inds",
+		"N_UNTREATED",
+		"assignments",
+		"indep_counts",
+		"p",
+		"N",
+		"T",
+		"R",
+		"d",
+		"sig_eps_sq",
+		"sig_eps_c_sq"
+	)
+	missing_fields <- setdiff(required_fields, names(sim_data))
+	if (length(missing_fields) > 0) {
+		stop(paste(
+			"simulateDataCore did not return expected components:",
+			paste(missing_fields, collapse = ", ")
+		))
+	}
 
-  if (!inherits(sim_data, "FETWFE_simulated")) {
-    stop("sim_data must be an object of class 'FETWFE_simulated'")
-  }
+	if (!inherits(sim_data, "FETWFE_simulated")) {
+		stop("sim_data must be an object of class 'FETWFE_simulated'")
+	}
 
-  return(sim_data)
+	return(sim_data)
 }
 
 #' Generate Coefficient Vector for Data Generation
@@ -607,60 +610,65 @@ simulateData <- function(
 #'
 #' @export
 genCoefs <- function(R, T, d, density, eff_size, seed = NULL) {
-  # Check that T is a numeric scalar and at least 3.
-  if (!is.numeric(T) || length(T) != 1 || T < 3) {
-    stop("T must be a numeric value greater than or equal to 3")
-  }
+	# Check that T is a numeric scalar and at least 3.
+	if (!is.numeric(T) || length(T) != 1 || T < 3) {
+		stop("T must be a numeric value greater than or equal to 3")
+	}
 
-  # Check that R is a numeric scalar and at least 2.
-  if (!is.numeric(R) || length(R) != 1 || R < 2) {
-    stop(
-      "R must be a numeric value greater than or equal to 2 (currently there is only support for data sets with staggered adoptions, so at least two treated cohorts)"
-    )
-  }
+	# Check that R is a numeric scalar and at least 2.
+	if (!is.numeric(R) || length(R) != 1 || R < 2) {
+		stop(
+			"R must be a numeric value greater than or equal to 2 (currently there is only support for data sets with staggered adoptions, so at least two treated cohorts)"
+		)
+	}
 
-  # Check that R does not exceed T - 1.
-  if (R > T - 1) {
-    stop("R must be less than or equal to T - 1")
-  }
+	# Check that R does not exceed T - 1.
+	if (R > T - 1) {
+		stop("R must be less than or equal to T - 1")
+	}
 
-  # Check that d is a numeric scalar and is non-negative.
-  if (!is.numeric(d) || length(d) != 1 || d < 0) {
-    stop("d must be a non-negative numeric value")
-  }
+	# Check that d is a numeric scalar and is non-negative.
+	if (!is.numeric(d) || length(d) != 1 || d < 0) {
+		stop("d must be a non-negative numeric value")
+	}
 
-  # Check that density is a numeric scalar strictly between 0 and 1.
-  if (
-    !is.numeric(density) || length(density) != 1 || density <= 0 || density >= 1
-  ) {
-    stop("density must be numeric and strictly between 0 and 1")
-  }
+	# Check that density is a numeric scalar strictly between 0 and 1.
+	if (
+		!is.numeric(density) ||
+			length(density) != 1 ||
+			density <= 0 ||
+			density >= 1
+	) {
+		stop("density must be numeric and strictly between 0 and 1")
+	}
 
-  # Check that eff_size is numeric.
-  if (!is.numeric(eff_size) || length(eff_size) != 1) {
-    stop("eff_size must be a numeric value")
-  }
+	# Check that eff_size is numeric.
+	if (!is.numeric(eff_size) || length(eff_size) != 1) {
+		stop("eff_size must be a numeric value")
+	}
 
-  stopifnot(R >= 2)
-  stopifnot(T >= 3)
-  stopifnot(R <= T - 1)
+	stopifnot(R >= 2)
+	stopifnot(T >= 3)
+	stopifnot(R <= T - 1)
 
-  core_obj <- genCoefsCore(
-    R = R,
-    T = T,
-    d = d,
-    density = density,
-    eff_size = eff_size,
-    seed = seed
-  )
-  if (is.null(core_obj$beta)) {
-    stop("Internal error: genCoefsCore() did not return expected components.")
-  }
+	core_obj <- genCoefsCore(
+		R = R,
+		T = T,
+		d = d,
+		density = density,
+		eff_size = eff_size,
+		seed = seed
+	)
+	if (is.null(core_obj$beta)) {
+		stop(
+			"Internal error: genCoefsCore() did not return expected components."
+		)
+	}
 
-  # Create an S3 object of class "FETWFE_coefs"
-  obj <- list(beta = core_obj$beta, R = R, T = T, d = d, seed = seed)
-  class(obj) <- "FETWFE_coefs"
-  return(obj)
+	# Create an S3 object of class "FETWFE_coefs"
+	obj <- list(beta = core_obj$beta, R = R, T = T, d = d, seed = seed)
+	class(obj) <- "FETWFE_coefs"
+	return(obj)
 }
 
 #' Run FETWFE on Simulated Data
@@ -776,49 +784,49 @@ genCoefs <- function(R, T, d, density, eff_size, seed = NULL) {
 #'
 #' @export
 fetwfeWithSimulatedData <- function(
-  simulated_obj,
-  lambda.max = NA,
-  lambda.min = NA,
-  nlambda = 100,
-  q = 0.5,
-  verbose = FALSE,
-  alpha = 0.05,
-  add_ridge = FALSE
+	simulated_obj,
+	lambda.max = NA,
+	lambda.min = NA,
+	nlambda = 100,
+	q = 0.5,
+	verbose = FALSE,
+	alpha = 0.05,
+	add_ridge = FALSE
 ) {
-  if (!inherits(simulated_obj, "FETWFE_simulated")) {
-    stop("simulated_obj must be an object of class 'FETWFE_simulated'")
-  }
+	if (!inherits(simulated_obj, "FETWFE_simulated")) {
+		stop("simulated_obj must be an object of class 'FETWFE_simulated'")
+	}
 
-  pdata <- simulated_obj$pdata
-  time_var <- simulated_obj$time_var
-  unit_var <- simulated_obj$unit_var
-  treatment <- simulated_obj$treatment
-  response <- simulated_obj$response
-  covs <- simulated_obj$covs
-  sig_eps_sq <- simulated_obj$sig_eps_sq
-  sig_eps_c_sq <- simulated_obj$sig_eps_c_sq
-  indep_counts <- simulated_obj$indep_counts
+	pdata <- simulated_obj$pdata
+	time_var <- simulated_obj$time_var
+	unit_var <- simulated_obj$unit_var
+	treatment <- simulated_obj$treatment
+	response <- simulated_obj$response
+	covs <- simulated_obj$covs
+	sig_eps_sq <- simulated_obj$sig_eps_sq
+	sig_eps_c_sq <- simulated_obj$sig_eps_c_sq
+	indep_counts <- simulated_obj$indep_counts
 
-  res <- fetwfe(
-    pdata = pdata,
-    time_var = time_var,
-    unit_var = unit_var,
-    treatment = treatment,
-    response = response,
-    covs = covs,
-    indep_counts = indep_counts,
-    sig_eps_sq = sig_eps_sq,
-    sig_eps_c_sq = sig_eps_c_sq,
-    lambda.max = lambda.max,
-    lambda.min = lambda.min,
-    nlambda = nlambda,
-    q = q,
-    verbose = verbose,
-    alpha = alpha,
-    add_ridge = add_ridge
-  )
+	res <- fetwfe(
+		pdata = pdata,
+		time_var = time_var,
+		unit_var = unit_var,
+		treatment = treatment,
+		response = response,
+		covs = covs,
+		indep_counts = indep_counts,
+		sig_eps_sq = sig_eps_sq,
+		sig_eps_c_sq = sig_eps_c_sq,
+		lambda.max = lambda.max,
+		lambda.min = lambda.min,
+		nlambda = nlambda,
+		q = q,
+		verbose = verbose,
+		alpha = alpha,
+		add_ridge = add_ridge
+	)
 
-  return(res)
+	return(res)
 }
 
 
@@ -866,36 +874,36 @@ fetwfeWithSimulatedData <- function(
 #'
 #' @export
 getTes <- function(coefs_obj) {
-  if (!inherits(coefs_obj, "FETWFE_coefs")) {
-    stop("coefs_obj must be an object of class 'FETWFE_coefs'")
-  }
+	if (!inherits(coefs_obj, "FETWFE_coefs")) {
+		stop("coefs_obj must be an object of class 'FETWFE_coefs'")
+	}
 
-  # Unpack components from the coefs object
-  beta <- coefs_obj$beta
-  R <- coefs_obj$R
-  T <- coefs_obj$T
-  d <- coefs_obj$d
+	# Unpack components from the coefs object
+	beta <- coefs_obj$beta
+	R <- coefs_obj$R
+	T <- coefs_obj$T
+	d <- coefs_obj$d
 
-  num_treats <- getNumTreats(R = R, T = T)
+	num_treats <- getNumTreats(R = R, T = T)
 
-  p <- getP(R = R, T = T, d = d, num_treats = num_treats)
+	p <- getP(R = R, T = T, d = d, num_treats = num_treats)
 
-  stopifnot(length(beta) == p)
+	stopifnot(length(beta) == p)
 
-  first_inds <- getFirstInds(R = R, T = T)
-  treat_inds <- getTreatInds(R = R, T = T, d = d, num_treats = num_treats)
+	first_inds <- getFirstInds(R = R, T = T)
+	treat_inds <- getTreatInds(R = R, T = T, d = d, num_treats = num_treats)
 
-  actual_cohort_tes <- getActualCohortTes(
-    R = R,
-    first_inds = first_inds,
-    treat_inds = treat_inds,
-    coefs = beta,
-    num_treats = num_treats
-  )
+	actual_cohort_tes <- getActualCohortTes(
+		R = R,
+		first_inds = first_inds,
+		treat_inds = treat_inds,
+		coefs = beta,
+		num_treats = num_treats
+	)
 
-  att_true <- as.numeric(mean(actual_cohort_tes))
+	att_true <- as.numeric(mean(actual_cohort_tes))
 
-  return(list(att_true = att_true, actual_cohort_tes = actual_cohort_tes))
+	return(list(att_true = att_true, actual_cohort_tes = actual_cohort_tes))
 }
 
 
@@ -1027,226 +1035,226 @@ getTes <- function(coefs_obj) {
 #'
 #' @export
 simulateDataCore <- function(
-  N,
-  T,
-  R,
-  d,
-  sig_eps_sq,
-  sig_eps_c_sq,
-  beta,
-  seed = NULL,
-  gen_ints = FALSE,
-  distribution = "gaussian"
+	N,
+	T,
+	R,
+	d,
+	sig_eps_sq,
+	sig_eps_c_sq,
+	beta,
+	seed = NULL,
+	gen_ints = FALSE,
+	distribution = "gaussian"
 ) {
-  if (!is.null(seed)) set.seed(seed)
+	if (!is.null(seed)) set.seed(seed)
 
-  res <- testGenRandomDataInputs(
-    beta = beta,
-    R = R,
-    T = T,
-    d = d,
-    N = N,
-    sig_eps_sq = sig_eps_sq,
-    sig_eps_c_sq = sig_eps_c_sq
-  )
+	res <- testGenRandomDataInputs(
+		beta = beta,
+		R = R,
+		T = T,
+		d = d,
+		N = N,
+		sig_eps_sq = sig_eps_sq,
+		sig_eps_c_sq = sig_eps_c_sq
+	)
 
-  num_treats <- res$num_treats
-  p_expected <- res$p_expected
+	num_treats <- res$num_treats
+	p_expected <- res$p_expected
 
-  rm(res)
+	rm(res)
 
-  # Generate base effects and covariates (using specified distribution)
-  res_base <- generateBaseEffects(
-    N = N,
-    d = d,
-    T = T,
-    R = R,
-    distribution = distribution
-  )
-  cohort_fe <- res_base$cohort_fe
-  time_fe <- res_base$time_fe
-  X_long <- res_base$X_long
-  assignments <- res_base$assignments
-  cohort_inds <- res_base$cohort_inds
+	# Generate base effects and covariates (using specified distribution)
+	res_base <- generateBaseEffects(
+		N = N,
+		d = d,
+		T = T,
+		R = R,
+		distribution = distribution
+	)
+	cohort_fe <- res_base$cohort_fe
+	time_fe <- res_base$time_fe
+	X_long <- res_base$X_long
+	assignments <- res_base$assignments
+	cohort_inds <- res_base$cohort_inds
 
-  stopifnot(ncol(cohort_fe) == R)
+	stopifnot(ncol(cohort_fe) == R)
 
-  # Base matrix: cohort FE, time FE, and covariates (if any)
-  X_base <- if (d > 0) {
-    cbind(cohort_fe, time_fe, X_long)
-  } else {
-    cbind(cohort_fe, time_fe)
-  }
+	# Base matrix: cohort FE, time FE, and covariates (if any)
+	X_base <- if (d > 0) {
+		cbind(cohort_fe, time_fe, X_long)
+	} else {
+		cbind(cohort_fe, time_fe)
+	}
 
-  indep_assignments <- genAssignments(N, R)
+	indep_assignments <- genAssignments(N, R)
 
-  if (d > 0) {
-    res_ints <- generateFEInts(X_long, cohort_fe, time_fe, N, T, R, d)
-    X_ints1 <- cbind(X_base, res_ints$X_long_cohort, res_ints$X_long_time)
-  } else {
-    X_ints1 <- X_base
-  }
+	if (d > 0) {
+		res_ints <- generateFEInts(X_long, cohort_fe, time_fe, N, T, R, d)
+		X_ints1 <- cbind(X_base, res_ints$X_long_cohort, res_ints$X_long_time)
+	} else {
+		X_ints1 <- X_base
+	}
 
-  first_inds_test <- getFirstInds(R = R, T = T)
-  res_treat <- genTreatVarsSim(
-    num_treats,
-    N,
-    T,
-    R,
-    assignments,
-    cohort_inds,
-    N_UNTREATED = assignments[1],
-    first_inds_test = first_inds_test,
-    d = d
-  )
-  treat_mat_long <- res_treat$treat_mat_long
-  first_inds <- res_treat$first_inds
+	first_inds_test <- getFirstInds(R = R, T = T)
+	res_treat <- genTreatVarsSim(
+		num_treats,
+		N,
+		T,
+		R,
+		assignments,
+		cohort_inds,
+		N_UNTREATED = assignments[1],
+		first_inds_test = first_inds_test,
+		d = d
+	)
+	treat_mat_long <- res_treat$treat_mat_long
+	first_inds <- res_treat$first_inds
 
-  X_ints2 <- cbind(X_ints1, treat_mat_long)
+	X_ints2 <- cbind(X_ints1, treat_mat_long)
 
-  if (d > 0) {
-    stopifnot(ncol(cohort_fe) == R)
-    X_long_treat <- genTreatInts(
-      treat_mat_long = treat_mat_long,
-      X_long = X_long,
-      n_treats = num_treats,
-      cohort_fe = cohort_fe,
-      N = N,
-      T = T,
-      R = R,
-      d = d,
-      N_UNTREATED = assignments[1]
-    )
+	if (d > 0) {
+		stopifnot(ncol(cohort_fe) == R)
+		X_long_treat <- genTreatInts(
+			treat_mat_long = treat_mat_long,
+			X_long = X_long,
+			n_treats = num_treats,
+			cohort_fe = cohort_fe,
+			N = N,
+			T = T,
+			R = R,
+			d = d,
+			N_UNTREATED = assignments[1]
+		)
 
-    X_final <- cbind(X_ints2, X_long_treat)
-  } else {
-    X_final <- X_ints2
-  }
+		X_final <- cbind(X_ints2, X_long_treat)
+	} else {
+		X_final <- X_ints2
+	}
 
-  if (ncol(X_final) != p_expected) {
-    stop(
-      "Constructed design matrix with interactions has incorrect number of columns."
-    )
-  }
+	if (ncol(X_final) != p_expected) {
+		stop(
+			"Constructed design matrix with interactions has incorrect number of columns."
+		)
+	}
 
-  unit_res <- rnorm(N, mean = 0, sd = sqrt(sig_eps_c_sq))
-  y <- X_final %*%
-    beta +
-    rep(unit_res, each = T) +
-    rnorm(N * T, mean = 0, sd = sqrt(sig_eps_sq))
-  y <- y - mean(y)
+	unit_res <- rnorm(N, mean = 0, sd = sqrt(sig_eps_c_sq))
+	y <- X_final %*%
+		beta +
+		rep(unit_res, each = T) +
+		rnorm(N * T, mean = 0, sd = sqrt(sig_eps_sq))
+	y <- y - mean(y)
 
-  if (gen_ints) {
-    X_ret <- X_final
-  } else {
-    # Return X with no interactions
-    # Expected number of columns: p = R + (T - 1) + d + num_treats
-    p_expected <- R + (T - 1) + d + num_treats
+	if (gen_ints) {
+		X_ret <- X_final
+	} else {
+		# Return X with no interactions
+		# Expected number of columns: p = R + (T - 1) + d + num_treats
+		p_expected <- R + (T - 1) + d + num_treats
 
-    X_ret <- cbind(X_base, treat_mat_long)
-    if (ncol(X_ret) != p_expected) {
-      stop(
-        "Constructed design matrix without interactions has incorrect number of columns."
-      )
-    }
-  }
+		X_ret <- cbind(X_base, treat_mat_long)
+		if (ncol(X_ret) != p_expected) {
+			stop(
+				"Constructed design matrix without interactions has incorrect number of columns."
+			)
+		}
+	}
 
-  # Prepare dataframe for `fetwfe()`
+	# Prepare dataframe for `fetwfe()`
 
-  # We know that when gen_ints = FALSE, the design matrix X is:
-  # X = [cohort_fe, time_fe, X_long, treat_mat_long]
-  # The base part (cohort_fe, time_fe, X_long) has (R + (T-1) + d) columns.
-  base_cols <- R + (T - 1) + d
+	# We know that when gen_ints = FALSE, the design matrix X is:
+	# X = [cohort_fe, time_fe, X_long, treat_mat_long]
+	# The base part (cohort_fe, time_fe, X_long) has (R + (T-1) + d) columns.
+	base_cols <- R + (T - 1) + d
 
-  # The treatment dummy block is in columns (base_cols + 1) : (base_cols + num_treats)
-  treat_dummy <- cbind(X_base, treat_mat_long)[,
-    (base_cols + 1):(base_cols + num_treats),
-    drop = FALSE
-  ]
-  # For each row, the observed treatment indicator is 1 if any entry in treat_dummy is 1.
-  treatment_vec <- as.integer(apply(treat_dummy, 1, function(x) {
-    any(x == 1)
-  }))
+	# The treatment dummy block is in columns (base_cols + 1) : (base_cols + num_treats)
+	treat_dummy <- cbind(X_base, treat_mat_long)[,
+		(base_cols + 1):(base_cols + num_treats),
+		drop = FALSE
+	]
+	# For each row, the observed treatment indicator is 1 if any entry in treat_dummy is 1.
+	treatment_vec <- as.integer(apply(treat_dummy, 1, function(x) {
+		any(x == 1)
+	}))
 
-  # Extract the covariate columns from the base part: they are the last d columns of the base part.
-  if (d > 0) {
-    cov_cols <- seq(from = (R + (T - 1) + 1), to = (R + (T - 1) + d))
-    covariates <- cbind(X_base, treat_mat_long)[, cov_cols, drop = FALSE]
-  }
+	# Extract the covariate columns from the base part: they are the last d columns of the base part.
+	if (d > 0) {
+		cov_cols <- seq(from = (R + (T - 1) + 1), to = (R + (T - 1) + d))
+		covariates <- cbind(X_base, treat_mat_long)[, cov_cols, drop = FALSE]
+	}
 
-  # Construct a data frame with the panel structure.
-  df_panel <- data.frame(
-    time = rep(1:T, times = N),
-    unit = rep(sprintf("unit%02d", 1:N), each = T),
-    treatment = treatment_vec,
-    y = as.numeric(y)
-  )
+	# Construct a data frame with the panel structure.
+	df_panel <- data.frame(
+		time = rep(1:T, times = N),
+		unit = rep(sprintf("unit%02d", 1:N), each = T),
+		treatment = treatment_vec,
+		y = as.numeric(y)
+	)
 
-  cov_names <- c()
+	cov_names <- c()
 
-  if (d > 0) {
-    # Add covariate columns with names "cov1", "cov2", ...
-    for (j in seq_len(d)) {
-      cov_name_j <- paste0("cov", j)
-      df_panel[[cov_name_j]] <- covariates[, j]
-      cov_names <- c(cov_names, cov_name_j)
-    }
-  }
+	if (d > 0) {
+		# Add covariate columns with names "cov1", "cov2", ...
+		for (j in seq_len(d)) {
+			cov_name_j <- paste0("cov", j)
+			df_panel[[cov_name_j]] <- covariates[, j]
+			cov_names <- c(cov_names, cov_name_j)
+		}
+	}
 
-  stopifnot(length(cov_names) == d)
+	stopifnot(length(cov_names) == d)
 
-  # Ensure that time is integer and unit is character.
-  df_panel$time <- as.integer(df_panel$time)
-  df_panel$unit <- as.character(df_panel$unit)
-  df_panel$treatment <- as.integer(df_panel$treatment)
+	# Ensure that time is integer and unit is character.
+	df_panel$time <- as.integer(df_panel$time)
+	df_panel$unit <- as.character(df_panel$unit)
+	df_panel$treatment <- as.integer(df_panel$treatment)
 
-  # confirm that outputs satisfy input requirements of fetwfe()
-  # (Plug in default values for arguments not generated here)
-  checkFetwfeInputs(
-    pdata = df_panel,
-    time_var = "time",
-    unit_var = "unit",
-    treatment = "treatment",
-    response = "y",
-    covs = cov_names,
-    indep_counts = indep_assignments,
-    sig_eps_sq = sig_eps_sq,
-    sig_eps_c_sq = sig_eps_c_sq,
-    lambda.max = NA,
-    lambda.min = NA,
-    nlambda = 100,
-    q = 0.5,
-    verbose = FALSE,
-    alpha = 0.05,
-    add_ridge = FALSE
-  )
+	# confirm that outputs satisfy input requirements of fetwfe()
+	# (Plug in default values for arguments not generated here)
+	checkFetwfeInputs(
+		pdata = df_panel,
+		time_var = "time",
+		unit_var = "unit",
+		treatment = "treatment",
+		response = "y",
+		covs = cov_names,
+		indep_counts = indep_assignments,
+		sig_eps_sq = sig_eps_sq,
+		sig_eps_c_sq = sig_eps_c_sq,
+		lambda.max = NA,
+		lambda.min = NA,
+		nlambda = 100,
+		q = 0.5,
+		verbose = FALSE,
+		alpha = 0.05,
+		add_ridge = FALSE
+	)
 
-  ret <- list(
-    pdata = df_panel,
-    X = X_ret,
-    y = y,
-    covs = cov_names,
-    time_var = "time",
-    unit_var = "unit",
-    treatment = "treatment",
-    response = "y",
-    coefs = beta,
-    first_inds = first_inds,
-    N_UNTREATED = assignments[1],
-    assignments = assignments,
-    indep_counts = indep_assignments,
-    p = p_expected,
-    N = N,
-    T = T,
-    R = R,
-    d = d,
-    sig_eps_sq = sig_eps_sq,
-    sig_eps_c_sq = sig_eps_c_sq
-  )
+	ret <- list(
+		pdata = df_panel,
+		X = X_ret,
+		y = y,
+		covs = cov_names,
+		time_var = "time",
+		unit_var = "unit",
+		treatment = "treatment",
+		response = "y",
+		coefs = beta,
+		first_inds = first_inds,
+		N_UNTREATED = assignments[1],
+		assignments = assignments,
+		indep_counts = indep_assignments,
+		p = p_expected,
+		N = N,
+		T = T,
+		R = R,
+		d = d,
+		sig_eps_sq = sig_eps_sq,
+		sig_eps_c_sq = sig_eps_c_sq
+	)
 
-  class(ret) <- "FETWFE_simulated"
+	class(ret) <- "FETWFE_simulated"
 
-  return(ret)
+	return(ret)
 }
 
 
@@ -1329,183 +1337,188 @@ simulateDataCore <- function(
 #'
 #' @export
 genCoefsCore <- function(R, T, d, density, eff_size, seed = NULL) {
-  if (!is.null(seed)) set.seed(seed)
+	if (!is.null(seed)) set.seed(seed)
 
-  # Check that T is a numeric scalar and at least 3.
-  if (!is.numeric(T) || length(T) != 1 || T < 3) {
-    stop("T must be a numeric value greater than or equal to 3")
-  }
+	# Check that T is a numeric scalar and at least 3.
+	if (!is.numeric(T) || length(T) != 1 || T < 3) {
+		stop("T must be a numeric value greater than or equal to 3")
+	}
 
-  # Check that R is a numeric scalar and at least 2.
-  if (!is.numeric(R) || length(R) != 1 || R < 2) {
-    stop(
-      "R must be a numeric value greater than or equal to 2 (currently there is only support for data sets with staggered adoptions, so at least two treated cohorts)"
-    )
-  }
+	# Check that R is a numeric scalar and at least 2.
+	if (!is.numeric(R) || length(R) != 1 || R < 2) {
+		stop(
+			"R must be a numeric value greater than or equal to 2 (currently there is only support for data sets with staggered adoptions, so at least two treated cohorts)"
+		)
+	}
 
-  # Check that R does not exceed T - 1.
-  if (R > T - 1) {
-    stop("R must be less than or equal to T - 1")
-  }
+	# Check that R does not exceed T - 1.
+	if (R > T - 1) {
+		stop("R must be less than or equal to T - 1")
+	}
 
-  # Check that d is a numeric scalar and is non-negative.
-  if (!is.numeric(d) || length(d) != 1 || d < 0) {
-    stop("d must be a non-negative numeric value")
-  }
+	# Check that d is a numeric scalar and is non-negative.
+	if (!is.numeric(d) || length(d) != 1 || d < 0) {
+		stop("d must be a non-negative numeric value")
+	}
 
-  # Check that density is a numeric scalar strictly between 0 and 1.
-  if (
-    !is.numeric(density) || length(density) != 1 || density <= 0 || density >= 1
-  ) {
-    stop("density must be numeric and strictly between 0 and 1")
-  }
+	# Check that density is a numeric scalar strictly between 0 and 1.
+	if (
+		!is.numeric(density) ||
+			length(density) != 1 ||
+			density <= 0 ||
+			density >= 1
+	) {
+		stop("density must be numeric and strictly between 0 and 1")
+	}
 
-  # Check that eff_size is numeric.
-  if (!is.numeric(eff_size) || length(eff_size) != 1) {
-    stop("eff_size must be a numeric value")
-  }
+	# Check that eff_size is numeric.
+	if (!is.numeric(eff_size) || length(eff_size) != 1) {
+		stop("eff_size must be a numeric value")
+	}
 
-  stopifnot(R >= 2)
-  stopifnot(T >= 3)
-  stopifnot(R <= T - 1)
+	stopifnot(R >= 2)
+	stopifnot(T >= 3)
+	stopifnot(R <= T - 1)
 
-  num_treats <- getNumTreats(R = R, T = T)
+	num_treats <- getNumTreats(R = R, T = T)
 
-  p <- getP(R = R, T = T, d = d, num_treats = num_treats)
+	p <- getP(R = R, T = T, d = d, num_treats = num_treats)
 
-  theta <- rep(0, p)
+	theta <- rep(0, p)
 
-  # Make sure at least one feature is selected
-  pass_condition <- FALSE
-  while (!pass_condition) {
-    theta_inds <- which(as.logical(rbinom(n = p, size = 1, prob = density)))
-    pass_condition <- length(theta_inds > 0)
-  }
+	# Make sure at least one feature is selected
+	pass_condition <- FALSE
+	while (!pass_condition) {
+		theta_inds <- which(as.logical(rbinom(n = p, size = 1, prob = density)))
+		pass_condition <- length(theta_inds > 0)
+	}
 
-  num_coefs <- length(theta_inds)
-  # Generate signs of coefficients in transformed space, and bias away from
-  # 0.5 (as described in paper)
-  signs <- rfunc(num_coefs, prob = 0.6)
+	num_coefs <- length(theta_inds)
+	# Generate signs of coefficients in transformed space, and bias away from
+	# 0.5 (as described in paper)
+	signs <- rfunc(num_coefs, prob = 0.6)
 
-  theta[theta_inds] <- eff_size * signs
+	theta[theta_inds] <- eff_size * signs
 
-  # Now we have coefficients that are sparse in the appropriate feature space.
-  # The last step is to transform them to the original feature space. Since
-  # theta = D %*% beta, beta = solve(D) %*% theta.
-  beta <- rep(as.numeric(NA), p)
+	# Now we have coefficients that are sparse in the appropriate feature space.
+	# The last step is to transform them to the original feature space. Since
+	# theta = D %*% beta, beta = solve(D) %*% theta.
+	beta <- rep(as.numeric(NA), p)
 
-  beta[1:R] <- genBackwardsInvFusionTransformMat(R) %*% theta[1:R]
+	beta[1:R] <- genBackwardsInvFusionTransformMat(R) %*% theta[1:R]
 
-  stopifnot(all(is.na(beta[(R + 1):(R + T - 1)])))
-  beta[(R + 1):(R + T - 1)] <- genBackwardsInvFusionTransformMat(T - 1) %*%
-    theta[(R + 1):(R + T - 1)]
+	stopifnot(all(is.na(beta[(R + 1):(R + T - 1)])))
+	beta[(R + 1):(R + T - 1)] <- genBackwardsInvFusionTransformMat(T - 1) %*%
+		theta[(R + 1):(R + T - 1)]
 
-  if (d > 0) {
-    # Coefficients corresponding to X don't need to be transformed
-    stopifnot(all(is.na(beta[(R + T - 1 + 1):(R + T - 1 + d)])))
-    beta[(R + T - 1 + 1):(R + T - 1 + d)] <- theta[
-      (R + T - 1 + 1):(R + T - 1 + d)
-    ]
+	if (d > 0) {
+		# Coefficients corresponding to X don't need to be transformed
+		stopifnot(all(is.na(beta[(R + T - 1 + 1):(R + T - 1 + d)])))
+		beta[(R + T - 1 + 1):(R + T - 1 + d)] <- theta[
+			(R + T - 1 + 1):(R + T - 1 + d)
+		]
 
-    # Cohort-X interactions (one cohort at a time, with all interactions for
-    # X. So R blocks of size d.)
+		# Cohort-X interactions (one cohort at a time, with all interactions for
+		# X. So R blocks of size d.)
 
-    for (j in 1:d) {
-      first_ind_j <- R + T - 1 + d + j
-      last_ind_j <- R + T - 1 + d + (R - 1) * d + j
+		for (j in 1:d) {
+			first_ind_j <- R + T - 1 + d + j
+			last_ind_j <- R + T - 1 + d + (R - 1) * d + j
 
-      inds_j <- seq(first_ind_j, last_ind_j, by = d)
+			inds_j <- seq(first_ind_j, last_ind_j, by = d)
 
-      stopifnot(length(inds_j) == R)
-      stopifnot(all(is.na(beta[inds_j])))
+			stopifnot(length(inds_j) == R)
+			stopifnot(all(is.na(beta[inds_j])))
 
-      beta[inds_j] <- genBackwardsInvFusionTransformMat(R) %*% theta[inds_j]
-    }
+			beta[inds_j] <- genBackwardsInvFusionTransformMat(R) %*%
+				theta[inds_j]
+		}
 
-    stopifnot(all(!is.na(beta[1:(R + T - 1 + d + R * d)])))
-    stopifnot(all(is.na(beta[(R + T - 1 + d + R * d + 1):p])))
+		stopifnot(all(!is.na(beta[1:(R + T - 1 + d + R * d)])))
+		stopifnot(all(is.na(beta[(R + T - 1 + d + R * d + 1):p])))
 
-    # Time-X interactions
-    for (j in 1:d) {
-      first_ind_j <- R + T - 1 + d + R * d + j
-      last_ind_j <- R + T - 1 + d + R * d + (T - 2) * d + j
+		# Time-X interactions
+		for (j in 1:d) {
+			first_ind_j <- R + T - 1 + d + R * d + j
+			last_ind_j <- R + T - 1 + d + R * d + (T - 2) * d + j
 
-      inds_j <- seq(first_ind_j, last_ind_j, by = d)
-      stopifnot(length(inds_j) == T - 1)
-      stopifnot(all(is.na(beta[inds_j])))
+			inds_j <- seq(first_ind_j, last_ind_j, by = d)
+			stopifnot(length(inds_j) == T - 1)
+			stopifnot(all(is.na(beta[inds_j])))
 
-      beta[inds_j] <- genBackwardsInvFusionTransformMat(T - 1) %*% theta[inds_j]
-    }
+			beta[inds_j] <- genBackwardsInvFusionTransformMat(T - 1) %*%
+				theta[inds_j]
+		}
 
-    stopifnot(all(!is.na(beta[1:(R + T - 1 + d + R * d + (T - 1) * d)])))
-    stopifnot(all(is.na(beta[(R + T - 1 + d + R * d + (T - 1) * d + 1):p])))
-  }
+		stopifnot(all(!is.na(beta[1:(R + T - 1 + d + R * d + (T - 1) * d)])))
+		stopifnot(all(is.na(beta[(R + T - 1 + d + R * d + (T - 1) * d + 1):p])))
+	}
 
-  # Base treatment effects: need to identify indices of first treatment
-  # effect for each cohort
-  first_inds <- getFirstInds(R = R, T = T)
+	# Base treatment effects: need to identify indices of first treatment
+	# effect for each cohort
+	first_inds <- getFirstInds(R = R, T = T)
 
-  treat_inds <- getTreatInds(R = R, T = T, d = d, num_treats = num_treats)
+	treat_inds <- getTreatInds(R = R, T = T, d = d, num_treats = num_treats)
 
-  stopifnot(all(is.na(beta[treat_inds])))
+	stopifnot(all(is.na(beta[treat_inds])))
 
-  beta[treat_inds] <- genInvTwoWayFusionTransformMat(
-    num_treats,
-    first_inds,
-    R
-  ) %*%
-    theta[treat_inds]
+	beta[treat_inds] <- genInvTwoWayFusionTransformMat(
+		num_treats,
+		first_inds,
+		R
+	) %*%
+		theta[treat_inds]
 
-  stopifnot(all(
-    !is.na(beta[1:(R + T - 1 + d + R * d + (T - 1) * d + num_treats)])
-  ))
+	stopifnot(all(
+		!is.na(beta[1:(R + T - 1 + d + R * d + (T - 1) * d + num_treats)])
+	))
 
-  if (d > 0) {
-    stopifnot(all(is.na(beta[
-      (R + T - 1 + d + R * d + (T - 1) * d + num_treats + 1):p
-    ])))
+	if (d > 0) {
+		stopifnot(all(is.na(beta[
+			(R + T - 1 + d + R * d + (T - 1) * d + num_treats + 1):p
+		])))
 
-    # Treatment effect-X interactions
-    for (j in 1:d) {
-      first_ind_j <- R + T - 1 + d + R * d + (T - 1) * d + num_treats + j
-      last_ind_j <- R +
-        T -
-        1 +
-        d +
-        R * d +
-        (T - 1) * d +
-        num_treats +
-        (num_treats - 1) * d +
-        j
+		# Treatment effect-X interactions
+		for (j in 1:d) {
+			first_ind_j <- R + T - 1 + d + R * d + (T - 1) * d + num_treats + j
+			last_ind_j <- R +
+				T -
+				1 +
+				d +
+				R * d +
+				(T - 1) * d +
+				num_treats +
+				(num_treats - 1) * d +
+				j
 
-      inds_j <- seq(first_ind_j, last_ind_j, by = d)
+			inds_j <- seq(first_ind_j, last_ind_j, by = d)
 
-      stopifnot(length(inds_j) == num_treats)
-      stopifnot(all(is.na(beta[inds_j])))
+			stopifnot(length(inds_j) == num_treats)
+			stopifnot(all(is.na(beta[inds_j])))
 
-      beta[inds_j] <- genInvTwoWayFusionTransformMat(
-        num_treats,
-        first_inds,
-        R
-      ) %*%
-        theta[inds_j]
-    }
-  }
+			beta[inds_j] <- genInvTwoWayFusionTransformMat(
+				num_treats,
+				first_inds,
+				R
+			) %*%
+				theta[inds_j]
+		}
+	}
 
-  stopifnot(all(!is.na(beta)))
+	stopifnot(all(!is.na(beta)))
 
-  # Confirm beta satisfies input requirements of genRandomData() (make
-  # up values for N, sig_eps_sq, and sig_eps_c_sq that meet requirements)
+	# Confirm beta satisfies input requirements of genRandomData() (make
+	# up values for N, sig_eps_sq, and sig_eps_c_sq that meet requirements)
 
-  testGenRandomDataInputs(
-    beta = beta,
-    R = R,
-    T = T,
-    d = d,
-    N = R + 1,
-    sig_eps_sq = 1,
-    sig_eps_c_sq = 1
-  )
+	testGenRandomDataInputs(
+		beta = beta,
+		R = R,
+		T = T,
+		d = d,
+		N = R + 1,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 1
+	)
 
-  return(list(beta = beta, theta = theta))
+	return(list(beta = beta, theta = theta))
 }
