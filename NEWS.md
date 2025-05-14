@@ -1,5 +1,9 @@
 # NEWS
 
+## Version 0.11.2 (2025-05-14)
+
+- Update documentation.
+
 ## Version 0.11.1 (2025-05-13)
 
 - Update documentation.

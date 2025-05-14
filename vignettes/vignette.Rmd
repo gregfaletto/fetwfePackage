@@ -26,9 +26,9 @@ Feel free to skip to the "Package Usage" section if you want to jump right in to
 
 ## Background
 
-This vignette is written under the assumption that you're at least vaguely familiar with developments in [difference-in-differences](https://en.wikipedia.org/wiki/Difference_in_differences) with [staggered adoptions](https://bookdown.org/mike/data_analysis/difference-in-differences.html#staggered-dif-n-dif) since about 2018. Just to make sure we're on the same page, the brief recap is:
+This vignette is written under the assumption that you're at least vaguely familiar with developments in [difference-in-differences](https://en.wikipedia.org/wiki/Difference_in_differences) with [staggered adoptions](https://bookdown.org/mike/data_analysis/sec-difference-in-differences.html#sec-multiple-periods-and-variation-in-treatment-timing) since about 2018. Just to make sure we're on the same page, the brief recap is:
 
-- Historically, under staggered adoptions researchers used the [standard two-way fixed effects estimator](https://bookdown.org/mike/data_analysis/two-way-fixed-effects.html) and interpreted the coefficient on the treatment dummy as an average treatment effect on the treated units.
+- Historically, under staggered adoptions researchers used the [standard two-way fixed effects estimator](https://bookdown.org/mike/data_analysis/sec-difference-in-differences.html#sec-two-way-fixed-effects) and interpreted the coefficient on the treatment dummy as an average treatment effect on the treated units.
 - In the late 2010s, econometricians formally checked what this estimator was doing and found that in fact, this coefficient was not any kind of reasonable average treatment effect estimator.
 - Since then, a number of new difference-in-differences estimators that are asymptotically unbiased under staggered adoptions have been developed.
 

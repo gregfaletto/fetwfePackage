@@ -64,7 +64,7 @@ catt_df_pct[["ConfIntHigh"]] <- 100 * catt_df_pct[["ConfIntHigh"]]
 catt_df_pct
 ```
 
-For a vignette and full documentation, check out the [page for the `{fetwfe}` package on CRAN](https://cran.r-project.org/web/packages/fetwfe/index.html).
+For a vignette and full documentation, check out the [page for the `{fetwfe}` package on CRAN](https://CRAN.R-project.org/package=fetwfe).
 
 # Documentation
 
