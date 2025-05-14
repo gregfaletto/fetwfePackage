@@ -38,7 +38,7 @@ One issue with these estimators has been that they've worked so hard to be unbia
 
 In machine learning, creating a more flexible estimator with lots of parameters and then finding that it is too high variance (that is, it *overfits*) is a familiar issue. The most common solution has been regularization.
 
-You could just add $\ell_2$ or $\ell_1$ regularization to a difference-in-differences regression estimator and probably see an improvement in your efficiency, but FETWFE does something more sophisticated than that. (Plus, that approach wouldn't allow you to get valid standard errors for your treatment effect estimates, but FETWFE does.) Qualitiatively, FETWFE uses machine learning to learn which of these added parameters were actually unnecessary to add, and then takes them back out in order to improve efficiency.
+You could just add $\ell_2$ or $\ell_1$ regularization to a difference-in-differences regression estimator and probably see an improvement in your efficiency, but FETWFE does something more sophisticated than that. (Plus, that approach wouldn't allow you to get valid standard errors for your treatment effect estimates, but FETWFE does.) Qualitatively, FETWFE uses machine learning to learn which of these added parameters were actually unnecessary to add, and then takes them back out in order to improve efficiency.
 
 That's all the description I'll give you in this vignette. You can learn all of the details in the paper on arXiv:
 

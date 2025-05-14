@@ -31,7 +31,7 @@ or simply an empty vector (if \eqn{d = 0})}
 \item{time_var}{The name of the time variable in pdata}
 \item{unit_var}{The name of the unit variable in pdata}
 \item{treatment}{The name of the treatment variable in pdata}
-\item{response}{The name of the reponse varialbe in pdata}
+\item{response}{The name of the response variable in pdata}
 \item{coefs}{The coefficient vector \eqn{\beta} used for data generation.}
 \item{first_inds}{A vector of indices indicating the first treatment effect for each treated
 cohort.}

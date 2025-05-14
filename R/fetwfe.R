@@ -406,7 +406,7 @@ fetwfe <- function(
 #'   \item{time_var}{The name of the time variable in pdata}
 #'   \item{unit_var}{The name of the unit variable in pdata}
 #'   \item{treatment}{The name of the treatment variable in pdata}
-#'   \item{response}{The name of the reponse varialbe in pdata}
+#'   \item{response}{The name of the response variable in pdata}
 #'   \item{coefs}{The coefficient vector \eqn{\beta} used for data generation.}
 #'   \item{first_inds}{A vector of indices indicating the first treatment effect for each treated
 #'         cohort.}
@@ -499,7 +499,7 @@ simulateData <- function(coefs_obj, N, sig_eps_sq, sig_eps_c_sq,
 #' Generate Coefficient Vector for Data Generation
 #'
 #' This function generates a coefficient vector \code{beta} for simulation studies of the fused
-#' extended two-way fixed effects estimator. Itreturns an S3 object of class
+#' extended two-way fixed effects estimator. It returns an S3 object of class
 #' \code{"FETWFE_coefs"} containing \code{beta} along with simulation parameters \code{R},
 #' \code{T}, and \code{d}. See the simulation studies section of Faletto (2025) for details.
 #'
@@ -888,7 +888,7 @@ getTes <- function(coefs_obj){
 #'   \item{time_var}{The name of the time variable in pdata}
 #'   \item{unit_var}{The name of the unit variable in pdata}
 #'   \item{treatment}{The name of the treatment variable in pdata}
-#'   \item{response}{The name of the reponse varialbe in pdata}
+#'   \item{response}{The name of the response variable in pdata}
 #'   \item{coefs}{The coefficient vector \eqn{\beta} used for data generation.}
 #'   \item{first_inds}{A vector of indices indicating the first treatment effect for each treated
 #'   cohort.}

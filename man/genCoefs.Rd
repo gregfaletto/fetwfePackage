@@ -37,7 +37,7 @@ transform.}
 }
 \description{
 This function generates a coefficient vector \code{beta} for simulation studies of the fused
-extended two-way fixed effects estimator. Itreturns an S3 object of class
+extended two-way fixed effects estimator. It returns an S3 object of class
 \code{"FETWFE_coefs"} containing \code{beta} along with simulation parameters \code{R},
 \code{T}, and \code{d}. See the simulation studies section of Faletto (2025) for details.
 }
