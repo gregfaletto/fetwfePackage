@@ -27,11 +27,8 @@
 
 ## CRAN checks
 
-- **R CMD check --as-cran**: no errors, warnings, or notes on  
-  - Windows release & devel  
-  - macOS (Intel & ARM)  
-  - Linux (Ubuntu)  
-- **Reverse dependencies**: tested with `bacondecomp`; all checks passing  
+- **R CMD check --as-cran**: no errors, warnings, or notes on macOS (Apple Silicon; M4 Pro)
+- **Windows devel** (via `devtools::check_win_devel()`): no errors, warnings, or notes
 - **Examples**: all examples run cleanly within time limits
 
 ## Dependency changes
