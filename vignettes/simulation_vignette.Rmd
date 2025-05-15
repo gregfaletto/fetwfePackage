@@ -29,33 +29,40 @@ library(fetwfe)
 
 # Introduction
 
-This vignette demonstrates how to perform simulation studies using the simulation functions provided in the `{fetwfe}` package. In particular, I will show how to:
-  
-- **Generate a vector of coefficients with `genCoefs()`.** These coefficients are used to generate responses for each unit in a panel at each time that align with standard difference-in-differences assumptions like conditional parallel trends, as well as the sparsity assumptions made by FETWFE.
-- **Simulate a panel data set with `simulateData()`. **
-- **Run the FETWFE estimator on the simulated data using `fetwfeWithSimulatedData()`.**
-- **Extract the true treatment effects with `getTes()`.**
+This vignette demonstrates how to conduct simulation studies with the `{fetwfe}` package. In particular, we will:
 
-The procedure here follows the process outlines in the simulation studies section of [the paper](https://arxiv.org/abs/2312.05985), so you may want to briefly skim the setup of those simulation studies to better understand what these functions are doing.
+- **Generate a vector of coefficients** with `genCoefs()`. These coefficients produce unit‐and‐time specific responses that respect difference‐in‐differences assumptions (e.g., conditional parallel trends) and the sparsity assumptions behind FETWFE.
+- **Simulate a panel data set** with `simulateData()`.
+- **Estimate treatment effects** via the FETWFE estimator with `fetwfeWithSimulatedData()`.
+- **Extract the true treatment effects** using `getTes()`.
+
+The workflow here follows the simulation‐study design outlined in [the paper](https://arxiv.org/abs/2312.05985), so you may wish to skim its setup section for additional context.
 
 # Simulation Workflow Using Piping
 
-Below we create a complete simulation pipeline.
+Below is a complete simulation pipeline, step by step.
 
 ## Step 1: Generate Simulation Coefficients
 
-The `genCoefs()` function creates an object of class `"FETWFE_coefs"` which includes a coefficient vector along with the simulation parameters. For this example, we set:
-  
-- **R** (number of treated cohorts) to 5,
-- **T** (number of time periods) to 30,
-- **d** (number of covariates) to 12,
-- **density** to 0.1 (controls sparsity), and
-- **eff_size** to 2.
+The `genCoefs()` function returns an object of class `"FETWFE_coefs"`, containing both the coefficient vector and its simulation parameters. In this example we set:
+
+- **R** (number of treated cohorts) = 3  
+- **T** (number of time periods) = 6  
+- **d** (number of covariates) = 2  
+- **density** (sparsity level) = 0.1  
+- **eff_size** (effect‐size multiplier) = 2  
 
 
 ```{r}
 # Generate the coefficient object for simulation
-sim_coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 101)
+sim_coefs <- genCoefs(
+  R         = 3, 
+  T         = 6, 
+  d         = 2, 
+  density   = 0.1, 
+  eff_size  = 2, 
+  seed      = 101
+)
 ```
 
 (Again, for more details on the meaning of these parameters, see the simulation study section of [the paper](https://arxiv.org/abs/2312.05985).)
@@ -64,9 +71,15 @@ sim_coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed =
 
 ## Step 2: Simulate Panel Data
 
-Next, we simulate a panel data set using the generated coefficient object with the `simulateData()` function. This data set will generate cohort assignments and time-invariant covariates for `N` units, and then generate outcomes for them at `T` times using the coefficients generated from `genCoefs()`. Here we specify:
+Next, we simulate a panel data set using the generated coefficient object with the `simulateData()` function. With `simulateData()`, we generate:
 
-- **N** (number of units) as 120,
+* `N` units, each assigned to one of the cohorts
+* Time‐invariant covariates drawn from a specified distribution
+* Outcomes at times 1 through T, using our simulated coefficients
+
+Here we choose:
+
+- **N** (number of units) as 30,
 - **sig_eps_sq** (observation-level noise variance) as 5,
 - **sig_eps_c_sq** (unit-level noise variance) as 5, and
 - use the default `"gaussian"` distribution for the covariates.
@@ -75,7 +88,7 @@ Next, we simulate a panel data set using the generated coefficient object with t
 # Simulate panel data based on the coefficients
 sim_data <- simulateData(
   sim_coefs,
-  N = 120,
+  N = 30,
   sig_eps_sq = 5,
   sig_eps_c_sq = 5,
   distribution = "gaussian"
@@ -99,19 +112,16 @@ result <- fetwfeWithSimulatedData(sim_data)
 We can now extract the results from `result` in the same way that we can with the standard `fetwfe()` function.
 
 ```{r}
-# Display the estimated overall average treatment effect
-cat("Estimated Overall ATT from Simulated Data:", result$att_hat, "\n")
+# Overall ATT estimate
+cat("Estimated Overall ATT:", result$att_hat, "\n")
 
-# Calculate a 95% confidence interval
-low_att <- result$att_hat - qnorm(1 - 0.05 / 2) * result$att_se
-high_att <- result$att_hat + qnorm(1 - 0.05 / 2) * result$att_se
+# 95% confidence interval
+ci_lower <- result$att_hat - qnorm(0.975) * result$att_se
+ci_upper <- result$att_hat + qnorm(0.975) * result$att_se
+cat("95% CI for ATT: [", ci_lower, ", ", ci_upper, "]\n")
 
-cat("Estimated Overall ATT from Simulated Data:")
-cat(c(low_att, high_att))
-
-# Print the estimated cohort-specific treatment effects
-cat("Estimated cohort-specific treatment effects:")
-result$catt_df
+# Cohort‐specific ATTs
+print(result$catt_df)
 
 ```
 
@@ -140,13 +150,13 @@ cat("Squared error of ATT estimate:", squared_error, "\n")
 
 ## Combining the Workflow in One Pipeline
 
-You can also chain the simulation functions together with the pipe operator. For example, the following code generates the coefficients, simulates the data, and runs the estimator all in one pipeline:
+You can also chain the simulation functions together with the pipe operator. The following code generates the coefficients, simulates the data, and runs the estimator all in one pipeline:
 
 ```{r}
-coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 2025)
+coefs <- genCoefs(R = 3, T = 6, d = 2, density = 0.1, eff_size = 2, seed = 2025)
 
 result_piped <- coefs |>
-  simulateData(N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5) |>
+  simulateData(N = 30, sig_eps_sq = 5, sig_eps_c_sq = 5) |>
   fetwfeWithSimulatedData()
 
 cat("Estimated Overall ATT from piped workflow:", result_piped$att_hat, "\n")
@@ -164,6 +174,6 @@ cat("Squared estimation error:", squared_error_piped, "\n")
 
 # Conclusion
 
-In this vignette, we walked through how to use the simulation functions in the `{fetwfe}` package to simulate data and run simulations similar to the ones in the simulation studies section of [the FETWFE paper](https://arxiv.org/abs/2312.05985). This pipeline makes it easy to iterate on simulation studies and assess the performance of the estimator under different conditions.
+In this vignette, we walked through how to use the simulation functions in the `{fetwfe}` package to simulate data and run simulations similar to the ones in the simulation studies section of [the FETWFE paper](https://arxiv.org/abs/2312.05985).
 
-For additional details or help, please refer to the package documentation or contact me.
+This pipeline streamlines simulation experiments so you can rapidly evaluate FETWFE’s performance under varying scenarios. For more details, consult the package documentation or reach out to the author.

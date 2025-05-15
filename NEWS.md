@@ -1,5 +1,9 @@
 # NEWS
 
+## Version 1.0.0 (2025-05-14)
+
+- Update vignettes.
+
 ## Version 0.11.2 (2025-05-14)
 
 - Update documentation.

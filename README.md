@@ -21,7 +21,7 @@ You can also install the latest development version by using
 remotes::install_github("gregfaletto/fetwfePackage")
 ```
 
-The `{fetwfe}` package contains one function, `fetwfe()`, which implements fused extended two-way fixed effects. Here's some example code that implements the data application from the paper:
+The primary function in the `{fetwfe}` is `fetwfe()`, which implements fused extended two-way fixed effects. Here's some example code that implements the data application from the paper:
 
 ```R
 library(fetwfe)

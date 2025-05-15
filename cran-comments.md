@@ -1,8 +1,8 @@
 # cran-comments.md
 
 **Package:** fetwfe  
-**Version:** 0.11.1  
-**Date:** 2025-05-13
+**Version:** 1.0.0 
+**Date:** 2025-05-14
 
 ## What’s new
 
@@ -14,7 +14,7 @@
   - `simulateDataCore()`, called under the hood by `simulateData()` and exported for convenience
   - `genCoefsCore()`, called under the hood by `genCoefs()` and exported for convenience`
 - **Enhancements to `fetwfe()`**  
-  - Centring and scaling of covariates before ridge penalty for improved numerical stability  
+  - Centering and scaling of covariates before ridge penalty for improved numerical stability  
   - Support for factor covariates (`covs` now accepts factors, automatically encoded)  
   - New `add_ridge` argument to include a small ridge regularization term  
 - **Bug fixes & refactoring**  
@@ -22,8 +22,7 @@
   - Various minor bug fixes and code refactoring for clarity and maintainability  
 - **Documentation**  
   - Updated Rd documentation and examples for all new functions  
-  - Enhanced vignette with simulation workflows and examples using `simulateData()` and `getTes()`  
-  - Rebuilt README and man pages under R 4.3
+  - Enhanced vignette with simulation workflows and examples using `simulateData()` and `getTes()`
 
 ## CRAN checks
 

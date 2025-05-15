@@ -84,8 +84,8 @@ Below is the complete code for simulating the data, converting it into the requi
 # Set seed for reproducibility
 set.seed(123456L)
 
-# 60 time periods, 30 individuals, and 5 waves of treatment
-tmax = 60; imax = 30; nlvls = 5
+# 20 time periods, 30 individuals, and 5 waves of treatment
+tmax = 20; imax = 30; nlvls = 5
 
 dat = 
   expand.grid(time = 1:tmax, id = 1:imax) |>
@@ -101,7 +101,7 @@ dat =
     
     for (lvls in 1:nlvls) {
       effect      = ifelse(cohort==lvls, sample(2:10, 1), effect)
-      first_treat = ifelse(cohort==lvls, sample(1:(tmax+20), 1), first_treat)
+      first_treat = ifelse(cohort==lvls, sample(1:(tmax+6), 1), first_treat)
     }
     
     first_treat = ifelse(first_treat>tmax, Inf, first_treat)
@@ -173,7 +173,7 @@ Next I illustrate FETWFE in an empirical context. I'll use data from Stevenson a
 
 In this application, the panel data consist of state-level observations over 33 years. After removing states that received treatment in the first period, we are left with 42 states, of which 5 are never treated and 12 cohorts adopt treatment at various times.
 
-Unlike the above example, this example also includes covariates (such as the state homicide rate, logged personal income, and welfare participation) as controls. Because the covariates are time-varying, the code selects the pre-treatment values. In this example, FETWFE estimates the marginal average treatment effect of no-fault divorce laws. Note: the below code takes about 15 seconds to run on my laptop.
+Unlike the above example, this example also includes covariates (such as the state homicide rate, logged personal income, and welfare participation) as controls. Because the covariates are time-varying, the code selects the pre-treatment values. In this example, FETWFE estimates the marginal average treatment effect of no-fault divorce laws.
 
 ```{r}
 library(bacondecomp)  # for the example data

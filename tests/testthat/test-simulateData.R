@@ -22,10 +22,10 @@ compute_p_no_int <- function(T, R, d) {
 # Test 1: Output structure and dimensions
 # ------------------------------------------------------------------------------
 test_that("simulateData (with interactions) returns expected output", {
-	N <- 120
-	T_val <- 30
+	N <- 30
+	T_val <- 6
 	R_val <- 5
-	d_val <- 12
+	d_val <- 4
 	sig_eps_sq <- 5
 	sig_eps_c_sq <- 5
 	p_int <- compute_p_int(T_val, R_val, d_val)
@@ -78,10 +78,10 @@ test_that("simulateData (with interactions) returns expected output", {
 # Test 2: Reproducibility test (seed)
 # ------------------------------------------------------------------------------
 test_that("simulateData is reproducible with same seed", {
-	N <- 120
-	T_val <- 30
+	N <- 30
+  T_val <- 6
 	R_val <- 5
-	d_val <- 12
+  d_val <- 4
 	sig_eps_sq <- 5
 	sig_eps_c_sq <- 5
 
@@ -118,10 +118,10 @@ test_that("simulateData is reproducible with same seed", {
 # Test 3: Error when beta has incorrect length
 # ------------------------------------------------------------------------------
 test_that("simulateData errors when beta has wrong length", {
-	N <- 120
-	T_val <- 30
+	N <- 30
+  T_val <- 6
 	R_val <- 5
-	d_val <- 12
+  d_val <- 4
 	sig_eps_sq <- 5
 	sig_eps_c_sq <- 5
 	p_int <- compute_p_int(T_val, R_val, d_val)
@@ -156,14 +156,14 @@ test_that("simulateData errors when beta has wrong length", {
 test_that("Output from simulateData can be piped into fetwfeWithSimulatedData", {
 	coefs_obj <- genCoefs(
 		R = 5,
-		T = 30,
-		d = 12,
+		T = 6,
+		d = 4,
 		density = 0.1,
 		eff_size = 2,
 		seed = 123
 	)
 	sim_data <- coefs_obj |>
-		simulateData(N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5)
+		simulateData(N = 30, sig_eps_sq = 5, sig_eps_c_sq = 5)
 	result <- sim_data |> fetwfeWithSimulatedData()
 	expect_type(result, "list")
 	expect_true("att_hat" %in% names(result))
@@ -176,14 +176,14 @@ test_that("Output from simulateData can be piped into fetwfeWithSimulatedData", 
 test_that("Output from simulateData can be piped into fetwfeWithSimulatedData", {
 	coefs_obj <- genCoefs(
 		R = 5,
-		T = 30,
+		T = 6,
 		d = 0,
 		density = 0.1,
 		eff_size = 2,
 		seed = 123
 	)
 	sim_data <- coefs_obj |>
-		simulateData(N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5)
+		simulateData(N = 30, sig_eps_sq = 5, sig_eps_c_sq = 5)
 	result <- sim_data |> fetwfeWithSimulatedData()
 	expect_type(result, "list")
 	expect_true("att_hat" %in% names(result))
@@ -194,10 +194,10 @@ test_that("Output from simulateData can be piped into fetwfeWithSimulatedData", 
 # Test 6: When distribution is "uniform", covariates are bounded between -sqrt(3) and sqrt(3)
 # ------------------------------------------------------------------------------
 test_that("Covariates are uniformly bounded when distribution = 'uniform'", {
-	N <- 120
-	T_val <- 30
+	N <- 30
+  T_val <- 6
 	R_val <- 5
-	d_val <- 12
+  d_val <- 4
 	sig_eps_sq <- 5
 	sig_eps_c_sq <- 5
 	num_treats <- T_val * R_val - (R_val * (R_val + 1)) / 2
@@ -236,8 +236,8 @@ test_that("Covariates are uniformly bounded when distribution = 'uniform'", {
 # Test 7: Covariates are constant over time for each unit.
 # ------------------------------------------------------------------------------
 test_that("Covariates are constant over time within each unit", {
-	N <- 50
-	T_val <- 20
+	N <- 30
+	T_val <- 4
 	R_val <- 3
 	d_val <- 5
 	sig_eps_sq <- 2
