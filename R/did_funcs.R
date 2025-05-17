@@ -3173,8 +3173,7 @@ getCohortATTsFinal <- function(
 #' @param sel_treat_inds_shifted Integer vector; indices of all selected
 #'   treatment effects within the `num_treats` block, shifted to start from 1.
 #' @param gram_inv Numeric matrix; the inverse of the Gram matrix for the
-#'   selected treatment effect features. (Note: This parameter seems unused in the
-#'   current function body provided, `psi_r` is constructed based on `sel_treat_inds_shifted` only).
+#'   selected treatment effect features.
 #' @return A numeric vector `psi_r` of length equal to
 #'   `length(sel_treat_inds_shifted)`. It contains weights (typically 1/k for
 #'   k selected effects in cohort r, 0 otherwise) to average the selected
@@ -3445,20 +3444,27 @@ getGramInv <- function(
 	N,
 	T,
 	X_final,
-	sel_feat_inds,
 	treat_inds,
 	num_treats,
-	sel_treat_inds_shifted,
 	calc_ses
+	sel_feat_inds=NA,
+	sel_treat_inds_shifted=NA,
 ) {
 	stopifnot(nrow(X_final) == N * T)
-	X_sel <- X_final[, sel_feat_inds, drop = FALSE]
+	if(any(!is.na(sel_feat_inds))){
+		X_sel <- X_final[, sel_feat_inds, drop = FALSE]
+		p_sel <- length(sel_feat_inds)
+	} else{
+		X_sel <- X_final
+		p_sel <- ncol(X_final)
+	}
+	
 	X_sel_centered <- scale(X_sel, center = TRUE, scale = FALSE)
 
 	gram <- 1 / (N * T) * (t(X_sel_centered) %*% X_sel_centered)
 
-	stopifnot(nrow(gram) == length(sel_feat_inds))
-	stopifnot(ncol(gram) == length(sel_feat_inds))
+	stopifnot(nrow(gram) == p_sel)
+	stopifnot(ncol(gram) == p_sel)
 
 	min_gram_eigen <- min(
 		eigen(gram, symmetric = TRUE, only.values = TRUE)$values
@@ -3473,19 +3479,26 @@ getGramInv <- function(
 
 	gram_inv <- solve(gram)
 
-	# Get only the parts of gram_inv that have to do with treatment effects
-	sel_treat_inds <- sel_feat_inds %in% treat_inds
+	if(any(!is.na(sel_feat_inds))){
+		# Get only the parts of gram_inv that have to do with treatment effects
+		sel_treat_inds <- sel_feat_inds %in% treat_inds
+	} else{
+		sel_treat_inds <- rep(TRUE, length(treat_inds))
+	}
 
 	stopifnot(is.logical(sel_treat_inds))
 	stopifnot(sum(sel_treat_inds) <= length(sel_feat_inds))
-	stopifnot(length(sel_feat_inds) == length(sel_feat_inds))
+	stopifnot(length(sel_treat_inds) == length(sel_feat_inds))
 
 	gram_inv <- gram_inv[sel_treat_inds, sel_treat_inds]
 
 	stopifnot(nrow(gram_inv) <= num_treats)
-	stopifnot(nrow(gram_inv) <= length(sel_feat_inds))
 	stopifnot(nrow(gram_inv) == ncol(gram_inv))
-	stopifnot(nrow(gram_inv) == length(sel_treat_inds_shifted))
+
+	if(any(!is.na(sel_treat_inds_shifted))){
+		stopifnot(nrow(gram_inv) == length(sel_treat_inds_shifted))
+		stopifnot(nrow(gram_inv) <= length(sel_feat_inds))
+	}
 
 	return(list(gram_inv = gram_inv, calc_ses = calc_ses))
 }
@@ -4556,11 +4569,6 @@ etwfe_core <- function(
 
 	beta_hat <- coefs[2:(p + 1)]
 
-	# OLS linear regression, so all features are "selected"
-	sel_feat_inds <- 1:p
-
-	sel_treat_inds_shifted <- 1:num_treats
-
 	# first_treat_ind <- model$coefs_obj$R + model$coefs_obj$T - 1 + model$coefs_obj$d + model$coefs_obj$R*model$coefs_obj$d +
 	# 	(model$coefs_obj$T - 1)*model$coefs_obj$d + 1
 
@@ -4637,21 +4645,19 @@ etwfe_core <- function(
 	#
 	#
 
-	res <- getCohortATTsFinal(
+	res <- getCohortATTsFinalOLS(
 		X_final = X_final, # This is X_mod * GLS_transform_matrix
-		sel_feat_inds = sel_feat_inds, # Indices of non-zero elements in theta_hat_slopes
+		sel_feat_inds = 1:p, # Indices of non-zero elements in theta_hat_slopes
 		treat_inds = treat_inds, # Global indices for treatment effects
 		num_treats = num_treats,
 		first_inds = first_inds,
-		sel_treat_inds_shifted = sel_treat_inds_shifted, # Indices (1 to num_treats) of non-zero transformed treat. coefs.
+		sel_treat_inds_shifted = 1:num_treats, # Indices (1 to num_treats) of non-zero transformed treat. coefs.
 		c_names = c_names,
 		tes = tes, # Untransformed treatment effect estimates (beta_hat[treat_inds])
 		sig_eps_sq = sig_eps_sq,
 		R = R,
 		N = N,
 		T = T,
-		fused = TRUE, # This parameter might be redundant if this function is only for fused
-		calc_ses = q < 1,
 		p = p, # Total number of original parameters (columns in X_ints)
 		alpha = alpha
 	)
@@ -4668,7 +4674,7 @@ etwfe_core <- function(
 
 	if (calc_ses) {
 		stopifnot(nrow(d_inv_treat_sel) == num_treats)
-		stopifnot(ncol(d_inv_treat_sel) == length(sel_treat_inds_shifted))
+		stopifnot(ncol(d_inv_treat_sel) == num_treats)
 	}
 
 	#
@@ -4692,7 +4698,7 @@ etwfe_core <- function(
 		cohort_probs = cohort_probs, # In-sample pi_r | treated
 		psi_mat = psi_mat,
 		gram_inv = gram_inv,
-		sel_treat_inds_shifted = sel_treat_inds_shifted,
+		sel_treat_inds_shifted = 1:num_treats,
 		tes = tes, # Untransformed treatment effect estimates beta_hat[treat_inds]
 		d_inv_treat_sel = d_inv_treat_sel,
 		cohort_probs_overall = cohort_probs_overall, # In-sample pi_r (unconditional on treated)
@@ -4717,7 +4723,7 @@ etwfe_core <- function(
 			cohort_probs = indep_cohort_probs, # indep pi_r | treated
 			psi_mat = psi_mat,
 			gram_inv = gram_inv,
-			sel_treat_inds_shifted = sel_treat_inds_shifted,
+			sel_treat_inds_shifted = 1:num_treats,
 			tes = tes,
 			d_inv_treat_sel = d_inv_treat_sel,
 			cohort_probs_overall = indep_cohort_probs_overall, # indep pi_r (unconditional)
@@ -5015,4 +5021,259 @@ prep_for_etwfe_regresion <- function(
 		indep_cohort_probs=indep_cohort_probs,
 		indep_cohort_probs_overall=indep_cohort_probs_overall)
 	)
+}
+
+
+
+# getCohortATTsFinalOLS
+#' @title Calculate Cohort-Specific ATTs and Standard Errors for ETWFE
+#' @description Computes the Average Treatment Effect on the Treated (ATT) for
+#'   each cohort, along with their standard errors and confidence intervals if
+#'   requested and feasible.
+#' @param X_final Numeric matrix; the final design matrix, potentially
+#'   transformed by `Omega_sqrt_inv` and the fusion transformation.
+#' @param treat_inds Integer vector; indices in the original (untransformed)
+#'   coefficient vector that correspond to the base treatment effects.
+#' @param num_treats Integer; total number of base treatment effect parameters.
+#' @param first_inds Integer vector; indices of the first treatment effect for
+#'   each cohort within the block of `num_treats` treatment effect parameters.
+#' @param c_names Character vector; names of the `R` treated cohorts.
+#' @param tes Numeric vector; estimated treatment effects in the original
+#'   parameterization for all `num_treats` possible cohort-time combinations.
+#' @param sig_eps_sq Numeric scalar; variance of the idiosyncratic error term.
+#' @param R Integer; total number of treated cohorts.
+#' @param N Integer; total number of units.
+#' @param T Integer; total number of time periods.
+#' @param calc_ses Logical; if `TRUE`, attempts to calculate standard errors.
+#'   This is typically `TRUE` if `q < 1`.
+#' @param p Integer; total number of parameters in the model.
+#' @param alpha Numeric scalar; significance level for confidence intervals
+#'   (e.g., 0.05 for 95% CIs).
+#' @return A list containing:
+#'   \item{cohort_te_df}{Dataframe with cohort names, estimated ATTs, SEs, and
+#'     confidence interval bounds.}
+#'   \item{cohort_tes}{Named numeric vector of estimated ATTs for each cohort.}
+#'   \item{cohort_te_ses}{Named numeric vector of standard errors for cohort ATTs.}
+#'   \item{psi_mat}{Matrix used in SE calculation for overall ATT.}
+#'   \item{gram_inv}{(Potentially NA) Inverse of the Gram matrix for selected
+#'     features, used in SE calculation.}
+#'   \item{d_inv_treat_sel}{(If `fused=TRUE`) Relevant block of the inverse
+#'     fusion matrix for selected treatment effects.}
+#' @details The function first computes the Gram matrix inverse (`gram_inv`).
+#'   Then, for each cohort `r`, it calculates the average
+#'   of the relevant `tes`. It uses `getPsiRFused` or
+#'   `getPsiRUnfused` to get a `psi_r` vector, which is then used with
+#'   `gram_inv` to find the standard error for that cohort's ATT.
+#' @keywords internal
+#' @noRd
+getCohortATTsFinalOLS <- function(
+	X_final,
+	treat_inds,
+	num_treats,
+	first_inds,
+	c_names,
+	tes,
+	sig_eps_sq,
+	R,
+	N,
+	T,
+	p,
+	alpha = 0.05
+) {
+	# stopifnot(max(sel_treat_inds_shifted) <= num_treats)
+	# stopifnot(min(sel_treat_inds_shifted) >= 1)
+	stopifnot(length(tes) == num_treats)
+	stopifnot(all(!is.na(tes)))
+
+	stopifnot(nrow(X_final) == N * T)
+	X_to_pass <- X_final
+
+	# Start by getting Gram matrix needed for standard errors
+	res <- getGramInv(
+		N = N,
+		T = T,
+		X_final = X_to_pass,
+		treat_inds = treat_inds,
+		num_treats = num_treats,
+		calc_ses = TRUE
+	)
+
+	gram_inv <- res$gram_inv
+	calc_ses <- res$calc_ses
+
+	# if (fused) {
+	# 	# Get the parts of D_inv that have to do with treatment effects
+	# 	d_inv_treat <- genInvTwoWayFusionTransformMat(num_treats, first_inds, R)
+	# }
+
+	# First, each cohort
+	cohort_tes <- rep(as.numeric(NA), R)
+	cohort_te_ses <- rep(as.numeric(NA), R)
+
+	psi_mat <- matrix(0, num_treats, R)
+
+	# d_inv_treat_sel <- matrix(
+	# 	0,
+	# 	nrow = 0,
+	# 	ncol = length(sel_treat_inds_shifted)
+	# )
+
+	for (r in 1:R) {
+		# Get indices corresponding to rth treatment
+		first_ind_r <- first_inds[r]
+		if (r < R) {
+			last_ind_r <- first_inds[r + 1] - 1
+		} else {
+			last_ind_r <- num_treats
+		}
+
+		stopifnot(last_ind_r >= first_ind_r)
+		stopifnot(all(first_ind_r:last_ind_r %in% 1:num_treats))
+
+		cohort_tes[r] <- mean(tes[first_ind_r:last_ind_r])
+
+		# Calculate standard errors
+
+		# if (fused) {
+		# 	res_r <- getPsiRFused(
+		# 		first_ind_r,
+		# 		last_ind_r,
+		# 		sel_treat_inds_shifted,
+		# 		d_inv_treat
+		# 	)
+
+		# 	psi_r <- res_r$psi_r
+
+		# 	# stopifnot(
+		# 	# 	nrow(res_r$d_inv_treat_sel) ==
+		# 	# 		last_ind_r -
+		# 	# 			first_ind_r +
+		# 	# 			1
+		# 	# )
+		# 	# stopifnot(
+		# 	# 	ncol(res_r$d_inv_treat_sel) ==
+		# 	# 		length(sel_treat_inds_shifted)
+		# 	# )
+
+		# 	# stopifnot(is.matrix(res_r$d_inv_treat_sel))
+
+		# 	# d_inv_treat_sel <- rbind(d_inv_treat_sel, res_r$d_inv_treat_sel)
+
+		# 	# if (nrow(d_inv_treat_sel) != last_ind_r) {
+		# 	# 	err_mes <- paste(
+		# 	# 		"nrow(d_inv_treat_sel) == last_ind_r is not TRUE. ",
+		# 	# 		"nrow(d_inv_treat_sel): ",
+		# 	# 		nrow(d_inv_treat_sel),
+		# 	# 		". num_treats: ",
+		# 	# 		num_treats,
+		# 	# 		". R: ",
+		# 	# 		R,
+		# 	# 		". first_inds: ",
+		# 	# 		paste(first_inds, collapse = ", "),
+		# 	# 		". r: ",
+		# 	# 		r,
+		# 	# 		". first_ind_r: ",
+		# 	# 		first_ind_r,
+		# 	# 		". last_ind_r: ",
+		# 	# 		last_ind_r,
+		# 	# 		". nrow(res_r$d_inv_treat_sel):",
+		# 	# 		nrow(res_r$d_inv_treat_sel)
+		# 	# 	)
+		# 	# 	stop(err_mes)
+		# 	# }
+
+		# 	rm(res_r)
+		# } else {
+		psi_r <- getPsiRUnfused(
+			first_ind_r,
+			last_ind_r,
+			sel_treat_inds_shifted=1:num_treats,
+			gram_inv=gram_inv
+		)
+		# }
+
+		stopifnot(length(psi_r) == num_treats)
+
+		psi_mat[, r] <- psi_r
+		# Get standard errors
+
+		if(calc_ses){
+			cohort_te_ses[r] <- sqrt(sig_eps_sq * as.numeric(t(psi_r) %*%gram_inv %*%psi_r) /(N * T))
+		}
+	}
+
+	# if (fused) {
+	# 	if (nrow(d_inv_treat_sel) != num_treats) {
+	# 		err_mes <- paste(
+	# 			"nrow(d_inv_treat_sel) == num_treats is not TRUE. ",
+	# 			"nrow(d_inv_treat_sel): ",
+	# 			nrow(d_inv_treat_sel),
+	# 			". num_treats: ",
+	# 			num_treats,
+	# 			". R: ",
+	# 			R,
+	# 			". first_inds: ",
+	# 			paste(first_inds, collapse = ", "),
+	# 			"."
+	# 		)
+	# 		stop(err_mes)
+	# 	}
+	# }
+
+	stopifnot(length(c_names) == R)
+	stopifnot(length(cohort_tes) == R)
+
+	if (all(!is.na(gram_inv))) {
+		stopifnot(length(cohort_te_ses) == R)
+
+		cohort_te_df <- data.frame(
+			c_names,
+			cohort_tes,
+			cohort_te_ses,
+			cohort_tes - stats::qnorm(1 - alpha / 2) * cohort_te_ses,
+			cohort_tes + stats::qnorm(1 - alpha / 2) * cohort_te_ses
+		)
+
+		names(cohort_te_ses) <- c_names
+		names(cohort_tes) <- c_names
+	} else {
+		cohort_te_df <- data.frame(
+			c_names,
+			cohort_tes,
+			rep(NA, R),
+			rep(NA, R),
+			rep(NA, R)
+		)
+	}
+
+	colnames(cohort_te_df) <- c(
+		"Cohort",
+		"Estimated TE",
+		"SE",
+		"ConfIntLow",
+		"ConfIntHigh"
+	)
+
+	# if (fused) {
+	# 	stopifnot(is.matrix(d_inv_treat_sel))
+	# 	ret <- list(
+	# 		cohort_te_df = cohort_te_df,
+	# 		cohort_tes = cohort_tes,
+	# 		cohort_te_ses = cohort_te_ses,
+	# 		psi_mat = psi_mat,
+	# 		gram_inv = gram_inv,
+	# 		d_inv_treat_sel = d_inv_treat_sel,
+	# 		calc_ses = calc_ses
+	# 	)
+	# } else {
+	ret <- list(
+		cohort_te_df = cohort_te_df,
+		cohort_tes = cohort_tes,
+		cohort_te_ses = cohort_te_ses,
+		psi_mat = psi_mat,
+		gram_inv = gram_inv,
+		calc_ses = calc_ses
+	)
+	# }
+	return(ret)
 }
