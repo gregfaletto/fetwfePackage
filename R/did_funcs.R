@@ -412,36 +412,11 @@ fetwfe_core <- function(
 	alpha = 0.05,
 	add_ridge = FALSE
 ) {
-	# ... (rest of the function code)
-	# NOTE: The existing stopifnot calls provide good internal checks.
-	# Consider if any should be user-facing `stop()` messages if triggered by bad inputs
-	# that somehow bypass `checkFetwfeInputs`.
 
-	# ... (Function body as provided)
+	R <- length(in_sample_counts) - 1 
 
-	# Ensure all paths through the function that return have the documented list structure.
-	# For instance, the early returns when `lambda_star_model_size == 0` or
-	# `length(sel_treat_inds_shifted) == 0` should also return all documented fields,
-	# filling with NA or appropriate defaults where necessary.
-	# The current code for these early returns seems to do this.
-
-	# Example for an early return structure (conceptual):
-	# if (some_early_exit_condition) {
-	#   return(list(
-	#     in_sample_att_hat = 0, in_sample_att_se = ifelse(q < 1, 0, NA), ...,
-	#     N = N, T = T, R = R, d = d, p = p # Ensure all documented fields are present
-	#   ))
-	# }
-	R <- length(in_sample_counts) - 1 # This needs to be defined before the early exits
-	# if c_names relies on it.
-	# c_names is used in catt_df_to_ret.
 	c_names <- names(in_sample_counts)[2:(R + 1)]
 
-	# (Actual function body as provided in the original file)
-	# ...
-	# Check inputs
-	#
-	#
 
 	stopifnot(N >= 2) # bare minimum, 2 units at 2 times
 
@@ -481,7 +456,6 @@ fetwfe_core <- function(
 		)
 	}
 
-	# R <- length(in_sample_counts) - 1 # Moved up
 	stopifnot(R >= 1)
 	stopifnot(R <= T - 1)
 
@@ -869,13 +843,9 @@ fetwfe_core <- function(
 	stopifnot(length(sel_treat_inds) <= length(treat_inds))
 	stopifnot(is.integer(sel_treat_inds) | is.numeric(sel_treat_inds))
 
-	# Shift sel_treat_inds to be relative to the start of the treat_inds block
-	# This seems to be what sel_treat_inds_shifted intends
-	# The current sel_treat_inds_shifted calculation appears complex and might be error-prone.
-	# A simpler way:
 	# 1. Get theta_hat_slopes[treat_inds] -> these are the transformed treatment coefficients
-	# 2. Find which of these are non-zero: `which(theta_hat_slopes[treat_inds] != 0)` -> these are indices *within* the treat_inds block.
-	# Let's call this `sel_treat_inds_relative_to_block`.
+	# 2. Find which of these are non-zero: `which(theta_hat_slopes[treat_inds] != 0)` -> these are
+	# indices *within* the treat_inds block. Let's call this `sel_treat_inds_relative_to_block`.
 	# `sel_treat_inds` itself contains the global indices of selected treatment features.
 	# So `theta_hat_slopes[sel_treat_inds]` are the non-zero transformed treatment coefs.
 
