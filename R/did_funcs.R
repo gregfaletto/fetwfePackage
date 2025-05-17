@@ -413,71 +413,23 @@ fetwfe_core <- function(
 	add_ridge = FALSE
 ) {
 
-	R <- length(in_sample_counts) - 1 
+	ret <- check_etwfe_core_inputs(
+		in_sample_counts=in_sample_counts,
+		N=N,
+		T=T,
+		sig_eps_sq=sig_eps_sq,
+		sig_eps_c_sq=sig_eps_c_sq,
+		indep_counts=indep_counts,
+		verbose=verbose,
+		alpha=alpha,
+		add_ridge=add_ridge
+	)
 
-	c_names <- names(in_sample_counts)[2:(R + 1)]
+	R <- ret$R
+	c_names <- ret$c_names
+	indep_count_data_available <- ret$indep_count_data_available
 
-
-	stopifnot(N >= 2) # bare minimum, 2 units at 2 times
-
-	stopifnot(T >= 2) # bare minimum, 2 units at 2 times
-
-	if (any(!is.na(sig_eps_sq))) {
-		stopifnot(is.numeric(sig_eps_sq) | is.integer(sig_eps_sq))
-		stopifnot(length(sig_eps_sq) == 1)
-		stopifnot(sig_eps_sq >= 0)
-	}
-
-	if (any(!is.na(sig_eps_c_sq))) {
-		stopifnot(is.numeric(sig_eps_c_sq) | is.integer(sig_eps_c_sq))
-		stopifnot(length(sig_eps_c_sq) == 1)
-		stopifnot(sig_eps_c_sq >= 0)
-	}
-
-	stopifnot(sum(in_sample_counts) == N)
-	stopifnot(all(in_sample_counts >= 0))
-	if (in_sample_counts[1] == 0) {
-		stop(
-			"No never-treated units detected in data to fit model; estimating treatment effects is not possible"
-		)
-	}
-	if (length(names(in_sample_counts)) != length(in_sample_counts)) {
-		stop(
-			"in_sample_counts must have all unique named entries (with names corresponding to the names of each cohort)"
-		)
-	}
-
-	if (
-		length(names(in_sample_counts)) !=
-			length(unique(names(in_sample_counts)))
-	) {
-		stop(
-			"in_sample_counts must have all unique named entries (with names corresponding to the names of each cohort)"
-		)
-	}
-
-	stopifnot(R >= 1)
-	stopifnot(R <= T - 1)
-
-	indep_count_data_available <- FALSE
-	if (any(!is.na(indep_counts))) {
-		if (sum(indep_counts) != N) {
-			stop(
-				"Number of units in independent cohort count data does not equal number of units in data to be used to fit model."
-			)
-		}
-		if (length(indep_counts) != length(in_sample_counts)) {
-			stop(
-				"Number of counts in independent counts does not match number of cohorts in data to be used to fit model."
-			)
-		}
-		if (any(indep_counts <= 0)) {
-			stop(
-				"At least one cohort in the independent count data has 0 members"
-			)
-		}
-		indep_count_data_available <- TRUE
-	}
+	rm(ret)
 
 	if (any(!is.na(lambda.max))) {
 		stopifnot(is.numeric(lambda.max) | is.integer(lambda.max))
@@ -498,17 +450,6 @@ fetwfe_core <- function(
 	stopifnot(length(q) == 1)
 	stopifnot(q > 0)
 	stopifnot(q <= 2)
-
-	stopifnot(is.logical(verbose))
-	stopifnot(length(verbose) == 1)
-
-	stopifnot(is.numeric(alpha))
-	stopifnot(length(alpha) == 1)
-	stopifnot(alpha > 0)
-	stopifnot(alpha < 1)
-
-	stopifnot(is.logical(add_ridge))
-	stopifnot(length(add_ridge) == 1)
 
 	#
 	#
@@ -534,139 +475,34 @@ fetwfe_core <- function(
 		first_inds = first_inds
 	)
 
-	#
-	#
-	# Step 2: get (known or estimated) covariance matrix within observations
-	# (due to umit-level random effects) and pre-multiply X and y by
-	# inverse square root matrix
-	#
-	#
-
-	if (verbose) {
-		message("Getting omega sqrt inverse estimate...")
-		t0 <- Sys.time()
-	}
-
-	if (is.na(sig_eps_sq) | is.na(sig_eps_c_sq)) {
-		# Get omega_sqrt_inv matrix to multiply y and X_mod by on the left
-		omega_res <- estOmegaSqrtInv(
-			y,
-			X_ints,
-			N = N,
-			T = T,
-			p = p
-		)
-
-		sig_eps_sq <- omega_res$sig_eps_sq
-		sig_eps_c_sq <- omega_res$sig_eps_c_sq
-
-		rm(omega_res)
-
-		if (verbose) {
-			message("Done! Time to estimate noise variances:")
-			message(Sys.time() - t0)
-			t0 <- Sys.time()
-		}
-	}
-
-	stopifnot(!is.na(sig_eps_sq) & !is.na(sig_eps_c_sq))
-
-	Omega <- diag(rep(sig_eps_sq, T)) + matrix(sig_eps_c_sq, T, T)
-
-	Omega_sqrt_inv <- expm::sqrtm(solve(Omega))
-
-	if (verbose) {
-		message("Time to get sqrt inverse matrix:")
-		message(Sys.time() - t0)
-	}
-
-	y_final <- kronecker(diag(N), sqrt(sig_eps_sq) * Omega_sqrt_inv) %*% y
-	X_final <- kronecker(diag(N), sqrt(sig_eps_sq) * Omega_sqrt_inv) %*% X_mod
-
-	#
-	#
-	# Optional: if using ridge regularization on untransformed coefficients,
-	# add those rows now
-	#
-	#
-
-	X_final_scaled <- my_scale(X_final)
-	scale_center <- attr(X_final_scaled, "scaled:center")
-	scale_scale <- attr(X_final_scaled, "scaled:scale")
-
-	if (add_ridge) {
-		# Add rows to X_final. First need to get D^{-1}:
-		D_inverse <- genFullInvFusionTransformMat(
-			first_inds = first_inds,
-			T = T,
-			R = R,
-			d = d,
-			num_treats = num_treats
-		)
-
-		stopifnot(ncol(D_inverse) == ncol(X_final))
-		stopifnot(ncol(D_inverse) == ncol(X_final_scaled))
-
-		# Now add rows
-		lambda_ridge <- 0.00001 *
-			(sig_eps_sq + sig_eps_c_sq) *
-			sqrt(p / (N * T))
-
-		X_final_scaled <- rbind(X_final_scaled, sqrt(lambda_ridge) * D_inverse)
-		y_final <- c(y_final, rep(0, nrow(D_inverse)))
-
-		stopifnot(nrow(X_final_scaled) == length(y_final))
-		stopifnot(nrow(X_final_scaled) == N * T + p)
-	}
-
-	#
-	#
-	# Step 3: get cohort-specific sample proportions (estimated treatment
-	# probabilities)
-	#
-	#
-
-	cohort_probs <- in_sample_counts[2:(R + 1)] /
-		sum(in_sample_counts[2:(R + 1)])
-
-	stopifnot(all(!is.na(cohort_probs)))
-	stopifnot(all(cohort_probs >= 0))
-	stopifnot(all(cohort_probs <= 1))
-	stopifnot(length(cohort_probs) == R)
-	stopifnot(abs(sum(cohort_probs) - 1) < 10^(-6))
-
-	cohort_probs_overall <- in_sample_counts[2:(R + 1)] / N
-
-	stopifnot(
-		abs(1 - sum(cohort_probs_overall) - in_sample_counts[1] / N) < 10^(-6)
+	res <- prep_for_etwfe_regresion(
+		verbose=verbose,
+		sig_eps_sq=sig_eps_sq,
+		sig_eps_c_sq=sig_eps_c_sq,
+		y=y,
+		X_ints=X_ints,
+		X_mod=X_mod,
+		N=N,
+		T=T,
+		R=R,
+		d=d,
+		p=p,
+		num_treats=num_treats,
+		add_ridge=add_ridge,
+		first_inds=first_inds,
+		in_sample_counts=in_sample_counts,
+		indep_count_data_available=indep_count_data_available,
+		indep_counts=indep_counts
 	)
 
-	if (indep_count_data_available) {
-		indep_cohort_probs <- indep_counts[2:(R + 1)] /
-			sum(indep_counts[2:(R + 1)])
-
-		stopifnot(all(!is.na(indep_cohort_probs)))
-		stopifnot(all(indep_cohort_probs >= 0))
-		stopifnot(all(indep_cohort_probs <= 1))
-		stopifnot(length(indep_cohort_probs) == R)
-		stopifnot(abs(sum(indep_cohort_probs) - 1) < 10^(-6))
-
-		indep_cohort_probs_overall <- indep_counts[2:(R + 1)] / N
-
-		stopifnot(
-			abs(
-				1 -
-					sum(
-						indep_cohort_probs_overall
-					) -
-					indep_counts[1] / N
-			) <
-				10^(-6)
-		)
-	} else {
-		indep_cohort_probs <- NA
-		indep_cohort_probs_overall <- NA
-	}
+	X_final_scaled <- res$X_final_scaled
+	y_final <- res$y_final
+	scale_center <- res$scale_center
+	scale_scale <- res$scale_scale
+	cohort_probs <- res$cohort_probs
+	cohort_probs_overall <- res$cohort_probs_overall
+	indep_cohort_probs <- res$indep_cohort_probs
+	indep_cohort_probs_overall <- res$indep_cohort_probs_overall
 
 	#
 	#
@@ -4025,69 +3861,26 @@ checkFetwfeInputs <- function(
 	alpha = 0.05,
 	add_ridge = FALSE
 ) {
-	# Check inputs
-	stopifnot(is.data.frame(pdata))
-	# Check if pdata is a tibble; if so, convert to a dataframe
-	if ("tbl_df" %in% class(pdata)) {
-		pdata <- as.data.frame(pdata)
-	}
-	stopifnot(nrow(pdata) >= 4) # bare minimum, 2 units at 2 times
 
-	stopifnot(is.character(time_var))
-	stopifnot(length(time_var) == 1)
-	stopifnot(time_var %in% colnames(pdata))
-	stopifnot(is.integer(pdata[[time_var]]))
+	res <- checkEtwfeInputs(
+		pdata=pdata,
+		time_var=time_var,
+		unit_var=unit_var,
+		treatment=treatment,
+		response=response,
+		covs=covs,
+		indep_counts=indep_counts,
+		sig_eps_sq=sig_eps_sq,
+		sig_eps_c_sq=sig_eps_c_sq,
+		verbose =verbose,
+		alpha=alpha,
+		add_ridge=add_ridge
+		)
 
-	stopifnot(is.character(unit_var))
-	stopifnot(length(unit_var) == 1)
-	stopifnot(unit_var %in% colnames(pdata))
-	stopifnot(is.character(pdata[[unit_var]]))
+	indep_count_data_available <- res$indep_count_data_available
+	pdata <- res$pdata
 
-	stopifnot(is.character(treatment))
-	stopifnot(length(treatment) == 1)
-	stopifnot(treatment %in% colnames(pdata))
-	stopifnot(is.integer(pdata[[treatment]]))
-	stopifnot(all(pdata[, treatment] %in% c(0, 1)))
-
-	if (length(covs) > 0) {
-		stopifnot(is.character(covs))
-		stopifnot(all(covs %in% colnames(pdata)))
-		for (cov in covs) {
-			stopifnot(
-				is.numeric(pdata[[cov]]) |
-					is.integer(pdata[[cov]]) |
-					is.factor(pdata[[cov]])
-			)
-		}
-	}
-
-	stopifnot(is.character(response))
-	stopifnot(length(response) == 1)
-	stopifnot(response %in% colnames(pdata))
-	stopifnot(is.numeric(pdata[[response]]) | is.integer(pdata[[response]]))
-
-	indep_count_data_available <- FALSE
-	if (any(!is.na(indep_counts))) {
-		stopifnot(is.integer(indep_counts))
-		if (any(indep_counts <= 0)) {
-			stop(
-				"At least one cohort in the independent count data has 0 members"
-			)
-		}
-		indep_count_data_available <- TRUE
-	}
-
-	if (any(!is.na(sig_eps_sq))) {
-		stopifnot(is.numeric(sig_eps_sq) | is.integer(sig_eps_sq))
-		stopifnot(length(sig_eps_sq) == 1)
-		stopifnot(sig_eps_sq >= 0)
-	}
-
-	if (any(!is.na(sig_eps_c_sq))) {
-		stopifnot(is.numeric(sig_eps_c_sq) | is.integer(sig_eps_c_sq))
-		stopifnot(length(sig_eps_c_sq) == 1)
-		stopifnot(sig_eps_c_sq >= 0)
-	}
+	rm(res)
 
 	if (any(!is.na(lambda.max))) {
 		stopifnot(is.numeric(lambda.max) | is.integer(lambda.max))
@@ -4108,22 +3901,6 @@ checkFetwfeInputs <- function(
 	stopifnot(length(q) == 1)
 	stopifnot(q > 0)
 	stopifnot(q <= 2)
-
-	stopifnot(is.logical(verbose))
-	stopifnot(length(verbose) == 1)
-
-	stopifnot(is.numeric(alpha))
-	stopifnot(length(alpha) == 1)
-	stopifnot(alpha > 0)
-	stopifnot(alpha < 1)
-	if (alpha > 0.5) {
-		warning(
-			"Provided alpha > 0.5; are you sure you didn't mean to enter a smaller alpha? The confidence level will be 1 - alpha."
-		)
-	}
-
-	stopifnot(is.logical(add_ridge))
-	stopifnot(length(add_ridge) == 1)
 
 	return(list(
 		pdata = pdata,
@@ -4324,4 +4101,918 @@ my_scale <- function(x) {
 	attr(scaled, "scaled:scale") <- sds2
 
 	return(scaled)
+}
+
+# checkEtwfeInputs
+#' @title Check Inputs for the main `fetwfe` function
+#' @description Validates the inputs provided to the main `fetwfe` function,
+#'   ensuring they meet type, dimension, and content requirements. Stops
+#'   execution with an error message if any check fails.
+#' @param pdata Dataframe; the panel data set.
+#' @param time_var Character; name of the time variable column.
+#' @param unit_var Character; name of the unit variable column.
+#' @param treatment Character; name of the treatment indicator column.
+#' @param response Character; name of the response variable column.
+#' @param covs Character vector; names of covariate columns. Default `c()`.
+#' @param indep_counts Integer vector or NA; counts for independent cohort data.
+#'   Default `NA`.
+#' @param sig_eps_sq Numeric or NA; variance of idiosyncratic noise. Default `NA`.
+#' @param sig_eps_c_sq Numeric or NA; variance of unit-level random effects.
+#'   Default `NA`.
+#' @param lambda.max Numeric or NA; maximum lambda for `gBridge`. Default `NA`.
+#' @param lambda.min Numeric or NA; minimum lambda for `gBridge`. Default `NA`.
+#' @param nlambda Integer; number of lambdas for `gBridge`. Default `100`.
+#' @param q Numeric; Lq penalty exponent for `gBridge`. Default `0.5`.
+#' @param verbose Logical; if TRUE, print progress. Default `FALSE`.
+#' @param alpha Numeric; significance level for confidence intervals. Default `0.05`.
+#' @param add_ridge Logical; if TRUE, add small ridge penalty. Default `FALSE`.
+#' @return Logical `indep_count_data_available`, which is `TRUE` if valid
+#'   `indep_counts` were provided, `FALSE` otherwise.
+#' @details This function performs a series of `stopifnot` checks on each
+#'   parameter. For example:
+#'   - `pdata` must be a dataframe with at least 4 rows.
+#'   - `time_var`, `unit_var`, `treatment`, `response` must be single characters,
+#'     present in `pdata`, and the corresponding columns must have the correct
+#'     type (e.g., integer for time, character for unit, 0/1 integer for treatment).
+#'   - `covs` if provided, must be characters, present in `pdata`, and columns
+#'     must be numeric, integer, or factor.
+#'   - `indep_counts` if provided, must be positive integers.
+#'   - `sig_eps_sq`, `sig_eps_c_sq` if provided, must be non-negative numerics.
+#'   - `lambda.max`, `lambda.min` if provided, must be valid numerics
+#'     (`lambda.max > lambda.min >= 0`).
+#'   - `q` must be in `(0, 2]`.
+#'   - `alpha` must be in `(0, 1)`.
+#'   Issues a warning if `alpha > 0.5`.
+#' @keywords internal
+#' @noRd
+checkEtwfeInputs <- function(
+	pdata,
+	time_var,
+	unit_var,
+	treatment,
+	response,
+	covs = c(),
+	indep_counts = NA,
+	sig_eps_sq = NA,
+	sig_eps_c_sq = NA,
+	verbose = FALSE,
+	alpha = 0.05,
+	add_ridge = FALSE
+) {
+	# Check inputs
+	stopifnot(is.data.frame(pdata))
+	# Check if pdata is a tibble; if so, convert to a dataframe
+	if ("tbl_df" %in% class(pdata)) {
+		pdata <- as.data.frame(pdata)
+	}
+	stopifnot(nrow(pdata) >= 4) # bare minimum, 2 units at 2 times
+
+	stopifnot(is.character(time_var))
+	stopifnot(length(time_var) == 1)
+	stopifnot(time_var %in% colnames(pdata))
+	stopifnot(is.integer(pdata[[time_var]]))
+
+	stopifnot(is.character(unit_var))
+	stopifnot(length(unit_var) == 1)
+	stopifnot(unit_var %in% colnames(pdata))
+	stopifnot(is.character(pdata[[unit_var]]))
+
+	stopifnot(is.character(treatment))
+	stopifnot(length(treatment) == 1)
+	stopifnot(treatment %in% colnames(pdata))
+	stopifnot(is.integer(pdata[[treatment]]))
+	stopifnot(all(pdata[, treatment] %in% c(0, 1)))
+
+	if (length(covs) > 0) {
+		stopifnot(is.character(covs))
+		stopifnot(all(covs %in% colnames(pdata)))
+		for (cov in covs) {
+			stopifnot(
+				is.numeric(pdata[[cov]]) |
+					is.integer(pdata[[cov]]) |
+					is.factor(pdata[[cov]])
+			)
+		}
+	}
+
+	stopifnot(is.character(response))
+	stopifnot(length(response) == 1)
+	stopifnot(response %in% colnames(pdata))
+	stopifnot(is.numeric(pdata[[response]]) | is.integer(pdata[[response]]))
+
+	indep_count_data_available <- FALSE
+	if (any(!is.na(indep_counts))) {
+		stopifnot(is.integer(indep_counts))
+		if (any(indep_counts <= 0)) {
+			stop(
+				"At least one cohort in the independent count data has 0 members"
+			)
+		}
+		indep_count_data_available <- TRUE
+	}
+
+	if (any(!is.na(sig_eps_sq))) {
+		stopifnot(is.numeric(sig_eps_sq) | is.integer(sig_eps_sq))
+		stopifnot(length(sig_eps_sq) == 1)
+		stopifnot(sig_eps_sq >= 0)
+	}
+
+	if (any(!is.na(sig_eps_c_sq))) {
+		stopifnot(is.numeric(sig_eps_c_sq) | is.integer(sig_eps_c_sq))
+		stopifnot(length(sig_eps_c_sq) == 1)
+		stopifnot(sig_eps_c_sq >= 0)
+	}
+
+	stopifnot(is.logical(verbose))
+	stopifnot(length(verbose) == 1)
+
+	stopifnot(is.numeric(alpha))
+	stopifnot(length(alpha) == 1)
+	stopifnot(alpha > 0)
+	stopifnot(alpha < 1)
+	if (alpha > 0.5) {
+		warning(
+			"Provided alpha > 0.5; are you sure you didn't mean to enter a smaller alpha? The confidence level will be 1 - alpha."
+		)
+	}
+
+	stopifnot(is.logical(add_ridge))
+	stopifnot(length(add_ridge) == 1)
+
+	return(list(
+		pdata = pdata,
+		indep_count_data_available = indep_count_data_available
+	))
+}
+
+prep_for_etwfe_core <- function(
+	pdata,
+	response,
+	time_var,
+	unit_var,
+	treatment,
+	covs,
+	response,
+	verbose){
+	# Subset pdata to include only the key columns
+	pdata <- pdata[, c(response, time_var, unit_var, treatment, covs)]
+
+	# Process any factor covariates:
+	if (length(covs) > 0) {
+		pf_res <- processFactors(pdata, covs)
+		pdata <- pf_res$pdata
+		covs <- pf_res$covs
+	}
+
+	# Proceed to generate design matrix and other objects
+	res <- prepXints(
+		data = pdata,
+		time_var = time_var,
+		unit_var = unit_var,
+		treatment = treatment,
+		covs = covs,
+		response = response,
+		verbose = verbose
+	)
+
+	X_ints <- res$X_ints
+	y <- res$y
+	N <- res$N
+	T <- res$T
+	d <- res$d
+	p <- res$p
+	in_sample_counts <- res$in_sample_counts
+	num_treats <- res$num_treats
+	first_inds <- res$first_inds
+
+	rm(res)
+
+	R <- length(in_sample_counts) - 1
+	stopifnot(R >= 1)
+	stopifnot(R <= T - 1)
+	if (R < 2) {
+		stop(
+			"Only one treated cohort detected in data. Currently fetwfe only supports data sets with at least two treated cohorts."
+		)
+	}
+	stopifnot(N >= R + 1)
+	stopifnot(sum(in_sample_counts) == N)
+	stopifnot(all(in_sample_counts >= 0))
+	stopifnot(is.integer(in_sample_counts))
+	if (in_sample_counts[1] == 0) {
+		stop(
+			"No never-treated units detected in data to fit model; estimating treatment effects is not possible"
+		)
+	}
+	if (length(names(in_sample_counts)) != length(in_sample_counts)) {
+		stop(
+			"in_sample_counts must have all unique named entries (with names corresponding to the names of each cohort)"
+		)
+	}
+	if (
+		length(names(in_sample_counts)) !=
+			length(unique(names(in_sample_counts)))
+	) {
+		stop(
+			"in_sample_counts must have all unique named entries (with names corresponding to the names of each cohort)"
+		)
+	}
+	if (indep_count_data_available) {
+		if (sum(indep_counts) != N) {
+			stop(
+				"Number of units in independent cohort count data does not equal number of units in data to be used to fit model."
+			)
+		}
+		if (length(indep_counts) != length(in_sample_counts)) {
+			stop(
+				"Number of counts in independent counts does not match number of cohorts in data to be used to fit model."
+			)
+		}
+	}
+
+	return(list(pdata=pdata,
+		covs=covs,
+		X_ints=X_ints,
+		y=y,
+		N=N,
+		T=T,
+		d=d,
+		p=p,
+		in_sample_counts=in_sample_counts,
+		num_treats=num_treats,
+		first_inds=first_inds,
+		R=R)
+	)
+}
+
+#' Core Estimation Logic for Extended Two-Way Fixed Effects
+#'
+#' @description
+#' This function implements the core estimation steps of the ETWFE methodology.
+#' It takes a pre-processed design matrix and response, handles variance components, performs
+#' ordinary least squares regression, and calculates treatment effects and their standard errors.
+#'
+#' @param X_ints The design matrix with all fixed effects, covariates, treatment
+#'   dummies, and their interactions, as produced by `prepXints`.
+#' @param y The centered response vector, as produced by `prepXints`.
+#' @param in_sample_counts An integer vector named with cohort identifiers
+#'   (including "Never_treated"), indicating the number of units in each cohort
+#'   within the data used for estimation.
+#' @param N The number of unique units.
+#' @param T The number of unique time periods.
+#' @param d The number of covariates.
+#' @param p The total number of columns in `X_ints` (total parameters).
+#' @param num_treats The total number of unique treatment effect parameters.
+#' @param first_inds A numeric vector indicating the starting column index for
+#'   each cohort's first treatment effect within the treatment effect block.
+#' @param indep_counts (Optional) An integer vector of counts for how many units
+#'   appear in the untreated cohort plus each of the other `R` cohorts, derived
+#'   from an independent dataset. Used for asymptotically exact standard errors for
+#'   the ATT. Default is `NA`.
+#' @param sig_eps_sq (Optional) Numeric; the known variance of the observation-level
+#'   IID noise. If `NA`, it will be estimated. Default is `NA`.
+#' @param sig_eps_c_sq (Optional) Numeric; the known variance of the unit-level IID
+#'   noise (random effects). If `NA`, it will be estimated. Default is `NA`.
+#' @param lambda.max (Optional) Numeric; the maximum `lambda` penalty parameter for
+#'   the bridge regression grid search. If `NA`, `grpreg` selects it. Default is `NA`.
+#' @param lambda.min (Optional) Numeric; the minimum `lambda` penalty parameter.
+#'   If `NA`, `grpreg` selects it. Default is `NA`.
+#' @param nlambda (Optional) Integer; the number of `lambda` values in the grid.
+#'   Default is 100.
+#' @param q (Optional) Numeric; the power of the Lq penalty for fusion regularization
+#'   (0 < q <= 2). `q=0.5` is default, `q=1` is lasso, `q=2` is ridge.
+#'   Default is 0.5.
+#' @param verbose Logical; if `TRUE`, prints progress messages. Default is `FALSE`.
+#' @param alpha Numeric; significance level for confidence intervals (e.g., 0.05 for
+#'   95% CIs). Default is 0.05.
+#' @param add_ridge (Optional) Logical; if `TRUE`, adds a small L2 penalty to
+#'   the untransformed coefficients to stabilize estimation. Default is `FALSE`.
+#'
+#' @details
+#' The function executes the following main steps:
+#' \enumerate{
+#'   \item **Input Checks:** Validates the provided parameters.
+#'   \item **Coordinate Transformation:** Calls `transformXintImproved` to transform
+#'     `X_ints` into `X_mod`. This transformation allows a standard bridge
+#'     regression penalty on `X_mod` to achieve the desired fusion penalties
+#'     on the original coefficients.
+#'   \item **Variance Component Handling:**
+#'     \itemize{
+#'       \item If `sig_eps_sq` or `sig_eps_c_sq` are `NA`, `estOmegaSqrtInv` is
+#'         called to estimate them from the data using a fixed-effects ridge
+#'         regression.
+#'       \item Constructs the covariance matrix `Omega` and its inverse square
+#'         root `Omega_sqrt_inv`.
+#'       \item Pre-multiplies `y` and `X_mod` by `sqrt(sig_eps_sq) * Omega_sqrt_inv`
+#'         (via Kronecker product) to obtain `y_final` and `X_final`, effectively
+#'         performing a GLS transformation.
+#'     }
+#'   \item **Optional Ridge Penalty:** If `add_ridge` is `TRUE`, `X_final_scaled`
+#'     (scaled version of `X_final`) and `y_final` are augmented to add an L2
+#'     penalty on the *original* (untransformed) coefficient scale. This involves
+#'     using `genFullInvFusionTransformMat` to get the inverse of the overall
+#'     fusion transformation matrix.
+#'   \item **Cohort Probabilities:** Calculates cohort membership probabilities
+#'     conditional on being treated, using `in_sample_counts` and `indep_counts`
+#'     if available.
+#'   \item **Bridge Regression:** Fits a bridge regression model using
+#'     `grpreg::gBridge` on `X_final_scaled` and `y_final` with the specified `q`
+#'     and lambda sequence.
+#'   \item **Coefficient Selection (BIC):** Calls `getBetaBIC` to select the
+#'     optimal `lambda` using BIC and retrieve the corresponding estimated
+#'     coefficients (`theta_hat` in the transformed space).
+#'   \item **Handle Zero-Feature Case:** If BIC selects a model with zero features,
+#'     treatment effects are set to zero.
+#'   \item **Coefficient Untransformation:** Calls `untransformCoefImproved` to
+#'     transform `theta_hat` back to the original coefficient space, yielding
+#'     `beta_hat`. If `add_ridge` was true, `beta_hat` is scaled.
+#'   \item **Treatment Effect Calculation:**
+#'     \itemize{
+#'       \item Extracts cohort-specific average treatment effects (CATTs) from
+#'         `beta_hat`.
+#'       \item Calls `getCohortATTsFinal` to calculate CATT point estimates,
+#'         standard errors (if `q < 1`), and confidence intervals. This involves
+#'         computing the Gram matrix and related quantities.
+#'     }
+#'   \item **Overall ATT Calculation:** Calls `getTeResults2` to calculate the
+#'     overall average treatment effect on the treated (ATT) and its standard
+#'     error, using both in-sample probabilities and independent probabilities
+#'     if `indep_counts` were provided.
+#' }
+#' The standard errors for CATTs are asymptotically exact. For ATT, if
+#' `indep_counts` are provided, the SE is asymptotically exact; otherwise, it's
+#' asymptotically conservative (if `q < 1`).
+#'
+#' @return A list containing detailed estimation results:
+#'   \item{in_sample_att_hat}{Estimated overall ATT using in-sample cohort probabilities.}
+#'   \item{in_sample_att_se}{Standard error for `in_sample_att_hat`.}
+#'   \item{in_sample_att_se_no_prob}{SE for `in_sample_att_hat` ignoring variability from estimating cohort probabilities.}
+#'   \item{indep_att_hat}{Estimated overall ATT using `indep_counts` cohort probabilities (NA if `indep_counts` not provided).}
+#'   \item{indep_att_se}{Standard error for `indep_att_hat` (NA if not applicable).}
+#'   \item{catt_hats}{A named vector of estimated CATTs for each cohort.}
+#'   \item{catt_ses}{A named vector of SEs for `catt_hats` (NA if `q >= 1`).}
+#'   \item{catt_df}{A data.frame summarizing CATTs, SEs, and confidence intervals.}
+#'   \item{theta_hat}{The vector of estimated coefficients in the *transformed* (fused) space, including the intercept as the first element.}
+#'   \item{beta_hat}{The vector of estimated coefficients in the *original* space (after untransforming `theta_hat`, excluding intercept).}
+#'   \item{treat_inds}{Indices in `beta_hat` corresponding to base treatment effects.}
+#'   \item{treat_int_inds}{Indices in `beta_hat` corresponding to treatment-covariate interactions.}
+#'   \item{cohort_probs}{Estimated cohort probabilities conditional on being treated, from `in_sample_counts`.}
+#'   \item{indep_cohort_probs}{Estimated cohort probabilities from `indep_counts` (NA if not provided).}
+#'   \item{sig_eps_sq}{The (possibly estimated) variance of observation-level noise.}
+#'   \item{sig_eps_c_sq}{The (possibly estimated) variance of unit-level random effects.}
+#'   \item{lambda.max}{The maximum lambda value used in `grpreg`.}
+#'   \item{lambda.max_model_size}{Model size for `lambda.max`.}
+#'   \item{lambda.min}{The minimum lambda value used in `grpreg`.}
+#'   \item{lambda.min_model_size}{Model size for `lambda.min`.}
+#'   \item{lambda_star}{The lambda value selected by BIC.}
+#'   \item{lambda_star_model_size}{Model size for `lambda_star`.}
+#'   \item{X_ints}{The original input design matrix from `prepXints`.}
+#'   \item{y}{The original input centered response vector from `prepXints`.}
+#'   \item{X_final}{The design matrix after fusion transformation and GLS weighting.}
+#'   \item{y_final}{The response vector after GLS weighting.}
+#'   \item{N, T, R, d, p}{Dimensions used in estimation.}
+#' @keywords internal
+#' @noRd
+etwfe_core <- function(
+	X_ints,
+	y,
+	in_sample_counts,
+	N,
+	T,
+	d,
+	p,
+	num_treats,
+	first_inds,
+	indep_counts = NA,
+	sig_eps_sq = NA,
+	sig_eps_c_sq = NA,
+	verbose = FALSE,
+	alpha = 0.05,
+	add_ridge = FALSE
+) {
+
+	ret <- check_etwfe_core_inputs(
+		in_sample_counts=in_sample_counts,
+		N=N,
+		T=T,
+		sig_eps_sq=sig_eps_sq,
+		sig_eps_c_sq=sig_eps_c_sq,
+		indep_counts=indep_counts,
+		verbose=verbose,
+		alpha=alpha,
+		add_ridge=add_ridge
+	)
+
+	R <- ret$R
+	c_names <- ret$c_names
+	indep_count_data_available <- ret$indep_count_data_available
+
+	rm(ret)
+
+	res <- prep_for_etwfe_regresion(
+		verbose=verbose,
+		sig_eps_sq=sig_eps_sq,
+		sig_eps_c_sq=sig_eps_c_sq,
+		y=y,
+		X_ints=X_ints,
+		X_mod=X_ints, # Don't transform matrix
+		N=N,
+		T=T,
+		R=R,
+		d=d,
+		p=p,
+		num_treats=num_treats,
+		add_ridge=add_ridge,
+		first_inds=first_inds,
+		in_sample_counts=in_sample_counts,
+		indep_count_data_available=indep_count_data_available,
+		indep_counts=indep_counts
+	)
+
+	X_final_scaled <- res$X_final_scaled
+	y_final <- res$y_final
+	scale_center <- res$scale_center
+	scale_scale <- res$scale_scale
+	cohort_probs <- res$cohort_probs
+	cohort_probs_overall <- res$cohort_probs_overall
+	indep_cohort_probs <- res$indep_cohort_probs
+	indep_cohort_probs_overall <- res$indep_cohort_probs_overall
+
+	#
+	#
+	# Step 4: estimate OLS regression and extract fitted coefficients
+	#
+	#
+
+	df <- data.frame(y=y_final, X_final)
+
+	t0 <- Sys.time()
+
+	fit <- lm(y ~., df)
+
+	coefs <- coef(fit)
+
+	stopifnot(length(coefs) == p + 1)
+
+	beta_hat <- coefs[2:(p + 1)]
+
+	# OLS linear regression, so all features are "selected"
+	sel_feat_inds <- 1:p
+
+	sel_treat_inds_shifted <- 1:num_treats
+
+	# first_treat_ind <- model$coefs_obj$R + model$coefs_obj$T - 1 + model$coefs_obj$d + model$coefs_obj$R*model$coefs_obj$d +
+	# 	(model$coefs_obj$T - 1)*model$coefs_obj$d + 1
+
+	# treat_inds <- first_treat_ind:(first_treat_ind + model$num_treats - 1)
+
+	# treat_int_inds <- (max(treat_inds) + 1):draw$p
+
+	# stopifnot(length(treat_int_inds) == model$num_treats*model$coefs_obj$d)
+
+	# counts <- draw$assignments
+
+	# ret <- processCoefs(
+	# 	R=model$coefs_obj$R,
+	# 	T=model$coefs_obj$T,
+	# 	d=model$coefs_obj$d,
+	# 	N=model$N,
+	# 	p=draw$p,
+	# 	num_treats=model$num_treats,
+	# 	first_inds=model$first_inds,
+	# 	sig_eps_sq=model$sig_eps_sq,
+	# 	sel_feat_inds=sel_feat_inds,
+	# 	beta_hat=beta_hat,
+	# 	X_final=X_final,
+	# 	isOLS=TRUE,
+	# 	treat_inds=treat_inds,
+	# 	N_UNTREATED=draw$N_UNTREATED,
+	# 	assignments=counts,
+	# 	calc_ses = TRUE
+	# 	)
+
+	# ret$treat_int_inds <- treat_int_inds
+
+	# ret$beta_hat <- beta_hat
+
+	stopifnot(length(c_names) == R)
+
+	# Indices corresponding to base treatment effects
+	treat_inds <- getTreatInds(R = R, T = T, d = d, num_treats = num_treats)
+
+	if (d > 0) {
+		stopifnot(max(treat_inds) + 1 <= p)
+		stopifnot(
+			max(treat_inds) == R + T - 1 + d + R * d + (T - 1) * d + num_treats
+		)
+
+		treat_int_inds <- (max(treat_inds) + 1):p
+
+		stopifnot(length(treat_int_inds) == num_treats * d)
+	} else {
+		stopifnot(max(treat_inds) <= p)
+		stopifnot(max(treat_inds) == R + T - 1 + num_treats)
+
+		treat_int_inds <- c()
+	}
+
+	# If using ridge regularization, multiply the "naive" estimated coefficients
+	# by 1 + lambda_ridge, similar to suggestion in original elastic net paper.
+	if (add_ridge) {
+		beta_hat <- beta_hat * (1 + lambda_ridge)
+	}
+
+	# Get actual estimated treatment effects (in original, untransformed space)
+	tes <- beta_hat[treat_inds]
+
+	stopifnot(length(tes) == num_treats)
+
+	stopifnot(length(first_inds) == R)
+	stopifnot(max(first_inds) <= num_treats)
+
+	#
+	#
+	# Step 6: calculate cohort-specific treatment effects and standard
+	# errors
+	#
+	#
+
+	res <- getCohortATTsFinal(
+		X_final = X_final, # This is X_mod * GLS_transform_matrix
+		sel_feat_inds = sel_feat_inds, # Indices of non-zero elements in theta_hat_slopes
+		treat_inds = treat_inds, # Global indices for treatment effects
+		num_treats = num_treats,
+		first_inds = first_inds,
+		sel_treat_inds_shifted = sel_treat_inds_shifted, # Indices (1 to num_treats) of non-zero transformed treat. coefs.
+		c_names = c_names,
+		tes = tes, # Untransformed treatment effect estimates (beta_hat[treat_inds])
+		sig_eps_sq = sig_eps_sq,
+		R = R,
+		N = N,
+		T = T,
+		fused = TRUE, # This parameter might be redundant if this function is only for fused
+		calc_ses = q < 1,
+		p = p, # Total number of original parameters (columns in X_ints)
+		alpha = alpha
+	)
+
+	cohort_te_df <- res$cohort_te_df
+	cohort_tes <- res$cohort_tes
+	cohort_te_ses <- res$cohort_te_ses
+	psi_mat <- res$psi_mat
+	gram_inv <- res$gram_inv
+	d_inv_treat_sel <- res$d_inv_treat_sel
+	calc_ses <- res$calc_ses
+
+	rm(res)
+
+	if (calc_ses) {
+		stopifnot(nrow(d_inv_treat_sel) == num_treats)
+		stopifnot(ncol(d_inv_treat_sel) == length(sel_treat_inds_shifted))
+	}
+
+	#
+	#
+	# Step 7: calculate overall average treatment effect on treated units
+	#
+	#
+
+	# Get overal estimated ATT!
+	# theta_hat_treat_sel needs to be the selected non-zero *transformed* treatment coefficients
+	# sel_treat_inds contains global indices of selected transformed features that are treatment effects
+	theta_hat_treat_sel_for_att <- theta_hat_slopes[sel_treat_inds]
+
+	in_sample_te_results <- getTeResults2(
+		sig_eps_sq = sig_eps_sq,
+		N = N,
+		T = T,
+		R = R,
+		num_treats = num_treats,
+		cohort_tes = cohort_tes, # CATTs (point estimates)
+		cohort_probs = cohort_probs, # In-sample pi_r | treated
+		psi_mat = psi_mat,
+		gram_inv = gram_inv,
+		sel_treat_inds_shifted = sel_treat_inds_shifted,
+		tes = tes, # Untransformed treatment effect estimates beta_hat[treat_inds]
+		d_inv_treat_sel = d_inv_treat_sel,
+		cohort_probs_overall = cohort_probs_overall, # In-sample pi_r (unconditional on treated)
+		first_inds = first_inds,
+		theta_hat_treat_sel = theta_hat_treat_sel_for_att, # Selected non-zero transformed treat coefs
+		calc_ses = calc_ses,
+		indep_probs = FALSE
+	)
+
+	in_sample_att_hat <- in_sample_te_results$att_hat
+	in_sample_att_se <- in_sample_te_results$att_te_se
+	in_sample_att_se_no_prob <- in_sample_te_results$att_te_se_no_prob
+
+	if (indep_count_data_available) {
+		indep_te_results <- getTeResults2(
+			sig_eps_sq = sig_eps_sq,
+			N = N,
+			T = T,
+			R = R,
+			num_treats = num_treats,
+			cohort_tes = cohort_tes,
+			cohort_probs = indep_cohort_probs, # indep pi_r | treated
+			psi_mat = psi_mat,
+			gram_inv = gram_inv,
+			sel_treat_inds_shifted = sel_treat_inds_shifted,
+			tes = tes,
+			d_inv_treat_sel = d_inv_treat_sel,
+			cohort_probs_overall = indep_cohort_probs_overall, # indep pi_r (unconditional)
+			first_inds = first_inds,
+			theta_hat_treat_sel = theta_hat_treat_sel_for_att,
+			calc_ses = calc_ses,
+			indep_probs = TRUE
+		)
+		indep_att_hat <- indep_te_results$att_hat
+		indep_att_se <- indep_te_results$att_te_se
+		# indep_att_se_no_prob <- indep_te_results$att_te_se_no_prob # This was commented out
+	} else {
+		indep_att_hat <- NA
+		indep_att_se <- NA
+		# indep_att_se_no_prob <- NA # Keep commented for consistency
+	}
+
+	return(list(
+		in_sample_att_hat = in_sample_att_hat,
+		in_sample_att_se = in_sample_att_se,
+		in_sample_att_se_no_prob = in_sample_att_se_no_prob,
+		indep_att_hat = indep_att_hat,
+		indep_att_se = indep_att_se,
+		catt_hats = cohort_tes, # Already named if applicable from getCohortATTsFinal
+		catt_ses = cohort_te_ses, # Already named if applicable
+		catt_df = cohort_te_df,
+		theta_hat = theta_hat, # Full theta_hat (with intercept)
+		beta_hat = beta_hat, # Untransformed slopes
+		treat_inds = treat_inds,
+		treat_int_inds = treat_int_inds,
+		cohort_probs = cohort_probs,
+		indep_cohort_probs = indep_cohort_probs,
+		sig_eps_sq = sig_eps_sq,
+		sig_eps_c_sq = sig_eps_c_sq,
+		lambda.max = lambda.max,
+		lambda.max_model_size = lambda.max_model_size,
+		lambda.min = lambda.min,
+		lambda.min_model_size = lambda.min_model_size,
+		lambda_star = lambda_star,
+		lambda_star_model_size = lambda_star_model_size,
+		X_ints = X_ints,
+		y = y,
+		X_final = X_final,
+		y_final = y_final,
+		N = N,
+		T = T,
+		R = R,
+		d = d,
+		p = p
+	))
+}
+
+check_etwfe_core_inputs <- function(
+	in_sample_counts,
+	N,
+	T,
+	sig_eps_sq,
+	sig_eps_c_sq,
+	indep_counts,
+	verbose,
+	alpha,
+	add_ridge)
+{
+	R <- length(in_sample_counts) - 1 
+
+	c_names <- names(in_sample_counts)[2:(R + 1)]
+
+
+	stopifnot(N >= 2) # bare minimum, 2 units at 2 times
+
+	stopifnot(T >= 2) # bare minimum, 2 units at 2 times
+
+	if (any(!is.na(sig_eps_sq))) {
+		stopifnot(is.numeric(sig_eps_sq) | is.integer(sig_eps_sq))
+		stopifnot(length(sig_eps_sq) == 1)
+		stopifnot(sig_eps_sq >= 0)
+	}
+
+	if (any(!is.na(sig_eps_c_sq))) {
+		stopifnot(is.numeric(sig_eps_c_sq) | is.integer(sig_eps_c_sq))
+		stopifnot(length(sig_eps_c_sq) == 1)
+		stopifnot(sig_eps_c_sq >= 0)
+	}
+
+	stopifnot(sum(in_sample_counts) == N)
+	stopifnot(all(in_sample_counts >= 0))
+	if (in_sample_counts[1] == 0) {
+		stop(
+			"No never-treated units detected in data to fit model; estimating treatment effects is not possible"
+		)
+	}
+	if (length(names(in_sample_counts)) != length(in_sample_counts)) {
+		stop(
+			"in_sample_counts must have all unique named entries (with names corresponding to the names of each cohort)"
+		)
+	}
+
+	if (
+		length(names(in_sample_counts)) !=
+			length(unique(names(in_sample_counts)))
+	) {
+		stop(
+			"in_sample_counts must have all unique named entries (with names corresponding to the names of each cohort)"
+		)
+	}
+
+	stopifnot(R >= 1)
+	stopifnot(R <= T - 1)
+
+	indep_count_data_available <- FALSE
+	if (any(!is.na(indep_counts))) {
+		if (sum(indep_counts) != N) {
+			stop(
+				"Number of units in independent cohort count data does not equal number of units in data to be used to fit model."
+			)
+		}
+		if (length(indep_counts) != length(in_sample_counts)) {
+			stop(
+				"Number of counts in independent counts does not match number of cohorts in data to be used to fit model."
+			)
+		}
+		if (any(indep_counts <= 0)) {
+			stop(
+				"At least one cohort in the independent count data has 0 members"
+			)
+		}
+		indep_count_data_available <- TRUE
+	}
+
+	stopifnot(is.logical(verbose))
+	stopifnot(length(verbose) == 1)
+
+	stopifnot(is.numeric(alpha))
+	stopifnot(length(alpha) == 1)
+	stopifnot(alpha > 0)
+	stopifnot(alpha < 1)
+
+	stopifnot(is.logical(add_ridge))
+	stopifnot(length(add_ridge) == 1)
+
+	return(list(R=R, c_names=c_names, indep_count_data_available=indep_count_data_available))
+}
+
+prep_for_etwfe_regresion <- function(
+	verbose,
+	sig_eps_sq,
+	sig_eps_c_sq,
+	y,
+	X_ints,
+	X_mod,
+	N,
+	T,
+	R,
+	d,
+	p,
+	num_treats,
+	add_ridge,
+	first_inds,
+	in_sample_counts,
+	indep_count_data_available
+	indep_counts=NA
+	){
+	if (verbose) {
+		message("Getting omega sqrt inverse estimate...")
+		t0 <- Sys.time()
+	}
+
+	if (is.na(sig_eps_sq) | is.na(sig_eps_c_sq)) {
+		# Get omega_sqrt_inv matrix to multiply y and X_mod by on the left
+		omega_res <- estOmegaSqrtInv(
+			y,
+			X_ints,
+			N = N,
+			T = T,
+			p = p
+		)
+
+		sig_eps_sq <- omega_res$sig_eps_sq
+		sig_eps_c_sq <- omega_res$sig_eps_c_sq
+
+		rm(omega_res)
+
+		if (verbose) {
+			message("Done! Time to estimate noise variances:")
+			message(Sys.time() - t0)
+			t0 <- Sys.time()
+		}
+	}
+
+	stopifnot(!is.na(sig_eps_sq) & !is.na(sig_eps_c_sq))
+
+	Omega <- diag(rep(sig_eps_sq, T)) + matrix(sig_eps_c_sq, T, T)
+
+	Omega_sqrt_inv <- expm::sqrtm(solve(Omega))
+
+	if (verbose) {
+		message("Time to get sqrt inverse matrix:")
+		message(Sys.time() - t0)
+	}
+
+	y_final <- kronecker(diag(N), sqrt(sig_eps_sq) * Omega_sqrt_inv) %*% y
+	X_final <- kronecker(diag(N), sqrt(sig_eps_sq) * Omega_sqrt_inv) %*% X_mod
+
+	#
+	#
+	# Optional: if using ridge regularization on untransformed coefficients,
+	# add those rows now
+	#
+	#
+
+	X_final_scaled <- my_scale(X_final)
+	scale_center <- attr(X_final_scaled, "scaled:center")
+	scale_scale <- attr(X_final_scaled, "scaled:scale")
+
+	if (add_ridge) {
+		# Add rows to X_final. First need to get D^{-1}:
+		D_inverse <- genFullInvFusionTransformMat(
+			first_inds = first_inds,
+			T = T,
+			R = R,
+			d = d,
+			num_treats = num_treats
+		)
+
+		stopifnot(ncol(D_inverse) == ncol(X_final))
+		stopifnot(ncol(D_inverse) == ncol(X_final_scaled))
+
+		# Now add rows
+		lambda_ridge <- 0.00001 *
+			(sig_eps_sq + sig_eps_c_sq) *
+			sqrt(p / (N * T))
+
+		X_final_scaled <- rbind(X_final_scaled, sqrt(lambda_ridge) * D_inverse)
+		y_final <- c(y_final, rep(0, nrow(D_inverse)))
+
+		stopifnot(nrow(X_final_scaled) == length(y_final))
+		stopifnot(nrow(X_final_scaled) == N * T + p)
+	}
+
+	#
+	#
+	# Step 2: get cohort-specific sample proportions (estimated treatment
+	# probabilities)
+	#
+	#
+
+	cohort_probs <- in_sample_counts[2:(R + 1)] /
+		sum(in_sample_counts[2:(R + 1)])
+
+	stopifnot(all(!is.na(cohort_probs)))
+	stopifnot(all(cohort_probs >= 0))
+	stopifnot(all(cohort_probs <= 1))
+	stopifnot(length(cohort_probs) == R)
+	stopifnot(abs(sum(cohort_probs) - 1) < 10^(-6))
+
+	cohort_probs_overall <- in_sample_counts[2:(R + 1)] / N
+
+	stopifnot(
+		abs(1 - sum(cohort_probs_overall) - in_sample_counts[1] / N) < 10^(-6)
+	)
+
+	if (indep_count_data_available) {
+		indep_cohort_probs <- indep_counts[2:(R + 1)] /
+			sum(indep_counts[2:(R + 1)])
+
+		stopifnot(all(!is.na(indep_cohort_probs)))
+		stopifnot(all(indep_cohort_probs >= 0))
+		stopifnot(all(indep_cohort_probs <= 1))
+		stopifnot(length(indep_cohort_probs) == R)
+		stopifnot(abs(sum(indep_cohort_probs) - 1) < 10^(-6))
+
+		indep_cohort_probs_overall <- indep_counts[2:(R + 1)] / N
+
+		stopifnot(
+			abs(
+				1 -
+					sum(
+						indep_cohort_probs_overall
+					) -
+					indep_counts[1] / N
+			) <
+				10^(-6)
+		)
+	} else {
+		indep_cohort_probs <- NA
+		indep_cohort_probs_overall <- NA
+	}
+
+	return(list(X_final_scaled=X_final_scaled,
+		y_final=y_final,
+		scale_center=scale_center,
+		scale_scale=scale_scale,
+		cohort_probs=cohort_probs,
+		cohort_probs_overall=cohort_probs_overall,
+		indep_cohort_probs=indep_cohort_probs,
+		indep_cohort_probs_overall=indep_cohort_probs_overall)
+	)
 }
