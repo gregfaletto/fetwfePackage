@@ -3464,6 +3464,8 @@ getGramInv <- function(
 		p_sel <- ncol(X_final)
 	}
 	
+	# TODO: confirm if I should center X_sel even when estimating via OLS
+	# (unnecessary for estimation to center covariates in that case?)
 	X_sel_centered <- scale(X_sel, center = TRUE, scale = FALSE)
 
 	gram <- 1 / (N * T) * (t(X_sel_centered) %*% X_sel_centered)
@@ -4720,7 +4722,7 @@ etwfe_core <- function(
 	in_sample_att_se_no_prob <- in_sample_te_results$att_te_se_no_prob
 
 	if (indep_count_data_available) {
-		indep_te_results <- getTeResults2(
+		indep_te_results <- getTeResultsOLS(
 			sig_eps_sq = sig_eps_sq,
 			N = N,
 			T = T,
@@ -5357,6 +5359,10 @@ getTeResultsOLS <- function(
 	att_hat <- as.numeric(cohort_tes %*% cohort_probs)
 
 	if (calc_ses) {
+
+		stopifnot(nrow(psi_mat) == num_treats)
+		stopifnot(ncol(psi_mat) == R)
+
 		# Get ATT standard error
 		# first variance term: convergence of theta
 		psi_att <- psi_mat %*% cohort_probs
@@ -5365,14 +5371,11 @@ getTeResultsOLS <- function(
 			as.numeric(t(psi_att) %*% gram_inv %*% psi_att) /
 			(N * T)
 
-		stopifnot(nrow(psi_mat) == num_treats)
-		stopifnot(ncol(psi_mat) == R)
-
 		stopifnot(length(tes) == num_treats)
 
 		# Second variance term: convergence of cohort membership probabilities
 		att_var_2 <- getSecondVarTermOLS(
-			cohort_probs = cohort_probs,
+			# cohort_probs = cohort_probs,
 			psi_mat = psi_mat,
 			# sel_treat_inds_shifted = sel_treat_inds_shifted,
 			tes = tes,
@@ -5497,6 +5500,9 @@ getSecondVarTermOLS <- function(
 		nrow = R,
 		ncol = R
 	)
+
+	stopifnot(length(cohort_probs_overall) == R)
+	stopifnot(sum(cohort_probs_overall) < 1 - 10e-6)
 
 	for (r in 1:R) {
 		# All terms in rth column have the same value except the diagonal term
