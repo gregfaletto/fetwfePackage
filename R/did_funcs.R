@@ -2740,9 +2740,7 @@ estOmegaSqrtInv <- function(y, X_ints, N, T, p) {
 #' @title Calculate Second Variance Term for ATT Standard Error (Data Application)
 #' @description Computes the second component of the variance for the Average
 #'   Treatment Effect on the Treated (ATT). This component accounts for the
-#'   variability due to the estimation of cohort membership probabilities. This
-#'   version seems tailored for contexts where cohort probabilities are
-#'   estimated from the data sample.
+#'   variability due to the estimation of cohort membership probabilities.
 #' @param cohort_probs Numeric vector; estimated probabilities of belonging to
 #'   each treated cohort, conditional on being treated. Length `R`.
 #' @param psi_mat Numeric matrix; a matrix where each column `r` is the `psi_r`
@@ -2793,6 +2791,9 @@ getSecondVarTermDataApp <- function(
 ) {
 	stopifnot(ncol(d_inv_treat_sel) == length(sel_treat_inds_shifted))
 	stopifnot(length(theta_hat_treat_sel) == length(sel_treat_inds_shifted))
+
+	# Get Sigma_pi_hat, the (sample-estimated) covariance matrix for the 
+	# sample proportions (derived from the multinomial distribution)
 	Sigma_pi_hat <- -outer(
 		cohort_probs_overall[1:(R)],
 		cohort_probs_overall[1:(R)]
@@ -2810,6 +2811,8 @@ getSecondVarTermDataApp <- function(
 		ncol = length(sel_treat_inds_shifted)
 	)
 
+	# Gather a list of the indices corresponding to the treatment coefficients
+	# for each cohort
 	sel_inds <- list()
 
 	for (r in 1:R) {
@@ -4447,7 +4450,7 @@ prep_for_etwfe_core <- function(
 #'         standard errors (if `q < 1`), and confidence intervals. This involves
 #'         computing the Gram matrix and related quantities.
 #'     }
-#'   \item **Overall ATT Calculation:** Calls `getTeResults2` to calculate the
+#'   \item **Overall ATT Calculation:** Calls `getTeResultsOLS` to calculate the
 #'     overall average treatment effect on the treated (ATT) and its standard
 #'     error, using both in-sample probabilities and independent probabilities
 #'     if `indep_counts` were provided.
@@ -4647,11 +4650,9 @@ etwfe_core <- function(
 
 	res <- getCohortATTsFinalOLS(
 		X_final = X_final, # This is X_mod * GLS_transform_matrix
-		sel_feat_inds = 1:p, # Indices of non-zero elements in theta_hat_slopes
 		treat_inds = treat_inds, # Global indices for treatment effects
 		num_treats = num_treats,
 		first_inds = first_inds,
-		sel_treat_inds_shifted = 1:num_treats, # Indices (1 to num_treats) of non-zero transformed treat. coefs.
 		c_names = c_names,
 		tes = tes, # Untransformed treatment effect estimates (beta_hat[treat_inds])
 		sig_eps_sq = sig_eps_sq,
@@ -4667,15 +4668,14 @@ etwfe_core <- function(
 	cohort_te_ses <- res$cohort_te_ses
 	psi_mat <- res$psi_mat
 	gram_inv <- res$gram_inv
-	d_inv_treat_sel <- res$d_inv_treat_sel
 	calc_ses <- res$calc_ses
 
 	rm(res)
 
-	if (calc_ses) {
-		stopifnot(nrow(d_inv_treat_sel) == num_treats)
-		stopifnot(ncol(d_inv_treat_sel) == num_treats)
-	}
+	# if (calc_ses) {
+	# 	stopifnot(nrow(d_inv_treat_sel) == num_treats)
+	# 	stopifnot(ncol(d_inv_treat_sel) == num_treats)
+	# }
 
 	#
 	#
@@ -4688,7 +4688,7 @@ etwfe_core <- function(
 	# sel_treat_inds contains global indices of selected transformed features that are treatment effects
 	theta_hat_treat_sel_for_att <- theta_hat_slopes[sel_treat_inds]
 
-	in_sample_te_results <- getTeResults2(
+	in_sample_te_results <- getTeResultsOLS(
 		sig_eps_sq = sig_eps_sq,
 		N = N,
 		T = T,
@@ -5276,4 +5276,257 @@ getCohortATTsFinalOLS <- function(
 	)
 	# }
 	return(ret)
+}
+
+# getTeResultsOLS
+#' @title Calculate Overall ATT and its Standard Error for ETWFE
+#' @description Computes the overall Average Treatment Effect on the Treated
+#'   (ATT) by taking a weighted average of cohort-specific ATTs. It also
+#'   calculates the standard error for this overall ATT, potentially considering
+#'   variability from estimated cohort probabilities.
+#' @param sig_eps_sq Numeric scalar; variance of the idiosyncratic error term.
+#' @param N Integer; total number of units.
+#' @param T Integer; total number of time periods.
+#' @param R Integer; total number of treated cohorts.
+#' @param num_treats Integer; total number of base treatment effect parameters.
+#' @param cohort_tes Numeric vector; estimated ATTs for each of the `R` cohorts.
+#' @param cohort_probs Numeric vector; weights for each cohort, typically
+#'   estimated probabilities of belonging to cohort `r` conditional on being
+#'   treated. Length `R`. Sums to 1.
+#' @param psi_mat Numeric matrix; matrix where column `r` is `psi_r` (from
+#'   `getCohortATTsFinal`). Dimensions: `length(sel_treat_inds_shifted)` x `R`.
+#' @param gram_inv Numeric matrix; inverse of the Gram matrix for selected
+#'   treatment effect features.
+#' @param tes Numeric vector; all `num_treats` estimated treatment effects
+#'   (original parameterization).
+#' @param cohort_probs_overall Numeric vector; estimated marginal probabilities
+#'   of belonging to each treated cohort P(W=r). Length `R`.
+#' @param first_inds Integer vector; indices of the first treatment effect for
+#'   each cohort.
+#' @param beta_hat_treat_sel Numeric vector; estimated coefficients
+#'   for selected treatment effects.
+#' @param calc_ses Logical; if `TRUE`, calculate standard errors.
+#' @param indep_probs Logical; if `TRUE`, assumes `cohort_probs` (and
+#'   `cohort_probs_overall`) were estimated from an independent sample, leading
+#'   to a different SE formula (sum of variances) compared to when they are
+#'   estimated from the same sample (conservative SE including a covariance term).
+#' @return A list containing:
+#'   \item{att_hat}{Numeric scalar; the estimated overall ATT.}
+#'   \item{att_te_se}{Numeric scalar; the standard error for `att_hat`. NA if
+#'     `calc_ses` is `FALSE`.}
+#'   \item{att_te_se_no_prob}{Numeric scalar; standard error for `att_hat`
+#'     ignoring variability from estimating cohort probabilities (i.e., only
+#'     `att_var_1`). NA if `calc_ses` is `FALSE`.}
+#' @details The overall ATT (`att_hat`) is `cohort_tes %*% cohort_probs`.
+#'   If `calc_ses` is `TRUE`:
+#'   - `att_var_1` (variance from `theta_hat` estimation) is computed using
+#'     `psi_att = psi_mat %*% cohort_probs` and `gram_inv`.
+#'   - `att_var_2` (variance from cohort probability estimation) is computed by
+#'     calling `getSecondVarTermDataApp`.
+#'   - `att_te_se` is `sqrt(att_var_1 + att_var_2)` if `indep_probs` is `TRUE`,
+#'     otherwise it's a conservative SE: `sqrt(att_var_1 + att_var_2 + 2*sqrt(att_var_1 * att_var_2))`.
+#'   - `att_te_se_no_prob` is `sqrt(att_var_1)`.
+#' @keywords internal
+#' @noRd
+getTeResultsOLS <- function(
+	# model,
+	sig_eps_sq,
+	N,
+	T,
+	R,
+	num_treats,
+	cohort_tes,
+	cohort_probs,
+	psi_mat,
+	gram_inv,
+	# sel_treat_inds_shifted,
+	tes,
+	# d_inv_treat_sel,
+	cohort_probs_overall,
+	first_inds,
+	# theta_hat_treat_sel,
+	beta_hat_treat_sel,
+	calc_ses,
+	indep_probs = FALSE
+) {
+	att_hat <- as.numeric(cohort_tes %*% cohort_probs)
+
+	if (calc_ses) {
+		# Get ATT standard error
+		# first variance term: convergence of theta
+		psi_att <- psi_mat %*% cohort_probs
+
+		att_var_1 <- sig_eps_sq *
+			as.numeric(t(psi_att) %*% gram_inv %*% psi_att) /
+			(N * T)
+
+		# Second variance term: convergence of cohort membership probabilities
+		att_var_2 <- getSecondVarTermOLS(
+			cohort_probs = cohort_probs,
+			psi_mat = psi_mat,
+			sel_treat_inds_shifted = sel_treat_inds_shifted,
+			tes = tes,
+			d_inv_treat_sel = d_inv_treat_sel,
+			cohort_probs_overall = cohort_probs_overall,
+			first_inds = first_inds,
+			beta_hat_treat_sel = beta_hat_treat_sel,
+			num_treats = num_treats,
+			N = N,
+			T = T,
+			R = R
+		)
+
+		if (indep_probs) {
+			att_te_se <- sqrt(att_var_1 + att_var_2)
+		} else {
+			att_te_se <- sqrt(
+				att_var_1 +
+					att_var_2 +
+					2 *
+						sqrt(
+							att_var_1 * att_var_2
+						)
+			)
+		}
+
+		att_te_se_no_prob <- sqrt(att_var_1)
+	} else {
+		att_te_se <- NA
+		att_te_se_no_prob <- NA
+	}
+
+	return(list(
+		att_hat = att_hat,
+		att_te_se = att_te_se,
+		att_te_se_no_prob = att_te_se_no_prob
+	))
+}
+
+# getSecondVarTermOLS
+#' @title Calculate Second Variance Term for ATT Standard Error for ETWFE
+#' @description Computes the second component of the variance for the Average
+#'   Treatment Effect on the Treated (ATT). This component accounts for the
+#'   variability due to the estimation of cohort membership probabilities.
+#' @param cohort_probs Numeric vector; estimated probabilities of belonging to
+#'   each treated cohort, conditional on being treated. Length `R`.
+#' @param psi_mat Numeric matrix; a matrix where each column `r` is the `psi_r`
+#'   vector used in calculating the ATT for cohort `r`. Dimensions:
+#'   `length(sel_treat_inds_shifted)` x `R`.
+#' @param sel_treat_inds_shifted Integer vector; indices of the selected
+#'   treatment effects within the `num_treats` block, shifted to start from 1.
+#' @param tes Numeric vector; the estimated treatment effects for all
+#'   `num_treats` possible cohort-time combinations.
+#' @param d_inv_treat_sel Numeric matrix; the relevant block of the inverse
+#'   two-way fusion transformation matrix corresponding to selected treatment
+#'   effects. Dimensions: `num_treats` (or fewer if selection occurs) x
+#'   `length(sel_treat_inds_shifted)`.
+#' @param cohort_probs_overall Numeric vector; estimated marginal probabilities
+#'   of belonging to each treated cohort (P(W=r)). Length `R`.
+#' @param first_inds Integer vector; indices of the first treatment effect for
+#'   each cohort within the `num_treats` block.
+#' @param beta_hat_treat_sel Numeric vector; estimated coefficients
+#' corresponding to estimated treatment effects.
+#' @param num_treats Integer; total number of base treatment effect parameters.
+#' @param N Integer; total number of units.
+#' @param T Integer; total number of time periods.
+#' @param R Integer; total number of treated cohorts.
+#' @return A numeric scalar representing the second variance component for the
+#'   ATT.
+#' @details This function calculates `Sigma_pi_hat`, the covariance matrix of
+#'   the cohort assignment indicators, and a Jacobian matrix. These are then
+#'   combined with `theta_hat_treat_sel` to compute the variance term as
+#'   `T * t(theta_hat_treat_sel) %*% t(jacobian_mat) %*% Sigma_pi_hat %*% jacobian_mat %*%
+#'   theta_hat_treat_sel / (N * T)`. The construction of the Jacobian involves averaging parts of
+#'   `d_inv_treat_sel` corresponding to different cohorts.
+#' @keywords internal
+#' @noRd
+getSecondVarTermOLS <- function(
+	cohort_probs,
+	psi_mat,
+	# sel_treat_inds_shifted,
+	tes,
+	# d_inv_treat_sel,
+	cohort_probs_overall,
+	first_inds,
+	# theta_hat_treat_sel,
+	beta_hat,
+	num_treats,
+	N,
+	T,
+	R
+) {
+	# Get Sigma_pi_hat, the (sample-estimated) covariance matrix for the 
+	# sample proportions (derived from the multinomial distribution)
+	Sigma_pi_hat <- -outer(
+		cohort_probs_overall[1:(R)],
+		cohort_probs_overall[1:(R)]
+	)
+	diag(Sigma_pi_hat) <- cohort_probs_overall[1:R] *
+		(1 - cohort_probs_overall[1:R])
+
+	stopifnot(nrow(Sigma_pi_hat) == R)
+	stopifnot(ncol(Sigma_pi_hat) == R)
+
+	# Gather a list of the indices corresponding to the treatment coefficients
+	# for each cohort. (Will be used to construct the Jacobian matrix.)
+	sel_inds <- list()
+
+	for (r in 1:R) {
+		first_ind_r <- first_inds[r]
+
+		if (r < R) {
+			last_ind_r <- first_inds[r + 1] - 1
+		} else {
+			last_ind_r <- num_treats
+		}
+		stopifnot(last_ind_r >= first_ind_r)
+		sel_inds[[r]] <- first_ind_r:last_ind_r
+		if (r > 1) {
+			stopifnot(min(sel_inds[[r]]) > max(sel_inds[[r - 1]]))
+			stopifnot(length(sel_inds[[r]]) < length(sel_inds[[r - 1]]))
+		}
+	}
+
+	stopifnot(all.equal(unlist(sel_inds), 1:num_treats))
+
+	# Construct Jacobian matrix corresponding to the mapping from the
+	# individual cohort probabilities to the proportions calculated for the ATT.
+	# See Proof of Theorem 6.1 for form.
+	jacobian_mat <- matrix(
+		as.numeric(NA),
+		nrow = R,
+		ncol = R
+	)
+
+	for (r in 1:R) {
+		# All terms in rth column have the same value except the diagonal term
+		col_r_val <- -cohort_probs_overall[r] / sum(cohort_probs_overall)^2
+
+		jacobian_mat[, r] <- rep(col_r_val, R)
+
+		# Diagonal term
+		cons_r <- (sum(cohort_probs_overall) -
+			cohort_probs_overall[r]) /
+			sum(cohort_probs_overall)^2
+
+		jacobian_mat[r, r] <- cons_r
+	}
+
+	stopifnot(all(!is.na(jacobian_mat)))
+
+	# See proof of Theorem D.2 for details.
+
+	# Calculate variance term from Sigma_pi_hat, Jacobian matrix, and beta_hat
+
+	att_var_2 <- T *
+		as.numeric(
+			t(beta_hat) %*%
+				t(jacobian_mat) %*%
+				Sigma_pi_hat %*%
+				jacobian_mat %*%
+				beta_hat
+		) /
+		(N * T)
+
+	return(att_var_2)
 }
