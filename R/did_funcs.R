@@ -3168,7 +3168,11 @@ getCohortATTsFinal <- function(
 #'   fusion penalization is applied to the treatment effects (or when calculating
 #'   SEs as if it were an OLS on selected variables). This vector is used in
 #'   standard error calculations for the cohort's Average Treatment Effect on
-#'   the Treated (ATT).
+#'   the Treated (ATT). In particular, this vector contains the constants
+#'   `1 / (T - r + 1)` that are multiplied by the cohort treatment effects
+#'   at each time, then summed, to get the average treatment effect for cohort
+#'   `r`. The vector `psi_r` places these constants in the correct positions so
+#'   that the inner product works as intended.
 #' @param first_ind_r Integer; the index of the first treatment effect for
 #'   cohort `r` within the `num_treats` block of treatment effects.
 #' @param last_ind_r Integer; the index of the last treatment effect for
@@ -4672,6 +4676,9 @@ etwfe_core <- function(
 
 	rm(res)
 
+	stopifnot(nrow(psi_mat) == num_treats)
+	stopifnot(ncol(psi_mat) == R)
+
 	# if (calc_ses) {
 	# 	stopifnot(nrow(d_inv_treat_sel) == num_treats)
 	# 	stopifnot(ncol(d_inv_treat_sel) == num_treats)
@@ -4688,6 +4695,8 @@ etwfe_core <- function(
 	# sel_treat_inds contains global indices of selected transformed features that are treatment effects
 	theta_hat_treat_sel_for_att <- theta_hat_slopes[sel_treat_inds]
 
+	stopifnot(length(beta_hat_treat_sel_for_att) == num_treats)
+
 	in_sample_te_results <- getTeResultsOLS(
 		sig_eps_sq = sig_eps_sq,
 		N = N,
@@ -4698,12 +4707,12 @@ etwfe_core <- function(
 		cohort_probs = cohort_probs, # In-sample pi_r | treated
 		psi_mat = psi_mat,
 		gram_inv = gram_inv,
-		sel_treat_inds_shifted = 1:num_treats,
+		# sel_treat_inds_shifted = 1:num_treats,
 		tes = tes, # Untransformed treatment effect estimates beta_hat[treat_inds]
-		d_inv_treat_sel = d_inv_treat_sel,
+		# d_inv_treat_sel = d_inv_treat_sel,
 		cohort_probs_overall = cohort_probs_overall, # In-sample pi_r (unconditional on treated)
 		first_inds = first_inds,
-		theta_hat_treat_sel = theta_hat_treat_sel_for_att, # Selected non-zero transformed treat coefs
+		# beta_hat_treat_sel = beta_hat_treat_sel_for_att, # Selected non-zero transformed treat coefs
 		calc_ses = calc_ses,
 		indep_probs = FALSE
 	)
@@ -5303,8 +5312,6 @@ getCohortATTsFinalOLS <- function(
 #'   of belonging to each treated cohort P(W=r). Length `R`.
 #' @param first_inds Integer vector; indices of the first treatment effect for
 #'   each cohort.
-#' @param beta_hat_treat_sel Numeric vector; estimated coefficients
-#'   for selected treatment effects.
 #' @param calc_ses Logical; if `TRUE`, calculate standard errors.
 #' @param indep_probs Logical; if `TRUE`, assumes `cohort_probs` (and
 #'   `cohort_probs_overall`) were estimated from an independent sample, leading
@@ -5345,7 +5352,7 @@ getTeResultsOLS <- function(
 	cohort_probs_overall,
 	first_inds,
 	# theta_hat_treat_sel,
-	beta_hat_treat_sel,
+	# beta_hat_treat_sel,
 	calc_ses,
 	indep_probs = FALSE
 ) {
@@ -5360,16 +5367,21 @@ getTeResultsOLS <- function(
 			as.numeric(t(psi_att) %*% gram_inv %*% psi_att) /
 			(N * T)
 
+		stopifnot(nrow(psi_mat) == num_treats)
+		stopifnot(ncol(psi_mat) == R)
+
+		stopifnot(length(tes) == num_treats)
+
 		# Second variance term: convergence of cohort membership probabilities
 		att_var_2 <- getSecondVarTermOLS(
 			cohort_probs = cohort_probs,
 			psi_mat = psi_mat,
-			sel_treat_inds_shifted = sel_treat_inds_shifted,
+			# sel_treat_inds_shifted = sel_treat_inds_shifted,
 			tes = tes,
-			d_inv_treat_sel = d_inv_treat_sel,
+			# d_inv_treat_sel = d_inv_treat_sel,
 			cohort_probs_overall = cohort_probs_overall,
 			first_inds = first_inds,
-			beta_hat_treat_sel = beta_hat_treat_sel,
+			beta_hat_treat_sel = tes,
 			num_treats = num_treats,
 			N = N,
 			T = T,
@@ -5412,14 +5424,8 @@ getTeResultsOLS <- function(
 #' @param psi_mat Numeric matrix; a matrix where each column `r` is the `psi_r`
 #'   vector used in calculating the ATT for cohort `r`. Dimensions:
 #'   `length(sel_treat_inds_shifted)` x `R`.
-#' @param sel_treat_inds_shifted Integer vector; indices of the selected
-#'   treatment effects within the `num_treats` block, shifted to start from 1.
 #' @param tes Numeric vector; the estimated treatment effects for all
 #'   `num_treats` possible cohort-time combinations.
-#' @param d_inv_treat_sel Numeric matrix; the relevant block of the inverse
-#'   two-way fusion transformation matrix corresponding to selected treatment
-#'   effects. Dimensions: `num_treats` (or fewer if selection occurs) x
-#'   `length(sel_treat_inds_shifted)`.
 #' @param cohort_probs_overall Numeric vector; estimated marginal probabilities
 #'   of belonging to each treated cohort (P(W=r)). Length `R`.
 #' @param first_inds Integer vector; indices of the first treatment effect for
@@ -5449,7 +5455,7 @@ getSecondVarTermOLS <- function(
 	cohort_probs_overall,
 	first_inds,
 	# theta_hat_treat_sel,
-	beta_hat,
+	beta_hat_treat_sel,
 	num_treats,
 	N,
 	T,
@@ -5514,17 +5520,23 @@ getSecondVarTermOLS <- function(
 
 	stopifnot(all(!is.na(jacobian_mat)))
 
-	# See proof of Theorem D.2 for details.
+	stopifnot(nrow(psi_mat) == num_treats)
+	stopifnot(ncol(psi_mat) == R)
 
-	# Calculate variance term from Sigma_pi_hat, Jacobian matrix, and beta_hat
+	stopifnot(length(beta_hat_treat_sel) == num_treats)
+
+	# Finally, calculate variance term for ATT from Sigma_pi_hat, Jacobian
+	# matrix, psi_mat, and beta_hat. See proof of Theorem D.2 for details.
 
 	att_var_2 <- T *
 		as.numeric(
-			t(beta_hat) %*%
+			t(beta_hat_treat_sel) %*%
+				psi_mat
 				t(jacobian_mat) %*%
 				Sigma_pi_hat %*%
 				jacobian_mat %*%
-				beta_hat
+				t(psi_mat) %*% 
+				beta_hat_treat_sel
 		) /
 		(N * T)
 
