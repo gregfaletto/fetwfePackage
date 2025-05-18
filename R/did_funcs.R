@@ -4732,12 +4732,12 @@ etwfe_core <- function(
 			cohort_probs = indep_cohort_probs, # indep pi_r | treated
 			psi_mat = psi_mat,
 			gram_inv = gram_inv,
-			sel_treat_inds_shifted = 1:num_treats,
+			# sel_treat_inds_shifted = 1:num_treats,
 			tes = tes,
-			d_inv_treat_sel = d_inv_treat_sel,
+			# d_inv_treat_sel = d_inv_treat_sel,
 			cohort_probs_overall = indep_cohort_probs_overall, # indep pi_r (unconditional)
 			first_inds = first_inds,
-			theta_hat_treat_sel = theta_hat_treat_sel_for_att,
+			# theta_hat_treat_sel = theta_hat_treat_sel_for_att,
 			calc_ses = calc_ses,
 			indep_probs = TRUE
 		)
@@ -5053,8 +5053,6 @@ prep_for_etwfe_regresion <- function(
 #' @param R Integer; total number of treated cohorts.
 #' @param N Integer; total number of units.
 #' @param T Integer; total number of time periods.
-#' @param calc_ses Logical; if `TRUE`, attempts to calculate standard errors.
-#'   This is typically `TRUE` if `q < 1`.
 #' @param p Integer; total number of parameters in the model.
 #' @param alpha Numeric scalar; significance level for confidence intervals
 #'   (e.g., 0.05 for 95% CIs).
@@ -5352,7 +5350,6 @@ getTeResultsOLS <- function(
 	cohort_probs_overall,
 	first_inds,
 	# theta_hat_treat_sel,
-	# beta_hat_treat_sel,
 	calc_ses,
 	indep_probs = FALSE
 ) {
