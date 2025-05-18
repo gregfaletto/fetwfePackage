@@ -2741,8 +2741,6 @@ estOmegaSqrtInv <- function(y, X_ints, N, T, p) {
 #' @description Computes the second component of the variance for the Average
 #'   Treatment Effect on the Treated (ATT). This component accounts for the
 #'   variability due to the estimation of cohort membership probabilities.
-#' @param cohort_probs Numeric vector; estimated probabilities of belonging to
-#'   each treated cohort, conditional on being treated. Length `R`.
 #' @param psi_mat Numeric matrix; a matrix where each column `r` is the `psi_r`
 #'   vector used in calculating the ATT for cohort `r`. Dimensions:
 #'   `length(sel_treat_inds_shifted)` x `R`.
@@ -2776,7 +2774,7 @@ estOmegaSqrtInv <- function(y, X_ints, N, T, p) {
 #' @keywords internal
 #' @noRd
 getSecondVarTermDataApp <- function(
-	cohort_probs,
+	# cohort_probs,
 	psi_mat,
 	sel_treat_inds_shifted,
 	tes,
@@ -3685,7 +3683,7 @@ getTeResults2 <- function(
 
 		# Second variance term: convergence of cohort membership probabilities
 		att_var_2 <- getSecondVarTermDataApp(
-			cohort_probs = cohort_probs,
+			# cohort_probs = cohort_probs,
 			psi_mat = psi_mat,
 			sel_treat_inds_shifted = sel_treat_inds_shifted,
 			tes = tes,
@@ -5381,7 +5379,7 @@ getTeResultsOLS <- function(
 			# d_inv_treat_sel = d_inv_treat_sel,
 			cohort_probs_overall = cohort_probs_overall,
 			first_inds = first_inds,
-			beta_hat_treat_sel = tes,
+			# beta_hat_treat_sel = tes,
 			num_treats = num_treats,
 			N = N,
 			T = T,
@@ -5419,8 +5417,6 @@ getTeResultsOLS <- function(
 #' @description Computes the second component of the variance for the Average
 #'   Treatment Effect on the Treated (ATT). This component accounts for the
 #'   variability due to the estimation of cohort membership probabilities.
-#' @param cohort_probs Numeric vector; estimated probabilities of belonging to
-#'   each treated cohort, conditional on being treated. Length `R`.
 #' @param psi_mat Numeric matrix; a matrix where each column `r` is the `psi_r`
 #'   vector used in calculating the ATT for cohort `r`. Dimensions:
 #'   `length(sel_treat_inds_shifted)` x `R`.
@@ -5430,8 +5426,6 @@ getTeResultsOLS <- function(
 #'   of belonging to each treated cohort (P(W=r)). Length `R`.
 #' @param first_inds Integer vector; indices of the first treatment effect for
 #'   each cohort within the `num_treats` block.
-#' @param beta_hat_treat_sel Numeric vector; estimated coefficients
-#' corresponding to estimated treatment effects.
 #' @param num_treats Integer; total number of base treatment effect parameters.
 #' @param N Integer; total number of units.
 #' @param T Integer; total number of time periods.
@@ -5447,7 +5441,7 @@ getTeResultsOLS <- function(
 #' @keywords internal
 #' @noRd
 getSecondVarTermOLS <- function(
-	cohort_probs,
+	# cohort_probs,
 	psi_mat,
 	# sel_treat_inds_shifted,
 	tes,
@@ -5455,7 +5449,7 @@ getSecondVarTermOLS <- function(
 	cohort_probs_overall,
 	first_inds,
 	# theta_hat_treat_sel,
-	beta_hat_treat_sel,
+	# beta_hat_treat_sel,
 	num_treats,
 	N,
 	T,
@@ -5523,20 +5517,20 @@ getSecondVarTermOLS <- function(
 	stopifnot(nrow(psi_mat) == num_treats)
 	stopifnot(ncol(psi_mat) == R)
 
-	stopifnot(length(beta_hat_treat_sel) == num_treats)
+	stopifnot(length(tes) == num_treats)
 
 	# Finally, calculate variance term for ATT from Sigma_pi_hat, Jacobian
 	# matrix, psi_mat, and beta_hat. See proof of Theorem D.2 for details.
 
 	att_var_2 <- T *
 		as.numeric(
-			t(beta_hat_treat_sel) %*%
+			t(tes) %*%
 				psi_mat
 				t(jacobian_mat) %*%
 				Sigma_pi_hat %*%
 				jacobian_mat %*%
 				t(psi_mat) %*% 
-				beta_hat_treat_sel
+				tes
 		) /
 		(N * T)
 
