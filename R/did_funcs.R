@@ -4658,7 +4658,7 @@ etwfe_core <- function(
 		num_treats = num_treats,
 		first_inds = first_inds,
 		c_names = c_names,
-		tes = tes, # Untransformed treatment effect estimates (beta_hat[treat_inds])
+		tes = tes, # Treatment effect estimates (beta_hat[treat_inds])
 		sig_eps_sq = sig_eps_sq,
 		R = R,
 		N = N,
