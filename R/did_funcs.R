@@ -4529,6 +4529,10 @@ etwfe_core <- function(
 
 	rm(ret)
 
+	stopifnot(length(c_names) == R)
+
+	stop("remove any d_inverse from etwfe implementation of prep_for_etwfe_regresion()")
+
 	res <- prep_for_etwfe_regresion(
 		verbose=verbose,
 		sig_eps_sq=sig_eps_sq,
@@ -4564,7 +4568,7 @@ etwfe_core <- function(
 	#
 	#
 
-	df <- data.frame(y=y_final, X_final)
+	df <- data.frame(y=y_final, X_final_scaled)
 
 	t0 <- Sys.time()
 
@@ -4610,8 +4614,6 @@ etwfe_core <- function(
 
 	# ret$beta_hat <- beta_hat
 
-	stopifnot(length(c_names) == R)
-
 	# Indices corresponding to base treatment effects
 	treat_inds <- getTreatInds(R = R, T = T, d = d, num_treats = num_treats)
 
@@ -4651,6 +4653,10 @@ etwfe_core <- function(
 	# errors
 	#
 	#
+
+	# TODO: get correct X matrix 
+
+	stop("need correct X_final to calculate gram matrix")
 
 	res <- getCohortATTsFinalOLS(
 		X_final = X_final, # This is X_mod * GLS_transform_matrix
