@@ -503,6 +503,9 @@ fetwfe_core <- function(
 	cohort_probs_overall <- res$cohort_probs_overall
 	indep_cohort_probs <- res$indep_cohort_probs
 	indep_cohort_probs_overall <- res$indep_cohort_probs_overall
+	X_final <- res$X_final
+
+	rm(res)
 
 	#
 	#
@@ -4531,8 +4534,6 @@ etwfe_core <- function(
 
 	stopifnot(length(c_names) == R)
 
-	stop("remove any d_inverse from etwfe implementation of prep_for_etwfe_regresion()")
-
 	res <- prep_for_etwfe_regresion(
 		verbose=verbose,
 		sig_eps_sq=sig_eps_sq,
@@ -4550,7 +4551,8 @@ etwfe_core <- function(
 		first_inds=first_inds,
 		in_sample_counts=in_sample_counts,
 		indep_count_data_available=indep_count_data_available,
-		indep_counts=indep_counts
+		indep_counts=indep_counts,
+		is_fetwfe=FALSE
 	)
 
 	X_final_scaled <- res$X_final_scaled
@@ -4561,6 +4563,7 @@ etwfe_core <- function(
 	cohort_probs_overall <- res$cohort_probs_overall
 	indep_cohort_probs <- res$indep_cohort_probs
 	indep_cohort_probs_overall <- res$indep_cohort_probs_overall
+	X_final <- res$X_final
 
 	#
 	#
@@ -4653,10 +4656,6 @@ etwfe_core <- function(
 	# errors
 	#
 	#
-
-	# TODO: get correct X matrix 
-
-	stop("need correct X_final to calculate gram matrix")
 
 	res <- getCohortATTsFinalOLS(
 		X_final = X_final, # This is X_mod * GLS_transform_matrix
@@ -4898,13 +4897,17 @@ prep_for_etwfe_regresion <- function(
 	add_ridge,
 	first_inds,
 	in_sample_counts,
-	indep_count_data_available
-	indep_counts=NA
+	indep_count_data_available,
+	indep_counts=NA,
+	is_fetwfe=TRUE
 	){
 	if (verbose) {
 		message("Getting omega sqrt inverse estimate...")
 		t0 <- Sys.time()
 	}
+
+	stopifnot(ncol(X_final) == p)
+	stopifnot(ncol(X_final_scaled) == p)
 
 	if (is.na(sig_eps_sq) | is.na(sig_eps_c_sq)) {
 		# Get omega_sqrt_inv matrix to multiply y and X_mod by on the left
@@ -4954,27 +4957,35 @@ prep_for_etwfe_regresion <- function(
 	scale_scale <- attr(X_final_scaled, "scaled:scale")
 
 	if (add_ridge) {
-		# Add rows to X_final. First need to get D^{-1}:
-		D_inverse <- genFullInvFusionTransformMat(
-			first_inds = first_inds,
-			T = T,
-			R = R,
-			d = d,
-			num_treats = num_treats
-		)
 
-		stopifnot(ncol(D_inverse) == ncol(X_final))
-		stopifnot(ncol(D_inverse) == ncol(X_final_scaled))
+		# Initialize identity matrix
+		mat_to_multiply <- diag(p)
 
-		# Now add rows
+		if(is_fetwfe){
+			# First need to get D^{-1}:
+			D_inverse <- genFullInvFusionTransformMat(
+				first_inds = first_inds,
+				T = T,
+				R = R,
+				d = d,
+				num_treats = num_treats
+			)
+
+			stopifnot(ncol(D_inverse) == p)
+			stopifnot(nrow(D_inverse) == p)
+
+			mat_to_multiply <- D_inverse
+		}
+		
+		# Now add rows to X_final_scaled
 		lambda_ridge <- 0.00001 *
 			(sig_eps_sq + sig_eps_c_sq) *
 			sqrt(p / (N * T))
 
-		X_final_scaled <- rbind(X_final_scaled, sqrt(lambda_ridge) * D_inverse)
-		y_final <- c(y_final, rep(0, nrow(D_inverse)))
+		X_final_scaled <- rbind(X_final_scaled, sqrt(lambda_ridge) * mat_to_multiply)
+		y_final <- c(y_final, rep(0, p))
 
-		stopifnot(nrow(X_final_scaled) == length(y_final))
+		stopifnot(length(y_final) == N * T + p)
 		stopifnot(nrow(X_final_scaled) == N * T + p)
 	}
 
@@ -5028,6 +5039,7 @@ prep_for_etwfe_regresion <- function(
 	}
 
 	return(list(X_final_scaled=X_final_scaled,
+		X_final=X_final,
 		y_final=y_final,
 		scale_center=scale_center,
 		scale_scale=scale_scale,
