@@ -504,6 +504,7 @@ fetwfe_core <- function(
 	indep_cohort_probs <- res$indep_cohort_probs
 	indep_cohort_probs_overall <- res$indep_cohort_probs_overall
 	X_final <- res$X_final
+	lambda_ridge <- res$lambda_ridge
 
 	rm(res)
 
@@ -662,7 +663,8 @@ fetwfe_core <- function(
 			T = T,
 			R = R,
 			d = d,
-			p = p
+			p = p,
+			calc_ses=q<1
 		))
 	}
 
@@ -762,7 +764,8 @@ fetwfe_core <- function(
 			T = T,
 			R = R,
 			d = d,
-			p = p
+			p = p,
+			calc_ses=q<1
 		))
 	}
 
@@ -885,6 +888,10 @@ fetwfe_core <- function(
 	in_sample_att_se <- in_sample_te_results$att_te_se
 	in_sample_att_se_no_prob <- in_sample_te_results$att_te_se_no_prob
 
+	if((q < 1) & calc_ses){
+		stopifnot(!is.na(in_sample_att_se))
+	}
+
 	if (indep_count_data_available) {
 		indep_te_results <- getTeResults2(
 			sig_eps_sq = sig_eps_sq,
@@ -945,7 +952,8 @@ fetwfe_core <- function(
 		T = T,
 		R = R,
 		d = d,
-		p = p
+		p = p,
+		calc_ses=calc_ses
 	))
 }
 
@@ -3454,9 +3462,9 @@ getGramInv <- function(
 	X_final,
 	treat_inds,
 	num_treats,
-	calc_ses
+	calc_ses,
 	sel_feat_inds=NA,
-	sel_treat_inds_shifted=NA,
+	sel_treat_inds_shifted=NA
 ) {
 	stopifnot(nrow(X_final) == N * T)
 	if(any(!is.na(sel_feat_inds))){
@@ -3682,9 +3690,23 @@ getTeResults2 <- function(
 		# first variance term: convergence of theta
 		psi_att <- psi_mat %*% cohort_probs
 
+		print("psi_mat:")
+		print(psi_mat)
+
+		print("cohort_probs:")
+		print(cohort_probs)
+
+		print("psi_att:")
+		print(psi_att)
+
+		print("gram_inv:")
+		print(gram_inv)
+
 		att_var_1 <- sig_eps_sq *
 			as.numeric(t(psi_att) %*% gram_inv %*% psi_att) /
 			(N * T)
+
+		stopifnot(!is.na(att_var_1))
 
 		# Second variance term: convergence of cohort membership probabilities
 		att_var_2 <- getSecondVarTermDataApp(
@@ -3701,6 +3723,8 @@ getTeResults2 <- function(
 			T = T,
 			R = R
 		)
+
+		stopifnot(!is.na(att_var_2))
 
 		if (indep_probs) {
 			att_te_se <- sqrt(att_var_1 + att_var_2)
@@ -4275,8 +4299,9 @@ prep_for_etwfe_core <- function(
 	unit_var,
 	treatment,
 	covs,
-	response,
-	verbose){
+	verbose,
+	indep_count_data_available,
+	indep_counts){
 	# Subset pdata to include only the key columns
 	pdata <- pdata[, c(response, time_var, unit_var, treatment, covs)]
 
@@ -4564,6 +4589,9 @@ etwfe_core <- function(
 	indep_cohort_probs <- res$indep_cohort_probs
 	indep_cohort_probs_overall <- res$indep_cohort_probs_overall
 	X_final <- res$X_final
+	lambda_ridge <- res$lambda_ridge
+
+	rm(res)
 
 	#
 	#
@@ -4906,9 +4934,6 @@ prep_for_etwfe_regresion <- function(
 		t0 <- Sys.time()
 	}
 
-	stopifnot(ncol(X_final) == p)
-	stopifnot(ncol(X_final_scaled) == p)
-
 	if (is.na(sig_eps_sq) | is.na(sig_eps_c_sq)) {
 		# Get omega_sqrt_inv matrix to multiply y and X_mod by on the left
 		omega_res <- estOmegaSqrtInv(
@@ -4945,6 +4970,8 @@ prep_for_etwfe_regresion <- function(
 	y_final <- kronecker(diag(N), sqrt(sig_eps_sq) * Omega_sqrt_inv) %*% y
 	X_final <- kronecker(diag(N), sqrt(sig_eps_sq) * Omega_sqrt_inv) %*% X_mod
 
+	stopifnot(ncol(X_final) == p)
+
 	#
 	#
 	# Optional: if using ridge regularization on untransformed coefficients,
@@ -4953,6 +4980,7 @@ prep_for_etwfe_regresion <- function(
 	#
 
 	X_final_scaled <- my_scale(X_final)
+	stopifnot(ncol(X_final_scaled) == p)
 	scale_center <- attr(X_final_scaled, "scaled:center")
 	scale_scale <- attr(X_final_scaled, "scaled:scale")
 
@@ -4987,6 +5015,8 @@ prep_for_etwfe_regresion <- function(
 
 		stopifnot(length(y_final) == N * T + p)
 		stopifnot(nrow(X_final_scaled) == N * T + p)
+	} else{
+		lambda_ridge <- as.numeric(NA)
 	}
 
 	#
@@ -5046,7 +5076,8 @@ prep_for_etwfe_regresion <- function(
 		cohort_probs=cohort_probs,
 		cohort_probs_overall=cohort_probs_overall,
 		indep_cohort_probs=indep_cohort_probs,
-		indep_cohort_probs_overall=indep_cohort_probs_overall)
+		indep_cohort_probs_overall=indep_cohort_probs_overall,
+		lambda_ridge=lambda_ridge)
 	)
 }
 
@@ -5546,7 +5577,7 @@ getSecondVarTermOLS <- function(
 	att_var_2 <- T *
 		as.numeric(
 			t(tes) %*%
-				psi_mat
+				psi_mat %*%
 				t(jacobian_mat) %*%
 				Sigma_pi_hat %*%
 				jacobian_mat %*%

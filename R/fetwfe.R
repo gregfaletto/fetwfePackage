@@ -243,15 +243,16 @@ fetwfe <- function(
 
 	rm(ret)
 
-	res_1 <- prep_for_etwfe_core(
+	res1 <- prep_for_etwfe_core(
 		pdata=pdata,
 		response=response,
 		time_var=time_var,
 		unit_var=unit_var,
 		treatment=treatment,
 		covs=covs,
-		response=response,
-		verbose=verbose
+		verbose=verbose,
+		indep_count_data_available=indep_count_data_available,
+		indep_counts=indep_counts
 	)
 
 	pdata <- res1$pdata
@@ -268,7 +269,7 @@ fetwfe <- function(
 	R <- res1$R
 
 	rm(res1)
-	
+
 	res <- fetwfe_core(
 		X_ints = X_ints,
 		y = y,
@@ -291,21 +292,30 @@ fetwfe <- function(
 		add_ridge = add_ridge
 	)
 
+	
 	if (indep_count_data_available) {
-		if (q < 1) {
-			stopifnot(!is.na(res$indep_att_hat))
+
+		stopifnot(!is.na(res$indep_att_hat))
+
+		if ((q < 1) & res$calc_ses) {
 			stopifnot(!is.na(res$indep_att_se))
 		}
+		
 		stopifnot(all(!is.na(res$indep_cohort_probs)))
 		att_hat <- res$indep_att_hat
 		att_se <- res$indep_att_se
 		cohort_probs <- res$indep_cohort_probs
 	} else {
+		stopifnot(!is.na(res$in_sample_att_hat))
+
+		if ((q < 1) & res$calc_ses) {
+			stopifnot(!is.na(res$in_sample_att_se))
+		}
+
 		att_hat <- res$in_sample_att_hat
 		att_se <- res$in_sample_att_se
 		cohort_probs <- res$cohort_probs
 	}
-
 	return(list(
 		att_hat = att_hat,
 		att_se = att_se,
@@ -332,7 +342,8 @@ fetwfe <- function(
 		T = res$T,
 		R = res$R,
 		d = res$d,
-		p = res$p
+		p = res$p,
+		calc_ses = res$calc_ses
 	))
 }
 
@@ -1693,8 +1704,9 @@ etwfe <- function(
 		unit_var=unit_var,
 		treatment=treatment,
 		covs=covs,
-		response=response,
-		verbose=verbose
+		verbose=verbose,
+		indep_count_data_available=indep_count_data_available,
+		indep_counts=indep_counts
 	)
 
 	pdata <- res1$pdata
@@ -1735,10 +1747,9 @@ etwfe <- function(
 	)
 
 	if (indep_count_data_available) {
-		if (q < 1) {
-			stopifnot(!is.na(res$indep_att_hat))
-			stopifnot(!is.na(res$indep_att_se))
-		}
+
+		stopifnot(!is.na(res$indep_att_hat))
+		stopifnot(!is.na(res$indep_att_se))
 		stopifnot(all(!is.na(res$indep_cohort_probs)))
 		att_hat <- res$indep_att_hat
 		att_se <- res$indep_att_se

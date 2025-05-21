@@ -478,7 +478,9 @@ test_that("fetwfe returns att_se for q < 1 and att_se is NA for q >= 1", {
 		q = 0.5,
 		verbose = FALSE
 	)
+	expect_true(result1$calc_ses)
 	expect_false(is.na(result1$att_se))
+	
 
 	result2 <- fetwfe(
 		pdata = df,
@@ -490,6 +492,7 @@ test_that("fetwfe returns att_se for q < 1 and att_se is NA for q >= 1", {
 		q = 2, # ridge-like penalty, where SE is not computed
 		verbose = FALSE
 	)
+	expect_false(result2$calc_ses)
 	expect_true(is.na(result2$att_se))
 })
 
@@ -926,10 +929,10 @@ test_that("processFactors processes factor covariates correctly", {
 	res <- processFactors(df, c("cov1", "cov2"))
 
 	# The original factor "cov2" should be removed from pdata.
-	expect_false("cov2" %in% colnames(res$pdata))
+	expect_true(!("cov2" %in% colnames(res$pdata)))
 
 	# The new covariate names (in res$covs) should not include "cov2" but should include dummy names.
-	expect_false("cov2" %in% res$covs)
+	expect_true(!("cov2" %in% res$covs))
 	expect_true(any(grepl("cov2_", res$covs)))
 
 	# Also, check that the number of covariates is: 1 (for cov1) plus (nlevels(cov2)-1).
@@ -967,7 +970,7 @@ test_that("fetwfe handles factor covariates appropriately", {
 
 	# (Optional) Run processFactors() separately and verify that the new dummy names are returned.
 	pf_res <- processFactors(df, c("cov1", "cov2"))
-	expect_false("cov2" %in% pf_res$covs)
+	expect_true(!("cov2" %in% pf_res$covs))
 	expect_true(any(grepl("cov2_", pf_res$covs)))
 })
 
