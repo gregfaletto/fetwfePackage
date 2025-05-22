@@ -956,7 +956,7 @@ test_that("tibbles work as input to fewtfe", {
 # Test 31: Error when a cohort contains fewer than d + 1 units
 # ------------------------------------------------------------------------------
 test_that("etwfe throws error when a cohort contains fewer than d + 1 units", {
-	df <- generate_panel_data(N = 30, T = 5, R = 9, seed = 123)
+	df <- generate_panel_data(N = 30, T = 10, R = 9, seed = 123)
 
 	expect_error(
 		etwfe(
