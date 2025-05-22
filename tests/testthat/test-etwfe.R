@@ -671,7 +671,7 @@ test_that("processCovs handles empty covariate vector correctly", {
 		time_var = "time",
 		covs = character(0),
 		resp_var = "y",
-		T = 10,
+		T = 5,
 		verbose = TRUE
 	)
 
