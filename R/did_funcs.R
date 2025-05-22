@@ -4611,15 +4611,18 @@ etwfe_core <- function(
 
 	df <- data.frame(y=y_final, X_final_scaled)
 
+	stopifnot(all(!is.na(df)))
+	stopifnot("y" %in% colnames(df))
+
 	t0 <- Sys.time()
 
-	fit <- lm(y ~., df)
+	# Response already centered; no intercept needed
+	fit <- lm(y ~. + 0, df)
 
-	coefs <- coef(fit)
+	beta_hat_slopes <- coef(fit)
 
-	stopifnot(length(coefs) == p + 1)
-
-	beta_hat_slopes <- coefs[2:(p + 1)]
+	stopifnot(length(beta_hat_slopes) == p)
+	stopifnot(all(!is.na(beta_hat_slopes)))
 
 	# first_treat_ind <- model$coefs_obj$R + model$coefs_obj$T - 1 + model$coefs_obj$d + model$coefs_obj$R*model$coefs_obj$d +
 	# 	(model$coefs_obj$T - 1)*model$coefs_obj$d + 1
@@ -4680,10 +4683,13 @@ etwfe_core <- function(
 	# by 1 + lambda_ridge, similar to suggestion in original elastic net paper.
 	if (add_ridge) {
 		beta_hat_slopes <- beta_hat_slopes * (1 + lambda_ridge)
+		stopifnot(all(!is.na(beta_hat_slopes)))
 	}
 
 	# Get actual estimated treatment effects (in original, untransformed space)
 	tes <- beta_hat_slopes[treat_inds]
+
+	stopifnot(all(!is.na(tes)))
 
 	stopifnot(length(tes) == num_treats)
 
