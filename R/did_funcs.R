@@ -3492,7 +3492,7 @@ getGramInv <- function(
 		eigen(gram, symmetric = TRUE, only.values = TRUE)$values
 	)
 
-	if (min_gram_eigen < 10^(-12)) {
+	if (min_gram_eigen < 10^(-16)) {
 		warning(
 			"Gram matrix corresponding to selected features is not invertible. Assumptions needed for inference are not satisfied. Standard errors will not be calculated."
 		)
@@ -4826,7 +4826,8 @@ etwfe_core <- function(
 		T = T,
 		R = R,
 		d = d,
-		p = p
+		p = p,
+		calc_ses = calc_ses
 	))
 }
 

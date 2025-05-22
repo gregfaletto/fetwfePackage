@@ -450,6 +450,7 @@ test_that("etwfe returns att_se", {
 		response = "y",
 		verbose = FALSE
 	)
+
 	expect_true(result1$calc_ses)
 	expect_false(is.na(result1$att_se))
 

@@ -1772,6 +1772,7 @@ etwfe <- function(
 		T = res$T,
 		R = res$R,
 		d = res$d,
-		p = res$p
+		p = res$p,
+		calc_ses = res$calc_ses
 	))
 }
