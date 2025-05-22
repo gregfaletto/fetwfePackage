@@ -1720,6 +1720,23 @@ etwfe <- function(
 
 	rm(res1)
 
+	warning_flag <- FALSE
+
+	for(r in 1:(R + 1)){
+		if(in_sample_counts[r] < d + 1){
+			if(add_ridge){
+				warning_flag <- TRUE
+			} else{
+				stop("At least one cohort contains fewer than d + 1 units. The design matrix is rank-deficient. Calculating standard errors will not be possible, and estimating treatment effects is only possible using add_ridge = TRUE.")
+			}
+
+		}
+	}
+
+	if(warning_flag){
+		warning("At least one cohort contains fewer than d + 1 units. The design matrix is rank-deficient. Calculating standard errors will not be possible, and estimating treatment effects is only possible using add_ridge = TRUE.")
+	}
+
 	res <- etwfe_core(
 		X_ints = X_ints,
 		y = y,
