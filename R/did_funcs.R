@@ -505,6 +505,8 @@ fetwfe_core <- function(
 	indep_cohort_probs_overall <- res$indep_cohort_probs_overall
 	X_final <- res$X_final
 	lambda_ridge <- res$lambda_ridge
+	sig_eps_sq <- res$sig_eps_sq
+	sig_eps_c_sq <- res$sig_eps_c_sq
 
 	rm(res)
 
@@ -3683,24 +3685,18 @@ getTeResults2 <- function(
 	calc_ses,
 	indep_probs = FALSE
 ) {
+
+	stopifnot(all(!is.na(cohort_probs)))
+
 	att_hat <- as.numeric(cohort_tes %*% cohort_probs)
 
 	if (calc_ses) {
+		stopifnot(all(!is.na(psi_mat)))
+		stopifnot(!is.na(sig_eps_sq))
+		stopifnot(all(!is.na(gram_inv)))
 		# Get ATT standard error
 		# first variance term: convergence of theta
 		psi_att <- psi_mat %*% cohort_probs
-
-		print("psi_mat:")
-		print(psi_mat)
-
-		print("cohort_probs:")
-		print(cohort_probs)
-
-		print("psi_att:")
-		print(psi_att)
-
-		print("gram_inv:")
-		print(gram_inv)
 
 		att_var_1 <- sig_eps_sq *
 			as.numeric(t(psi_att) %*% gram_inv %*% psi_att) /
@@ -4590,6 +4586,8 @@ etwfe_core <- function(
 	indep_cohort_probs_overall <- res$indep_cohort_probs_overall
 	X_final <- res$X_final
 	lambda_ridge <- res$lambda_ridge
+	sig_eps_sq <- res$sig_eps_sq
+	sig_eps_c_sq <- res$sig_eps_c_sq
 
 	rm(res)
 
@@ -5077,6 +5075,8 @@ prep_for_etwfe_regresion <- function(
 		cohort_probs_overall=cohort_probs_overall,
 		indep_cohort_probs=indep_cohort_probs,
 		indep_cohort_probs_overall=indep_cohort_probs_overall,
+		sig_eps_sq=sig_eps_sq,
+		sig_eps_c_sq=sig_eps_c_sq,
 		lambda_ridge=lambda_ridge)
 	)
 }
