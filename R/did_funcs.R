@@ -4617,12 +4617,16 @@ etwfe_core <- function(
 	t0 <- Sys.time()
 
 	# Response already centered; no intercept needed
-	fit <- lm(y ~. + 0, df)
+	fit <- lm(y ~., df)
 
-	beta_hat_slopes <- coef(fit)
+	coefs <- coef(fit)
+
+	stopifnot(length(coefs) == p + 1)
+	stopifnot(all(!is.na(coefs)))
+
+	beta_hat_slopes <- coefs[2:(p+1)]
 
 	stopifnot(length(beta_hat_slopes) == p)
-	stopifnot(all(!is.na(beta_hat_slopes)))
 
 	# first_treat_ind <- model$coefs_obj$R + model$coefs_obj$T - 1 + model$coefs_obj$d + model$coefs_obj$R*model$coefs_obj$d +
 	# 	(model$coefs_obj$T - 1)*model$coefs_obj$d + 1
