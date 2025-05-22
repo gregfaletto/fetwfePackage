@@ -430,7 +430,7 @@ test_that("etwfe errors when data has fewer than 4 rows", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 14: Test that the function returns a standard error
+# Test 13: Test that the function returns a standard error
 # ------------------------------------------------------------------------------
 test_that("etwfe returns att_se", {
 	df <- generate_panel_data(N = 30, T = 5, R = 2, seed = 123)
@@ -451,7 +451,7 @@ test_that("etwfe returns att_se", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 15: Test that a warning is thrown when all covariates are constant.
+# Test 14: Test that a warning is thrown when all covariates are constant.
 # ------------------------------------------------------------------------------
 test_that("etwfe warns when all covariates are removed due to constant values", {
 	df_const <- generate_panel_data(N = 30, T = 5, R = 2, seed = 101)
@@ -476,7 +476,7 @@ test_that("etwfe warns when all covariates are removed due to constant values", 
 })
 
 # ------------------------------------------------------------------------------
-# Test 16: Test that the overall ATT (att_hat) is numeric and non-missing.
+# Test 15: Test that the overall ATT (att_hat) is numeric and non-missing.
 # ------------------------------------------------------------------------------
 test_that("etwfe returns a valid numeric overall ATT", {
 	df <- generate_panel_data(N = 30, T = 5, R = 2, seed = 202)
@@ -497,7 +497,7 @@ test_that("etwfe returns a valid numeric overall ATT", {
 
 
 # ------------------------------------------------------------------------------
-# Test 17: Test that function works on a minimal data set
+# Test 16: Test that function works on a minimal data set
 # ------------------------------------------------------------------------------
 test_that("etwfe works on a minimal valid dataset", {
 	# Create a balanced panel with N = 3 units and T = 3 time periods.
@@ -520,7 +520,7 @@ test_that("etwfe works on a minimal valid dataset", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 18: Test that minimal data set requires provided noise variance
+# Test 17: Test that minimal data set requires provided noise variance
 # ------------------------------------------------------------------------------
 test_that("minimal data set requires provided noise variance", {
 	# Create a balanced panel with N = 3 units and T = 3 time periods.
@@ -541,7 +541,7 @@ test_that("minimal data set requires provided noise variance", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 19: Test that function works on only two cohorts
+# Test 18: Test that function works on only two cohorts
 # ------------------------------------------------------------------------------
 test_that("etwfe works on only two cohorts", {
 	# Create a balanced panel with N = 6 units and T = 5 time periods.
@@ -562,7 +562,7 @@ test_that("etwfe works on only two cohorts", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 20: Test that at least 2 treated cohorts requires
+# Test 19: Test that at least 2 treated cohorts requires
 # ------------------------------------------------------------------------------
 test_that("at least two treated cohorts required", {
 	# Create a balanced panel with N = 3 units and T = 3 time periods.
@@ -584,7 +584,7 @@ test_that("at least two treated cohorts required", {
 
 
 # ------------------------------------------------------------------------------
-# Test 21: Overall ATT standard error is computed (non‐zero)
+# Test 20: Overall ATT standard error is computed (non‐zero)
 # ------------------------------------------------------------------------------
 test_that("Overall ATT standard error is non-negative", {
 	df <- generate_panel_data(N = 30, T = 5, R = 2, seed = 303)
@@ -607,7 +607,7 @@ test_that("Overall ATT standard error is non-negative", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 22: Cohort-specific treatment effect standard errors are computed,
+# Test 21: Cohort-specific treatment effect standard errors are computed,
 # nonnegative, and match the number of treated cohorts.
 # ------------------------------------------------------------------------------
 test_that("Cohort-specific standard errors are computed correctly", {
@@ -631,7 +631,7 @@ test_that("Cohort-specific standard errors are computed correctly", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 23: The estimator works when no covariates are provided.
+# Test 22: The estimator works when no covariates are provided.
 # (processCovs() should issue a warning but continue.)
 # ------------------------------------------------------------------------------
 test_that("Estimator works with no covariates", {
@@ -658,7 +658,7 @@ test_that("Estimator works with no covariates", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 24: processCovs() properly handles an empty covariate vector.
+# Test 23: processCovs() properly handles an empty covariate vector.
 # ------------------------------------------------------------------------------
 test_that("processCovs handles empty covariate vector correctly", {
 	df <- generate_panel_data(N = 30, T = 5, R = 2, seed = 707)
@@ -680,7 +680,7 @@ test_that("processCovs handles empty covariate vector correctly", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 25: Overall ATT and cohort-specific estimates are finite and numeric.
+# Test 24: Overall ATT and cohort-specific estimates are finite and numeric.
 # ------------------------------------------------------------------------------
 test_that("Overall and cohort-specific treatment effects are valid", {
 	df <- generate_panel_data(N = 30, T = 5, R = 2, seed = 808)
@@ -705,7 +705,7 @@ test_that("Overall and cohort-specific treatment effects are valid", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 26: Second test when no covariates are provided.
+# Test 25: Second test when no covariates are provided.
 # (processCovs() should issue a warning but continue.)
 # ------------------------------------------------------------------------------
 test_that("Estimator works with no covariates again", {
@@ -784,7 +784,7 @@ test_that("Estimator works with no covariates again", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 27: Test that adding ridge regularization works
+# Test 26: Test that adding ridge regularization works
 # ------------------------------------------------------------------------------
 test_that("adding ridge regularization to etwfe works", {
 	df <- generate_panel_data(N = 30, T = 5, R = 2, seed = 202)
@@ -845,7 +845,7 @@ test_that("data application works with ridge penalty", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 28: Test that processFactors() converts factor covariates to dummies
+# Test 27: Test that processFactors() converts factor covariates to dummies
 # ------------------------------------------------------------------------------
 test_that("processFactors processes factor covariates correctly", {
 	set.seed(987)
@@ -868,7 +868,7 @@ test_that("processFactors processes factor covariates correctly", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 29: Test that etwfe() handles factor covariates appropriately
+# Test 28: Test that etwfe() handles factor covariates appropriately
 # ------------------------------------------------------------------------------
 test_that("etwfe handles factor covariates appropriately", {
 	df <- generate_panel_data(N = 30, T = 5, R = 2, seed = 123)
@@ -901,7 +901,7 @@ test_that("etwfe handles factor covariates appropriately", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 30: Check that tibbles work
+# Test 29: Check that tibbles work
 # ------------------------------------------------------------------------------
 test_that("tibbles work as input to fewtfe", {
 	df <- generate_panel_data(N = 30, T = 5, R = 2, seed = 123) # uses N = 30, T = 10 by default
@@ -953,7 +953,7 @@ test_that("tibbles work as input to fewtfe", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 31: Error when a cohort contains fewer than d + 1 units
+# Test 30: Error when a cohort contains fewer than d + 1 units
 # ------------------------------------------------------------------------------
 test_that("etwfe throws error when a cohort contains fewer than d + 1 units", {
 	df <- generate_panel_data(N = 30, T = 10, R = 9, seed = 123)
