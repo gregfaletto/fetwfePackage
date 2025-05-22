@@ -91,7 +91,7 @@ getting a reasonable range of \code{lambda} values for grid search.)}
 mentioned above, for \code{q <= 1} ideally this value is close to 0.}
 \item{lambda.min}{Either the provided \code{lambda.min} or the one
 that was used, if a value wasn't provided.} \item{lambda.min_model_size}{The
-size of the selected model corresponding \code{lambda.min} (for \code{q <= 1}, this
+size of the selected model corresponding to \code{lambda.min} (for \code{q <= 1}, this
 will be the largest model size). As mentioned above, for \code{q <= 1} ideally
 this value is close to \code{p}.}\item{lambda_star}{The value of \code{lambda} chosen
 by BIC. If this value is close to \code{lambda.min} or \code{lambda.max}, that could

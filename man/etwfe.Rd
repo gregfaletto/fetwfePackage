@@ -96,12 +96,10 @@ Default is FALSE.}
 \value{
 A named list with the following elements: \item{att_hat}{The
 estimated overall average treatment effect for a randomly selected treated
-unit.} \item{att_se}{If \code{q < 1}, a standard error for the ATT. If
-\code{indep_counts} was provided, this standard error is asymptotically exact; if
-not, it is asymptotically conservative. If \code{q >= 1}, this will be NA.}
-\item{catt_hats}{A named vector containing the estimated average treatment
-effects for each cohort.} \item{catt_ses}{If \code{q < 1}, a named vector
-containing the (asymptotically exact, non-conservative) standard errors for
+unit.} \item{att_se}{A standard error for the ATT. If the Gram matrix is not
+invertible, this will be NA.} \item{catt_hats}{A named vector containing the
+estimated average treatment effects for each cohort.} \item{catt_ses}{A named
+vector containing the (asymptotically exact) standard errors for
 the estimated average treatment effects within each cohort.}
 \item{cohort_probs}{A vector of the estimated probabilities of being in each
 cohort conditional on being treated, which was used in calculating \code{att_hat}.
@@ -117,23 +115,7 @@ interactions between the treatment effects for each cohort at each time and
 the covariates.} \item{sig_eps_sq}{Either the provided \code{sig_eps_sq} or
 the estimated one, if a value wasn't provided.} \item{sig_eps_c_sq}{Either
 the provided \code{sig_eps_c_sq} or the estimated one, if a value wasn't
-provided.} \item{lambda.max}{Either the provided \code{lambda.max} or the one
-that was used, if a value wasn't provided. (This is returned to help with
-getting a reasonable range of \code{lambda} values for grid search.)}
-\item{lambda.max_model_size}{The size of the selected model corresponding
-\code{lambda.max} (for \code{q <= 1}, this will be the smallest model size). As
-mentioned above, for \code{q <= 1} ideally this value is close to 0.}
-\item{lambda.min}{Either the provided \code{lambda.min} or the one
-that was used, if a value wasn't provided.} \item{lambda.min_model_size}{The
-size of the selected model corresponding \code{lambda.min} (for \code{q <= 1}, this
-will be the largest model size). As mentioned above, for \code{q <= 1} ideally
-this value is close to \code{p}.}\item{lambda_star}{The value of \code{lambda} chosen
-by BIC. If this value is close to \code{lambda.min} or \code{lambda.max}, that could
-suggest that the range of \code{lambda} values should be expanded.}
-\item{lambda_star_model_size}{The size of the model that was selected. If
-this value is close to \code{lambda.max_model_size} or \code{lambda.min_model_size},
-That could suggest that the range of \code{lambda} values should be expanded.}
-\item{X_ints}{The design matrix created containing all
+provided.} \item{X_ints}{The design matrix created containing all
 interactions, time and cohort dummies, etc.} \item{y}{The vector of
 responses, containing \code{nrow(X_ints)} entries.} \item{X_final}{The design
 matrix after applying the change in coordinates to fit the model and also
@@ -155,56 +137,11 @@ Implementation of extended two-way fixed effects.
 Estimates overall ATT as well as CATT (cohort average treatment effects on
 the treated units).
 }
-\examples{
-set.seed(23451)
-
-library(bacondecomp)
-
-data(divorce)
-
-# sig_eps_sq and sig_eps_c_sq, calculated in a separate run of `fetwfe(),
-# are provided to speed up the computation of the example
-res <- fetwfe(
-    pdata = divorce[divorce$sex == 2, ],
-    time_var = "year",
-    unit_var = "st",
-    treatment = "changed",
-    covs = c("murderrate", "lnpersinc", "afdcrolls"),
-    response = "suiciderate_elast_jag",
-    sig_eps_sq = 0.1025361,
-    sig_eps_c_sq = 4.227651e-35,
-    verbose = TRUE)
-
-# Average treatment effect on the treated units (in percentage point
-# units)
-100 * res$att_hat
-
-# Conservative 95\% confidence interval for ATT (in percentage point units)
-
-low_att <- 100 * (res$att_hat - qnorm(1 - 0.05 / 2) * res$att_se)
-high_att <- 100 * (res$att_hat + qnorm(1 - 0.05 / 2) * res$att_se)
-
-c(low_att, high_att)
-
-# Cohort average treatment effects and confidence intervals (in percentage
-# point units)
-
-catt_df_pct <- res$catt_df
-catt_df_pct[["Estimated TE"]] <- 100 * catt_df_pct[["Estimated TE"]]
-catt_df_pct[["SE"]] <- 100 * catt_df_pct[["SE"]]
-catt_df_pct[["ConfIntLow"]] <- 100 * catt_df_pct[["ConfIntLow"]]
-catt_df_pct[["ConfIntHigh"]] <- 100 * catt_df_pct[["ConfIntHigh"]]
-
-catt_df_pct
-}
 \references{
-Faletto, G (2025). Fused Extended Two-Way Fixed Effects for
-Difference-in-Differences with Staggered Adoptions.
-\emph{arXiv preprint arXiv:2312.05985}.
-\url{https://arxiv.org/abs/2312.05985}.
-Pesaran, M. H. . Time Series and Panel Data Econometrics. Number 9780198759980 in OUP
-Catalogue. Oxford University Press, 2015. URL
-\url{https://ideas.repec.org/b/oxp/obooks/9780198759980.html}.
+Wooldridge, J. M. (2021). Two-way fixed effects, the two-way mundlak
+regression, and difference-in-differences estimators.
+\emph{Available at SSRN 3906345}.
+\url{https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3906345}.
 }
 \author{
 Gregory Faletto
