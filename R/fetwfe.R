@@ -125,7 +125,7 @@
 #' mentioned above, for `q <= 1` ideally this value is close to 0.}
 #' \item{lambda.min}{Either the provided `lambda.min` or the one
 #' that was used, if a value wasn't provided.} \item{lambda.min_model_size}{The
-#' size of the selected model corresponding `lambda.min` (for `q <= 1`, this
+#' size of the selected model corresponding to `lambda.min` (for `q <= 1`, this
 #' will be the largest model size). As mentioned above, for `q <= 1` ideally
 #' this value is close to `p`.}\item{lambda_star}{The value of `lambda` chosen
 #' by BIC. If this value is close to `lambda.min` or `lambda.max`, that could
@@ -707,7 +707,7 @@ genCoefs <- function(R, T, d, density, eff_size, seed = NULL) {
 #' mentioned above, for `q <= 1` ideally this value is close to 0.}
 #' \item{lambda.min}{Either the provided `lambda.min` or the one
 #' that was used, if a value wasn't provided.} \item{lambda.min_model_size}{The
-#' size of the selected model corresponding `lambda.min` (for `q <= 1`, this
+#' size of the selected model corresponding to `lambda.min` (for `q <= 1`, this
 #' will be the largest model size). As mentioned above, for `q <= 1` ideally
 #' this value is close to `p`.}\item{lambda_star}{The value of `lambda` chosen
 #' by BIC. If this value is close to `lambda.min` or `lambda.max`, that could
@@ -1554,12 +1554,10 @@ genCoefsCore <- function(R, T, d, density, eff_size, seed = NULL) {
 #' Default is FALSE.
 #' @return A named list with the following elements: \item{att_hat}{The
 #' estimated overall average treatment effect for a randomly selected treated
-#' unit.} \item{att_se}{If `q < 1`, a standard error for the ATT. If
-#' `indep_counts` was provided, this standard error is asymptotically exact; if
-#' not, it is asymptotically conservative. If `q >= 1`, this will be NA.}
-#' \item{catt_hats}{A named vector containing the estimated average treatment
-#' effects for each cohort.} \item{catt_ses}{If `q < 1`, a named vector
-#' containing the (asymptotically exact, non-conservative) standard errors for
+#' unit.} \item{att_se}{A standard error for the ATT. If the Gram matrix is not
+#' invertible, this will be NA.} \item{catt_hats}{A named vector containing the
+#' estimated average treatment effects for each cohort.} \item{catt_ses}{A named
+#' vector containing the (asymptotically exact) standard errors for
 #' the estimated average treatment effects within each cohort.}
 #' \item{cohort_probs}{A vector of the estimated probabilities of being in each
 #' cohort conditional on being treated, which was used in calculating `att_hat`.
@@ -1575,23 +1573,7 @@ genCoefsCore <- function(R, T, d, density, eff_size, seed = NULL) {
 #' the covariates.} \item{sig_eps_sq}{Either the provided `sig_eps_sq` or
 #' the estimated one, if a value wasn't provided.} \item{sig_eps_c_sq}{Either
 #' the provided `sig_eps_c_sq` or the estimated one, if a value wasn't
-#' provided.} \item{lambda.max}{Either the provided `lambda.max` or the one
-#' that was used, if a value wasn't provided. (This is returned to help with
-#' getting a reasonable range of `lambda` values for grid search.)}
-#' \item{lambda.max_model_size}{The size of the selected model corresponding
-#' `lambda.max` (for `q <= 1`, this will be the smallest model size). As
-#' mentioned above, for `q <= 1` ideally this value is close to 0.}
-#' \item{lambda.min}{Either the provided `lambda.min` or the one
-#' that was used, if a value wasn't provided.} \item{lambda.min_model_size}{The
-#' size of the selected model corresponding `lambda.min` (for `q <= 1`, this
-#' will be the largest model size). As mentioned above, for `q <= 1` ideally
-#' this value is close to `p`.}\item{lambda_star}{The value of `lambda` chosen
-#' by BIC. If this value is close to `lambda.min` or `lambda.max`, that could
-#' suggest that the range of `lambda` values should be expanded.}
-#' \item{lambda_star_model_size}{The size of the model that was selected. If
-#' this value is close to `lambda.max_model_size` or `lambda.min_model_size`,
-#' That could suggest that the range of `lambda` values should be expanded.}
-#' \item{X_ints}{The design matrix created containing all
+#' provided.} \item{X_ints}{The design matrix created containing all
 #' interactions, time and cohort dummies, etc.} \item{y}{The vector of
 #' responses, containing `nrow(X_ints)` entries.} \item{X_final}{The design
 #' matrix after applying the change in coordinates to fit the model and also
@@ -1609,54 +1591,10 @@ genCoefsCore <- function(R, T, d, density, eff_size, seed = NULL) {
 #' set of covariates used to estimate the model.}
 #' @author Gregory Faletto
 #' @references
-#' Faletto, G (2025). Fused Extended Two-Way Fixed Effects for
-#' Difference-in-Differences with Staggered Adoptions.
-#' \emph{arXiv preprint arXiv:2312.05985}.
-#' \url{https://arxiv.org/abs/2312.05985}.
-#' Pesaran, M. H. . Time Series and Panel Data Econometrics. Number 9780198759980 in OUP
-#' Catalogue. Oxford University Press, 2015. URL
-#' \url{https://ideas.repec.org/b/oxp/obooks/9780198759980.html}.
-#' @examples
-#' set.seed(23451)
-#'
-#' library(bacondecomp)
-#'
-#' data(divorce)
-#'
-#' # sig_eps_sq and sig_eps_c_sq, calculated in a separate run of `fetwfe(),
-#' # are provided to speed up the computation of the example
-#' res <- fetwfe(
-#'     pdata = divorce[divorce$sex == 2, ],
-#'     time_var = "year",
-#'     unit_var = "st",
-#'     treatment = "changed",
-#'     covs = c("murderrate", "lnpersinc", "afdcrolls"),
-#'     response = "suiciderate_elast_jag",
-#'     sig_eps_sq = 0.1025361,
-#'     sig_eps_c_sq = 4.227651e-35,
-#'     verbose = TRUE)
-#'
-#' # Average treatment effect on the treated units (in percentage point
-#' # units)
-#' 100 * res$att_hat
-#'
-#' # Conservative 95% confidence interval for ATT (in percentage point units)
-#'
-#' low_att <- 100 * (res$att_hat - qnorm(1 - 0.05 / 2) * res$att_se)
-#' high_att <- 100 * (res$att_hat + qnorm(1 - 0.05 / 2) * res$att_se)
-#'
-#' c(low_att, high_att)
-#'
-#' # Cohort average treatment effects and confidence intervals (in percentage
-#' # point units)
-#'
-#' catt_df_pct <- res$catt_df
-#' catt_df_pct[["Estimated TE"]] <- 100 * catt_df_pct[["Estimated TE"]]
-#' catt_df_pct[["SE"]] <- 100 * catt_df_pct[["SE"]]
-#' catt_df_pct[["ConfIntLow"]] <- 100 * catt_df_pct[["ConfIntLow"]]
-#' catt_df_pct[["ConfIntHigh"]] <- 100 * catt_df_pct[["ConfIntHigh"]]
-#'
-#' catt_df_pct
+#' Wooldridge, J. M. (2021). Two-way fixed effects, the two-way mundlak
+#' regression, and difference-in-differences estimators.
+#' \emph{Available at SSRN 3906345}.
+#' \url{https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3906345}.
 #' @export
 etwfe <- function(
 	pdata,
@@ -1792,4 +1730,154 @@ etwfe <- function(
 		p = res$p,
 		calc_ses = res$calc_ses
 	))
+}
+
+#' Convert data formatted for `att_gt()` to a dataframe suitable for `fetwfe()` / `etwfe()`
+#'
+#' `attgt_to_fetwfe_df()` reshapes and renames a panel dataset that is already
+#' formatted for `did::att_gt()` so that it can be passed directly to
+#' `fetwfe()` or `etwfe()` from the **fetwfe** package.  In particular, it
+#'   * creates an *absorbing‑state* treatment dummy that equals 1 *from the
+#'     first treated period onward* and 0 otherwise,
+#'   * (optionally) drops units that are already treated in the very first
+#'     period of the sample (because `fetwfe()` removes them internally), and
+#'   * returns a tidy dataframe whose column names match the arguments that
+#'     `fetwfe()`/`etwfe()` expect.
+#'
+#' @param data A `data.frame` in **long** format containing at least the four
+#'   columns used by `did::att_gt()`: outcome `yname`, time `tname`, unit id
+#'   `idname`, and the first‑treatment period `gname` (which is 0 for the
+#'   never‑treated group).
+#' @param yname  Character scalar.  Name of the outcome column.
+#' @param tname  Character scalar.  Name of the time variable (numeric or
+#'   integer).  This becomes `time` in the returned dataframe.
+#' @param idname Character scalar.  Name of the unit identifier.  Converted to
+#'   character and returned as `unit`.
+#' @param gname  Character scalar.  Name of the *group* variable holding the
+#'   first period of treatment.  Values must be 0 for never‑treated, or a
+#'   positive integer representing the first treated period.
+#' @param covars Character vector of additional covariate column names to carry
+#'   through (default `character(0)`).  These columns are left untouched and
+#'   appear *after* the required columns in the returned dataframe.
+#' @param drop_first_period_treated Logical.  If `TRUE` (default), units that
+#'   are already treated in the first sample period are removed *before*
+#'   creating the treatment dummy.  `fetwfe()` would do this internally, but
+#'   dropping them here keeps the returned dataframe cleaner.
+#' @param out_names  A named list giving the column names to use in the
+#'   resulting dataframe.  Defaults are `list(time = "time", unit = "unit",
+#'   treatment = "treatment", response = "y")`.  Override if you prefer
+#'   different names (for instance, to keep the original `yname`).  The vector
+#'   *must* contain exactly these four names.
+#'
+#' @return A `data.frame` with columns `time`, `unit`, `treatment`, `y`, and any
+#'   covariates requested in `covars`, ready to be fed to
+#'   `fetwfe()`/`etwfe()`.  All required columns are of the correct type:
+#'   `time` is integer, `unit` is character, `treatment` is integer 0/1, and
+#'   `y` is numeric.
+#' @examples
+#' ## toy example ---------------------------------------------------------------
+#' library(did)  # provides the mpdta example dataframe
+#' data(mpdta)
+#'
+#' head(mpdta)
+#'
+#' tidy_df <- attgt_to_fetwfe_df(
+#'   data  = mpdta,
+#'   yname = "lemp",
+#'   tname = "year",
+#'   idname = "countyreal",
+#'   gname = "first.treat",
+#'   covars = c("lpop"))
+#'
+#' head(tidy_df)
+#'
+#' ## Now you can call fetwfe()  ------------------------------------------------
+#' # library(fetwfe)
+#' # res <- fetwfe(
+#' #   pdata      = tidy_df,
+#' #   time_var   = "time",
+#' #   unit_var   = "unit",
+#' #   treatment  = "treatment",
+#' #   response   = "y",
+#' #   covs       = c("lpop"))
+#'
+#' @export
+attgtToFetwfeDf <- function(data,
+                            yname,
+                            tname,
+                            idname,
+                            gname,
+                            covars = character(0),
+                            drop_first_period_treated = TRUE,
+                            out_names = list(time      = "time",
+                                             unit      = "unit",
+                                             treatment = "treatment",
+                                             response  = "y")) {
+  ## -------------------- basic column presence --------------------------------
+  stopifnot(is.data.frame(data))
+  needed_cols <- c(yname, tname, idname, gname)
+  all_cols    <- unique(c(needed_cols, covars))
+  missing <- setdiff(all_cols, names(data))
+  if (length(missing)) {
+    stop("Column(s) not found in `data`: ", paste(missing, collapse = ", "))
+  }
+
+  ## -------------------- enforce types ---------------------------------------
+  df <- data[, all_cols]
+  df[[tname]]  <- as.integer(df[[tname]])
+  df[[gname]]  <- as.integer(df[[gname]])
+  df[[idname]] <- as.character(df[[idname]])
+
+  if (anyNA(df[[tname]])) stop("Missing values in `", tname, "`.")
+  if (anyNA(df[[gname]])) stop("Missing values in `", gname, "`.")
+
+  ## -------------------- uniqueness & irreversibility ------------------------
+  dup_rows <- duplicated(df[, c(idname, tname)])
+  if (any(dup_rows)) {
+    stop("Each (id, time) pair must appear at most once; found duplicates.")
+  }
+
+  g_by_id <- by(df, df[[idname]], function(x) length(unique(x[[gname]])))
+  if (any(g_by_id > 1)) {
+    stop("`", gname, "` must be constant within each unit (irreversible treatment).")
+  }
+
+  ## -------------------- drop first‑period treated units ---------------------
+  first_period <- min(df[[tname]])
+  if (drop_first_period_treated) {
+    treat_first <- df[[gname]] != 0 & df[[gname]] <= first_period
+    if (any(treat_first)) {
+      df <- df[!treat_first, ]
+      message("Dropped ", sum(treat_first), " unit‑periods treated in the first period.")
+    }
+  }
+
+  ## -------------------- treatment dummy ------------------------------------
+  df$treat_dummy <- ifelse(df[[gname]] > 0 & df[[tname]] >= df[[gname]], 1L, 0L)
+  bad_units <- with(df, tapply(treat_dummy, df[[idname]], function(z) any(diff(z) < 0)))
+  if (any(bad_units)) {
+    warning(sum(bad_units), " unit(s) switch from treated to untreated – these will be dropped by fetwfe().")
+  }
+
+  ## -------------------- assemble dataframe ----------------------------------
+  res <- data.frame(
+    df[[tname]],         # time
+    df[[idname]],        # unit
+    df$treat_dummy,      # treatment
+    df[[yname]],         # response
+    stringsAsFactors = FALSE
+  )
+  names(res)[1:4] <- unlist(out_names[c("time", "unit", "treatment", "response")], use.names = FALSE)
+
+  if (length(covars)) res[covars] <- df[covars]
+
+  ## final coercion (guard against factors)
+  res[[out_names$time]]      <- as.integer(res[[out_names$time]])
+  res[[out_names$unit]]      <- as.character(res[[out_names$unit]])
+  res[[out_names$treatment]] <- as.integer(res[[out_names$treatment]])
+  res[[out_names$response]]  <- as.numeric(res[[out_names$response]])
+
+  res <- res[order(res[[out_names$unit]], res[[out_names$time]]), ]
+  rownames(res) <- NULL
+  res
 }
