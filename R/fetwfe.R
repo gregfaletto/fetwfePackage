@@ -1683,10 +1683,6 @@ etwfe <- function(
 		indep_counts = indep_counts,
 		sig_eps_sq = sig_eps_sq,
 		sig_eps_c_sq = sig_eps_c_sq,
-		lambda.max = lambda.max,
-		lambda.min = lambda.min,
-		nlambda = nlambda,
-		q = q,
 		verbose = verbose,
 		alpha = alpha,
 		add_ridge = add_ridge
@@ -1697,7 +1693,7 @@ etwfe <- function(
 
 	rm(ret)
 
-	res_1 <- prep_for_etwfe_core(
+	res1 <- prep_for_etwfe_core(
 		pdata=pdata,
 		response=response,
 		time_var=time_var,
@@ -1737,10 +1733,6 @@ etwfe <- function(
 		indep_counts = indep_counts,
 		sig_eps_sq = sig_eps_sq,
 		sig_eps_c_sq = sig_eps_c_sq,
-		lambda.max = lambda.max,
-		lambda.min = lambda.min,
-		nlambda = nlambda,
-		q = q,
 		verbose = verbose,
 		alpha = alpha,
 		add_ridge = add_ridge
@@ -1772,12 +1764,6 @@ etwfe <- function(
 		treat_int_inds = res$treat_int_inds,
 		sig_eps_sq = res$sig_eps_sq,
 		sig_eps_c_sq = res$sig_eps_c_sq,
-		lambda.max = res$lambda.max,
-		lambda.max_model_size = res$lambda.max_model_size,
-		lambda.min = res$lambda.min,
-		lambda.min_model_size = res$lambda.min_model_size,
-		lambda_star = res$lambda_star,
-		lambda_star_model_size = res$lambda_star_model_size,
 		X_ints = res$X_ints,
 		y = res$y,
 		X_final = res$X_final,

@@ -143,17 +143,16 @@ generate_minimal_panel_data <- function(seed = 123) {
 # ------------------------------------------------------------------------------
 # Test 1: Check that valid input produces a list with the expected output elements.
 # ------------------------------------------------------------------------------
-test_that("fetwfe returns expected output structure with valid input", {
+test_that("etwfe returns expected output structure with valid input", {
 	df <- generate_panel_data() # uses N = 30, T = 10 by default
 
-	result <- fetwfe(
+	result <- etwfe(
 		pdata = df,
 		time_var = "time",
 		unit_var = "unit",
 		treatment = "treatment",
 		covs = c("cov1", "cov2"),
 		response = "y",
-		q = 0.5,
 		verbose = FALSE
 	)
 
@@ -171,12 +170,12 @@ test_that("fetwfe returns expected output structure with valid input", {
 		"treat_int_inds",
 		"sig_eps_sq",
 		"sig_eps_c_sq",
-		"lambda.max",
-		"lambda.max_model_size",
-		"lambda.min",
-		"lambda.min_model_size",
-		"lambda_star",
-		"lambda_star_model_size",
+		# "lambda.max",
+		# "lambda.max_model_size",
+		# "lambda.min",
+		# "lambda.min_model_size",
+		# "lambda_star",
+		# "lambda_star_model_size",
 		"X_ints",
 		"y",
 		"X_final",
@@ -202,9 +201,9 @@ test_that("fetwfe returns expected output structure with valid input", {
 # ------------------------------------------------------------------------------
 # Test 2: Error when pdata is not a data.frame
 # ------------------------------------------------------------------------------
-test_that("fetwfe errors when pdata is not a data.frame", {
+test_that("etwfe errors when pdata is not a data.frame", {
 	expect_error(
-		fetwfe(
+		etwfe(
 			pdata = "not a data.frame",
 			time_var = "time",
 			unit_var = "unit",
@@ -219,12 +218,12 @@ test_that("fetwfe errors when pdata is not a data.frame", {
 # ------------------------------------------------------------------------------
 # Test 3: Error when time_var column is not integer.
 # ------------------------------------------------------------------------------
-test_that("fetwfe errors when time_var is not integer", {
+test_that("etwfe errors when time_var is not integer", {
 	df <- generate_panel_data()
 	df$time <- as.character(df$time) # convert time to character
 
 	expect_error(
-		fetwfe(
+		etwfe(
 			pdata = df,
 			time_var = "time",
 			unit_var = "unit",
@@ -239,12 +238,12 @@ test_that("fetwfe errors when time_var is not integer", {
 # ------------------------------------------------------------------------------
 # Test 4: Error when unit_var column is not character.
 # ------------------------------------------------------------------------------
-test_that("fetwfe errors when unit_var is not character", {
+test_that("etwfe errors when unit_var is not character", {
 	df <- generate_panel_data()
 	df$unit <- as.factor(df$unit) # make unit a factor
 
 	expect_error(
-		fetwfe(
+		etwfe(
 			pdata = df,
 			time_var = "time",
 			unit_var = "unit",
@@ -259,12 +258,12 @@ test_that("fetwfe errors when unit_var is not character", {
 # ------------------------------------------------------------------------------
 # Test 5: Error when treatment column is not integer.
 # ------------------------------------------------------------------------------
-test_that("fetwfe errors when treatment is not integer", {
+test_that("etwfe errors when treatment is not integer", {
 	df <- generate_panel_data()
 	df$treatment <- as.character(df$treatment) # wrong type
 
 	expect_error(
-		fetwfe(
+		etwfe(
 			pdata = df,
 			time_var = "time",
 			unit_var = "unit",
@@ -279,13 +278,13 @@ test_that("fetwfe errors when treatment is not integer", {
 # ------------------------------------------------------------------------------
 # Test 6: Error when treatment column contains values other than 0 and 1.
 # ------------------------------------------------------------------------------
-test_that("fetwfe errors when treatment has values other than 0/1", {
+test_that("etwfe errors when treatment has values other than 0/1", {
 	df <- generate_panel_data()
 	# Force an invalid value into treatment (e.g. 2)
 	df$treatment[1] <- 2L
 
 	expect_error(
-		fetwfe(
+		etwfe(
 			pdata = df,
 			time_var = "time",
 			unit_var = "unit",
@@ -300,13 +299,13 @@ test_that("fetwfe errors when treatment has values other than 0/1", {
 # ------------------------------------------------------------------------------
 # Test 7: Error when a specified covariate column is missing.
 # ------------------------------------------------------------------------------
-test_that("fetwfe errors when a covariate column is missing", {
+test_that("etwfe errors when a covariate column is missing", {
 	df <- generate_panel_data()
 	# Remove one of the covariate columns
 	df <- df[, !(names(df) %in% "cov2")]
 
 	expect_error(
-		fetwfe(
+		etwfe(
 			pdata = df,
 			time_var = "time",
 			unit_var = "unit",
@@ -321,12 +320,12 @@ test_that("fetwfe errors when a covariate column is missing", {
 # ------------------------------------------------------------------------------
 # Test 8: Error when response column is not numeric.
 # ------------------------------------------------------------------------------
-test_that("fetwfe errors when response is not numeric", {
+test_that("etwfe errors when response is not numeric", {
 	df <- generate_panel_data()
 	df$y <- as.character(df$y)
 
 	expect_error(
-		fetwfe(
+		etwfe(
 			pdata = df,
 			time_var = "time",
 			unit_var = "unit",
@@ -341,11 +340,11 @@ test_that("fetwfe errors when response is not numeric", {
 # ------------------------------------------------------------------------------
 # Test 9: Warning when alpha > 0.5.
 # ------------------------------------------------------------------------------
-test_that("fetwfe warns when alpha > 0.5", {
+test_that("etwfe warns when alpha > 0.5", {
 	df <- generate_panel_data()
 
 	expect_warning(
-		fetwfe(
+		etwfe(
 			pdata = df,
 			time_var = "time",
 			unit_var = "unit",
@@ -363,7 +362,7 @@ test_that("fetwfe warns when alpha > 0.5", {
 # Test 10: Error when all units are treated in the first period.
 # Create a panel in which every unit is treated in the first period.
 # ------------------------------------------------------------------------------
-test_that("fetwfe errors when all units are treated in the first period", {
+test_that("etwfe errors when all units are treated in the first period", {
 	# Create a panel data frame with 5 units and 5 periods,
 	# where treatment is 1 for all observations.
 	df <- data.frame(
@@ -376,7 +375,7 @@ test_that("fetwfe errors when all units are treated in the first period", {
 	)
 
 	expect_error(
-		suppressWarnings(fetwfe(
+		suppressWarnings(etwfe(
 			pdata = df,
 			time_var = "time",
 			unit_var = "unit",
@@ -393,11 +392,11 @@ test_that("fetwfe errors when all units are treated in the first period", {
 # Test 11: Error when there are no never-treated units.
 # ------------------------------------------------------------------------------
 
-test_that("fetwfe errors with a panel having no never-treated units", {
+test_that("etwfe errors with a panel having no never-treated units", {
 	df_bad <- generate_bad_panel_data(N = 30, T = 10, seed = 123)
 
 	expect_error(
-		suppressWarnings(fetwfe(
+		suppressWarnings(etwfe(
 			pdata = df_bad,
 			time_var = "time",
 			unit_var = "unit",
@@ -413,7 +412,7 @@ test_that("fetwfe errors with a panel having no never-treated units", {
 # ------------------------------------------------------------------------------
 # Test 12: Error when the data has too few rows (less than 4).
 # ------------------------------------------------------------------------------
-test_that("fetwfe errors when data has fewer than 4 rows", {
+test_that("etwfe errors when data has fewer than 4 rows", {
 	df <- data.frame(
 		time = as.integer(1:3),
 		unit = as.character(c("u1", "u2", "u3")),
@@ -424,7 +423,7 @@ test_that("fetwfe errors when data has fewer than 4 rows", {
 	)
 
 	expect_error(
-		fetwfe(
+		etwfe(
 			pdata = df,
 			time_var = "time",
 			unit_var = "unit",
@@ -437,76 +436,36 @@ test_that("fetwfe errors when data has fewer than 4 rows", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 13: Test that optional lambda parameters are handled.
+# Test 14: Test that the function returns a standard error
 # ------------------------------------------------------------------------------
-test_that("fetwfe returns expected output when lambda parameters are supplied", {
-	df <- generate_panel_data(N = 30, T = 10, R = 9, seed = 456)
-
-	result <- fetwfe(
-		pdata = df,
-		time_var = "time",
-		unit_var = "unit",
-		treatment = "treatment",
-		covs = c("cov1", "cov2"),
-		response = "y",
-		lambda.max = 5,
-		lambda.min = 0.5,
-		nlambda = 50,
-		verbose = FALSE
-	)
-
-	expect_true(is.numeric(result$lambda.max))
-	expect_true(is.numeric(result$lambda.min))
-	# Also check that some model size was recorded.
-	expect_true(result$lambda.max_model_size >= 0)
-})
-
-# ------------------------------------------------------------------------------
-# Test 14: Test that the function returns a standard error when q < 1 and not
-# when q >= 1.
-# ------------------------------------------------------------------------------
-test_that("fetwfe returns att_se for q < 1 and att_se is NA for q >= 1", {
+test_that("etwfe returns att_se", {
 	df <- generate_panel_data(N = 30, T = 10, R = 9, seed = 789)
 
-	result1 <- fetwfe(
+	result1 <- etwfe(
 		pdata = df,
 		time_var = "time",
 		unit_var = "unit",
 		treatment = "treatment",
 		covs = c("cov1", "cov2"),
 		response = "y",
-		q = 0.5,
 		verbose = FALSE
 	)
 	expect_true(result1$calc_ses)
 	expect_false(is.na(result1$att_se))
-	
 
-	result2 <- fetwfe(
-		pdata = df,
-		time_var = "time",
-		unit_var = "unit",
-		treatment = "treatment",
-		covs = c("cov1", "cov2"),
-		response = "y",
-		q = 2, # ridge-like penalty, where SE is not computed
-		verbose = FALSE
-	)
-	expect_false(result2$calc_ses)
-	expect_true(is.na(result2$att_se))
 })
 
 # ------------------------------------------------------------------------------
 # Test 15: Test that a warning is thrown when all covariates are constant.
 # ------------------------------------------------------------------------------
-test_that("fetwfe warns when all covariates are removed due to constant values", {
+test_that("etwfe warns when all covariates are removed due to constant values", {
 	df_const <- generate_panel_data(N = 30, T = 10, R = 9, seed = 101)
 	# Set both covariates to a constant value
 	df_const$cov1 <- 1
 	df_const$cov2 <- 1
 
 	expect_warning(
-		fetwfe(
+		etwfe(
 			pdata = df_const,
 			time_var = "time",
 			unit_var = "unit",
@@ -524,10 +483,10 @@ test_that("fetwfe warns when all covariates are removed due to constant values",
 # ------------------------------------------------------------------------------
 # Test 16: Test that the overall ATT (att_hat) is numeric and non-missing.
 # ------------------------------------------------------------------------------
-test_that("fetwfe returns a valid numeric overall ATT", {
+test_that("etwfe returns a valid numeric overall ATT", {
 	df <- generate_panel_data(N = 30, T = 10, R = 9, seed = 202)
 
-	result <- fetwfe(
+	result <- etwfe(
 		pdata = df,
 		time_var = "time",
 		unit_var = "unit",
@@ -545,11 +504,11 @@ test_that("fetwfe returns a valid numeric overall ATT", {
 # ------------------------------------------------------------------------------
 # Test 17: Test that function works on a minimal data set
 # ------------------------------------------------------------------------------
-test_that("fetwfe works on a minimal valid dataset", {
+test_that("etwfe works on a minimal valid dataset", {
 	# Create a balanced panel with N = 3 units and T = 3 time periods.
 	df_min <- generate_minimal_panel_data()
 
-	result <- fetwfe(
+	result <- etwfe(
 		pdata = df_min,
 		time_var = "time",
 		unit_var = "unit",
@@ -573,7 +532,7 @@ test_that("minimal data set requires provided noise variance", {
 	df_min <- generate_minimal_panel_data()
 
 	expect_error(
-		fetwfe(
+		etwfe(
 			pdata = df_min,
 			time_var = "time",
 			unit_var = "unit",
@@ -589,11 +548,11 @@ test_that("minimal data set requires provided noise variance", {
 # ------------------------------------------------------------------------------
 # Test 19: Test that function works on only two cohorts
 # ------------------------------------------------------------------------------
-test_that("fetwfe works on only two cohorts", {
+test_that("etwfe works on only two cohorts", {
 	# Create a balanced panel with N = 6 units and T = 5 time periods.
 	df <- generate_panel_data(N = 30, T = 10, R = 2, seed = 202)
 
-	result <- fetwfe(
+	result <- etwfe(
 		pdata = df,
 		time_var = "time",
 		unit_var = "unit",
@@ -615,7 +574,7 @@ test_that("at least two treated cohorts required", {
 	df <- generate_panel_data(N = 30, T = 10, R = 1, seed = 202)
 
 	expect_error(
-		fetwfe(
+		etwfe(
 			pdata = df,
 			time_var = "time",
 			unit_var = "unit",
@@ -630,21 +589,19 @@ test_that("at least two treated cohorts required", {
 
 
 # ------------------------------------------------------------------------------
-# Test 21: Overall ATT standard error is computed (non‐zero) when q < 1,
-# and is NA when q >= 1.
+# Test 21: Overall ATT standard error is computed (non‐zero)
 # ------------------------------------------------------------------------------
-test_that("Overall ATT standard error is non-negative for q < 1", {
+test_that("Overall ATT standard error is non-negative", {
 	df <- generate_panel_data(N = 30, T = 10, R = 9, seed = 303)
 
 	# q < 1: expect an overall standard error to be computed
-	result <- fetwfe(
+	result <- etwfe(
 		pdata = df,
 		time_var = "time",
 		unit_var = "unit",
 		treatment = "treatment",
 		covs = c("cov1", "cov2"),
 		response = "y",
-		q = 0.5,
 		verbose = FALSE,
 		sig_eps_sq = 1, # provided noise variances
 		sig_eps_c_sq = 1
@@ -654,26 +611,6 @@ test_that("Overall ATT standard error is non-negative for q < 1", {
 	expect_true(result$att_se >= 0)
 })
 
-test_that("Overall ATT standard error is NA for q >= 1", {
-	df <- generate_panel_data(N = 30, T = 10, R = 9, seed = 404)
-
-	# q >= 1 (ridge-like): standard error is not computed
-	result <- fetwfe(
-		pdata = df,
-		time_var = "time",
-		unit_var = "unit",
-		treatment = "treatment",
-		covs = c("cov1", "cov2"),
-		response = "y",
-		q = 2,
-		verbose = FALSE,
-		sig_eps_sq = 1,
-		sig_eps_c_sq = 1
-	)
-
-	expect_true(is.na(result$att_se))
-})
-
 # ------------------------------------------------------------------------------
 # Test 22: Cohort-specific treatment effect standard errors are computed,
 # nonnegative, and match the number of treated cohorts.
@@ -681,14 +618,13 @@ test_that("Overall ATT standard error is NA for q >= 1", {
 test_that("Cohort-specific standard errors are computed correctly", {
 	df <- generate_panel_data(N = 30, T = 10, R = 9, seed = 505)
 
-	result <- fetwfe(
+	result <- etwfe(
 		pdata = df,
 		time_var = "time",
 		unit_var = "unit",
 		treatment = "treatment",
 		covs = c("cov1", "cov2"),
 		response = "y",
-		q = 0.5,
 		verbose = FALSE,
 		sig_eps_sq = 1,
 		sig_eps_c_sq = 1
@@ -706,14 +642,13 @@ test_that("Cohort-specific standard errors are computed correctly", {
 test_that("Estimator works with no covariates", {
 	df <- generate_panel_data(N = 30, T = 10, R = 9, seed = 606)
 
-	# Call fetwfe with no covariate argument.
-	result <- fetwfe(
+	# Call etwfe with no covariate argument.
+	result <- etwfe(
 		pdata = df,
 		time_var = "time",
 		unit_var = "unit",
 		treatment = "treatment",
 		response = "y",
-		q = 0.5,
 		verbose = TRUE,
 		sig_eps_sq = 1,
 		sig_eps_c_sq = 1
@@ -755,14 +690,13 @@ test_that("processCovs handles empty covariate vector correctly", {
 test_that("Overall and cohort-specific treatment effects are valid", {
 	df <- generate_panel_data(N = 30, T = 10, R = 9, seed = 808)
 
-	result <- fetwfe(
+	result <- etwfe(
 		pdata = df,
 		time_var = "time",
 		unit_var = "unit",
 		treatment = "treatment",
 		covs = c("cov1", "cov2"),
 		response = "y",
-		q = 0.5,
 		verbose = FALSE,
 		sig_eps_sq = 1,
 		sig_eps_c_sq = 1
@@ -837,13 +771,12 @@ test_that("Estimator works with no covariates again", {
 			{{ response }}
 		)
 
-	result <- fetwfe(
+	result <- etwfe(
 		pdata = pdata, # The panel dataset
 		time_var = "time", # The time variable
 		unit_var = "unit", # The unit identifier
 		treatment = "treated", # The treatment dummy indicator
 		response = "response", # The response variable
-		q = 0.5 # The L_q penalty for fusion regularization
 	)
 
 	expect_true(is.numeric(result$att_hat))
@@ -858,10 +791,10 @@ test_that("Estimator works with no covariates again", {
 # ------------------------------------------------------------------------------
 # Test 27: Test that adding ridge regularization works
 # ------------------------------------------------------------------------------
-test_that("adding ridge regularization to fetwfe works", {
+test_that("adding ridge regularization to etwfe works", {
 	df <- generate_panel_data(N = 30, T = 10, R = 9, seed = 202)
 
-	result <- fetwfe(
+	result <- etwfe(
 		pdata = df,
 		time_var = "time",
 		unit_var = "unit",
@@ -875,7 +808,7 @@ test_that("adding ridge regularization to fetwfe works", {
 	expect_true(is.numeric(result$att_hat))
 	expect_false(is.na(result$att_hat))
 
-	result <- fetwfe(
+	result <- etwfe(
 		pdata = df,
 		time_var = "time",
 		unit_var = "unit",
@@ -883,8 +816,7 @@ test_that("adding ridge regularization to fetwfe works", {
 		covs = c("cov1", "cov2"),
 		response = "y",
 		verbose = FALSE,
-		add_ridge = TRUE,
-		q = 0.5
+		add_ridge = TRUE
 	)
 
 	expect_true(is.numeric(result$att_hat))
@@ -898,9 +830,9 @@ test_that("data application works with ridge penalty", {
 
 	data(divorce)
 
-	# sig_eps_sq and sig_eps_c_sq, calculated in a separate run of `fetwfe(),
+	# sig_eps_sq and sig_eps_c_sq, calculated in a separate run of `etwfe(),
 	# are provided to speed up the computation of the example
-	res <- suppressWarnings(fetwfe(
+	res <- suppressWarnings(etwfe(
 		pdata = divorce[divorce$sex == 2, ],
 		time_var = "year",
 		unit_var = "st",
@@ -941,23 +873,22 @@ test_that("processFactors processes factor covariates correctly", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 29: Test that fetwfe() handles factor covariates appropriately
+# Test 29: Test that etwfe() handles factor covariates appropriately
 # ------------------------------------------------------------------------------
-test_that("fetwfe handles factor covariates appropriately", {
+test_that("etwfe handles factor covariates appropriately", {
 	df <- generate_panel_data(N = 30, T = 10, R = 9, seed = 123)
 
 	# Convert cov2 into a factor with 3 levels.
 	set.seed(123)
 	df$cov2 <- factor(sample(c("A", "B", "C"), nrow(df), replace = TRUE))
 
-	result <- fetwfe(
+	result <- etwfe(
 		pdata = df,
 		time_var = "time",
 		unit_var = "unit",
 		treatment = "treatment",
 		covs = c("cov1", "cov2"),
 		response = "y",
-		q = 0.5,
 		verbose = FALSE,
 		sig_eps_sq = 1,
 		sig_eps_c_sq = 1
@@ -980,14 +911,13 @@ test_that("fetwfe handles factor covariates appropriately", {
 test_that("tibbles work as input to fewtfe", {
 	df <- generate_panel_data() # uses N = 30, T = 10 by default
 
-	result <- fetwfe(
+	result <- etwfe(
 		pdata = tibble::as_tibble(df),
 		time_var = "time",
 		unit_var = "unit",
 		treatment = "treatment",
 		covs = c("cov1", "cov2"),
 		response = "y",
-		q = 0.5,
 		verbose = FALSE
 	)
 
@@ -1005,12 +935,6 @@ test_that("tibbles work as input to fewtfe", {
 		"treat_int_inds",
 		"sig_eps_sq",
 		"sig_eps_c_sq",
-		"lambda.max",
-		"lambda.max_model_size",
-		"lambda.min",
-		"lambda.min_model_size",
-		"lambda_star",
-		"lambda_star_model_size",
 		"X_ints",
 		"y",
 		"X_final",

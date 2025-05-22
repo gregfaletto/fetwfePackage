@@ -3279,7 +3279,7 @@ genInvTwoWayFusionTransformMat <- function(n_vars, first_inds, R) {
 
 	if (R < 2) {
 		stop(
-			"Only one treated cohort detected in data. Currently fetwfe only supports data sets with at least two treated cohorts."
+			"Only one treated cohort detected in data. Currently fetwfe and etwfe only support data sets with at least two treated cohorts."
 		)
 	}
 
@@ -3476,6 +3476,8 @@ getGramInv <- function(
 		X_sel <- X_final
 		p_sel <- ncol(X_final)
 	}
+
+	stopifnot(length(treat_inds) == num_treats)
 	
 	# TODO: confirm if I should center X_sel even when estimating via OLS
 	# (unnecessary for estimation to center covariates in that case?)
@@ -3502,13 +3504,19 @@ getGramInv <- function(
 	if(any(!is.na(sel_feat_inds))){
 		# Get only the parts of gram_inv that have to do with treatment effects
 		sel_treat_inds <- sel_feat_inds %in% treat_inds
+		stopifnot(sum(sel_treat_inds) <= length(sel_feat_inds))
+		stopifnot(length(sel_treat_inds) == length(sel_feat_inds))
 	} else{
-		sel_treat_inds <- rep(TRUE, length(treat_inds))
+		sel_treat_inds <- rep(FALSE, p_sel)
+		sel_treat_inds[treat_inds] <- TRUE
 	}
 
 	stopifnot(is.logical(sel_treat_inds))
-	stopifnot(sum(sel_treat_inds) <= length(sel_feat_inds))
-	stopifnot(length(sel_treat_inds) == length(sel_feat_inds))
+	stopifnot(sum(sel_treat_inds) <= num_treats)
+	stopifnot(length(sel_treat_inds) == p_sel)
+	stopifnot(nrow(gram_inv) == ncol(gram_inv))
+
+	stopifnot(all(!is.na(gram_inv)))
 
 	gram_inv <- gram_inv[sel_treat_inds, sel_treat_inds]
 
@@ -3517,7 +3525,9 @@ getGramInv <- function(
 
 	if(any(!is.na(sel_treat_inds_shifted))){
 		stopifnot(nrow(gram_inv) == length(sel_treat_inds_shifted))
-		stopifnot(nrow(gram_inv) <= length(sel_feat_inds))
+		if(any(!is.na(sel_feat_inds))){
+			stopifnot(nrow(gram_inv) <= length(sel_feat_inds))
+		}
 	}
 
 	return(list(gram_inv = gram_inv, calc_ses = calc_ses))
@@ -3813,6 +3823,8 @@ getTreatInds <- function(R, T, d, num_treats) {
 	} else {
 		stopifnot(max(treat_inds) == R + T - 1 + num_treats)
 	}
+
+	stopifnot(length(treat_inds) == num_treats)
 
 	return(treat_inds)
 }
@@ -4336,7 +4348,7 @@ prep_for_etwfe_core <- function(
 	stopifnot(R <= T - 1)
 	if (R < 2) {
 		stop(
-			"Only one treated cohort detected in data. Currently fetwfe only supports data sets with at least two treated cohorts."
+			"Only one treated cohort detected in data. Currently fetwfe and etwfe only support data sets with at least two treated cohorts."
 		)
 	}
 	stopifnot(N >= R + 1)
@@ -4607,7 +4619,7 @@ etwfe_core <- function(
 
 	stopifnot(length(coefs) == p + 1)
 
-	beta_hat <- coefs[2:(p + 1)]
+	beta_hat_slopes <- coefs[2:(p + 1)]
 
 	# first_treat_ind <- model$coefs_obj$R + model$coefs_obj$T - 1 + model$coefs_obj$d + model$coefs_obj$R*model$coefs_obj$d +
 	# 	(model$coefs_obj$T - 1)*model$coefs_obj$d + 1
@@ -4662,14 +4674,16 @@ etwfe_core <- function(
 		treat_int_inds <- c()
 	}
 
+	stopifnot(length(treat_inds) == num_treats)
+
 	# If using ridge regularization, multiply the "naive" estimated coefficients
 	# by 1 + lambda_ridge, similar to suggestion in original elastic net paper.
 	if (add_ridge) {
-		beta_hat <- beta_hat * (1 + lambda_ridge)
+		beta_hat_slopes <- beta_hat_slopes * (1 + lambda_ridge)
 	}
 
 	# Get actual estimated treatment effects (in original, untransformed space)
-	tes <- beta_hat[treat_inds]
+	tes <- beta_hat_slopes[treat_inds]
 
 	stopifnot(length(tes) == num_treats)
 
@@ -4689,7 +4703,7 @@ etwfe_core <- function(
 		num_treats = num_treats,
 		first_inds = first_inds,
 		c_names = c_names,
-		tes = tes, # Treatment effect estimates (beta_hat[treat_inds])
+		tes = tes, # Treatment effect estimates (beta_hat_slopes[treat_inds])
 		sig_eps_sq = sig_eps_sq,
 		R = R,
 		N = N,
@@ -4724,9 +4738,9 @@ etwfe_core <- function(
 	# Get overal estimated ATT!
 	# theta_hat_treat_sel needs to be the selected non-zero *transformed* treatment coefficients
 	# sel_treat_inds contains global indices of selected transformed features that are treatment effects
-	theta_hat_treat_sel_for_att <- theta_hat_slopes[sel_treat_inds]
+	# beta_hat_treat_sel_for_att <- beta_hat_slopes[sel_treat_inds]
 
-	stopifnot(length(beta_hat_treat_sel_for_att) == num_treats)
+	stopifnot(length(tes) == num_treats)
 
 	in_sample_te_results <- getTeResultsOLS(
 		sig_eps_sq = sig_eps_sq,
@@ -4790,20 +4804,20 @@ etwfe_core <- function(
 		catt_hats = cohort_tes, # Already named if applicable from getCohortATTsFinal
 		catt_ses = cohort_te_ses, # Already named if applicable
 		catt_df = cohort_te_df,
-		theta_hat = theta_hat, # Full theta_hat (with intercept)
-		beta_hat = beta_hat, # Untransformed slopes
+		# theta_hat = theta_hat, # Full theta_hat (with intercept)
+		beta_hat = beta_hat_slopes, # Untransformed slopes
 		treat_inds = treat_inds,
 		treat_int_inds = treat_int_inds,
 		cohort_probs = cohort_probs,
 		indep_cohort_probs = indep_cohort_probs,
 		sig_eps_sq = sig_eps_sq,
 		sig_eps_c_sq = sig_eps_c_sq,
-		lambda.max = lambda.max,
-		lambda.max_model_size = lambda.max_model_size,
-		lambda.min = lambda.min,
-		lambda.min_model_size = lambda.min_model_size,
-		lambda_star = lambda_star,
-		lambda_star_model_size = lambda_star_model_size,
+		# lambda.max = lambda.max,
+		# lambda.max_model_size = lambda.max_model_size,
+		# lambda.min = lambda.min,
+		# lambda.min_model_size = lambda.min_model_size,
+		# lambda_star = lambda_star,
+		# lambda_star_model_size = lambda_star_model_size,
 		X_ints = X_ints,
 		y = y,
 		X_final = X_final,
