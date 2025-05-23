@@ -4777,6 +4777,59 @@ etwfe_core <- function(
 	))
 }
 
+#' @title Validate Inputs for the ETWFE Core Estimator
+#'
+#' @description
+#' Performs a complete set of argument, dimension, and consistency checks
+#' for \code{\link{etwfe_core}}.
+#' The function halts with informative error messages whenever a necessary
+#' condition is violated (e.g., negative variances, inconsistent cohort
+#' counts, or ill-posed significance levels).
+#' When all checks pass it returns a compact list of derived quantities
+#' used downstream by the core estimator.
+#'
+#' @param in_sample_counts Integer named vector. Length \(R+1\).
+#'   The first element must be the number of never–treated units; the
+#'   remaining \(R\) elements give the number of units in each treated
+#'   cohort.  Names must be unique and correspond to cohort identifiers.
+#' @param N Integer. Total number of unique units in the (filtered) data.
+#' @param T Integer. Total number of time periods.
+#' @param sig_eps_sq Numeric scalar or \code{NA}.  Prespecified observation-level
+#'   variance component (see Section 2 of Faletto 2025).  If \code{NA},
+#'   it will later be estimated.
+#' @param sig_eps_c_sq Numeric scalar or \code{NA}.  Prespecified unit-level
+#'   random-effect variance component.  If \code{NA}, it will later be estimated.
+#' @param indep_counts Optional integer vector.  Cohort counts from an
+#'   independent sample used to obtain asymptotically exact SEs for the ATT.
+#'   Must have the same length and ordering as \code{in_sample_counts}.
+#'   Default is \code{NA}.
+#' @param verbose Logical.  Forwarded verbosity flag.  Default \code{FALSE}.
+#' @param alpha Numeric in \((0,1)\).  Significance level requested for
+#'   confidence intervals.  Default \code{0.05}.
+#' @param add_ridge Logical.  Whether a small ridge penalty will later be
+#'   applied inside \code{etwfe_core}.  Used only to customise warning
+#'   messages.  Default \code{FALSE}.
+#'
+#' @details
+#' Key validations include:
+#' \itemize{
+#'   \item Ensuring the total of \code{in_sample_counts} equals \code{N}.
+#'   \item Checking that at least one never-treated unit is present.
+#'   \item Verifying that cohort names are unique and counts non-negative.
+#'   \item Confirming that \(1 \le R \le T-1\).
+#'   \item Basic sanity checks for all numeric scalars (\code{alpha} inside \((0,1)\), non-negative variances, etc.).
+#'   \item All structural requirements on \code{indep_counts} when supplied.
+#' }
+#'
+#' @return A list with three elements:
+#'   \describe{
+#'     \item{\code{R}}{Integer. The number of treated cohorts (\(= \text{length(in\_sample\_counts)}-1\)).}
+#'     \item{\code{c_names}}{Character vector of cohort names (length \(R\)).}
+#'     \item{\code{indep_count_data_available}}{Logical. \code{TRUE} if
+#'       valid \code{indep_counts} were supplied, \code{FALSE} otherwise.}
+#'   }
+#' @keywords internal
+#' @noRd
 check_etwfe_core_inputs <- function(
 	in_sample_counts,
 	N,
@@ -4871,6 +4924,91 @@ check_etwfe_core_inputs <- function(
 	))
 }
 
+#' @title Prepare Transformed Design Matrix and Response for ETWFE Regression
+#'
+#' @description
+#' Generates all matrix- and vector-level inputs required by the bridge/OLS
+#' fitting step inside \code{\link{etwfe_core}}.
+#' Its responsibilities include: estimating or assembling the covariance
+#' matrix \(\Omega\); performing the GLS whitening transformation;
+#' (optionally) appending ridge-penalty rows; computing cohort probability
+#' weights; and returning both raw and scaled versions of the final design
+#' matrix.
+#'
+#' @param verbose Logical.  If \code{TRUE}, prints timing information for
+#'   each major sub-task.  Default \code{FALSE}.
+#' @param sig_eps_sq,sig_eps_c_sq Numeric or \code{NA}.  Observation-level
+#'   and unit-level variance components.  If either is \code{NA},
+#'   they are estimated via \code{estOmegaSqrtInv()}.
+#' @param y Numeric vector of length \(N\times T\).  Centered response.
+#' @param X_ints Numeric matrix.  Full design matrix in the \emph{original}
+#'   parameterisation.
+#' @param X_mod Numeric matrix.  Same dimensions as \code{X_ints}.  In the
+#'   ETWFE path this is usually a transformed version, but for OLS it is
+#'   often identical to \code{X_ints}.
+#' @param N,T,R,d,p,num_treats Integers giving key problem dimensions:
+#'   number of units, time periods, treated cohorts, covariates,
+#'   total parameters, and base treatment-effect parameters, respectively.
+#' @param add_ridge Logical.  Whether to append rows that implement a small
+#'   L2 penalty on the \emph{untransformed} coefficients.  Default \code{FALSE}.
+#' @param first_inds Integer vector (length \(R\)).  Column indices of the
+#'   first base treatment-effect for each cohort within the block of
+#'   \code{num_treats} columns.
+#' @param in_sample_counts Integer vector of cohort sizes in the estimation
+#'   sample (see \code{check_etwfe_core_inputs}).
+#' @param indep_count_data_available Logical.  Indicates whether
+#'   \code{indep_counts} contains valid cohort counts from an independent
+#'   sample; affects the probability calculations below.
+#' @param indep_counts Optional integer vector.  Cohort counts from an
+#'   independent sample; only used when
+#'   \code{indep_count_data_available = TRUE}.  Default \code{NA}.
+#' @param is_fetwfe Logical.  If \code{TRUE}, a fusion transformation matrix
+#'   has been applied upstream (this matters for how the optional ridge rows
+#'   are constructed).  Default \code{TRUE}.
+#'
+#' @details
+#' The routine carries out the following steps in order:
+#' \enumerate{
+#'   \item \strong{Variance-Component Handling}\newline
+#'     Calls \code{estOmegaSqrtInv()} when either variance component is
+#'     unknown; otherwise uses supplied values.
+#'   \item \strong{GLS Transformation}\newline
+#'     Forms \(\Omega = \sigma_\varepsilon^2 I_T + \sigma_{\varepsilon c}^2 J_T\)
+#'     and multiplies both \code{y} and \code{X_mod} on the left by
+#'     \(\sqrt{\sigma_\varepsilon^2}\,\Omega^{-1/2} \otimes I_N\).
+#'   \item \strong{Optional Ridge Augmentation}\newline
+#'     If \code{add_ridge = TRUE}, appends \(p\) rows to the scaled design
+#'     matrix and response, thereby imposing a tiny L2 penalty equal to
+#'     \code{lambda_ridge}.  When \code{is_fetwfe = TRUE} the rows are first
+#'     premultiplied by the inverse fusion transformation so the penalty
+#'     applies on the original coefficient scale.
+#'   \item \strong{Cohort Probability Estimation}\newline
+#'     Computes \eqn{\hat\pi_r = n_r / \sum_{s=1}^R n_s} from the in-sample
+#'     counts; when an independent split is available the same is done for
+#'     \code{indep_counts}.
+#' }
+#'
+#' @return A list with everything \code{etwfe_core} needs next:
+#'   \describe{
+#'     \item{\code{X_final_scaled}}{Design matrix after GLS transform
+#'       and column-wise scaling (and ridge rows if requested).}
+#'     \item{\code{X_final}}{Design matrix after GLS transform but before scaling.}
+#'     \item{\code{y_final}}{Response after GLS transform (and augmentation).}
+#'     \item{\code{scale_center}, \code{scale_scale}}{Vectors used to undo
+#'       column scaling.}
+#'     \item{\code{cohort_probs}}{Vector of \(\hat\pi_r \mid \text{treated}\)
+#'       from the estimation sample.}
+#'     \item{\code{cohort_probs_overall}}{Vector of unconditional
+#'       probabilities \(P(W=r)\).}
+#'     \item{\code{indep_cohort_probs}, \code{indep_cohort_probs_overall}}{Same
+#'       probabilities if an independent split was provided; otherwise \code{NA}.}
+#'     \item{\code{sig_eps_sq}, \code{sig_eps_c_sq}}{Possibly estimated
+#'       variance components carried forward.}
+#'     \item{\code{lambda_ridge}}{Numeric scalar.  Value of the ridge penalty
+#'       used (or \code{NA} if none).}
+#'   }
+#' @keywords internal
+#' @noRd
 prep_for_etwfe_regresion <- function(
 	verbose,
 	sig_eps_sq,
@@ -5449,17 +5587,76 @@ getSecondVarTermOLS <- function(
 	return(att_var_2)
 }
 
-# ---  INTERNAL helper ---------------------------------------------------------
+#' Core converter for “*_ToFetwfeDf” helpers
+#'
+#' `.fetwfe_df_core()` holds the shared back-end logic used by
+#' [etwfeToFetwfeDf()] and [attgtToFetwfeDf()].  It takes a long-format panel
+#' dataset, performs a suite of validity checks and coercions, constructs an
+#' *absorbing-state* treatment dummy \eqn{ 1\{ t ≥ g & g > 0 \}}, optionally drops
+#' units treated in the very first sample period, and returns a tidy data frame
+#' ready for [fetwfe::fetwfe()] / [fetwfe::etwfe()].
+#'
+#' @section Typical usage:
+#' End-users should not call this function directly.  Instead, use one of
+#' the thin wrappers that merely translate argument names:
+#' * [etwfeToFetwfeDf()] – for data already labelled with `etwfe` conventions.
+#' * [attgtToFetwfeDf()] – for data prepared for `did::att_gt()`.
+#'
+#' @param data A `data.frame` in long panel format.
+#' @param vars Named list (or vector) with exactly four elements,
+#'   giving the column names of the core variables in `data`:
+#'   \describe{
+#'     \item{`y`}{Outcome / response variable.}
+#'     \item{`t`}{Time variable (numeric or integer).}
+#'     \item{`id`}{Unit identifier.}
+#'     \item{`g`}{“First treated” period; 0 for never-treated.}
+#'   }
+#' @param covars Character vector of additional covariate names to carry through
+#'   unchanged (default `character(0)`).
+#' @param drop_first_period_treated Logical.  If `TRUE` (default), observations
+#'   that are already treated in the *earliest* sample period are removed before
+#'   creating the treatment dummy.  This mirrors the internal behaviour of
+#'   **fetwfe** but keeps the returned data frame cleaner.
+#' @param out_names Named list of length four giving the desired column names
+#'   in the returned data frame.  Defaults are
+#'   `list(time = "time_var", unit = "unit_var", treatment = "treatment",
+#'	 response = "response")`.
+#'
+#' @return A tidy `data.frame` with columns, in this order:
+#' \itemize{
+#'   \item **`time_var`**   – integer,
+#'   \item **`unit_var`**   – character,
+#'   \item **`treatment`** – integer 0 / 1 absorbing-state dummy,
+#'   \item **`response`**      – numeric outcome,
+#'   \item any extra covariates requested via `covars`.
+#' }
+#' The rows are sorted by `unit` then `time`; row names are dropped.
+#'
+#' @details
+#' The function enforces several data-quality constraints:
+#' \enumerate{
+#'   \item Each `(unit, time)` pair must appear at most once.
+#'   \item The first-treatment period `g` must be constant within a unit
+#'     (irreversible treatment).
+#'   \item `time` and `g` are coerced to `integer`; `unit` to `character`.
+#' }
+#' If any unit ever switches from treated back to untreated
+#' (`diff(treatment) < 0`), a warning is thrown because those units will be
+#' silently dropped by [fetwfe::fetwfe()].
+#'
+#' @keywords internal
+#' @noRd
+
 .fetwfe_df_core <- function(
 	data,
 	vars,
 	covars = character(0),
 	drop_first_period_treated = TRUE,
 	out_names = list(
-		time = "time",
-		unit = "unit",
+		time = "time_var",
+		unit = "unit_var",
 		treatment = "treatment",
-		response = "y"
+		response = "response"
 	)
 ) {
 	stopifnot(is.data.frame(data))

@@ -12,7 +12,8 @@ attgtToFetwfeDf(
   gname,
   covars = character(0),
   drop_first_period_treated = TRUE,
-  out_names = list(time = "time", unit = "unit", treatment = "treatment", response = "y")
+  out_names = list(time = "time_var", unit = "unit_var", treatment = "treatment",
+    response = "response")
 )
 }
 \arguments{
@@ -88,10 +89,10 @@ head(tidy_df)
 # library(fetwfe)
 # res <- fetwfe(
 #   pdata      = tidy_df,
-#   time_var   = "time",
-#   unit_var   = "unit",
+#   time_var   = "time_var",
+#   unit_var   = "unit_var",
 #   treatment  = "treatment",
-#   response   = "y",
+#   response   = "response",
 #   covs       = c("lpop"))
 
 }

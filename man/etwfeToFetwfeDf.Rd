@@ -13,7 +13,8 @@ etwfeToFetwfeDf(
   gvar,
   covars = character(0),
   drop_first_period_treated = TRUE,
-  out_names = list(time = "time", unit = "unit", treatment = "treatment", response = "y")
+  out_names = list(time = "time_var", unit = "unit_var", treatment = "treatment",
+    response = "response")
 )
 }
 \arguments{
@@ -45,7 +46,7 @@ A tidy \code{data.frame} with (in this order)
 \item \code{time}       integer,
 \item \code{unit}       character,
 \item \code{treatment}  integer 0/1 absorbing-state dummy,
-\item \code{y}          numeric outcome,
+\item \code{response}   numeric outcome,
 \item any covariates requested in \code{covars}.
 Ready to pass straight to \code{fetwfe()} or \code{fetwfe::etwfe()}.
 }
@@ -53,4 +54,32 @@ Ready to pass straight to \code{fetwfe()} or \code{fetwfe::etwfe()}.
 \description{
 Convert data prepared for \code{etwfe::etwfe()} to the format required by
 \code{fetwfe()} and \code{fetwfe::etwfe()}
+}
+\examples{
+## toy example ---------------------------------------------------------------
+library(did)  # provides the mpdta example dataframe
+data(mpdta)
+
+head(mpdta)
+
+tidy_df <- etwfeToFetwfeDf(
+  data  = mpdta,
+  yvar = "lemp",
+  tvar = "year",
+  idvar = "countyreal",
+  gvar = "first.treat",
+  covars = c("lpop"))
+
+head(tidy_df)
+
+## Now you can call fetwfe()  ------------------------------------------------
+# library(fetwfe)
+# res <- fetwfe(
+#   pdata      = tidy_df,
+#   time_var   = "time_var",
+#   unit_var   = "unit_var",
+#   treatment  = "treatment",
+#   response   = "response",
+#   covs       = c("lpop"))
+
 }

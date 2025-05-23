@@ -1901,10 +1901,10 @@ etwfeWithSimulatedData <- function(
 #' # library(fetwfe)
 #' # res <- fetwfe(
 #' #   pdata      = tidy_df,
-#' #   time_var   = "time",
-#' #   unit_var   = "unit",
+#' #   time_var   = "time_var",
+#' #   unit_var   = "unit_var",
 #' #   treatment  = "treatment",
-#' #   response   = "y",
+#' #   response   = "response",
 #' #   covs       = c("lpop"))
 #'
 #' @export
@@ -1917,10 +1917,10 @@ attgtToFetwfeDf <- function(
 	covars = character(0),
 	drop_first_period_treated = TRUE,
 	out_names = list(
-		time = "time",
-		unit = "unit",
+		time = "time_var",
+		unit = "unit_var",
 		treatment = "treatment",
-		response = "y"
+		response = "response"
 	)
 ) {
 	.fetwfe_df_core(
@@ -1954,9 +1954,36 @@ attgtToFetwfeDf <- function(
 #'   * `time`       integer,
 #'   * `unit`       character,
 #'   * `treatment`  integer 0/1 absorbing-state dummy,
-#'   * `y`          numeric outcome,
+#'   * `response`   numeric outcome,
 #'   * any covariates requested in `covars`.
 #'   Ready to pass straight to `fetwfe()` or `fetwfe::etwfe()`.
+#'
+#' @examples
+#' ## toy example ---------------------------------------------------------------
+#' library(did)  # provides the mpdta example dataframe
+#' data(mpdta)
+#'
+#' head(mpdta)
+#'
+#' tidy_df <- etwfeToFetwfeDf(
+#'   data  = mpdta,
+#'   yvar = "lemp",
+#'   tvar = "year",
+#'   idvar = "countyreal",
+#'   gvar = "first.treat",
+#'   covars = c("lpop"))
+#'
+#' head(tidy_df)
+#'
+#' ## Now you can call fetwfe()  ------------------------------------------------
+#' # library(fetwfe)
+#' # res <- fetwfe(
+#' #   pdata      = tidy_df,
+#' #   time_var   = "time_var",
+#' #   unit_var   = "unit_var",
+#' #   treatment  = "treatment",
+#' #   response   = "response",
+#' #   covs       = c("lpop"))
 #'
 #' @export
 etwfeToFetwfeDf <- function(
@@ -1968,10 +1995,10 @@ etwfeToFetwfeDf <- function(
 	covars = character(0),
 	drop_first_period_treated = TRUE,
 	out_names = list(
-		time = "time",
-		unit = "unit",
+		time = "time_var",
+		unit = "unit_var",
 		treatment = "treatment",
-		response = "y"
+		response = "response"
 	)
 ) {
 	.fetwfe_df_core(
