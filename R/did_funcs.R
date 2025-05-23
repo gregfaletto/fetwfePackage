@@ -4615,50 +4615,12 @@ etwfe_core <- function(
 	t0 <- Sys.time()
 
 	# Response already centered; no intercept needed
-	fit <- lm(y ~ ., df)
+	fit <- lm(y ~ . + 0, df)
 
-	coefs <- coef(fit)
-
-	stopifnot(length(coefs) == p + 1)
-	stopifnot(all(!is.na(coefs)))
-
-	beta_hat_slopes <- coefs[2:(p + 1)]
+	beta_hat_slopes<- coef(fit) / scale_scale
 
 	stopifnot(length(beta_hat_slopes) == p)
-
-	# first_treat_ind <- model$coefs_obj$R + model$coefs_obj$T - 1 + model$coefs_obj$d + model$coefs_obj$R*model$coefs_obj$d +
-	# 	(model$coefs_obj$T - 1)*model$coefs_obj$d + 1
-
-	# treat_inds <- first_treat_ind:(first_treat_ind + model$num_treats - 1)
-
-	# treat_int_inds <- (max(treat_inds) + 1):draw$p
-
-	# stopifnot(length(treat_int_inds) == model$num_treats*model$coefs_obj$d)
-
-	# counts <- draw$assignments
-
-	# ret <- processCoefs(
-	# 	R=model$coefs_obj$R,
-	# 	T=model$coefs_obj$T,
-	# 	d=model$coefs_obj$d,
-	# 	N=model$N,
-	# 	p=draw$p,
-	# 	num_treats=model$num_treats,
-	# 	first_inds=model$first_inds,
-	# 	sig_eps_sq=model$sig_eps_sq,
-	# 	sel_feat_inds=sel_feat_inds,
-	# 	beta_hat=beta_hat,
-	# 	X_final=X_final,
-	# 	isOLS=TRUE,
-	# 	treat_inds=treat_inds,
-	# 	N_UNTREATED=draw$N_UNTREATED,
-	# 	assignments=counts,
-	# 	calc_ses = TRUE
-	# 	)
-
-	# ret$treat_int_inds <- treat_int_inds
-
-	# ret$beta_hat <- beta_hat
+	stopifnot(all(!is.na(beta_hat_slopes)))
 
 	# Indices corresponding to base treatment effects
 	treat_inds <- getTreatInds(R = R, T = T, d = d, num_treats = num_treats)
@@ -4732,11 +4694,6 @@ etwfe_core <- function(
 	stopifnot(nrow(psi_mat) == num_treats)
 	stopifnot(ncol(psi_mat) == R)
 
-	# if (calc_ses) {
-	# 	stopifnot(nrow(d_inv_treat_sel) == num_treats)
-	# 	stopifnot(ncol(d_inv_treat_sel) == num_treats)
-	# }
-
 	#
 	#
 	# Step 7: calculate overall average treatment effect on treated units
@@ -4744,10 +4701,6 @@ etwfe_core <- function(
 	#
 
 	# Get overal estimated ATT!
-	# theta_hat_treat_sel needs to be the selected non-zero *transformed* treatment coefficients
-	# sel_treat_inds contains global indices of selected transformed features that are treatment effects
-	# beta_hat_treat_sel_for_att <- beta_hat_slopes[sel_treat_inds]
-
 	stopifnot(length(tes) == num_treats)
 
 	in_sample_te_results <- getTeResultsOLS(
@@ -4760,12 +4713,9 @@ etwfe_core <- function(
 		cohort_probs = cohort_probs, # In-sample pi_r | treated
 		psi_mat = psi_mat,
 		gram_inv = gram_inv,
-		# sel_treat_inds_shifted = 1:num_treats,
 		tes = tes, # Untransformed treatment effect estimates beta_hat[treat_inds]
-		# d_inv_treat_sel = d_inv_treat_sel,
 		cohort_probs_overall = cohort_probs_overall, # In-sample pi_r (unconditional on treated)
 		first_inds = first_inds,
-		# beta_hat_treat_sel = beta_hat_treat_sel_for_att, # Selected non-zero transformed treat coefs
 		calc_ses = calc_ses,
 		indep_probs = FALSE
 	)
@@ -4785,22 +4735,17 @@ etwfe_core <- function(
 			cohort_probs = indep_cohort_probs, # indep pi_r | treated
 			psi_mat = psi_mat,
 			gram_inv = gram_inv,
-			# sel_treat_inds_shifted = 1:num_treats,
 			tes = tes,
-			# d_inv_treat_sel = d_inv_treat_sel,
 			cohort_probs_overall = indep_cohort_probs_overall, # indep pi_r (unconditional)
 			first_inds = first_inds,
-			# theta_hat_treat_sel = theta_hat_treat_sel_for_att,
 			calc_ses = calc_ses,
 			indep_probs = TRUE
 		)
 		indep_att_hat <- indep_te_results$att_hat
 		indep_att_se <- indep_te_results$att_te_se
-		# indep_att_se_no_prob <- indep_te_results$att_te_se_no_prob # This was commented out
 	} else {
 		indep_att_hat <- NA
 		indep_att_se <- NA
-		# indep_att_se_no_prob <- NA # Keep commented for consistency
 	}
 
 	return(list(
@@ -4812,7 +4757,6 @@ etwfe_core <- function(
 		catt_hats = cohort_tes, # Already named if applicable from getCohortATTsFinal
 		catt_ses = cohort_te_ses, # Already named if applicable
 		catt_df = cohort_te_df,
-		# theta_hat = theta_hat, # Full theta_hat (with intercept)
 		beta_hat = beta_hat_slopes, # Untransformed slopes
 		treat_inds = treat_inds,
 		treat_int_inds = treat_int_inds,
@@ -4820,12 +4764,6 @@ etwfe_core <- function(
 		indep_cohort_probs = indep_cohort_probs,
 		sig_eps_sq = sig_eps_sq,
 		sig_eps_c_sq = sig_eps_c_sq,
-		# lambda.max = lambda.max,
-		# lambda.max_model_size = lambda.max_model_size,
-		# lambda.min = lambda.min,
-		# lambda.min_model_size = lambda.min_model_size,
-		# lambda_star = lambda_star,
-		# lambda_star_model_size = lambda_star_model_size,
 		X_ints = X_ints,
 		y = y,
 		X_final = X_final,
@@ -5008,6 +4946,8 @@ prep_for_etwfe_regresion <- function(
 	scale_center <- attr(X_final_scaled, "scaled:center")
 	scale_scale <- attr(X_final_scaled, "scaled:scale")
 
+	
+
 	if (add_ridge) {
 		# Initialize identity matrix
 		mat_to_multiply <- diag(p)
@@ -5164,8 +5104,6 @@ getCohortATTsFinalOLS <- function(
 	p,
 	alpha = 0.05
 ) {
-	# stopifnot(max(sel_treat_inds_shifted) <= num_treats)
-	# stopifnot(min(sel_treat_inds_shifted) >= 1)
 	stopifnot(length(tes) == num_treats)
 	stopifnot(all(!is.na(tes)))
 
@@ -5185,22 +5123,11 @@ getCohortATTsFinalOLS <- function(
 	gram_inv <- res$gram_inv
 	calc_ses <- res$calc_ses
 
-	# if (fused) {
-	# 	# Get the parts of D_inv that have to do with treatment effects
-	# 	d_inv_treat <- genInvTwoWayFusionTransformMat(num_treats, first_inds, R)
-	# }
-
 	# First, each cohort
 	cohort_tes <- rep(as.numeric(NA), R)
 	cohort_te_ses <- rep(as.numeric(NA), R)
 
 	psi_mat <- matrix(0, num_treats, R)
-
-	# d_inv_treat_sel <- matrix(
-	# 	0,
-	# 	nrow = 0,
-	# 	ncol = length(sel_treat_inds_shifted)
-	# )
 
 	for (r in 1:R) {
 		# Get indices corresponding to rth treatment
@@ -5216,65 +5143,12 @@ getCohortATTsFinalOLS <- function(
 
 		cohort_tes[r] <- mean(tes[first_ind_r:last_ind_r])
 
-		# Calculate standard errors
-
-		# if (fused) {
-		# 	res_r <- getPsiRFused(
-		# 		first_ind_r,
-		# 		last_ind_r,
-		# 		sel_treat_inds_shifted,
-		# 		d_inv_treat
-		# 	)
-
-		# 	psi_r <- res_r$psi_r
-
-		# 	# stopifnot(
-		# 	# 	nrow(res_r$d_inv_treat_sel) ==
-		# 	# 		last_ind_r -
-		# 	# 			first_ind_r +
-		# 	# 			1
-		# 	# )
-		# 	# stopifnot(
-		# 	# 	ncol(res_r$d_inv_treat_sel) ==
-		# 	# 		length(sel_treat_inds_shifted)
-		# 	# )
-
-		# 	# stopifnot(is.matrix(res_r$d_inv_treat_sel))
-
-		# 	# d_inv_treat_sel <- rbind(d_inv_treat_sel, res_r$d_inv_treat_sel)
-
-		# 	# if (nrow(d_inv_treat_sel) != last_ind_r) {
-		# 	# 	err_mes <- paste(
-		# 	# 		"nrow(d_inv_treat_sel) == last_ind_r is not TRUE. ",
-		# 	# 		"nrow(d_inv_treat_sel): ",
-		# 	# 		nrow(d_inv_treat_sel),
-		# 	# 		". num_treats: ",
-		# 	# 		num_treats,
-		# 	# 		". R: ",
-		# 	# 		R,
-		# 	# 		". first_inds: ",
-		# 	# 		paste(first_inds, collapse = ", "),
-		# 	# 		". r: ",
-		# 	# 		r,
-		# 	# 		". first_ind_r: ",
-		# 	# 		first_ind_r,
-		# 	# 		". last_ind_r: ",
-		# 	# 		last_ind_r,
-		# 	# 		". nrow(res_r$d_inv_treat_sel):",
-		# 	# 		nrow(res_r$d_inv_treat_sel)
-		# 	# 	)
-		# 	# 	stop(err_mes)
-		# 	# }
-
-		# 	rm(res_r)
-		# } else {
 		psi_r <- getPsiRUnfused(
 			first_ind_r,
 			last_ind_r,
 			sel_treat_inds_shifted = 1:num_treats,
 			gram_inv = gram_inv
 		)
-		# }
 
 		stopifnot(length(psi_r) == num_treats)
 
@@ -5289,24 +5163,6 @@ getCohortATTsFinalOLS <- function(
 			)
 		}
 	}
-
-	# if (fused) {
-	# 	if (nrow(d_inv_treat_sel) != num_treats) {
-	# 		err_mes <- paste(
-	# 			"nrow(d_inv_treat_sel) == num_treats is not TRUE. ",
-	# 			"nrow(d_inv_treat_sel): ",
-	# 			nrow(d_inv_treat_sel),
-	# 			". num_treats: ",
-	# 			num_treats,
-	# 			". R: ",
-	# 			R,
-	# 			". first_inds: ",
-	# 			paste(first_inds, collapse = ", "),
-	# 			"."
-	# 		)
-	# 		stop(err_mes)
-	# 	}
-	# }
 
 	stopifnot(length(c_names) == R)
 	stopifnot(length(cohort_tes) == R)
@@ -5342,18 +5198,6 @@ getCohortATTsFinalOLS <- function(
 		"ConfIntHigh"
 	)
 
-	# if (fused) {
-	# 	stopifnot(is.matrix(d_inv_treat_sel))
-	# 	ret <- list(
-	# 		cohort_te_df = cohort_te_df,
-	# 		cohort_tes = cohort_tes,
-	# 		cohort_te_ses = cohort_te_ses,
-	# 		psi_mat = psi_mat,
-	# 		gram_inv = gram_inv,
-	# 		d_inv_treat_sel = d_inv_treat_sel,
-	# 		calc_ses = calc_ses
-	# 	)
-	# } else {
 	ret <- list(
 		cohort_te_df = cohort_te_df,
 		cohort_tes = cohort_tes,
@@ -5362,7 +5206,6 @@ getCohortATTsFinalOLS <- function(
 		gram_inv = gram_inv,
 		calc_ses = calc_ses
 	)
-	# }
 	return(ret)
 }
 
@@ -5425,12 +5268,9 @@ getTeResultsOLS <- function(
 	cohort_probs,
 	psi_mat,
 	gram_inv,
-	# sel_treat_inds_shifted,
 	tes,
-	# d_inv_treat_sel,
 	cohort_probs_overall,
 	first_inds,
-	# theta_hat_treat_sel,
 	calc_ses,
 	indep_probs = FALSE
 ) {
@@ -5452,14 +5292,10 @@ getTeResultsOLS <- function(
 
 		# Second variance term: convergence of cohort membership probabilities
 		att_var_2 <- getSecondVarTermOLS(
-			# cohort_probs = cohort_probs,
 			psi_mat = psi_mat,
-			# sel_treat_inds_shifted = sel_treat_inds_shifted,
 			tes = tes,
-			# d_inv_treat_sel = d_inv_treat_sel,
 			cohort_probs_overall = cohort_probs_overall,
 			first_inds = first_inds,
-			# beta_hat_treat_sel = tes,
 			num_treats = num_treats,
 			N = N,
 			T = T,
@@ -5521,15 +5357,10 @@ getTeResultsOLS <- function(
 #' @keywords internal
 #' @noRd
 getSecondVarTermOLS <- function(
-	# cohort_probs,
 	psi_mat,
-	# sel_treat_inds_shifted,
 	tes,
-	# d_inv_treat_sel,
 	cohort_probs_overall,
 	first_inds,
-	# theta_hat_treat_sel,
-	# beta_hat_treat_sel,
 	num_treats,
 	N,
 	T,
