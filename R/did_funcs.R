@@ -4788,9 +4788,9 @@ etwfe_core <- function(
 #' When all checks pass it returns a compact list of derived quantities
 #' used downstream by the core estimator.
 #'
-#' @param in_sample_counts Integer named vector. Length \(R+1\).
+#' @param in_sample_counts Integer named vector. Length `R+1`.
 #'   The first element must be the number of never–treated units; the
-#'   remaining \(R\) elements give the number of units in each treated
+#'   remaining `R` elements give the number of units in each treated
 #'   cohort.  Names must be unique and correspond to cohort identifiers.
 #' @param N Integer. Total number of unique units in the (filtered) data.
 #' @param T Integer. Total number of time periods.
@@ -4804,10 +4804,10 @@ etwfe_core <- function(
 #'   Must have the same length and ordering as \code{in_sample_counts}.
 #'   Default is \code{NA}.
 #' @param verbose Logical.  Forwarded verbosity flag.  Default \code{FALSE}.
-#' @param alpha Numeric in \((0,1)\).  Significance level requested for
+#' @param alpha Numeric in \eqn{(0,1)}.  Significance level requested for
 #'   confidence intervals.  Default \code{0.05}.
 #' @param add_ridge Logical.  Whether a small ridge penalty will later be
-#'   applied inside \code{etwfe_core}.  Used only to customise warning
+#'   applied inside \code{etwfe_core}.  Used only to customize warning
 #'   messages.  Default \code{FALSE}.
 #'
 #' @details
@@ -4816,15 +4816,15 @@ etwfe_core <- function(
 #'   \item Ensuring the total of \code{in_sample_counts} equals \code{N}.
 #'   \item Checking that at least one never-treated unit is present.
 #'   \item Verifying that cohort names are unique and counts non-negative.
-#'   \item Confirming that \(1 \le R \le T-1\).
-#'   \item Basic sanity checks for all numeric scalars (\code{alpha} inside \((0,1)\), non-negative variances, etc.).
+#'   \item Confirming that \eqn{1 \le R \le T-1}.
+#'   \item Basic sanity checks for all numeric scalars (\code{alpha} inside \eqn{(0,1)}, non-negative variances, etc.).
 #'   \item All structural requirements on \code{indep_counts} when supplied.
 #' }
 #'
 #' @return A list with three elements:
 #'   \describe{
-#'     \item{\code{R}}{Integer. The number of treated cohorts (\(= \text{length(in\_sample\_counts)}-1\)).}
-#'     \item{\code{c_names}}{Character vector of cohort names (length \(R\)).}
+#'     \item{\code{R}}{Integer. The number of treated cohorts `=length(in_sample_counts)-1`).}
+#'     \item{\code{c_names}}{Character vector of cohort names (length `R`).}
 #'     \item{\code{indep_count_data_available}}{Logical. \code{TRUE} if
 #'       valid \code{indep_counts} were supplied, \code{FALSE} otherwise.}
 #'   }
@@ -4930,7 +4930,7 @@ check_etwfe_core_inputs <- function(
 #' Generates all matrix- and vector-level inputs required by the bridge/OLS
 #' fitting step inside \code{\link{etwfe_core}}.
 #' Its responsibilities include: estimating or assembling the covariance
-#' matrix \(\Omega\); performing the GLS whitening transformation;
+#' matrix `\Omega`; performing the GLS whitening transformation;
 #' (optionally) appending ridge-penalty rows; computing cohort probability
 #' weights; and returning both raw and scaled versions of the final design
 #' matrix.
