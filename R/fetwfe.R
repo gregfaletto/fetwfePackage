@@ -244,15 +244,15 @@ fetwfe <- function(
 	rm(ret)
 
 	res1 <- prep_for_etwfe_core(
-		pdata=pdata,
-		response=response,
-		time_var=time_var,
-		unit_var=unit_var,
-		treatment=treatment,
-		covs=covs,
-		verbose=verbose,
-		indep_count_data_available=indep_count_data_available,
-		indep_counts=indep_counts
+		pdata = pdata,
+		response = response,
+		time_var = time_var,
+		unit_var = unit_var,
+		treatment = treatment,
+		covs = covs,
+		verbose = verbose,
+		indep_count_data_available = indep_count_data_available,
+		indep_counts = indep_counts
 	)
 
 	pdata <- res1$pdata
@@ -292,15 +292,13 @@ fetwfe <- function(
 		add_ridge = add_ridge
 	)
 
-	
 	if (indep_count_data_available) {
-
 		stopifnot(!is.na(res$indep_att_hat))
 
 		if ((q < 1) & res$calc_ses) {
 			stopifnot(!is.na(res$indep_att_se))
 		}
-		
+
 		stopifnot(all(!is.na(res$indep_cohort_probs)))
 		att_hat <- res$indep_att_hat
 		att_se <- res$indep_att_se
@@ -1632,15 +1630,15 @@ etwfe <- function(
 	rm(ret)
 
 	res1 <- prep_for_etwfe_core(
-		pdata=pdata,
-		response=response,
-		time_var=time_var,
-		unit_var=unit_var,
-		treatment=treatment,
-		covs=covs,
-		verbose=verbose,
-		indep_count_data_available=indep_count_data_available,
-		indep_counts=indep_counts
+		pdata = pdata,
+		response = response,
+		time_var = time_var,
+		unit_var = unit_var,
+		treatment = treatment,
+		covs = covs,
+		verbose = verbose,
+		indep_count_data_available = indep_count_data_available,
+		indep_counts = indep_counts
 	)
 
 	pdata <- res1$pdata
@@ -1660,19 +1658,22 @@ etwfe <- function(
 
 	warning_flag <- FALSE
 
-	for(r in 1:(R + 1)){
-		if(in_sample_counts[r] < d + 1){
-			if(add_ridge){
+	for (r in 1:(R + 1)) {
+		if (in_sample_counts[r] < d + 1) {
+			if (add_ridge) {
 				warning_flag <- TRUE
-			} else{
-				stop("At least one cohort contains fewer than d + 1 units. The design matrix is rank-deficient. Calculating standard errors will not be possible, and estimating treatment effects is only possible using add_ridge = TRUE.")
+			} else {
+				stop(
+					"At least one cohort contains fewer than d + 1 units. The design matrix is rank-deficient. Calculating standard errors will not be possible, and estimating treatment effects is only possible using add_ridge = TRUE."
+				)
 			}
-
 		}
 	}
 
-	if(warning_flag){
-		warning("At least one cohort contains fewer than d + 1 units. The design matrix is rank-deficient. Calculating standard errors will not be possible, and estimating treatment effects is only possible using add_ridge = TRUE.")
+	if (warning_flag) {
+		warning(
+			"At least one cohort contains fewer than d + 1 units. The design matrix is rank-deficient. Calculating standard errors will not be possible, and estimating treatment effects is only possible using add_ridge = TRUE."
+		)
 	}
 
 	res <- etwfe_core(
@@ -1694,7 +1695,6 @@ etwfe <- function(
 	)
 
 	if (indep_count_data_available) {
-
 		stopifnot(!is.na(res$indep_att_hat))
 		stopifnot(!is.na(res$indep_att_se))
 		stopifnot(all(!is.na(res$indep_cohort_probs)))
@@ -1908,87 +1908,113 @@ etwfeWithSimulatedData <- function(
 #' #   covs       = c("lpop"))
 #'
 #' @export
-attgtToFetwfeDf <- function(data,
-                            yname,
-                            tname,
-                            idname,
-                            gname,
-                            covars = character(0),
-                            drop_first_period_treated = TRUE,
-                            out_names = list(time      = "time",
-                                             unit      = "unit",
-                                             treatment = "treatment",
-                                             response  = "y")) {
-  ## -------------------- basic column presence --------------------------------
-  stopifnot(is.data.frame(data))
-  needed_cols <- c(yname, tname, idname, gname)
-  all_cols    <- unique(c(needed_cols, covars))
-  missing <- setdiff(all_cols, names(data))
-  if (length(missing)) {
-    stop("Column(s) not found in `data`: ", paste(missing, collapse = ", "))
-  }
+attgtToFetwfeDf <- function(
+	data,
+	yname,
+	tname,
+	idname,
+	gname,
+	covars = character(0),
+	drop_first_period_treated = TRUE,
+	out_names = list(
+		time = "time",
+		unit = "unit",
+		treatment = "treatment",
+		response = "y"
+	)
+) {
+	## -------------------- basic column presence --------------------------------
+	stopifnot(is.data.frame(data))
+	needed_cols <- c(yname, tname, idname, gname)
+	all_cols <- unique(c(needed_cols, covars))
+	missing <- setdiff(all_cols, names(data))
+	if (length(missing)) {
+		stop("Column(s) not found in `data`: ", paste(missing, collapse = ", "))
+	}
 
-  ## -------------------- enforce types ---------------------------------------
-  df <- data[, all_cols]
-  df[[tname]]  <- as.integer(df[[tname]])
-  df[[gname]]  <- as.integer(df[[gname]])
-  df[[idname]] <- as.character(df[[idname]])
+	## -------------------- enforce types ---------------------------------------
+	df <- data[, all_cols]
+	df[[tname]] <- as.integer(df[[tname]])
+	df[[gname]] <- as.integer(df[[gname]])
+	df[[idname]] <- as.character(df[[idname]])
 
-  if (anyNA(df[[tname]])) stop("Missing values in `", tname, "`.")
-  if (anyNA(df[[gname]])) stop("Missing values in `", gname, "`.")
+	if (anyNA(df[[tname]])) stop("Missing values in `", tname, "`.")
+	if (anyNA(df[[gname]])) stop("Missing values in `", gname, "`.")
 
-  ## -------------------- uniqueness & irreversibility ------------------------
-  dup_rows <- duplicated(df[, c(idname, tname)])
-  if (any(dup_rows)) {
-    stop("Each (id, time) pair must appear at most once; found duplicates.")
-  }
+	## -------------------- uniqueness & irreversibility ------------------------
+	dup_rows <- duplicated(df[, c(idname, tname)])
+	if (any(dup_rows)) {
+		stop("Each (id, time) pair must appear at most once; found duplicates.")
+	}
 
-  g_by_id <- by(df, df[[idname]], function(x) length(unique(x[[gname]])))
-  if (any(g_by_id > 1)) {
-    stop("`", gname, "` must be constant within each unit (irreversible treatment).")
-  }
+	g_by_id <- by(df, df[[idname]], function(x) length(unique(x[[gname]])))
+	if (any(g_by_id > 1)) {
+		stop(
+			"`",
+			gname,
+			"` must be constant within each unit (irreversible treatment)."
+		)
+	}
 
-  ## -------------------- drop first‑period treated units ---------------------
-  first_period <- min(df[[tname]])
-  if (drop_first_period_treated) {
-    treat_first <- df[[gname]] != 0 & df[[gname]] <= first_period
-    if (any(treat_first)) {
-      df <- df[!treat_first, ]
-      message("Dropped ", sum(treat_first), " unit‑periods treated in the first period.")
-    }
-  }
+	## -------------------- drop first‑period treated units ---------------------
+	first_period <- min(df[[tname]])
+	if (drop_first_period_treated) {
+		treat_first <- df[[gname]] != 0 & df[[gname]] <= first_period
+		if (any(treat_first)) {
+			df <- df[!treat_first, ]
+			message(
+				"Dropped ",
+				sum(treat_first),
+				" unit‑periods treated in the first period."
+			)
+		}
+	}
 
-  ## -------------------- treatment dummy ------------------------------------
-  df$treat_dummy <- ifelse(df[[gname]] > 0 & df[[tname]] >= df[[gname]], 1L, 0L)
-  bad_units <- with(df, tapply(treat_dummy, df[[idname]], function(z) any(diff(z) < 0)))
-  if (any(bad_units)) {
-    warning(sum(bad_units), " unit(s) switch from treated to untreated – these will be dropped by fetwfe().")
-  }
+	## -------------------- treatment dummy ------------------------------------
+	df$treat_dummy <- ifelse(
+		df[[gname]] > 0 & df[[tname]] >= df[[gname]],
+		1L,
+		0L
+	)
+	bad_units <- with(
+		df,
+		tapply(treat_dummy, df[[idname]], function(z) any(diff(z) < 0))
+	)
+	if (any(bad_units)) {
+		warning(
+			sum(bad_units),
+			" unit(s) switch from treated to untreated – these will be dropped by fetwfe()."
+		)
+	}
 
-  ## -------------------- assemble dataframe ----------------------------------
-  res <- data.frame(
-    df[[tname]],         # time
-    df[[idname]],        # unit
-    df$treat_dummy,      # treatment
-    df[[yname]],         # response
-    stringsAsFactors = FALSE
-  )
-  names(res)[1:4] <- unlist(out_names[c("time", "unit", "treatment", "response")], use.names = FALSE)
+	## -------------------- assemble dataframe ----------------------------------
+	res <- data.frame(
+		df[[tname]], # time
+		df[[idname]], # unit
+		df$treat_dummy, # treatment
+		df[[yname]], # response
+		stringsAsFactors = FALSE
+	)
+	names(res)[1:4] <- unlist(
+		out_names[c("time", "unit", "treatment", "response")],
+		use.names = FALSE
+	)
 
-  if (length(covars)) res[covars] <- df[covars]
+	if (length(covars)) res[covars] <- df[covars]
 
-  ## final coercion (guard against factors)
-  res[[out_names$time]]      <- as.integer(res[[out_names$time]])
-  res[[out_names$unit]]      <- as.character(res[[out_names$unit]])
-  res[[out_names$treatment]] <- as.integer(res[[out_names$treatment]])
-  res[[out_names$response]]  <- as.numeric(res[[out_names$response]])
+	## final coercion (guard against factors)
+	res[[out_names$time]] <- as.integer(res[[out_names$time]])
+	res[[out_names$unit]] <- as.character(res[[out_names$unit]])
+	res[[out_names$treatment]] <- as.integer(res[[out_names$treatment]])
+	res[[out_names$response]] <- as.numeric(res[[out_names$response]])
 
-  res <- res[order(res[[out_names$unit]], res[[out_names$time]]), ]
-  rownames(res) <- NULL
-  res
+	res <- res[order(res[[out_names$unit]], res[[out_names$time]]), ]
+	rownames(res) <- NULL
+	res
 }
 
-#' Convert data prepared for `etwfe()` to the format required by `fetwfe()`
+#' Convert data prepared for `etwfe::etwfe()` to the format required by
+#' `fetwfe()` and `fetwfe::etwfe()`
 #'
 #' @param data A long-format data.frame that you could already feed to `etwfe()`.
 #' @param yvar Character. Column name of the outcome (left-hand side in your `fml`).
@@ -2006,100 +2032,131 @@ attgtToFetwfeDf <- function(data,
 #'   `fetwfe()`.  **Do not change the *names* of this list** – only the *values* – and keep all four.
 #'
 #' @return A tidy `data.frame` with (in this order)
-#'   * `time`       integer,  
-#'   * `unit`       character,  
-#'   * `treatment`  integer 0/1 absorbing-state dummy,  
-#'   * `y`          numeric outcome,  
+#'   * `time`       integer,
+#'   * `unit`       character,
+#'   * `treatment`  integer 0/1 absorbing-state dummy,
+#'   * `y`          numeric outcome,
 #'   * any covariates requested in `covars`.
 #'   Ready to pass straight to `fetwfe()` or `fetwfe::etwfe()`.
 #'
 #' @export
-etwfeToFetwfeDf <- function(data,
-                               yvar,
-                               tvar,
-                               idvar,
-                               gvar,
-                               covars = character(0),
-                               drop_first_period_treated = TRUE,
-                               out_names = list(time      = "time",
-                                                unit      = "unit",
-                                                treatment = "treatment",
-                                                response  = "y")) {
+etwfeToFetwfeDf <- function(
+	data,
+	yvar,
+	tvar,
+	idvar,
+	gvar,
+	covars = character(0),
+	drop_first_period_treated = TRUE,
+	out_names = list(
+		time = "time",
+		unit = "unit",
+		treatment = "treatment",
+		response = "y"
+	)
+) {
+	## ---- basic column checks --------------------------------------------------
+	stopifnot(is.data.frame(data))
+	needed_cols <- c(yvar, tvar, idvar, gvar)
+	all_cols <- unique(c(needed_cols, covars))
+	missing <- setdiff(all_cols, names(data))
+	if (length(missing))
+		stop(
+			"Column(s) not found in `data`: ",
+			paste(missing, collapse = ", "),
+			call. = FALSE
+		)
 
-  ## ---- basic column checks --------------------------------------------------
-  stopifnot(is.data.frame(data))
-  needed_cols <- c(yvar, tvar, idvar, gvar)
-  all_cols    <- unique(c(needed_cols, covars))
-  missing     <- setdiff(all_cols, names(data))
-  if (length(missing))
-    stop("Column(s) not found in `data`: ",
-         paste(missing, collapse = ", "), call. = FALSE)
+	## ---- enforce types --------------------------------------------------------
+	df <- data[, all_cols]
+	df[[tvar]] <- as.integer(df[[tvar]])
+	df[[gvar]] <- as.integer(df[[gvar]])
+	df[[idvar]] <- as.character(df[[idvar]])
 
-  ## ---- enforce types --------------------------------------------------------
-  df <- data[, all_cols]
-  df[[tvar]]  <- as.integer(df[[tvar]])
-  df[[gvar]]  <- as.integer(df[[gvar]])
-  df[[idvar]] <- as.character(df[[idvar]])
+	if (anyNA(df[[tvar]]))
+		stop("Missing values in `", tvar, "`.", call. = FALSE)
+	if (anyNA(df[[gvar]]))
+		stop("Missing values in `", gvar, "`.", call. = FALSE)
 
-  if (anyNA(df[[tvar]])) stop("Missing values in `", tvar, "`.", call. = FALSE)
-  if (anyNA(df[[gvar]])) stop("Missing values in `", gvar, "`.", call. = FALSE)
+	## ---- uniqueness & irreversibility checks ---------------------------------
+	dup_rows <- duplicated(df[, c(idvar, tvar)])
+	if (any(dup_rows))
+		stop(
+			"Each (",
+			idvar,
+			", ",
+			tvar,
+			") pair must appear at most once; ",
+			"found duplicates.",
+			call. = FALSE
+		)
 
-  ## ---- uniqueness & irreversibility checks ---------------------------------
-  dup_rows <- duplicated(df[, c(idvar, tvar)])
-  if (any(dup_rows))
-    stop("Each (", idvar, ", ", tvar, ") pair must appear at most once; ",
-         "found duplicates.", call. = FALSE)
+	g_by_id <- by(
+		df,
+		df[[idvar]],
+		function(x) length(unique(x[[gvar]])),
+		simplify = TRUE
+	)
+	if (any(g_by_id > 1))
+		stop(
+			"`",
+			gvar,
+			"` must be constant within each unit (irreversible treatment).",
+			call. = FALSE
+		)
 
-  g_by_id <- by(df, df[[idvar]],
-                function(x) length(unique(x[[gvar]])), simplify = TRUE)
-  if (any(g_by_id > 1))
-    stop("`", gvar, "` must be constant within each unit (irreversible treatment).",
-         call. = FALSE)
+	## ---- drop units treated in first sample period ---------------------------
+	first_period <- min(df[[tvar]])
+	if (drop_first_period_treated) {
+		treat_first <- df[[gvar]] != 0 & df[[gvar]] <= first_period
+		if (any(treat_first)) {
+			df <- df[!treat_first, ]
+			message(
+				"Dropped ",
+				sum(treat_first),
+				" unit-period(s) treated in the first period."
+			)
+		}
+	}
 
-  ## ---- drop units treated in first sample period ---------------------------
-  first_period <- min(df[[tvar]])
-  if (drop_first_period_treated) {
-    treat_first <- df[[gvar]] != 0 & df[[gvar]] <= first_period
-    if (any(treat_first)) {
-      df <- df[!treat_first, ]
-      message("Dropped ", sum(treat_first), " unit-period(s) treated in the first period.")
-    }
-  }
+	## ---- create absorbing-state treatment dummy ------------------------------
+	df$.treat_dummy <- ifelse(df[[gvar]] > 0 & df[[tvar]] >= df[[gvar]], 1L, 0L)
 
-  ## ---- create absorbing-state treatment dummy ------------------------------
-  df$.treat_dummy <- ifelse(df[[gvar]] > 0 & df[[tvar]] >= df[[gvar]], 1L, 0L)
+	## warn if any unit switches back (fetwfe will drop them)
+	bad_units <- with(
+		df,
+		tapply(.treat_dummy, df[[idvar]], function(z) any(diff(z) < 0))
+	)
+	if (any(bad_units))
+		warning(
+			sum(bad_units),
+			" unit(s) switch from treated back to untreated. ",
+			"They will be dropped by `fetwfe()`."
+		)
 
-  ## warn if any unit switches back (fetwfe will drop them)
-  bad_units <- with(df,
-                    tapply(.treat_dummy, df[[idvar]],
-                           function(z) any(diff(z) < 0)))
-  if (any(bad_units))
-    warning(sum(bad_units), " unit(s) switch from treated back to untreated. ",
-            "They will be dropped by `fetwfe()`.")
+	## ---- assemble tidy dataframe ---------------------------------------------
+	res <- data.frame(
+		df[[tvar]], # time
+		df[[idvar]], # unit
+		df$.treat_dummy, # absorbing treatment dummy
+		df[[yvar]], # outcome
+		stringsAsFactors = FALSE
+	)
+	names(res)[1:4] <- unlist(
+		out_names[c("time", "unit", "treatment", "response")],
+		use.names = FALSE
+	)
 
-  ## ---- assemble tidy dataframe ---------------------------------------------
-  res <- data.frame(
-    df[[tvar]],          # time
-    df[[idvar]],         # unit
-    df$.treat_dummy,     # absorbing treatment dummy
-    df[[yvar]],          # outcome
-    stringsAsFactors = FALSE
-  )
-  names(res)[1:4] <- unlist(
-    out_names[c("time", "unit", "treatment", "response")],
-    use.names = FALSE)
+	if (length(covars)) res[covars] <- df[covars]
 
-  if (length(covars))
-    res[covars] <- df[covars]
+	## final coercions (guard against factors that may have snuck in)
+	res[[out_names$time]] <- as.integer(res[[out_names$time]])
+	res[[out_names$unit]] <- as.character(res[[out_names$unit]])
+	res[[out_names$treatment]] <- as.integer(res[[out_names$treatment]])
+	res[[out_names$response]] <- as.numeric(res[[out_names$response]])
 
-  ## final coercions (guard against factors that may have snuck in)
-  res[[out_names$time]]      <- as.integer(res[[out_names$time]])
-  res[[out_names$unit]]      <- as.character(res[[out_names$unit]])
-  res[[out_names$treatment]] <- as.integer(res[[out_names$treatment]])
-  res[[out_names$response]]  <- as.numeric(res[[out_names$response]])
-
-  ## ensure time-within-unit ordering
-  res <- res[order(res[[out_names$unit]], res[[out_names$time]]), ]
-  rownames(res) <- NULL
-  res
+	## ensure time-within-unit ordering
+	res <- res[order(res[[out_names$unit]], res[[out_names$time]]), ]
+	rownames(res) <- NULL
+	res
 }

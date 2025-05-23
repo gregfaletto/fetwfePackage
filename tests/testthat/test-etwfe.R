@@ -447,7 +447,6 @@ test_that("etwfe returns att_se", {
 
 	expect_true(result1$calc_ses)
 	expect_false(is.na(result1$att_se))
-
 })
 
 # ------------------------------------------------------------------------------
@@ -980,7 +979,7 @@ test_that("etwfe throws error when a cohort contains fewer than d + 1 units", {
 			covs = c("cov1", "cov2"),
 			response = "y",
 			verbose = FALSE,
-			add_ridge=TRUE
+			add_ridge = TRUE
 		),
 		"At least one cohort contains fewer than d \\+ 1 units\\. The design matrix is rank-deficient\\. Calculating standard errors will not be possible, and estimating treatment effects is only possible using add_ridge = TRUE\\."
 	)
@@ -993,12 +992,11 @@ test_that("etwfe throws error when a cohort contains fewer than d + 1 units", {
 		covs = c("cov1", "cov2"),
 		response = "y",
 		verbose = FALSE,
-		add_ridge=TRUE
+		add_ridge = TRUE
 	))
 
 	expect_false(res$calc_ses)
 	expect_true(is.na(res$att_se))
 	expect_true(!is.na(res$att_hat))
 	expect_true(res$att_hat != 0)
-
 })

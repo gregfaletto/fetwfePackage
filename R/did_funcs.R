@@ -412,17 +412,16 @@ fetwfe_core <- function(
 	alpha = 0.05,
 	add_ridge = FALSE
 ) {
-
 	ret <- check_etwfe_core_inputs(
-		in_sample_counts=in_sample_counts,
-		N=N,
-		T=T,
-		sig_eps_sq=sig_eps_sq,
-		sig_eps_c_sq=sig_eps_c_sq,
-		indep_counts=indep_counts,
-		verbose=verbose,
-		alpha=alpha,
-		add_ridge=add_ridge
+		in_sample_counts = in_sample_counts,
+		N = N,
+		T = T,
+		sig_eps_sq = sig_eps_sq,
+		sig_eps_c_sq = sig_eps_c_sq,
+		indep_counts = indep_counts,
+		verbose = verbose,
+		alpha = alpha,
+		add_ridge = add_ridge
 	)
 
 	R <- ret$R
@@ -476,23 +475,23 @@ fetwfe_core <- function(
 	)
 
 	res <- prep_for_etwfe_regresion(
-		verbose=verbose,
-		sig_eps_sq=sig_eps_sq,
-		sig_eps_c_sq=sig_eps_c_sq,
-		y=y,
-		X_ints=X_ints,
-		X_mod=X_mod,
-		N=N,
-		T=T,
-		R=R,
-		d=d,
-		p=p,
-		num_treats=num_treats,
-		add_ridge=add_ridge,
-		first_inds=first_inds,
-		in_sample_counts=in_sample_counts,
-		indep_count_data_available=indep_count_data_available,
-		indep_counts=indep_counts
+		verbose = verbose,
+		sig_eps_sq = sig_eps_sq,
+		sig_eps_c_sq = sig_eps_c_sq,
+		y = y,
+		X_ints = X_ints,
+		X_mod = X_mod,
+		N = N,
+		T = T,
+		R = R,
+		d = d,
+		p = p,
+		num_treats = num_treats,
+		add_ridge = add_ridge,
+		first_inds = first_inds,
+		in_sample_counts = in_sample_counts,
+		indep_count_data_available = indep_count_data_available,
+		indep_counts = indep_counts
 	)
 
 	X_final_scaled <- res$X_final_scaled
@@ -666,7 +665,7 @@ fetwfe_core <- function(
 			R = R,
 			d = d,
 			p = p,
-			calc_ses=q<1
+			calc_ses = q < 1
 		))
 	}
 
@@ -767,7 +766,7 @@ fetwfe_core <- function(
 			R = R,
 			d = d,
 			p = p,
-			calc_ses=q<1
+			calc_ses = q < 1
 		))
 	}
 
@@ -890,7 +889,7 @@ fetwfe_core <- function(
 	in_sample_att_se <- in_sample_te_results$att_te_se
 	in_sample_att_se_no_prob <- in_sample_te_results$att_te_se_no_prob
 
-	if((q < 1) & calc_ses){
+	if ((q < 1) & calc_ses) {
 		stopifnot(!is.na(in_sample_att_se))
 	}
 
@@ -955,7 +954,7 @@ fetwfe_core <- function(
 		R = R,
 		d = d,
 		p = p,
-		calc_ses=calc_ses
+		calc_ses = calc_ses
 	))
 }
 
@@ -2803,7 +2802,7 @@ getSecondVarTermDataApp <- function(
 	stopifnot(ncol(d_inv_treat_sel) == length(sel_treat_inds_shifted))
 	stopifnot(length(theta_hat_treat_sel) == length(sel_treat_inds_shifted))
 
-	# Get Sigma_pi_hat, the (sample-estimated) covariance matrix for the 
+	# Get Sigma_pi_hat, the (sample-estimated) covariance matrix for the
 	# sample proportions (derived from the multinomial distribution)
 	Sigma_pi_hat <- -outer(
 		cohort_probs_overall[1:(R)],
@@ -3465,20 +3464,20 @@ getGramInv <- function(
 	treat_inds,
 	num_treats,
 	calc_ses,
-	sel_feat_inds=NA,
-	sel_treat_inds_shifted=NA
+	sel_feat_inds = NA,
+	sel_treat_inds_shifted = NA
 ) {
 	stopifnot(nrow(X_final) == N * T)
-	if(any(!is.na(sel_feat_inds))){
+	if (any(!is.na(sel_feat_inds))) {
 		X_sel <- X_final[, sel_feat_inds, drop = FALSE]
 		p_sel <- length(sel_feat_inds)
-	} else{
+	} else {
 		X_sel <- X_final
 		p_sel <- ncol(X_final)
 	}
 
 	stopifnot(length(treat_inds) == num_treats)
-	
+
 	# TODO: confirm if I should center X_sel even when estimating via OLS
 	# (unnecessary for estimation to center covariates in that case?)
 	X_sel_centered <- scale(X_sel, center = TRUE, scale = FALSE)
@@ -3501,12 +3500,12 @@ getGramInv <- function(
 
 	gram_inv <- solve(gram)
 
-	if(any(!is.na(sel_feat_inds))){
+	if (any(!is.na(sel_feat_inds))) {
 		# Get only the parts of gram_inv that have to do with treatment effects
 		sel_treat_inds <- sel_feat_inds %in% treat_inds
 		stopifnot(sum(sel_treat_inds) <= length(sel_feat_inds))
 		stopifnot(length(sel_treat_inds) == length(sel_feat_inds))
-	} else{
+	} else {
 		sel_treat_inds <- rep(FALSE, p_sel)
 		sel_treat_inds[treat_inds] <- TRUE
 	}
@@ -3523,9 +3522,9 @@ getGramInv <- function(
 	stopifnot(nrow(gram_inv) <= num_treats)
 	stopifnot(nrow(gram_inv) == ncol(gram_inv))
 
-	if(any(!is.na(sel_treat_inds_shifted))){
+	if (any(!is.na(sel_treat_inds_shifted))) {
 		stopifnot(nrow(gram_inv) == length(sel_treat_inds_shifted))
-		if(any(!is.na(sel_feat_inds))){
+		if (any(!is.na(sel_feat_inds))) {
 			stopifnot(nrow(gram_inv) <= length(sel_feat_inds))
 		}
 	}
@@ -3695,7 +3694,6 @@ getTeResults2 <- function(
 	calc_ses,
 	indep_probs = FALSE
 ) {
-
 	stopifnot(all(!is.na(cohort_probs)))
 
 	att_hat <- as.numeric(cohort_tes %*% cohort_probs)
@@ -3916,21 +3914,20 @@ checkFetwfeInputs <- function(
 	alpha = 0.05,
 	add_ridge = FALSE
 ) {
-
 	res <- checkEtwfeInputs(
-		pdata=pdata,
-		time_var=time_var,
-		unit_var=unit_var,
-		treatment=treatment,
-		response=response,
-		covs=covs,
-		indep_counts=indep_counts,
-		sig_eps_sq=sig_eps_sq,
-		sig_eps_c_sq=sig_eps_c_sq,
-		verbose =verbose,
-		alpha=alpha,
-		add_ridge=add_ridge
-		)
+		pdata = pdata,
+		time_var = time_var,
+		unit_var = unit_var,
+		treatment = treatment,
+		response = response,
+		covs = covs,
+		indep_counts = indep_counts,
+		sig_eps_sq = sig_eps_sq,
+		sig_eps_c_sq = sig_eps_c_sq,
+		verbose = verbose,
+		alpha = alpha,
+		add_ridge = add_ridge
+	)
 
 	indep_count_data_available <- res$indep_count_data_available
 	pdata <- res$pdata
@@ -4309,7 +4306,8 @@ prep_for_etwfe_core <- function(
 	covs,
 	verbose,
 	indep_count_data_available,
-	indep_counts){
+	indep_counts
+) {
 	# Subset pdata to include only the key columns
 	pdata <- pdata[, c(response, time_var, unit_var, treatment, covs)]
 
@@ -4386,19 +4384,20 @@ prep_for_etwfe_core <- function(
 		}
 	}
 
-	return(list(pdata=pdata,
-		covs=covs,
-		X_ints=X_ints,
-		y=y,
-		N=N,
-		T=T,
-		d=d,
-		p=p,
-		in_sample_counts=in_sample_counts,
-		num_treats=num_treats,
-		first_inds=first_inds,
-		R=R)
-	)
+	return(list(
+		pdata = pdata,
+		covs = covs,
+		X_ints = X_ints,
+		y = y,
+		N = N,
+		T = T,
+		d = d,
+		p = p,
+		in_sample_counts = in_sample_counts,
+		num_treats = num_treats,
+		first_inds = first_inds,
+		R = R
+	))
 }
 
 #' Core Estimation Logic for Extended Two-Way Fixed Effects
@@ -4546,17 +4545,16 @@ etwfe_core <- function(
 	alpha = 0.05,
 	add_ridge = FALSE
 ) {
-
 	ret <- check_etwfe_core_inputs(
-		in_sample_counts=in_sample_counts,
-		N=N,
-		T=T,
-		sig_eps_sq=sig_eps_sq,
-		sig_eps_c_sq=sig_eps_c_sq,
-		indep_counts=indep_counts,
-		verbose=verbose,
-		alpha=alpha,
-		add_ridge=add_ridge
+		in_sample_counts = in_sample_counts,
+		N = N,
+		T = T,
+		sig_eps_sq = sig_eps_sq,
+		sig_eps_c_sq = sig_eps_c_sq,
+		indep_counts = indep_counts,
+		verbose = verbose,
+		alpha = alpha,
+		add_ridge = add_ridge
 	)
 
 	R <- ret$R
@@ -4568,24 +4566,24 @@ etwfe_core <- function(
 	stopifnot(length(c_names) == R)
 
 	res <- prep_for_etwfe_regresion(
-		verbose=verbose,
-		sig_eps_sq=sig_eps_sq,
-		sig_eps_c_sq=sig_eps_c_sq,
-		y=y,
-		X_ints=X_ints,
-		X_mod=X_ints, # Don't transform matrix
-		N=N,
-		T=T,
-		R=R,
-		d=d,
-		p=p,
-		num_treats=num_treats,
-		add_ridge=add_ridge,
-		first_inds=first_inds,
-		in_sample_counts=in_sample_counts,
-		indep_count_data_available=indep_count_data_available,
-		indep_counts=indep_counts,
-		is_fetwfe=FALSE
+		verbose = verbose,
+		sig_eps_sq = sig_eps_sq,
+		sig_eps_c_sq = sig_eps_c_sq,
+		y = y,
+		X_ints = X_ints,
+		X_mod = X_ints, # Don't transform matrix
+		N = N,
+		T = T,
+		R = R,
+		d = d,
+		p = p,
+		num_treats = num_treats,
+		add_ridge = add_ridge,
+		first_inds = first_inds,
+		in_sample_counts = in_sample_counts,
+		indep_count_data_available = indep_count_data_available,
+		indep_counts = indep_counts,
+		is_fetwfe = FALSE
 	)
 
 	X_final_scaled <- res$X_final_scaled
@@ -4609,7 +4607,7 @@ etwfe_core <- function(
 	#
 	#
 
-	df <- data.frame(y=y_final, X_final_scaled)
+	df <- data.frame(y = y_final, X_final_scaled)
 
 	stopifnot(all(!is.na(df)))
 	stopifnot("y" %in% colnames(df))
@@ -4617,14 +4615,14 @@ etwfe_core <- function(
 	t0 <- Sys.time()
 
 	# Response already centered; no intercept needed
-	fit <- lm(y ~., df)
+	fit <- lm(y ~ ., df)
 
 	coefs <- coef(fit)
 
 	stopifnot(length(coefs) == p + 1)
 	stopifnot(all(!is.na(coefs)))
 
-	beta_hat_slopes <- coefs[2:(p+1)]
+	beta_hat_slopes <- coefs[2:(p + 1)]
 
 	stopifnot(length(beta_hat_slopes) == p)
 
@@ -4850,12 +4848,11 @@ check_etwfe_core_inputs <- function(
 	indep_counts,
 	verbose,
 	alpha,
-	add_ridge)
-{
-	R <- length(in_sample_counts) - 1 
+	add_ridge
+) {
+	R <- length(in_sample_counts) - 1
 
 	c_names <- names(in_sample_counts)[2:(R + 1)]
-
 
 	stopifnot(N >= 2) # bare minimum, 2 units at 2 times
 
@@ -4929,7 +4926,11 @@ check_etwfe_core_inputs <- function(
 	stopifnot(is.logical(add_ridge))
 	stopifnot(length(add_ridge) == 1)
 
-	return(list(R=R, c_names=c_names, indep_count_data_available=indep_count_data_available))
+	return(list(
+		R = R,
+		c_names = c_names,
+		indep_count_data_available = indep_count_data_available
+	))
 }
 
 prep_for_etwfe_regresion <- function(
@@ -4949,9 +4950,9 @@ prep_for_etwfe_regresion <- function(
 	first_inds,
 	in_sample_counts,
 	indep_count_data_available,
-	indep_counts=NA,
-	is_fetwfe=TRUE
-	){
+	indep_counts = NA,
+	is_fetwfe = TRUE
+) {
 	if (verbose) {
 		message("Getting omega sqrt inverse estimate...")
 		t0 <- Sys.time()
@@ -5008,11 +5009,10 @@ prep_for_etwfe_regresion <- function(
 	scale_scale <- attr(X_final_scaled, "scaled:scale")
 
 	if (add_ridge) {
-
 		# Initialize identity matrix
 		mat_to_multiply <- diag(p)
 
-		if(is_fetwfe){
+		if (is_fetwfe) {
 			# First need to get D^{-1}:
 			D_inverse <- genFullInvFusionTransformMat(
 				first_inds = first_inds,
@@ -5027,18 +5027,21 @@ prep_for_etwfe_regresion <- function(
 
 			mat_to_multiply <- D_inverse
 		}
-		
+
 		# Now add rows to X_final_scaled
 		lambda_ridge <- 0.00001 *
 			(sig_eps_sq + sig_eps_c_sq) *
 			sqrt(p / (N * T))
 
-		X_final_scaled <- rbind(X_final_scaled, sqrt(lambda_ridge) * mat_to_multiply)
+		X_final_scaled <- rbind(
+			X_final_scaled,
+			sqrt(lambda_ridge) * mat_to_multiply
+		)
 		y_final <- c(y_final, rep(0, p))
 
 		stopifnot(length(y_final) == N * T + p)
 		stopifnot(nrow(X_final_scaled) == N * T + p)
-	} else{
+	} else {
 		lambda_ridge <- as.numeric(NA)
 	}
 
@@ -5091,21 +5094,21 @@ prep_for_etwfe_regresion <- function(
 		indep_cohort_probs_overall <- NA
 	}
 
-	return(list(X_final_scaled=X_final_scaled,
-		X_final=X_final,
-		y_final=y_final,
-		scale_center=scale_center,
-		scale_scale=scale_scale,
-		cohort_probs=cohort_probs,
-		cohort_probs_overall=cohort_probs_overall,
-		indep_cohort_probs=indep_cohort_probs,
-		indep_cohort_probs_overall=indep_cohort_probs_overall,
-		sig_eps_sq=sig_eps_sq,
-		sig_eps_c_sq=sig_eps_c_sq,
-		lambda_ridge=lambda_ridge)
-	)
+	return(list(
+		X_final_scaled = X_final_scaled,
+		X_final = X_final,
+		y_final = y_final,
+		scale_center = scale_center,
+		scale_scale = scale_scale,
+		cohort_probs = cohort_probs,
+		cohort_probs_overall = cohort_probs_overall,
+		indep_cohort_probs = indep_cohort_probs,
+		indep_cohort_probs_overall = indep_cohort_probs_overall,
+		sig_eps_sq = sig_eps_sq,
+		sig_eps_c_sq = sig_eps_c_sq,
+		lambda_ridge = lambda_ridge
+	))
 }
-
 
 
 # getCohortATTsFinalOLS
@@ -5268,8 +5271,8 @@ getCohortATTsFinalOLS <- function(
 		psi_r <- getPsiRUnfused(
 			first_ind_r,
 			last_ind_r,
-			sel_treat_inds_shifted=1:num_treats,
-			gram_inv=gram_inv
+			sel_treat_inds_shifted = 1:num_treats,
+			gram_inv = gram_inv
 		)
 		# }
 
@@ -5278,8 +5281,12 @@ getCohortATTsFinalOLS <- function(
 		psi_mat[, r] <- psi_r
 		# Get standard errors
 
-		if(calc_ses){
-			cohort_te_ses[r] <- sqrt(sig_eps_sq * as.numeric(t(psi_r) %*%gram_inv %*%psi_r) /(N * T))
+		if (calc_ses) {
+			cohort_te_ses[r] <- sqrt(
+				sig_eps_sq *
+					as.numeric(t(psi_r) %*% gram_inv %*% psi_r) /
+					(N * T)
+			)
 		}
 	}
 
@@ -5430,7 +5437,6 @@ getTeResultsOLS <- function(
 	att_hat <- as.numeric(cohort_tes %*% cohort_probs)
 
 	if (calc_ses) {
-
 		stopifnot(nrow(psi_mat) == num_treats)
 		stopifnot(ncol(psi_mat) == R)
 
@@ -5529,7 +5535,7 @@ getSecondVarTermOLS <- function(
 	T,
 	R
 ) {
-	# Get Sigma_pi_hat, the (sample-estimated) covariance matrix for the 
+	# Get Sigma_pi_hat, the (sample-estimated) covariance matrix for the
 	# sample proportions (derived from the multinomial distribution)
 	Sigma_pi_hat <- -outer(
 		cohort_probs_overall[1:(R)],
@@ -5606,7 +5612,7 @@ getSecondVarTermOLS <- function(
 				t(jacobian_mat) %*%
 				Sigma_pi_hat %*%
 				jacobian_mat %*%
-				t(psi_mat) %*% 
+				t(psi_mat) %*%
 				tes
 		) /
 		(N * T)

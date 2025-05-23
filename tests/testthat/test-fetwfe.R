@@ -480,7 +480,6 @@ test_that("fetwfe returns att_se for q < 1 and att_se is NA for q >= 1", {
 	)
 	expect_true(result1$calc_ses)
 	expect_false(is.na(result1$att_se))
-	
 
 	result2 <- fetwfe(
 		pdata = df,
