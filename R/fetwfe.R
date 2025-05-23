@@ -1037,6 +1037,7 @@ simulateDataCore <- function(
 	cohort_inds <- res_base$cohort_inds
 
 	stopifnot(ncol(cohort_fe) == R)
+	stopifnot(is.matrix(X_long))
 
 	# Base matrix: cohort FE, time FE, and covariates (if any)
 	X_base <- if (d > 0) {

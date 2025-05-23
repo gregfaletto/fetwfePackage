@@ -225,7 +225,7 @@ prepXints <- function(
 	stopifnot(is.numeric(ncol(treat_var_mat)) | is.integer(ncol(treat_var_mat)))
 	stopifnot(ncol(treat_var_mat) >= 1)
 
-	covariate_mat <- as.matrix(data[, covs]) # Covariates
+	covariate_mat <- as.matrix(data[, covs, drop = FALSE]) # Covariates
 
 	rm(ret)
 	rm(data)
@@ -234,6 +234,7 @@ prepXints <- function(
 	p <- getP(R = R, T = T, d = d, num_treats = num_treats)
 
 	stopifnot(ncol(cohort_var_mat) == R)
+	stopifnot(is.matrix(covariate_mat))
 
 	X_ints <- genXintsData(
 		cohort_fe = cohort_var_mat,
@@ -1955,6 +1956,7 @@ genXintsData <- function(
 	N_UNTREATED,
 	p
 ) {
+	stopifnot(is.matrix(X_long))
 	# X_long may be an empty matrix if d == 0.
 	X_int <- cbind(cohort_fe, time_fe, X_long)
 	stopifnot(ncol(X_int) == R + T - 1 + d)
