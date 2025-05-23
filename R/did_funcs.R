@@ -1,7 +1,7 @@
 #' @import glmnet
 #' @importFrom Matrix bdiag
 #' @importFrom expm sqrtm
-#' @importFrom stats qnorm predict coef model.matrix setNames
+#' @importFrom stats qnorm predict coef model.matrix setNames lm
 
 #' @title Prepare Design Matrix and Initial Data for FETWFE
 #'

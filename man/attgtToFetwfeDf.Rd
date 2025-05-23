@@ -22,46 +22,47 @@ columns used by \code{did::att_gt()}: outcome \code{yname}, time \code{tname}, u
 \code{idname}, and the first‑treatment period \code{gname} (which is 0 for the
 never‑treated group).}
 
-\item{yname}{Character scalar.  Name of the outcome column.}
+\item{yname}{Character scalar. Name of the outcome column.}
 
-\item{tname}{Character scalar.  Name of the time variable (numeric or
-integer).  This becomes \code{time} in the returned dataframe.}
+\item{tname}{Character scalar. Name of the time variable (numeric or
+integer). This becomes \code{time} in the returned dataframe.}
 
-\item{idname}{Character scalar.  Name of the unit identifier.  Converted to
-character and returned as \code{unit}.}
+\item{idname}{Character scalar. Name of the unit identifier. Converted to
+character and returned as \code{unit_var}.}
 
-\item{gname}{Character scalar.  Name of the \emph{group} variable holding the
-first period of treatment.  Values must be 0 for never‑treated, or a
+\item{gname}{Character scalar. Name of the \emph{group} variable holding the
+first period of treatment. Values must be 0 for never‑treated, or a
 positive integer representing the first treated period.}
 
 \item{covars}{Character vector of additional covariate column names to carry
-through (default \code{character(0)}).  These columns are left untouched and
+through (default \code{character(0)}). These columns are left untouched and
 appear \emph{after} the required columns in the returned dataframe.}
 
-\item{drop_first_period_treated}{Logical.  If \code{TRUE} (default), units that
+\item{drop_first_period_treated}{Logical. If \code{TRUE} (default), units that
 are already treated in the first sample period are removed \emph{before}
-creating the treatment dummy.  \code{fetwfe()} would do this internally, but
+creating the treatment dummy. \code{fetwfe()} would do this internally, but
 dropping them here keeps the returned dataframe cleaner.}
 
 \item{out_names}{A named list giving the column names to use in the
-resulting dataframe.  Defaults are \code{list(time = "time", unit = "unit", treatment = "treatment", response = "y")}.  Override if you prefer
-different names (for instance, to keep the original \code{yname}).  The vector
+resulting dataframe. Defaults are \code{list(time = "time", unit = "unit", treatment = "treatment", response = "y")}. Override if you prefer
+different names (for instance, to keep the original \code{yname}). The vector
 \emph{must} contain exactly these four names.}
 }
 \value{
 A \code{data.frame} with columns \code{time}, \code{unit}, \code{treatment}, \code{y}, and any
 covariates requested in \code{covars}, ready to be fed to
-\code{fetwfe()}/\code{etwfe()}.  All required columns are of the correct type:
+\code{fetwfe()}/\code{etwfe()}. All required columns are of the correct type:
 \code{time} is integer, \code{unit} is character, \code{treatment} is integer 0/1, and
 \code{y} is numeric.
 }
 \description{
 \code{attgtToFetwfeDf()} reshapes and renames a panel dataset that is already
-formatted for \code{did::att_gt()} so that it can be passed directly to
-\code{fetwfe()} or \code{etwfe()} from the \strong{fetwfe} package.  In particular, it
+formatted for \code{did::att_gt()} (Callaway and Sant'Anna 2021) so that it can be
+passed directly to fetwfe()\code{or}etwfe()\verb{from the}fetwfe` package. In
+particular, it
 \itemize{
-\item creates an \emph{absorbing‑state} treatment dummy that equals 1 \emph{from the
-first treated period onward} and 0 otherwise,
+\item creates an \emph{absorbing‑state} treatment dummy that equals 1 from the
+first treated period onward* and 0 otherwise,
 \item (optionally) drops units that are already treated in the very first
 period of the sample (because \code{fetwfe()} removes them internally), and
 \item returns a tidy dataframe whose column names match the arguments that
@@ -70,6 +71,7 @@ period of the sample (because \code{fetwfe()} removes them internally), and
 }
 \examples{
 ## toy example ---------------------------------------------------------------
+\dontrun{
 library(did)  # provides the mpdta example dataframe
 data(mpdta)
 
@@ -84,9 +86,9 @@ tidy_df <- attgtToFetwfeDf(
   covars = c("lpop"))
 
 head(tidy_df)
+}
 
 ## Now you can call fetwfe()  ------------------------------------------------
-# library(fetwfe)
 # res <- fetwfe(
 #   pdata      = tidy_df,
 #   time_var   = "time_var",
@@ -95,4 +97,11 @@ head(tidy_df)
 #   response   = "response",
 #   covs       = c("lpop"))
 
+}
+\references{
+Callaway, Brantly and Pedro H.C. Sant'Anna. "Difference-in-
+Differences with Multiple Time Periods." Journal of Econometrics, Vol. 225,
+No. 2, pp. 200-230, 2021.
+\url{https://doi.org/10.1016/j.jeconom.2020.12.001},
+\url{https://arxiv.org/abs/1803.09015}.
 }

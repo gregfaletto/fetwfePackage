@@ -32,13 +32,13 @@ Must be \code{0} for never-treated units, or the (strictly positive) first treat
 
 \item{covars}{Character vector of \emph{additional} covariate columns to keep (default \code{character(0)}).}
 
-\item{drop_first_period_treated}{Logical.  Should units already treated in the very first
+\item{drop_first_period_treated}{Logical. Should units already treated in the very first
 sample period be removed?  (\code{fetwfe()} will drop them internally anyway, but doing it
 here keeps the returned dataframe clean.)  Default \code{TRUE}.}
 
 \item{out_names}{Named list giving the column names that the returned dataframe should have.
 The default (\code{time}, \code{unit}, \code{treatment}, \code{y}) matches the arguments usually supplied to
-\code{fetwfe()}.  \strong{Do not change the \emph{names} of this list} – only the \emph{values} – and keep all four.}
+\code{fetwfe()}. \strong{Do not change the \emph{names} of this list} – only the \emph{values} – and keep all four.}
 }
 \value{
 A tidy \code{data.frame} with (in this order)
@@ -52,11 +52,22 @@ Ready to pass straight to \code{fetwfe()} or \code{fetwfe::etwfe()}.
 }
 }
 \description{
-Convert data prepared for \code{etwfe::etwfe()} to the format required by
-\code{fetwfe()} and \code{fetwfe::etwfe()}
+\code{etwfeToFetwfeDf()} reshapes and renames a panel dataset that is already
+formatted for \code{etwfe::etwfe()} (McDermott 2024) so that it can be
+passed directly to fetwfe()\code{or}etwfe()\verb{from the}fetwfe` package. In
+particular, it
+\itemize{
+\item creates an \emph{absorbing‑state} treatment dummy that equals 1 from the
+first treated period onward* and 0 otherwise,
+\item (optionally) drops units that are already treated in the very first
+period of the sample (because \code{fetwfe()} removes them internally), and
+\item returns a tidy dataframe whose column names match the arguments that
+\code{fetwfe()}/\code{etwfe()} expect.
+}
 }
 \examples{
 ## toy example ---------------------------------------------------------------
+\dontrun{
 library(did)  # provides the mpdta example dataframe
 data(mpdta)
 
@@ -72,8 +83,8 @@ tidy_df <- etwfeToFetwfeDf(
 
 head(tidy_df)
 
+}
 ## Now you can call fetwfe()  ------------------------------------------------
-# library(fetwfe)
 # res <- fetwfe(
 #   pdata      = tidy_df,
 #   time_var   = "time_var",
@@ -82,4 +93,10 @@ head(tidy_df)
 #   response   = "response",
 #   covs       = c("lpop"))
 
+}
+\references{
+McDermott G (2024). \emph{etwfe: Extended Two-Way Fixed Effects}.
+doi:10.32614/CRAN.package.etwfe
+\url{https://doi.org/10.32614/CRAN.package.etwfe}, R package
+version 0.5.0, \url{https://CRAN.R-project.org/package=etwfe}.
 }

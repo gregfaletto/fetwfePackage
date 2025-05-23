@@ -1,5 +1,5 @@
 #' @import glmnet
-#' @importFrom stats rbinom rmultinom rnorm runif sd
+#' @importFrom stats rbinom rmultinom rnorm runif sd lm
 
 #' @title Fused extended two-way fixed effects
 #'
@@ -1889,6 +1889,7 @@ etwfeWithSimulatedData <- function(
 #' \url{https://arxiv.org/abs/1803.09015}.
 #' @examples
 #' ## toy example ---------------------------------------------------------------
+#' \dontrun{
 #' library(did)  # provides the mpdta example dataframe
 #' data(mpdta)
 #'
@@ -1903,6 +1904,7 @@ etwfeWithSimulatedData <- function(
 #'   covars = c("lpop"))
 #'
 #' head(tidy_df)
+#' }
 #'
 #' ## Now you can call fetwfe()  ------------------------------------------------
 #' # res <- fetwfe(
@@ -1981,6 +1983,7 @@ attgtToFetwfeDf <- function(
 #' version 0.5.0, \url{https://CRAN.R-project.org/package=etwfe}.
 #' @examples
 #' ## toy example ---------------------------------------------------------------
+#' \dontrun{
 #' library(did)  # provides the mpdta example dataframe
 #' data(mpdta)
 #'
@@ -1996,6 +1999,7 @@ attgtToFetwfeDf <- function(
 #'
 #' head(tidy_df)
 #'
+#' }
 #' ## Now you can call fetwfe()  ------------------------------------------------
 #' # res <- fetwfe(
 #' #   pdata      = tidy_df,

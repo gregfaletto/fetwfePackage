@@ -28,11 +28,14 @@ test_that("basic happy path works", {
 		covars = c("lpop")
 	)
 	expect_s3_class(tidy, "data.frame")
-	expect_named(tidy, c("time", "unit", "treatment", "y", "lpop"))
-	expect_true(all(tidy$time == as.integer(tidy$time)))
+	expect_named(
+		tidy,
+		c("time_var", "unit_var", "treatment", "response", "lpop")
+	)
+	expect_true(all(tidy$time_var == as.integer(tidy$time_var)))
 	expect_true(all(tidy$treatment %in% 0:1))
 	# treated unit 3 should switch on in 2001 and stay on
-	unit3 <- subset(tidy, unit == "3")
+	unit3 <- subset(tidy, unit_var == "3")
 	expect_equal(unit3$treatment, c(0L, 1L, 1L))
 })
 
@@ -58,7 +61,7 @@ test_that("dropping first‑period treated units", {
 	df <- make_simple_df()
 	df$first.treat[df$county == 1] <- 2000 # treated from first period
 	tidy <- attgtToFetwfeDf(df, "lemp", "year", "county", "first.treat")
-	expect_false(any(tidy$unit == "1"))
+	expect_false(any(tidy$unit_var == "1"))
 })
 
 test_that("missing columns are caught", {

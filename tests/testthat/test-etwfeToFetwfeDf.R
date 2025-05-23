@@ -34,13 +34,16 @@ test_that("basic happy path works", {
 	)
 
 	expect_s3_class(tidy, "data.frame")
-	expect_named(tidy, c("time", "unit", "treatment", "y", "lpop"))
+	expect_named(
+		tidy,
+		c("time_var", "unit_var", "treatment", "response", "lpop")
+	)
 
-	expect_true(all(tidy$time == as.integer(tidy$time)))
+	expect_true(all(tidy$time_var == as.integer(tidy$time_var)))
 	expect_true(all(tidy$treatment %in% 0:1))
 
 	## Unit 3 should switch on in 2001 and stay on
-	unit3 <- subset(tidy, unit == "3")
+	unit3 <- subset(tidy, unit_var == "3")
 	expect_equal(unit3$treatment, c(0L, 1L, 1L))
 })
 
@@ -73,7 +76,7 @@ test_that("dropping first-period treated units works", {
 	df$first.treat[df$county == 1] <- 2000 # unit 1 treated from first period
 
 	tidy <- etwfeToFetwfeDf(df, "lemp", "year", "county", "first.treat")
-	expect_false(any(tidy$unit == "1"))
+	expect_false(any(tidy$unit_var == "1"))
 })
 
 ## ---------------------------------------------------------------------------
