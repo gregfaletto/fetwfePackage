@@ -4617,7 +4617,7 @@ etwfe_core <- function(
 	# Response already centered; no intercept needed
 	fit <- lm(y ~ . + 0, df)
 
-	beta_hat_slopes<- coef(fit) / scale_scale
+	beta_hat_slopes <- coef(fit) / scale_scale
 
 	stopifnot(length(beta_hat_slopes) == p)
 	stopifnot(all(!is.na(beta_hat_slopes)))
@@ -4945,8 +4945,6 @@ prep_for_etwfe_regresion <- function(
 	stopifnot(ncol(X_final_scaled) == p)
 	scale_center <- attr(X_final_scaled, "scaled:center")
 	scale_scale <- attr(X_final_scaled, "scaled:scale")
-
-	
 
 	if (add_ridge) {
 		# Initialize identity matrix
@@ -5449,4 +5447,112 @@ getSecondVarTermOLS <- function(
 		(N * T)
 
 	return(att_var_2)
+}
+
+# ---  INTERNAL helper ---------------------------------------------------------
+.fetwfe_df_core <- function(
+	data,
+	vars,
+	covars = character(0),
+	drop_first_period_treated = TRUE,
+	out_names = list(
+		time = "time",
+		unit = "unit",
+		treatment = "treatment",
+		response = "y"
+	)
+) {
+	stopifnot(is.data.frame(data))
+	required <- unlist(vars, use.names = FALSE)
+	missing <- setdiff(c(required, covars), names(data))
+	if (length(missing))
+		stop(
+			"Column(s) not found in `data`: ",
+			paste(missing, collapse = ", "),
+			call. = FALSE
+		)
+
+	## ---------- enforce types --------------------------------------------------
+	df <- data[, unique(c(required, covars))]
+	df[[vars$t]] <- as.integer(df[[vars$t]])
+	df[[vars$g]] <- as.integer(df[[vars$g]])
+	df[[vars$id]] <- as.character(df[[vars$id]])
+
+	if (anyNA(df[[vars$t]]))
+		stop("Missing values in `", vars$t, "`.", call. = FALSE)
+	if (anyNA(df[[vars$g]]))
+		stop("Missing values in `", vars$g, "`.", call. = FALSE)
+
+	## ---------- uniqueness & irreversibility ----------------------------------
+	dup_rows <- duplicated(df[, c(vars$id, vars$t)])
+	if (any(dup_rows))
+		stop(
+			"Each (id, time) pair must appear at most once; found duplicates.",
+			call. = FALSE
+		)
+
+	g_const <- by(df, df[[vars$id]], function(x) length(unique(x[[vars$g]])))
+	if (any(g_const > 1))
+		stop(
+			"`",
+			vars$g,
+			"` must be constant within each unit (irreversible treatment).",
+			call. = FALSE
+		)
+
+	## ---------- drop first-period treated --------------------------------------
+	first_period <- min(df[[vars$t]])
+	if (drop_first_period_treated) {
+		treated_first <- df[[vars$g]] != 0 & df[[vars$g]] <= first_period
+		if (any(treated_first)) {
+			df <- df[!treated_first, ]
+			message(
+				"Dropped ",
+				sum(treated_first),
+				" unit-period(s) treated in the first period."
+			)
+		}
+	}
+
+	## ---------- absorb-state dummy --------------------------------------------
+	treat_dummy <- ifelse(
+		df[[vars$g]] > 0 & df[[vars$t]] >= df[[vars$g]],
+		1L,
+		0L
+	)
+	bad_units <- with(
+		df,
+		tapply(treat_dummy, df[[vars$id]], function(z) any(diff(z) < 0))
+	)
+	if (any(bad_units))
+		warning(
+			sum(bad_units),
+			" unit(s) switch from treated back to untreated. ",
+			"They will be dropped by `fetwfe()`."
+		)
+
+	## ---------- assemble tidy dataframe ---------------------------------------
+	res <- data.frame(
+		df[[vars$t]], # time
+		df[[vars$id]], # unit
+		treat_dummy, # treatment dummy
+		df[[vars$y]], # outcome
+		stringsAsFactors = FALSE
+	)
+	names(res)[1:4] <- unlist(
+		out_names[c("time", "unit", "treatment", "response")],
+		use.names = FALSE
+	)
+
+	if (length(covars)) res[covars] <- df[covars]
+
+	# guard against factors that slipped in
+	res[[out_names$time]] <- as.integer(res[[out_names$time]])
+	res[[out_names$unit]] <- as.character(res[[out_names$unit]])
+	res[[out_names$treatment]] <- as.integer(res[[out_names$treatment]])
+	res[[out_names$response]] <- as.numeric(res[[out_names$response]])
+
+	res <- res[order(res[[out_names$unit]], res[[out_names$time]]), ]
+	rownames(res) <- NULL
+	res
 }

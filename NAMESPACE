@@ -2,6 +2,7 @@
 
 export(attgtToFetwfeDf)
 export(etwfe)
+export(etwfeToFetwfeDf)
 export(etwfeWithSimulatedData)
 export(fetwfe)
 export(fetwfeWithSimulatedData)

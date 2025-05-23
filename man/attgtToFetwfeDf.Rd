@@ -55,7 +55,7 @@ covariates requested in \code{covars}, ready to be fed to
 \code{y} is numeric.
 }
 \description{
-\code{attgt_to_fetwfe_df()} reshapes and renames a panel dataset that is already
+\code{attgtToFetwfeDf()} reshapes and renames a panel dataset that is already
 formatted for \code{did::att_gt()} so that it can be passed directly to
 \code{fetwfe()} or \code{etwfe()} from the \strong{fetwfe} package.  In particular, it
 \itemize{
@@ -74,7 +74,7 @@ data(mpdta)
 
 head(mpdta)
 
-tidy_df <- attgt_to_fetwfe_df(
+tidy_df <- attgtToFetwfeDf(
   data  = mpdta,
   yname = "lemp",
   tname = "year",
