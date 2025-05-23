@@ -1842,9 +1842,10 @@ etwfeWithSimulatedData <- function(
 #' Convert data formatted for `att_gt()` to a dataframe suitable for `fetwfe()` / `etwfe()`
 #'
 #' `attgtToFetwfeDf()` reshapes and renames a panel dataset that is already
-#' formatted for `did::att_gt()` so that it can be passed directly to
-#' `fetwfe()` or `etwfe()` from the **fetwfe** package.  In particular, it
-#'   * creates an *absorbing‑state* treatment dummy that equals 1 *from the
+#' formatted for `did::att_gt()` (Callaway and Sant'Anna 2021) so that it can be
+#' passed directly to fetwfe()` or `etwfe()` from the `fetwfe` package. In
+#' particular, it
+#'   * creates an *absorbing‑state* treatment dummy that equals 1 from the
 #'     first treated period onward* and 0 otherwise,
 #'   * (optionally) drops units that are already treated in the very first
 #'     period of the sample (because `fetwfe()` removes them internally), and
@@ -1855,32 +1856,37 @@ etwfeWithSimulatedData <- function(
 #'   columns used by `did::att_gt()`: outcome `yname`, time `tname`, unit id
 #'   `idname`, and the first‑treatment period `gname` (which is 0 for the
 #'   never‑treated group).
-#' @param yname  Character scalar.  Name of the outcome column.
-#' @param tname  Character scalar.  Name of the time variable (numeric or
-#'   integer).  This becomes `time` in the returned dataframe.
-#' @param idname Character scalar.  Name of the unit identifier.  Converted to
-#'   character and returned as `unit`.
-#' @param gname  Character scalar.  Name of the *group* variable holding the
-#'   first period of treatment.  Values must be 0 for never‑treated, or a
+#' @param yname  Character scalar. Name of the outcome column.
+#' @param tname  Character scalar. Name of the time variable (numeric or
+#'   integer). This becomes `time` in the returned dataframe.
+#' @param idname Character scalar. Name of the unit identifier. Converted to
+#'   character and returned as `unit_var`.
+#' @param gname  Character scalar. Name of the *group* variable holding the
+#'   first period of treatment. Values must be 0 for never‑treated, or a
 #'   positive integer representing the first treated period.
 #' @param covars Character vector of additional covariate column names to carry
-#'   through (default `character(0)`).  These columns are left untouched and
+#'   through (default `character(0)`). These columns are left untouched and
 #'   appear *after* the required columns in the returned dataframe.
-#' @param drop_first_period_treated Logical.  If `TRUE` (default), units that
+#' @param drop_first_period_treated Logical. If `TRUE` (default), units that
 #'   are already treated in the first sample period are removed *before*
-#'   creating the treatment dummy.  `fetwfe()` would do this internally, but
+#'   creating the treatment dummy. `fetwfe()` would do this internally, but
 #'   dropping them here keeps the returned dataframe cleaner.
 #' @param out_names  A named list giving the column names to use in the
-#'   resulting dataframe.  Defaults are `list(time = "time", unit = "unit",
-#'   treatment = "treatment", response = "y")`.  Override if you prefer
-#'   different names (for instance, to keep the original `yname`).  The vector
+#'   resulting dataframe. Defaults are `list(time = "time", unit = "unit",
+#'   treatment = "treatment", response = "y")`. Override if you prefer
+#'   different names (for instance, to keep the original `yname`). The vector
 #'   *must* contain exactly these four names.
 #'
 #' @return A `data.frame` with columns `time`, `unit`, `treatment`, `y`, and any
 #'   covariates requested in `covars`, ready to be fed to
-#'   `fetwfe()`/`etwfe()`.  All required columns are of the correct type:
+#'   `fetwfe()`/`etwfe()`. All required columns are of the correct type:
 #'   `time` is integer, `unit` is character, `treatment` is integer 0/1, and
 #'   `y` is numeric.
+#' @references Callaway, Brantly and Pedro H.C. Sant'Anna. "Difference-in-
+#' Differences with Multiple Time Periods." Journal of Econometrics, Vol. 225,
+#' No. 2, pp. 200-230, 2021.
+#' \url{https://doi.org/10.1016/j.jeconom.2020.12.001},
+#' \url{https://arxiv.org/abs/1803.09015}.
 #' @examples
 #' ## toy example ---------------------------------------------------------------
 #' library(did)  # provides the mpdta example dataframe
@@ -1899,7 +1905,6 @@ etwfeWithSimulatedData <- function(
 #' head(tidy_df)
 #'
 #' ## Now you can call fetwfe()  ------------------------------------------------
-#' # library(fetwfe)
 #' # res <- fetwfe(
 #' #   pdata      = tidy_df,
 #' #   time_var   = "time_var",
@@ -1936,6 +1941,17 @@ attgtToFetwfeDf <- function(
 #' Convert data prepared for `etwfe::etwfe()` to the format required by
 #' `fetwfe()` and `fetwfe::etwfe()`
 #'
+#' `etwfeToFetwfeDf()` reshapes and renames a panel dataset that is already
+#' formatted for `etwfe::etwfe()` (McDermott 2024) so that it can be
+#' passed directly to fetwfe()` or `etwfe()` from the `fetwfe` package. In
+#' particular, it
+#'   * creates an *absorbing‑state* treatment dummy that equals 1 from the
+#'     first treated period onward* and 0 otherwise,
+#'   * (optionally) drops units that are already treated in the very first
+#'     period of the sample (because `fetwfe()` removes them internally), and
+#'   * returns a tidy dataframe whose column names match the arguments that
+#'     `fetwfe()`/`etwfe()` expect.
+#'
 #' @param data A long-format data.frame that you could already feed to `etwfe()`.
 #' @param yvar Character. Column name of the outcome (left-hand side in your `fml`).
 #' @param tvar Character. Column name of the time variable that you pass to `etwfe()` as `tvar`.
@@ -1944,12 +1960,12 @@ attgtToFetwfeDf <- function(
 #' @param gvar Character. Column name of the “first treated” cohort variable passed to `etwfe()` as `gvar`.
 #'   Must be `0` for never-treated units, or the (strictly positive) first treated period.
 #' @param covars Character vector of *additional* covariate columns to keep (default `character(0)`).
-#' @param drop_first_period_treated Logical.  Should units already treated in the very first
+#' @param drop_first_period_treated Logical. Should units already treated in the very first
 #'   sample period be removed?  (`fetwfe()` will drop them internally anyway, but doing it
 #'   here keeps the returned dataframe clean.)  Default `TRUE`.
 #' @param out_names Named list giving the column names that the returned dataframe should have.
 #'   The default (`time`, `unit`, `treatment`, `y`) matches the arguments usually supplied to
-#'   `fetwfe()`.  **Do not change the *names* of this list** – only the *values* – and keep all four.
+#'   `fetwfe()`. **Do not change the *names* of this list** – only the *values* – and keep all four.
 #'
 #' @return A tidy `data.frame` with (in this order)
 #'   * `time`       integer,
@@ -1959,6 +1975,10 @@ attgtToFetwfeDf <- function(
 #'   * any covariates requested in `covars`.
 #'   Ready to pass straight to `fetwfe()` or `fetwfe::etwfe()`.
 #'
+#' @references McDermott G (2024). _etwfe: Extended Two-Way Fixed Effects_.
+#' doi:10.32614/CRAN.package.etwfe
+#' \url{https://doi.org/10.32614/CRAN.package.etwfe}, R package
+#' version 0.5.0, \url{https://CRAN.R-project.org/package=etwfe}.
 #' @examples
 #' ## toy example ---------------------------------------------------------------
 #' library(did)  # provides the mpdta example dataframe
@@ -1977,7 +1997,6 @@ attgtToFetwfeDf <- function(
 #' head(tidy_df)
 #'
 #' ## Now you can call fetwfe()  ------------------------------------------------
-#' # library(fetwfe)
 #' # res <- fetwfe(
 #' #   pdata      = tidy_df,
 #' #   time_var   = "time_var",
