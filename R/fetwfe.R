@@ -1840,7 +1840,7 @@ etwfeWithSimulatedData <- function(
 
 #' Convert data formatted for `att_gt()` to a dataframe suitable for `fetwfe()` / `etwfe()`
 #'
-#' `attgt_to_fetwfe_df()` reshapes and renames a panel dataset that is already
+#' `attgtToFetwfeDf()` reshapes and renames a panel dataset that is already
 #' formatted for `did::att_gt()` so that it can be passed directly to
 #' `fetwfe()` or `etwfe()` from the **fetwfe** package.  In particular, it
 #'   * creates an *absorbing‑state* treatment dummy that equals 1 *from the
@@ -1887,7 +1887,7 @@ etwfeWithSimulatedData <- function(
 #'
 #' head(mpdta)
 #'
-#' tidy_df <- attgt_to_fetwfe_df(
+#' tidy_df <- attgtToFetwfeDf(
 #'   data  = mpdta,
 #'   yname = "lemp",
 #'   tname = "year",
@@ -1983,6 +1983,122 @@ attgtToFetwfeDf <- function(data,
   res[[out_names$treatment]] <- as.integer(res[[out_names$treatment]])
   res[[out_names$response]]  <- as.numeric(res[[out_names$response]])
 
+  res <- res[order(res[[out_names$unit]], res[[out_names$time]]), ]
+  rownames(res) <- NULL
+  res
+}
+
+#' Convert data prepared for `etwfe()` to the format required by `fetwfe()`
+#'
+#' @param data A long-format data.frame that you could already feed to `etwfe()`.
+#' @param yvar Character. Column name of the outcome (left-hand side in your `fml`).
+#' @param tvar Character. Column name of the time variable that you pass to `etwfe()` as `tvar`.
+#' @param idvar Character. Column name of the unit identifier (the variable you would
+#'   cluster on, or pass to `etwfe(..., ivar = idvar)` if you were using unit FEs).
+#' @param gvar Character. Column name of the “first treated” cohort variable passed to `etwfe()` as `gvar`.
+#'   Must be `0` for never-treated units, or the (strictly positive) first treated period.
+#' @param covars Character vector of *additional* covariate columns to keep (default `character(0)`).
+#' @param drop_first_period_treated Logical.  Should units already treated in the very first
+#'   sample period be removed?  (`fetwfe()` will drop them internally anyway, but doing it
+#'   here keeps the returned dataframe clean.)  Default `TRUE`.
+#' @param out_names Named list giving the column names that the returned dataframe should have.
+#'   The default (`time`, `unit`, `treatment`, `y`) matches the arguments usually supplied to
+#'   `fetwfe()`.  **Do not change the *names* of this list** – only the *values* – and keep all four.
+#'
+#' @return A tidy `data.frame` with (in this order)
+#'   * `time`       integer,  
+#'   * `unit`       character,  
+#'   * `treatment`  integer 0/1 absorbing-state dummy,  
+#'   * `y`          numeric outcome,  
+#'   * any covariates requested in `covars`.
+#'   Ready to pass straight to `fetwfe()` or `fetwfe::etwfe()`.
+#'
+#' @export
+etwfeToFetwfeDf <- function(data,
+                               yvar,
+                               tvar,
+                               idvar,
+                               gvar,
+                               covars = character(0),
+                               drop_first_period_treated = TRUE,
+                               out_names = list(time      = "time",
+                                                unit      = "unit",
+                                                treatment = "treatment",
+                                                response  = "y")) {
+
+  ## ---- basic column checks --------------------------------------------------
+  stopifnot(is.data.frame(data))
+  needed_cols <- c(yvar, tvar, idvar, gvar)
+  all_cols    <- unique(c(needed_cols, covars))
+  missing     <- setdiff(all_cols, names(data))
+  if (length(missing))
+    stop("Column(s) not found in `data`: ",
+         paste(missing, collapse = ", "), call. = FALSE)
+
+  ## ---- enforce types --------------------------------------------------------
+  df <- data[, all_cols]
+  df[[tvar]]  <- as.integer(df[[tvar]])
+  df[[gvar]]  <- as.integer(df[[gvar]])
+  df[[idvar]] <- as.character(df[[idvar]])
+
+  if (anyNA(df[[tvar]])) stop("Missing values in `", tvar, "`.", call. = FALSE)
+  if (anyNA(df[[gvar]])) stop("Missing values in `", gvar, "`.", call. = FALSE)
+
+  ## ---- uniqueness & irreversibility checks ---------------------------------
+  dup_rows <- duplicated(df[, c(idvar, tvar)])
+  if (any(dup_rows))
+    stop("Each (", idvar, ", ", tvar, ") pair must appear at most once; ",
+         "found duplicates.", call. = FALSE)
+
+  g_by_id <- by(df, df[[idvar]],
+                function(x) length(unique(x[[gvar]])), simplify = TRUE)
+  if (any(g_by_id > 1))
+    stop("`", gvar, "` must be constant within each unit (irreversible treatment).",
+         call. = FALSE)
+
+  ## ---- drop units treated in first sample period ---------------------------
+  first_period <- min(df[[tvar]])
+  if (drop_first_period_treated) {
+    treat_first <- df[[gvar]] != 0 & df[[gvar]] <= first_period
+    if (any(treat_first)) {
+      df <- df[!treat_first, ]
+      message("Dropped ", sum(treat_first), " unit-period(s) treated in the first period.")
+    }
+  }
+
+  ## ---- create absorbing-state treatment dummy ------------------------------
+  df$.treat_dummy <- ifelse(df[[gvar]] > 0 & df[[tvar]] >= df[[gvar]], 1L, 0L)
+
+  ## warn if any unit switches back (fetwfe will drop them)
+  bad_units <- with(df,
+                    tapply(.treat_dummy, df[[idvar]],
+                           function(z) any(diff(z) < 0)))
+  if (any(bad_units))
+    warning(sum(bad_units), " unit(s) switch from treated back to untreated. ",
+            "They will be dropped by `fetwfe()`.")
+
+  ## ---- assemble tidy dataframe ---------------------------------------------
+  res <- data.frame(
+    df[[tvar]],          # time
+    df[[idvar]],         # unit
+    df$.treat_dummy,     # absorbing treatment dummy
+    df[[yvar]],          # outcome
+    stringsAsFactors = FALSE
+  )
+  names(res)[1:4] <- unlist(
+    out_names[c("time", "unit", "treatment", "response")],
+    use.names = FALSE)
+
+  if (length(covars))
+    res[covars] <- df[covars]
+
+  ## final coercions (guard against factors that may have snuck in)
+  res[[out_names$time]]      <- as.integer(res[[out_names$time]])
+  res[[out_names$unit]]      <- as.character(res[[out_names$unit]])
+  res[[out_names$treatment]] <- as.integer(res[[out_names$treatment]])
+  res[[out_names$response]]  <- as.numeric(res[[out_names$response]])
+
+  ## ensure time-within-unit ordering
   res <- res[order(res[[out_names$unit]], res[[out_names$time]]), ]
   rownames(res) <- NULL
   res
