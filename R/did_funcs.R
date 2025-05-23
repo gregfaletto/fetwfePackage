@@ -669,9 +669,6 @@ fetwfe_core <- function(
 		))
 	}
 
-	# intercept
-	# eta_hat <- theta_hat[1] # theta_hat from getBetaBIC already has intercept as first element
-
 	# estimated coefficients (slopes in transformed space)
 	theta_hat_slopes <- theta_hat[2:(p + 1)]
 
@@ -915,11 +912,9 @@ fetwfe_core <- function(
 		)
 		indep_att_hat <- indep_te_results$att_hat
 		indep_att_se <- indep_te_results$att_te_se
-		# indep_att_se_no_prob <- indep_te_results$att_te_se_no_prob # This was commented out
 	} else {
 		indep_att_hat <- NA
 		indep_att_se <- NA
-		# indep_att_se_no_prob <- NA # Keep commented for consistency
 	}
 
 	return(list(
@@ -1012,8 +1007,6 @@ idCohorts <- function(df, time_var, unit_var, treat_var, covs) {
 	stopifnot(time_var %in% colnames(df))
 	stopifnot(unit_var %in% colnames(df))
 	stopifnot(treat_var %in% colnames(df))
-	# stopifnot(all(covs %in% colnames(df))) # covs might be empty, or not all present if some were
-	# factors
 
 	# Form design matrix
 	units <- unique(df[, unit_var])
@@ -1117,8 +1110,6 @@ idCohorts <- function(df, time_var, unit_var, treat_var, covs) {
 	# If after removing first-period treated, there are no treated cohorts left:
 	if (length(cohorts) == 0) {
 		# This implies all treated units were treated in the first period.
-		# The code in prepXints would later error if R < 2.
-		# This function's main job is to return the filtered df and cohort structure.
 		stop("all units appear to have been treated in the first period")
 	}
 
@@ -1345,7 +1336,6 @@ processCovs <- function(
 			)
 		}
 		for (s in units) {
-			# df_s <- df[df[, unit_var] == s, ] # Not needed if iterating by index
 			first_period_rows_s_idx <- which(
 				(df[, unit_var] == s) & (df[, time_var] == first_time_val)
 			)
@@ -1505,7 +1495,6 @@ addDummies <- function(
 	resp_var,
 	n_cohorts
 ) {
-	# ... (Function body as provided)
 	# Total number of treated times for all cohorts (later, this will be the
 	# total number of treatment effects to estimate)
 	num_treats <- 0
@@ -1538,13 +1527,6 @@ addDummies <- function(
 	if (n_cohorts == 0 && length(cohorts) > 0) {
 		stop("n_cohorts == 0 but the cohorts list is not empty in addDummies.")
 	}
-	if (n_cohorts > 0 && length(cohorts) != n_cohorts) {
-		# This might happen if idCohorts filters out all treated units.
-		# prepXints already checks R >= 1 (where R is length(cohorts))
-		# and R < 2.
-		# This stop might be too strict if R is derived from length(cohorts) earlier.
-		# stop(paste("n_cohorts is", n_cohorts, "but length(cohorts) is", length(cohorts)))
-	}
 
 	for (i in 1:n_cohorts) {
 		# Time of first treatment for this cohort
@@ -1558,7 +1540,6 @@ addDummies <- function(
 		# How many treated times are there?
 		n_treated_times_for_cohort_i <- length(treated_times_i)
 		stopifnot(n_treated_times_for_cohort_i <= T)
-		# stopifnot(n_treated_times_for_cohort_i == max(times) - y1_treat_i + 1) # This might fail if times are not consecutive integers
 
 		if (n_treated_times_for_cohort_i == 0 && length(cohorts[[i]]) > 0) {
 			# This means a cohort is defined but has no post-treatment periods within 'times'
@@ -1592,7 +1573,7 @@ addDummies <- function(
 			length(current_cohort_units) == 0 &&
 				n_treated_times_for_cohort_i > 0
 		) {
-			# A defined cohort from names(cohorts) has no units
+			stop("A defined cohort from names(cohorts) has no units.")
 			# This shouldn't happen if idCohorts filters empty cohorts, unless n_cohorts was passed independently.
 			# warning(paste("Cohort starting at time", y1_treat_i, "has no units."))
 			# If a cohort has no units, its dummies will be all zero.
@@ -1632,7 +1613,6 @@ addDummies <- function(
 				treat_var_mat <- cbind(treat_var_mat, current_treat_dummies)
 			}
 		}
-		# df <- data.frame(df, treat_vars_i) # Original code modifies df, but not strictly needed if matrices are goal
 	}
 
 	# After loop, num_treats holds the grand total number of treatment-period dummies
@@ -1641,7 +1621,6 @@ addDummies <- function(
 	stopifnot(length(first_inds) == n_cohorts)
 
 	stopifnot(length(cohort_treat_names) == n_cohorts)
-	# names(cohort_treat_names) <- names(cohorts) # Already done inside loop if using y1_treat_i
 
 	if (n_cohorts == 0 || num_treats == 0) {
 		# If no cohorts or no treatment effects
@@ -2306,9 +2285,6 @@ transformXintImproved <- function(
 
 	X_mod[, feat_inds] <- X_int[, feat_inds] %*%
 		genInvTwoWayFusionTransformMat(num_treats, first_inds, R)
-
-	# stopifnot(all(!is.na(X_mod[, 1:(R + T - 1 + d + R*d + (T - 1)*d + num_treats)])))
-	# stopifnot(all(is.na(X_mod[, (R + T - 1 + d + R*d + (T - 1)*d + num_treats + 1):p])))
 
 	if (d > 0) {
 		# Lastly, penalize interactions between each treatment effect and each feature.
