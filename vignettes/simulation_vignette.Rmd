@@ -79,9 +79,9 @@ Next, we simulate a panel data set using the generated coefficient object with t
 
 Here we choose:
 
-- **N** (number of units) as 30,
-- **sig_eps_sq** (observation-level noise variance) as 5,
-- **sig_eps_c_sq** (unit-level noise variance) as 5, and
+- `N` (number of units) as 30,
+- `sig_eps_sq` (observation-level noise variance) as 5,
+- `sig_eps_c_sq` (unit-level noise variance) as 5, and
 - use the default `"gaussian"` distribution for the covariates.
 
 ```{r}

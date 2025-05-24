@@ -36,7 +36,7 @@ generateBaseEffects <- function(N, d, T, R, distribution = "gaussian") {
 
 	stopifnot(ncol(ret$cohort_fe) == R)
 
-	X_long <- X[rep(1:N, each = T), ]
+	X_long <- X[rep(1:N, each = T), , drop = FALSE]
 	return(list(
 		cohort_fe = ret$cohort_fe,
 		time_fe = ret$time_fe,

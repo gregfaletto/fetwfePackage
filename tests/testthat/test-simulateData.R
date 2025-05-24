@@ -79,9 +79,9 @@ test_that("simulateData (with interactions) returns expected output", {
 # ------------------------------------------------------------------------------
 test_that("simulateData is reproducible with same seed", {
 	N <- 30
-  T_val <- 6
+	T_val <- 6
 	R_val <- 5
-  d_val <- 4
+	d_val <- 4
 	sig_eps_sq <- 5
 	sig_eps_c_sq <- 5
 
@@ -119,9 +119,9 @@ test_that("simulateData is reproducible with same seed", {
 # ------------------------------------------------------------------------------
 test_that("simulateData errors when beta has wrong length", {
 	N <- 30
-  T_val <- 6
+	T_val <- 6
 	R_val <- 5
-  d_val <- 4
+	d_val <- 4
 	sig_eps_sq <- 5
 	sig_eps_c_sq <- 5
 	p_int <- compute_p_int(T_val, R_val, d_val)
@@ -195,9 +195,9 @@ test_that("Output from simulateData can be piped into fetwfeWithSimulatedData", 
 # ------------------------------------------------------------------------------
 test_that("Covariates are uniformly bounded when distribution = 'uniform'", {
 	N <- 30
-  T_val <- 6
+	T_val <- 6
 	R_val <- 5
-  d_val <- 4
+	d_val <- 4
 	sig_eps_sq <- 5
 	sig_eps_c_sq <- 5
 	num_treats <- T_val * R_val - (R_val * (R_val + 1)) / 2

@@ -1,5 +1,5 @@
 #' @import glmnet
-#' @importFrom stats rbinom rmultinom rnorm runif sd
+#' @importFrom stats rbinom rmultinom rnorm runif sd lm
 
 #' @title Fused extended two-way fixed effects
 #'
@@ -125,7 +125,7 @@
 #' mentioned above, for `q <= 1` ideally this value is close to 0.}
 #' \item{lambda.min}{Either the provided `lambda.min` or the one
 #' that was used, if a value wasn't provided.} \item{lambda.min_model_size}{The
-#' size of the selected model corresponding `lambda.min` (for `q <= 1`, this
+#' size of the selected model corresponding to `lambda.min` (for `q <= 1`, this
 #' will be the largest model size). As mentioned above, for `q <= 1` ideally
 #' this value is close to `p`.}\item{lambda_star}{The value of `lambda` chosen
 #' by BIC. If this value is close to `lambda.min` or `lambda.max`, that could
@@ -243,81 +243,32 @@ fetwfe <- function(
 
 	rm(ret)
 
-	# Subset pdata to include only the key columns
-	pdata <- pdata[, c(response, time_var, unit_var, treatment, covs)]
-
-	# Process any factor covariates:
-	if (length(covs) > 0) {
-		pf_res <- processFactors(pdata, covs)
-		pdata <- pf_res$pdata
-		covs <- pf_res$covs
-	}
-
-	# Proceed to generate design matrix and other objects
-	res <- prepXints(
-		data = pdata,
+	res1 <- prep_for_etwfe_core(
+		pdata = pdata,
+		response = response,
 		time_var = time_var,
 		unit_var = unit_var,
 		treatment = treatment,
 		covs = covs,
-		response = response,
-		verbose = verbose
+		verbose = verbose,
+		indep_count_data_available = indep_count_data_available,
+		indep_counts = indep_counts
 	)
 
-	X_ints <- res$X_ints
-	y <- res$y
-	N <- res$N
-	T <- res$T
-	d <- res$d
-	p <- res$p
-	in_sample_counts <- res$in_sample_counts
-	num_treats <- res$num_treats
-	first_inds <- res$first_inds
+	pdata <- res1$pdata
+	covs <- res1$covs
+	X_ints <- res1$X_ints
+	y <- res1$y
+	N <- res1$N
+	T <- res1$T
+	d <- res1$d
+	p <- res1$p
+	in_sample_counts <- res1$in_sample_counts
+	num_treats <- res1$num_treats
+	first_inds <- res1$first_inds
+	R <- res1$R
 
-	rm(res)
-
-	R <- length(in_sample_counts) - 1
-	stopifnot(R >= 1)
-	stopifnot(R <= T - 1)
-	if (R < 2) {
-		stop(
-			"Only one treated cohort detected in data. Currently fetwfe only supports data sets with at least two treated cohorts."
-		)
-	}
-	stopifnot(N >= R + 1)
-	stopifnot(sum(in_sample_counts) == N)
-	stopifnot(all(in_sample_counts >= 0))
-	stopifnot(is.integer(in_sample_counts))
-	if (in_sample_counts[1] == 0) {
-		stop(
-			"No never-treated units detected in data to fit model; estimating treatment effects is not possible"
-		)
-	}
-	if (length(names(in_sample_counts)) != length(in_sample_counts)) {
-		stop(
-			"in_sample_counts must have all unique named entries (with names corresponding to the names of each cohort)"
-		)
-	}
-	if (
-		length(names(in_sample_counts)) !=
-			length(unique(names(in_sample_counts)))
-	) {
-		stop(
-			"in_sample_counts must have all unique named entries (with names corresponding to the names of each cohort)"
-		)
-	}
-	if (indep_count_data_available) {
-		if (sum(indep_counts) != N) {
-			stop(
-				"Number of units in independent cohort count data does not equal number of units in data to be used to fit model."
-			)
-		}
-		if (length(indep_counts) != length(in_sample_counts)) {
-			stop(
-				"Number of counts in independent counts does not match number of cohorts in data to be used to fit model."
-			)
-		}
-	}
+	rm(res1)
 
 	res <- fetwfe_core(
 		X_ints = X_ints,
@@ -342,20 +293,27 @@ fetwfe <- function(
 	)
 
 	if (indep_count_data_available) {
-		if (q < 1) {
-			stopifnot(!is.na(res$indep_att_hat))
+		stopifnot(!is.na(res$indep_att_hat))
+
+		if ((q < 1) & res$calc_ses) {
 			stopifnot(!is.na(res$indep_att_se))
 		}
+
 		stopifnot(all(!is.na(res$indep_cohort_probs)))
 		att_hat <- res$indep_att_hat
 		att_se <- res$indep_att_se
 		cohort_probs <- res$indep_cohort_probs
 	} else {
+		stopifnot(!is.na(res$in_sample_att_hat))
+
+		if ((q < 1) & res$calc_ses) {
+			stopifnot(!is.na(res$in_sample_att_se))
+		}
+
 		att_hat <- res$in_sample_att_hat
 		att_se <- res$in_sample_att_se
 		cohort_probs <- res$cohort_probs
 	}
-
 	return(list(
 		att_hat = att_hat,
 		att_se = att_se,
@@ -382,7 +340,8 @@ fetwfe <- function(
 		T = res$T,
 		R = res$R,
 		d = res$d,
-		p = res$p
+		p = res$p,
+		calc_ses = res$calc_ses
 	))
 }
 
@@ -746,7 +705,7 @@ genCoefs <- function(R, T, d, density, eff_size, seed = NULL) {
 #' mentioned above, for `q <= 1` ideally this value is close to 0.}
 #' \item{lambda.min}{Either the provided `lambda.min` or the one
 #' that was used, if a value wasn't provided.} \item{lambda.min_model_size}{The
-#' size of the selected model corresponding `lambda.min` (for `q <= 1`, this
+#' size of the selected model corresponding to `lambda.min` (for `q <= 1`, this
 #' will be the largest model size). As mentioned above, for `q <= 1` ideally
 #' this value is close to `p`.}\item{lambda_star}{The value of `lambda` chosen
 #' by BIC. If this value is close to `lambda.min` or `lambda.max`, that could
@@ -1078,6 +1037,7 @@ simulateDataCore <- function(
 	cohort_inds <- res_base$cohort_inds
 
 	stopifnot(ncol(cohort_fe) == R)
+	stopifnot(is.matrix(X_long))
 
 	# Base matrix: cohort FE, time FE, and covariates (if any)
 	X_base <- if (d > 0) {
@@ -1521,4 +1481,555 @@ genCoefsCore <- function(R, T, d, density, eff_size, seed = NULL) {
 	)
 
 	return(list(beta = beta, theta = theta))
+}
+
+
+#' @title Extended two-way fixed effects
+#'
+#' @description Implementation of extended two-way fixed effects.
+#' Estimates overall ATT as well as CATT (cohort average treatment effects on
+#' the treated units).
+#'
+#' @param pdata Dataframe; the panel data set. Each row should represent an
+#' observation of a unit at a time. Should contain columns as described below.
+#' @param time_var Character; the name of a single column containing a variable
+#' for the time period. This column is expected to contain integer values (for
+#' example, years). Recommended encodings for dates include format YYYY, YYYYMM,
+#' or YYYYMMDD, whichever is appropriate for your data.
+#' @param unit_var Character; the name of a single column containing a variable
+#' for each unit. This column is expected to contain character values (i.e. the
+#' "name" of each unit).
+#' @param treatment Character; the name of a single column containing a variable
+#' for the treatment dummy indicator. This column is expected to contain integer
+#' values, and in particular, should equal 0 if the unit was untreated at that
+#' time and 1 otherwise. Treatment should be an absorbing state; that is, if
+#' unit `i` is treated at time `t`, then it must also be treated at all times
+#' `t` + 1, ..., `T`. Any units treated in the first time period will be removed
+#' automatically. Please make sure yourself that at least some units remain
+#' untreated at the final time period ("never-treated units").
+#' @param response Character; the name of a single column containing the
+#' response for each unit at each time. The response must be an integer or
+#' numeric value.
+#' @param covs (Optional.) Character; a vector containing the names of the
+#' columns for covariates. All of these columns are expected to contain integer,
+#' numeric, or factor values, and any categorical values will be automatically
+#' encoded as binary indicators. If no covariates are provided, the treatment
+#' effect estimation will proceed, but it will only be valid under unconditional
+#' versions of the parallel trends and no anticipation assumptions. Default is c().
+#' @param indep_counts (Optional.) Integer; a vector. If you have a sufficiently
+#' large number of units, you can optionally randomly split your data set in
+#' half (with `N` units in each data set). The data for half of the units should
+#' go in the `pdata` argument provided above. For the other `N` units, simply
+#' provide the counts for how many units appear in the untreated cohort plus
+#' each of the other `R` cohorts in this argument `indep_counts`. The benefit
+#' of doing this is that the standard error for the average treatment effect
+#' will be (asymptotically) exact instead of conservative. The length of
+#' `indep_counts` must equal 1 plus the number of treated cohorts in `pdata`.
+#' All entries of `indep_counts` must be strictly positive (if you are concerned
+#' that this might not work out, maybe your data set is on the small side and
+#' it's best to just leave your full data set in `pdata`). The sum of all the
+#' counts in `indep_counts` must match the total number of units in `pdata`.
+#' Default is NA (in which case conservative standard errors will be calculated
+#' if `q < 1`.)
+#' @param sig_eps_sq (Optional.) Numeric; the variance of the row-level IID
+#' noise assumed to apply to each observation. See Section 2 of Faletto (2025)
+#' for details. It is best to provide this variance if it is known (for example,
+#' if you are using simulated data). If this variance is unknown, this argument
+#' can be omitted, and the variance will be estimated using the estimator from
+#' Pesaran (2015, Section 26.5.1) with ridge regression. Default is NA.
+#' @param sig_eps_c_sq (Optional.) Numeric; the variance of the unit-level IID
+#' noise (random effects) assumed to apply to each observation. See Section 2 of
+#' Faletto (2025) for details. It is best to provide this variance if it is
+#' known (for example, if you are using simulated data). If this variance is
+#' unknown, this argument can be omitted, and the variance will be estimated
+#' using the estimator from Pesaran (2015, Section 26.5.1) with ridge
+#' regression. Default is NA.
+#' @param verbose Logical; if TRUE, more details on the progress of the function will
+#' be printed as the function executes. Default is FALSE.
+#' @param alpha Numeric; function will calculate (1 - `alpha`) confidence intervals
+#' for the cohort average treatment effects that will be returned in `catt_df`.
+#' @param add_ridge (Optional.) Logical; if TRUE, adds a small amount of ridge
+#' regularization to the (untransformed) coefficients to stabilize estimation.
+#' Default is FALSE.
+#' @return A named list with the following elements: \item{att_hat}{The
+#' estimated overall average treatment effect for a randomly selected treated
+#' unit.} \item{att_se}{A standard error for the ATT. If the Gram matrix is not
+#' invertible, this will be NA.} \item{catt_hats}{A named vector containing the
+#' estimated average treatment effects for each cohort.} \item{catt_ses}{A named
+#' vector containing the (asymptotically exact) standard errors for
+#' the estimated average treatment effects within each cohort.}
+#' \item{cohort_probs}{A vector of the estimated probabilities of being in each
+#' cohort conditional on being treated, which was used in calculating `att_hat`.
+#' If `indep_counts` was provided, `cohort_probs` was calculated from that;
+#' otherwise, it was calculated from the counts of units in each treated
+#' cohort in `pdata`.} \item{catt_df}{A dataframe displaying the cohort names,
+#' average treatment effects, standard errors, and `1 - alpha` confidence
+#' interval bounds.} \item{beta_hat}{The full vector of estimated coefficients.}
+#' \item{treat_inds}{The indices of `beta_hat` corresponding to
+#' the treatment effects for each cohort at each time.}
+#' \item{treat_int_inds}{The indices of `beta_hat` corresponding to the
+#' interactions between the treatment effects for each cohort at each time and
+#' the covariates.} \item{sig_eps_sq}{Either the provided `sig_eps_sq` or
+#' the estimated one, if a value wasn't provided.} \item{sig_eps_c_sq}{Either
+#' the provided `sig_eps_c_sq` or the estimated one, if a value wasn't
+#' provided.} \item{X_ints}{The design matrix created containing all
+#' interactions, time and cohort dummies, etc.} \item{y}{The vector of
+#' responses, containing `nrow(X_ints)` entries.} \item{X_final}{The design
+#' matrix after applying the change in coordinates to fit the model and also
+#' multiplying on the left by the square root inverse of the estimated
+#' covariance matrix for each unit.} \item{y_final}{The final response after
+#' multiplying on the left by the square root inverse of the estimated
+#' covariance matrix for each unit.} \item{N}{The final number of units that
+#' were in the  data set used for estimation (after any units may have been
+#' removed because they were treated in the first time period).} \item{T}{The
+#' number of time periods in the final data set.} \item{R}{The final number of
+#' treated cohorts that appear in the final data set.} \item{d}{The final number
+#' of covariates that appear in the final data set (after any covariates may
+#' have been removed because they contained missing values or all contained the
+#' same value for every unit).} \item{p}{The final number of columns in the full
+#' set of covariates used to estimate the model.}
+#' @author Gregory Faletto
+#' @references
+#' Wooldridge, J. M. (2021). Two-way fixed effects, the two-way mundlak
+#' regression, and difference-in-differences estimators.
+#' \emph{Available at SSRN 3906345}.
+#' \url{https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3906345}.
+#' @export
+etwfe <- function(
+	pdata,
+	time_var,
+	unit_var,
+	treatment,
+	response,
+	covs = c(),
+	indep_counts = NA,
+	sig_eps_sq = NA,
+	sig_eps_c_sq = NA,
+	verbose = FALSE,
+	alpha = 0.05,
+	add_ridge = FALSE
+) {
+	# Check inputs
+	ret <- checkEtwfeInputs(
+		pdata = pdata,
+		time_var = time_var,
+		unit_var = unit_var,
+		treatment = treatment,
+		response = response,
+		covs = covs,
+		indep_counts = indep_counts,
+		sig_eps_sq = sig_eps_sq,
+		sig_eps_c_sq = sig_eps_c_sq,
+		verbose = verbose,
+		alpha = alpha,
+		add_ridge = add_ridge
+	)
+
+	pdata <- ret$pdata
+	indep_count_data_available = ret$indep_count_data_available
+
+	rm(ret)
+
+	res1 <- prep_for_etwfe_core(
+		pdata = pdata,
+		response = response,
+		time_var = time_var,
+		unit_var = unit_var,
+		treatment = treatment,
+		covs = covs,
+		verbose = verbose,
+		indep_count_data_available = indep_count_data_available,
+		indep_counts = indep_counts
+	)
+
+	pdata <- res1$pdata
+	covs <- res1$covs
+	X_ints <- res1$X_ints
+	y <- res1$y
+	N <- res1$N
+	T <- res1$T
+	d <- res1$d
+	p <- res1$p
+	in_sample_counts <- res1$in_sample_counts
+	num_treats <- res1$num_treats
+	first_inds <- res1$first_inds
+	R <- res1$R
+
+	rm(res1)
+
+	warning_flag <- FALSE
+
+	for (r in 1:(R + 1)) {
+		if (in_sample_counts[r] < d + 1) {
+			if (add_ridge) {
+				warning_flag <- TRUE
+			} else {
+				stop(
+					"At least one cohort contains fewer than d + 1 units. The design matrix is rank-deficient. Calculating standard errors will not be possible, and estimating treatment effects is only possible using add_ridge = TRUE."
+				)
+			}
+		}
+	}
+
+	if (warning_flag) {
+		warning(
+			"At least one cohort contains fewer than d + 1 units. The design matrix is rank-deficient. Calculating standard errors will not be possible, and estimating treatment effects is only possible using add_ridge = TRUE."
+		)
+	}
+
+	res <- etwfe_core(
+		X_ints = X_ints,
+		y = y,
+		in_sample_counts = in_sample_counts,
+		N = N,
+		T = T,
+		d = d,
+		p = p,
+		num_treats = num_treats,
+		first_inds = first_inds,
+		indep_counts = indep_counts,
+		sig_eps_sq = sig_eps_sq,
+		sig_eps_c_sq = sig_eps_c_sq,
+		verbose = verbose,
+		alpha = alpha,
+		add_ridge = add_ridge
+	)
+
+	if (indep_count_data_available) {
+		stopifnot(!is.na(res$indep_att_hat))
+		stopifnot(!is.na(res$indep_att_se))
+		stopifnot(all(!is.na(res$indep_cohort_probs)))
+		att_hat <- res$indep_att_hat
+		att_se <- res$indep_att_se
+		cohort_probs <- res$indep_cohort_probs
+	} else {
+		att_hat <- res$in_sample_att_hat
+		att_se <- res$in_sample_att_se
+		cohort_probs <- res$cohort_probs
+	}
+
+	return(list(
+		att_hat = att_hat,
+		att_se = att_se,
+		catt_hats = res$catt_hats,
+		catt_ses = res$catt_ses,
+		cohort_probs = cohort_probs,
+		catt_df = res$catt_df,
+		beta_hat = res$beta_hat,
+		treat_inds = res$treat_inds,
+		treat_int_inds = res$treat_int_inds,
+		sig_eps_sq = res$sig_eps_sq,
+		sig_eps_c_sq = res$sig_eps_c_sq,
+		X_ints = res$X_ints,
+		y = res$y,
+		X_final = res$X_final,
+		y_final = res$y_final,
+		N = res$N,
+		T = res$T,
+		R = res$R,
+		d = res$d,
+		p = res$p,
+		calc_ses = res$calc_ses
+	))
+}
+
+#' Run ETWFE on Simulated Data
+#'
+#' @description
+#' This function runs the extended two-way fixed effects estimator (\code{etwfe()}) on
+#' simulated data. It is simply a wrapper for \code{etwfe()}: it accepts an object of class
+#' \code{"FETWFE_simulated"} (produced by \code{simulateData()}) and unpacks the necessary
+#' components to pass to \code{etwfe()}. So the outputs match \code{etwfe()}, and the needed inputs
+#' match their counterparts in \code{etwfe()}.
+#'
+#' @param simulated_obj An object of class \code{"FETWFE_simulated"} containing the simulated panel
+#' data and design matrix.
+#' @param verbose Logical; if TRUE, more details on the progress of the function will
+#' be printed as the function executes. Default is FALSE.
+#' @param alpha Numeric; function will calculate (1 - `alpha`) confidence intervals
+#' for the cohort average treatment effects that will be returned in `catt_df`.
+#' @param add_ridge (Optional.) Logical; if TRUE, adds a small amount of ridge
+#' regularization to the (untransformed) coefficients to stabilize estimation.
+#' Default is FALSE.
+#' @return A named list with the following elements: \item{att_hat}{The
+#' estimated overall average treatment effect for a randomly selected treated
+#' unit.} \item{att_se}{A standard error for the ATT. If the Gram matrix is not
+#' invertible, this will be NA.} \item{catt_hats}{A named vector containing the
+#' estimated average treatment effects for each cohort.} \item{catt_ses}{A named
+#' vector containing the (asymptotically exact) standard errors for
+#' the estimated average treatment effects within each cohort.}
+#' \item{cohort_probs}{A vector of the estimated probabilities of being in each
+#' cohort conditional on being treated, which was used in calculating `att_hat`.
+#' If `indep_counts` was provided, `cohort_probs` was calculated from that;
+#' otherwise, it was calculated from the counts of units in each treated
+#' cohort in `pdata`.} \item{catt_df}{A dataframe displaying the cohort names,
+#' average treatment effects, standard errors, and `1 - alpha` confidence
+#' interval bounds.} \item{beta_hat}{The full vector of estimated coefficients.}
+#' \item{treat_inds}{The indices of `beta_hat` corresponding to
+#' the treatment effects for each cohort at each time.}
+#' \item{treat_int_inds}{The indices of `beta_hat` corresponding to the
+#' interactions between the treatment effects for each cohort at each time and
+#' the covariates.} \item{sig_eps_sq}{Either the provided `sig_eps_sq` or
+#' the estimated one, if a value wasn't provided.} \item{sig_eps_c_sq}{Either
+#' the provided `sig_eps_c_sq` or the estimated one, if a value wasn't
+#' provided.} \item{X_ints}{The design matrix created containing all
+#' interactions, time and cohort dummies, etc.} \item{y}{The vector of
+#' responses, containing `nrow(X_ints)` entries.} \item{X_final}{The design
+#' matrix after applying the change in coordinates to fit the model and also
+#' multiplying on the left by the square root inverse of the estimated
+#' covariance matrix for each unit.} \item{y_final}{The final response after
+#' multiplying on the left by the square root inverse of the estimated
+#' covariance matrix for each unit.} \item{N}{The final number of units that
+#' were in the  data set used for estimation (after any units may have been
+#' removed because they were treated in the first time period).} \item{T}{The
+#' number of time periods in the final data set.} \item{R}{The final number of
+#' treated cohorts that appear in the final data set.} \item{d}{The final number
+#' of covariates that appear in the final data set (after any covariates may
+#' have been removed because they contained missing values or all contained the
+#' same value for every unit).} \item{p}{The final number of columns in the full
+#' set of covariates used to estimate the model.}
+#'
+#' @examples
+#' \dontrun{
+#'   # Generate coefficients
+#'   coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2)
+#'
+#'   # Simulate data using the coefficients
+#'   sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5, seed = 123)
+#'
+#'   result <- etwfeWithSimulatedData(sim_data)
+#' }
+#'
+#' @export
+etwfeWithSimulatedData <- function(
+	simulated_obj,
+	verbose = FALSE,
+	alpha = 0.05,
+	add_ridge = FALSE
+) {
+	if (!inherits(simulated_obj, "FETWFE_simulated")) {
+		stop("simulated_obj must be an object of class 'FETWFE_simulated'")
+	}
+
+	pdata <- simulated_obj$pdata
+	time_var <- simulated_obj$time_var
+	unit_var <- simulated_obj$unit_var
+	treatment <- simulated_obj$treatment
+	response <- simulated_obj$response
+	covs <- simulated_obj$covs
+	sig_eps_sq <- simulated_obj$sig_eps_sq
+	sig_eps_c_sq <- simulated_obj$sig_eps_c_sq
+	indep_counts <- simulated_obj$indep_counts
+
+	res <- etwfe(
+		pdata = pdata,
+		time_var = time_var,
+		unit_var = unit_var,
+		treatment = treatment,
+		response = response,
+		covs = covs,
+		indep_counts = indep_counts,
+		sig_eps_sq = sig_eps_sq,
+		sig_eps_c_sq = sig_eps_c_sq,
+		verbose = verbose,
+		alpha = alpha,
+		add_ridge = add_ridge
+	)
+
+	return(res)
+}
+
+#' Convert data formatted for `att_gt()` to a dataframe suitable for `fetwfe()` / `etwfe()`
+#'
+#' `attgtToFetwfeDf()` reshapes and renames a panel dataset that is already
+#' formatted for `did::att_gt()` (Callaway and Sant'Anna 2021) so that it can be
+#' passed directly to fetwfe()` or `etwfe()` from the `fetwfe` package. In
+#' particular, it
+#'   * creates an *absorbing‑state* treatment dummy that equals 1 from the
+#'     first treated period onward* and 0 otherwise,
+#'   * (optionally) drops units that are already treated in the very first
+#'     period of the sample (because `fetwfe()` removes them internally), and
+#'   * returns a tidy dataframe whose column names match the arguments that
+#'     `fetwfe()`/`etwfe()` expect.
+#'
+#' @param data A `data.frame` in **long** format containing at least the four
+#'   columns used by `did::att_gt()`: outcome `yname`, time `tname`, unit id
+#'   `idname`, and the first‑treatment period `gname` (which is 0 for the
+#'   never‑treated group).
+#' @param yname  Character scalar. Name of the outcome column.
+#' @param tname  Character scalar. Name of the time variable (numeric or
+#'   integer). This becomes `time` in the returned dataframe.
+#' @param idname Character scalar. Name of the unit identifier. Converted to
+#'   character and returned as `unit_var`.
+#' @param gname  Character scalar. Name of the *group* variable holding the
+#'   first period of treatment. Values must be 0 for never‑treated, or a
+#'   positive integer representing the first treated period.
+#' @param covars Character vector of additional covariate column names to carry
+#'   through (default `character(0)`). These columns are left untouched and
+#'   appear *after* the required columns in the returned dataframe.
+#' @param drop_first_period_treated Logical. If `TRUE` (default), units that
+#'   are already treated in the first sample period are removed *before*
+#'   creating the treatment dummy. `fetwfe()` would do this internally, but
+#'   dropping them here keeps the returned dataframe cleaner.
+#' @param out_names  A named list giving the column names to use in the
+#'   resulting dataframe. Defaults are `list(time = "time", unit = "unit",
+#'   treatment = "treatment", response = "y")`. Override if you prefer
+#'   different names (for instance, to keep the original `yname`). The vector
+#'   *must* contain exactly these four names.
+#'
+#' @return A `data.frame` with columns `time`, `unit`, `treatment`, `y`, and any
+#'   covariates requested in `covars`, ready to be fed to
+#'   `fetwfe()`/`etwfe()`. All required columns are of the correct type:
+#'   `time` is integer, `unit` is character, `treatment` is integer 0/1, and
+#'   `y` is numeric.
+#' @references Callaway, Brantly and Pedro H.C. Sant'Anna. "Difference-in-
+#' Differences with Multiple Time Periods." Journal of Econometrics, Vol. 225,
+#' No. 2, pp. 200-230, 2021.
+#' \url{https://doi.org/10.1016/j.jeconom.2020.12.001},
+#' \url{https://arxiv.org/abs/1803.09015}.
+#' @examples
+#' ## toy example ---------------------------------------------------------------
+#' \dontrun{
+#' library(did)  # provides the mpdta example dataframe
+#' data(mpdta)
+#'
+#' head(mpdta)
+#'
+#' tidy_df <- attgtToFetwfeDf(
+#'   data  = mpdta,
+#'   yname = "lemp",
+#'   tname = "year",
+#'   idname = "countyreal",
+#'   gname = "first.treat",
+#'   covars = c("lpop"))
+#'
+#' head(tidy_df)
+#' }
+#'
+#' ## Now you can call fetwfe()  ------------------------------------------------
+#' # res <- fetwfe(
+#' #   pdata      = tidy_df,
+#' #   time_var   = "time_var",
+#' #   unit_var   = "unit_var",
+#' #   treatment  = "treatment",
+#' #   response   = "response",
+#' #   covs       = c("lpop"))
+#'
+#' @export
+attgtToFetwfeDf <- function(
+	data,
+	yname,
+	tname,
+	idname,
+	gname,
+	covars = character(0),
+	drop_first_period_treated = TRUE,
+	out_names = list(
+		time = "time_var",
+		unit = "unit_var",
+		treatment = "treatment",
+		response = "response"
+	)
+) {
+	.fetwfe_df_core(
+		data = data,
+		vars = list(y = yname, t = tname, id = idname, g = gname),
+		covars = covars,
+		drop_first_period_treated = drop_first_period_treated,
+		out_names = out_names
+	)
+}
+
+#' Convert data prepared for `etwfe::etwfe()` to the format required by
+#' `fetwfe()` and `fetwfe::etwfe()`
+#'
+#' `etwfeToFetwfeDf()` reshapes and renames a panel dataset that is already
+#' formatted for `etwfe::etwfe()` (McDermott 2024) so that it can be
+#' passed directly to fetwfe()` or `etwfe()` from the `fetwfe` package. In
+#' particular, it
+#'   * creates an *absorbing‑state* treatment dummy that equals 1 from the
+#'     first treated period onward* and 0 otherwise,
+#'   * (optionally) drops units that are already treated in the very first
+#'     period of the sample (because `fetwfe()` removes them internally), and
+#'   * returns a tidy dataframe whose column names match the arguments that
+#'     `fetwfe()`/`etwfe()` expect.
+#'
+#' @param data A long-format data.frame that you could already feed to `etwfe()`.
+#' @param yvar Character. Column name of the outcome (left-hand side in your `fml`).
+#' @param tvar Character. Column name of the time variable that you pass to `etwfe()` as `tvar`.
+#' @param idvar Character. Column name of the unit identifier (the variable you would
+#'   cluster on, or pass to `etwfe(..., ivar = idvar)` if you were using unit FEs).
+#' @param gvar Character. Column name of the “first treated” cohort variable passed to `etwfe()` as `gvar`.
+#'   Must be `0` for never-treated units, or the (strictly positive) first treated period.
+#' @param covars Character vector of *additional* covariate columns to keep (default `character(0)`).
+#' @param drop_first_period_treated Logical. Should units already treated in the very first
+#'   sample period be removed?  (`fetwfe()` will drop them internally anyway, but doing it
+#'   here keeps the returned dataframe clean.)  Default `TRUE`.
+#' @param out_names Named list giving the column names that the returned dataframe should have.
+#'   The default (`time`, `unit`, `treatment`, `y`) matches the arguments usually supplied to
+#'   `fetwfe()`. **Do not change the *names* of this list** – only the *values* – and keep all four.
+#'
+#' @return A tidy `data.frame` with (in this order)
+#'   * `time`       integer,
+#'   * `unit`       character,
+#'   * `treatment`  integer 0/1 absorbing-state dummy,
+#'   * `response`   numeric outcome,
+#'   * any covariates requested in `covars`.
+#'   Ready to pass straight to `fetwfe()` or `fetwfe::etwfe()`.
+#'
+#' @references McDermott G (2024). _etwfe: Extended Two-Way Fixed Effects_.
+#' doi:10.32614/CRAN.package.etwfe
+#' \url{https://doi.org/10.32614/CRAN.package.etwfe}, R package
+#' version 0.5.0, \url{https://CRAN.R-project.org/package=etwfe}.
+#' @examples
+#' ## toy example ---------------------------------------------------------------
+#' \dontrun{
+#' library(did)  # provides the mpdta example dataframe
+#' data(mpdta)
+#'
+#' head(mpdta)
+#'
+#' tidy_df <- etwfeToFetwfeDf(
+#'   data  = mpdta,
+#'   yvar = "lemp",
+#'   tvar = "year",
+#'   idvar = "countyreal",
+#'   gvar = "first.treat",
+#'   covars = c("lpop"))
+#'
+#' head(tidy_df)
+#'
+#' }
+#' ## Now you can call fetwfe()  ------------------------------------------------
+#' # res <- fetwfe(
+#' #   pdata      = tidy_df,
+#' #   time_var   = "time_var",
+#' #   unit_var   = "unit_var",
+#' #   treatment  = "treatment",
+#' #   response   = "response",
+#' #   covs       = c("lpop"))
+#'
+#' @export
+etwfeToFetwfeDf <- function(
+	data,
+	yvar,
+	tvar,
+	idvar,
+	gvar,
+	covars = character(0),
+	drop_first_period_treated = TRUE,
+	out_names = list(
+		time = "time_var",
+		unit = "unit_var",
+		treatment = "treatment",
+		response = "response"
+	)
+) {
+	.fetwfe_df_core(
+		data = data,
+		vars = list(y = yvar, t = tvar, id = idvar, g = gvar),
+		covars = covars,
+		drop_first_period_treated = drop_first_period_treated,
+		out_names = out_names
+	)
 }

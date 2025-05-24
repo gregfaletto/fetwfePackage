@@ -1,5 +1,14 @@
 # NEWS
 
+## Version 1.1.0 (2025-05-23)
+
+- Add functions:
+  * `etwfe()` (implementation of extended two-way fixed effects)
+  * `etwfeWithSimulatedData()` (analogous to `fetwfeWithSimulatedData()`)
+  * `attgtToFetwfeDf()` (converts data.frame formatted for `did::attgt()` to format required for `fetwfe()` and `etwfe()`
+  * `attgtToFetwfeDf()` (converts data.frame formatted for `did::att_gt()` to format required for `fetwfe()` and `fewtfe::etwfe()`
+  * `ewtfeToFetwfeDf()` (converts data.frame formatted for `etwfe::etwfe()` to format required for `fetwfe()` and `fetwfe::etwfe()`
+
 ## Version 1.0.0 (2025-05-14)
 
 - Update vignettes.
