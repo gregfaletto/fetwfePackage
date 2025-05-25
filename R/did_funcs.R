@@ -729,6 +729,7 @@ fetwfe_core <- function(
 			num_treats = num_treats
 		)
 		if (add_ridge) {
+			lambda_ridge <- ifelse(is.na(lambda_ridge), 0, lambda_ridge)
 			beta_hat_early_exit <- beta_hat_early_exit * (1 + lambda_ridge)
 		}
 
@@ -788,6 +789,7 @@ fetwfe_core <- function(
 	# If using ridge regularization, multiply the "naive" estimated coefficients
 	# by 1 + lambda_ridge, similar to suggestion in original elastic net paper.
 	if (add_ridge) {
+		lambda_ridge <- ifelse(is.na(lambda_ridge), 0, lambda_ridge)
 		beta_hat <- beta_hat * (1 + lambda_ridge)
 	}
 
@@ -2738,10 +2740,6 @@ estOmegaSqrtInv <- function(y, X_ints, N, T, p) {
 #'   treatment effects within the `num_treats` block, shifted to start from 1.
 #' @param tes Numeric vector; the estimated treatment effects for all
 #'   `num_treats` possible cohort-time combinations.
-#' @param d_inv_treat_sel Numeric matrix; the relevant block of the inverse
-#'   two-way fusion transformation matrix corresponding to selected treatment
-#'   effects. Dimensions: `num_treats` (or fewer if selection occurs) x
-#'   `length(sel_treat_inds_shifted)`.
 #' @param cohort_probs_overall Numeric vector; estimated marginal probabilities
 #'   of belonging to each treated cohort (P(W=r)). Length `R`.
 #' @param first_inds Integer vector; indices of the first treatment effect for
@@ -2753,6 +2751,13 @@ estOmegaSqrtInv <- function(y, X_ints, N, T, p) {
 #' @param N Integer; total number of units.
 #' @param T Integer; total number of time periods.
 #' @param R Integer; total number of treated cohorts.
+#' @param fused Logical; if `TRUE`, assumes fusion penalization was used,
+#'   affecting how standard errors and related matrices are computed.
+#' @param d_inv_treat_sel Numeric matrix; the relevant block of the inverse
+#'   two-way fusion transformation matrix corresponding to selected treatment
+#'   effects. Dimensions: `num_treats` (or fewer if selection occurs) x
+#'   `length(sel_treat_inds_shifted)`. Does not need to be provided if fused
+#'   is FALSE.
 #' @return A numeric scalar representing the second variance component for the
 #'   ATT.
 #' @details This function calculates `Sigma_pi_hat`, the covariance matrix of
@@ -2768,16 +2773,20 @@ getSecondVarTermDataApp <- function(
 	psi_mat,
 	sel_treat_inds_shifted,
 	tes,
-	d_inv_treat_sel,
 	cohort_probs_overall,
 	first_inds,
 	theta_hat_treat_sel,
 	num_treats,
 	N,
 	T,
-	R
+	R,
+	fused = TRUE,
+	d_inv_treat_sel = NA
 ) {
-	stopifnot(ncol(d_inv_treat_sel) == length(sel_treat_inds_shifted))
+	if(fused){
+		stopifnot(all(!is.na(d_inv_treat_sel)))
+		stopifnot(ncol(d_inv_treat_sel) == length(sel_treat_inds_shifted))
+	}
 	stopifnot(length(theta_hat_treat_sel) == length(sel_treat_inds_shifted))
 
 	# Get Sigma_pi_hat, the (sample-estimated) covariance matrix for the
@@ -2799,75 +2808,104 @@ getSecondVarTermDataApp <- function(
 		ncol = length(sel_treat_inds_shifted)
 	)
 
-	# Gather a list of the indices corresponding to the treatment coefficients
-	# for each cohort
-	sel_inds <- list()
+	if(fused){
 
-	for (r in 1:R) {
-		first_ind_r <- first_inds[r]
+		# Gather a list of the indices corresponding to the treatment coefficients
+		# for each cohort
+		sel_inds <- list()
 
-		if (r < R) {
-			last_ind_r <- first_inds[r + 1] - 1
-		} else {
-			last_ind_r <- num_treats
-		}
-		stopifnot(last_ind_r >= first_ind_r)
-		sel_inds[[r]] <- first_ind_r:last_ind_r
-		if (r > 1) {
-			stopifnot(min(sel_inds[[r]]) > max(sel_inds[[r - 1]]))
-			stopifnot(length(sel_inds[[r]]) < length(sel_inds[[r - 1]]))
-		}
-	}
-	stopifnot(all.equal(unlist(sel_inds), 1:num_treats))
+		for (r in 1:R) {
+			first_ind_r <- first_inds[r]
 
-	for (r in 1:R) {
-		cons_r <- (sum(cohort_probs_overall) -
-			cohort_probs_overall[r]) /
-			sum(cohort_probs_overall)^2
-
-		if (length(sel_treat_inds_shifted) > 1) {
-			jacobian_mat[r, ] <- cons_r *
-				colMeans(d_inv_treat_sel[sel_inds[[r]], , drop = FALSE])
-		} else {
-			jacobian_mat[r, ] <- cons_r *
-				mean(d_inv_treat_sel[sel_inds[[r]], , drop = FALSE])
-		}
-		for (r_double_prime in setdiff(1:R, r)) {
-			cons_r_double_prime <- (sum(cohort_probs_overall) -
-				cohort_probs_overall[r_double_prime]) /
-				sum(cohort_probs_overall)^2
-
-			if (length(sel_treat_inds_shifted) > 1) {
-				jacobian_mat[r, ] <- jacobian_mat[r, ] -
-					cons_r_double_prime *
-						colMeans(d_inv_treat_sel[
-							sel_inds[[r_double_prime]],
-							,
-							drop = FALSE
-						])
+			if (r < R) {
+				last_ind_r <- first_inds[r + 1] - 1
 			} else {
-				jacobian_mat[r, ] <- jacobian_mat[r, ] -
-					cons_r_double_prime *
-						mean(d_inv_treat_sel[
-							sel_inds[[r_double_prime]],
-							,
-							drop = FALSE
-						])
+				last_ind_r <- num_treats
+			}
+			stopifnot(last_ind_r >= first_ind_r)
+			sel_inds[[r]] <- first_ind_r:last_ind_r
+			if (r > 1) {
+				stopifnot(min(sel_inds[[r]]) > max(sel_inds[[r - 1]]))
+				stopifnot(length(sel_inds[[r]]) < length(sel_inds[[r - 1]]))
 			}
 		}
+		stopifnot(all.equal(unlist(sel_inds), 1:num_treats))
+
+		for (r in 1:R) {
+			cons_r <- (sum(cohort_probs_overall) -
+				cohort_probs_overall[r]) /
+				sum(cohort_probs_overall)^2
+
+
+			if (length(sel_treat_inds_shifted) > 1) {
+				jacobian_mat[r, ] <- cons_r *
+					colMeans(d_inv_treat_sel[sel_inds[[r]], , drop = FALSE])
+			} else {
+				jacobian_mat[r, ] <- cons_r *
+					mean(d_inv_treat_sel[sel_inds[[r]], , drop = FALSE])
+			}
+		
+			for (r_double_prime in setdiff(1:R, r)) {
+				cons_r_double_prime <- (sum(cohort_probs_overall) -
+					cohort_probs_overall[r_double_prime]) /
+					sum(cohort_probs_overall)^2
+
+
+				if (length(sel_treat_inds_shifted) > 1) {
+					jacobian_mat[r, ] <- jacobian_mat[r, ] -
+						cons_r_double_prime *
+							colMeans(d_inv_treat_sel[
+								sel_inds[[r_double_prime]],
+								,
+								drop = FALSE
+							])
+				}
+				
+			}
+		}
+	# } else {
+	# 	for (r in 1:R) {
+	# 		# All terms in rth column have the same value except the diagonal term
+	# 		col_r_val <- -cohort_probs_overall[r] / sum(cohort_probs_overall)^2
+
+	# 		jacobian_mat[, r] <- rep(col_r_val, R)
+
+	# 		# Diagonal term
+	# 		cons_r <- (sum(cohort_probs_overall) -
+	# 			cohort_probs_overall[r]) /
+	# 			sum(cohort_probs_overall)^2
+
+	# 		jacobian_mat[r, r] <- cons_r
+	# 	}
 	}
 
 	stopifnot(all(!is.na(jacobian_mat)))
 
-	att_var_2 <- T *
-		as.numeric(
-			t(theta_hat_treat_sel) %*%
-				t(jacobian_mat) %*%
-				Sigma_pi_hat %*%
-				jacobian_mat %*%
-				theta_hat_treat_sel
-		) /
-		(N * T)
+	if(fused){
+
+		att_var_2 <- T *
+			as.numeric(
+				t(theta_hat_treat_sel) %*%
+					t(jacobian_mat) %*%
+					Sigma_pi_hat %*%
+					jacobian_mat %*%
+					theta_hat_treat_sel
+			) /
+			(N * T)
+
+	# } else{
+	# 	att_var_2 <- T *
+	# 		as.numeric(
+	# 			t(tes) %*%
+	# 				psi_mat %*%
+	# 				t(jacobian_mat) %*%
+	# 				Sigma_pi_hat %*%
+	# 				jacobian_mat %*%
+	# 				t(psi_mat) %*%
+	# 				tes
+	# 		) /
+	# 		(N * T)
+	}
 
 	return(att_var_2)
 }
@@ -2968,6 +3006,12 @@ getCohortATTsFinal <- function(
 	if (fused) {
 		# Get the parts of D_inv that have to do with treatment effects
 		d_inv_treat <- genInvTwoWayFusionTransformMat(num_treats, first_inds, R)
+
+		d_inv_treat_sel <- matrix(
+			0,
+			nrow = 0,
+			ncol = length(sel_treat_inds_shifted)
+		)
 	}
 
 	# First, each cohort
@@ -2975,12 +3019,6 @@ getCohortATTsFinal <- function(
 	cohort_te_ses <- rep(as.numeric(NA), R)
 
 	psi_mat <- matrix(0, length(sel_treat_inds_shifted), R)
-
-	d_inv_treat_sel <- matrix(
-		0,
-		nrow = 0,
-		ncol = length(sel_treat_inds_shifted)
-	)
 
 	for (r in 1:R) {
 		# Get indices corresponding to rth treatment
@@ -3703,7 +3741,8 @@ getTeResults2 <- function(
 			num_treats = num_treats,
 			N = N,
 			T = T,
-			R = R
+			R = R,
+			fused = TRUE
 		)
 
 		stopifnot(!is.na(att_var_2))
@@ -4624,6 +4663,7 @@ etwfe_core <- function(
 	# If using ridge regularization, multiply the "naive" estimated coefficients
 	# by 1 + lambda_ridge, similar to suggestion in original elastic net paper.
 	if (add_ridge) {
+		lambda_ridge <- ifelse(is.na(lambda_ridge), 0, lambda_ridge)
 		beta_hat_slopes <- beta_hat_slopes * (1 + lambda_ridge)
 		stopifnot(all(!is.na(beta_hat_slopes)))
 	}
@@ -4680,6 +4720,7 @@ etwfe_core <- function(
 
 	# Get overal estimated ATT!
 	stopifnot(length(tes) == num_treats)
+	stopifnot(nrow(psi_mat) == length(tes))
 
 	in_sample_te_results <- getTeResultsOLS(
 		sig_eps_sq = sig_eps_sq,
@@ -5218,7 +5259,7 @@ getCohortATTsFinalOLS <- function(
 	p,
 	alpha = 0.05
 ) {
-	stopifnot(length(tes) == num_treats)
+	stopifnot(length(tes) <= num_treats)
 	stopifnot(all(!is.na(tes)))
 
 	stopifnot(nrow(X_final) == N * T)
@@ -5312,6 +5353,8 @@ getCohortATTsFinalOLS <- function(
 		"ConfIntHigh"
 	)
 
+	stopifnot(length(tes) == nrow(psi_mat))
+
 	ret <- list(
 		cohort_te_df = cohort_te_df,
 		cohort_tes = cohort_tes,
@@ -5391,7 +5434,8 @@ getTeResultsOLS <- function(
 	att_hat <- as.numeric(cohort_tes %*% cohort_probs)
 
 	if (calc_ses) {
-		stopifnot(nrow(psi_mat) == num_treats)
+		stopifnot(nrow(psi_mat) == length(tes))
+		stopifnot(nrow(psi_mat) <= num_treats)
 		stopifnot(ncol(psi_mat) == R)
 
 		# Get ATT standard error
@@ -5402,7 +5446,9 @@ getTeResultsOLS <- function(
 			as.numeric(t(psi_att) %*% gram_inv %*% psi_att) /
 			(N * T)
 
-		stopifnot(length(tes) == num_treats)
+		stopifnot(length(tes) <= num_treats)
+
+		stopifnot(length(tes) == nrow(psi_mat))
 
 		# Second variance term: convergence of cohort membership probabilities
 		att_var_2 <- getSecondVarTermOLS(
@@ -5480,6 +5526,7 @@ getSecondVarTermOLS <- function(
 	T,
 	R
 ) {
+	stopifnot(length(tes) == nrow(psi_mat))
 	# Get Sigma_pi_hat, the (sample-estimated) covariance matrix for the
 	# sample proportions (derived from the multinomial distribution)
 	Sigma_pi_hat <- -outer(
@@ -5542,10 +5589,10 @@ getSecondVarTermOLS <- function(
 
 	stopifnot(all(!is.na(jacobian_mat)))
 
-	stopifnot(nrow(psi_mat) == num_treats)
+	stopifnot(nrow(psi_mat) <= num_treats)
 	stopifnot(ncol(psi_mat) == R)
 
-	stopifnot(length(tes) == num_treats)
+	stopifnot(length(tes) == nrow(psi_mat))
 
 	# Finally, calculate variance term for ATT from Sigma_pi_hat, Jacobian
 	# matrix, psi_mat, and beta_hat. See proof of Theorem D.2 for details.
@@ -5773,7 +5820,7 @@ getSecondVarTermOLS <- function(
 #' @param alpha Numeric; significance level for confidence intervals (e.g., 0.05 for
 #'   95% CIs). Default is 0.05.
 #' @param add_ridge (Optional) Logical; if `TRUE`, adds a small L2 penalty to
-#'   the untransformed coefficients to stabilize estimation. Default is `FALSE`.
+#'   the coefficients to stabilize estimation. Default is `FALSE`.
 #'
 #' @details
 #' The function executes the following main steps:
@@ -5792,9 +5839,7 @@ getSecondVarTermOLS <- function(
 #'     }
 #'   \item **Optional Ridge Penalty:** If `add_ridge` is `TRUE`, `X_final_scaled`
 #'     (scaled version of `X_final`) and `y_final` are augmented to add an L2
-#'     penalty on the *original* (untransformed) coefficient scale. This involves
-#'     using `genFullInvFusionTransformMat` to get the inverse of the overall
-#'     fusion transformation matrix.
+#'     penalty.
 #'   \item **Cohort Probabilities:** Calculates cohort membership probabilities
 #'     conditional on being treated, using `in_sample_counts` and `indep_counts`
 #'     if available.
@@ -5832,7 +5877,7 @@ getSecondVarTermOLS <- function(
 #'   \item{catt_hats}{A named vector of estimated CATTs for each cohort.}
 #'   \item{catt_ses}{A named vector of SEs for `catt_hats` (NA if `q >= 1`).}
 #'   \item{catt_df}{A data.frame summarizing CATTs, SEs, and confidence intervals.}
-#'   \item{beta_hat}{The vector of estimated coefficients in the *original* space (after untransforming `theta_hat`, excluding intercept).}
+#'   \item{beta_hat}{The vector of estimated coefficients.}
 #'   \item{treat_inds}{Indices in `beta_hat` corresponding to base treatment effects.}
 #'   \item{treat_int_inds}{Indices in `beta_hat` corresponding to treatment-covariate interactions.}
 #'   \item{cohort_probs}{Estimated cohort probabilities conditional on being treated, from `in_sample_counts`.}
@@ -5847,7 +5892,7 @@ getSecondVarTermOLS <- function(
 #'   \item{lambda_star_model_size}{Model size for `lambda_star`.}
 #'   \item{X_ints}{The original input design matrix from `prepXints`.}
 #'   \item{y}{The original input centered response vector from `prepXints`.}
-#'   \item{X_final}{The design matrix after fusion transformation and GLS weighting.}
+#'   \item{X_final}{The design matrix after GLS weighting.}
 #'   \item{y_final}{The response vector after GLS weighting.}
 #'   \item{N, T, R, d, p}{Dimensions used in estimation.}
 #' @keywords internal
@@ -6105,10 +6150,10 @@ betwfe_core <- function(
 		))
 	}
 
-	# estimated coefficients (slopes in transformed space)
+	# estimated coefficients
 	beta_hat_slopes <- beta_hat[2:(p + 1)]
 
-	# Indices of selected features in transformed feature space (among slopes)
+	# Indices of selected features
 	sel_feat_inds <- which(beta_hat_slopes != 0)
 
 	sel_treat_inds <- sel_feat_inds[sel_feat_inds %in% treat_inds]
@@ -6124,8 +6169,8 @@ betwfe_core <- function(
 	# `sel_treat_inds` itself contains the global indices of selected treatment features.
 	# So `beta_hat_slopes[sel_treat_inds]` are the non-zero treatment coefs.
 
-	beta_hat_treat_block_transformed = beta_hat_slopes[treat_inds]
-	sel_treat_inds_shifted <- which(beta_hat_treat_block_transformed != 0) # these are 1 to num_treats
+	beta_hat_treat_block = beta_hat_slopes[treat_inds]
+	sel_treat_inds_shifted <- which(beta_hat_treat_block != 0) # these are 1 to num_treats
 
 	stopifnot(all(sel_treat_inds_shifted >= 1))
 	stopifnot(all(sel_treat_inds_shifted <= num_treats))
@@ -6154,6 +6199,7 @@ betwfe_core <- function(
 		)
 
 		if (add_ridge) {
+			lambda_ridge <- ifelse(is.na(lambda_ridge), 0, lambda_ridge)
 			beta_hat_slopes <- beta_hat_slopes * (1 + lambda_ridge)
 		}
 
@@ -6197,13 +6243,15 @@ betwfe_core <- function(
 	# If using ridge regularization, multiply the "naive" estimated coefficients
 	# by 1 + lambda_ridge, similar to suggestion in original elastic net paper.
 	if (add_ridge) {
+		lambda_ridge <- ifelse(is.na(lambda_ridge), 0, lambda_ridge)
+
 		beta_hat <- beta_hat * (1 + lambda_ridge)
 	}
 
 	# Get actual estimated treatment effects
 	tes <- beta_hat[treat_inds]
 
-	stopifnot(length(tes) == num_treats)
+	stopifnot(length(tes) <= num_treats)
 
 	stopifnot(all(beta_hat_slopes[treat_inds][sel_treat_inds_shifted] != 0))
 	stopifnot(all(
@@ -6226,9 +6274,6 @@ betwfe_core <- function(
 	# errors
 	#
 	#
-
-	stop("haven't fixed function beyond this point yet")
-	# May want to use getCohortATTsFinalOLS() instead?
 
 	res <- getCohortATTsFinal(
 		X_final = X_final, # This is X_mod * GLS_transform_matrix
@@ -6254,15 +6299,9 @@ betwfe_core <- function(
 	cohort_te_ses <- res$cohort_te_ses
 	psi_mat <- res$psi_mat
 	gram_inv <- res$gram_inv
-	d_inv_treat_sel <- res$d_inv_treat_sel
 	calc_ses <- res$calc_ses
 
 	rm(res)
-
-	if (calc_ses) {
-		stopifnot(nrow(d_inv_treat_sel) == num_treats)
-		stopifnot(ncol(d_inv_treat_sel) == length(sel_treat_inds_shifted))
-	}
 
 	#
 	#
@@ -6271,12 +6310,7 @@ betwfe_core <- function(
 	#
 
 	# Get overal estimated ATT!
-	# theta_hat_treat_sel needs to be the selected non-zero *transformed* treatment coefficients
-	# sel_treat_inds contains global indices of selected transformed features that are treatment effects
-	theta_hat_treat_sel_for_att <- theta_hat_slopes[sel_treat_inds]
-
-	# May want to use getTeResultsOLS() instead?
-	in_sample_te_results <- getTeResults2(
+	in_sample_te_results <- getTeResultsOLS(
 		sig_eps_sq = sig_eps_sq,
 		N = N,
 		T = T,
@@ -6286,12 +6320,9 @@ betwfe_core <- function(
 		cohort_probs = cohort_probs, # In-sample pi_r | treated
 		psi_mat = psi_mat,
 		gram_inv = gram_inv,
-		sel_treat_inds_shifted = sel_treat_inds_shifted,
-		tes = tes, # Untransformed treatment effect estimates beta_hat[treat_inds]
-		d_inv_treat_sel = d_inv_treat_sel,
+		tes = tes[sel_treat_inds_shifted], # Untransformed treatment effect estimates beta_hat[treat_inds]
 		cohort_probs_overall = cohort_probs_overall, # In-sample pi_r (unconditional on treated)
 		first_inds = first_inds,
-		theta_hat_treat_sel = theta_hat_treat_sel_for_att, # Selected non-zero transformed treat coefs
 		calc_ses = calc_ses,
 		indep_probs = FALSE
 	)
@@ -6305,8 +6336,30 @@ betwfe_core <- function(
 	}
 
 	if (indep_count_data_available) {
-		# May want to use getTeResultsOLS() instead?
-		indep_te_results <- getTeResults2(
+		# # May want to use getTeResultsOLS() instead?
+		# indep_te_results <- getTeResults2(
+		# 	sig_eps_sq = sig_eps_sq,
+		# 	N = N,
+		# 	T = T,
+		# 	R = R,
+		# 	num_treats = num_treats,
+		# 	cohort_tes = cohort_tes,
+		# 	cohort_probs = indep_cohort_probs, # indep pi_r | treated
+		# 	psi_mat = psi_mat,
+		# 	gram_inv = gram_inv,
+		# 	sel_treat_inds_shifted = sel_treat_inds_shifted,
+		# 	tes = tes,
+		# 	d_inv_treat_sel = d_inv_treat_sel,
+		# 	cohort_probs_overall = indep_cohort_probs_overall, # indep pi_r (unconditional)
+		# 	first_inds = first_inds,
+		# 	theta_hat_treat_sel = theta_hat_treat_sel_for_att,
+		# 	calc_ses = calc_ses,
+		# 	indep_probs = TRUE
+		# )
+
+		stopifnot(nrow(psi_mat) == length(tes[sel_treat_inds_shifted]))
+
+		indep_te_results <- getTeResultsOLS(
 			sig_eps_sq = sig_eps_sq,
 			N = N,
 			T = T,
@@ -6316,15 +6369,13 @@ betwfe_core <- function(
 			cohort_probs = indep_cohort_probs, # indep pi_r | treated
 			psi_mat = psi_mat,
 			gram_inv = gram_inv,
-			sel_treat_inds_shifted = sel_treat_inds_shifted,
-			tes = tes,
-			d_inv_treat_sel = d_inv_treat_sel,
+			tes = tes[sel_treat_inds_shifted],
 			cohort_probs_overall = indep_cohort_probs_overall, # indep pi_r (unconditional)
 			first_inds = first_inds,
-			theta_hat_treat_sel = theta_hat_treat_sel_for_att,
 			calc_ses = calc_ses,
 			indep_probs = TRUE
 		)
+
 		indep_att_hat <- indep_te_results$att_hat
 		indep_att_se <- indep_te_results$att_te_se
 	} else {
@@ -6341,7 +6392,6 @@ betwfe_core <- function(
 		catt_hats = cohort_tes, # Already named if applicable from getCohortATTsFinal
 		catt_ses = cohort_te_ses, # Already named if applicable
 		catt_df = cohort_te_df,
-		theta_hat = theta_hat, # Full theta_hat (with intercept)
 		beta_hat = beta_hat, # Untransformed slopes
 		treat_inds = treat_inds,
 		treat_int_inds = treat_int_inds,
