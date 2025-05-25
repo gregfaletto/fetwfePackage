@@ -4979,6 +4979,8 @@ check_etwfe_core_inputs <- function(
 #' @param is_fetwfe Logical.  If \code{TRUE}, a fusion transformation matrix
 #'   has been applied upstream (this matters for how the optional ridge rows
 #'   are constructed).  Default \code{TRUE}.
+#' @param is_twfe_covs Logical.  If \code{TRUE}, columns will be removed and
+#'   consolidated as required for `twfeCovs()`.  Default \code{FALSE}.
 #'
 #' @details
 #' The routine carries out the following steps in order:
@@ -5041,7 +5043,8 @@ prep_for_etwfe_regresion <- function(
 	in_sample_counts,
 	indep_count_data_available,
 	indep_counts = NA,
-	is_fetwfe = TRUE
+	is_fetwfe = TRUE,
+	is_twfe_covs = FALSE
 ) {
 	if (verbose) {
 		message("Getting omega sqrt inverse estimate...")
@@ -5085,6 +5088,76 @@ prep_for_etwfe_regresion <- function(
 	X_final <- kronecker(diag(N), sqrt(sig_eps_sq) * Omega_sqrt_inv) %*% X_mod
 
 	stopifnot(ncol(X_final) == p)
+
+
+	#
+	#
+	# twfeCovs modifications
+	#
+	#
+
+	if(is_twfe_covs){
+
+		stopifnot(nrow(X_final) == N * T)
+		# stopifnot(nrow(X_final_scaled) == N * T)
+
+		# Drop columns corresponding to treatment effect interactions
+		X_final <- X_final[, 1:(R + T - 1 + d * (1 + R + T - 1) + num_treats)]
+		# X_final_scaled <- X_final_scaled[, 1:(R + T - 1 + d * (1 + R + T - 1) + num_treats)]
+
+		# Drop columns corresponding to interactions between X and time, cohorts
+		first_treat_ind <- R + T - 1 + d * (1 + R + T - 1)
+		treat_inds <- first_treat_ind:(first_treat_ind + num_treats - 1)
+
+		stopifnot(length(treat_inds) == num_treats)
+
+		X_final <- X_final[, c(1:(R + T - 1 + d), treat_inds)]
+		# X_final_scaled <- X_final_scaled[, c(1:(R + T - 1 + d), treat_inds)]
+
+		stopifnot(nrow(X_final) == N * T)
+
+		# Collapse together all columns corresponding to the same cohort
+		# stopifnot(nrow(X_final_scaled) == N * T)
+		treat_inds_mat <- matrix(as.numeric(NA), nrow = N * T, ncol = R)
+		
+
+		for (r in 1:R) {
+			first_ind_r <- first_inds[r]
+			if (r == R) {
+				last_ind_r <- num_treats
+			} else {
+				last_ind_r <- first_inds[r + 1] - 1
+			}
+
+			cols_r <- R + T - 1 + d + first_ind_r:last_ind_r
+
+			treat_inds_mat[, r] <- rowSums(X_final[, cols_r])
+		}
+
+		stopifnot(all(!is.na(treat_inds_mat)))
+
+		X_final <- cbind(X_final[, 1:(R + T - 1 + d)], treat_inds_mat)
+		# X_final_scaled <- cbind(X_final_scaled[, 1:(R + T - 1 + d)], treat_inds_mat)
+
+		p_short <- R + T - 1 + d + R
+
+		stopifnot(ncol(X_final) == p_short)
+		# stopifnot(ncol(X_final_scaled) == p_short)
+
+		treat_inds_short <- (R + T - 1 + d + 1):p_short
+
+		stopifnot(length(treat_inds_short) == R)
+
+		#
+		#
+		# Wrap up, store needed values
+		#
+		#
+
+		p <- p_short
+		treat_inds <- treat_inds_short
+		num_treats <- R
+	}
 
 	#
 	#
@@ -5550,7 +5623,7 @@ getSecondVarTermOLS <- function(
 		sel_inds[[r]] <- first_ind_r:last_ind_r
 		if (r > 1) {
 			stopifnot(min(sel_inds[[r]]) > max(sel_inds[[r - 1]]))
-			stopifnot(length(sel_inds[[r]]) < length(sel_inds[[r - 1]]))
+			stopifnot(length(sel_inds[[r]]) <= length(sel_inds[[r - 1]]))
 		}
 	}
 
@@ -6442,20 +6515,9 @@ betwfe_core <- function(
 #'   IID noise. If `NA`, it will be estimated. Default is `NA`.
 #' @param sig_eps_c_sq (Optional) Numeric; the known variance of the unit-level IID
 #'   noise (random effects). If `NA`, it will be estimated. Default is `NA`.
-#' @param lambda.max (Optional) Numeric; the maximum `lambda` penalty parameter for
-#'   the bridge regression grid search. If `NA`, `grpreg` selects it. Default is `NA`.
-#' @param lambda.min (Optional) Numeric; the minimum `lambda` penalty parameter.
-#'   If `NA`, `grpreg` selects it. Default is `NA`.
-#' @param nlambda (Optional) Integer; the number of `lambda` values in the grid.
-#'   Default is 100.
-#' @param q (Optional) Numeric; the power of the Lq penalty for fusion regularization
-#'   (0 < q <= 2). `q=0.5` is default, `q=1` is lasso, `q=2` is ridge.
-#'   Default is 0.5.
 #' @param verbose Logical; if `TRUE`, prints progress messages. Default is `FALSE`.
 #' @param alpha Numeric; significance level for confidence intervals (e.g., 0.05 for
 #'   95% CIs). Default is 0.05.
-#' @param add_ridge (Optional) Logical; if `TRUE`, adds a small L2 penalty to
-#'   the untransformed coefficients to stabilize estimation. Default is `FALSE`.
 #'
 #' @details
 #' The function executes the following main steps:
@@ -6529,12 +6591,6 @@ betwfe_core <- function(
 #'   \item{indep_cohort_probs}{Estimated cohort probabilities from `indep_counts` (NA if not provided).}
 #'   \item{sig_eps_sq}{The (possibly estimated) variance of observation-level noise.}
 #'   \item{sig_eps_c_sq}{The (possibly estimated) variance of unit-level random effects.}
-#'   \item{lambda.max}{The maximum lambda value used in `grpreg`.}
-#'   \item{lambda.max_model_size}{Model size for `lambda.max`.}
-#'   \item{lambda.min}{The minimum lambda value used in `grpreg`.}
-#'   \item{lambda.min_model_size}{Model size for `lambda.min`.}
-#'   \item{lambda_star}{The lambda value selected by BIC.}
-#'   \item{lambda_star_model_size}{Model size for `lambda_star`.}
 #'   \item{X_ints}{The original input design matrix from `prepXints`.}
 #'   \item{y}{The original input centered response vector from `prepXints`.}
 #'   \item{X_final}{The design matrix after fusion transformation and GLS weighting.}
@@ -6556,8 +6612,7 @@ twfeCovs_core <- function(
 	sig_eps_sq = NA,
 	sig_eps_c_sq = NA,
 	verbose = FALSE,
-	alpha = 0.05,
-	add_ridge = FALSE
+	alpha = 0.05
 ) {
 	ret <- check_etwfe_core_inputs(
 		in_sample_counts = in_sample_counts,
@@ -6568,7 +6623,7 @@ twfeCovs_core <- function(
 		indep_counts = indep_counts,
 		verbose = verbose,
 		alpha = alpha,
-		add_ridge = add_ridge
+		add_ridge = FALSE
 	)
 
 	R <- ret$R
@@ -6592,12 +6647,13 @@ twfeCovs_core <- function(
 		d = d,
 		p = p,
 		num_treats = num_treats,
-		add_ridge = add_ridge,
+		add_ridge = FALSE,
 		first_inds = first_inds,
 		in_sample_counts = in_sample_counts,
 		indep_count_data_available = indep_count_data_available,
 		indep_counts = indep_counts,
-		is_fetwfe = FALSE
+		is_fetwfe = FALSE,
+		is_twfe_covs = TRUE
 	)
 
 	X_final_scaled <- res$X_final_scaled
@@ -6617,85 +6673,27 @@ twfeCovs_core <- function(
 
 	#
 	#
-	# twfeCovs modifications
-	#
-	#
-
-	# Drop columns corresponding to treatment effect interactions
-	X_final <- X_final[, 1:(R + T - 1 + d * (1 + R + T - 1) + num_treats)]
-	X_final_scaled <- X_final_scaled[, 1:(R + T - 1 + d * (1 + R + T - 1) + num_treats)]
-
-	if(add_ridge){
-		X_final <- X_final[1:(N*T + (R + T - 1 + d * (1 + R + T - 1) + num_treats)), ]
-		X_final_scaled <- X_final_scaled[1:(N*T + (R + T - 1 + d * (1 + R + T - 1) + num_treats)), ]
-	}
-
-	# Drop columns corresponding to interactions between X and time, cohorts
-	first_treat_ind <- R + T - 1 + d * (1 + R + T - 1)
-	treat_inds <- first_treat_ind:(first_treat_ind + num_treats - 1)
-
-	stopifnot(length(treat_inds) == num_treats)
-
-	X_final <- X_final[, c(1:(R + T - 1 + d), treat_inds)]
-	X_final_scaled <- X_final_scaled[, c(1:(R + T - 1 + d), treat_inds)]
-
-	stopifnot(nrow(X_final) == N * T)
-
-	# Collapse together all columns corresponding to the same cohort
-	if(add_ridge){
-		stopifnot(nrow(X_final_scaled) == N * T + p_short)
-		treat_inds_mat <- matrix(as.numeric(NA), nrow = N * T + p_short, ncol = R)
-	} else{
-		stopifnot(nrow(X_final_scaled) == N * T)
-		treat_inds_mat <- matrix(as.numeric(NA), nrow = N * T, ncol = R)
-	}
-	
-
-	for (r in 1:R) {
-		first_ind_r <- first_inds[r]
-		if (r == R) {
-			last_ind_r <- num_treats
-		} else {
-			last_ind_r <- first_inds[r + 1] - 1
-		}
-
-		cols_r <- R + T - 1 + d + first_ind_r:last_ind_r
-
-		treat_inds_mat[, r] <- rowSums(X_final[, cols_r])
-	}
-	stopifnot(all(!is.na(treat_inds_mat)))
-
-	if(add_ridge){
-		stop("haven't fixed treat_inds_mat in this case yet")
-	}
-
-	X_final <- cbind(X_final[, 1:(R + T - 1 + d)], treat_inds_mat)
-	X_final_scaled <- cbind(X_final_scaled[, 1:(R + T - 1 + d)], treat_inds_mat)
-
-	p_short <- R + T - 1 + d + R
-
-	stopifnot(ncol(X_final) == p_short)
-	stopifnot(ncol(X_final_scaled) == p_short)
-
-	treat_inds_short <- (R + T - 1 + d + 1):p_short
-
-	stopifnot(length(treat_inds_short) == R)
-
-	#
-	#
 	# Step 4: estimate OLS regression and extract fitted coefficients
 	#
 	#
+
+	p_short <- R + T - 1 + d + R
+	treat_inds_short <- (R + T - 1 + d + 1):p_short
+	first_inds <- 1:R
 
 	df <- data.frame(y = y_final, X_final_scaled)
 
 	stopifnot(all(!is.na(df)))
 	stopifnot("y" %in% colnames(df))
+	stopifnot(ncol(df) == p_short + 1)
 
 	t0 <- Sys.time()
 
 	# Response already centered; no intercept needed
 	fit <- lm(y ~ . + 0, df)
+
+	stopifnot(length(coef(fit)) == p_short)
+	stopifnot(length(scale_scale) == p_short)
 
 	beta_hat_slopes <- coef(fit) / scale_scale
 
@@ -6707,14 +6705,6 @@ twfeCovs_core <- function(
 	treat_int_inds <- c()
 
 	stopifnot(length(treat_inds_short) == R)
-
-	# If using ridge regularization, multiply the "naive" estimated coefficients
-	# by 1 + lambda_ridge, similar to suggestion in original elastic net paper.
-	if (add_ridge) {
-		lambda_ridge <- ifelse(is.na(lambda_ridge), 0, lambda_ridge)
-		beta_hat_slopes <- beta_hat_slopes * (1 + lambda_ridge)
-		stopifnot(all(!is.na(beta_hat_slopes)))
-	}
 
 	# Get actual estimated treatment effects (in original, untransformed space)
 	tes <- beta_hat_slopes[treat_inds_short]
@@ -6736,7 +6726,7 @@ twfeCovs_core <- function(
 	res <- getCohortATTsFinalOLS(
 		X_final = X_final, # This is X_mod * GLS_transform_matrix
 		treat_inds = treat_inds_short, # Global indices for treatment effects
-		num_treats = num_treats,
+		num_treats = R,
 		first_inds = first_inds,
 		c_names = c_names,
 		tes = tes, # Treatment effect estimates (beta_hat_slopes[treat_inds])
@@ -6757,7 +6747,7 @@ twfeCovs_core <- function(
 
 	rm(res)
 
-	stopifnot(nrow(psi_mat) == num_treats)
+	stopifnot(nrow(psi_mat) == R)
 	stopifnot(ncol(psi_mat) == R)
 
 	#
@@ -6797,7 +6787,7 @@ twfeCovs_core <- function(
 			N = N,
 			T = T,
 			R = R,
-			num_treats = num_treats,
+			num_treats = R,
 			cohort_tes = cohort_tes,
 			cohort_probs = indep_cohort_probs, # indep pi_r | treated
 			psi_mat = psi_mat,
