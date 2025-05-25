@@ -2603,6 +2603,9 @@ betwfeWithSimulatedData <- function(
 #' be printed as the function executes. Default is FALSE.
 #' @param alpha Numeric; function will calculate (1 - `alpha`) confidence intervals
 #' for the cohort average treatment effects that will be returned in `catt_df`.
+#' @param add_ridge (Optional.) Logical; if TRUE, adds a small amount of ridge
+#' regularization to the (untransformed) coefficients to stabilize estimation.
+#' Default is FALSE.
 #' @return A named list with the following elements: \item{att_hat}{The
 #' estimated overall average treatment effect for a randomly selected treated
 #' unit.} \item{att_se}{A standard error for the ATT. If the Gram matrix is not
@@ -2658,7 +2661,8 @@ twfeCovs <- function(
 	sig_eps_sq = NA,
 	sig_eps_c_sq = NA,
 	verbose = FALSE,
-	alpha = 0.05
+	alpha = 0.05,
+	add_ridge = FALSE
 ) {
 	# Check inputs
 	ret <- checkEtwfeInputs(
@@ -2673,7 +2677,7 @@ twfeCovs <- function(
 		sig_eps_c_sq = sig_eps_c_sq,
 		verbose = verbose,
 		alpha = alpha,
-		add_ridge = FALSE
+		add_ridge = add_ridge
 	)
 
 	pdata <- ret$pdata
@@ -2731,7 +2735,8 @@ twfeCovs <- function(
 		sig_eps_sq = sig_eps_sq,
 		sig_eps_c_sq = sig_eps_c_sq,
 		verbose = verbose,
-		alpha = alpha
+		alpha = alpha,
+		add_ridge = add_ridge
 	)
 
 	if (indep_count_data_available) {
@@ -2788,6 +2793,9 @@ twfeCovs <- function(
 #' be printed as the function executes. Default is FALSE.
 #' @param alpha Numeric; function will calculate (1 - `alpha`) confidence intervals
 #' for the cohort average treatment effects that will be returned in `catt_df`.
+#' @param add_ridge (Optional.) Logical; if TRUE, adds a small amount of ridge
+#' regularization to the (untransformed) coefficients to stabilize estimation.
+#' Default is FALSE.
 #' @return A named list with the following elements: \item{att_hat}{The
 #' estimated overall average treatment effect for a randomly selected treated
 #' unit.} \item{att_se}{If `q < 1`, a standard error for the ATT. If
@@ -2844,7 +2852,8 @@ twfeCovs <- function(
 twfeCovsWithSimulatedData <- function(
 	simulated_obj,
 	verbose = FALSE,
-	alpha = 0.05
+	alpha = 0.05,
+	add_ridge = FALSE
 ) {
 	if (!inherits(simulated_obj, "FETWFE_simulated")) {
 		stop("simulated_obj must be an object of class 'FETWFE_simulated'")
@@ -2871,7 +2880,8 @@ twfeCovsWithSimulatedData <- function(
 		sig_eps_sq = sig_eps_sq,
 		sig_eps_c_sq = sig_eps_c_sq,
 		verbose = verbose,
-		alpha = alpha
+		alpha = alpha,
+		add_ridge = add_ridge
 	)
 
 	return(res)

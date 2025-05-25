@@ -6518,6 +6518,9 @@ betwfe_core <- function(
 #' @param verbose Logical; if `TRUE`, prints progress messages. Default is `FALSE`.
 #' @param alpha Numeric; significance level for confidence intervals (e.g., 0.05 for
 #'   95% CIs). Default is 0.05.
+#' @param add_ridge (Optional.) Logical; if TRUE, adds a small amount of ridge
+#'   regularization to the (untransformed) coefficients to stabilize estimation.
+#'   Default is FALSE.
 #'
 #' @details
 #' The function executes the following main steps:
@@ -6612,7 +6615,8 @@ twfeCovs_core <- function(
 	sig_eps_sq = NA,
 	sig_eps_c_sq = NA,
 	verbose = FALSE,
-	alpha = 0.05
+	alpha = 0.05,
+	add_ridge = FALSE
 ) {
 	ret <- check_etwfe_core_inputs(
 		in_sample_counts = in_sample_counts,
@@ -6623,7 +6627,7 @@ twfeCovs_core <- function(
 		indep_counts = indep_counts,
 		verbose = verbose,
 		alpha = alpha,
-		add_ridge = FALSE
+		add_ridge = add_ridge
 	)
 
 	R <- ret$R
@@ -6647,7 +6651,7 @@ twfeCovs_core <- function(
 		d = d,
 		p = p,
 		num_treats = num_treats,
-		add_ridge = FALSE,
+		add_ridge = add_ridge,
 		first_inds = first_inds,
 		in_sample_counts = in_sample_counts,
 		indep_count_data_available = indep_count_data_available,
