@@ -74,10 +74,10 @@ match their counterparts in \code{etwfe()}.
 \examples{
 \dontrun{
   # Generate coefficients
-  coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2)
+  coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
 
   # Simulate data using the coefficients
-  sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5, seed = 123)
+  sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5)
 
   result <- etwfeWithSimulatedData(sim_data)
 }
