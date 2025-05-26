@@ -1,5 +1,11 @@
 # NEWS
 
+## Version 1.3.0 (2025-05-25)
+
+- Add functions:
+  * `twfeCovs()` (implementation of two-way fixed effects with covariates)
+  * `twfeCovsWithSimulatedData()` (analogous to `fetwfeWithSimulatedData()`)
+
 ## Version 1.2.0 (2025-05-24)
 
 - Add functions:

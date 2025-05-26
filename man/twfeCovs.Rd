@@ -16,7 +16,8 @@ twfeCovs(
   sig_eps_sq = NA,
   sig_eps_c_sq = NA,
   verbose = FALSE,
-  alpha = 0.05
+  alpha = 0.05,
+  add_ridge = FALSE
 )
 }
 \arguments{
@@ -88,6 +89,10 @@ be printed as the function executes. Default is FALSE.}
 
 \item{alpha}{Numeric; function will calculate (1 - \code{alpha}) confidence intervals
 for the cohort average treatment effects that will be returned in \code{catt_df}.}
+
+\item{add_ridge}{(Optional.) Logical; if TRUE, adds a small amount of ridge
+regularization to the (untransformed) coefficients to stabilize estimation.
+Default is FALSE.}
 }
 \value{
 A named list with the following elements: \item{att_hat}{The
@@ -129,11 +134,14 @@ same value for every unit).} \item{p}{The final number of columns in the full
 set of covariates used to estimate the model.}
 }
 \description{
-Implementation of two-way fixed effects with covariates and
-separate treatment effects for each cohort. Estimates overall ATT as well as
-CATT (cohort average treatment effects on the treated units). \strong{This function
-should not be used for estimation.} It is implemented only for the sake of
-the simulation studies in Faletto (2025).
+\strong{WARNING: This function should NOT be used for estimation. It
+is a biased estimator of treatment effects.} Implementation of two-way fixed
+effects with covariates and separate treatment effects for each cohort.
+Estimates overall ATT as well as CATT (cohort average treatment effects on
+the treated units). It is implemented only for the sake of the simulation
+studies in Faletto (2025). This estimator is only unbiased under the
+assumptions that treatment effects are homogeneous across covariates and are
+identical within cohorts across all times since treatment.
 }
 \references{
 Faletto, G (2025). Fused Extended Two-Way Fixed Effects for

@@ -4,7 +4,12 @@
 \alias{twfeCovsWithSimulatedData}
 \title{Run twfeCovs on Simulated Data}
 \usage{
-twfeCovsWithSimulatedData(simulated_obj, verbose = FALSE, alpha = 0.05)
+twfeCovsWithSimulatedData(
+  simulated_obj,
+  verbose = FALSE,
+  alpha = 0.05,
+  add_ridge = FALSE
+)
 }
 \arguments{
 \item{simulated_obj}{An object of class \code{"FETWFE_simulated"} containing the simulated panel
@@ -15,6 +20,10 @@ be printed as the function executes. Default is FALSE.}
 
 \item{alpha}{Numeric; function will calculate (1 - \code{alpha}) confidence intervals
 for the cohort average treatment effects that will be returned in \code{catt_df}.}
+
+\item{add_ridge}{(Optional.) Logical; if TRUE, adds a small amount of ridge
+regularization to the (untransformed) coefficients to stabilize estimation.
+Default is FALSE.}
 }
 \value{
 A named list with the following elements: \item{att_hat}{The
