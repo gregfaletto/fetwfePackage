@@ -2539,11 +2539,14 @@ betwfeWithSimulatedData <- function(
 #' @title Two-way fixed effects with covariates and separate treatment effects
 #' for each cohort
 #'
-#' @description Implementation of two-way fixed effects with covariates and
-#' separate treatment effects for each cohort. Estimates overall ATT as well as
-#' CATT (cohort average treatment effects on the treated units). **This function
-#' should not be used for estimation.** It is implemented only for the sake of
-#' the simulation studies in Faletto (2025).
+#' @description **WARNING: This function should NOT be used for estimation. It
+#' is a biased estimator of treatment effects.** Implementation of two-way fixed
+#' effects with covariates and separate treatment effects for each cohort.
+#' Estimates overall ATT as well as CATT (cohort average treatment effects on
+#' the treated units). It is implemented only for the sake of the simulation
+#' studies in Faletto (2025). This estimator is only unbiased under the
+#' assumptions that treatment effects are homogeneous across covariates and are
+#' identical within cohorts across all times since treatment.
 #'
 #' @param pdata Dataframe; the panel data set. Each row should represent an
 #' observation of a unit at a time. Should contain columns as described below.
@@ -2712,12 +2715,24 @@ twfeCovs <- function(
 
 	rm(res1)
 
+	warning_flag <- FALSE
+
 	for (r in 1:(R + 1)) {
 		if (in_sample_counts[r] < d + 1) {
-			stop(
-				"At least one cohort contains fewer than d + 1 units. The design matrix is rank-deficient. Calculating standard errors will not be possible, and estimating treatment effects is only possible using add_ridge = TRUE."
-			)
+			if (add_ridge) {
+				warning_flag <- TRUE
+			} else {
+				stop(
+					"At least one cohort contains fewer than d + 1 units. The design matrix may be rank-deficient. Calculating standard errors may not be possible, and estimating treatment effects may only be possible using add_ridge = TRUE."
+				)
+			}
 		}
+	}
+
+	if (warning_flag) {
+		warning(
+			"At least one cohort contains fewer than d + 1 units. The design matrix may be rank-deficient. Calculating standard errors may not be possible, and estimating treatment effects may only be possible using add_ridge = TRUE."
+		)
 	}
 
 

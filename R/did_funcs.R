@@ -5131,7 +5131,7 @@ prep_for_etwfe_regresion <- function(
 
 			cols_r <- R + T - 1 + d + first_ind_r:last_ind_r
 
-			treat_inds_mat[, r] <- rowSums(X_final[, cols_r])
+			treat_inds_mat[, r] <- rowSums(X_final[, cols_r, drop=FALSE])
 		}
 
 		stopifnot(all(!is.na(treat_inds_mat)))
@@ -5331,6 +5331,7 @@ getCohortATTsFinalOLS <- function(
 	stopifnot(all(!is.na(tes)))
 
 	stopifnot(nrow(X_final) == N * T)
+	stopifnot(ncol(X_final) == p)
 	X_to_pass <- X_final
 
 	# Start by getting Gram matrix needed for standard errors
@@ -6701,6 +6702,11 @@ twfeCovs_core <- function(
 
 	beta_hat_slopes <- coef(fit) / scale_scale
 
+	if (add_ridge) {
+		lambda_ridge <- ifelse(is.na(lambda_ridge), 0, lambda_ridge)
+		beta_hat_slopes <- beta_hat_slopes * (1 + lambda_ridge)
+	}
+
 	stopifnot(length(beta_hat_slopes) == p_short)
 	stopifnot(all(!is.na(beta_hat_slopes)))
 
@@ -6738,7 +6744,7 @@ twfeCovs_core <- function(
 		R = R,
 		N = N,
 		T = T,
-		p = p, # Total number of original parameters (columns in X_ints)
+		p = p_short, # Total number of original parameters (columns in X_ints)
 		alpha = alpha
 	)
 
