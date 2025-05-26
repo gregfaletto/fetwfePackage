@@ -4309,6 +4309,70 @@ checkEtwfeInputs <- function(
 	))
 }
 
+#' Prepare Data & Design Matrix for ETWFE/TWFE Workflows
+#'
+#' @description
+#' A helper that converts raw **panel data** into the core objects required by
+#' `etwfe_core()`, `twfeCovs_core()`, and related fitting routines.  The function
+#' (i) keeps only the relevant variables, (ii) one-hot–encodes or otherwise
+#' expands any *factor* covariates, (iii) builds the stacked design matrix
+#' `X_ints` and centred response `y` via [`prepXints()`], and (iv) performs a
+#' battery of **sanity checks** on cohort counts before estimation proceeds.
+#'
+#' @param pdata A **data.frame** in long (unit × time) format containing at
+#'   least the columns named in `response`, `time_var`, `unit_var`,
+#'   `treatment`, and `covs`.
+#' @param response Character; name of the response variable column.
+#' @param time_var Character; name of the time variable column.
+#' @param unit_var Character; name of the unit variable column.
+#' @param treatment Character; name of the treatment indicator column.
+#' @param covs Character vector of additional covariate column names.  Factor
+#'   covariates are expanded to dummies by `processFactors()`.  May be empty.
+#' @param verbose Logical; print progress/timing information?
+#' @param indep_count_data_available Logical; `TRUE` when *independent* cohort
+#'   counts are supplied in `indep_counts` and should be validated.
+#' @param indep_counts Optional integer vector with length
+#'   `1 + R` (never-treated plus `R` treated cohorts) giving cohort sizes in an
+#'   independent sample.  Only used when
+#'   `indep_count_data_available = TRUE`.
+#'
+#' @return A named **list** ready to be passed into the “_core” estimators:
+#' \describe{
+#'   \item{pdata}{The (possibly modified) data frame after factor processing.}
+#'   \item{covs}{Updated character vector of covariate names after dummy-expansion.}
+#'   \item{X_ints}{Design matrix with unit FE, time FE, covariates,
+#'     treatment dummies and their interactions (dimensions \(N T \times p\)).}
+#'   \item{y}{Centred response vector of length \(N T\).}
+#'   \item{N, T}{Integers – number of unique units and time periods.}
+#'   \item{d}{Integer – number of *raw* covariates after processing.}
+#'   \item{p}{Integer – total number of columns in `X_ints`.}
+#'   \item{in_sample_counts}{Named integer vector of length `1 + R` with cohort
+#'     sizes in the estimation sample (first entry = never-treated).}
+#'   \item{num_treats}{Integer – total number of base treatment-effect
+#'     parameters in `X_ints`.}
+#'   \item{first_inds}{Integer vector (length `R`) giving the first column
+#'     index of each cohort’s treatment-effect block inside `X_ints`.}
+#'   \item{R}{Integer – number of treated cohorts detected.}
+#' }
+#'
+#' @details
+#' The routine executes the following steps:
+#' \enumerate{
+#'   \item **Column subset** – drops all variables not explicitly required.
+#'   \item **Factor processing** – calls `processFactors()` so that every
+#'     categorical covariate becomes a set of \(0/1\) dummies.
+#'   \item **Design-matrix construction** – hands the cleaned data to
+#'     `prepXints()`, which adds unit and time dummies, interactions, etc.
+#'   \item **Cohort diagnostics** – verifies that
+#'     \eqn{R \ge 2}, at least one never-treated unit exists, cohort names are
+#'     unique, and (if provided) `indep_counts` are dimensionally consistent.
+#' }
+#'
+#' Any violation of the checks triggers an informative `stop()` message so that
+#' higher-level functions fail fast.
+#'
+#' @keywords internal
+#' @noRd
 prep_for_etwfe_core <- function(
 	pdata,
 	response,
