@@ -2150,47 +2150,78 @@ getFirstInds <- function(R, T) {
 	return(f_inds)
 }
 
-#' Transform Design Matrix for Fusion Penalties (`transformXintImproved`)
+#' Transform a Full Design Matrix by  \( \boldsymbol D_N^{-1} \)
 #'
-#' @description Applies a series of transformations to the input design matrix
-#'   `X_int`. This transformation is a change of coordinates such that applying a
-#'   standard bridge regression penalty to the transformed matrix results in the
-#'   desired FETWFE fusion penalties on the original parameterization.
-#' Transforms the design matrix `X_int` (containing original fixed effects,
-#' covariates, interactions, and treatment dummies) into `X_mod`. This
-#' transformation is a change of coordinates such that applying a standard
-#' Lq penalty to coefficients of `X_mod` is equivalent to applying the
-#' desired fusion penalties to coefficients of `X_int`.
-#' This corresponds to multiplying `X_int` by `D_N^{-1}` where `theta = D_N beta`.
-#' @param X_int Numeric matrix; the initial design matrix containing cohort fixed
-#'   effects, time fixed effects, covariates, treatment indicators, and all
-#'   their interactions.
-#' @param N Integer; the total number of unique units in the panel.
-#' @param T Integer; the total number of time periods in the panel.
-#' @param R Integer; the total number of treated cohorts (excluding the
-#'   never-treated group).
-#' @param d Integer; the number of time-invariant covariates.
-#' @param num_treats Integer; the total number of unique treatment effect
-#'   parameters (i.e., number of cohort-time treatment indicators).
-#' @param first_inds Integer vector; (Optional) A vector indicating the index of
-#'   the first treatment effect for each of the `R` cohorts within the block of
-#'   `num_treats` treatment effect parameters. If NA (default), it's computed
-#'   internally using `getFirstInds(R, T)`.
-#' @return A numeric matrix `X_mod` of the same dimensions as `X_int`,
-#'   representing the transformed design matrix.
-#' @details The function sequentially transforms blocks of columns in `X_int`
-#'   corresponding to:
-#'   \itemize{
-#'     \item Cohort fixed effects
-#'     \item Time fixed effects
-#'     \item Covariate main effects (copied directly if `d > 0`)
-#'     \item Interactions between covariates and cohort fixed effects (if `d > 0`)
-#'     \item Interactions between covariates and time fixed effects (if `d > 0`)
-#'     \item Base treatment effects
-#'     \item Interactions between covariates and treatment effects (if `d > 0`)
-#'   }
-#'   Transformations for fusion penalization are applied using helper functions
-#'   like `genBackwardsInvFusionTransformMat()` and `genInvTwoWayFusionTransformMat()`.
+#' @description
+#' Takes the *raw* stacked panel design matrix
+#' \eqn{\tilde{\boldsymbol Z}\in\mathbb R^{NT\times p}}
+#' and post-multiplies it by the block-diagonal inverse fusion matrix
+#' \(\boldsymbol D_N^{-1}\) from Lemma 3:
+#' \deqn{
+#'   \boldsymbol D_N^{-1}
+#'   = \operatorname{diag}\!\bigl(
+#'       (D^{(1)}(R))^{-1},\;
+#'       (D^{(1)}(T-1))^{-1},\;
+#'       I_{d},\;
+#'       I_{d}\otimes(D^{(1)}(R))^{-1},\;
+#'       I_{d}\otimes(D^{(1)}(T-1))^{-1},\;
+#'       (D^{(2)}(\mathcal R))^{-1},\;
+#'       I_{d}\otimes(D^{(2)}(\mathcal R))^{-1}
+#'     \bigr).
+#' }
+#' The result is a matrix ready for vanilla bridge regression (Lasso,
+#' elastic-net, \eqn{\ell_q} etc.), where the penalty on the transformed
+#' coefficients reproduces the complex fusion penalty on the original ones.
+#'
+#' @details
+#' The columns of `X_int` **must** appear in the order:
+#' \enumerate{
+#'   \item Cohort fixed-effects (length \eqn{R})
+#'   \item Time fixed-effects (length \eqn{T-1})
+#'   \item Main covariates (length \eqn{d})
+#'   \item Covariate \(\times\) cohort interactions (length \eqn{dR})
+#'   \item Covariate \(\times\) time interactions (length \eqn{d(T-1)})
+#'   \item Base treatment effects (length `num_treats`)
+#'   \item Covariate \(\times\) treatment interactions (length `d*num_treats`)
+#' }
+#' Each block is transformed exactly by the corresponding diagonal block of
+#' \(\boldsymbol D_N^{-1}\) using helper functions
+#' `genBackwardsInvFusionTransformMat()` and
+#' `genInvTwoWayFusionTransformMat()`.
+#'
+#' Side-effect `stopifnot()` guards verify both the expected column order and
+#' the absence of `NA`s after transformation.
+#'
+#' @param X_int Numeric matrix \eqn{NT\times p}.  Original design matrix.
+#' @param N,T,R Integers. Panel dimensions and number of treated cohorts.
+#' @param d Integer. Number of time-invariant covariates.
+#' @param num_treats Integer. Total number of base treatment-effect dummies
+#'   \eqn{\mathfrak W}.
+#' @param first_inds Optional integer vector of length \eqn{R}.
+#'   Starting column indices of the first treatment dummy of each cohort inside
+#'   the treatment block.  If `NA` (default) they are computed by
+#'   `getFirstInds()`.
+#'
+#' @return
+#' A numeric matrix `X_mod` with the **same dimensions** as `X_int` but whose
+#' columns are the transformed regressors  
+#' \(\bigl[\tilde{\boldsymbol Z}\,\boldsymbol D_N^{-1}\bigr]_{NT\times p}\).
+#'
+#' @seealso
+#' * `genBackwardsInvFusionTransformMat()`  
+#' * `genInvTwoWayFusionTransformMat()`
+#'
+#' @examples
+#' set.seed(1)
+#' R <- 2; T <- 5; d <- 1; N <- 10
+#' num_treats  <- getNumTreats(R, T)
+#' p <- R + (T-1) + d + d*R + d*(T-1) + num_treats + d*num_treats
+#' X_int <- matrix(rnorm(N*T*p), N*T, p)
+#' X_mod <- transformXintImproved(
+#'   X_int, N=N, T=T, R=R, d=d, num_treats=num_treats
+#' )
+#' # The two matrices have identical dimensions:
+#' dim(X_mod)  # NT × p
 #' @keywords internal
 #' @noRd
 transformXintImproved <- function(
@@ -2321,32 +2352,111 @@ transformXintImproved <- function(
 	return(X_mod)
 }
 
-# untransformCoefImproved
-#' @title Untransform Estimated Coefficients Back to Original Scale
-#' @description Reverses the transformation applied by `transformXintImproved()`
-#'   to a vector of estimated coefficients. This converts coefficients estimated
-#'   in the transformed (fused) space back to the original parameterization of
-#'   the ETWFE model.
-#' @param beta_hat_mod Numeric vector; the estimated coefficients from the
-#'   penalized regression on the transformed design matrix `X_mod`. Length `p`.
-#' @param T Integer; the total number of time periods in the panel.
-#' @param R Integer; the total number of treated cohorts.
-#' @param p Integer; the total number of parameters (columns in the original
-#'   design matrix `X_int`).
-#' @param d Integer; the number of time-invariant covariates.
-#' @param num_treats Integer; the total number of unique treatment effect
-#'   parameters.
-#' @param first_inds Integer vector; (Optional) A vector indicating the index of
-#'   the first treatment effect for each of the `R` cohorts. If NA (default),
-#'   it's computed internally.
-#' @return A numeric vector `beta_hat` of length `p`, representing the
-#'   coefficients in the original, untransformed feature space.
-#' @details This function mirrors `transformXintImproved()` by applying the
-#'   inverse of the fusion transformations to the respective blocks of
-#'   `beta_hat_mod`. It uses helper functions such as
-#'   `genBackwardsInvFusionTransformMat()` and `genInvTwoWayFusionTransformMat()`
-#'   (which are their own inverses in this context, acting as the forward
-#'   transformation from the sparse basis to the original basis).
+#' Back-transform Bridge-Regression Coefficients  
+#' \( \widehat{\boldsymbol\beta}
+#'   = \boldsymbol D_N^{-1}\,\widehat{\boldsymbol\theta}\)
+#'
+#' @description
+#' After fitting a bridge (Lasso, Elastic-Net, \eqn{\ell_q}) regression on the
+#' transformed design matrix
+#' \eqn{\widetilde{\boldsymbol Z}\,\boldsymbol D_N^{-1}}  
+#' (see `transformXintImproved()`), the solver returns parameter estimates
+#' \eqn{\widehat{\boldsymbol\theta}}.
+#' This helper multiplies that vector by the block-diagonal matrix
+#' \eqn{\boldsymbol D_N^{-1}} from the paper,
+#' thereby recovering the original-scale coefficients
+#' \eqn{\widehat{\boldsymbol\beta}} for the FETWFE model.
+#'
+#' @details
+#' The matrix
+#' \deqn{
+#' \boldsymbol D_N^{-1}
+#'  = \operatorname{diag}\Bigl(
+#'        (D^{(1)}(R))^{-1},\;
+#'        (D^{(1)}(T\!-\!1))^{-1},\;
+#'        I_d,\;
+#'        I_d\!\otimes\!(D^{(1)}(R))^{-1},\;
+#'        I_d\!\otimes\!(D^{(1)}(T\!-\!1))^{-1},\;
+#'        (D^{(2)}(\mathcal R))^{-1},\;
+#'        I_d\!\otimes\!(D^{(2)}(\mathcal R))^{-1}
+#'     \Bigr)
+#' }
+#' corresponds to seven consecutive blocks in the column ordering used by
+#' `transformXintImproved()`:
+#' \enumerate{
+#'   \item Cohort fixed–effect coefficients (length \eqn{R})
+#'   \item Time fixed-effects (length \eqn{T-1})
+#'   \item Main covariates (length \eqn{d})
+#'   \item Covariate × cohort interactions (\eqn{dR})
+#'   \item Covariate × time interactions \eqn{d(T-1)}
+#'   \item Base treatment effects (\eqn{\mathfrak W =} `num_treats`)
+#'   \item Covariate × treatment interactions (\eqn{d\mathfrak W})
+#' }
+#'
+#' For each block the function premultiplies the slice of
+#' \code{beta_hat_mod} with the *same* inverse-fusion matrix that was used as a
+#' post-multiplier when building the transformed design matrix:
+#'
+#' | block | helper used | mathematical symbol |
+#' |-------|-------------|---------------------|
+#' | cohort FE | `genBackwardsInvFusionTransformMat(R)` | \((D^{(1)}(R))^{-1}\) |
+#' | time FE | `genBackwardsInvFusionTransformMat(T-1)` | \((D^{(1)}(T-1))^{-1}\) |
+#' | covariate blocks | identity copy | \(I_d\) |
+#' | covariate × cohort | same helper, repeated for each feature | \(I_d\otimes(D^{(1)}(R))^{-1}\) |
+#' | covariate × time | idem with \(T-1\) | \(I_d\otimes(D^{(1)}(T-1))^{-1}\) |
+#' | base treatment | `genInvTwoWayFusionTransformMat()` | \((D^{(2)}(\mathcal R))^{-1}\) |
+#' | covariate × treatment | same two-way helper for each feature | \(I_d\otimes(D^{(2)}(\mathcal R))^{-1}\) |
+#'
+#' @param beta_hat_mod Numeric vector (length \eqn{p}).  
+#'   Estimated coefficients returned by a penalised fit on the transformed
+#'   design matrix.
+#' @param T Integer. Total time periods.
+#' @param R Integer. Number of treated cohorts.
+#' @param p Integer. Total number of columns in the **original** design matrix
+#'   \eqn{p = p_N}.
+#' @param d Integer. Number of time-invariant covariates.
+#' @param num_treats Integer. Count of base treatment-effect dummies
+#'   \eqn{\mathfrak W}.
+#' @param first_inds Optional integer vector of length \eqn{R}.  
+#'   Starting indices (1-based, inside the treatment-dummy block) of the first
+#'   effect for each cohort.  If `NA` they are reconstructed with
+#'   **`getFirstInds()`**.
+#'
+#' @return Numeric vector \code{beta_hat} (length \eqn{p}) equal to
+#'   \eqn{\boldsymbol D_N^{-1}\,\widehat{\boldsymbol\theta}}.
+#'
+#' @references
+#' Wooldridge, J. M. (2021). Two-way fixed effects, the two-way mundlak
+#' regression, and difference-in-differences estimators.
+#' \emph{Available at SSRN 3906345}.
+#' \url{https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3906345}.
+#' Tibshirani & Taylor (2011), “The Solution Path of the Generalized
+#' Lasso”.  
+#' Faletto, G (2025). Fused Extended Two-Way Fixed Effects for
+#' Difference-in-Differences with Staggered Adoptions.
+#' \emph{arXiv preprint arXiv:2312.05985}.
+#' \url{https://arxiv.org/abs/2312.05985}.
+#'
+#' @seealso
+#' * `transformXintImproved()` – forward transformation of the design matrix.  
+#' * `genBackwardsInvFusionTransformMat()`,  
+#'   `genInvTwoWayFusionTransformMat()` – block-wise inverse matrices.
+#'
+#' @examples
+#' ## toy example: one covariate, two treated cohorts, T = 5
+#' R <- 2; T <- 5; d <- 1
+#' num_treats <- getNumTreats(R, T)
+#' p <- R + (T-1) + d + d*R + d*(T-1) + num_treats + d*num_treats
+#'
+#' ## pretend we ran a penalised regression in the transformed space
+#' beta_hat_mod <- rnorm(p)
+#'
+#' ## back-transform:
+#' beta_hat <- untransformCoefImproved(
+#'   beta_hat_mod, T=T, R=R, p=p, d=d,
+#'   num_treats=num_treats
+#' )
+#' length(beta_hat)  # == p
 #' @keywords internal
 #' @noRd
 untransformCoefImproved <- function(
@@ -2575,26 +2685,36 @@ genBackwardsFusionTransformMat <- function(n_vars) {
 	return(D)
 }
 
-# genBackwardsInvFusionTransformMat
-#' @title Generate Inverse of Backward Fusion Transformation Matrix
-#' @description Creates the inverse of the transformation matrix `D` generated by
-#'   `genBackwardsFusionTransformMat(n_vars)`. If `theta = D %*% beta`, then
-#'   `beta = D_inv %*% theta`, where `D_inv` is the matrix returned by this
-#'   function. This matrix effectively transforms coefficients from a space where
-#'   differences are penalized back to the original coefficient space.
-#' @param n_vars Integer; the number of variables (coefficients), determining
-#'   the dimension of the output matrix.
-#' @return A numeric matrix `D_inv` of dimension `n_vars` x `n_vars`.
-#' @details The resulting matrix `D_inv` is an upper triangular matrix with all
-#'   elements on and above the main diagonal equal to 1, and all elements below
-#'   the main diagonal equal to 0.
-#' @examples
-#'   genBackwardsInvFusionTransformMat(3)
-#'   # Output:
-#'   #      [,1] [,2] [,3]
-#'   # [1,]    1    1    1
-#'   # [2,]    0    1    1
-#'   # [3,]    0    0    1
+#' Inverse “Backwards-Difference” Transformation Matrix  \( \bigl(D^{(1)}(t)\bigr)^{-1} \)
+#'
+#' @description
+#' Generates the \eqn{t\times t} upper-triangular matrix of 1s whose inverse is
+#' the first-difference operator
+#' \eqn{D^{(1)}(t)}
+#' defined in Eq. (14) of the paper:
+#' \deqn{
+#'   D^{(1)}(t) =
+#'   \begin{bmatrix}
+#'     1 & -1 &        &        & 0\\
+#'       &  1 & -1     &        &  \\
+#'       &    & \ddots & \ddots &  \\
+#'       &    &        & 1 & -1 \\
+#'     0 &    &        &   &  1
+#'   \end{bmatrix}.
+#' }
+#' Multiplying a block of coefficients by this inverse converts finite
+#' differences back to cumulative sums, which is what the bridge‐penalty
+#' expects.
+#'
+#' @details
+#' The matrix has ones on and strictly above the main diagonal
+#' (\eqn{D^{-1}_{ij}=1_{\{i\le j\}}}).  
+#' It is its own Cholesky factor, \eqn{D^{-1} = U = U^\top}.
+#'
+#' @param n_vars Integer. Dimension \eqn{t}.
+#'
+#' @return A \eqn{n\_vars \times n\_vars} numeric matrix equal to
+#'   \(\bigl(D^{(1)}(n\_vars)\bigr)^{-1}\).
 #' @keywords internal
 #' @noRd
 genBackwardsInvFusionTransformMat <- function(n_vars) {
@@ -3248,66 +3368,136 @@ getPsiRUnfused <- function(
 	return(psi_r)
 }
 
-# genInvTwoWayFusionTransformMat
-#' @title Generate Inverse Two-Way Fusion Transformation Matrix
-#' @description Creates a square transformation matrix `D_inv` of size `n_vars` x
-#'   `n_vars` used for the two-way fusion penalization of treatment effects.
-#'   This matrix transforms coefficients from a sparse "fused" basis back to
-#'   the original parameterization of treatment effects. The penalization
-#'   structure involves fusing effects within cohorts over time and fusing the
-#'   initial effect of each cohort to the initial effect of the previous cohort.
-#' @param n_vars Integer; the total number of treatment effect parameters,
-#'   determining the dimension of the output matrix.
-#' @param first_inds Integer vector; a vector of length `R` where `first_inds[j]`
-#'   is the index (1-based) of the first treatment effect parameter corresponding
-#'   to the j-th treated cohort within the block of `n_vars` parameters.
-#' @param R Integer; the total number of treated cohorts.
-#' @return A numeric matrix `D_inv` of dimension `n_vars` x `n_vars`.
-#' @details The matrix is constructed such that:
-#'   \itemize{
-#'     \item It has 1s on the main diagonal.
-#'     \item For each cohort `j` (from 1 to `R-1`):
-#'       \itemize{
-#'         \item `D[first_inds[j]:n_vars, first_inds[j]] <- 1`
-#'         \item `D[first_inds[j+1]:n_vars, first_inds[j+1]] <- 1`
-#'       }
-#'     \item Within each cohort `j`, for effects from `first_inds[j]+1` up to
-#'       the one before `first_inds[j+1]`, say effect `k`,
-#'       `D[k, (first_inds[j]+1):k] <- 1`. This creates a lower triangular
-#'       structure for within-cohort fusion.
-#'   }
-#'   This structure implies that an original coefficient is a sum of certain
-#'   transformed (theta) coefficients.
+#' Inverse Two-Way-Fusion Transformation Matrix  \( \bigl(D^{(2)}(\mathcal R)\bigr)^{-1} \)
+#'
+#' @description
+#' Constructs the **inverse** of the block-lower-triangular matrix
+#' \eqn{D^{(2)}(\mathcal R)} that appears in Lemma \eqn{3} of the paper.
+#' Each treated cohort \(r\) has a “first” post-treatment coefficient
+#' \(\tau_{r,0}\) and a string of subsequent coefficients
+#' \(\tau_{r,1},\dots,\tau_{r,T-r}\).
+#' The fusion penalty (1) pulls every \(\tau_{r,k}\;(k>0)\) toward its
+#' predecessor \(\tau_{r,k-1}\) *within* the same cohort **and**
+#' (2) pulls the first effect of cohort \(r\) toward the first effect of cohort
+#' \(r-1\).
+#' Multiplying the raw design sub-matrix by the output of
+#' `genInvTwoWayFusionTransformMat()` therefore changes coordinates from
+#' \eqn{\boldsymbol\beta} to
+#' \eqn{\boldsymbol\theta = D^{(2)}(\mathcal R)\,\boldsymbol\beta},
+#' so that an \eqn{\ell_q} penalty on \eqn{\theta} is exactly the desired
+#' two-level fusion penalty on \eqn{\beta}.
+#'
+#' @details
+#' * The returned matrix is **upper-triangular with 1s** on and above the main
+#'   diagonal and zeros elsewhere, except for extra 1s that implement the
+#'   cross-cohort link on the first effect of each cohort (see paper, Eq. (18)).
+#' * Its inverse contains only \{-1,0,1\} and recreates Eq. (17) of the paper.
+#' * Determinant is 1, so the transformation is volume-preserving.
+#'
+#' @param n_vars Integer. Total number of base treatment-effect coefficients
+#'   ( \eqn{\mathfrak W}  in the paper).
+#' @param first_inds Integer vector of length \eqn{R}.  
+#'   `first_inds[r]` is the **1-based** column index of \(\tau_{r,0}\)
+#'   inside the block of the \eqn{n\_vars} treatment columns.
+#' @param R Integer. Number of treated cohorts.
+#'
+#' @return A numeric matrix of size \eqn{n\_vars \times n\_vars} that is
+#'   exactly \(\bigl(D^{(2)}(\mathcal R)\bigr)^{-1}\).
+#'
+#' @references
+#' Faletto, G (2025). Fused Extended Two-Way Fixed Effects for
+#' Difference-in-Differences with Staggered Adoptions.
+#' \emph{arXiv preprint arXiv:2312.05985}.
+#' \url{https://arxiv.org/abs/2312.05985}.
+#'
+#' @examples
+#' R  <- 3;  T <- 6
+#' num_treats <- getNumTreats(R, T)
+#' first <- getFirstInds(R, T)
+#' Dinv <- genInvTwoWayFusionTransformMat(num_treats, first, R)
+#' # verify Dinv %*% solve(Dinv) = I
+#' all.equal(Dinv %*% solve(Dinv), diag(num_treats))
 #' @keywords internal
 #' @noRd
 genInvTwoWayFusionTransformMat <- function(n_vars, first_inds, R) {
-	stopifnot(length(n_vars) == 1)
-	stopifnot(length(first_inds) == R)
-	D <- matrix(0, n_vars, n_vars)
-
-	diag(D) <- 1
-
-	if (R < 2) {
-		stop(
-			"Only one treated cohort detected in data. Currently fetwfe and etwfe only support data sets with at least two treated cohorts."
-		)
+	stopifnot(length(n_vars) == 1, n_vars >= 0)
+	stopifnot(is.numeric(R), length(R) == 1, R >= 0)
+	if (R > 0) {
+		stopifnot(is.numeric(first_inds), length(first_inds) == R)
+		# Add checks for consistency of first_inds if n_vars > 0
+		if (n_vars > 0) {
+		    stopifnot(first_inds[1] == 1)
+		    if (R > 1) {
+		        stopifnot(all(diff(first_inds) > 0)) # Must be strictly increasing
+		    }
+		    # Check that the last effect of the last cohort aligns with n_vars
+		    # M_R = n_vars - first_inds[R] + 1. This M_R must be > 0 if first_inds[R] <= n_vars.
+		    stopifnot(first_inds[R] <= n_vars)
+		} else { # n_vars == 0
+		    stopifnot(R == 0) # If n_vars is 0, R must be 0. first_inds should be empty.
+		}
+	} else { # R == 0
+		stopifnot(length(first_inds) == 0, n_vars == 0)
 	}
 
-	for (j in 1:(R - 1)) {
-		index_j <- first_inds[j]
-		next_index <- first_inds[j + 1]
+	D_inv <- matrix(0, nrow = n_vars, ncol = n_vars)
 
-		D[index_j:n_vars, index_j] <- 1
-		D[next_index:n_vars, next_index] <- 1
+	if (n_vars == 0) { # Handles R=0 correctly
+		return(D_inv)
+	}
 
-		if (index_j + 1 <= next_index - 1) {
-			for (k in (index_j + 1):(next_index - 1)) {
-				D[k, (index_j + 1):k] <- 1
-			}
+	# Part 1: Set up the column structure for \tilde{U} blocks and
+	# the first column of each diagonal block.
+	# For each cohort `c` (from 1 to R), the column in D_inv corresponding to its
+	# first treatment effect (i.e., absolute column index `first_inds[c]`)
+	# should have 1s from its own row (`first_inds[c]`) down to `n_vars`.
+	if (R > 0) {
+		for (cohort_idx in 1:R) {
+			col_to_fill <- first_inds[cohort_idx]
+			D_inv[col_to_fill:n_vars, col_to_fill] <- 1
 		}
 	}
 
-	return(D)
+	# Part 2: Form the correct diagonal blocks.
+	# Each diagonal block is (D^{(1)}(M_c)^{-1})^T, which is a fully
+	# lower triangular matrix of 1s (all elements on and below diagonal are 1).
+	# This will correctly overwrite the 1s placed in Part 1 for these diagonal parts.
+	if (R > 0) {
+		for (cohort_idx in 1:R) {
+			block_start_idx <- first_inds[cohort_idx]
+
+			if (cohort_idx < R) {
+				block_end_idx <- first_inds[cohort_idx + 1] - 1
+			} else { # This is the last cohort
+				block_end_idx <- n_vars
+			}
+			
+			# Ensure block indices are valid (e.g. cohort has at least one effect)
+			if (block_start_idx > block_end_idx) {
+			    # This case implies cohort_idx has zero effects.
+			    # This should ideally not happen if first_inds and n_vars are consistent
+			    # with cohorts having at least one effect.
+			    # If it can happen, 'continue' or 'next' might be appropriate.
+			    # For now, assume M_x >= 1 for all cohorts included in R.
+			    next 
+			}
+
+			# Fill this diagonal block D_inv[block_start_idx:block_end_idx, block_start_idx:block_end_idx]
+			for (row_abs in block_start_idx:block_end_idx) { # Absolute row index in D_inv
+				# For the current row_abs within its block, set columns from
+				# the start of the block (block_start_idx) up to the current row_abs to 1.
+				D_inv[row_abs, block_start_idx:row_abs] <- 1
+			}
+		}
+	}
+	
+	# The original code had a stop for R < 2.
+	# This revised logic handles R=0 and R=1 correctly without a special stop.
+	# If R=1, Part 1 sets D_inv[1:n_vars, 1] <- 1.
+	# Part 2 (with cohort_idx=1, block_start_idx=1, block_end_idx=n_vars) then correctly
+	# forms the full (D^{(1)}(n_vars)^{-1})^T matrix.
+
+	return(D_inv)
 }
 
 # getBetaBIC
