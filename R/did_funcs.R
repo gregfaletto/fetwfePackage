@@ -2972,6 +2972,13 @@ getSecondVarTermDataApp <- function(
 	stopifnot(ncol(Sigma_pi_hat) == R)
 
 	# Jacobian
+	##
+	## J_{rs} =  (S-pi_r)/S^2      if r = s
+	##           -pi_r   /S^2      if r ~= s
+	##
+	## Each column block of d_inv_treat_sel belongs to a selected theta coordinate;
+	## averaging the rows of cohort s gives the vector needed to multiply theta_sel.
+	##
 	jacobian_mat <- matrix(
 		as.numeric(NA),
 		nrow = R,
@@ -3001,6 +3008,7 @@ getSecondVarTermDataApp <- function(
 		stopifnot(all.equal(unlist(sel_inds), 1:num_treats))
 
 		for (r in 1:R) {
+			## diagonal contribution
 			cons_r <- (sum(cohort_probs_overall) -
 				cohort_probs_overall[r]) /
 				sum(cohort_probs_overall)^2
@@ -3013,6 +3021,7 @@ getSecondVarTermDataApp <- function(
 					mean(d_inv_treat_sel[sel_inds[[r]], , drop = FALSE])
 			}
 
+			## off-diagonal: subtract sum_{s!=r} pi_r / S^2  x  block-mean of cohort s
 			for (r_double_prime in setdiff(1:R, r)) {
 				cons_r_double_prime <- cohort_probs_overall[r] / sum(cohort_probs_overall)^2
 
@@ -3026,6 +3035,7 @@ getSecondVarTermDataApp <- function(
 
 	stopifnot(all(!is.na(jacobian_mat)))
 
+	## variance term: theta_sel' J' sum_pi J theta_sel / N
 	if (fused) {
 		att_var_2 <- T *
 			as.numeric(
@@ -3175,10 +3185,12 @@ getCohortATTsFinal <- function(
 		gram_inv <- NA
 	}
 
+	## We need the tau sub-matrix of D^{-1} ONLY if we are in fused workflow
 	if (fused) {
 		# Get the parts of D_inv that have to do with treatment effects
 		d_inv_treat <- genInvTwoWayFusionTransformMat(num_treats, first_inds, R)
 
+		## we will progressively rbind() the selected-column rows of this matrix
 		d_inv_treat_sel <- matrix(
 			0,
 			nrow = 0,
@@ -3187,13 +3199,14 @@ getCohortATTsFinal <- function(
 	}
 
 	# First, each cohort
-	cohort_tes <- rep(as.numeric(NA), R)
-	cohort_te_ses <- rep(as.numeric(NA), R)
+	cohort_tes <- rep(as.numeric(NA), R) # cohort average treatment effect point estimates
+	cohort_te_ses <- rep(as.numeric(NA), R) # standard errors
 
 	psi_mat <- matrix(0, length(sel_treat_inds_shifted), R)
 
+	# loop over cohorts
 	for (r in 1:R) {
-		# Get indices corresponding to rth treatment
+		# Get indices corresponding to marginal treatment effects for rth cohort
 		first_ind_r <- first_inds[r]
 		if (r < R) {
 			last_ind_r <- first_inds[r + 1] - 1
@@ -3204,12 +3217,16 @@ getCohortATTsFinal <- function(
 		stopifnot(last_ind_r >= first_ind_r)
 		stopifnot(all(first_ind_r:last_ind_r %in% 1:num_treats))
 
+		# average treatment effect for cohort r: simple mean of these treatment
+		# effects
 		cohort_tes[r] <- mean(tes[first_ind_r:last_ind_r])
 
 		if (calc_ses) {
 			# Calculate standard errors
 
 			if (fused) {
+				# build psi_r and extract block of D^{-1} for these rows/
+				# selected columns
 				res_r <- getPsiRFused(
 					first_ind_r,
 					last_ind_r,
@@ -3272,6 +3289,8 @@ getCohortATTsFinal <- function(
 			psi_mat[, r] <- psi_r
 			# Get standard errors
 
+			## Variance of the treatment effect for cohort r is sigma^2 /(NT) x
+			# pt(psi_r) %*% gram_inv %*% psi_r  (see paper)
 			cohort_te_ses[r] <- sqrt(
 				sig_eps_sq *
 					as.numeric(
@@ -3859,6 +3878,12 @@ getPsiRFused <- function(
 
 	# Correct rows of matrix
 
+	## psi_r := column-wise mean of those rows  (weights for average treatment
+	## effect for cohort r)
+	##
+	## * If |S| > 1, result is a vector length |S|
+	## * If |S| == 1, treat the scalar mean as length-1 vector
+
 	if (last_ind_r > first_ind_r) {
 		if (length(sel_treat_inds_shifted) > 1) {
 			psi_r <- colMeans(d_inv_treat[
@@ -3889,6 +3914,8 @@ getPsiRFused <- function(
 		# Since first_ind_r and last_ind_r are the same, need to coerce this
 		# object to be a matrix with one row so that it works smoothly with
 		# rbind() later
+
+		## Block of D^{-1} used later for probability-variance term
 		d_inv_treat_sel <- matrix(
 			d_inv_treat[first_ind_r:last_ind_r, sel_treat_inds_shifted],
 			nrow = 1
@@ -3931,6 +3958,8 @@ getPsiRFused <- function(
 #' @param R Integer; total number of treated cohorts.
 #' @param num_treats Integer; total number of base treatment effect parameters.
 #' @param cohort_tes Numeric vector; estimated ATTs for each of the `R` cohorts.
+#' (Simple average of all of the estimated treatment effects for each cohort
+#' across time.)
 #' @param cohort_probs Numeric vector; weights for each cohort, typically
 #'   estimated probabilities of belonging to cohort `r` conditional on being
 #'   treated. Length `R`. Sums to 1.
@@ -4008,6 +4037,7 @@ getTeResults2 <- function(
 ) {
 	stopifnot(all(!is.na(cohort_probs)))
 
+	# point estimate ATT
 	att_hat <- as.numeric(cohort_tes %*% cohort_probs)
 
 	if (calc_ses) {
@@ -4015,6 +4045,7 @@ getTeResults2 <- function(
 		stopifnot(!is.na(sig_eps_sq))
 		stopifnot(all(!is.na(gram_inv)))
 		# Get ATT standard error
+
 		# first variance term: convergence of theta
 		psi_att <- psi_mat %*% cohort_probs
 
@@ -4043,6 +4074,7 @@ getTeResults2 <- function(
 
 		stopifnot(!is.na(att_var_2))
 
+		# Combine the two variance terms
 		if (indep_probs) {
 			att_te_se <- sqrt(att_var_1 + att_var_2)
 		} else {
@@ -5812,6 +5844,8 @@ getCohortATTsFinalOLS <- function(
 #' @param R Integer; total number of treated cohorts.
 #' @param num_treats Integer; total number of base treatment effect parameters.
 #' @param cohort_tes Numeric vector; estimated ATTs for each of the `R` cohorts.
+#' (Simple average of all of the estimated treatment effects for each cohort
+#' across time.)
 #' @param cohort_probs Numeric vector; weights for each cohort, typically
 #'   estimated probabilities of belonging to cohort `r` conditional on being
 #'   treated. Length `R`. Sums to 1.
