@@ -720,8 +720,8 @@ fetwfe_core <- function(
 
 		# Need to untransform theta_hat_slopes to get beta_hat for consistency
 		beta_hat_early_exit <- untransformCoefImproved(
-			theta_hat_slopes, # Pass slopes only
-			first_inds,
+			beta_hat_mod=theta_hat_slopes, # Pass slopes only
+			first_inds=first_inds,
 			T = T,
 			R = R,
 			p = p,
@@ -777,8 +777,8 @@ fetwfe_core <- function(
 	#
 
 	beta_hat <- untransformCoefImproved(
-		theta_hat_slopes, # Pass slopes only
-		first_inds,
+		beta_hat_mod=theta_hat_slopes, # Pass slopes only
+		first_inds=first_inds,
 		T = T,
 		R = R,
 		p = p,
@@ -833,7 +833,7 @@ fetwfe_core <- function(
 		R = R,
 		N = N,
 		T = T,
-		fused = TRUE, # This parameter might be redundant if this function is only for fused
+		fused = TRUE,
 		calc_ses = q < 1,
 		p = p, # Total number of original parameters (columns in X_ints)
 		alpha = alpha
@@ -2221,7 +2221,7 @@ getFirstInds <- function(R, T) {
 #'   X_int, N=N, T=T, R=R, d=d, num_treats=num_treats
 #' )
 #' # The two matrices have identical dimensions:
-#' dim(X_mod)  # NT × p
+#' dim(X_mod)  # NT x p
 #' @keywords internal
 #' @noRd
 transformXintImproved <- function(
@@ -2384,13 +2384,13 @@ transformXintImproved <- function(
 #' corresponds to seven consecutive blocks in the column ordering used by
 #' `transformXintImproved()`:
 #' \enumerate{
-#'   \item Cohort fixed–effect coefficients (length \eqn{R})
+#'   \item Cohort fixed-effect coefficients (length \eqn{R})
 #'   \item Time fixed-effects (length \eqn{T-1})
 #'   \item Main covariates (length \eqn{d})
-#'   \item Covariate × cohort interactions (\eqn{dR})
-#'   \item Covariate × time interactions \eqn{d(T-1)}
+#'   \item Covariate x cohort interactions (\eqn{dR})
+#'   \item Covariate x time interactions \eqn{d(T-1)}
 #'   \item Base treatment effects (\eqn{\mathfrak W =} `num_treats`)
-#'   \item Covariate × treatment interactions (\eqn{d\mathfrak W})
+#'   \item Covariate x treatment interactions (\eqn{d\mathfrak W})
 #' }
 #'
 #' For each block the function premultiplies the slice of
@@ -2402,10 +2402,10 @@ transformXintImproved <- function(
 #' | cohort FE | `genBackwardsInvFusionTransformMat(R)` | \((D^{(1)}(R))^{-1}\) |
 #' | time FE | `genBackwardsInvFusionTransformMat(T-1)` | \((D^{(1)}(T-1))^{-1}\) |
 #' | covariate blocks | identity copy | \(I_d\) |
-#' | covariate × cohort | same helper, repeated for each feature | \(I_d\otimes(D^{(1)}(R))^{-1}\) |
-#' | covariate × time | idem with \(T-1\) | \(I_d\otimes(D^{(1)}(T-1))^{-1}\) |
+#' | covariate x cohort | same helper, repeated for each feature | \(I_d\otimes(D^{(1)}(R))^{-1}\) |
+#' | covariate x time | idem with \(T-1\) | \(I_d\otimes(D^{(1)}(T-1))^{-1}\) |
 #' | base treatment | `genInvTwoWayFusionTransformMat()` | \((D^{(2)}(\mathcal R))^{-1}\) |
-#' | covariate × treatment | same two-way helper for each feature | \(I_d\otimes(D^{(2)}(\mathcal R))^{-1}\) |
+#' | covariate x treatment | same two-way helper for each feature | \(I_d\otimes(D^{(2)}(\mathcal R))^{-1}\) |
 #'
 #' @param beta_hat_mod Numeric vector (length \eqn{p}).  
 #'   Estimated coefficients returned by a penalised fit on the transformed
@@ -2430,17 +2430,17 @@ transformXintImproved <- function(
 #' regression, and difference-in-differences estimators.
 #' \emph{Available at SSRN 3906345}.
 #' \url{https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3906345}.
-#' Tibshirani & Taylor (2011), “The Solution Path of the Generalized
-#' Lasso”.  
+#' Tibshirani & Taylor (2011), "The Solution Path of the Generalized
+#' Lasso".  
 #' Faletto, G (2025). Fused Extended Two-Way Fixed Effects for
 #' Difference-in-Differences with Staggered Adoptions.
 #' \emph{arXiv preprint arXiv:2312.05985}.
 #' \url{https://arxiv.org/abs/2312.05985}.
 #'
 #' @seealso
-#' * `transformXintImproved()` – forward transformation of the design matrix.  
+#' * `transformXintImproved()` - forward transformation of the design matrix.  
 #' * `genBackwardsInvFusionTransformMat()`,  
-#'   `genInvTwoWayFusionTransformMat()` – block-wise inverse matrices.
+#'   `genInvTwoWayFusionTransformMat()` - block-wise inverse matrices.
 #'
 #' @examples
 #' ## toy example: one covariate, two treated cohorts, T = 5
@@ -2685,7 +2685,7 @@ genBackwardsFusionTransformMat <- function(n_vars) {
 	return(D)
 }
 
-#' Inverse “Backwards-Difference” Transformation Matrix  \( \bigl(D^{(1)}(t)\bigr)^{-1} \)
+#' Inverse "Backwards-Difference" Transformation Matrix  \( \bigl(D^{(1)}(t)\bigr)^{-1} \)
 #'
 #' @description
 #' Generates the \eqn{t\times t} upper-triangular matrix of 1s whose inverse is
@@ -2703,13 +2703,20 @@ genBackwardsFusionTransformMat <- function(n_vars) {
 #'   \end{bmatrix}.
 #' }
 #' Multiplying a block of coefficients by this inverse converts finite
-#' differences back to cumulative sums, which is what the bridge‐penalty
+#' differences back to cumulative sums, which is what the bridge-penalty
 #' expects.
 #'
 #' @details
 #' The matrix has ones on and strictly above the main diagonal
 #' (\eqn{D^{-1}_{ij}=1_{\{i\le j\}}}).  
 #' It is its own Cholesky factor, \eqn{D^{-1} = U = U^\top}.
+#'
+#' After constructing `D_inv`, the routine calls
+#' `genBackwardsFusionTransformMat(n_vars)`, forms both
+#' `D %*% D_inv` and `D_inv %*% D`, and checks that their
+#' maximum element-wise deviation from the identity matrix is below
+#' `tol = 1e-12`.  Failing the check raises an error, protecting downstream
+#' computations from a silent algebraic bug.
 #'
 #' @param n_vars Integer. Dimension \eqn{t}.
 #'
@@ -2731,10 +2738,22 @@ genBackwardsInvFusionTransformMat <- function(n_vars) {
 	stopifnot(nrow(D_inv) == n_vars)
 	stopifnot(ncol(D_inv) == n_vars)
 
+	## -- self-test: D_inv %*% D  ==  I
+	D <- genBackwardsFusionTransformMat(n_vars)
+	tol <- 1e-12
+	if (!all.equal(D_inv %*% D,
+                        diag(n_vars),
+                        tolerance = tol)) {
+	    stop("genBackwardsInvFusionTransformMat(): self-test failed - ",
+	         "result is not the matrix inverse of D.")
+	}
+	## ---------------------------------------
+
+
 	return(D_inv)
 }
 
-# genInvFusionTransformMat
+# genInvFusionTransformMat (TODO: unused for now)
 #' @title Generate Inverse of Forward Fusion Transformation Matrix
 #' @description Creates the inverse of a "forward" fusion transformation matrix.
 #'   A forward fusion matrix `D_forward` (not explicitly generated here) would
@@ -2853,6 +2872,30 @@ estOmegaSqrtInv <- function(y, X_ints, N, T, p) {
 #' @description Computes the second component of the variance for the Average
 #'   Treatment Effect on the Treated (ATT). This component accounts for the
 #'   variability due to the estimation of cohort membership probabilities.
+#' Computes **Term 2** of the overall-ATT variance:
+#' \deqn{\frac{1}{N}\,
+#'       \hat\theta_{\!\text{sel}}^{\!\top}
+#'       J^{\!\top}\widehat\Sigma_\pi J
+#'       \hat\theta_{\!\text{sel}},}
+#' where
+#' \itemize{
+#'   \item \(\widehat\Sigma_\pi\) is the multinomial covariance of the
+#'         cohort-count vector
+#'         (\(\widehat\pi_r(1-\widehat\pi_r)\) on the diagonal,
+#'         \(-\widehat\pi_r\widehat\pi_s\) off-diagonal).
+#'   \item \(J\) is the Jacobian of the weighting function
+#'         \(f_r(\pi)=\pi_r/\sum_{k}\pi_k\) evaluated at
+#'         \(\widehat\pi\).  In matrix form
+#'         \eqn{J_{rs}=
+#'           \begin{cases}
+#'             (1-\widehat\pi_r)/S^2,& r=s,\\[4pt]
+#'             -\,\widehat\pi_r    /S^2,& r\neq s,
+#'           \end{cases}} with \(S=\sum_k\widehat\pi_k\).
+#'   \item Each column of `d_inv_treat_sel` is a selected **transformed**
+#'         treatment coefficient; row-averaging over the rows belonging to
+#'         cohort \(s\) produces the part of \(J\) that multiplies
+#'         \(\theta_{\text{sel}}\).
+#' }
 #' @param psi_mat Numeric matrix; a matrix where each column `r` is the `psi_r`
 #'   vector used in calculating the ATT for cohort `r`. Dimensions:
 #'   `length(sel_treat_inds_shifted)` x `R`.
@@ -2886,6 +2929,13 @@ estOmegaSqrtInv <- function(y, X_ints, N, T, p) {
 #'   `T * t(theta_hat_treat_sel) %*% t(jacobian_mat) %*% Sigma_pi_hat %*% jacobian_mat %*%
 #'   theta_hat_treat_sel / (N * T)`. The construction of the Jacobian involves averaging parts of
 #'   `d_inv_treat_sel` corresponding to different cohorts.
+#'
+#' The function is currentky written for the fused workflow only
+#' (`fused = TRUE` guard).  It first reconstructs \(J\) from
+#' `d_inv_treat_sel` and the cohort probabilities, then plugs everything into
+#' the quadratic form above and finally rescales by \(T/(N T)=1/N\).
+#' @inheritParams getSecondVarTermDataApp
+#' @seealso [getTeResults2()]
 #' @keywords internal
 #' @noRd
 getSecondVarTermDataApp <- function(
@@ -2964,35 +3014,14 @@ getSecondVarTermDataApp <- function(
 			}
 
 			for (r_double_prime in setdiff(1:R, r)) {
-				cons_r_double_prime <- (sum(cohort_probs_overall) -
-					cohort_probs_overall[r_double_prime]) /
-					sum(cohort_probs_overall)^2
+				cons_r_double_prime <- cohort_probs_overall[r] / sum(cohort_probs_overall)^2
 
-				if (length(sel_treat_inds_shifted) > 1) {
-					jacobian_mat[r, ] <- jacobian_mat[r, ] -
-						cons_r_double_prime *
-							colMeans(d_inv_treat_sel[
-								sel_inds[[r_double_prime]],
-								,
-								drop = FALSE
-							])
-				}
+				jacobian_mat[r, ] <- jacobian_mat[r, ] -
+					cons_r_double_prime *
+						colMeans(d_inv_treat_sel[
+							sel_inds[[r_double_prime]], , drop = FALSE])
 			}
 		}
-		# } else {
-		# 	for (r in 1:R) {
-		# 		# All terms in rth column have the same value except the diagonal term
-		# 		col_r_val <- -cohort_probs_overall[r] / sum(cohort_probs_overall)^2
-
-		# 		jacobian_mat[, r] <- rep(col_r_val, R)
-
-		# 		# Diagonal term
-		# 		cons_r <- (sum(cohort_probs_overall) -
-		# 			cohort_probs_overall[r]) /
-		# 			sum(cohort_probs_overall)^2
-
-		# 		jacobian_mat[r, r] <- cons_r
-		# 	}
 	}
 
 	stopifnot(all(!is.na(jacobian_mat)))
@@ -3007,29 +3036,38 @@ getSecondVarTermDataApp <- function(
 					theta_hat_treat_sel
 			) /
 			(N * T)
+	}
 
-		# } else{
-		# 	att_var_2 <- T *
-		# 		as.numeric(
-		# 			t(tes) %*%
-		# 				psi_mat %*%
-		# 				t(jacobian_mat) %*%
-		# 				Sigma_pi_hat %*%
-		# 				jacobian_mat %*%
-		# 				t(psi_mat) %*%
-		# 				tes
-		# 		) /
-		# 		(N * T)
+	if(!fused){
+		stop("this function is not implemented as of now.")
 	}
 
 	return(att_var_2)
 }
 
 # getCohortATTsFinal
-#' @title Calculate Cohort-Specific ATTs and Standard Errors
-#' @description Computes the Average Treatment Effect on the Treated (ATT) for
-#'   each cohort, along with their standard errors and confidence intervals if
-#'   requested and feasible.
+#' @description
+#' Computes the **Cohort Average Treatment Effect on the Treated**  
+#' \deqn{\tau_{\text{ATT},r}\;=\;\frac1{T-r+1}\sum_{t=r}^{T}\tau_{\text{ATT}}(r,t)}
+#' for every treated cohort \(r\in\{1,\dots,R\}\).\cr
+#' In the fused-parameterisation used by the estimator, each
+#' \(\tau_{\text{ATT}}(r,t)\) is a *row* of
+#' \((D^{(2)}(\mathcal R))^{-1}\widehat\theta\).
+#' Averaging those rows within a cohort produces a
+#' **weight vector** \(\psi_r\) such that  
+#' \(\widehat{\tau}_{\text{ATT},r}=\psi_r^{\!\top}\widehat\theta\).
+#' The function
+#'
+#' * constructs every \(\psi_r\) (via [getPsiRFused()])
+#' * builds the Gram inverse
+#'   \(\bigl((NT)^{-1}X_{\hat{\mathcal S}}^{\top}X_{\hat{\mathcal S}}\bigr)^{-1}\)
+#'   for the *selected* treatment-effect columns
+#' * returns point estimates, \(\sqrt{\widehat{\operatorname{Var}}}\) and
+#'   Wald intervals
+#'   \(\widehat{\tau}_{\text{ATT},r}\pm z_{1-\alpha/2}\,
+#'     \widehat{\operatorname{SE}}(\widehat{\tau}_{\text{ATT},r})\).
+#'
+#' @inheritParams getCohortATTsFinal
 #' @param X_final Numeric matrix; the final design matrix, potentially
 #'   transformed by `Omega_sqrt_inv` and the fusion transformation.
 #' @param sel_feat_inds Integer vector; indices of all features selected by the
@@ -3071,6 +3109,25 @@ getSecondVarTermDataApp <- function(
 #'   of the relevant `tes`. If SEs are calculated, it uses `getPsiRFused` or
 #'   `getPsiRUnfused` to get a `psi_r` vector, which is then used with
 #'   `gram_inv` to find the standard error for that cohort's ATT.
+#'
+#' The finite-sample variance estimator is
+#' \deqn{\widehat{\operatorname{Var}}(\widehat{\tau}_{\text{ATT},r})
+#'       =\frac{\sigma^{2}}{NT}\;
+#'         \psi_r^{\!\top}\,
+#'         \widehat G^{-1}\psi_r ,}
+#' where \(\widehat G^{-1}\) is the Gram inverse restricted to the selected
+#' treatment-effect features.
+#' All matrix slices come from the *inverse fusion matrix*
+#' \(D^{(2)}(\mathcal R)^{-1}\) and therefore depend only on the known
+#' cohort structure.
+#'
+#' When `calc_ses = TRUE`, the routine also accumulates a
+#' block `d_inv_treat_sel` -
+#' the sub-matrix of \(D^{(2)}(\mathcal R)^{-1}\) with
+#' **all rows** but **only the selected columns**.
+#' This block is later required by [getSecondVarTermDataApp()]
+#' to propagate sampling noise in the cohort-probability estimates.
+#' @seealso [getPsiRFused()], [getTeResults2()]
 #' @keywords internal
 #' @noRd
 getCohortATTsFinal <- function(
@@ -3373,7 +3430,7 @@ getPsiRUnfused <- function(
 #' @description
 #' Constructs the **inverse** of the block-lower-triangular matrix
 #' \eqn{D^{(2)}(\mathcal R)} that appears in Lemma \eqn{3} of the paper.
-#' Each treated cohort \(r\) has a “first” post-treatment coefficient
+#' Each treated cohort \(r\) has a "first" post-treatment coefficient
 #' \(\tau_{r,0}\) and a string of subsequent coefficients
 #' \(\tau_{r,1},\dots,\tau_{r,T-r}\).
 #' The fusion penalty (1) pulls every \(\tau_{r,k}\;(k>0)\) toward its
@@ -3679,8 +3736,7 @@ getGramInv <- function(
 
 	stopifnot(length(treat_inds) == num_treats)
 
-	# TODO: confirm if I should center X_sel even when estimating via OLS
-	# (unnecessary for estimation to center covariates in that case?)
+	# Centering X_sel even when estimating via OLS is harmless
 	X_sel_centered <- scale(X_sel, center = TRUE, scale = FALSE)
 
 	gram <- 1 / (N * T) * (t(X_sel_centered) %*% X_sel_centered)
@@ -3740,6 +3796,22 @@ getGramInv <- function(
 #'   cohort `r`. These are used in standard error calculations for the cohort's
 #'   Average Treatment Effect on the Treated (ATT) when fusion penalization
 #'   has been applied.
+#'
+#' For a treated cohort \(r\) let
+#' \(M_r=T-r+1\) be the number of post-treatment periods.
+#' The CATT is the *simple average*
+#' \(M_r^{-1}\sum_{t=r}^{T}\tau_{\text{ATT}}(r,t)\).
+#' In the fused basis each \(\tau_{\text{ATT}}(r,t)\) is a row of
+#' \(D^{(2)}(\mathcal R)^{-1}\widehat\theta\),
+#' so the averaging weights are the **row-means** of the corresponding block
+#' of the inverse fusion matrix.  
+#' This helper:
+#'
+#' * extracts those rows (`first_ind_r:last_ind_r`) from
+#'   `d_inv_treat`,
+#' * averages them column-wise to form \(\psi_r\),
+#' * returns the block itself (`d_inv_treat_sel`) because later routines need
+#'   it for probability-variance propagation.
 #' @param first_ind_r Integer; the index of the first treatment effect parameter
 #'   for cohort `r` within the original `num_treats` block (1-based).
 #' @param last_ind_r Integer; the index of the last treatment effect parameter
@@ -3763,6 +3835,13 @@ getGramInv <- function(
 #'   to cohort `r`'s treatment effects) for the columns that were actually
 #'   selected by the model. `d_inv_treat_sel` is this specific block of the
 #'   `d_inv_treat` matrix.
+#'
+#' * If only one transformed treatment coefficient was selected,
+#'   both the mean and the returned block are forced to the correct
+#'   1 x 1 or 1 x *`k`* shape so that higher-level code can
+#'   `rbind()` the blocks without special cases.
+#' @inheritParams getPsiRFused
+#' @seealso [getCohortATTsFinal()]
 #' @keywords internal
 #' @noRd
 getPsiRFused <- function(
@@ -3827,6 +3906,25 @@ getPsiRFused <- function(
 #'   (ATT) by taking a weighted average of cohort-specific ATTs. It also
 #'   calculates the standard error for this overall ATT, potentially considering
 #'   variability from estimated cohort probabilities.
+#'
+#' The overall Average Treatment Effect on the Treated is
+#' \deqn{\widehat{\text{ATT}}
+#'       \;=\;
+#'       \sum_{r=1}^{R}\widehat{\tau}_{\text{ATT},r}\,
+#'                     \widehat{\pi}_{r\mid\tau},}
+#' a weighted mean of cohort-specific ATTs with weights
+#' \(\widehat{\pi}_{r\mid\tau}=N_r/N_\tau\).  
+#' The variance has **two additive pieces**
+#'
+#' * *Term 1* - randomness from \(\widehat\theta\):
+#'   \(\sigma^{2}(NT)^{-1}\psi_{\text{att}}^{\!\top}\widehat G^{-1}\psi_{\text{att}}\)
+#'   with \(\psi_{\text{att}}=\Psi\,\widehat\pi\) and
+#'   \(\Psi=(\psi_1,\dots,\psi_R)\).
+#' * *Term 2* - randomness from \(\widehat\pi\) itself.
+#'   It equals \(N^{-1}\theta_{\text{sel}}^{\!\top}J^{\!\top}
+#'   \widehat\Sigma_\pi J\theta_{\text{sel}}\) when cohort counts and outcomes
+#'   come from independent samples, and it enters a conservative sum of
+#'   variances otherwise.
 #' @param sig_eps_sq Numeric scalar; variance of the idiosyncratic error term.
 #' @param N Integer; total number of units.
 #' @param T Integer; total number of time periods.
@@ -3873,6 +3971,19 @@ getPsiRFused <- function(
 #'   - `att_te_se` is `sqrt(att_var_1 + att_var_2)` if `indep_probs` is `TRUE`,
 #'     otherwise it's a conservative SE: `sqrt(att_var_1 + att_var_2 + 2*sqrt(att_var_1 * att_var_2))`.
 #'   - `att_te_se_no_prob` is `sqrt(att_var_1)`.
+#'
+#' `indep_probs = TRUE` implements the independent-sample
+#' variance (`att_var_1 + att_var_2`);
+#' `indep_probs = FALSE` returns the conservative bound
+#' `att_var_1 + att_var_2 + 2sqrt(att_var_1*att_var_2)`.
+#'
+#' All matrices required for Term 2 are produced upstream:
+#' * `psi_mat` from [getCohortATTsFinal()]  
+#' * `d_inv_treat_sel` from the same routine  
+#' * the Jacobian \(J\) is built in
+#'   [getSecondVarTermDataApp()] using `d_inv_treat_sel`
+#' @inheritParams getTeResults2
+#' @seealso [getSecondVarTermDataApp()]
 #' @keywords internal
 #' @noRd
 getTeResults2 <- function(
@@ -4168,7 +4279,7 @@ checkFetwfeInputs <- function(
 #' treated cohort.
 #' @param T Total number of time periods.
 #' @param R Number of treated cohorts.
-#' @param d Number of covariates (time–invariant).
+#' @param d Number of covariates (time-invariant).
 #' @param num_treats Total number of base treatment effect parameters.
 #'
 #' @return A matrix of dimension p x p where p = R + (T - 1) + d + d*R + d*(T - 1) + num_treats +
@@ -4504,12 +4615,12 @@ checkEtwfeInputs <- function(
 #' @description
 #' A helper that converts raw **panel data** into the core objects required by
 #' `etwfe_core()`, `twfeCovs_core()`, and related fitting routines.  The function
-#' (i) keeps only the relevant variables, (ii) one-hot–encodes or otherwise
+#' (i) keeps only the relevant variables, (ii) one-hot-encodes or otherwise
 #' expands any *factor* covariates, (iii) builds the stacked design matrix
 #' `X_ints` and centred response `y` via [`prepXints()`], and (iv) performs a
 #' battery of **sanity checks** on cohort counts before estimation proceeds.
 #'
-#' @param pdata A **data.frame** in long (unit × time) format containing at
+#' @param pdata A **data.frame** in long (unit x time) format containing at
 #'   least the columns named in `response`, `time_var`, `unit_var`,
 #'   `treatment`, and `covs`.
 #' @param response Character; name of the response variable column.
@@ -4526,34 +4637,34 @@ checkEtwfeInputs <- function(
 #'   independent sample.  Only used when
 #'   `indep_count_data_available = TRUE`.
 #'
-#' @return A named **list** ready to be passed into the “_core” estimators:
+#' @return A named **list** ready to be passed into the "_core" estimators:
 #' \describe{
 #'   \item{pdata}{The (possibly modified) data frame after factor processing.}
 #'   \item{covs}{Updated character vector of covariate names after dummy-expansion.}
 #'   \item{X_ints}{Design matrix with unit FE, time FE, covariates,
 #'     treatment dummies and their interactions (dimensions \(N T \times p\)).}
 #'   \item{y}{Centred response vector of length \(N T\).}
-#'   \item{N, T}{Integers – number of unique units and time periods.}
-#'   \item{d}{Integer – number of *raw* covariates after processing.}
-#'   \item{p}{Integer – total number of columns in `X_ints`.}
+#'   \item{N, T}{Integers - number of unique units and time periods.}
+#'   \item{d}{Integer - number of *raw* covariates after processing.}
+#'   \item{p}{Integer - total number of columns in `X_ints`.}
 #'   \item{in_sample_counts}{Named integer vector of length `1 + R` with cohort
 #'     sizes in the estimation sample (first entry = never-treated).}
-#'   \item{num_treats}{Integer – total number of base treatment-effect
+#'   \item{num_treats}{Integer - total number of base treatment-effect
 #'     parameters in `X_ints`.}
 #'   \item{first_inds}{Integer vector (length `R`) giving the first column
-#'     index of each cohort’s treatment-effect block inside `X_ints`.}
-#'   \item{R}{Integer – number of treated cohorts detected.}
+#'     index of each cohort's treatment-effect block inside `X_ints`.}
+#'   \item{R}{Integer - number of treated cohorts detected.}
 #' }
 #'
 #' @details
 #' The routine executes the following steps:
 #' \enumerate{
-#'   \item **Column subset** – drops all variables not explicitly required.
-#'   \item **Factor processing** – calls `processFactors()` so that every
+#'   \item **Column subset** - drops all variables not explicitly required.
+#'   \item **Factor processing** - calls `processFactors()` so that every
 #'     categorical covariate becomes a set of \(0/1\) dummies.
-#'   \item **Design-matrix construction** – hands the cleaned data to
+#'   \item **Design-matrix construction** - hands the cleaned data to
 #'     `prepXints()`, which adds unit and time dummies, interactions, etc.
-#'   \item **Cohort diagnostics** – verifies that
+#'   \item **Cohort diagnostics** - verifies that
 #'     \eqn{R \ge 2}, at least one never-treated unit exists, cohort names are
 #'     unique, and (if provided) `indep_counts` are dimensionally consistent.
 #' }
@@ -5057,7 +5168,7 @@ etwfe_core <- function(
 #' used downstream by the core estimator.
 #'
 #' @param in_sample_counts Integer named vector. Length `R+1`.
-#'   The first element must be the number of never–treated units; the
+#'   The first element must be the number of never-treated units; the
 #'   remaining `R` elements give the number of units in each treated
 #'   cohort.  Names must be unique and correspond to cohort identifiers.
 #' @param N Integer. Total number of unique units in the (filtered) data.
@@ -5935,20 +6046,20 @@ getSecondVarTermOLS <- function(
 	return(att_var_2)
 }
 
-#' Core converter for “*_ToFetwfeDf” helpers
+#' Core converter for "*_ToFetwfeDf" helpers
 #'
 #' `.fetwfe_df_core()` holds the shared back-end logic used by
 #' [etwfeToFetwfeDf()] and [attgtToFetwfeDf()].  It takes a long-format panel
 #' dataset, performs a suite of validity checks and coercions, constructs an
-#' *absorbing-state* treatment dummy \eqn{ 1\{ t ≥ g & g > 0 \}}, optionally drops
+#' *absorbing-state* treatment dummy \eqn{ 1\{ t >= g & g > 0 \}}, optionally drops
 #' units treated in the very first sample period, and returns a tidy data frame
 #' ready for [fetwfe::fetwfe()] / [fetwfe::etwfe()].
 #'
 #' @section Typical usage:
 #' End-users should not call this function directly.  Instead, use one of
 #' the thin wrappers that merely translate argument names:
-#' * [etwfeToFetwfeDf()] – for data already labelled with `etwfe` conventions.
-#' * [attgtToFetwfeDf()] – for data prepared for `did::att_gt()`.
+#' * [etwfeToFetwfeDf()] - for data already labelled with `etwfe` conventions.
+#' * [attgtToFetwfeDf()] - for data prepared for `did::att_gt()`.
 #'
 #' @param data A `data.frame` in long panel format.
 #' @param vars Named list (or vector) with exactly four elements,
@@ -5957,7 +6068,7 @@ getSecondVarTermOLS <- function(
 #'     \item{`y`}{Outcome / response variable.}
 #'     \item{`t`}{Time variable (numeric or integer).}
 #'     \item{`id`}{Unit identifier.}
-#'     \item{`g`}{“First treated” period; 0 for never-treated.}
+#'     \item{`g`}{"First treated" period; 0 for never-treated.}
 #'   }
 #' @param covars Character vector of additional covariate names to carry through
 #'   unchanged (default `character(0)`).
@@ -5972,10 +6083,10 @@ getSecondVarTermOLS <- function(
 #'
 #' @return A tidy `data.frame` with columns, in this order:
 #' \itemize{
-#'   \item **`time_var`**   – integer,
-#'   \item **`unit_var`**   – character,
-#'   \item **`treatment`** – integer 0 / 1 absorbing-state dummy,
-#'   \item **`response`**      – numeric outcome,
+#'   \item **`time_var`**   - integer,
+#'   \item **`unit_var`**   - character,
+#'   \item **`treatment`** - integer 0 / 1 absorbing-state dummy,
+#'   \item **`response`**      - numeric outcome,
 #'   \item any extra covariates requested via `covars`.
 #' }
 #' The rows are sorted by `unit` then `time`; row names are dropped.

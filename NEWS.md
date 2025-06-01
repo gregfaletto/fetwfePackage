@@ -1,5 +1,9 @@
 # NEWS
 
+## Version 1.3.2 (2025-06-01)
+
+- Correct some math details, update documentation.
+
 ## Version 1.3.1 (2025-06-01)
 
 - Fix some bugs, update documentation.
