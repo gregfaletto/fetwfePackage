@@ -2735,7 +2735,6 @@ twfeCovs <- function(
 		)
 	}
 
-
 	res <- twfeCovs_core(
 		X_ints = X_ints,
 		y = y,

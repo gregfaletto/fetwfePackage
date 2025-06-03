@@ -720,8 +720,8 @@ fetwfe_core <- function(
 
 		# Need to untransform theta_hat_slopes to get beta_hat for consistency
 		beta_hat_early_exit <- untransformCoefImproved(
-			beta_hat_mod=theta_hat_slopes, # Pass slopes only
-			first_inds=first_inds,
+			beta_hat_mod = theta_hat_slopes, # Pass slopes only
+			first_inds = first_inds,
 			T = T,
 			R = R,
 			p = p,
@@ -777,8 +777,8 @@ fetwfe_core <- function(
 	#
 
 	beta_hat <- untransformCoefImproved(
-		beta_hat_mod=theta_hat_slopes, # Pass slopes only
-		first_inds=first_inds,
+		beta_hat_mod = theta_hat_slopes, # Pass slopes only
+		first_inds = first_inds,
 		T = T,
 		R = R,
 		p = p,
@@ -2204,11 +2204,11 @@ getFirstInds <- function(R, T) {
 #'
 #' @return
 #' A numeric matrix `X_mod` with the **same dimensions** as `X_int` but whose
-#' columns are the transformed regressors  
+#' columns are the transformed regressors
 #' \(\bigl[\tilde{\boldsymbol Z}\,\boldsymbol D_N^{-1}\bigr]_{NT\times p}\).
 #'
 #' @seealso
-#' * `genBackwardsInvFusionTransformMat()`  
+#' * `genBackwardsInvFusionTransformMat()`
 #' * `genInvTwoWayFusionTransformMat()`
 #'
 #' @examples
@@ -2352,14 +2352,14 @@ transformXintImproved <- function(
 	return(X_mod)
 }
 
-#' Back-transform Bridge-Regression Coefficients  
+#' Back-transform Bridge-Regression Coefficients
 #' \( \widehat{\boldsymbol\beta}
 #'   = \boldsymbol D_N^{-1}\,\widehat{\boldsymbol\theta}\)
 #'
 #' @description
 #' After fitting a bridge (Lasso, Elastic-Net, \eqn{\ell_q}) regression on the
 #' transformed design matrix
-#' \eqn{\widetilde{\boldsymbol Z}\,\boldsymbol D_N^{-1}}  
+#' \eqn{\widetilde{\boldsymbol Z}\,\boldsymbol D_N^{-1}}
 #' (see `transformXintImproved()`), the solver returns parameter estimates
 #' \eqn{\widehat{\boldsymbol\theta}}.
 #' This helper multiplies that vector by the block-diagonal matrix
@@ -2407,7 +2407,7 @@ transformXintImproved <- function(
 #' | base treatment | `genInvTwoWayFusionTransformMat()` | \((D^{(2)}(\mathcal R))^{-1}\) |
 #' | covariate x treatment | same two-way helper for each feature | \(I_d\otimes(D^{(2)}(\mathcal R))^{-1}\) |
 #'
-#' @param beta_hat_mod Numeric vector (length \eqn{p}).  
+#' @param beta_hat_mod Numeric vector (length \eqn{p}).
 #'   Estimated coefficients returned by a penalised fit on the transformed
 #'   design matrix.
 #' @param T Integer. Total time periods.
@@ -2417,7 +2417,7 @@ transformXintImproved <- function(
 #' @param d Integer. Number of time-invariant covariates.
 #' @param num_treats Integer. Count of base treatment-effect dummies
 #'   \eqn{\mathfrak W}.
-#' @param first_inds Optional integer vector of length \eqn{R}.  
+#' @param first_inds Optional integer vector of length \eqn{R}.
 #'   Starting indices (1-based, inside the treatment-dummy block) of the first
 #'   effect for each cohort.  If `NA` they are reconstructed with
 #'   **`getFirstInds()`**.
@@ -2431,15 +2431,15 @@ transformXintImproved <- function(
 #' \emph{Available at SSRN 3906345}.
 #' \url{https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3906345}.
 #' Tibshirani & Taylor (2011), "The Solution Path of the Generalized
-#' Lasso".  
+#' Lasso".
 #' Faletto, G (2025). Fused Extended Two-Way Fixed Effects for
 #' Difference-in-Differences with Staggered Adoptions.
 #' \emph{arXiv preprint arXiv:2312.05985}.
 #' \url{https://arxiv.org/abs/2312.05985}.
 #'
 #' @seealso
-#' * `transformXintImproved()` - forward transformation of the design matrix.  
-#' * `genBackwardsInvFusionTransformMat()`,  
+#' * `transformXintImproved()` - forward transformation of the design matrix.
+#' * `genBackwardsInvFusionTransformMat()`,
 #'   `genInvTwoWayFusionTransformMat()` - block-wise inverse matrices.
 #'
 #' @examples
@@ -2708,7 +2708,7 @@ genBackwardsFusionTransformMat <- function(n_vars) {
 #'
 #' @details
 #' The matrix has ones on and strictly above the main diagonal
-#' (\eqn{D^{-1}_{ij}=1_{\{i\le j\}}}).  
+#' (\eqn{D^{-1}_{ij}=1_{\{i\le j\}}}).
 #' It is its own Cholesky factor, \eqn{D^{-1} = U = U^\top}.
 #'
 #' After constructing `D_inv`, the routine calls
@@ -2741,14 +2741,13 @@ genBackwardsInvFusionTransformMat <- function(n_vars) {
 	## -- self-test: D_inv %*% D  ==  I
 	D <- genBackwardsFusionTransformMat(n_vars)
 	tol <- 1e-12
-	if (!all.equal(D_inv %*% D,
-                        diag(n_vars),
-                        tolerance = tol)) {
-	    stop("genBackwardsInvFusionTransformMat(): self-test failed - ",
-	         "result is not the matrix inverse of D.")
+	if (!all.equal(D_inv %*% D, diag(n_vars), tolerance = tol)) {
+		stop(
+			"genBackwardsInvFusionTransformMat(): self-test failed - ",
+			"result is not the matrix inverse of D."
+		)
 	}
 	## ---------------------------------------
-
 
 	return(D_inv)
 }
@@ -2974,10 +2973,12 @@ getSecondVarTermDataApp <- function(
 	# Jacobian
 	##
 	## J_{rs} =  (S-pi_r)/S^2      if r = s
-	##           -pi_r   /S^2      if r ~= s
+	##           -pi_r   /S^2      if r != s
+	##
+	## where S := sum(cohort_probs_overall)
 	##
 	## Each column block of d_inv_treat_sel belongs to a selected theta coordinate;
-	## averaging the rows of cohort s gives the vector needed to multiply theta_sel.
+	## averaging the rows of cohorts gives the vector needed to multiply theta_sel.
 	##
 	jacobian_mat <- matrix(
 		as.numeric(NA),
@@ -3023,12 +3024,16 @@ getSecondVarTermDataApp <- function(
 
 			## off-diagonal: subtract sum_{s!=r} pi_r / S^2  x  block-mean of cohort s
 			for (r_double_prime in setdiff(1:R, r)) {
-				cons_r_double_prime <- cohort_probs_overall[r] / sum(cohort_probs_overall)^2
+				cons_r_double_prime <- cohort_probs_overall[r] /
+					sum(cohort_probs_overall)^2
 
 				jacobian_mat[r, ] <- jacobian_mat[r, ] -
 					cons_r_double_prime *
 						colMeans(d_inv_treat_sel[
-							sel_inds[[r_double_prime]], , drop = FALSE])
+							sel_inds[[r_double_prime]],
+							,
+							drop = FALSE
+						])
 			}
 		}
 	}
@@ -3048,7 +3053,7 @@ getSecondVarTermDataApp <- function(
 			(N * T)
 	}
 
-	if(!fused){
+	if (!fused) {
 		stop("this function is not implemented as of now.")
 	}
 
@@ -3057,14 +3062,14 @@ getSecondVarTermDataApp <- function(
 
 # getCohortATTsFinal
 #' @description
-#' Computes the **Cohort Average Treatment Effect on the Treated**  
+#' Computes the **Cohort Average Treatment Effect on the Treated**
 #' \deqn{\tau_{\text{ATT},r}\;=\;\frac1{T-r+1}\sum_{t=r}^{T}\tau_{\text{ATT}}(r,t)}
 #' for every treated cohort \(r\in\{1,\dots,R\}\).\cr
 #' In the fused-parameterisation used by the estimator, each
 #' \(\tau_{\text{ATT}}(r,t)\) is a *row* of
 #' \((D^{(2)}(\mathcal R))^{-1}\widehat\theta\).
 #' Averaging those rows within a cohort produces a
-#' **weight vector** \(\psi_r\) such that  
+#' **weight vector** \(\psi_r\) such that
 #' \(\widehat{\tau}_{\text{ATT},r}=\psi_r^{\!\top}\widehat\theta\).
 #' The function
 #'
@@ -3472,7 +3477,7 @@ getPsiRUnfused <- function(
 #'
 #' @param n_vars Integer. Total number of base treatment-effect coefficients
 #'   ( \eqn{\mathfrak W}  in the paper).
-#' @param first_inds Integer vector of length \eqn{R}.  
+#' @param first_inds Integer vector of length \eqn{R}.
 #'   `first_inds[r]` is the **1-based** column index of \(\tau_{r,0}\)
 #'   inside the block of the \eqn{n\_vars} treatment columns.
 #' @param R Integer. Number of treated cohorts.
@@ -3502,23 +3507,26 @@ genInvTwoWayFusionTransformMat <- function(n_vars, first_inds, R) {
 		stopifnot(is.numeric(first_inds), length(first_inds) == R)
 		# Add checks for consistency of first_inds if n_vars > 0
 		if (n_vars > 0) {
-		    stopifnot(first_inds[1] == 1)
-		    if (R > 1) {
-		        stopifnot(all(diff(first_inds) > 0)) # Must be strictly increasing
-		    }
-		    # Check that the last effect of the last cohort aligns with n_vars
-		    # M_R = n_vars - first_inds[R] + 1. This M_R must be > 0 if first_inds[R] <= n_vars.
-		    stopifnot(first_inds[R] <= n_vars)
-		} else { # n_vars == 0
-		    stopifnot(R == 0) # If n_vars is 0, R must be 0. first_inds should be empty.
+			stopifnot(first_inds[1] == 1)
+			if (R > 1) {
+				stopifnot(all(diff(first_inds) > 0)) # Must be strictly increasing
+			}
+			# Check that the last effect of the last cohort aligns with n_vars
+			# M_R = n_vars - first_inds[R] + 1. This M_R must be > 0 if first_inds[R] <= n_vars.
+			stopifnot(first_inds[R] <= n_vars)
+		} else {
+			# n_vars == 0
+			stopifnot(R == 0) # If n_vars is 0, R must be 0. first_inds should be empty.
 		}
-	} else { # R == 0
+	} else {
+		# R == 0
 		stopifnot(length(first_inds) == 0, n_vars == 0)
 	}
 
 	D_inv <- matrix(0, nrow = n_vars, ncol = n_vars)
 
-	if (n_vars == 0) { # Handles R=0 correctly
+	if (n_vars == 0) {
+		# Handles R=0 correctly
 		return(D_inv)
 	}
 
@@ -3544,29 +3552,31 @@ genInvTwoWayFusionTransformMat <- function(n_vars, first_inds, R) {
 
 			if (cohort_idx < R) {
 				block_end_idx <- first_inds[cohort_idx + 1] - 1
-			} else { # This is the last cohort
+			} else {
+				# This is the last cohort
 				block_end_idx <- n_vars
 			}
-			
+
 			# Ensure block indices are valid (e.g. cohort has at least one effect)
 			if (block_start_idx > block_end_idx) {
-			    # This case implies cohort_idx has zero effects.
-			    # This should ideally not happen if first_inds and n_vars are consistent
-			    # with cohorts having at least one effect.
-			    # If it can happen, 'continue' or 'next' might be appropriate.
-			    # For now, assume M_x >= 1 for all cohorts included in R.
-			    next 
+				# This case implies cohort_idx has zero effects.
+				# This should ideally not happen if first_inds and n_vars are consistent
+				# with cohorts having at least one effect.
+				# If it can happen, 'continue' or 'next' might be appropriate.
+				# For now, assume M_x >= 1 for all cohorts included in R.
+				next
 			}
 
 			# Fill this diagonal block D_inv[block_start_idx:block_end_idx, block_start_idx:block_end_idx]
-			for (row_abs in block_start_idx:block_end_idx) { # Absolute row index in D_inv
+			for (row_abs in block_start_idx:block_end_idx) {
+				# Absolute row index in D_inv
 				# For the current row_abs within its block, set columns from
 				# the start of the block (block_start_idx) up to the current row_abs to 1.
 				D_inv[row_abs, block_start_idx:row_abs] <- 1
 			}
 		}
 	}
-	
+
 	# The original code had a stop for R < 2.
 	# This revised logic handles R=0 and R=1 correctly without a special stop.
 	# If R=1, Part 1 sets D_inv[1:n_vars, 1] <- 1.
@@ -3823,7 +3833,7 @@ getGramInv <- function(
 #' In the fused basis each \(\tau_{\text{ATT}}(r,t)\) is a row of
 #' \(D^{(2)}(\mathcal R)^{-1}\widehat\theta\),
 #' so the averaging weights are the **row-means** of the corresponding block
-#' of the inverse fusion matrix.  
+#' of the inverse fusion matrix.
 #' This helper:
 #'
 #' * extracts those rows (`first_ind_r:last_ind_r`) from
@@ -3940,7 +3950,7 @@ getPsiRFused <- function(
 #'       \sum_{r=1}^{R}\widehat{\tau}_{\text{ATT},r}\,
 #'                     \widehat{\pi}_{r\mid\tau},}
 #' a weighted mean of cohort-specific ATTs with weights
-#' \(\widehat{\pi}_{r\mid\tau}=N_r/N_\tau\).  
+#' \(\widehat{\pi}_{r\mid\tau}=N_r/N_\tau\).
 #' The variance has **two additive pieces**
 #'
 #' * *Term 1* - randomness from \(\widehat\theta\):
@@ -4007,8 +4017,8 @@ getPsiRFused <- function(
 #' `att_var_1 + att_var_2 + 2sqrt(att_var_1*att_var_2)`.
 #'
 #' All matrices required for Term 2 are produced upstream:
-#' * `psi_mat` from [getCohortATTsFinal()]  
-#' * `d_inv_treat_sel` from the same routine  
+#' * `psi_mat` from [getCohortATTsFinal()]
+#' * `d_inv_treat_sel` from the same routine
 #' * the Jacobian \(J\) is built in
 #'   [getSecondVarTermDataApp()] using `d_inv_treat_sel`
 #' @inheritParams getTeResults2
@@ -5486,15 +5496,13 @@ prep_for_etwfe_regresion <- function(
 
 	stopifnot(ncol(X_final) == p)
 
-
 	#
 	#
 	# twfeCovs modifications
 	#
 	#
 
-	if(is_twfe_covs){
-
+	if (is_twfe_covs) {
 		stopifnot(nrow(X_final) == N * T)
 		# stopifnot(nrow(X_final_scaled) == N * T)
 
@@ -5516,7 +5524,6 @@ prep_for_etwfe_regresion <- function(
 		# Collapse together all columns corresponding to the same cohort
 		# stopifnot(nrow(X_final_scaled) == N * T)
 		treat_inds_mat <- matrix(as.numeric(NA), nrow = N * T, ncol = R)
-		
 
 		for (r in 1:R) {
 			first_ind_r <- first_inds[r]
@@ -5528,7 +5535,7 @@ prep_for_etwfe_regresion <- function(
 
 			cols_r <- R + T - 1 + d + first_ind_r:last_ind_r
 
-			treat_inds_mat[, r] <- rowSums(X_final[, cols_r, drop=FALSE])
+			treat_inds_mat[, r] <- rowSums(X_final[, cols_r, drop = FALSE])
 		}
 
 		stopifnot(all(!is.na(treat_inds_mat)))
