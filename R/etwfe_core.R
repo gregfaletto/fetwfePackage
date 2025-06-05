@@ -140,173 +140,6 @@ checkEtwfeInputs <- function(
 	))
 }
 
-#' Prepare Data & Design Matrix for ETWFE/TWFE Workflows
-#'
-#' @description
-#' A helper that converts raw **panel data** into the core objects required by
-#' `etwfe_core()`, `twfeCovs_core()`, and related fitting routines.  The function
-#' (i) keeps only the relevant variables, (ii) one-hot-encodes or otherwise
-#' expands any *factor* covariates, (iii) builds the stacked design matrix
-#' `X_ints` and centred response `y` via [`prepXints()`], and (iv) performs a
-#' battery of **sanity checks** on cohort counts before estimation proceeds.
-#'
-#' @param pdata A **data.frame** in long (unit x time) format containing at
-#'   least the columns named in `response`, `time_var`, `unit_var`,
-#'   `treatment`, and `covs`.
-#' @param response Character; name of the response variable column.
-#' @param time_var Character; name of the time variable column.
-#' @param unit_var Character; name of the unit variable column.
-#' @param treatment Character; name of the treatment indicator column.
-#' @param covs Character vector of additional covariate column names.  Factor
-#'   covariates are expanded to dummies by `processFactors()`.  May be empty.
-#' @param verbose Logical; print progress/timing information?
-#' @param indep_count_data_available Logical; `TRUE` when *independent* cohort
-#'   counts are supplied in `indep_counts` and should be validated.
-#' @param indep_counts Optional integer vector with length
-#'   `1 + R` (never-treated plus `R` treated cohorts) giving cohort sizes in an
-#'   independent sample.  Only used when
-#'   `indep_count_data_available = TRUE`.
-#'
-#' @return A named **list** ready to be passed into the "_core" estimators:
-#' \describe{
-#'   \item{pdata}{The (possibly modified) data frame after factor processing.}
-#'   \item{covs}{Updated character vector of covariate names after dummy-expansion.}
-#'   \item{X_ints}{Design matrix with unit FE, time FE, covariates,
-#'     treatment dummies and their interactions (dimensions \(N T \times p\)).}
-#'   \item{y}{Centred response vector of length \(N T\).}
-#'   \item{N, T}{Integers - number of unique units and time periods.}
-#'   \item{d}{Integer - number of *raw* covariates after processing.}
-#'   \item{p}{Integer - total number of columns in `X_ints`.}
-#'   \item{in_sample_counts}{Named integer vector of length `1 + R` with cohort
-#'     sizes in the estimation sample (first entry = never-treated).}
-#'   \item{num_treats}{Integer - total number of base treatment-effect
-#'     parameters in `X_ints`.}
-#'   \item{first_inds}{Integer vector (length `R`) giving the first column
-#'     index of each cohort's treatment-effect block inside `X_ints`.}
-#'   \item{R}{Integer - number of treated cohorts detected.}
-#' }
-#'
-#' @details
-#' The routine executes the following steps:
-#' \enumerate{
-#'   \item **Column subset** - drops all variables not explicitly required.
-#'   \item **Factor processing** - calls `processFactors()` so that every
-#'     categorical covariate becomes a set of \(0/1\) dummies.
-#'   \item **Design-matrix construction** - hands the cleaned data to
-#'     `prepXints()`, which adds unit and time dummies, interactions, etc.
-#'   \item **Cohort diagnostics** - verifies that
-#'     \eqn{R \ge 2}, at least one never-treated unit exists, cohort names are
-#'     unique, and (if provided) `indep_counts` are dimensionally consistent.
-#' }
-#'
-#' Any violation of the checks triggers an informative `stop()` message so that
-#' higher-level functions fail fast.
-#'
-#' @keywords internal
-#' @noRd
-prep_for_etwfe_core <- function(
-	pdata,
-	response,
-	time_var,
-	unit_var,
-	treatment,
-	covs,
-	verbose,
-	indep_count_data_available,
-	indep_counts
-) {
-	# Subset pdata to include only the key columns
-	pdata <- pdata[, c(response, time_var, unit_var, treatment, covs)]
-
-	# Process any factor covariates:
-	if (length(covs) > 0) {
-		pf_res <- processFactors(pdata, covs)
-		pdata <- pf_res$pdata
-		covs <- pf_res$covs
-	}
-
-	# Proceed to generate design matrix and other objects
-	res <- prepXints(
-		data = pdata,
-		time_var = time_var,
-		unit_var = unit_var,
-		treatment = treatment,
-		covs = covs,
-		response = response,
-		verbose = verbose
-	)
-
-	X_ints <- res$X_ints
-	y <- res$y
-	N <- res$N
-	T <- res$T
-	d <- res$d
-	p <- res$p
-	in_sample_counts <- res$in_sample_counts
-	num_treats <- res$num_treats
-	first_inds <- res$first_inds
-
-	rm(res)
-
-	R <- length(in_sample_counts) - 1
-	stopifnot(R >= 1)
-	stopifnot(R <= T - 1)
-	if (R < 2) {
-		stop(
-			"Only one treated cohort detected in data. Currently fetwfe and etwfe only support data sets with at least two treated cohorts."
-		)
-	}
-	stopifnot(N >= R + 1)
-	stopifnot(sum(in_sample_counts) == N)
-	stopifnot(all(in_sample_counts >= 0))
-	stopifnot(is.integer(in_sample_counts))
-	if (in_sample_counts[1] == 0) {
-		stop(
-			"No never-treated units detected in data to fit model; estimating treatment effects is not possible"
-		)
-	}
-	if (length(names(in_sample_counts)) != length(in_sample_counts)) {
-		stop(
-			"in_sample_counts must have all unique named entries (with names corresponding to the names of each cohort)"
-		)
-	}
-	if (
-		length(names(in_sample_counts)) !=
-			length(unique(names(in_sample_counts)))
-	) {
-		stop(
-			"in_sample_counts must have all unique named entries (with names corresponding to the names of each cohort)"
-		)
-	}
-	if (indep_count_data_available) {
-		if (sum(indep_counts) != N) {
-			stop(
-				"Number of units in independent cohort count data does not equal number of units in data to be used to fit model."
-			)
-		}
-		if (length(indep_counts) != length(in_sample_counts)) {
-			stop(
-				"Number of counts in independent counts does not match number of cohorts in data to be used to fit model."
-			)
-		}
-	}
-
-	return(list(
-		pdata = pdata,
-		covs = covs,
-		X_ints = X_ints,
-		y = y,
-		N = N,
-		T = T,
-		d = d,
-		p = p,
-		in_sample_counts = in_sample_counts,
-		num_treats = num_treats,
-		first_inds = first_inds,
-		R = R
-	))
-}
-
 #' Core Estimation Logic for Extended Two-Way Fixed Effects
 #'
 #' @description
@@ -686,92 +519,127 @@ etwfe_core <- function(
 	))
 }
 
-#' @title Validate Inputs for the ETWFE Core Estimator
+
+#' Prepare Data & Design Matrix for ETWFE/TWFE Workflows
 #'
 #' @description
-#' Performs a complete set of argument, dimension, and consistency checks
-#' for \code{\link{etwfe_core}}.
-#' The function halts with informative error messages whenever a necessary
-#' condition is violated (e.g., negative variances, inconsistent cohort
-#' counts, or ill-posed significance levels).
-#' When all checks pass it returns a compact list of derived quantities
-#' used downstream by the core estimator.
+#' A helper that converts raw **panel data** into the core objects required by
+#' `etwfe_core()`, `twfeCovs_core()`, and related fitting routines.  The function
+#' (i) keeps only the relevant variables, (ii) one-hot-encodes or otherwise
+#' expands any *factor* covariates, (iii) builds the stacked design matrix
+#' `X_ints` and centred response `y` via [`prepXints()`], and (iv) performs a
+#' battery of **sanity checks** on cohort counts before estimation proceeds.
 #'
-#' @param in_sample_counts Integer named vector. Length `R+1`.
-#'   The first element must be the number of never-treated units; the
-#'   remaining `R` elements give the number of units in each treated
-#'   cohort.  Names must be unique and correspond to cohort identifiers.
-#' @param N Integer. Total number of unique units in the (filtered) data.
-#' @param T Integer. Total number of time periods.
-#' @param sig_eps_sq Numeric scalar or \code{NA}.  Prespecified observation-level
-#'   variance component (see Section 2 of Faletto 2025).  If \code{NA},
-#'   it will later be estimated.
-#' @param sig_eps_c_sq Numeric scalar or \code{NA}.  Prespecified unit-level
-#'   random-effect variance component.  If \code{NA}, it will later be estimated.
-#' @param indep_counts Optional integer vector.  Cohort counts from an
-#'   independent sample used to obtain asymptotically exact SEs for the ATT.
-#'   Must have the same length and ordering as \code{in_sample_counts}.
-#'   Default is \code{NA}.
-#' @param verbose Logical.  Forwarded verbosity flag.  Default \code{FALSE}.
-#' @param alpha Numeric in \eqn{(0,1)}.  Significance level requested for
-#'   confidence intervals.  Default \code{0.05}.
-#' @param add_ridge Logical.  Whether a small ridge penalty will later be
-#'   applied inside \code{etwfe_core}.  Used only to customize warning
-#'   messages.  Default \code{FALSE}.
+#' @param pdata A **data.frame** in long (unit x time) format containing at
+#'   least the columns named in `response`, `time_var`, `unit_var`,
+#'   `treatment`, and `covs`.
+#' @param response Character; name of the response variable column.
+#' @param time_var Character; name of the time variable column.
+#' @param unit_var Character; name of the unit variable column.
+#' @param treatment Character; name of the treatment indicator column.
+#' @param covs Character vector of additional covariate column names.  Factor
+#'   covariates are expanded to dummies by `processFactors()`.  May be empty.
+#' @param verbose Logical; print progress/timing information?
+#' @param indep_count_data_available Logical; `TRUE` when *independent* cohort
+#'   counts are supplied in `indep_counts` and should be validated.
+#' @param indep_counts Optional integer vector with length
+#'   `1 + R` (never-treated plus `R` treated cohorts) giving cohort sizes in an
+#'   independent sample.  Only used when
+#'   `indep_count_data_available = TRUE`.
 #'
-#' @details
-#' Key validations include:
-#' \itemize{
-#'   \item Ensuring the total of \code{in_sample_counts} equals \code{N}.
-#'   \item Checking that at least one never-treated unit is present.
-#'   \item Verifying that cohort names are unique and counts non-negative.
-#'   \item Confirming that \eqn{1 \le R \le T-1}.
-#'   \item Basic sanity checks for all numeric scalars (\code{alpha} inside \eqn{(0,1)}, non-negative variances, etc.).
-#'   \item All structural requirements on \code{indep_counts} when supplied.
+#' @return A named **list** ready to be passed into the "_core" estimators:
+#' \describe{
+#'   \item{pdata}{The (possibly modified) data frame after factor processing.}
+#'   \item{covs}{Updated character vector of covariate names after dummy-expansion.}
+#'   \item{X_ints}{Design matrix with unit FE, time FE, covariates,
+#'     treatment dummies and their interactions (dimensions \(N T \times p\)).}
+#'   \item{y}{Centred response vector of length \(N T\).}
+#'   \item{N, T}{Integers - number of unique units and time periods.}
+#'   \item{d}{Integer - number of *raw* covariates after processing.}
+#'   \item{p}{Integer - total number of columns in `X_ints`.}
+#'   \item{in_sample_counts}{Named integer vector of length `1 + R` with cohort
+#'     sizes in the estimation sample (first entry = never-treated).}
+#'   \item{num_treats}{Integer - total number of base treatment-effect
+#'     parameters in `X_ints`.}
+#'   \item{first_inds}{Integer vector (length `R`) giving the first column
+#'     index of each cohort's treatment-effect block inside `X_ints`.}
+#'   \item{R}{Integer - number of treated cohorts detected.}
 #' }
 #'
-#' @return A list with three elements:
-#'   \describe{
-#'     \item{\code{R}}{Integer. The number of treated cohorts `=length(in_sample_counts)-1`).}
-#'     \item{\code{c_names}}{Character vector of cohort names (length `R`).}
-#'     \item{\code{indep_count_data_available}}{Logical. \code{TRUE} if
-#'       valid \code{indep_counts} were supplied, \code{FALSE} otherwise.}
-#'   }
+#' @details
+#' The routine executes the following steps:
+#' \enumerate{
+#'   \item **Column subset** - drops all variables not explicitly required.
+#'   \item **Factor processing** - calls `processFactors()` so that every
+#'     categorical covariate becomes a set of \(0/1\) dummies.
+#'   \item **Design-matrix construction** - hands the cleaned data to
+#'     `prepXints()`, which adds unit and time dummies, interactions, etc.
+#'   \item **Cohort diagnostics** - verifies that
+#'     \eqn{R \ge 2}, at least one never-treated unit exists, cohort names are
+#'     unique, and (if provided) `indep_counts` are dimensionally consistent.
+#' }
+#'
+#' Any violation of the checks triggers an informative `stop()` message so that
+#' higher-level functions fail fast.
+#'
 #' @keywords internal
 #' @noRd
-check_etwfe_core_inputs <- function(
-	in_sample_counts,
-	N,
-	T,
-	sig_eps_sq,
-	sig_eps_c_sq,
-	indep_counts,
+prep_for_etwfe_core <- function(
+	pdata,
+	response,
+	time_var,
+	unit_var,
+	treatment,
+	covs,
 	verbose,
-	alpha,
-	add_ridge
+	indep_count_data_available,
+	indep_counts
 ) {
+	# Subset pdata to include only the key columns
+	pdata <- pdata[, c(response, time_var, unit_var, treatment, covs)]
+
+	# Process any factor covariates:
+	if (length(covs) > 0) {
+		pf_res <- processFactors(pdata, covs)
+		pdata <- pf_res$pdata
+		covs <- pf_res$covs
+	}
+
+	# Proceed to generate design matrix and other objects
+	res <- prepXints(
+		data = pdata,
+		time_var = time_var,
+		unit_var = unit_var,
+		treatment = treatment,
+		covs = covs,
+		response = response,
+		verbose = verbose
+	)
+
+	X_ints <- res$X_ints
+	y <- res$y
+	N <- res$N
+	T <- res$T
+	d <- res$d
+	p <- res$p
+	in_sample_counts <- res$in_sample_counts
+	num_treats <- res$num_treats
+	first_inds <- res$first_inds
+
+	rm(res)
+
 	R <- length(in_sample_counts) - 1
-
-	c_names <- names(in_sample_counts)[2:(R + 1)]
-
-	stopifnot(N >= 2) # bare minimum, 2 units at 2 times
-
-	stopifnot(T >= 2) # bare minimum, 2 units at 2 times
-
-	if (any(!is.na(sig_eps_sq))) {
-		stopifnot(is.numeric(sig_eps_sq) | is.integer(sig_eps_sq))
-		stopifnot(length(sig_eps_sq) == 1)
-		stopifnot(sig_eps_sq >= 0)
+	stopifnot(R >= 1)
+	stopifnot(R <= T - 1)
+	if (R < 2) {
+		stop(
+			"Only one treated cohort detected in data. Currently fetwfe and etwfe only support data sets with at least two treated cohorts."
+		)
 	}
-
-	if (any(!is.na(sig_eps_c_sq))) {
-		stopifnot(is.numeric(sig_eps_c_sq) | is.integer(sig_eps_c_sq))
-		stopifnot(length(sig_eps_c_sq) == 1)
-		stopifnot(sig_eps_c_sq >= 0)
-	}
-
+	stopifnot(N >= R + 1)
 	stopifnot(sum(in_sample_counts) == N)
 	stopifnot(all(in_sample_counts >= 0))
+	stopifnot(is.integer(in_sample_counts))
 	if (in_sample_counts[1] == 0) {
 		stop(
 			"No never-treated units detected in data to fit model; estimating treatment effects is not possible"
@@ -782,7 +650,6 @@ check_etwfe_core_inputs <- function(
 			"in_sample_counts must have all unique named entries (with names corresponding to the names of each cohort)"
 		)
 	}
-
 	if (
 		length(names(in_sample_counts)) !=
 			length(unique(names(in_sample_counts)))
@@ -791,12 +658,7 @@ check_etwfe_core_inputs <- function(
 			"in_sample_counts must have all unique named entries (with names corresponding to the names of each cohort)"
 		)
 	}
-
-	stopifnot(R >= 1)
-	stopifnot(R <= T - 1)
-
-	indep_count_data_available <- FALSE
-	if (any(!is.na(indep_counts))) {
+	if (indep_count_data_available) {
 		if (sum(indep_counts) != N) {
 			stop(
 				"Number of units in independent cohort count data does not equal number of units in data to be used to fit model."
@@ -807,480 +669,23 @@ check_etwfe_core_inputs <- function(
 				"Number of counts in independent counts does not match number of cohorts in data to be used to fit model."
 			)
 		}
-		if (any(indep_counts <= 0)) {
-			stop(
-				"At least one cohort in the independent count data has 0 members"
-			)
-		}
-		indep_count_data_available <- TRUE
-	}
-
-	stopifnot(is.logical(verbose))
-	stopifnot(length(verbose) == 1)
-
-	stopifnot(is.numeric(alpha))
-	stopifnot(length(alpha) == 1)
-	stopifnot(alpha > 0)
-	stopifnot(alpha < 1)
-
-	stopifnot(is.logical(add_ridge))
-	stopifnot(length(add_ridge) == 1)
-
-	return(list(
-		R = R,
-		c_names = c_names,
-		indep_count_data_available = indep_count_data_available
-	))
-}
-
-#' @title Prepare Transformed Design Matrix and Response for ETWFE Regression
-#'
-#' @description
-#' Generates all matrix- and vector-level inputs required by the bridge/OLS
-#' fitting step inside \code{\link{etwfe_core}}.
-#' Its responsibilities include: estimating or assembling the covariance
-#' matrix `\Omega`; performing the GLS whitening transformation;
-#' (optionally) appending ridge-penalty rows; computing cohort probability
-#' weights; and returning both raw and scaled versions of the final design
-#' matrix.
-#'
-#' @param verbose Logical.  If \code{TRUE}, prints timing information for
-#'   each major sub-task.  Default \code{FALSE}.
-#' @param sig_eps_sq,sig_eps_c_sq Numeric or \code{NA}.  Observation-level
-#'   and unit-level variance components.  If either is \code{NA},
-#'   they are estimated via \code{estOmegaSqrtInv()}.
-#' @param y Numeric vector of length \(N\times T\).  Centered response.
-#' @param X_ints Numeric matrix.  Full design matrix in the \emph{original}
-#'   parameterisation.
-#' @param X_mod Numeric matrix.  Same dimensions as \code{X_ints}.  In the
-#'   ETWFE path this is usually a transformed version, but for OLS it is
-#'   often identical to \code{X_ints}.
-#' @param N,T,R,d,p,num_treats Integers giving key problem dimensions:
-#'   number of units, time periods, treated cohorts, covariates,
-#'   total parameters, and base treatment-effect parameters, respectively.
-#' @param add_ridge Logical.  Whether to append rows that implement a small
-#'   L2 penalty on the \emph{untransformed} coefficients.  Default \code{FALSE}.
-#' @param first_inds Integer vector (length \(R\)).  Column indices of the
-#'   first base treatment-effect for each cohort within the block of
-#'   \code{num_treats} columns.
-#' @param in_sample_counts Integer vector of cohort sizes in the estimation
-#'   sample (see \code{check_etwfe_core_inputs}).
-#' @param indep_count_data_available Logical.  Indicates whether
-#'   \code{indep_counts} contains valid cohort counts from an independent
-#'   sample; affects the probability calculations below.
-#' @param indep_counts Optional integer vector.  Cohort counts from an
-#'   independent sample; only used when
-#'   \code{indep_count_data_available = TRUE}.  Default \code{NA}.
-#' @param is_fetwfe Logical.  If \code{TRUE}, a fusion transformation matrix
-#'   has been applied upstream (this matters for how the optional ridge rows
-#'   are constructed).  Default \code{TRUE}.
-#' @param is_twfe_covs Logical.  If \code{TRUE}, columns will be removed and
-#'   consolidated as required for `twfeCovs()`.  Default \code{FALSE}.
-#'
-#' @details
-#' The routine carries out the following steps in order:
-#' \enumerate{
-#'   \item \strong{Variance-Component Handling}\newline
-#'     Calls \code{estOmegaSqrtInv()} when either variance component is
-#'     unknown; otherwise uses supplied values.
-#'   \item \strong{GLS Transformation}\newline
-#'     Forms \(\Omega = \sigma_\varepsilon^2 I_T + \sigma_{\varepsilon c}^2 J_T\)
-#'     and multiplies both \code{y} and \code{X_mod} on the left by
-#'     \(\sqrt{\sigma_\varepsilon^2}\,\Omega^{-1/2} \otimes I_N\).
-#'   \item \strong{Optional Ridge Augmentation}\newline
-#'     If \code{add_ridge = TRUE}, appends \(p\) rows to the scaled design
-#'     matrix and response, thereby imposing a tiny L2 penalty equal to
-#'     \code{lambda_ridge}.  When \code{is_fetwfe = TRUE} the rows are first
-#'     premultiplied by the inverse fusion transformation so the penalty
-#'     applies on the original coefficient scale.
-#'   \item \strong{Cohort Probability Estimation}\newline
-#'     Computes \eqn{\hat\pi_r = n_r / \sum_{s=1}^R n_s} from the in-sample
-#'     counts; when an independent split is available the same is done for
-#'     \code{indep_counts}.
-#' }
-#'
-#' @return A list with everything \code{etwfe_core} needs next:
-#'   \describe{
-#'     \item{\code{X_final_scaled}}{Design matrix after GLS transform
-#'       and column-wise scaling (and ridge rows if requested).}
-#'     \item{\code{X_final}}{Design matrix after GLS transform but before scaling.}
-#'     \item{\code{y_final}}{Response after GLS transform (and augmentation).}
-#'     \item{\code{scale_center}, \code{scale_scale}}{Vectors used to undo
-#'       column scaling.}
-#'     \item{\code{cohort_probs}}{Vector of \(\hat\pi_r \mid \text{treated}\)
-#'       from the estimation sample.}
-#'     \item{\code{cohort_probs_overall}}{Vector of unconditional
-#'       probabilities \(P(W=r)\).}
-#'     \item{\code{indep_cohort_probs}, \code{indep_cohort_probs_overall}}{Same
-#'       probabilities if an independent split was provided; otherwise \code{NA}.}
-#'     \item{\code{sig_eps_sq}, \code{sig_eps_c_sq}}{Possibly estimated
-#'       variance components carried forward.}
-#'     \item{\code{lambda_ridge}}{Numeric scalar.  Value of the ridge penalty
-#'       used (or \code{NA} if none).}
-#'   }
-#' @keywords internal
-#' @noRd
-prep_for_etwfe_regresion <- function(
-	verbose,
-	sig_eps_sq,
-	sig_eps_c_sq,
-	y,
-	X_ints,
-	X_mod,
-	N,
-	T,
-	R,
-	d,
-	p,
-	num_treats,
-	add_ridge,
-	first_inds,
-	in_sample_counts,
-	indep_count_data_available,
-	indep_counts = NA,
-	is_fetwfe = TRUE,
-	is_twfe_covs = FALSE
-) {
-	if (verbose) {
-		message("Getting omega sqrt inverse estimate...")
-		t0 <- Sys.time()
-	}
-
-	if (is.na(sig_eps_sq) | is.na(sig_eps_c_sq)) {
-		# Get omega_sqrt_inv matrix to multiply y and X_mod by on the left
-		omega_res <- estOmegaSqrtInv(
-			y,
-			X_ints,
-			N = N,
-			T = T,
-			p = p
-		)
-
-		sig_eps_sq <- omega_res$sig_eps_sq
-		sig_eps_c_sq <- omega_res$sig_eps_c_sq
-
-		rm(omega_res)
-
-		if (verbose) {
-			message("Done! Time to estimate noise variances:")
-			message(Sys.time() - t0)
-			t0 <- Sys.time()
-		}
-	}
-
-	stopifnot(!is.na(sig_eps_sq) & !is.na(sig_eps_c_sq))
-
-	Omega <- diag(rep(sig_eps_sq, T)) + matrix(sig_eps_c_sq, T, T)
-
-	Omega_sqrt_inv <- expm::sqrtm(solve(Omega))
-
-	if (verbose) {
-		message("Time to get sqrt inverse matrix:")
-		message(Sys.time() - t0)
-	}
-
-	y_final <- kronecker(diag(N), sqrt(sig_eps_sq) * Omega_sqrt_inv) %*% y
-	X_final <- kronecker(diag(N), sqrt(sig_eps_sq) * Omega_sqrt_inv) %*% X_mod
-
-	stopifnot(ncol(X_final) == p)
-
-	#
-	#
-	# twfeCovs modifications
-	#
-	#
-
-	if (is_twfe_covs) {
-		stopifnot(nrow(X_final) == N * T)
-		# stopifnot(nrow(X_final_scaled) == N * T)
-
-		# Drop columns corresponding to treatment effect interactions
-		X_final <- X_final[, 1:(R + T - 1 + d * (1 + R + T - 1) + num_treats)]
-		# X_final_scaled <- X_final_scaled[, 1:(R + T - 1 + d * (1 + R + T - 1) + num_treats)]
-
-		# Drop columns corresponding to interactions between X and time, cohorts
-		first_treat_ind <- R + T - 1 + d * (1 + R + T - 1)
-		treat_inds <- first_treat_ind:(first_treat_ind + num_treats - 1)
-
-		stopifnot(length(treat_inds) == num_treats)
-
-		X_final <- X_final[, c(1:(R + T - 1 + d), treat_inds)]
-		# X_final_scaled <- X_final_scaled[, c(1:(R + T - 1 + d), treat_inds)]
-
-		stopifnot(nrow(X_final) == N * T)
-
-		# Collapse together all columns corresponding to the same cohort
-		# stopifnot(nrow(X_final_scaled) == N * T)
-		treat_inds_mat <- matrix(as.numeric(NA), nrow = N * T, ncol = R)
-
-		for (r in 1:R) {
-			first_ind_r <- first_inds[r]
-			if (r == R) {
-				last_ind_r <- num_treats
-			} else {
-				last_ind_r <- first_inds[r + 1] - 1
-			}
-
-			cols_r <- R + T - 1 + d + first_ind_r:last_ind_r
-
-			treat_inds_mat[, r] <- rowSums(X_final[, cols_r, drop = FALSE])
-		}
-
-		stopifnot(all(!is.na(treat_inds_mat)))
-
-		X_final <- cbind(X_final[, 1:(R + T - 1 + d)], treat_inds_mat)
-		# X_final_scaled <- cbind(X_final_scaled[, 1:(R + T - 1 + d)], treat_inds_mat)
-
-		p_short <- R + T - 1 + d + R
-
-		stopifnot(ncol(X_final) == p_short)
-		# stopifnot(ncol(X_final_scaled) == p_short)
-
-		treat_inds_short <- (R + T - 1 + d + 1):p_short
-
-		stopifnot(length(treat_inds_short) == R)
-
-		#
-		#
-		# Wrap up, store needed values
-		#
-		#
-
-		p <- p_short
-		treat_inds <- treat_inds_short
-		num_treats <- R
-	}
-
-	#
-	#
-	# Optional: if using ridge regularization on untransformed coefficients,
-	# add those rows now
-	#
-	#
-
-	X_final_scaled <- my_scale(X_final)
-	stopifnot(ncol(X_final_scaled) == p)
-	scale_center <- attr(X_final_scaled, "scaled:center")
-	scale_scale <- attr(X_final_scaled, "scaled:scale")
-
-	if (add_ridge) {
-		# Initialize identity matrix
-		mat_to_multiply <- diag(p)
-
-		if (is_fetwfe) {
-			# First need to get D^{-1}:
-			D_inverse <- genFullInvFusionTransformMat(
-				first_inds = first_inds,
-				T = T,
-				R = R,
-				d = d,
-				num_treats = num_treats
-			)
-
-			stopifnot(ncol(D_inverse) == p)
-			stopifnot(nrow(D_inverse) == p)
-
-			mat_to_multiply <- D_inverse
-		}
-
-		# Now add rows to X_final_scaled
-		lambda_ridge <- 0.00001 *
-			(sig_eps_sq + sig_eps_c_sq) *
-			sqrt(p / (N * T))
-
-		X_final_scaled <- rbind(
-			X_final_scaled,
-			sqrt(lambda_ridge) * mat_to_multiply
-		)
-		y_final <- c(y_final, rep(0, p))
-
-		stopifnot(length(y_final) == N * T + p)
-		stopifnot(nrow(X_final_scaled) == N * T + p)
-	} else {
-		lambda_ridge <- as.numeric(NA)
-	}
-
-	#
-	#
-	# Step 2: get cohort-specific sample proportions (estimated treatment
-	# probabilities)
-	#
-	#
-
-	cohort_probs <- in_sample_counts[2:(R + 1)] /
-		sum(in_sample_counts[2:(R + 1)])
-
-	stopifnot(all(!is.na(cohort_probs)))
-	stopifnot(all(cohort_probs >= 0))
-	stopifnot(all(cohort_probs <= 1))
-	stopifnot(length(cohort_probs) == R)
-	stopifnot(abs(sum(cohort_probs) - 1) < 10^(-6))
-
-	cohort_probs_overall <- in_sample_counts[2:(R + 1)] / N
-
-	stopifnot(
-		abs(1 - sum(cohort_probs_overall) - in_sample_counts[1] / N) < 10^(-6)
-	)
-
-	if (indep_count_data_available) {
-		indep_cohort_probs <- indep_counts[2:(R + 1)] /
-			sum(indep_counts[2:(R + 1)])
-
-		stopifnot(all(!is.na(indep_cohort_probs)))
-		stopifnot(all(indep_cohort_probs >= 0))
-		stopifnot(all(indep_cohort_probs <= 1))
-		stopifnot(length(indep_cohort_probs) == R)
-		stopifnot(abs(sum(indep_cohort_probs) - 1) < 10^(-6))
-
-		indep_cohort_probs_overall <- indep_counts[2:(R + 1)] / N
-
-		stopifnot(
-			abs(
-				1 -
-					sum(
-						indep_cohort_probs_overall
-					) -
-					indep_counts[1] / N
-			) <
-				10^(-6)
-		)
-	} else {
-		indep_cohort_probs <- NA
-		indep_cohort_probs_overall <- NA
 	}
 
 	return(list(
-		X_final_scaled = X_final_scaled,
-		X_final = X_final,
-		y_final = y_final,
-		scale_center = scale_center,
-		scale_scale = scale_scale,
-		cohort_probs = cohort_probs,
-		cohort_probs_overall = cohort_probs_overall,
-		indep_cohort_probs = indep_cohort_probs,
-		indep_cohort_probs_overall = indep_cohort_probs_overall,
-		sig_eps_sq = sig_eps_sq,
-		sig_eps_c_sq = sig_eps_c_sq,
-		lambda_ridge = lambda_ridge
+		pdata = pdata,
+		covs = covs,
+		X_ints = X_ints,
+		y = y,
+		N = N,
+		T = T,
+		d = d,
+		p = p,
+		in_sample_counts = in_sample_counts,
+		num_treats = num_treats,
+		first_inds = first_inds,
+		R = R
 	))
 }
-
-
-# getGramInv
-#' @title Compute Inverse of Gram Matrix for Selected Features
-#' @description Calculates the inverse of the Gram matrix formed by the selected
-#'   features from the (potentially transformed) design matrix `X_final`. This
-#'   is a key component in calculating standard errors for the estimated
-#'   coefficients.
-#' @param N Integer; total number of units.
-#' @param T Integer; total number of time periods.
-#' @param X_final Numeric matrix; the final design matrix (e.g., after GLS and
-#'   fusion transformations). Dimensions: `N*T` x `p_model`, where `p_model` is
-#'   the total number of columns in this matrix.
-#' @param sel_feat_inds Integer vector; indices of the features selected by the
-#'   penalized regression, corresponding to columns in `X_final`.
-#' @param treat_inds Integer vector; original indices (before selection) of the
-#'   base treatment effect parameters. Used to subset `sel_feat_inds` to get
-#'   only selected *treatment* features for the final Gram matrix.
-#' @param num_treats Integer; total number of base treatment effect parameters.
-#' @param sel_treat_inds_shifted Integer vector; indices of the selected
-#'   treatment effects within the `num_treats` block, shifted to start from 1.
-#'   Used to check dimensions.
-#' @param calc_ses Logical; if `FALSE`, the function may return `NA` for
-#'   `gram_inv`.
-#' @return A list containing:
-#'   \item{gram_inv}{The inverse of the Gram matrix corresponding to the
-#'     *selected treatment effect features*. Returns `NA` if `calc_ses` is
-#'     `FALSE` or if the Gram matrix is found to be singular.}
-#'   \item{calc_ses}{Logical, potentially modified to `FALSE` if the Gram
-#'     matrix is singular.}
-#' @details
-#'   1. Subsets `X_final` to include only columns specified by `sel_feat_inds`.
-#'   2. Centers these selected columns.
-#'   3. Computes the Gram matrix: `(1/(N*T)) * t(X_sel_centered) %*% X_sel_centered`.
-#'   4. Checks if the minimum eigenvalue of the Gram matrix is too small (close to zero).
-#'      If so, it issues a warning and sets `calc_ses` to `FALSE`, returning `NA`
-#'      for `gram_inv`.
-#'   5. Otherwise, it computes the inverse of the Gram matrix.
-#'   6. It then subsets this inverse Gram matrix to retain only the rows/columns
-#'      that correspond to the *selected treatment effects* (identified via
-#'      `sel_feat_inds` and `treat_inds`).
-#' @keywords internal
-#' @noRd
-getGramInv <- function(
-	N,
-	T,
-	X_final,
-	treat_inds,
-	num_treats,
-	calc_ses,
-	sel_feat_inds = NA,
-	sel_treat_inds_shifted = NA
-) {
-	stopifnot(nrow(X_final) == N * T)
-	if (any(!is.na(sel_feat_inds))) {
-		X_sel <- X_final[, sel_feat_inds, drop = FALSE]
-		p_sel <- length(sel_feat_inds)
-	} else {
-		X_sel <- X_final
-		p_sel <- ncol(X_final)
-	}
-
-	stopifnot(length(treat_inds) == num_treats)
-
-	# Centering X_sel even when estimating via OLS is harmless
-	X_sel_centered <- scale(X_sel, center = TRUE, scale = FALSE)
-
-	gram <- 1 / (N * T) * (t(X_sel_centered) %*% X_sel_centered)
-
-	stopifnot(nrow(gram) == p_sel)
-	stopifnot(ncol(gram) == p_sel)
-
-	min_gram_eigen <- min(
-		eigen(gram, symmetric = TRUE, only.values = TRUE)$values
-	)
-
-	if (min_gram_eigen < 10^(-16)) {
-		warning(
-			"Gram matrix corresponding to selected features is not invertible. Assumptions needed for inference are not satisfied. Standard errors will not be calculated."
-		)
-		return(list(gram_inv = NA, calc_ses = FALSE))
-	}
-
-	gram_inv <- solve(gram)
-
-	if (any(!is.na(sel_feat_inds))) {
-		# Get only the parts of gram_inv that have to do with treatment effects
-		sel_treat_inds <- sel_feat_inds %in% treat_inds
-		stopifnot(sum(sel_treat_inds) <= length(sel_feat_inds))
-		stopifnot(length(sel_treat_inds) == length(sel_feat_inds))
-	} else {
-		sel_treat_inds <- rep(FALSE, p_sel)
-		sel_treat_inds[treat_inds] <- TRUE
-	}
-
-	stopifnot(is.logical(sel_treat_inds))
-	stopifnot(sum(sel_treat_inds) <= num_treats)
-	stopifnot(length(sel_treat_inds) == p_sel)
-	stopifnot(nrow(gram_inv) == ncol(gram_inv))
-
-	stopifnot(all(!is.na(gram_inv)))
-
-	gram_inv <- gram_inv[sel_treat_inds, sel_treat_inds]
-
-	stopifnot(nrow(gram_inv) <= num_treats)
-	stopifnot(nrow(gram_inv) == ncol(gram_inv))
-
-	if (any(!is.na(sel_treat_inds_shifted))) {
-		stopifnot(nrow(gram_inv) == length(sel_treat_inds_shifted))
-		if (any(!is.na(sel_feat_inds))) {
-			stopifnot(nrow(gram_inv) <= length(sel_feat_inds))
-		}
-	}
-
-	return(list(gram_inv = gram_inv, calc_ses = calc_ses))
-}
-
 
 # processFactors
 #' @title Process Factor Covariates into Dummy Variables
@@ -2511,467 +1916,4 @@ genXintsData <- function(
 	stopifnot(nrow(X_int) == N * T)
 
 	return(X_int)
-}
-
-# estOmegaSqrtInv
-#' @title Estimate Noise Variance Components and Omega Matrix
-#' @description Estimates the idiosyncratic error variance (`sig_eps_sq`) and
-#'   the unit-level random effect variance (`sig_eps_c_sq`) using the method
-#'   described by Pesaran (2015, Section 26.5.1) with ridge regression.
-#'   This function is called when these variances are not provided by the user.
-#' @param y Numeric vector; the observed response variable, length `N*T`.
-#' @param X_ints Numeric matrix; the design matrix including all fixed effects,
-#'   covariates, treatment dummies, and interactions. `N*T` rows.
-#' @param N Integer; the total number of unique units.
-#' @param T Integer; the total number of time periods.
-#' @param p Integer; the number of columns in `X_ints`.
-#' @return A list containing two named elements:
-#'   \item{sig_eps_sq}{Estimated variance of the idiosyncratic error term.}
-#'   \item{sig_eps_c_sq}{Estimated variance of the unit-level random effect.}
-#' @details The function first demeans `y` and `X_ints` within each unit (fixed
-#'   effects transformation). Then, it fits a ridge regression (`alpha=0` in
-#'   `glmnet::cv.glmnet`) to the demeaned data. Residuals from this model are
-#'   used to estimate `sigma_hat_sq` (which corresponds to `sig_eps_sq`).
-#'   The estimated unit-specific intercepts (`alpha_hat`) are then used to
-#'   estimate `sigma_c_sq_hat` (corresponding to `sig_eps_c_sq`).
-#' @references Pesaran, M. H. (2015). Time Series and Panel Data Econometrics.
-#'   Oxford University Press.
-#' @keywords internal
-#' @noRd
-estOmegaSqrtInv <- function(y, X_ints, N, T, p) {
-	if (N * (T - 1) - p <= 0) {
-		stop("Not enough units available to estimate the noise variance.")
-	}
-	stopifnot(N > 1)
-
-	# Estimate standard deviations
-	y_fe <- y
-	X_ints_fe <- X_ints
-	for (i in 1:N) {
-		inds_i <- ((i - 1) * T + 1):(i * T)
-		stopifnot(length(inds_i) == T)
-		y_fe[inds_i] <- y[inds_i] - mean(y[inds_i])
-		X_ints[inds_i, ] <- X_ints[inds_i, ] - colMeans(X_ints[inds_i, ])
-	}
-
-	lin_mod_fe <- glmnet::cv.glmnet(x = X_ints_fe, y = y_fe, alpha = 0)
-
-	# Get residuals
-	y_hat_fe <- stats::predict(lin_mod_fe, s = "lambda.min", newx = X_ints_fe)
-
-	# Get coefficients
-	beta_hat_fe <- stats::coef(lin_mod_fe, s = "lambda.min")[2:(p + 1)]
-
-	resids <- y_fe - y_hat_fe
-
-	tau <- rep(1, T)
-	M <- diag(rep(1, T)) - outer(tau, tau) / T
-
-	sigma_hat_sq <- 0
-	alpha_hat <- rep(as.numeric(NA), N)
-
-	for (i in 1:N) {
-		inds_i <- ((i - 1) * T + 1):(i * T)
-		sigma_hat_sq <- sigma_hat_sq +
-			as.numeric(resids[inds_i] %*% M %*% resids[inds_i])
-		alpha_hat[i] <- mean(y_hat_fe[inds_i]) -
-			colMeans(X_ints_fe[inds_i, ] %*% beta_hat_fe)
-	}
-
-	stopifnot(all(!is.na(alpha_hat)))
-
-	sigma_hat_sq <- sigma_hat_sq / (N * (T - 1) - p)
-
-	sigma_c_sq_hat <- sum((alpha_hat - mean(alpha_hat))^2) / (N - 1)
-
-	return(list(sig_eps_sq = sigma_hat_sq, sig_eps_c_sq = sigma_c_sq_hat))
-}
-
-# getCohortATTsFinal
-#' @description
-#' Computes the **Cohort Average Treatment Effect on the Treated**
-#' \deqn{\tau_{\text{ATT},r}\;=\;\frac1{T-r+1}\sum_{t=r}^{T}\tau_{\text{ATT}}(r,t)}
-#' for every treated cohort \(r\in\{1,\dots,R\}\).\cr
-#' In the fused-parameterisation used by the estimator, each
-#' \(\tau_{\text{ATT}}(r,t)\) is a *row* of
-#' \((D^{(2)}(\mathcal R))^{-1}\widehat\theta\).
-#' Averaging those rows within a cohort produces a
-#' **weight vector** \(\psi_r\) such that
-#' \(\widehat{\tau}_{\text{ATT},r}=\psi_r^{\!\top}\widehat\theta\).
-#' The function
-#'
-#' * constructs every \(\psi_r\) (via [getPsiRFused()])
-#' * builds the Gram inverse
-#'   \(\bigl((NT)^{-1}X_{\hat{\mathcal S}}^{\top}X_{\hat{\mathcal S}}\bigr)^{-1}\)
-#'   for the *selected* treatment-effect columns
-#' * returns point estimates, \(\sqrt{\widehat{\operatorname{Var}}}\) and
-#'   Wald intervals
-#'   \(\widehat{\tau}_{\text{ATT},r}\pm z_{1-\alpha/2}\,
-#'     \widehat{\operatorname{SE}}(\widehat{\tau}_{\text{ATT},r})\).
-#'
-#' @inheritParams getCohortATTsFinal
-#' @param X_final Numeric matrix; the final design matrix, potentially
-#'   transformed by `Omega_sqrt_inv` and the fusion transformation.
-#' @param sel_feat_inds Integer vector; indices of all features selected by the
-#'   penalized regression in the transformed space.
-#' @param treat_inds Integer vector; indices in the original (untransformed)
-#'   coefficient vector that correspond to the base treatment effects.
-#' @param num_treats Integer; total number of base treatment effect parameters.
-#' @param first_inds Integer vector; indices of the first treatment effect for
-#'   each cohort within the block of `num_treats` treatment effect parameters.
-#' @param sel_treat_inds_shifted Integer vector; indices of selected treatment
-#'   effects within the `num_treats` block (shifted to start from 1).
-#' @param c_names Character vector; names of the `R` treated cohorts.
-#' @param tes Numeric vector; estimated treatment effects in the original
-#'   parameterization for all `num_treats` possible cohort-time combinations.
-#' @param sig_eps_sq Numeric scalar; variance of the idiosyncratic error term.
-#' @param R Integer; total number of treated cohorts.
-#' @param N Integer; total number of units.
-#' @param T Integer; total number of time periods.
-#' @param fused Logical; if `TRUE`, assumes fusion penalization was used,
-#'   affecting how standard errors and related matrices are computed.
-#' @param calc_ses Logical; if `TRUE`, attempts to calculate standard errors.
-#'   This is typically `TRUE` if `q < 1`.
-#' @param p Integer; total number of parameters in the model.
-#' @param alpha Numeric scalar; significance level for confidence intervals
-#'   (e.g., 0.05 for 95% CIs).
-#' @return A list containing:
-#'   \item{cohort_te_df}{Dataframe with cohort names, estimated ATTs, SEs, and
-#'     confidence interval bounds.}
-#'   \item{cohort_tes}{Named numeric vector of estimated ATTs for each cohort.}
-#'   \item{cohort_te_ses}{Named numeric vector of standard errors for cohort ATTs.}
-#'   \item{psi_mat}{Matrix used in SE calculation for overall ATT.}
-#'   \item{gram_inv}{(Potentially NA) Inverse of the Gram matrix for selected
-#'     features, used in SE calculation.}
-#'   \item{d_inv_treat_sel}{(If `fused=TRUE`) Relevant block of the inverse
-#'     fusion matrix for selected treatment effects.}
-#'   \item{calc_ses}{Logical, indicating if SEs were actually calculated.}
-#' @details The function first computes the Gram matrix inverse (`gram_inv`) if
-#'   `calc_ses` is `TRUE`. Then, for each cohort `r`, it calculates the average
-#'   of the relevant `tes`. If SEs are calculated, it uses `getPsiRFused` or
-#'   `getPsiRUnfused` to get a `psi_r` vector, which is then used with
-#'   `gram_inv` to find the standard error for that cohort's ATT.
-#'
-#' The finite-sample variance estimator is
-#' \deqn{\widehat{\operatorname{Var}}(\widehat{\tau}_{\text{ATT},r})
-#'       =\frac{\sigma^{2}}{NT}\;
-#'         \psi_r^{\!\top}\,
-#'         \widehat G^{-1}\psi_r ,}
-#' where \(\widehat G^{-1}\) is the Gram inverse restricted to the selected
-#' treatment-effect features.
-#' All matrix slices come from the *inverse fusion matrix*
-#' \(D^{(2)}(\mathcal R)^{-1}\) and therefore depend only on the known
-#' cohort structure.
-#'
-#' When `calc_ses = TRUE`, the routine also accumulates a
-#' block `d_inv_treat_sel` -
-#' the sub-matrix of \(D^{(2)}(\mathcal R)^{-1}\) with
-#' **all rows** but **only the selected columns**.
-#' This block is later required by [getSecondVarTermDataApp()]
-#' to propagate sampling noise in the cohort-probability estimates.
-#' @seealso [getPsiRFused()], [getTeResults2()]
-#' @keywords internal
-#' @noRd
-getCohortATTsFinal <- function(
-	X_final,
-	sel_feat_inds,
-	treat_inds,
-	num_treats,
-	first_inds,
-	sel_treat_inds_shifted,
-	c_names,
-	tes,
-	sig_eps_sq,
-	R,
-	N,
-	T,
-	fused,
-	calc_ses,
-	p,
-	alpha = 0.05
-) {
-	stopifnot(max(sel_treat_inds_shifted) <= num_treats)
-	stopifnot(min(sel_treat_inds_shifted) >= 1)
-	stopifnot(length(tes) == num_treats)
-	stopifnot(all(!is.na(tes)))
-
-	stopifnot(nrow(X_final) == N * T)
-	X_to_pass <- X_final
-
-	# Start by getting Gram matrix needed for standard errors
-	if (calc_ses) {
-		res <- getGramInv(
-			N = N,
-			T = T,
-			X_final = X_to_pass,
-			sel_feat_inds = sel_feat_inds,
-			treat_inds = treat_inds,
-			num_treats = num_treats,
-			sel_treat_inds_shifted = sel_treat_inds_shifted,
-			calc_ses = calc_ses
-		)
-
-		gram_inv <- res$gram_inv
-		calc_ses <- res$calc_ses
-	} else {
-		gram_inv <- NA
-	}
-
-	## We need the tau sub-matrix of D^{-1} ONLY if we are in fused workflow
-	if (fused) {
-		# Get the parts of D_inv that have to do with treatment effects
-		d_inv_treat <- genInvTwoWayFusionTransformMat(num_treats, first_inds, R)
-
-		## we will progressively rbind() the selected-column rows of this matrix
-		d_inv_treat_sel <- matrix(
-			0,
-			nrow = 0,
-			ncol = length(sel_treat_inds_shifted)
-		)
-	}
-
-	# First, each cohort
-	cohort_tes <- rep(as.numeric(NA), R) # cohort average treatment effect point estimates
-	cohort_te_ses <- rep(as.numeric(NA), R) # standard errors
-
-	psi_mat <- matrix(0, length(sel_treat_inds_shifted), R)
-
-	# loop over cohorts
-	for (r in 1:R) {
-		# Get indices corresponding to marginal treatment effects for rth cohort
-		first_ind_r <- first_inds[r]
-		if (r < R) {
-			last_ind_r <- first_inds[r + 1] - 1
-		} else {
-			last_ind_r <- num_treats
-		}
-
-		stopifnot(last_ind_r >= first_ind_r)
-		stopifnot(all(first_ind_r:last_ind_r %in% 1:num_treats))
-
-		# average treatment effect for cohort r: simple mean of these treatment
-		# effects
-		cohort_tes[r] <- mean(tes[first_ind_r:last_ind_r])
-
-		if (calc_ses) {
-			# Calculate standard errors
-
-			if (fused) {
-				# build psi_r and extract block of D^{-1} for these rows/
-				# selected columns
-				res_r <- getPsiRFused(
-					first_ind_r,
-					last_ind_r,
-					sel_treat_inds_shifted,
-					d_inv_treat
-				)
-
-				psi_r <- res_r$psi_r
-
-				stopifnot(
-					nrow(res_r$d_inv_treat_sel) ==
-						last_ind_r -
-							first_ind_r +
-							1
-				)
-				stopifnot(
-					ncol(res_r$d_inv_treat_sel) ==
-						length(sel_treat_inds_shifted)
-				)
-
-				stopifnot(is.matrix(res_r$d_inv_treat_sel))
-
-				d_inv_treat_sel <- rbind(d_inv_treat_sel, res_r$d_inv_treat_sel)
-
-				if (nrow(d_inv_treat_sel) != last_ind_r) {
-					err_mes <- paste(
-						"nrow(d_inv_treat_sel) == last_ind_r is not TRUE. ",
-						"nrow(d_inv_treat_sel): ",
-						nrow(d_inv_treat_sel),
-						". num_treats: ",
-						num_treats,
-						". R: ",
-						R,
-						". first_inds: ",
-						paste(first_inds, collapse = ", "),
-						". r: ",
-						r,
-						". first_ind_r: ",
-						first_ind_r,
-						". last_ind_r: ",
-						last_ind_r,
-						". nrow(res_r$d_inv_treat_sel):",
-						nrow(res_r$d_inv_treat_sel)
-					)
-					stop(err_mes)
-				}
-
-				rm(res_r)
-			} else {
-				psi_r <- getPsiRUnfused(
-					first_ind_r,
-					last_ind_r,
-					sel_treat_inds_shifted,
-					gram_inv
-				)
-			}
-
-			stopifnot(length(psi_r) == length(sel_treat_inds_shifted))
-
-			psi_mat[, r] <- psi_r
-			# Get standard errors
-
-			## Variance of the treatment effect for cohort r is sigma^2 /(NT) x
-			# pt(psi_r) %*% gram_inv %*% psi_r  (see paper)
-			cohort_te_ses[r] <- sqrt(
-				sig_eps_sq *
-					as.numeric(
-						t(psi_r) %*%
-							gram_inv %*%
-							psi_r
-					) /
-					(N * T)
-			)
-		}
-	}
-
-	if (fused & calc_ses) {
-		if (nrow(d_inv_treat_sel) != num_treats) {
-			err_mes <- paste(
-				"nrow(d_inv_treat_sel) == num_treats is not TRUE. ",
-				"nrow(d_inv_treat_sel): ",
-				nrow(d_inv_treat_sel),
-				". num_treats: ",
-				num_treats,
-				". R: ",
-				R,
-				". first_inds: ",
-				paste(first_inds, collapse = ", "),
-				"."
-			)
-			stop(err_mes)
-		}
-	}
-
-	stopifnot(length(c_names) == R)
-	stopifnot(length(cohort_tes) == R)
-
-	if (calc_ses & all(!is.na(gram_inv))) {
-		stopifnot(length(cohort_te_ses) == R)
-
-		cohort_te_df <- data.frame(
-			c_names,
-			cohort_tes,
-			cohort_te_ses,
-			cohort_tes - stats::qnorm(1 - alpha / 2) * cohort_te_ses,
-			cohort_tes + stats::qnorm(1 - alpha / 2) * cohort_te_ses
-		)
-
-		names(cohort_te_ses) <- c_names
-		names(cohort_tes) <- c_names
-	} else {
-		cohort_te_df <- data.frame(
-			c_names,
-			cohort_tes,
-			rep(NA, R),
-			rep(NA, R),
-			rep(NA, R)
-		)
-	}
-
-	colnames(cohort_te_df) <- c(
-		"Cohort",
-		"Estimated TE",
-		"SE",
-		"ConfIntLow",
-		"ConfIntHigh"
-	)
-
-	if (fused) {
-		stopifnot(is.matrix(d_inv_treat_sel))
-		ret <- list(
-			cohort_te_df = cohort_te_df,
-			cohort_tes = cohort_tes,
-			cohort_te_ses = cohort_te_ses,
-			psi_mat = psi_mat,
-			gram_inv = gram_inv,
-			d_inv_treat_sel = d_inv_treat_sel,
-			calc_ses = calc_ses
-		)
-	} else {
-		ret <- list(
-			cohort_te_df = cohort_te_df,
-			cohort_tes = cohort_tes,
-			cohort_te_ses = cohort_te_ses,
-			psi_mat = psi_mat,
-			gram_inv = gram_inv,
-			calc_ses = calc_ses
-		)
-	}
-	return(ret)
-}
-
-# getPsiRUnfused
-#' @title Calculate Psi Vector for Cohort ATT (Unfused Case)
-#' @description Computes the `psi_r` vector for a specific cohort `r` when no
-#'   fusion penalization is applied to the treatment effects (or when calculating
-#'   SEs as if it were an OLS on selected variables). This vector is used in
-#'   standard error calculations for the cohort's Average Treatment Effect on
-#'   the Treated (ATT). In particular, this vector contains the constants
-#'   `1 / (T - r + 1)` that are multiplied by the cohort treatment effects
-#'   at each time, then summed, to get the average treatment effect for cohort
-#'   `r`. The vector `psi_r` places these constants in the correct positions so
-#'   that the inner product works as intended.
-#' @param first_ind_r Integer; the index of the first treatment effect for
-#'   cohort `r` within the `num_treats` block of treatment effects.
-#' @param last_ind_r Integer; the index of the last treatment effect for
-#'   cohort `r` within the `num_treats` block.
-#' @param sel_treat_inds_shifted Integer vector; indices of all selected
-#'   treatment effects within the `num_treats` block, shifted to start from 1.
-#' @param gram_inv Numeric matrix; the inverse of the Gram matrix for the
-#'   selected treatment effect features.
-#' @return A numeric vector `psi_r` of length equal to
-#'   `length(sel_treat_inds_shifted)`. It contains weights (typically 1/k for
-#'   k selected effects in cohort r, 0 otherwise) to average the selected
-#'   treatment effect coefficients for cohort `r`.
-#' @details The function identifies which of the `sel_treat_inds_shifted` fall
-#'   within the range `[first_ind_r, last_ind_r]`. For these identified
-#'   indices in `psi_r`, it assigns a value of 1. `psi_r` is then normalized by
-#'   dividing by its sum, effectively creating an averaging vector for the
-#'   selected treatment effects belonging to cohort `r`. If no treatment effects
-#'   for cohort `r` were selected, `psi_r` will be a zero vector.
-#' @keywords internal
-#' @noRd
-getPsiRUnfused <- function(
-	first_ind_r,
-	last_ind_r,
-	sel_treat_inds_shifted,
-	gram_inv
-) {
-	which_inds_ir <- sel_treat_inds_shifted %in% (first_ind_r:last_ind_r)
-
-	psi_r <- rep(0, length(sel_treat_inds_shifted))
-
-	if (sum(which_inds_ir) > 0) {
-		inds_r <- which(which_inds_ir)
-
-		stopifnot(is.integer(inds_r) | is.numeric(inds_r))
-		stopifnot(identical(inds_r, as.integer(round(inds_r))))
-		stopifnot(length(inds_r) >= 1)
-		stopifnot(length(inds_r) == length(unique(inds_r)))
-		stopifnot(length(inds_r) <= length(sel_treat_inds_shifted))
-		stopifnot(all(inds_r %in% 1:length(sel_treat_inds_shifted)))
-
-		stopifnot(max(inds_r) <= nrow(gram_inv))
-		stopifnot(max(inds_r) <= ncol(gram_inv))
-		stopifnot(min(inds_r) >= 0)
-
-		psi_r[inds_r] <- 1
-
-		stopifnot(sum(psi_r) > 0)
-
-		psi_r <- psi_r / sum(psi_r)
-	}
-
-	return(psi_r)
 }

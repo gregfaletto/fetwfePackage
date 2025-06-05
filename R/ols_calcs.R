@@ -406,3 +406,69 @@ getSecondVarTermOLS <- function(
 
 	return(att_var_2)
 }
+
+
+# getPsiRUnfused
+#' @title Calculate Psi Vector for Cohort ATT (Unfused Case)
+#' @description Computes the `psi_r` vector for a specific cohort `r` when no
+#'   fusion penalization is applied to the treatment effects (or when calculating
+#'   SEs as if it were an OLS on selected variables). This vector is used in
+#'   standard error calculations for the cohort's Average Treatment Effect on
+#'   the Treated (ATT). In particular, this vector contains the constants
+#'   `1 / (T - r + 1)` that are multiplied by the cohort treatment effects
+#'   at each time, then summed, to get the average treatment effect for cohort
+#'   `r`. The vector `psi_r` places these constants in the correct positions so
+#'   that the inner product works as intended.
+#' @param first_ind_r Integer; the index of the first treatment effect for
+#'   cohort `r` within the `num_treats` block of treatment effects.
+#' @param last_ind_r Integer; the index of the last treatment effect for
+#'   cohort `r` within the `num_treats` block.
+#' @param sel_treat_inds_shifted Integer vector; indices of all selected
+#'   treatment effects within the `num_treats` block, shifted to start from 1.
+#' @param gram_inv Numeric matrix; the inverse of the Gram matrix for the
+#'   selected treatment effect features.
+#' @return A numeric vector `psi_r` of length equal to
+#'   `length(sel_treat_inds_shifted)`. It contains weights (typically 1/k for
+#'   k selected effects in cohort r, 0 otherwise) to average the selected
+#'   treatment effect coefficients for cohort `r`.
+#' @details The function identifies which of the `sel_treat_inds_shifted` fall
+#'   within the range `[first_ind_r, last_ind_r]`. For these identified
+#'   indices in `psi_r`, it assigns a value of 1. `psi_r` is then normalized by
+#'   dividing by its sum, effectively creating an averaging vector for the
+#'   selected treatment effects belonging to cohort `r`. If no treatment effects
+#'   for cohort `r` were selected, `psi_r` will be a zero vector.
+#' @keywords internal
+#' @noRd
+getPsiRUnfused <- function(
+	first_ind_r,
+	last_ind_r,
+	sel_treat_inds_shifted,
+	gram_inv
+) {
+	which_inds_ir <- sel_treat_inds_shifted %in% (first_ind_r:last_ind_r)
+
+	psi_r <- rep(0, length(sel_treat_inds_shifted))
+
+	if (sum(which_inds_ir) > 0) {
+		inds_r <- which(which_inds_ir)
+
+		stopifnot(is.integer(inds_r) | is.numeric(inds_r))
+		stopifnot(identical(inds_r, as.integer(round(inds_r))))
+		stopifnot(length(inds_r) >= 1)
+		stopifnot(length(inds_r) == length(unique(inds_r)))
+		stopifnot(length(inds_r) <= length(sel_treat_inds_shifted))
+		stopifnot(all(inds_r %in% 1:length(sel_treat_inds_shifted)))
+
+		stopifnot(max(inds_r) <= nrow(gram_inv))
+		stopifnot(max(inds_r) <= ncol(gram_inv))
+		stopifnot(min(inds_r) >= 0)
+
+		psi_r[inds_r] <- 1
+
+		stopifnot(sum(psi_r) > 0)
+
+		psi_r <- psi_r / sum(psi_r)
+	}
+
+	return(psi_r)
+}
