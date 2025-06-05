@@ -466,7 +466,7 @@ fetwfe_core <- function(
 	# Transform matrix (change of coordinates so that fitting regular bridge
 	# regression results in FETWFE fusion penalties)
 	X_mod <- transformXintImproved(
-		X_ints,
+		X_int = X_ints,
 		N = N,
 		T = T,
 		R = R,
@@ -572,7 +572,7 @@ fetwfe_core <- function(
 	# Select a single set of fitted coefficients by using BIC to choose among
 	# the penalties that were fitted
 	res <- getBetaBIC(
-		fit,
+		fit = fit,
 		N = N,
 		T = T,
 		p = p,
@@ -2308,12 +2308,7 @@ transformXintImproved <- function(
 	# genTransformedMatTwoWayFusion does this.
 
 	feat_inds <- (R + T - 1 + d + R * d + (T - 1) * d + 1):(R +
-		T -
-		1 +
-		d +
-		R * d +
-		(T - 1) * d +
-		num_treats)
+		T - 1 + d + R * d + (T - 1) * d + num_treats)
 
 	# Now ready to generate the appropriate transformed matrix
 	stopifnot(all(is.na(X_mod[, feat_inds])))
@@ -6528,7 +6523,7 @@ betwfe_core <- function(
 	# Select a single set of fitted coefficients by using BIC to choose among
 	# the penalties that were fitted
 	res <- getBetaBIC(
-		fit,
+		fit = fit,
 		N = N,
 		T = T,
 		p = p,
