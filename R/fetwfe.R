@@ -1350,7 +1350,7 @@ genCoefsCore <- function(R, T, d, density, eff_size, seed = NULL) {
 	pass_condition <- FALSE
 	while (!pass_condition) {
 		theta_inds <- which(as.logical(rbinom(n = p, size = 1, prob = density)))
-		pass_condition <- length(theta_inds > 0)
+		pass_condition <- length(theta_inds) > 0
 	}
 
 	num_coefs <- length(theta_inds)
