@@ -68,7 +68,7 @@ same value for every unit).} \item{p}{The final number of columns in the full
 set of covariates used to estimate the model.}
 }
 \description{
-This function runs the bridge-penelized extended two-way fixed effects estimator (\code{twfeCovs()}) on
+This function runs the bridge-penalized extended two-way fixed effects estimator (\code{twfeCovs()}) on
 simulated data. It is simply a wrapper for \code{twfeCovs()}: it accepts an object of class
 \code{"FETWFE_simulated"} (produced by \code{simulateData()}) and unpacks the necessary
 components to pass to \code{twfeCovs()}. So the outputs match \code{twfeCovs()}, and the needed inputs
