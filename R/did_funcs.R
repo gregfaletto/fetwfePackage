@@ -2308,7 +2308,12 @@ transformXintImproved <- function(
 	# genTransformedMatTwoWayFusion does this.
 
 	feat_inds <- (R + T - 1 + d + R * d + (T - 1) * d + 1):(R +
-		T - 1 + d + R * d + (T - 1) * d + num_treats)
+		T -
+		1 +
+		d +
+		R * d +
+		(T - 1) * d +
+		num_treats)
 
 	# Now ready to generate the appropriate transformed matrix
 	stopifnot(all(is.na(X_mod[, feat_inds])))
