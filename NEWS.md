@@ -1,5 +1,9 @@
 # NEWS
 
+## Version 1.4.0 (2025-06-06)
+
+- Add S3 class for `fetwfe()`.
+
 ## Version 1.3.2 (2025-06-01)
 
 - Correct some math details, update documentation.
