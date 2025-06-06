@@ -27,6 +27,12 @@ print.fetwfe <- function(x, show_internal = FALSE, ...) {
     cat(sprintf("  Estimate: %.4f\n", x$att_hat))
     if (!is.na(x$att_se)) {
         cat(sprintf("  Standard Error: %.4f\n", x$att_se))
+        ConfIntLow <- x$att$estimate - qnorm(1 - x$alpha / 2) * x$att$se
+        ConfIntHigh <- x$att$estimate + qnorm(1 - x$alpha / 2) * x$att$se
+        cat(sprintf("    %d%% CI: [%.4f, %.4f]\n", 
+                       (1 - x$alpha) * 100,  # Assuming alpha = x$alpha
+                       ConfIntLow,
+                       ConfIntHigh))
     }
     cat("\n")
     
@@ -70,7 +76,6 @@ print.fetwfe <- function(x, show_internal = FALSE, ...) {
 #' @rdname fetwfe-class
 #' @export
 summary.fetwfe <- function(object, ..., show_internal = FALSE) {
-    # Create a summary list
     summary_list <- list(
         att = list(
             estimate = object$att_hat,
@@ -87,10 +92,10 @@ summary.fetwfe <- function(object, ..., show_internal = FALSE) {
             model_size     = object$lambda_star_model_size,
             sig_eps_sq     = object$sig_eps_sq,
             sig_eps_c_sq   = object$sig_eps_c_sq
-        )
+        ),
+        alpha = object$alpha        # ← add alpha here
     )
 
-    # Add internal details if requested
     if (show_internal) {
         summary_list$internal <- object$internal
     }
@@ -98,6 +103,7 @@ summary.fetwfe <- function(object, ..., show_internal = FALSE) {
     class(summary_list) <- "summary.fetwfe"
     return(summary_list)
 }
+
 
 
 #' @rdname fetwfe-class
@@ -111,6 +117,15 @@ print.summary.fetwfe <- function(x, ...) {
     cat(sprintf("  Estimate: %.4f\n", x$att$estimate))
     if (!is.na(x$att$se)) {
         cat(sprintf("  Standard Error: %.4f\n", x$att$se))
+        
+        # compute CI bounds
+        ConfIntLow  <- x$att$estimate - qnorm(1 - x$alpha / 2) * x$att$se
+        ConfIntHigh <- x$att$estimate + qnorm(1 - x$alpha / 2) * x$att$se
+        
+        # compute percentage (e.g. 95 rather than 0.95)
+        ci_pct <- 100 * (1 - x$alpha)
+        cat(sprintf("    %.0f%% CI: [%.4f, %.4f]\n", 
+                       ci_pct, ConfIntLow, ConfIntHigh))
     }
     cat("\n")
     
@@ -122,10 +137,13 @@ print.summary.fetwfe <- function(x, ...) {
         cat(sprintf("    Estimate: %.4f\n", catt_df$`Estimated TE`[i]))
         if (!is.na(catt_df$SE[i])) {
             cat(sprintf("    Standard Error: %.4f\n", catt_df$SE[i]))
-            cat(sprintf("    %d%% CI: [%.4f, %.4f]\n", 
-                       (1 - 0.05) * 100,  # Assuming alpha = 0.05
-                       catt_df$ConfIntLow[i],
-                       catt_df$ConfIntHigh[i]))
+            
+            # Same change here:
+            ci_pct <- 100 * (1 - x$alpha)
+            cat(sprintf("    %.0f%% CI: [%.4f, %.4f]\n", 
+                           ci_pct,
+                           catt_df$ConfIntLow[i],
+                           catt_df$ConfIntHigh[i]))
         }
         cat("\n")
     }
@@ -151,4 +169,4 @@ print.summary.fetwfe <- function(x, ...) {
     }
     
     invisible(x)
-} 
+}

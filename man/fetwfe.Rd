@@ -189,19 +189,11 @@ res <- fetwfe(
     sig_eps_c_sq = 4.227651e-35,
     verbose = TRUE)
 
-# Average treatment effect on the treated units (in percentage point
-# units)
-100 * res$att_hat
+# Print results with internal details
+print(res)
 
-# Conservative 95\% confidence interval for ATT (in percentage point units)
-
-low_att <- 100 * (res$att_hat - qnorm(1 - 0.05 / 2) * res$att_se)
-high_att <- 100 * (res$att_hat + qnorm(1 - 0.05 / 2) * res$att_se)
-
-c(low_att, high_att)
-
-# Cohort average treatment effects and confidence intervals (in percentage
-# point units)
+# Dataframe of cohort average treatment effects and confidence intervals (in
+# percentage point units)
 
 catt_df_pct <- res$catt_df
 catt_df_pct[["Estimated TE"]] <- 100 * catt_df_pct[["Estimated TE"]]
@@ -211,11 +203,6 @@ catt_df_pct[["ConfIntHigh"]] <- 100 * catt_df_pct[["ConfIntHigh"]]
 
 catt_df_pct
 
-# Print results with internal details
-print(res, show_internal = TRUE)
-
-# Get summary with internal details
-summary(res, show_internal = TRUE)
 }
 \references{
 Faletto, G (2025). Fused Extended Two-Way Fixed Effects for

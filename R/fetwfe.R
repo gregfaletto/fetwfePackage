@@ -127,7 +127,6 @@
 #'     \item{calc_ses}{Logical indicating whether standard errors were calculated.}
 #'   }
 #' }
-
 #' 
 #' The object has methods for \code{print()}, \code{summary()}, and \code{coef()}. By default, \code{print()} and \code{summary()} only show the essential outputs. To see internal details, use \code{print(x, show_internal = TRUE)} or \code{summary(x, show_internal = TRUE)}. The \code{coef()} method returns the vector of estimated coefficients (\code{beta_hat}).
 #' 
@@ -160,19 +159,11 @@
 #'     sig_eps_c_sq = 4.227651e-35,
 #'     verbose = TRUE)
 #'
-#' # Average treatment effect on the treated units (in percentage point
-#' # units)
-#' 100 * res$att_hat
+#' # Print results with internal details
+#' print(res)
 #'
-#' # Conservative 95% confidence interval for ATT (in percentage point units)
-#'
-#' low_att <- 100 * (res$att_hat - qnorm(1 - 0.05 / 2) * res$att_se)
-#' high_att <- 100 * (res$att_hat + qnorm(1 - 0.05 / 2) * res$att_se)
-#'
-#' c(low_att, high_att)
-#'
-#' # Cohort average treatment effects and confidence intervals (in percentage
-#' # point units)
+#' # Dataframe of cohort average treatment effects and confidence intervals (in
+#' # percentage point units)
 #'
 #' catt_df_pct <- res$catt_df
 #' catt_df_pct[["Estimated TE"]] <- 100 * catt_df_pct[["Estimated TE"]]
@@ -182,11 +173,6 @@
 #'
 #' catt_df_pct
 #'
-#' # Print results with internal details
-#' print(res, show_internal = TRUE)
-#'
-#' # Get summary with internal details
-#' summary(res, show_internal = TRUE)
 #' @export
 fetwfe <- function(
 	pdata,
@@ -390,62 +376,42 @@ fetwfe <- function(
 #' @param add_ridge (Optional.) Logical; if TRUE, adds a small amount of ridge
 #' regularization to the (untransformed) coefficients to stabilize estimation.
 #' Default is FALSE.
-#' @return A named list with the following elements: \item{att_hat}{The
-#' estimated overall average treatment effect for a randomly selected treated
-#' unit.} \item{att_se}{If `q < 1`, a standard error for the ATT. If
-#' `indep_counts` was provided, this standard error is asymptotically exact; if
-#' not, it is asymptotically conservative. If `q >= 1`, this will be NA.}
-#' \item{catt_hats}{A named vector containing the estimated average treatment
-#' effects for each cohort.} \item{catt_ses}{If `q < 1`, a named vector
-#' containing the (asymptotically exact, non-conservative) standard errors for
-#' the estimated average treatment effects within each cohort.}
-#' \item{cohort_probs}{A vector of the estimated probabilities of being in each
-#' cohort conditional on being treated, which was used in calculating `att_hat`.
-#' If `indep_counts` was provided, `cohort_probs` was calculated from that;
-#' otherwise, it was calculated from the counts of units in each treated
-#' cohort in `pdata`.} \item{catt_df}{A dataframe displaying the cohort names,
-#' average treatment effects, standard errors, and `1 - alpha` confidence
-#' interval bounds.} \item{beta_hat}{The full vector of estimated coefficients.}
-#' \item{treat_inds}{The indices of `beta_hat` corresponding to
-#' the treatment effects for each cohort at each time.}
-#' \item{treat_int_inds}{The indices of `beta_hat` corresponding to the
-#' interactions between the treatment effects for each cohort at each time and
-#' the covariates.} \item{sig_eps_sq}{Either the provided `sig_eps_sq` or
-#' the estimated one, if a value wasn't provided.} \item{sig_eps_c_sq}{Either
-#' the provided `sig_eps_c_sq` or the estimated one, if a value wasn't
-#' provided.} \item{lambda.max}{Either the provided `lambda.max` or the one
-#' that was used, if a value wasn't provided. (This is returned to help with
-#' getting a reasonable range of `lambda` values for grid search.)}
-#' \item{lambda.max_model_size}{The size of the selected model corresponding
-#' `lambda.max` (for `q <= 1`, this will be the smallest model size). As
-#' mentioned above, for `q <= 1` ideally this value is close to 0.}
-#' \item{lambda.min}{Either the provided `lambda.min` or the one
-#' that was used, if a value wasn't provided.} \item{lambda.min_model_size}{The
-#' size of the selected model corresponding to `lambda.min` (for `q <= 1`, this
-#' will be the largest model size). As mentioned above, for `q <= 1` ideally
-#' this value is close to `p`.}\item{lambda_star}{The value of `lambda` chosen
-#' by BIC. If this value is close to `lambda.min` or `lambda.max`, that could
-#' suggest that the range of `lambda` values should be expanded.}
-#' \item{lambda_star_model_size}{The size of the model that was selected. If
-#' this value is close to `lambda.max_model_size` or `lambda.min_model_size`,
-#' That could suggest that the range of `lambda` values should be expanded.}
-#' \item{X_ints}{The design matrix created containing all
-#' interactions, time and cohort dummies, etc.} \item{y}{The vector of
-#' responses, containing `nrow(X_ints)` entries.} \item{X_final}{The design
-#' matrix after applying the change in coordinates to fit the model and also
-#' multiplying on the left by the square root inverse of the estimated
-#' covariance matrix for each unit.} \item{y_final}{The final response after
-#' multiplying on the left by the square root inverse of the estimated
-#' covariance matrix for each unit.} \item{N}{The final number of units that
-#' were in the  data set used for estimation (after any units may have been
-#' removed because they were treated in the first time period).} \item{T}{The
-#' number of time periods in the final data set.} \item{R}{The final number of
-#' treated cohorts that appear in the final data set.} \item{d}{The final number
-#' of covariates that appear in the final data set (after any covariates may
-#' have been removed because they contained missing values or all contained the
-#' same value for every unit).} \item{p}{The final number of columns in the full
-#' set of covariates used to estimate the model.}
-#'
+#' @return An object of class \code{fetwfe} containing the following elements:
+#' \item{att_hat}{The estimated overall average treatment effect for a randomly selected treated unit.}
+#' \item{att_se}{If `q < 1`, a standard error for the ATT. If `indep_counts` was provided, this standard error is asymptotically exact; if not, it is asymptotically conservative. If `q >= 1`, this will be NA.}
+#' \item{catt_hats}{A named vector containing the estimated average treatment effects for each cohort.}
+#' \item{catt_ses}{If `q < 1`, a named vector containing the (asymptotically exact, non-conservative) standard errors for the estimated average treatment effects within each cohort.}
+#' \item{cohort_probs}{A vector of the estimated probabilities of being in each cohort conditional on being treated, which was used in calculating `att_hat`. If `indep_counts` was provided, `cohort_probs` was calculated from that; otherwise, it was calculated from the counts of units in each treated cohort in `pdata`.}
+#' \item{catt_df}{A dataframe displaying the cohort names, average treatment effects, standard errors, and `1 - alpha` confidence interval bounds.}
+#' \item{beta_hat}{The full vector of estimated coefficients.}
+#' \item{treat_inds}{The indices of `beta_hat` corresponding to the treatment effects for each cohort at each time.}
+#' \item{treat_int_inds}{The indices of `beta_hat` corresponding to the interactions between the treatment effects for each cohort at each time and the covariates.}
+#' \item{sig_eps_sq}{Either the provided `sig_eps_sq` or the estimated one, if a value wasn't provided.}
+#' \item{sig_eps_c_sq}{Either the provided `sig_eps_c_sq` or the estimated one, if a value wasn't provided.}
+#' \item{lambda.max}{Either the provided `lambda.max` or the one that was used, if a value wasn't provided. (This is returned to help with getting a reasonable range of `lambda` values for grid search.)}
+#' \item{lambda.max_model_size}{The size of the selected model corresponding to `lambda.max` (for `q <= 1`, this will be the smallest model size). As mentioned above, for `q <= 1` ideally this value is close to 0.}
+#' \item{lambda.min}{Either the provided `lambda.min` or the one that was used, if a value wasn't provided.}
+#' \item{lambda.min_model_size}{The size of the selected model corresponding to `lambda.min` (for `q <= 1`, this will be the largest model size). As mentioned above, for `q <= 1` ideally this value is close to `p`.}
+#' \item{lambda_star}{The value of `lambda` chosen by BIC. If this value is close to `lambda.min` or `lambda.max`, that could suggest that the range of `lambda` values should be expanded.}
+#' \item{lambda_star_model_size}{The size of the model that was selected. If this value is close to `lambda.max_model_size` or `lambda.min_model_size`, that could suggest that the range of `lambda` values should be expanded.}
+#' \item{N}{The final number of units that were in the data set used for estimation (after any units may have been removed because they were treated in the first time period).}
+#' \item{T}{The number of time periods in the final data set.}
+#' \item{R}{The final number of treated cohorts that appear in the final data set.}
+#' \item{d}{The final number of covariates that appear in the final data set (after any covariates may have been removed because they contained missing values or all contained the same value for every unit).}
+#' \item{p}{The final number of columns in the full set of covariates used to estimate the model.}
+#' \item{alpha}{The alpha level used for confidence intervals.}
+#' \item{internal}{A list containing internal outputs that are typically not needed for interpretation:
+#'   \describe{
+#'     \item{X_ints}{The design matrix created containing all interactions, time and cohort dummies, etc.}
+#'     \item{y}{The vector of responses, containing `nrow(X_ints)` entries.}
+#'     \item{X_final}{The design matrix after applying the change in coordinates to fit the model and also multiplying on the left by the square root inverse of the estimated covariance matrix for each unit.}
+#'     \item{y_final}{The final response after multiplying on the left by the square root inverse of the estimated covariance matrix for each unit.}
+#'     \item{calc_ses}{Logical indicating whether standard errors were calculated.}
+#'   }
+#' }
+#' 
+#' The object has methods for \code{print()}, \code{summary()}, and \code{coef()}. By default, \code{print()} and \code{summary()} only show the essential outputs. To see internal details, use \code{print(x, show_internal = TRUE)} or \code{summary(x, show_internal = TRUE)}. The \code{coef()} method returns the vector of estimated coefficients (\code{beta_hat}).
+#' 
 #' @examples
 #' \dontrun{
 #'   # Generate coefficients
