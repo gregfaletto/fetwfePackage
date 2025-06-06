@@ -177,10 +177,7 @@ test_that("fetwfe returns expected output structure with valid input", {
 		"lambda.min_model_size",
 		"lambda_star",
 		"lambda_star_model_size",
-		"X_ints",
-		"y",
-		"X_final",
-		"y_final",
+		"internal",
 		"N",
 		"T",
 		"R",
@@ -478,7 +475,7 @@ test_that("fetwfe returns att_se for q < 1 and att_se is NA for q >= 1", {
 		q = 0.5,
 		verbose = FALSE
 	)
-	expect_true(result1$calc_ses)
+	expect_true(result1$internal$calc_ses)
 	expect_false(is.na(result1$att_se))
 
 	result2 <- fetwfe(
@@ -491,7 +488,7 @@ test_that("fetwfe returns att_se for q < 1 and att_se is NA for q >= 1", {
 		q = 2, # ridge-like penalty, where SE is not computed
 		verbose = FALSE
 	)
-	expect_false(result2$calc_ses)
+	expect_false(result2$internal$calc_ses)
 	expect_true(is.na(result2$att_se))
 })
 
@@ -1010,10 +1007,7 @@ test_that("tibbles work as input to fewtfe", {
 		"lambda.min_model_size",
 		"lambda_star",
 		"lambda_star_model_size",
-		"X_ints",
-		"y",
-		"X_final",
-		"y_final",
+		"internal",
 		"N",
 		"T",
 		"R",
