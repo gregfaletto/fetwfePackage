@@ -27,12 +27,15 @@ print.fetwfe <- function(x, show_internal = FALSE, ...) {
     cat(sprintf("  Estimate: %.4f\n", x$att_hat))
     if (!is.na(x$att_se)) {
         cat(sprintf("  Standard Error: %.4f\n", x$att_se))
-        ConfIntLow <- x$att$estimate - qnorm(1 - x$alpha / 2) * x$att$se
-        ConfIntHigh <- x$att$estimate + qnorm(1 - x$alpha / 2) * x$att$se
-        cat(sprintf("    %d%% CI: [%.4f, %.4f]\n", 
-                       (1 - x$alpha) * 100,  # Assuming alpha = x$alpha
-                       ConfIntLow,
-                       ConfIntHigh))
+
+        # compute CI bounds
+        ConfIntLow  <- x$att_hat - qnorm(1 - x$alpha / 2) * x$att_se
+        ConfIntHigh <- x$att_hat + qnorm(1 - x$alpha / 2) * x$att_se
+        
+        # compute percentage (e.g. 95 rather than 0.95)
+        ci_pct <- 100 * (1 - x$alpha)
+        cat(sprintf("    %.0f%% CI: [%.4f, %.4f]\n", 
+                       ci_pct, ConfIntLow, ConfIntHigh))
     }
     cat("\n")
     
@@ -93,7 +96,7 @@ summary.fetwfe <- function(object, ..., show_internal = FALSE) {
             sig_eps_sq     = object$sig_eps_sq,
             sig_eps_c_sq   = object$sig_eps_c_sq
         ),
-        alpha = object$alpha        # ← add alpha here
+        alpha = object$alpha
     )
 
     if (show_internal) {
