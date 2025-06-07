@@ -20,7 +20,11 @@
 #' @param sig_eps_c_sq Numeric. Variance of the unit-level random effects.
 #' @param distribution Character. Distribution to generate covariates.
 #'   Defaults to \code{"gaussian"}. If set to \code{"uniform"}, covariates are drawn uniformly
-#'   from \eqn{[-\sqrt{3}, \sqrt{3}]}..
+#'   from \eqn{[-\sqrt{3}, \sqrt{3}]}.
+#' @param guarantee_rank_condition (Optional). Logical. If TRUE, the returned
+#' data set is guaranteed to have at least `d + 1` units per cohort, which is
+#' necessary for the final design matrix to have full column rank. Default is
+#' FALSE, in which case no such condition is enforced.
 #'
 #' @return An object of class \code{"FETWFE_simulated"}, which is a list containing:
 #' \describe{
@@ -84,7 +88,8 @@ simulateData <- function(
 	N,
 	sig_eps_sq,
 	sig_eps_c_sq,
-	distribution = "gaussian"
+	distribution = "gaussian",
+	guarantee_rank_condition = FALSE
 ) {
 	if (!inherits(coefs_obj, "FETWFE_coefs")) {
 		stop("coefs_obj must be an object of class 'FETWFE_coefs'")
@@ -120,7 +125,8 @@ simulateData <- function(
 		beta = beta,
 		seed = seed,
 		gen_ints = TRUE,
-		distribution = distribution
+		distribution = distribution,
+		guarantee_rank_condition = guarantee_rank_condition
 	)
 
 	required_fields <- c(
@@ -404,6 +410,10 @@ getTes <- function(coefs_obj) {
 #' @param distribution Character. Distribution to generate covariates.
 #'   Defaults to \code{"gaussian"}. If set to \code{"uniform"}, covariates are drawn uniformly
 #'   from \eqn{[-\sqrt{3}, \sqrt{3}]}.
+#' @param guarantee_rank_condition (Optional). Logical. If TRUE, the returned
+#' data set is guaranteed to have at least `d + 1` units per cohort, which is
+#' necessary for the final design matrix to have full column rank. Default is
+#' FALSE, in which case no such condition is enforced.
 #'
 #' @return An object of class \code{"FETWFE_simulated"}, which is a list containing:
 #' \describe{
@@ -499,7 +509,8 @@ simulateDataCore <- function(
 	beta,
 	seed = NULL,
 	gen_ints = FALSE,
-	distribution = "gaussian"
+	distribution = "gaussian",
+	guarantee_rank_condition = FALSE
 ) {
 	if (!is.null(seed)) set.seed(seed)
 
@@ -524,7 +535,8 @@ simulateDataCore <- function(
 		d = d,
 		T = T,
 		R = R,
-		distribution = distribution
+		distribution = distribution,
+		guarantee_rank_condition = guarantee_rank_condition
 	)
 	cohort_fe <- res_base$cohort_fe
 	time_fe <- res_base$time_fe
@@ -542,7 +554,12 @@ simulateDataCore <- function(
 		cbind(cohort_fe, time_fe)
 	}
 
-	indep_assignments <- genAssignments(N, R)
+	indep_assignments <- genAssignments(
+		N = N,
+		R = R,
+		guarantee_rank_condition = guarantee_rank_condition,
+		d = d
+	)
 
 	if (d > 0) {
 		res_ints <- generateFEInts(X_long, cohort_fe, time_fe, N, T, R, d)
@@ -992,6 +1009,10 @@ genCoefsCore <- function(R, T, d, density, eff_size, seed = NULL) {
 #' @param distribution Character. Distribution to generate covariates.
 #'   Defaults to \code{"gaussian"}. If set to \code{"uniform"}, covariates are drawn uniformly
 #'   from \eqn{[-\sqrt{3}, \sqrt{3}]}.
+#' @param guarantee_rank_condition (Optional). Logical. If TRUE, the returned
+#' data set is guaranteed to have at least `d + 1` units per cohort, which is
+#' necessary for the final design matrix to have full column rank. Default is
+#' FALSE, in which case no such condition is enforced.
 #'
 #' @return A list containing:
 #'   \item{cohort_fe}{A matrix of cohort fixed effects (dummy variables).}
@@ -1003,8 +1024,21 @@ genCoefsCore <- function(R, T, d, density, eff_size, seed = NULL) {
 #'         long-format matrices corresponding to the units in a specific treated cohort.}
 #' @keywords internal
 #' @noRd
-generateBaseEffects <- function(N, d, T, R, distribution = "gaussian") {
-	ret <- genCohortTimeFE(N, T, R, d)
+generateBaseEffects <- function(
+	N,
+	d,
+	T,
+	R,
+	distribution = "gaussian",
+	guarantee_rank_condition = FALSE
+) {
+	ret <- genCohortTimeFE(
+		N = N,
+		T = T,
+		R = R,
+		d = d,
+		guarantee_rank_condition = guarantee_rank_condition
+	)
 
 	if (distribution == "gaussian") {
 		X <- matrix(rnorm(N * d), nrow = N, ncol = d)
@@ -1037,6 +1071,10 @@ generateBaseEffects <- function(N, d, T, R, distribution = "gaussian") {
 #' @param T Integer. Number of time periods.
 #' @param R Integer. Number of treated cohorts.
 #' @param d Integer. Number of covariates (used to ensure minimum units per cohort).
+#' @param guarantee_rank_condition (Optional). Logical. If TRUE, the returned
+#' data set is guaranteed to have at least `d + 1` units per cohort, which is
+#' necessary for the final design matrix to have full column rank. Default is
+#' FALSE, in which case no such condition is enforced.
 #'
 #' @return A list containing:
 #'   \item{cohort_fe}{An NT x R matrix of cohort dummy variables. The r-th column is 1
@@ -1051,7 +1089,7 @@ generateBaseEffects <- function(N, d, T, R, distribution = "gaussian") {
 #'     in the NT-row matrices that correspond to units in the r-th treated cohort.}
 #' @keywords internal
 #' @noRd
-genCohortTimeFE <- function(N, T, R, d) {
+genCohortTimeFE <- function(N, T, R, d, guarantee_rank_condition = FALSE) {
 	# The observations will be arranged row-wise as blocks of T, one unit at
 	# a time. So the first T rows correspond to all observations from the first
 	# unit, and so on. Therefore the first N_UNTREATED*T rows contain all of
@@ -1064,7 +1102,12 @@ genCohortTimeFE <- function(N, T, R, d) {
 	stopifnot(N >= (R + 1) * (d + 1))
 
 	# Generate cohort assignments
-	assignments <- genAssignments(N, R)
+	assignments <- genAssignments(
+		N = N,
+		R = R,
+		guarantee_rank_condition = guarantee_rank_condition,
+		d = d
+	)
 
 	# Cohort fixed effects
 	cohort_fe <- matrix(0, N * T, R)
@@ -1121,6 +1164,13 @@ genCohortTimeFE <- function(N, T, R, d) {
 #'
 #' @param N Integer. Total number of units to assign.
 #' @param R Integer. Number of treated cohorts.
+#' @param guarantee_rank_condition (Optional). Logical. If TRUE, `d` must be
+#' provided, and this function will ensure that the returned data set has at
+#' least `d + 1` units per cohort, which is necessary for the final design
+#' matrix to have full column rank. Default is FALSE, in which case no such
+#' condition is enforced.
+#' @param d (Optional). Integer. The total number of covariates in the data.
+#' Only needs to be provied if guarantee_rank_condition is TRUE.
 #'
 #' @return An integer vector of length R+1, where the first element is the count
 #'   of never-treated units, and subsequent elements are counts for each treated cohort.
@@ -1128,7 +1178,7 @@ genCohortTimeFE <- function(N, T, R, d) {
 #' @importFrom stats rmultinom
 #' @keywords internal
 #' @noRd
-genAssignments <- function(N, R) {
+genAssignments <- function(N, R, guarantee_rank_condition = FALSE, d = NA) {
 	# Make sure at least one observation in each cohort
 	stopifnot(N >= R + 1)
 	pass_condition <- FALSE
@@ -1141,10 +1191,18 @@ genAssignments <- function(N, R) {
 			1
 		]
 		pass_condition <- all(assignments >= 1)
+		if (guarantee_rank_condition) {
+			stopifnot(all(!is.na(d)))
+			stopifnot(d >= 0)
+			pass_condition <- all(assignments >= d + 1)
+		}
 	}
 
 	stopifnot(sum(assignments) == N)
 	stopifnot(all(assignments >= 1))
+	if (guarantee_rank_condition) {
+		stopifnot(all(assignments >= d + 1))
+	}
 	stopifnot(length(assignments) == R + 1)
 	return(assignments)
 }

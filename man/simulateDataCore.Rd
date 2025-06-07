@@ -14,7 +14,8 @@ simulateDataCore(
   beta,
   seed = NULL,
   gen_ints = FALSE,
-  distribution = "gaussian"
+  distribution = "gaussian",
+  guarantee_rank_condition = FALSE
 )
 }
 \arguments{
@@ -50,6 +51,11 @@ if \code{FALSE} (the default), generate a design matrix without any interaction 
 \item{distribution}{Character. Distribution to generate covariates.
 Defaults to \code{"gaussian"}. If set to \code{"uniform"}, covariates are drawn uniformly
 from \eqn{[-\sqrt{3}, \sqrt{3}]}.}
+
+\item{guarantee_rank_condition}{(Optional). Logical. If TRUE, the returned
+data set is guaranteed to have at least \code{d + 1} units per cohort, which is
+necessary for the final design matrix to have full column rank. Default is
+FALSE, in which case no such condition is enforced.}
 }
 \value{
 An object of class \code{"FETWFE_simulated"}, which is a list containing:

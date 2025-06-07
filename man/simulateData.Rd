@@ -4,7 +4,14 @@
 \alias{simulateData}
 \title{Generate Random Panel Data for FETWFE Simulations}
 \usage{
-simulateData(coefs_obj, N, sig_eps_sq, sig_eps_c_sq, distribution = "gaussian")
+simulateData(
+  coefs_obj,
+  N,
+  sig_eps_sq,
+  sig_eps_c_sq,
+  distribution = "gaussian",
+  guarantee_rank_condition = FALSE
+)
 }
 \arguments{
 \item{coefs_obj}{An object of class \code{"FETWFE_coefs"} containing the coefficient vector
@@ -18,7 +25,12 @@ and simulation parameters.}
 
 \item{distribution}{Character. Distribution to generate covariates.
 Defaults to \code{"gaussian"}. If set to \code{"uniform"}, covariates are drawn uniformly
-from \eqn{[-\sqrt{3}, \sqrt{3}]}..}
+from \eqn{[-\sqrt{3}, \sqrt{3}]}.}
+
+\item{guarantee_rank_condition}{(Optional). Logical. If TRUE, the returned
+data set is guaranteed to have at least \code{d + 1} units per cohort, which is
+necessary for the final design matrix to have full column rank. Default is
+FALSE, in which case no such condition is enforced.}
 }
 \value{
 An object of class \code{"FETWFE_simulated"}, which is a list containing:
