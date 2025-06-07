@@ -1,5 +1,5 @@
 #' @import glmnet
-#' @importFrom stats rbinom rmultinom rnorm runif sd lm coef
+#' @importFrom stats rbinom rmultinom rnorm runif sd lm coef pnorm
 
 #' @title Fused extended two-way fixed effects
 #'
@@ -127,9 +127,9 @@
 #'     \item{calc_ses}{Logical indicating whether standard errors were calculated.}
 #'   }
 #' }
-#' 
+#'
 #' The object has methods for \code{print()}, \code{summary()}, and \code{coef()}. By default, \code{print()} and \code{summary()} only show the essential outputs. To see internal details, use \code{print(x, show_internal = TRUE)} or \code{summary(x, show_internal = TRUE)}. The \code{coef()} method returns the vector of estimated coefficients (\code{beta_hat}).
-#' 
+#'
 #' @author Gregory Faletto
 #' @references
 #' Faletto, G (2025). Fused Extended Two-Way Fixed Effects for
@@ -160,18 +160,7 @@
 #'     verbose = TRUE)
 #'
 #' # Print results with internal details
-#' print(res)
-#'
-#' # Dataframe of cohort average treatment effects and confidence intervals (in
-#' # percentage point units)
-#'
-#' catt_df_pct <- res$catt_df
-#' catt_df_pct[["Estimated TE"]] <- 100 * catt_df_pct[["Estimated TE"]]
-#' catt_df_pct[["SE"]] <- 100 * catt_df_pct[["SE"]]
-#' catt_df_pct[["ConfIntLow"]] <- 100 * catt_df_pct[["ConfIntLow"]]
-#' catt_df_pct[["ConfIntHigh"]] <- 100 * catt_df_pct[["ConfIntHigh"]]
-#'
-#' catt_df_pct
+#' print(res, max_cohorts = Inf)
 #'
 #' @export
 fetwfe <- function(
@@ -288,7 +277,7 @@ fetwfe <- function(
 		att_se <- res$in_sample_att_se
 		cohort_probs <- res$cohort_probs
 	}
-	
+
 	# Create the main output list with essential results
 	out <- list(
 		att_hat = att_hat,
@@ -315,7 +304,7 @@ fetwfe <- function(
 		p = res$p,
 		alpha = alpha
 	)
-	
+
 	# Add internal outputs in a separate list
 	out$internal <- list(
 		X_ints = res$X_ints,
@@ -324,10 +313,10 @@ fetwfe <- function(
 		y_final = res$y_final,
 		calc_ses = res$calc_ses
 	)
-	
+
 	# Add the fetwfe class
 	class(out) <- "fetwfe"
-	
+
 	return(out)
 }
 
@@ -409,9 +398,9 @@ fetwfe <- function(
 #'     \item{calc_ses}{Logical indicating whether standard errors were calculated.}
 #'   }
 #' }
-#' 
+#'
 #' The object has methods for \code{print()}, \code{summary()}, and \code{coef()}. By default, \code{print()} and \code{summary()} only show the essential outputs. To see internal details, use \code{print(x, show_internal = TRUE)} or \code{summary(x, show_internal = TRUE)}. The \code{coef()} method returns the vector of estimated coefficients (\code{beta_hat}).
-#' 
+#'
 #' @examples
 #' \dontrun{
 #'   # Generate coefficients

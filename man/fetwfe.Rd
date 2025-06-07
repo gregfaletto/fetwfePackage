@@ -190,18 +190,7 @@ res <- fetwfe(
     verbose = TRUE)
 
 # Print results with internal details
-print(res)
-
-# Dataframe of cohort average treatment effects and confidence intervals (in
-# percentage point units)
-
-catt_df_pct <- res$catt_df
-catt_df_pct[["Estimated TE"]] <- 100 * catt_df_pct[["Estimated TE"]]
-catt_df_pct[["SE"]] <- 100 * catt_df_pct[["SE"]]
-catt_df_pct[["ConfIntLow"]] <- 100 * catt_df_pct[["ConfIntLow"]]
-catt_df_pct[["ConfIntHigh"]] <- 100 * catt_df_pct[["ConfIntHigh"]]
-
-catt_df_pct
+print(res, max_cohorts = Inf)
 
 }
 \references{
