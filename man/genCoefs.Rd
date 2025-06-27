@@ -29,6 +29,10 @@ An object of class \code{"FETWFE_coefs"}, which is a list containing:
 \describe{
 \item{beta}{A numeric vector representing the full coefficient vector after the inverse fusion
 transform.}
+\item{theta}{A numeric vector representing the coefficient vector in the transformed feature
+space. \code{theta} is a sparse vector, which aligns with an assumption that deviations from the
+restrictions encoded in the FETWFE model are sparse. \code{beta} is derived from
+\code{theta}.}
 \item{R}{The provided number of treated cohorts.}
 \item{T}{The provided number of time periods.}
 \item{d}{The provided number of covariates.}

@@ -1,3 +1,110 @@
+#' Run ETWFE on Simulated Data
+#'
+#' @description
+#' This function runs the extended two-way fixed effects estimator (\code{etwfe()}) on
+#' simulated data. It is simply a wrapper for \code{etwfe()}: it accepts an object of class
+#' \code{"FETWFE_simulated"} (produced by \code{simulateData()}) and unpacks the necessary
+#' components to pass to \code{etwfe()}. So the outputs match \code{etwfe()}, and the needed inputs
+#' match their counterparts in \code{etwfe()}.
+#'
+#' @param simulated_obj An object of class \code{"FETWFE_simulated"} containing the simulated panel
+#' data and design matrix.
+#' @param verbose Logical; if TRUE, more details on the progress of the function will
+#' be printed as the function executes. Default is FALSE.
+#' @param alpha Numeric; function will calculate (1 - `alpha`) confidence intervals
+#' for the cohort average treatment effects that will be returned in `catt_df`.
+#' @param add_ridge (Optional.) Logical; if TRUE, adds a small amount of ridge
+#' regularization to the (untransformed) coefficients to stabilize estimation.
+#' Default is FALSE.
+#' @return A named list with the following elements: \item{att_hat}{The
+#' estimated overall average treatment effect for a randomly selected treated
+#' unit.} \item{att_se}{A standard error for the ATT. If the Gram matrix is not
+#' invertible, this will be NA.} \item{catt_hats}{A named vector containing the
+#' estimated average treatment effects for each cohort.} \item{catt_ses}{A named
+#' vector containing the (asymptotically exact) standard errors for
+#' the estimated average treatment effects within each cohort.}
+#' \item{cohort_probs}{A vector of the estimated probabilities of being in each
+#' cohort conditional on being treated, which was used in calculating `att_hat`.
+#' If `indep_counts` was provided, `cohort_probs` was calculated from that;
+#' otherwise, it was calculated from the counts of units in each treated
+#' cohort in `pdata`.} \item{catt_df}{A dataframe displaying the cohort names,
+#' average treatment effects, standard errors, and `1 - alpha` confidence
+#' interval bounds.} \item{beta_hat}{The full vector of estimated coefficients.}
+#' \item{treat_inds}{The indices of `beta_hat` corresponding to
+#' the treatment effects for each cohort at each time.}
+#' \item{treat_int_inds}{The indices of `beta_hat` corresponding to the
+#' interactions between the treatment effects for each cohort at each time and
+#' the covariates.} \item{sig_eps_sq}{Either the provided `sig_eps_sq` or
+#' the estimated one, if a value wasn't provided.} \item{sig_eps_c_sq}{Either
+#' the provided `sig_eps_c_sq` or the estimated one, if a value wasn't
+#' provided.} \item{X_ints}{The design matrix created containing all
+#' interactions, time and cohort dummies, etc.} \item{y}{The vector of
+#' responses, containing `nrow(X_ints)` entries.} \item{X_final}{The design
+#' matrix after applying the change in coordinates to fit the model and also
+#' multiplying on the left by the square root inverse of the estimated
+#' covariance matrix for each unit.} \item{y_final}{The final response after
+#' multiplying on the left by the square root inverse of the estimated
+#' covariance matrix for each unit.} \item{N}{The final number of units that
+#' were in the  data set used for estimation (after any units may have been
+#' removed because they were treated in the first time period).} \item{T}{The
+#' number of time periods in the final data set.} \item{R}{The final number of
+#' treated cohorts that appear in the final data set.} \item{d}{The final number
+#' of covariates that appear in the final data set (after any covariates may
+#' have been removed because they contained missing values or all contained the
+#' same value for every unit).} \item{p}{The final number of columns in the full
+#' set of covariates used to estimate the model.}
+#'
+#' @examples
+#' \dontrun{
+#'   # Generate coefficients
+#'   coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
+#'
+#'   # Simulate data using the coefficients
+#'   sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5)
+#'
+#'   result <- etwfeWithSimulatedData(sim_data)
+#' }
+#'
+#' @export
+etwfeWithSimulatedData <- function(
+	simulated_obj,
+	verbose = FALSE,
+	alpha = 0.05,
+	add_ridge = FALSE
+) {
+	if (!inherits(simulated_obj, "FETWFE_simulated")) {
+		stop("simulated_obj must be an object of class 'FETWFE_simulated'")
+	}
+
+	pdata <- simulated_obj$pdata
+	time_var <- simulated_obj$time_var
+	unit_var <- simulated_obj$unit_var
+	treatment <- simulated_obj$treatment
+	response <- simulated_obj$response
+	covs <- simulated_obj$covs
+	sig_eps_sq <- simulated_obj$sig_eps_sq
+	sig_eps_c_sq <- simulated_obj$sig_eps_c_sq
+	indep_counts <- simulated_obj$indep_counts
+
+	res <- etwfe(
+		pdata = pdata,
+		time_var = time_var,
+		unit_var = unit_var,
+		treatment = treatment,
+		response = response,
+		covs = covs,
+		indep_counts = indep_counts,
+		sig_eps_sq = sig_eps_sq,
+		sig_eps_c_sq = sig_eps_c_sq,
+		verbose = verbose,
+		alpha = alpha,
+		add_ridge = add_ridge
+	)
+
+	return(res)
+}
+
+
 # checkEtwfeInputs
 #' @title Check Inputs for the main `fetwfe` function
 #' @description Validates the inputs provided to the main `fetwfe` function,

@@ -29,7 +29,10 @@ A list with two elements:
 \describe{
 \item{\code{beta}}{A numeric vector representing the full coefficient vector after the inverse
 fusion transform.}
-\item{\code{theta}}{A numeric vector that is sparse, from which \code{beta} is derived.}
+\item{theta}{A numeric vector representing the coefficient vector in the transformed feature
+space. \code{theta} is a sparse vector, which aligns with an assumption that deviations from the
+restrictions encoded in the FETWFE model are sparse. \code{beta} is derived from
+\code{theta}.}
 }
 }
 \description{
