@@ -1,8 +1,14 @@
+^.*\.DS_Store$
+^.*\.Rhistory$
+^.*\.Rproj\.user$
+^\.git$
+^\.gitignore$
+^\.gitattributes$
 ^fetwfePackage\.Rproj$
-^\.Rproj\.user$
 ^LICENSE\.md$
-^doc$
-^Meta$
 ^CRAN-SUBMISSION$
 ^cran-comments\.md$
+^Meta$
+^doc$
 ^air\.toml$
+^.*\.Rcheck$

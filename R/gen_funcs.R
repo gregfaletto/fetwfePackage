@@ -289,7 +289,14 @@ genCoefs <- function(R, T, d, density, eff_size, seed = NULL) {
 	}
 
 	# Create an S3 object of class "FETWFE_coefs"
-	obj <- list(beta = core_obj$beta, theta = core_obj$theta, R = R, T = T, d = d, seed = seed)
+	obj <- list(
+		beta = core_obj$beta,
+		theta = core_obj$theta,
+		R = R,
+		T = T,
+		d = d,
+		seed = seed
+	)
 	class(obj) <- "FETWFE_coefs"
 	return(obj)
 }

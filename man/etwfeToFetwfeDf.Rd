@@ -97,6 +97,6 @@ head(tidy_df)
 \references{
 McDermott G (2024). \emph{etwfe: Extended Two-Way Fixed Effects}.
 doi:10.32614/CRAN.package.etwfe
-\url{https://doi.org/10.32614/CRAN.package.etwfe}, R package
+\doi{10.32614/CRAN.package.etwfe}, R package
 version 0.5.0, \url{https://CRAN.R-project.org/package=etwfe}.
 }

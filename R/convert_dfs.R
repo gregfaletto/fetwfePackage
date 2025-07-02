@@ -44,7 +44,7 @@
 #' @references Callaway, Brantly and Pedro H.C. Sant'Anna. "Difference-in-
 #' Differences with Multiple Time Periods." Journal of Econometrics, Vol. 225,
 #' No. 2, pp. 200-230, 2021.
-#' \url{https://doi.org/10.1016/j.jeconom.2020.12.001},
+#' \doi{10.1016/j.jeconom.2020.12.001},
 #' \url{https://arxiv.org/abs/1803.09015}.
 #' @examples
 #' ## toy example ---------------------------------------------------------------
@@ -138,7 +138,7 @@ attgtToFetwfeDf <- function(
 #'
 #' @references McDermott G (2024). _etwfe: Extended Two-Way Fixed Effects_.
 #' doi:10.32614/CRAN.package.etwfe
-#' \url{https://doi.org/10.32614/CRAN.package.etwfe}, R package
+#' \doi{10.32614/CRAN.package.etwfe}, R package
 #' version 0.5.0, \url{https://CRAN.R-project.org/package=etwfe}.
 #' @examples
 #' ## toy example ---------------------------------------------------------------

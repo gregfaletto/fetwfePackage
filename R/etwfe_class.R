@@ -172,4 +172,4 @@ print.summary.etwfe <- function(x, ...) {
 	cat(sprintf("  Features (p)        : %d\n", x$model_info$p))
 
 	invisible(x)
-} 
+}

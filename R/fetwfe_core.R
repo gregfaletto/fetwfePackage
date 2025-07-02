@@ -1494,7 +1494,7 @@ transformXintImproved <- function(
 #' Wooldridge, J. M. (2021). Two-way fixed effects, the two-way mundlak
 #' regression, and difference-in-differences estimators.
 #' \emph{Available at SSRN 3906345}.
-#' \url{https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3906345}.
+#' \doi{10.2139/ssrn.3906345}.
 #' Tibshirani & Taylor (2011), "The Solution Path of the Generalized
 #' Lasso".
 #' Faletto, G (2025). Fused Extended Two-Way Fixed Effects for

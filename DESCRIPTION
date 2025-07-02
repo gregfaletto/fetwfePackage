@@ -4,7 +4,11 @@ Version: 1.4.1
 Authors@R: 
     person(given = "Gregory", family = "Faletto", email = "gfaletto@gmail.com", role = c("aut", "cre"), comment = c(ORCID = "0000-0001-8298-1401"))
 Maintainer: Gregory Faletto <gfaletto@gmail.com>
+Depends: 
+    R (>= 4.1.0)
 Description: Calculates the fused extended two-way fixed effects (FETWFE) estimator for unbiased and efficient estimation of difference-in-differences in panel data with staggered treatment adoption. This estimator eliminates bias inherent in conventional two-way fixed effects estimators, while also employing a novel bridge regression regularization approach to improve efficiency and yield valid standard errors. Provides flexible tuning parameters (including user-specified or data-driven choices for penalty parameters), detailed output including overall and cohort-specific treatment effects with confidence intervals, and extensive diagnostic tools. Also provides functions for generating simulated panel data formatted for estimating FETWFE, and running and evaluating simulations. See details in Faletto (2025) (<doi:10.48550/arXiv.2312.05985>).
+URL: https://github.com/gregfaletto/fetwfePackage
+BugReports: https://github.com/gregfaletto/fetwfePackage/issues
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
