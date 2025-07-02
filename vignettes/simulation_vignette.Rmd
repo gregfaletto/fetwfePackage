@@ -112,16 +112,7 @@ result <- fetwfeWithSimulatedData(sim_data)
 We can now extract the results from `result` in the same way that we can with the standard `fetwfe()` function.
 
 ```{r}
-# Overall ATT estimate
-cat("Estimated Overall ATT:", result$att_hat, "\n")
-
-# 95% confidence interval
-ci_lower <- result$att_hat - qnorm(0.975) * result$att_se
-ci_upper <- result$att_hat + qnorm(0.975) * result$att_se
-cat("95% CI for ATT: [", ci_lower, ", ", ci_upper, "]\n")
-
-# Cohort‐specific ATTs
-print(result$catt_df)
+summary(result)
 
 ```
 
