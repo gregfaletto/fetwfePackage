@@ -1,5 +1,9 @@
 # NEWS
 
+## Version 1.5.0 (2025-07-01)
+
+- Updates to documentation, various minor tweaks to prepare for CRAN submission.
+
 ## Version 1.4.1 (2025-06-06)
 
 - Add argument `guarantee_rank_condition` to `simulateData()` to provide option to ensure that final design matrix has full column rank.

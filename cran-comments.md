@@ -1,7 +1,7 @@
 # cran-comments.md
 
 **Package:** fetwfe  
-**Version:** 1.4.1  
+**Version:** 1.5.0
 **Date:** 2025-07-01
 
 ## What’s new since version 1.0.0 (2025-05-14)
