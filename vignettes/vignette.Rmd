@@ -159,8 +159,8 @@ result <- fetwfe(
   response = "response"      # The response variable
 )
 
-# Display the overall average treatment effect estimate
-cat("Estimated Overall ATT:", result$att_hat, "\n")
+# Display the average treatment effect estimates
+summary(result)
 ```
 
 When you run this code, the function internally performs all the necessary data preparation, applies the fusion penalty via a bridge regression (using the `grpreg` package), and returns a list with overall and cohort-specific treatment effect estimates, standard errors (if available), and additional diagnostics.
@@ -203,6 +203,8 @@ res <- fetwfe(
     response="suiciderate_elast_jag"
     )
 
+summary(res)
+
 # Average treatment effect on the treated units (in percentage point
 # units)
 100 * res$att_hat
@@ -226,7 +228,7 @@ catt_df_pct[["ConfIntHigh"]] <- 100 * catt_df_pct[["ConfIntHigh"]]
 catt_df_pct
 ```
 
-For the data application, FETWFE yielded an overall ATT of approximately –3.76% change in the female suicide rate, similar to other estimates in the literature. In addition, the output table (stored in `result_emp$catt_df`) displays the cohort-specific estimates. (Note that standard errors for the individual cohort estimates are less reliable when the number of units per cohort is small.)
+For the data application, FETWFE yielded an overall ATT of approximately –1.84% change in the female suicide rate, similar to other estimates in the literature. In addition, the output table (stored in `result_emp$catt_df`) displays the cohort-specific estimates. (Note that standard errors for the individual cohort estimates are less reliable when the number of units per cohort is small.)
 
 # Conclusion
 

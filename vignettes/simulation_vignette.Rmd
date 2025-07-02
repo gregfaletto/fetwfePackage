@@ -57,7 +57,7 @@ The `genCoefs()` function returns an object of class `"FETWFE_coefs"`, containin
 # Generate the coefficient object for simulation
 sim_coefs <- genCoefs(
   R         = 3, 
-  T         = 6, 
+  T         = 4, 
   d         = 2, 
   density   = 0.1, 
   eff_size  = 2, 
@@ -79,18 +79,18 @@ Next, we simulate a panel data set using the generated coefficient object with t
 
 Here we choose:
 
-- `N` (number of units) as 30,
-- `sig_eps_sq` (observation-level noise variance) as 5,
-- `sig_eps_c_sq` (unit-level noise variance) as 5, and
+- `N` (number of units) as 60,
+- `sig_eps_sq` (observation-level noise variance) as 1,
+- `sig_eps_c_sq` (unit-level noise variance) as 1, and
 - use the default `"gaussian"` distribution for the covariates.
 
 ```{r}
 # Simulate panel data based on the coefficients
 sim_data <- simulateData(
   sim_coefs,
-  N = 30,
-  sig_eps_sq = 5,
-  sig_eps_c_sq = 5,
+  N = 60,
+  sig_eps_sq = 1,
+  sig_eps_c_sq = 1,
   distribution = "gaussian"
   )
 ```
@@ -153,10 +153,10 @@ cat("Squared error of ATT estimate:", squared_error, "\n")
 You can also chain the simulation functions together with the pipe operator. The following code generates the coefficients, simulates the data, and runs the estimator all in one pipeline:
 
 ```{r}
-coefs <- genCoefs(R = 3, T = 6, d = 2, density = 0.1, eff_size = 2, seed = 2025)
+coefs <- genCoefs(R = 3, T = 4, d = 2, density = 0.1, eff_size = 2, seed = 2025)
 
 result_piped <- coefs |>
-  simulateData(N = 30, sig_eps_sq = 5, sig_eps_c_sq = 5) |>
+  simulateData(N = 60, sig_eps_sq = 1, sig_eps_c_sq = 1) |>
   fetwfeWithSimulatedData()
 
 cat("Estimated Overall ATT from piped workflow:", result_piped$att_hat, "\n")
