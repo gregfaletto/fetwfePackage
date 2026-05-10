@@ -70,10 +70,22 @@ paper_arxiv.tex     Source for the methodology paper (R-build-ignored).
 
 - **Indentation: hard tabs.** Every R file in `R/` uses tab indentation. Do
   not introduce spaces.
-- **Documentation: roxygen2 (markdown).** `Roxygen: list(markdown = TRUE)` is
-  set in DESCRIPTION. Public functions get full `@param`, `@return`,
-  `@examples`, `@export`. Internal helpers should be marked
-  `@keywords internal` and `@noRd` (see `utility.R`, `core_funcs.R`).
+- **Documentation: roxygen2 (markdown), on every function.**
+  `Roxygen: list(markdown = TRUE)` is set in DESCRIPTION.
+  **Every function — public or internal — gets a roxygen block** with a
+  one-line title, `@param` for each argument, and `@return`. Public
+  functions additionally get `@export` and `@examples`. Internal helpers
+  additionally get `@keywords internal` and `@noRd` (so they're documented
+  for code readers but don't produce a user-facing man page). See
+  `R/core_funcs.R::idCohorts`, `R/gen_funcs.R::getActualCohortTes`, and
+  `R/ols_calcs.R::getCohortATTsFinalOLS` for the internal-helper pattern
+  in practice.
+  **Exception: S3 methods registered for a generic in another package**
+  (e.g., `print.fetwfe`, `summary.etwfe`, `coef.fetwfe`) carry only
+  `#' @export` — the generic in the parent package owns the `@param` /
+  `@return` contract, and a per-method block would only restate it. See
+  `R/fetwfe_class.R` and `R/etwfe_class.R` for the existing pattern;
+  match it.
 - **Imports are declared at the top of `R/fetwfe.R` and `R/core_funcs.R`** via
   `@import` / `@importFrom`. If you add a new dependency, also update
   `Imports:` in DESCRIPTION.
