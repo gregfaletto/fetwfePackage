@@ -43,16 +43,16 @@ Before this change, the same call printed the raw list:
 - [x] (2026-05-10) `.plans/feat-s3-class-getTes-16/PLAN.md` drafted.
 - [x] (2026-05-10) Plan-review subagent invoked per `.workflow/PLANS.md` § "Plan review and iteration"; feedback at `PLAN_feedback.md`.
 - [x] (2026-05-10) Round-1 feedback applied to plan; response at `PLAN_feedback_response.md`. No round-2 needed (no substantive items). Bundled `.Rbuildignore` cleanup added to scope.
-- [ ] Greg reviews the updated plan before implementation begins.
-- [ ] Implementation milestone 1: write `R/getTes_class.R` (print/summary/print.summary methods). Add `class()` assignment in `R/gen_funcs.R::getTes()`.
-- [ ] Implementation milestone 2: regenerate `man/*.Rd` and `NAMESPACE` via `devtools::document()`. Update `getTes()` roxygen `@return` to mention the class; update `\dontrun{}` example to demonstrate the new print method.
-- [ ] Implementation milestone 3: add new tests to `tests/testthat/test-getTes.R`.
-- [ ] Implementation milestone 4: bump version 1.5.0 → 1.5.1 in `DESCRIPTION`, `NEWS.md`, `inst/CITATION`.
-- [ ] Implementation milestone 5: add five lines to `.Rbuildignore` for `^\.workflow$`, `^\.claude$`, `^\.plans$`, `^AGENTS\.md$`, `^paper_arxiv\.tex$`.
-- [ ] Run the per-PR CRAN gate: `air format .`, then `devtools::document()`, `devtools::test()`, `devtools::check(args = "--as-cran")`, `devtools::spell_check()` (bootstrap `inst/WORDLIST` if needed), `urlchecker::url_check()`. Confirm clean. (`devtools::build_vignettes()` not required since vignettes are untouched.)
-- [ ] Post-execution review subagent invoked per `.workflow/REVIEW_AGENT.md`.
-- [ ] Post-execution feedback applied.
-- [ ] Push branch, open PR targeting `main`, link issue #16.
+- [x] (2026-05-10) Greg reviewed the updated plan; sign-off received in chat.
+- [x] (2026-05-10) Implementation milestone 1: wrote `R/getTes_class.R`, added `class()` assignment in `R/gen_funcs.R::getTes()`.
+- [x] (2026-05-10) Implementation milestone 2: `devtools::document()` regenerated `man/getTes.Rd`, created `man/FETWFE_tes-class.Rd`, updated `NAMESPACE`. `\dontrun{}` example updated.
+- [x] (2026-05-10) Implementation milestone 3: appended Tests 5/6/7 to `tests/testthat/test-getTes.R`.
+- [x] (2026-05-10) Implementation milestone 4: version bumped 1.5.0 → 1.5.1 in `DESCRIPTION`, `NEWS.md`, `inst/CITATION`.
+- [x] (2026-05-10) Implementation milestone 5: added 5 lines to `.Rbuildignore`. Bootstrap of `inst/WORDLIST` (36 entries) added in same commit.
+- [x] (2026-05-10) Per-PR CRAN gate clean: `air format .` no-op; `devtools::document()` idempotent; `devtools::check(args = "--as-cran")` `0/0/0`; `devtools::test()` 1065/1065 PASS; `devtools::spell_check()` empty; `urlchecker::url_check()` only the 2 pre-existing redirects in `vignettes/vignette.Rmd`. (`build_vignettes()` not required; vignettes untouched.)
+- [x] (2026-05-10) Implementation committed as `3688aff`.
+- [x] (2026-05-10) Post-execution review subagent invoked per `.workflow/REVIEW_AGENT.md`; feedback at `PLAN_implementation_feedback.md`. Verdict: LGTM, no blockers, no action items.
+- [ ] Push branch to `origin/feat/s3-class-getTes-16`, open PR targeting `main`, link issue #16. (Awaiting Greg's final checkpoint.)
 
 ## Surprises & Discoveries
 
@@ -115,7 +115,21 @@ Before this change, the same call printed the raw list:
 
 ## Outcomes & Retrospective
 
-(To be written at completion.)
+**What was built.** Issue #16 resolved: `getTes()` output is now an S3 object of class `FETWFE_tes`, with `print()` / `summary()` / `print.summary()` methods. Existing field accessors (`$att_true`, `$actual_cohort_tes`) unchanged; existing tests pass without modification. Bundled scope: 5-line `.Rbuildignore` cleanup (silenced 2 pre-existing CRAN NOTEs), 36-term `inst/WORDLIST` bootstrap (`spell_check()` now passes cleanly), version bump 1.5.0 → 1.5.1 across DESCRIPTION/NEWS.md/inst/CITATION. Post-execution review (subagent) verdict: LGTM, no blockers, no action items.
+
+**Per-PR CRAN gate established.** This is the first PR cycle to run the full per-PR CRAN gate (`devtools::check(args = "--as-cran")` + `devtools::spell_check()` + `urlchecker::url_check()`). The gate is now clean; future PRs inherit a CRAN-ready baseline and need only maintain it.
+
+**`.plans/<branch>/` tracking convention adopted.** Greg established mid-cycle that `.plans/<branch>/` folders are tracked in version control alongside the feature branch, so the design dialogue (plan, subagent feedback, response, post-execution feedback) rides into `main` as part of the PR. Workflow docs were updated to reflect this.
+
+**Lessons learned.**
+- The plan-review subagent's empirical "overlay + load_all + document + test + check" methodology caught zero plan-shape bugs but contributed five Surprises & Discoveries entries that materially de-risked implementation. Cost: ~14 minutes of subagent runtime. Worth it.
+- The post-execution review's "build the actual tarball and grep its contents" step verified the `.Rbuildignore` cleanup definitively (no `.workflow`, `.claude`, `.plans`, `AGENTS.md`, `paper_arxiv.tex` in the built `.tar.gz`). This is a useful pattern to retain for any PR that touches `.Rbuildignore`.
+- The `air format .` doc warning ("preserve tabs by hand because no `air.toml` exists") was empirically wrong — air on this repo is a no-op (auto-detects existing tab indentation somehow). Workflow doc fixed during this cycle.
+- Pre-existing `urlchecker::url_check()` redirects (`vignettes/vignette.Rmd:29`, `:31`, both bookdown.org → posit.cloud) and 3 pre-existing `@details`/`@seealso` roxygen warnings in `fetwfe_core.R` (`getPsiRFused`, `getSecondVarTermDataApp`, `getTeResults2`) are flagged here as candidate follow-ups, not in scope for #16.
+
+**Diff size.** 12 files, +310/-38 lines net. Well within the "split if >150 lines" heuristic when measured against source files only (~95 source lines added; the rest is regenerated `man/*.Rd`, `NAMESPACE`, `inst/WORDLIST`, plan updates, version-string updates).
+
+**Match to clarified scope.** All four bullets of the clarified-scope paragraph (the dialog with Greg in `CHOOSING_A_PR.md` § "Issue clarification") realized in code: class set, print method medium-detail, summary with dispersion stats, version bump as patch.
 
 ## Context and Orientation
 
@@ -581,3 +595,5 @@ No changes to `Imports:` or `Suggests:` in `DESCRIPTION`.
 - **2026-05-10 (round 1 plan-review applied)** — Plan-review subagent ran empirical validation (overlay + load_all + document + test + check); no blockers, six minor action items. Greg directed: keep the `length(tes) >= 2` guard for defensive resiliency (with a comment) but change `"<NA (R<2)>"` → `"<NA>"`; bundle a 5-line `.Rbuildignore` cleanup to silence the 2 pre-existing CRAN NOTEs the subagent surfaced; apply remaining items 2–6 (note `cran-comments.md` not bumped, code-comment Test 6 regex sensitivity, Decision Log on `expect_type` continuity, optional `\dontrun{}` example update). Surprises & Discoveries populated with reviewer's empirical findings (`seed = NULL` path, `expect_named` ordering, `R = 2` edge case, `expect_type` typeof behavior, two pre-existing NOTEs). Total source change estimate revised from ~150 to ~160 lines including the bundled `.Rbuildignore` lines.
 
 - **2026-05-10 (CRAN-readiness gate adopted)** — Greg directed that every PR cycle leave the package CRAN-ready, not just CRAN-bound ones. Workflow docs (`.workflow/PLANS.md`, `.workflow/REVIEW_AGENT.md`, `.workflow/R_WORKFLOW.md`, `.workflow/DEV_INSTRUCTIONS.md`) updated to make `devtools::check(args = "--as-cran")` + `devtools::spell_check()` + `urlchecker::url_check()` the unconditional per-PR gate, with `devtools::build_vignettes()` required only when vignettes are touched. This plan's Step 5 and Validation/Acceptance sections updated accordingly: spell_check / url_check added; criterion list re-numbered; commit list now includes `inst/WORDLIST` if first-run spell_check requires bootstrapping it. `build_vignettes()` is skipped for this PR (vignettes untouched).
+
+- **2026-05-10 (implementation + post-execution review)** — Implementation committed as `3688aff` (12 files, +310/-38 lines net). Per-PR CRAN gate verified clean: `--as-cran` 0/0/0, 1065/1065 tests pass, `spell_check` empty (after 36-term WORDLIST bootstrap), `url_check` clean modulo 2 pre-existing redirects in vignettes. Post-execution review subagent verdict: LGTM, no blockers, no action items. Workflow doc cleanup applied during this round: `.workflow/PLANS.md:171` "preserve tabs by hand" warning corrected — `air format .` is empirically a no-op in this repo (auto-detects tabs).
