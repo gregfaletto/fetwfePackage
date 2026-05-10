@@ -541,7 +541,9 @@ simulateDataCore <- function(
 	distribution = "gaussian",
 	guarantee_rank_condition = FALSE
 ) {
-	if (!is.null(seed)) set.seed(seed)
+	if (!is.null(seed)) {
+		set.seed(seed)
+	}
 
 	res <- testGenRandomDataInputs(
 		beta = beta,
@@ -842,7 +844,9 @@ simulateDataCore <- function(
 #'
 #' @export
 genCoefsCore <- function(R, T, d, density, eff_size, seed = NULL) {
-	if (!is.null(seed)) set.seed(seed)
+	if (!is.null(seed)) {
+		set.seed(seed)
+	}
 
 	# Check that T is a numeric scalar and at least 3.
 	if (!is.numeric(T) || length(T) != 1 || T < 3) {

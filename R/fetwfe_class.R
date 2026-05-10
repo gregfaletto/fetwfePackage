@@ -86,11 +86,12 @@ print.fetwfe <- function(
 	catt_df <- .truncate_catt(x$catt_df, max_cohorts, order_by)
 	cat("Cohort Average Treatment Effects (CATT):\n")
 	.print_catt_tbl(catt_df)
-	if (isTRUE(attr(catt_df, "truncated")))
+	if (isTRUE(attr(catt_df, "truncated"))) {
 		cat(sprintf(
 			"  ... and %d more cohorts.\n",
 			attr(catt_df, "n_discarded")
 		))
+	}
 	cat("\n")
 
 	## Model info
@@ -124,8 +125,11 @@ print.fetwfe <- function(
 summary.fetwfe <- function(object, full_catt = FALSE, ...) {
 	list(
 		att = c(estimate = object$att_hat, se = object$att_se),
-		catt = if (full_catt) object$catt_df else
-			.truncate_catt(object$catt_df, max_cohorts = 20),
+		catt = if (full_catt) {
+			object$catt_df
+		} else {
+			.truncate_catt(object$catt_df, max_cohorts = 20)
+		},
 		model_info = list(
 			N = object$N,
 			T = object$T,
@@ -163,8 +167,9 @@ print.summary.fetwfe <- function(x, ...) {
 
 	cat("CATT (preview):\n")
 	.print_catt_tbl(x$catt)
-	if (isTRUE(attr(x$catt, "truncated")))
+	if (isTRUE(attr(x$catt, "truncated"))) {
 		cat(sprintf("  ... + %d more cohorts.\n", attr(x$catt, "n_discarded")))
+	}
 	cat("\n")
 
 	# cat("Model Info:\n")
