@@ -12,3 +12,4 @@
 ^doc$
 ^air\.toml$
 ^.*\.Rcheck$
+^\.Rproj\.user$
