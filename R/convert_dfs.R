@@ -268,12 +268,13 @@ etwfeToFetwfeDf <- function(
 	stopifnot(is.data.frame(data))
 	required <- unlist(vars, use.names = FALSE)
 	missing <- setdiff(c(required, covars), names(data))
-	if (length(missing))
+	if (length(missing)) {
 		stop(
 			"Column(s) not found in `data`: ",
 			paste(missing, collapse = ", "),
 			call. = FALSE
 		)
+	}
 
 	## ---------- enforce types --------------------------------------------------
 	df <- data[, unique(c(required, covars))]
@@ -281,27 +282,31 @@ etwfeToFetwfeDf <- function(
 	df[[vars$g]] <- as.integer(df[[vars$g]])
 	df[[vars$id]] <- as.character(df[[vars$id]])
 
-	if (anyNA(df[[vars$t]]))
+	if (anyNA(df[[vars$t]])) {
 		stop("Missing values in `", vars$t, "`.", call. = FALSE)
-	if (anyNA(df[[vars$g]]))
+	}
+	if (anyNA(df[[vars$g]])) {
 		stop("Missing values in `", vars$g, "`.", call. = FALSE)
+	}
 
 	## ---------- uniqueness & irreversibility ----------------------------------
 	dup_rows <- duplicated(df[, c(vars$id, vars$t)])
-	if (any(dup_rows))
+	if (any(dup_rows)) {
 		stop(
 			"Each (id, time) pair must appear at most once; found duplicates.",
 			call. = FALSE
 		)
+	}
 
 	g_const <- by(df, df[[vars$id]], function(x) length(unique(x[[vars$g]])))
-	if (any(g_const > 1))
+	if (any(g_const > 1)) {
 		stop(
 			"`",
 			vars$g,
 			"` must be constant within each unit (irreversible treatment).",
 			call. = FALSE
 		)
+	}
 
 	## ---------- drop first-period treated --------------------------------------
 	first_period <- min(df[[vars$t]])
@@ -327,12 +332,13 @@ etwfeToFetwfeDf <- function(
 		df,
 		tapply(treat_dummy, df[[vars$id]], function(z) any(diff(z) < 0))
 	)
-	if (any(bad_units))
+	if (any(bad_units)) {
 		warning(
 			sum(bad_units),
 			" unit(s) switch from treated back to untreated. ",
 			"They will be dropped by `fetwfe()`."
 		)
+	}
 
 	## ---------- assemble tidy dataframe ---------------------------------------
 	res <- data.frame(
@@ -347,7 +353,9 @@ etwfeToFetwfeDf <- function(
 		use.names = FALSE
 	)
 
-	if (length(covars)) res[covars] <- df[covars]
+	if (length(covars)) {
+		res[covars] <- df[covars]
+	}
 
 	# guard against factors that slipped in
 	res[[out_names$time]] <- as.integer(res[[out_names$time]])

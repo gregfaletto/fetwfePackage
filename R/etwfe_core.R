@@ -1219,7 +1219,7 @@ processCovs <- function(
 				cov_name
 			]
 			if (length(val_first_period) != 1 || is.na(val_first_period)) {
-				if (verbose)
+				if (verbose) {
 					message(
 						"Covariate '",
 						cov_name,
@@ -1227,6 +1227,7 @@ processCovs <- function(
 						s,
 						"'. Removing covariate."
 					)
+				}
 				is_valid_cov <- FALSE
 				break
 			}

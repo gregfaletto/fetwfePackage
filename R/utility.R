@@ -402,7 +402,9 @@ getFirstInds <- function(R, T) {
 	n_treats <- getNumTreats(R = R, T = T)
 
 	f_inds <- integer(R)
-	if (R == 0) return(f_inds) # No cohorts, no first_inds
+	if (R == 0) {
+		return(f_inds)
+	} # No cohorts, no first_inds
 
 	for (r in 1:R) {
 		f_inds[r] <- 1 + (r - 1) * (2 * T - r) / 2
@@ -416,7 +418,9 @@ getFirstInds <- function(R, T) {
 	# Additional checks from Gemini below
 
 	stopifnot(all(f_inds <= n_treats) || R == 0)
-	if (R > 0) stopifnot(f_inds[1] == 1)
+	if (R > 0) {
+		stopifnot(f_inds[1] == 1)
+	}
 
 	# Last first_ind: f_inds[R] = 1 + sum_{j=1}^{R-1} (T-j)
 	# Total effects = sum_{j=1}^{R} (T-j) = n_treats

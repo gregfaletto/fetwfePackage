@@ -740,12 +740,18 @@ genFullInvFusionTransformMat <- function(first_inds, T, R, d, num_treats) {
 	block3 <- if (d > 0) diag(d) else NULL
 
 	##———— 4. Cohort × X interactions:     I_d ⊗ (D^{(1)}(R))^{-1} ——
-	block4 <- if (d > 0)
-		kronecker(diag(d), genBackwardsInvFusionTransformMat(R)) else NULL
+	block4 <- if (d > 0) {
+		kronecker(diag(d), genBackwardsInvFusionTransformMat(R))
+	} else {
+		NULL
+	}
 
 	##———— 5. Time × X interactions:       I_d ⊗ (D^{(1)}(T-1))^{-1} —
-	block5 <- if (d > 0)
-		kronecker(diag(d), genBackwardsInvFusionTransformMat(T - 1)) else NULL
+	block5 <- if (d > 0) {
+		kronecker(diag(d), genBackwardsInvFusionTransformMat(T - 1))
+	} else {
+		NULL
+	}
 
 	##———— 6. Base treatment effects:      (D^{(2)}(𝓡))^{-1} ————————
 	block6 <- genInvTwoWayFusionTransformMat(
@@ -755,7 +761,7 @@ genFullInvFusionTransformMat <- function(first_inds, T, R, d, num_treats) {
 	)
 
 	##———— 7. Treatment × X interactions:  I_d ⊗ (D^{(2)}(𝓡))^{-1} ——
-	block7 <- if (d > 0)
+	block7 <- if (d > 0) {
 		kronecker(
 			diag(d),
 			genInvTwoWayFusionTransformMat(
@@ -763,7 +769,10 @@ genFullInvFusionTransformMat <- function(first_inds, T, R, d, num_treats) {
 				first_inds = first_inds,
 				R = R
 			)
-		) else NULL
+		)
+	} else {
+		NULL
+	}
 
 	## Gather present blocks in the same order as the theoretical expression
 	blocks <- list(block1, block2, block3, block4, block5, block6, block7)

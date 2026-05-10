@@ -13,3 +13,8 @@
 ^air\.toml$
 ^.*\.Rcheck$
 ^\.Rproj\.user$
+^\.workflow$
+^\.claude$
+^\.plans$
+^AGENTS\.md$
+^paper_arxiv\.tex$

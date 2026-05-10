@@ -1,0 +1,5 @@
+[format]
+# Use tabs for indentation
+indent-style = "tab"
+# Treat each tab as 4 spaces wide
+indent-width = 4

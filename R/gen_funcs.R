@@ -313,15 +313,21 @@ genCoefs <- function(R, T, d, density, eff_size, seed = NULL) {
 #' @param coefs_obj An object of class \code{"FETWFE_coefs"} containing the coefficient vector
 #' and simulation parameters.
 #'
-#' @return A named list with two elements:
+#' @return An object of class \code{"FETWFE_tes"}, which is a list with the
+#' following elements:
 #' \describe{
-#'   \item{att_true}{A numeric value representing the overall average treatment effect on the
-#'         treated. It is computed as the (equal-weighted) mean of the cohort-specific treatment
-#'         effects.}
-#'   \item{actual_cohort_tes}{A numeric vector containing the true cohort-specific treatment
-#'         effects, calculated by averaging the coefficients corresponding to the treatment dummies
-#'         for each cohort.}
+#'   \item{att_true}{A numeric value representing the overall average treatment
+#'         effect on the treated. It is computed as the (equal-weighted) mean of
+#'         the cohort-specific treatment effects.}
+#'   \item{actual_cohort_tes}{A numeric vector of length \code{R} containing the
+#'         true cohort-specific treatment effects, calculated by averaging the
+#'         coefficients corresponding to the treatment dummies for each cohort.}
+#'   \item{R, T, d, seed}{The generating parameters carried over from
+#'         \code{coefs_obj} so that \code{print()} and \code{summary()} on the
+#'         returned object are self-describing.}
 #' }
+#' Use \code{print()} or \code{summary()} on the returned object for a
+#' formatted display.
 #'
 #' @details
 #' The function internally uses auxiliary routines \code{getNumTreats()}, \code{getP()},
@@ -342,6 +348,9 @@ genCoefs <- function(R, T, d, density, eff_size, seed = NULL) {
 #'
 #' # Cohort-specific treatment effects:
 #' print(te_results$actual_cohort_tes)
+#'
+#' # Or use the new print method for a self-describing display:
+#' print(te_results)
 #' }
 #'
 #' @export
@@ -375,7 +384,16 @@ getTes <- function(coefs_obj) {
 
 	att_true <- as.numeric(mean(actual_cohort_tes))
 
-	return(list(att_true = att_true, actual_cohort_tes = actual_cohort_tes))
+	out <- list(
+		att_true = att_true,
+		actual_cohort_tes = actual_cohort_tes,
+		R = R,
+		T = T,
+		d = d,
+		seed = coefs_obj$seed
+	)
+	class(out) <- "FETWFE_tes"
+	return(out)
 }
 
 
@@ -523,7 +541,9 @@ simulateDataCore <- function(
 	distribution = "gaussian",
 	guarantee_rank_condition = FALSE
 ) {
-	if (!is.null(seed)) set.seed(seed)
+	if (!is.null(seed)) {
+		set.seed(seed)
+	}
 
 	res <- testGenRandomDataInputs(
 		beta = beta,
@@ -824,7 +844,9 @@ simulateDataCore <- function(
 #'
 #' @export
 genCoefsCore <- function(R, T, d, density, eff_size, seed = NULL) {
-	if (!is.null(seed)) set.seed(seed)
+	if (!is.null(seed)) {
+		set.seed(seed)
+	}
 
 	# Check that T is a numeric scalar and at least 3.
 	if (!is.numeric(T) || length(T) != 1 || T < 3) {

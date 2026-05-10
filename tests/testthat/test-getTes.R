@@ -130,3 +130,87 @@ test_that("getTes errors with invalid beta length", {
 		fixed = TRUE
 	)
 })
+
+# ------------------------------------------------------------------------------
+# Test 5: getTes returns an object of class FETWFE_tes with carried params.
+# ------------------------------------------------------------------------------
+test_that("getTes returns an object of class FETWFE_tes with carried params", {
+	coefs <- genCoefs(
+		R = 5,
+		T = 30,
+		d = 12,
+		density = 0.1,
+		eff_size = 2,
+		seed = 234
+	)
+	res <- getTes(coefs)
+	expect_s3_class(res, "FETWFE_tes")
+	expect_equal(res$R, 5)
+	expect_equal(res$T, 30)
+	expect_equal(res$d, 12)
+	expect_equal(res$seed, 234)
+})
+
+# ------------------------------------------------------------------------------
+# Test 6: print method writes the expected lines.
+# NOTE: the regexes below intentionally lock the print-output labels
+# ("Cohorts (R)", "Time periods (T)", "Covariates (d)"). Any cosmetic
+# relabeling of print.FETWFE_tes requires updating this test.
+# ------------------------------------------------------------------------------
+test_that("print.FETWFE_tes writes the expected sections", {
+	coefs <- genCoefs(
+		R = 3,
+		T = 5,
+		d = 2,
+		density = 0.5,
+		eff_size = 1,
+		seed = 1
+	)
+	out <- capture.output(print(getTes(coefs)))
+	joined <- paste(out, collapse = "\n")
+	expect_match(joined, "Overall true ATT")
+	expect_match(joined, "Cohort 1")
+	expect_match(joined, "Cohort 2")
+	expect_match(joined, "Cohort 3")
+	expect_match(joined, "Cohorts \\(R\\)")
+	expect_match(joined, "Time periods \\(T\\)")
+	expect_match(joined, "Covariates \\(d\\)")
+	expect_match(joined, "Seed")
+})
+
+# ------------------------------------------------------------------------------
+# Test 7: summary method returns the documented fields and dispersion stats.
+# ------------------------------------------------------------------------------
+test_that("summary.FETWFE_tes returns expected fields and dispersion stats", {
+	coefs <- genCoefs(
+		R = 3,
+		T = 5,
+		d = 2,
+		density = 0.5,
+		eff_size = 1,
+		seed = 1
+	)
+	s <- summary(getTes(coefs))
+	expect_s3_class(s, "summary.FETWFE_tes")
+	expect_named(s$cohort_te_stats, c("min", "max", "median", "sd"))
+	expect_equal(
+		unname(s$cohort_te_stats["min"]),
+		min(s$actual_cohort_tes)
+	)
+	expect_equal(
+		unname(s$cohort_te_stats["max"]),
+		max(s$actual_cohort_tes)
+	)
+	expect_equal(
+		unname(s$cohort_te_stats["median"]),
+		stats::median(s$actual_cohort_tes)
+	)
+	expect_equal(
+		unname(s$cohort_te_stats["sd"]),
+		stats::sd(s$actual_cohort_tes)
+	)
+
+	out <- capture.output(print(s))
+	joined <- paste(out, collapse = "\n")
+	expect_match(joined, "Cohort effect dispersion")
+})
