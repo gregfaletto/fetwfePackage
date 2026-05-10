@@ -11,15 +11,21 @@ getTes(coefs_obj)
 and simulation parameters.}
 }
 \value{
-A named list with two elements:
+An object of class \code{"FETWFE_tes"}, which is a list with the
+following elements:
 \describe{
-\item{att_true}{A numeric value representing the overall average treatment effect on the
-treated. It is computed as the (equal-weighted) mean of the cohort-specific treatment
-effects.}
-\item{actual_cohort_tes}{A numeric vector containing the true cohort-specific treatment
-effects, calculated by averaging the coefficients corresponding to the treatment dummies
-for each cohort.}
+\item{att_true}{A numeric value representing the overall average treatment
+effect on the treated. It is computed as the (equal-weighted) mean of
+the cohort-specific treatment effects.}
+\item{actual_cohort_tes}{A numeric vector of length \code{R} containing the
+true cohort-specific treatment effects, calculated by averaging the
+coefficients corresponding to the treatment dummies for each cohort.}
+\item{R, T, d, seed}{The generating parameters carried over from
+\code{coefs_obj} so that \code{print()} and \code{summary()} on the
+returned object are self-describing.}
 }
+Use \code{print()} or \code{summary()} on the returned object for a
+formatted display.
 }
 \description{
 This function extracts the true treatment effects from a full coefficient vector
@@ -46,6 +52,9 @@ print(te_results$att_true)
 
 # Cohort-specific treatment effects:
 print(te_results$actual_cohort_tes)
+
+# Or use the new print method for a self-describing display:
+print(te_results)
 }
 
 }

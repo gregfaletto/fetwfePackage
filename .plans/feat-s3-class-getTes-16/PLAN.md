@@ -49,7 +49,7 @@ Before this change, the same call printed the raw list:
 - [ ] Implementation milestone 3: add new tests to `tests/testthat/test-getTes.R`.
 - [ ] Implementation milestone 4: bump version 1.5.0 → 1.5.1 in `DESCRIPTION`, `NEWS.md`, `inst/CITATION`.
 - [ ] Implementation milestone 5: add five lines to `.Rbuildignore` for `^\.workflow$`, `^\.claude$`, `^\.plans$`, `^AGENTS\.md$`, `^paper_arxiv\.tex$`.
-- [ ] Run `air format .`, then `devtools::document()`, `devtools::test()`, `devtools::check()`, `devtools::check(args = "--as-cran")`. Confirm clean.
+- [ ] Run the per-PR CRAN gate: `air format .`, then `devtools::document()`, `devtools::test()`, `devtools::check(args = "--as-cran")`, `devtools::spell_check()` (bootstrap `inst/WORDLIST` if needed), `urlchecker::url_check()`. Confirm clean. (`devtools::build_vignettes()` not required since vignettes are untouched.)
 - [ ] Post-execution review subagent invoked per `.workflow/REVIEW_AGENT.md`.
 - [ ] Post-execution feedback applied.
 - [ ] Push branch, open PR targeting `main`, link issue #16.
@@ -108,6 +108,10 @@ Before this change, the same call printed the raw list:
 - Decision: Empirically verified `expect_type(res, "list")` continues to pass with class assignment.
   Rationale: Plan-review subagent verified that `typeof(structure(list(), class = "FETWFE_tes"))` returns `"list"`, and testthat's `expect_type` uses `typeof()`. So existing Test 1 in `tests/testthat/test-getTes.R` is not affected by the class change. Recorded here per round-1 feedback action item 4.
   Date/Author: 2026-05-10 / plan-review subagent.
+
+- Decision: Adopt the unconditional per-PR CRAN-readiness gate (`--as-cran` + `spell_check` + `url_check`, plus `build_vignettes` when vignettes change).
+  Rationale: Greg directed that every PR cycle leave the package CRAN-ready, not just CRAN-bound ones. Workflow docs updated; this plan's Step 5 and Validation criteria expanded to match. The marginal cost is small (`spell_check` and `url_check` are seconds each) and catches typos / dead URLs that would otherwise accumulate as deferred CRAN-NOTE backlog.
+  Date/Author: 2026-05-10 / Greg.
 
 ## Outcomes & Retrospective
 
@@ -420,11 +424,11 @@ Note: `stats::median` and `stats::sd` are not currently in the `@importFrom stat
     ^AGENTS\.md$
     ^paper_arxiv\.tex$
 
-These silence the two pre-existing `R CMD check` NOTEs surfaced during plan review (one for hidden top-level dirs, one for the two top-level files). All five paths are personal-tooling or methodology-source artifacts that do not belong in a CRAN tarball; the package's installed surface is unaffected.
+These silence the two pre-existing `R CMD check` NOTEs surfaced during plan review (one for hidden top-level dirs, one for the two top-level files). The `^\.plans$` entry is particularly important now that `.plans/<branch>/` is **tracked** in version control (per `.workflow/WORKFLOW_LESSONS.md` §9 — the design dialogue rides along with the feature branch's PR) but should still not enter the CRAN tarball. The other four paths are personal-tooling or methodology-source artifacts that do not belong in a CRAN tarball either. The package's installed surface is unaffected by any of the five entries.
 
 After this step, `devtools::check()` should produce `0 errors / 0 warnings / 0 notes` rather than `0 errors / 0 warnings / 2 notes`.
 
-**Step 5 — Format, regenerate docs, run checks.** From the repo root:
+**Step 5 — Format, regenerate docs, run the full per-PR CRAN gate.** From the repo root:
 
     air format .
 
@@ -432,16 +436,21 @@ Then in an R session:
 
     devtools::document()
     devtools::test()
-    devtools::check()
     devtools::check(args = "--as-cran")
+    devtools::spell_check()
+    urlchecker::url_check()
+    # vignettes/*.Rmd is not in this PR's diff, so build_vignettes() is not required.
 
 Expected:
 
-- `devtools::document()` regenerates `man/getTes.Rd` (updated `@return`), creates `man/FETWFE_tes-class.Rd`, and updates `NAMESPACE` to add three `S3method(...)` lines.
+- `devtools::document()` regenerates `man/getTes.Rd` (updated `@return` and `\dontrun{}` example), creates `man/FETWFE_tes-class.Rd`, and updates `NAMESPACE` to add three `S3method(...)` lines. A second run produces no diff (idempotent).
 - `devtools::test()` reports all tests passing — the four existing `getTes` tests plus the three new ones, plus everything else in the suite.
-- `devtools::check()` and `devtools::check(args = "--as-cran")` exit with `0 errors ✔ | 0 warnings ✔ | 0 notes ✔`.
+- `devtools::check(args = "--as-cran")` exits with `0 errors ✔ | 0 warnings ✔ | 0 notes ✔` (assumes Step 4b's `.Rbuildignore` cleanup landed).
+- `devtools::spell_check()` produces empty output — *or*, on first run for this repo, flags domain terms (`FETWFE`, `ETWFE`, `BETWFE`, `ATT`, `CATT`, `Faletto`, `Wooldridge`, `Pesaran`, etc.) which need to be added to `inst/WORDLIST` (one term per line). If a WORDLIST update is needed, it lands in the same commit as the rest of this PR. **Note:** `inst/WORDLIST` may not exist on `origin/main`; if so, this PR creates it. Real typos in any new strings must be fixed (the new strings are: "True Treatment Effects (from FETWFE_coefs)", "Overall true ATT", "Cohort effects", "Generated from", "Cohorts (R)", "Time periods (T)", "Covariates (d)", "Seed", "Summary of True Treatment Effects (from FETWFE_coefs)", "Cohort effect dispersion", "min", "max", "median", "sd").
+- `urlchecker::url_check()` reports all URLs reachable. This PR introduces no new URLs, so the result is whatever the baseline is — flag any pre-existing dead URLs in the PR description but don't block merge on them (separate concern).
+- `devtools::build_vignettes()` is **not** in the gate for this PR because `vignettes/*.Rmd` is not in the diff. (Per `.workflow/PLANS.md` § "Standard acceptance criteria" #4.)
 
-If `air format .` modifies any file, stage and commit alongside the source edit.
+If `air format .` modifies any file, stage and commit alongside the source edit. If `inst/WORDLIST` is created or updated, add it to the commit's `git add` list (see Step 6).
 
 **Step 6 — Commit.** Stage exactly:
 
@@ -452,32 +461,36 @@ If `air format .` modifies any file, stage and commit alongside the source edit.
 - `NEWS.md` (new section)
 - `inst/CITATION` (version bump)
 - `.Rbuildignore` (5 new lines)
+- `inst/WORDLIST` (created or updated, only if `spell_check()` flagged legitimate terms — see Step 5)
 - `man/getTes.Rd` (regenerated)
 - `man/FETWFE_tes-class.Rd` (new, regenerated)
 - `NAMESPACE` (regenerated)
 
-Single commit:
+Single commit (omit `inst/WORDLIST` from the `git add` list if Step 5's `spell_check()` was empty):
 
     git add R/gen_funcs.R R/getTes_class.R tests/testthat/test-getTes.R \
             DESCRIPTION NEWS.md inst/CITATION .Rbuildignore \
+            inst/WORDLIST \
             man/getTes.Rd man/FETWFE_tes-class.Rd NAMESPACE
     git commit -m "Add S3 class FETWFE_tes for getTes() output (#16)"
 
-Verify with `git status` — only `.claude/` (and any other personal-state directories) should remain untracked. Do not stage `.plans/`.
+Verify with `git status` — only `.claude/` (and any other personal-state directories) should remain untracked. The `.plans/feat-s3-class-getTes-16/` folder is tracked (per `.workflow/WORKFLOW_LESSONS.md` §9) but the plan/feedback/response files were already committed in `8fdba98 update plan` and should not show as modified unless this PR's work caused further plan edits.
 
 ## Validation and Acceptance
 
-Per `.workflow/PLANS.md` § "Standard acceptance criteria":
+Per `.workflow/PLANS.md` § "Standard acceptance criteria" — the unconditional per-PR CRAN gate:
 
-1. `devtools::check()` exits with `0 errors ✔ | 0 warnings ✔ | 0 notes ✔`.
-2. `devtools::check(args = "--as-cran")` exits cleanly.
-3. `devtools::test()` reports all tests passing. The three new tests (5, 6, 7) fail before the source changes and pass after — verify by running on `origin/main` first, then on this branch.
-4. `devtools::document()` is idempotent: a second run produces no diff.
-5. `NEWS.md` has a new bullet under a new `## Version 1.5.1` header. `DESCRIPTION` `Version:` is bumped to 1.5.1.
-6. `inst/CITATION` `note` line references `1.5.1`.
-7. Every named declaration in the "Interfaces and Dependencies" section appears in `git diff origin/main` with matching signature; no extra unplanned exports appear.
-8. The `Surprises & Discoveries / Decision Log / Outcomes & Retrospective` sections of this plan are kept current.
-9. No math change; no `paper_arxiv.tex` citation needed.
+1. `devtools::check(args = "--as-cran")` exits with `0 errors ✔ | 0 warnings ✔ | 0 notes ✔`. (Achievable with Step 4b's `.Rbuildignore` cleanup landed.)
+2. `devtools::spell_check()` produces empty output. If domain terms were flagged on first run, they have been added to `inst/WORDLIST` in the same commit and a re-run is now empty.
+3. `urlchecker::url_check()` reports all URLs reachable. (No new URLs introduced by this PR; pre-existing URL-check state is the baseline.)
+4. `devtools::build_vignettes()` is **not required** for this PR: `vignettes/*.Rmd` is not in the diff.
+5. `devtools::test()` reports all tests passing. The three new tests (5, 6, 7) fail before the source changes and pass after — verify by running on `origin/main` first, then on this branch.
+6. `devtools::document()` is idempotent: a second run produces no diff.
+7. `NEWS.md` has a new bullet under a new `## Version 1.5.1` header. `DESCRIPTION` `Version:` is bumped to 1.5.1.
+8. `inst/CITATION` `note` line references `1.5.1`.
+9. Every named declaration in the "Interfaces and Dependencies" section appears in `git diff origin/main` with matching signature; no extra unplanned exports appear.
+10. The `Surprises & Discoveries / Decision Log / Outcomes & Retrospective` sections of this plan are kept current.
+11. No math change; no `paper_arxiv.tex` citation needed.
 
 PR-specific acceptance:
 
@@ -566,3 +579,5 @@ No changes to `Imports:` or `Suggests:` in `DESCRIPTION`.
 - **2026-05-10 (initial draft)** — Plan drafted from issue-clarification dialogue with Greg. Class name `FETWFE_tes`, medium-detail print, summary with min/max/median/sd dispersion stats, patch version bump 1.5.0 → 1.5.1, all decisions confirmed in chat.
 
 - **2026-05-10 (round 1 plan-review applied)** — Plan-review subagent ran empirical validation (overlay + load_all + document + test + check); no blockers, six minor action items. Greg directed: keep the `length(tes) >= 2` guard for defensive resiliency (with a comment) but change `"<NA (R<2)>"` → `"<NA>"`; bundle a 5-line `.Rbuildignore` cleanup to silence the 2 pre-existing CRAN NOTEs the subagent surfaced; apply remaining items 2–6 (note `cran-comments.md` not bumped, code-comment Test 6 regex sensitivity, Decision Log on `expect_type` continuity, optional `\dontrun{}` example update). Surprises & Discoveries populated with reviewer's empirical findings (`seed = NULL` path, `expect_named` ordering, `R = 2` edge case, `expect_type` typeof behavior, two pre-existing NOTEs). Total source change estimate revised from ~150 to ~160 lines including the bundled `.Rbuildignore` lines.
+
+- **2026-05-10 (CRAN-readiness gate adopted)** — Greg directed that every PR cycle leave the package CRAN-ready, not just CRAN-bound ones. Workflow docs (`.workflow/PLANS.md`, `.workflow/REVIEW_AGENT.md`, `.workflow/R_WORKFLOW.md`, `.workflow/DEV_INSTRUCTIONS.md`) updated to make `devtools::check(args = "--as-cran")` + `devtools::spell_check()` + `urlchecker::url_check()` the unconditional per-PR gate, with `devtools::build_vignettes()` required only when vignettes are touched. This plan's Step 5 and Validation/Acceptance sections updated accordingly: spell_check / url_check added; criterion list re-numbered; commit list now includes `inst/WORDLIST` if first-run spell_check requires bootstrapping it. `build_vignettes()` is skipped for this PR (vignettes untouched).

@@ -1,5 +1,11 @@
 # NEWS
 
+## Version 1.5.1 (2026-05-10)
+
+- Output of `getTes()` is now an S3 object of class `FETWFE_tes` with
+  `print()` and `summary()` methods. Existing field accessors
+  (`$att_true`, `$actual_cohort_tes`) are unchanged.
+
 ## Version 1.5.0 (2025-07-01)
 
 - Updates to documentation, various minor tweaks to prepare for CRAN submission.
