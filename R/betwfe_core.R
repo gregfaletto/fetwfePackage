@@ -91,7 +91,8 @@
 #' @param add_ridge (Optional.) Logical; if TRUE, adds a small amount of ridge
 #' regularization to the (untransformed) coefficients to stabilize estimation.
 #' Default is FALSE.
-#' @return A named list with the following elements: \item{att_hat}{The
+#' @return An object of class \code{betwfe} containing the following elements:
+#' \item{att_hat}{The
 #' estimated overall average treatment effect for a randomly selected treated
 #' unit.} \item{att_se}{If `q < 1`, a standard error for the ATT. If
 #' `indep_counts` was provided, this standard error is asymptotically exact; if
@@ -311,7 +312,7 @@ betwfe <- function(
 		att_se <- res$in_sample_att_se
 		cohort_probs <- res$cohort_probs
 	}
-	return(list(
+	out <- list(
 		att_hat = att_hat,
 		att_se = att_se,
 		catt_hats = res$catt_hats,
@@ -338,8 +339,11 @@ betwfe <- function(
 		R = res$R,
 		d = res$d,
 		p = res$p,
-		calc_ses = res$calc_ses
-	))
+		calc_ses = res$calc_ses,
+		alpha = alpha
+	)
+	class(out) <- "betwfe"
+	return(out)
 }
 
 #' Run BETWFE on Simulated Data
@@ -386,7 +390,8 @@ betwfe <- function(
 #' @param add_ridge (Optional.) Logical; if TRUE, adds a small amount of ridge
 #' regularization to the (untransformed) coefficients to stabilize estimation.
 #' Default is FALSE.
-#' @return A named list with the following elements: \item{att_hat}{The
+#' @return An object of class \code{betwfe} containing the following elements:
+#' \item{att_hat}{The
 #' estimated overall average treatment effect for a randomly selected treated
 #' unit.} \item{att_se}{If `q < 1`, a standard error for the ATT. If
 #' `indep_counts` was provided, this standard error is asymptotically exact; if

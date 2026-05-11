@@ -1,5 +1,19 @@
 # NEWS
 
+## Version 1.5.4 (2026-05-10)
+
+- Added a new vignette `vignettes/etwfe_betwfe_vignette.Rmd`
+  ("Comparison Estimators: ETWFE and BETWFE") demonstrating
+  `etwfe()` and `betwfe()` on simulated panel data (with
+  comparison to true treatment effects via `getTes()`), plus
+  practical guidance on when to use each estimator vs. the
+  recommended `fetwfe()`. Resolves #17.
+- Output of `betwfe()` is now an S3 object of class `betwfe`
+  with `print()`, `summary()`, and `coef()` methods, matching
+  the pattern already in place for `fetwfe()` and `etwfe()`.
+  Existing field accessors (`$att_hat`, `$att_se`, `$catt_df`,
+  etc.) are unchanged.
+
 ## Version 1.5.3 (2026-05-10)
 
 - Resolved 11 "Could not resolve link to topic" warnings from

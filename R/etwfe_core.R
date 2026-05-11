@@ -16,7 +16,8 @@
 #' @param add_ridge (Optional.) Logical; if TRUE, adds a small amount of ridge
 #' regularization to the (untransformed) coefficients to stabilize estimation.
 #' Default is FALSE.
-#' @return A named list with the following elements: \item{att_hat}{The
+#' @return An object of class \code{etwfe} containing the following elements:
+#' \item{att_hat}{The
 #' estimated overall average treatment effect for a randomly selected treated
 #' unit.} \item{att_se}{A standard error for the ATT. If the Gram matrix is not
 #' invertible, this will be NA.} \item{catt_hats}{A named vector containing the

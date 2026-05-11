@@ -1031,3 +1031,93 @@ test_that("tibbles work as input to fewtfe", {
 			colnames(result$catt_df)
 	))
 })
+
+# ------------------------------------------------------------------------------
+# S3 class + methods (added in PR for issue #17 bundle).
+# ------------------------------------------------------------------------------
+
+# Helper: a small simulated betwfe result reused across S3 method tests.
+.s3_betwfe_fixture <- function() {
+	coefs <- genCoefs(
+		R = 3,
+		T = 6,
+		d = 2,
+		density = 0.5,
+		eff_size = 2,
+		seed = 20260510
+	)
+	sim <- simulateData(
+		coefs,
+		N = 120,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 1
+	)
+	betwfeWithSimulatedData(sim)
+}
+
+test_that("betwfe() returns an object of class 'betwfe'", {
+	res <- .s3_betwfe_fixture()
+	expect_s3_class(res, "betwfe")
+	# typeof() unaffected by class assignment, so existing list-shape
+	# assertions elsewhere in this file continue to pass.
+	expect_type(res, "list")
+	# The new alpha field is present so print/summary methods can compute CIs.
+	expect_true("alpha" %in% names(res))
+	expect_equal(res$alpha, 0.05)
+})
+
+test_that("print.betwfe writes the expected sections", {
+	res <- .s3_betwfe_fixture()
+	out <- capture.output(print(res))
+	joined <- paste(out, collapse = "\n")
+	expect_match(joined, "Bridge-Penalized Extended Two-Way Fixed Effects")
+	expect_match(joined, "Overall Average Treatment Effect")
+	expect_match(joined, "Cohort Average Treatment Effects")
+	expect_match(joined, "Model Details")
+	expect_match(joined, "Lambda\\*")
+})
+
+test_that("summary.betwfe returns documented fields and renders cleanly", {
+	res <- .s3_betwfe_fixture()
+	s <- summary(res)
+	expect_s3_class(s, "summary.betwfe")
+	expect_true(all(c("att", "catt", "model_info", "alpha") %in% names(s)))
+	expect_named(s$att, c("estimate", "se"))
+	expect_s3_class(s$catt, "data.frame")
+	expect_true(
+		all(
+			c("N", "T", "R", "d", "p", "lambda_star", "model_size") %in%
+				names(s$model_info)
+		)
+	)
+
+	out <- capture.output(print(s))
+	joined <- paste(out, collapse = "\n")
+	expect_match(joined, "Summary of Bridge-Penalized")
+	expect_match(joined, "Overall ATT")
+})
+
+test_that("coef.betwfe returns the beta_hat vector", {
+	res <- .s3_betwfe_fixture()
+	expect_identical(coef(res), res$beta_hat)
+})
+
+# Regression test: print.betwfe(show_internal = TRUE) must read top-level
+# x$X_ints / x$y / x$calc_ses fields (not x$internal$..., which is fetwfe()'s
+# nested shape -- see R/betwfe_class.R comment near the show_internal block
+# and the round-3 plan-review feedback for why this matters).
+test_that("print.betwfe show_internal = TRUE reads top-level fields", {
+	res <- .s3_betwfe_fixture()
+	out <- capture.output(print(res, show_internal = TRUE))
+	joined <- paste(out, collapse = "\n")
+	expect_match(joined, "Internal Details")
+	expect_match(joined, "X dims")
+	expect_match(joined, "y length")
+	expect_match(joined, "SEs computed")
+	# If the wrong (fetwfe-style nested) field paths were used, the X dims line
+	# would print empty dims, the y length would be 0, and SEs computed would
+	# be empty. Assert that the actual values appear.
+	expect_match(joined, "X dims +: \\d+ x \\d+")
+	expect_match(joined, "y length +: \\d+")
+	expect_match(joined, "SEs computed: (TRUE|FALSE)")
+})
