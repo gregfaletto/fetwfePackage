@@ -1,5 +1,20 @@
 # NEWS
 
+## Version 1.5.5 (2026-05-11)
+
+- `fetwfe()`, `betwfe()`, `etwfe()`, and `twfeCovs()` now surface a
+  per-cohort `P_value` column in `catt_df` and a top-level
+  `att_p_value` field on the returned list. For `fetwfe()` and
+  `betwfe()` (which perform bridge regression with selection), the
+  `catt_df` also gains a `selected` logical column and the return
+  list gains a top-level `att_selected` field; selected-out cohorts
+  have `P_value = NA` and `selected = FALSE`. The previously
+  documented but non-functional `order_by = "pvalue"` option in the
+  S3 `print()` methods now works as advertised. See the new
+  "Testing the zero-effect null" section in the package vignette
+  for interpretation guidance under FETWFE's restriction selection
+  consistency.
+
 ## Version 1.5.4 (2026-05-10)
 
 - Added a new vignette `vignettes/etwfe_betwfe_vignette.Rmd`

@@ -31,6 +31,10 @@ estimated overall average treatment effect for a randomly selected treated
 unit.} \item{att_se}{If \code{q < 1}, a standard error for the ATT. If
 \code{indep_counts} was provided, this standard error is asymptotically exact; if
 not, it is asymptotically conservative. If \code{q >= 1}, this will be NA.}
+\item{att_p_value}{A two-sided p-value for the overall ATT against the
+null \code{H_0: tau = 0}, computed as \verb{2 * pnorm(-|att_hat / att_se|)}. \code{NA} if
+\code{att_se} is zero or \code{NA}. Standard post-OLS interpretation; \code{twfeCovs} does
+not perform selection.}
 \item{catt_hats}{A named vector containing the estimated average treatment
 effects for each cohort.} \item{catt_ses}{If \code{q < 1}, a named vector
 containing the (asymptotically exact, non-conservative) standard errors for
@@ -40,8 +44,10 @@ cohort conditional on being treated, which was used in calculating \code{att_hat
 If \code{indep_counts} was provided, \code{cohort_probs} was calculated from that;
 otherwise, it was calculated from the counts of units in each treated
 cohort in \code{pdata}.} \item{catt_df}{A dataframe displaying the cohort names,
-average treatment effects, standard errors, and \code{1 - alpha} confidence
-interval bounds.} \item{beta_hat}{The full vector of estimated coefficients.}
+average treatment effects, standard errors, \code{1 - alpha} confidence
+interval bounds, and per-cohort p-values (\code{P_value}). No \code{selected}
+column; \code{twfeCovs} does not perform selection.}
+\item{beta_hat}{The full vector of estimated coefficients.}
 \item{treat_inds}{The indices of \code{beta_hat} corresponding to
 the treatment effects for each cohort at each time.}
 \item{treat_int_inds}{The indices of \code{beta_hat} corresponding to the

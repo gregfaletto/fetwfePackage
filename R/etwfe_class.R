@@ -71,12 +71,17 @@ print.etwfe <- function(
 	ci_low <- x$att_hat - qnorm(1 - x$alpha / 2) * x$att_se
 	ci_high <- x$att_hat + qnorm(1 - x$alpha / 2) * x$att_se
 	cat(sprintf(
-		"Overall Average Treatment Effect (ATT):\n  Estimate: %.4f\n",
+		"Overall Average Treatment Effect (ATT):\n  Estimate:   %.4f\n",
 		x$att_hat
 	))
+	cat(sprintf("  Std. Error: %.4f\n", x$att_se))
+	if (!is.null(x$att_p_value) && !is.na(x$att_p_value)) {
+		cat(sprintf("  P-value:    %.4g\n", x$att_p_value))
+	} else {
+		cat("  P-value:    NA\n")
+	}
 	cat(sprintf(
-		"  Std. Error: %.4f\n  %.0f%% CI: [%.4f, %.4f]\n\n",
-		x$att_se,
+		"  %.0f%% CI:    [%.4f, %.4f]\n\n",
 		ci_pct,
 		ci_low,
 		ci_high
@@ -122,7 +127,11 @@ print.etwfe <- function(
 #' @export
 summary.etwfe <- function(object, full_catt = FALSE, ...) {
 	list(
-		att = c(estimate = object$att_hat, se = object$att_se),
+		att = c(
+			estimate = object$att_hat,
+			se = object$att_se,
+			p_value = object$att_p_value
+		),
 		catt = if (full_catt) {
 			object$catt_df
 		} else {
@@ -152,10 +161,13 @@ print.summary.etwfe <- function(x, ...) {
 	ci_pct <- 100 * (1 - x$alpha)
 	ci_low <- x$att["estimate"] - qnorm(1 - x$alpha / 2) * x$att["se"]
 	ci_high <- x$att["estimate"] + qnorm(1 - x$alpha / 2) * x$att["se"]
+	p_val <- x$att["p_value"]
+	p_str <- if (is.na(p_val)) "NA" else sprintf("%.4g", p_val)
 	cat(sprintf(
-		"Overall ATT: %.4f  (SE = %.4f, %.0f%% CI = [%.4f, %.4f])\n\n",
+		"Overall ATT: %.4f  (SE = %.4f, p = %s, %.0f%% CI = [%.4f, %.4f])\n\n",
 		x$att["estimate"],
 		x$att["se"],
+		p_str,
 		ci_pct,
 		ci_low,
 		ci_high

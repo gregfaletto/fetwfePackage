@@ -74,7 +74,12 @@
 #' @return A named list with the following elements: \item{att_hat}{The
 #' estimated overall average treatment effect for a randomly selected treated
 #' unit.} \item{att_se}{A standard error for the ATT. If the Gram matrix is not
-#' invertible, this will be NA.} \item{catt_hats}{A named vector containing the
+#' invertible, this will be NA.}
+#' \item{att_p_value}{A two-sided p-value for the overall ATT against the
+#' null `H_0: tau = 0`, computed as `2 * pnorm(-|att_hat / att_se|)`. `NA` if
+#' `att_se` is zero or `NA`. Standard post-OLS interpretation; `twfeCovs` does
+#' not perform selection.}
+#' \item{catt_hats}{A named vector containing the
 #' estimated average treatment effects for each cohort.} \item{catt_ses}{A named
 #' vector containing the (asymptotically exact) standard errors for
 #' the estimated average treatment effects within each cohort.}
@@ -83,8 +88,10 @@
 #' If `indep_counts` was provided, `cohort_probs` was calculated from that;
 #' otherwise, it was calculated from the counts of units in each treated
 #' cohort in `pdata`.} \item{catt_df}{A dataframe displaying the cohort names,
-#' average treatment effects, standard errors, and `1 - alpha` confidence
-#' interval bounds.} \item{beta_hat}{The full vector of estimated coefficients.}
+#' average treatment effects, standard errors, `1 - alpha` confidence
+#' interval bounds, and per-cohort p-values (`P_value`). No `selected`
+#' column; `twfeCovs` does not perform selection.}
+#' \item{beta_hat}{The full vector of estimated coefficients.}
 #' \item{treat_inds}{The indices of `beta_hat` corresponding to
 #' the treatment effects for each cohort at each time.}
 #' \item{treat_int_inds}{The indices of `beta_hat` corresponding to the
@@ -228,9 +235,12 @@ twfeCovs <- function(
 		cohort_probs <- res$cohort_probs
 	}
 
+	att_p_value <- .compute_p_values(att_hat, att_se)
+
 	return(list(
 		att_hat = att_hat,
 		att_se = att_se,
+		att_p_value = att_p_value,
 		catt_hats = res$catt_hats,
 		catt_ses = res$catt_ses,
 		cohort_probs = cohort_probs,
@@ -277,6 +287,10 @@ twfeCovs <- function(
 #' unit.} \item{att_se}{If `q < 1`, a standard error for the ATT. If
 #' `indep_counts` was provided, this standard error is asymptotically exact; if
 #' not, it is asymptotically conservative. If `q >= 1`, this will be NA.}
+#' \item{att_p_value}{A two-sided p-value for the overall ATT against the
+#' null `H_0: tau = 0`, computed as `2 * pnorm(-|att_hat / att_se|)`. `NA` if
+#' `att_se` is zero or `NA`. Standard post-OLS interpretation; `twfeCovs` does
+#' not perform selection.}
 #' \item{catt_hats}{A named vector containing the estimated average treatment
 #' effects for each cohort.} \item{catt_ses}{If `q < 1`, a named vector
 #' containing the (asymptotically exact, non-conservative) standard errors for
@@ -286,8 +300,10 @@ twfeCovs <- function(
 #' If `indep_counts` was provided, `cohort_probs` was calculated from that;
 #' otherwise, it was calculated from the counts of units in each treated
 #' cohort in `pdata`.} \item{catt_df}{A dataframe displaying the cohort names,
-#' average treatment effects, standard errors, and `1 - alpha` confidence
-#' interval bounds.} \item{beta_hat}{The full vector of estimated coefficients.}
+#' average treatment effects, standard errors, `1 - alpha` confidence
+#' interval bounds, and per-cohort p-values (`P_value`). No `selected`
+#' column; `twfeCovs` does not perform selection.}
+#' \item{beta_hat}{The full vector of estimated coefficients.}
 #' \item{treat_inds}{The indices of `beta_hat` corresponding to
 #' the treatment effects for each cohort at each time.}
 #' \item{treat_int_inds}{The indices of `beta_hat` corresponding to the
@@ -462,7 +478,7 @@ twfeCovsWithSimulatedData <- function(
 #'   \item{indep_att_se}{Standard error for `indep_att_hat` (NA if not applicable).}
 #'   \item{catt_hats}{A named vector of estimated CATTs for each cohort.}
 #'   \item{catt_ses}{A named vector of SEs for `catt_hats` (NA if `q >= 1`).}
-#'   \item{catt_df}{A data.frame summarizing CATTs, SEs, and confidence intervals.}
+#'   \item{catt_df}{A data.frame summarizing CATTs, SEs, confidence intervals, and per-cohort p-values (`P_value`).}
 #'   \item{theta_hat}{The vector of estimated coefficients in the *transformed* (fused) space, including the intercept as the first element.}
 #'   \item{beta_hat}{The vector of estimated coefficients in the *original* space (after untransforming `theta_hat`, excluding intercept).}
 #'   \item{treat_inds}{Indices in `beta_hat` corresponding to base treatment effects.}

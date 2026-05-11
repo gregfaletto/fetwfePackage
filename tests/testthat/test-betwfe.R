@@ -1082,7 +1082,7 @@ test_that("summary.betwfe returns documented fields and renders cleanly", {
 	s <- summary(res)
 	expect_s3_class(s, "summary.betwfe")
 	expect_true(all(c("att", "catt", "model_info", "alpha") %in% names(s)))
-	expect_named(s$att, c("estimate", "se"))
+	expect_named(s$att, c("estimate", "se", "p_value"))
 	expect_s3_class(s$catt, "data.frame")
 	expect_true(
 		all(
@@ -1120,4 +1120,101 @@ test_that("print.betwfe show_internal = TRUE reads top-level fields", {
 	expect_match(joined, "X dims +: \\d+ x \\d+")
 	expect_match(joined, "y length +: \\d+")
 	expect_match(joined, "SEs computed: (TRUE|FALSE)")
+})
+
+# ------------------------------------------------------------------------------
+# Test: betwfe surfaces P_value and selected in catt_df
+# ------------------------------------------------------------------------------
+test_that("betwfe surfaces P_value and selected in catt_df", {
+	set.seed(2026)
+	sim <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+	dat <- simulateData(
+		sim,
+		N = 120,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5
+	)
+	res <- betwfeWithSimulatedData(dat, verbose = FALSE)
+
+	expect_true("P_value" %in% colnames(res$catt_df))
+	expect_true("selected" %in% colnames(res$catt_df))
+	expect_type(res$catt_df$P_value, "double")
+	expect_type(res$catt_df$selected, "logical")
+
+	expect_true("att_p_value" %in% names(res))
+	expect_true("att_selected" %in% names(res))
+	expect_type(res$att_selected, "logical")
+	expect_length(res$att_p_value, 1)
+	expect_length(res$att_selected, 1)
+
+	# P_value semantics: in [0, 1] when not NA; NA exactly when the cohort
+	# is selected out (Estimated TE == 0).
+	non_na <- !is.na(res$catt_df$P_value)
+	expect_true(all(res$catt_df$P_value[non_na] >= 0))
+	expect_true(all(res$catt_df$P_value[non_na] <= 1))
+	expect_identical(
+		res$catt_df$selected,
+		res$catt_df[["Estimated TE"]] != 0
+	)
+	expect_true(all(is.na(res$catt_df$P_value[!res$catt_df$selected])))
+})
+
+# ------------------------------------------------------------------------------
+# Test: betwfe produces at least one selected-out cohort in a sparse simulation
+# ------------------------------------------------------------------------------
+test_that("betwfe produces at least one selected-out cohort in a sparse simulation", {
+	set.seed(2026)
+	sim <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+	dat <- simulateData(
+		sim,
+		N = 120,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5
+	)
+	res <- betwfeWithSimulatedData(dat, verbose = FALSE)
+
+	expect_gt(sum(res$catt_df[["Estimated TE"]] == 0), 0)
+})
+
+# ------------------------------------------------------------------------------
+# Test: order_by = "pvalue" sorts by ascending P_value with NAs last
+# ------------------------------------------------------------------------------
+test_that("order_by = 'pvalue' sorts CATT by ascending P_value with NAs last", {
+	set.seed(2026)
+	sim <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+	dat <- simulateData(
+		sim,
+		N = 120,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5
+	)
+	res <- betwfeWithSimulatedData(dat, verbose = FALSE)
+
+	output_lines <- capture.output(print(res, order_by = "pvalue"))
+
+	header_idx <- grep(
+		"Cohort Average Treatment Effects \\(CATT\\):",
+		output_lines
+	)
+	expect_length(header_idx, 1)
+
+	end_idx <- grep("^$|Model Details:", output_lines)
+	end_idx <- end_idx[end_idx > header_idx][1]
+	cohort_rows <- output_lines[(header_idx + 2):(end_idx - 1)]
+
+	expected_order <- order(
+		res$catt_df$P_value,
+		na.last = TRUE
+	)
+	expected_cohorts <- as.character(
+		res$catt_df$Cohort[expected_order]
+	)
+
+	first_tokens <- vapply(
+		strsplit(trimws(cohort_rows), "\\s+"),
+		`[`,
+		character(1),
+		1
+	)
+	expect_equal(first_tokens, expected_cohorts)
 })

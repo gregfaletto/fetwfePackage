@@ -1000,3 +1000,30 @@ test_that("etwfe throws error when a cohort contains fewer than d + 1 units", {
 	expect_true(!is.na(res$att_hat))
 	expect_true(res$att_hat != 0)
 })
+
+# ------------------------------------------------------------------------------
+# Test: etwfe surfaces P_value but not selected in catt_df
+# ------------------------------------------------------------------------------
+test_that("etwfe surfaces P_value but not selected in catt_df", {
+	set.seed(2026)
+	sim <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+	dat <- simulateData(
+		sim,
+		N = 120,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5
+	)
+	res <- etwfeWithSimulatedData(dat, verbose = FALSE)
+
+	expect_true("P_value" %in% colnames(res$catt_df))
+	expect_false("selected" %in% colnames(res$catt_df))
+
+	expect_true("att_p_value" %in% names(res))
+	expect_false("att_selected" %in% names(res))
+	expect_length(res$att_p_value, 1)
+
+	# P_value is in [0, 1] for non-NA entries.
+	non_na <- !is.na(res$catt_df$P_value)
+	expect_true(all(res$catt_df$P_value[non_na] >= 0))
+	expect_true(all(res$catt_df$P_value[non_na] <= 1))
+})
