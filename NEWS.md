@@ -1,5 +1,11 @@
 # NEWS
 
+## Version 1.5.2 (2026-05-10)
+
+- Fixed two redirected URLs in the main vignette (`vignettes/vignette.Rmd`)
+  that pointed at a bookdown.org domain now 301-redirecting to Posit
+  Connect cloud. Resolves #20.
+
 ## Version 1.5.1 (2026-05-10)
 
 - Output of `getTes()` is now an S3 object of class `FETWFE_tes` with
