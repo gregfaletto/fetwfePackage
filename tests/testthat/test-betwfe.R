@@ -1101,3 +1101,23 @@ test_that("coef.betwfe returns the beta_hat vector", {
 	res <- .s3_betwfe_fixture()
 	expect_identical(coef(res), res$beta_hat)
 })
+
+# Regression test: print.betwfe(show_internal = TRUE) must read top-level
+# x$X_ints / x$y / x$calc_ses fields (not x$internal$..., which is fetwfe()'s
+# nested shape -- see R/betwfe_class.R comment near the show_internal block
+# and the round-3 plan-review feedback for why this matters).
+test_that("print.betwfe show_internal = TRUE reads top-level fields", {
+	res <- .s3_betwfe_fixture()
+	out <- capture.output(print(res, show_internal = TRUE))
+	joined <- paste(out, collapse = "\n")
+	expect_match(joined, "Internal Details")
+	expect_match(joined, "X dims")
+	expect_match(joined, "y length")
+	expect_match(joined, "SEs computed")
+	# If the wrong (fetwfe-style nested) field paths were used, the X dims line
+	# would print empty dims, the y length would be 0, and SEs computed would
+	# be empty. Assert that the actual values appear.
+	expect_match(joined, "X dims +: \\d+ x \\d+")
+	expect_match(joined, "y length +: \\d+")
+	expect_match(joined, "SEs computed: (TRUE|FALSE)")
+})
