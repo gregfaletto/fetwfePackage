@@ -78,12 +78,12 @@
 #' `att_var_1 + att_var_2 + 2sqrt(att_var_1*att_var_2)`.
 #'
 #' All matrices required for Term 2 are produced upstream:
-#' * `psi_mat` from [getCohortATTsFinal()]
+#' * `psi_mat` from \code{getCohortATTsFinal()}
 #' * `d_inv_treat_sel` from the same routine
 #' * the Jacobian \(J\) is built in
-#'   [getSecondVarTermDataApp()] using `d_inv_treat_sel`
+#'   \code{getSecondVarTermDataApp()} using `d_inv_treat_sel`
 #' @inheritParams getTeResults2
-#' @seealso [getSecondVarTermDataApp()]
+#' @seealso \code{getSecondVarTermDataApp()}
 #' @keywords internal
 #' @noRd
 getTeResults2 <- function(
@@ -330,7 +330,7 @@ checkFetwfeInputs <- function(
 #'   1 x 1 or 1 x *`k`* shape so that higher-level code can
 #'   `rbind()` the blocks without special cases.
 #' @inheritParams getPsiRFused
-#' @seealso [getCohortATTsFinal()]
+#' @seealso \code{getCohortATTsFinal()}
 #' @keywords internal
 #' @noRd
 getPsiRFused <- function(
@@ -1270,7 +1270,7 @@ fetwfe_core <- function(
 #' @return
 #' A numeric matrix `X_mod` with the **same dimensions** as `X_int` but whose
 #' columns are the transformed regressors
-#' \(\bigl[\tilde{\boldsymbol Z}\,\boldsymbol D_N^{-1}\bigr]_{NT\times p}\).
+#' \eqn{[\tilde{\boldsymbol Z}\,\boldsymbol D_N^{-1}]_{NT\times p}}.
 #'
 #' @seealso
 #' * `genBackwardsInvFusionTransformMat()`
@@ -1888,7 +1888,7 @@ genInvFusionTransformMat <- function(n_vars) {
 #' `d_inv_treat_sel` and the cohort probabilities, then plugs everything into
 #' the quadratic form above and finally rescales by \(T/(N T)=1/N\).
 #' @inheritParams getSecondVarTermDataApp
-#' @seealso [getTeResults2()]
+#' @seealso \code{getTeResults2()}
 #' @keywords internal
 #' @noRd
 getSecondVarTermDataApp <- function(
@@ -2164,7 +2164,7 @@ genInvTwoWayFusionTransformMat <- function(n_vars, first_inds, R) {
 #' \(\widehat{\tau}_{\text{ATT},r}=\psi_r^{\!\top}\widehat\theta\).
 #' The function
 #'
-#' * constructs every \(\psi_r\) (via [getPsiRFused()])
+#' * constructs every \(\psi_r\) (via \code{getPsiRFused()})
 #' * builds the Gram inverse
 #'   \(\bigl((NT)^{-1}X_{\hat{\mathcal S}}^{\top}X_{\hat{\mathcal S}}\bigr)^{-1}\)
 #'   for the *selected* treatment-effect columns
@@ -2231,9 +2231,9 @@ genInvTwoWayFusionTransformMat <- function(n_vars, first_inds, R) {
 #' block `d_inv_treat_sel` -
 #' the sub-matrix of \(D^{(2)}(\mathcal R)^{-1}\) with
 #' **all rows** but **only the selected columns**.
-#' This block is later required by [getSecondVarTermDataApp()]
+#' This block is later required by \code{getSecondVarTermDataApp()}
 #' to propagate sampling noise in the cohort-probability estimates.
-#' @seealso [getPsiRFused()], [getTeResults2()]
+#' @seealso \code{getPsiRFused()}, \code{getTeResults2()}
 #' @keywords internal
 #' @noRd
 getCohortATTsFinal <- function(

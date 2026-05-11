@@ -1,5 +1,14 @@
 # NEWS
 
+## Version 1.5.3 (2026-05-10)
+
+- Resolved 11 "Could not resolve link to topic" warnings from
+  `devtools::document()` against `R/fetwfe_core.R` and `R/etwfe_core.R`
+  by replacing internal-helper Markdown link forms `[func()]` with
+  `\code{func()}`, plus one LaTeX-in-`@return` fix to use `\eqn{}`
+  instead of `\(...\)`. Internal cleanup; no behavior change. Resolves
+  #21.
+
 ## Version 1.5.2 (2026-05-10)
 
 - Fixed two redirected URLs in the main vignette (`vignettes/vignette.Rmd`)
