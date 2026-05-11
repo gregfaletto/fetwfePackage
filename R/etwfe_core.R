@@ -634,7 +634,7 @@ etwfe_core <- function(
 #' `etwfe_core()`, `twfeCovs_core()`, and related fitting routines.  The function
 #' (i) keeps only the relevant variables, (ii) one-hot-encodes or otherwise
 #' expands any *factor* covariates, (iii) builds the stacked design matrix
-#' `X_ints` and centred response `y` via [`prepXints()`], and (iv) performs a
+#' `X_ints` and centred response `y` via \code{prepXints()}, and (iv) performs a
 #' battery of **sanity checks** on cohort counts before estimation proceeds.
 #'
 #' @param pdata A **data.frame** in long (unit x time) format containing at
