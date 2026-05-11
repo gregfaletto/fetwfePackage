@@ -28,7 +28,7 @@ library(fetwfe)
 The `{fetwfe}` package implements `fetwfe()` as its recommended estimator for difference-in-differences with staggered adoptions. It also exports two related estimators that serve as comparison baselines:
 
 - `etwfe()` — Wooldridge-style extended two-way fixed effects.
-- `betwfe()` — bridge-penalized ETWFE (without the fusion transformation that distinguishes `fetwfe()` from `betwfe()`).
+- `betwfe()` — bridge-penalized ETWFE; like `fetwfe()` but without the fusion transformation.
 
 This vignette demonstrates both, on simulated data so we can compare each estimator against the known true treatment effects.
 
