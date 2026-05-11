@@ -128,7 +128,8 @@ regularization to the (untransformed) coefficients to stabilize estimation.
 Default is FALSE.}
 }
 \value{
-A named list with the following elements: \item{att_hat}{The
+An object of class \code{betwfe} containing the following elements:
+\item{att_hat}{The
 estimated overall average treatment effect for a randomly selected treated
 unit.} \item{att_se}{If \code{q < 1}, a standard error for the ATT. If
 \code{indep_counts} was provided, this standard error is asymptotically exact; if

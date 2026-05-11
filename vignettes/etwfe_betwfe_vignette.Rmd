@@ -85,15 +85,10 @@ cat("Squared error:", (res_etwfe$att_hat - true_tes$att_true)^2, "\n")
 
 `betwfe()` extends `etwfe()` by adding a bridge (`L_q`, `0 < q < 1`) regularization penalty on the cohort-time effects. Compared to `etwfe()`, this trades a small amount of bias for lower variance — the same idea as `fetwfe()`, but without the fusion transformation that `fetwfe()` applies. So `betwfe()` is essentially "fetwfe minus the fusion."
 
-A practical wrinkle: unlike `fetwfe()` and `etwfe()`, `betwfe()` does **not** currently provide a `summary()` S3 method. Its return value is a plain `list`, so we extract the fields directly:
-
 ```{r}
 res_betwfe <- betwfeWithSimulatedData(sim_data)
 
-cat("Estimated overall ATT:", res_betwfe$att_hat, "\n")
-cat("Standard error:       ", res_betwfe$att_se, "\n")
-cat("\nCohort-specific estimates:\n")
-print(res_betwfe$catt_df)
+summary(res_betwfe)
 ```
 
 Comparing against the truth and against `etwfe()`:
