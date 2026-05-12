@@ -45,8 +45,8 @@ where $\widehat G^{-1}$ is the Gram inverse on the bridge-selected support and $
 
 The overall ATT carries a second variance term, $\mathrm{Var}_2$, that comes from estimating the cohort-membership probabilities $\widehat\pi_r$. This term scales like $1/N$ and is unrelated to the regression residuals.
 
-* If you pass `indep_counts`, the package treats the cohort-membership counts as coming from an independent split, so the two variance terms simply add: $\mathrm{Var}_1 + \mathrm{Var}_2$ is **asymptotically exact**.
-* If `indep_counts` is omitted (the common case), the package returns the **conservative** Cauchy-Schwarz bound $\mathrm{Var}_1 + \mathrm{Var}_2 + 2\sqrt{\mathrm{Var}_1\,\mathrm{Var}_2}$, which is valid under any covariance between the two pieces.
+* If you pass `indep_counts`, the package treats the cohort-membership counts as coming from an independent split, so the two variance terms simply add: $\mathrm{Var}_1 + \mathrm{Var}_2$ is asymptotically exact.
+* If `indep_counts` is omitted (the common case), the package returns the conservative Cauchy-Schwarz bound $\mathrm{Var}_1 + \mathrm{Var}_2 + 2\sqrt{\mathrm{Var}_1\,\mathrm{Var}_2}$, which is valid under any covariance between the two pieces.
 
 Either way, the standard error printed and stored on the object is the square root of this combined variance.
 
