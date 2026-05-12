@@ -1084,3 +1084,90 @@ test_that("etwfe errors cleanly when no-never-treated truncation would yield < 2
 		"treated cohort"
 	)
 })
+
+# ------------------------------------------------------------------------------
+# Helpers for se_type tests: small F1-conforming and AR(1)-corrupted panels.
+# simulateData() produces F1-conforming shocks only; for the serially-correlated
+# fixture we add an AR(1) shock per unit on top of the simulated response.
+# ------------------------------------------------------------------------------
+make_se_type_panel <- function(seed = 2026, N = 120) {
+	set.seed(seed)
+	sim_coefs <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+	simulateData(sim_coefs, N = N, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+}
+
+make_ar1_panel <- function(seed = 7, N = 150, rho = 0.85, sd_e = 1) {
+	set.seed(seed)
+	sim_coefs <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+	sim <- simulateData(
+		sim_coefs,
+		N = N,
+		sig_eps_sq = 0.5,
+		sig_eps_c_sq = 0.5
+	)
+	pdata <- sim$pdata
+	pdata <- pdata[order(pdata$unit, pdata$time), ]
+	units <- unique(pdata$unit)
+	T_ <- length(unique(pdata$time))
+	set.seed(seed + 100)
+	for (u in units) {
+		idx <- which(pdata$unit == u)
+		ar <- numeric(T_)
+		ar[1] <- rnorm(1, sd = sd_e / sqrt(1 - rho^2))
+		for (t in 2:T_) {
+			ar[t] <- rho * ar[t - 1] + rnorm(1, sd = sd_e)
+		}
+		pdata[idx, sim$response] <- pdata[idx, sim$response] + ar
+	}
+	sim$pdata <- pdata
+	sim
+}
+
+# ------------------------------------------------------------------------------
+# Test: etwfe with se_type omitted matches se_type = "default" identically
+# ------------------------------------------------------------------------------
+test_that("etwfe se_type omitted matches se_type = 'default' identically", {
+	sim <- make_se_type_panel()
+	res_omit <- etwfeWithSimulatedData(sim)
+	res_def <- etwfeWithSimulatedData(sim, se_type = "default")
+	expect_identical(res_omit$att_se, res_def$att_se)
+	expect_identical(res_omit$catt_ses, res_def$catt_ses)
+	expect_identical(res_omit$att_hat, res_def$att_hat)
+	expect_identical(res_omit$catt_hats, res_def$catt_hats)
+})
+
+# ------------------------------------------------------------------------------
+# Test: etwfe with se_type = "cluster" returns finite SEs on a clean panel
+# ------------------------------------------------------------------------------
+test_that("etwfe se_type = 'cluster' returns finite SEs on a clean panel", {
+	sim <- make_se_type_panel()
+	res <- etwfeWithSimulatedData(sim, se_type = "cluster")
+	expect_true(is.finite(res$att_se))
+	expect_gt(res$att_se, 0)
+	expect_true(all(is.finite(res$catt_ses)))
+	expect_true(all(res$catt_ses > 0))
+})
+
+# ------------------------------------------------------------------------------
+# Test: under deliberately serially-correlated DGP, cluster SE > default SE
+# ------------------------------------------------------------------------------
+test_that("etwfe cluster-robust SE exceeds default SE under AR(1) shocks", {
+	mk <- make_ar1_panel()
+	res_def <- etwfeWithSimulatedData(mk, se_type = "default")
+	res_cls <- etwfeWithSimulatedData(mk, se_type = "cluster")
+	expect_true(is.finite(res_def$att_se))
+	expect_true(is.finite(res_cls$att_se))
+	expect_gt(res_def$att_se, 0)
+	expect_gt(res_cls$att_se, res_def$att_se)
+})
+
+# ------------------------------------------------------------------------------
+# Test: $se_type slot on output reflects the argument value
+# ------------------------------------------------------------------------------
+test_that("etwfe $se_type slot reflects the argument value", {
+	sim <- make_se_type_panel()
+	res_def <- etwfeWithSimulatedData(sim)
+	res_cls <- etwfeWithSimulatedData(sim, se_type = "cluster")
+	expect_identical(res_def$se_type, "default")
+	expect_identical(res_cls$se_type, "cluster")
+})
