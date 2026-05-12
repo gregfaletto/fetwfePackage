@@ -79,6 +79,12 @@
 #' `FALSE`, the estimator stops with an error in this case (the package's
 #' behavior prior to version 1.5.6). The argument has no effect when the input
 #' already contains never-treated units. Default is `TRUE`.
+#' @param se_type Character; one of `"default"` (the package's
+#' Assumption-F1-based standard error from the paper) or `"cluster"`
+#' (an *experimental* unit-clustered Liang-Zeger sandwich SE on the
+#' OLS-selected support; see the companion vignette `inference_vignette`
+#' for the formula, the assumptions, and the theory-pending caveat).
+#' Default is `"default"`.
 #' @return A named list with the following elements: \item{att_hat}{The
 #' estimated overall average treatment effect for a randomly selected treated
 #' unit.} \item{att_se}{A standard error for the ATT. If the Gram matrix is not
@@ -143,8 +149,11 @@ twfeCovs <- function(
 	verbose = FALSE,
 	alpha = 0.05,
 	add_ridge = FALSE,
-	allow_no_never_treated = TRUE
+	allow_no_never_treated = TRUE,
+	se_type = "default"
 ) {
+	se_type <- match.arg(se_type, c("default", "cluster"))
+
 	# Check inputs
 	ret <- checkEtwfeInputs(
 		pdata = pdata,
@@ -236,7 +245,8 @@ twfeCovs <- function(
 		sig_eps_c_sq = sig_eps_c_sq,
 		verbose = verbose,
 		alpha = alpha,
-		add_ridge = add_ridge
+		add_ridge = add_ridge,
+		se_type = se_type
 	)
 
 	if (indep_count_data_available) {
@@ -276,7 +286,8 @@ twfeCovs <- function(
 		R = res$R,
 		d = res$d,
 		p = res$p,
-		calc_ses = res$calc_ses
+		calc_ses = res$calc_ses,
+		se_type = se_type
 	))
 }
 
@@ -307,6 +318,12 @@ twfeCovs <- function(
 #' `FALSE`, the estimator stops with an error in this case (the package's
 #' behavior prior to version 1.5.6). The argument has no effect when the input
 #' already contains never-treated units. Default is `TRUE`.
+#' @param se_type Character; one of `"default"` (the package's
+#' Assumption-F1-based standard error from the paper) or `"cluster"`
+#' (an *experimental* unit-clustered Liang-Zeger sandwich SE on the
+#' OLS-selected support; see the companion vignette `inference_vignette`
+#' for the formula, the assumptions, and the theory-pending caveat).
+#' Default is `"default"`.
 #' @return A named list with the following elements: \item{att_hat}{The
 #' estimated overall average treatment effect for a randomly selected treated
 #' unit.} \item{att_se}{If `q < 1`, a standard error for the ATT. If
@@ -371,8 +388,11 @@ twfeCovsWithSimulatedData <- function(
 	verbose = FALSE,
 	alpha = 0.05,
 	add_ridge = FALSE,
-	allow_no_never_treated = TRUE
+	allow_no_never_treated = TRUE,
+	se_type = "default"
 ) {
+	se_type <- match.arg(se_type, c("default", "cluster"))
+
 	if (!inherits(simulated_obj, "FETWFE_simulated")) {
 		stop("simulated_obj must be an object of class 'FETWFE_simulated'")
 	}
@@ -400,7 +420,8 @@ twfeCovsWithSimulatedData <- function(
 		verbose = verbose,
 		alpha = alpha,
 		add_ridge = add_ridge,
-		allow_no_never_treated = allow_no_never_treated
+		allow_no_never_treated = allow_no_never_treated,
+		se_type = se_type
 	)
 
 	return(res)

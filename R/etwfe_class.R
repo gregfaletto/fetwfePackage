@@ -74,7 +74,14 @@ print.etwfe <- function(
 		"Overall Average Treatment Effect (ATT):\n  Estimate:   %.4f\n",
 		x$att_hat
 	))
-	cat(sprintf("  Std. Error: %.4f\n", x$att_se))
+	if (identical(x$se_type, "cluster")) {
+		cat(sprintf(
+			"  Std. Error (cluster-robust): %.4f\n",
+			x$att_se
+		))
+	} else {
+		cat(sprintf("  Std. Error: %.4f\n", x$att_se))
+	}
 	if (!is.null(x$att_p_value) && !is.na(x$att_p_value)) {
 		cat(sprintf("  P-value:    %.4g\n", x$att_p_value))
 	} else {
@@ -146,7 +153,8 @@ summary.etwfe <- function(object, full_catt = FALSE, ...) {
 			sig_eps_sq = object$sig_eps_sq,
 			sig_eps_c_sq = object$sig_eps_c_sq
 		),
-		alpha = object$alpha
+		alpha = object$alpha,
+		se_type = object$se_type
 	) |>
 		structure(class = "summary.etwfe")
 }
@@ -163,9 +171,15 @@ print.summary.etwfe <- function(x, ...) {
 	ci_high <- x$att["estimate"] + qnorm(1 - x$alpha / 2) * x$att["se"]
 	p_val <- x$att["p_value"]
 	p_str <- if (is.na(p_val)) "NA" else sprintf("%.4g", p_val)
+	se_label <- if (identical(x$se_type, "cluster")) {
+		"SE (cluster-robust)"
+	} else {
+		"SE"
+	}
 	cat(sprintf(
-		"Overall ATT: %.4f  (SE = %.4f, p = %s, %.0f%% CI = [%.4f, %.4f])\n\n",
+		"Overall ATT: %.4f  (%s = %.4f, p = %s, %.0f%% CI = [%.4f, %.4f])\n\n",
 		x$att["estimate"],
+		se_label,
 		x$att["se"],
 		p_str,
 		ci_pct,

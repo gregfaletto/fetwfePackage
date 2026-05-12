@@ -24,6 +24,12 @@
 #' `FALSE`, the estimator stops with an error in this case (the package's
 #' behavior prior to version 1.5.6). The argument has no effect when the input
 #' already contains never-treated units. Default is `TRUE`.
+#' @param se_type Character; one of `"default"` (the package's
+#' Assumption-F1-based standard error from the paper) or `"cluster"`
+#' (an *experimental* unit-clustered Liang-Zeger sandwich SE on the
+#' OLS-selected support; see the companion vignette `inference_vignette`
+#' for the formula, the assumptions, and the theory-pending caveat).
+#' Default is `"default"`.
 #' @return An object of class \code{etwfe} containing the following elements:
 #' \item{att_hat}{The
 #' estimated overall average treatment effect for a randomly selected treated
@@ -87,8 +93,11 @@ etwfeWithSimulatedData <- function(
 	verbose = FALSE,
 	alpha = 0.05,
 	add_ridge = FALSE,
-	allow_no_never_treated = TRUE
+	allow_no_never_treated = TRUE,
+	se_type = "default"
 ) {
+	se_type <- match.arg(se_type, c("default", "cluster"))
+
 	if (!inherits(simulated_obj, "FETWFE_simulated")) {
 		stop("simulated_obj must be an object of class 'FETWFE_simulated'")
 	}
@@ -116,7 +125,8 @@ etwfeWithSimulatedData <- function(
 		verbose = verbose,
 		alpha = alpha,
 		add_ridge = add_ridge,
-		allow_no_never_treated = allow_no_never_treated
+		allow_no_never_treated = allow_no_never_treated,
+		se_type = se_type
 	)
 
 	return(res)

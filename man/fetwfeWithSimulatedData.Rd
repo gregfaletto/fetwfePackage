@@ -13,7 +13,8 @@ fetwfeWithSimulatedData(
   verbose = FALSE,
   alpha = 0.05,
   add_ridge = FALSE,
-  allow_no_never_treated = TRUE
+  allow_no_never_treated = TRUE,
+  se_type = "default"
 )
 }
 \arguments{
@@ -68,6 +69,15 @@ in the retained sub-panel --- with a warning naming the dropped periods. If
 \code{FALSE}, the estimator stops with an error in this case (the package's
 behavior prior to version 1.5.6). The argument has no effect when the input
 already contains never-treated units. Default is \code{TRUE}.}
+
+\item{se_type}{Character; one of \code{"default"} (the package's
+Assumption-F1-based standard error from the paper) or \code{"cluster"}
+(an \emph{experimental} unit-clustered Liang-Zeger sandwich SE on the
+bridge-selected support; see the companion vignette \code{inference_vignette}
+for the formula, the assumptions, and the theory-pending caveat).
+\code{"cluster"} is only meaningful when \code{q < 1} (the bridge oracle property
+is required); for \code{q >= 1} the SE will be \code{NA} regardless of \code{se_type}.
+Default is \code{"default"}.}
 }
 \value{
 An object of class \code{fetwfe} containing the following elements:
