@@ -1,5 +1,19 @@
 # NEWS
 
+## Version 1.5.6 (2026-05-11)
+
+- The four estimators (`fetwfe()`, `betwfe()`, `etwfe()`, `twfeCovs()`)
+  and their `*WithSimulatedData()` wrappers now accept a new
+  `allow_no_never_treated = TRUE` argument. When the input panel has
+  zero never-treated units (previously a hard error), the package
+  auto-truncates the panel by dropping time periods at and after the
+  latest cohort's start time --- the units in that latest cohort then
+  serve as the never-treated comparison group in the retained
+  sub-panel --- and issues a clear warning naming the dropped periods.
+  Pass `allow_no_never_treated = FALSE` to restore the previous
+  hard-error behavior. The argument has no effect when the input
+  already contains never-treated units.
+
 ## Version 1.5.5 (2026-05-11)
 
 - `fetwfe()`, `betwfe()`, `etwfe()`, and `twfeCovs()` now surface a

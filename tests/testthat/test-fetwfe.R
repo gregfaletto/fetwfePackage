@@ -390,7 +390,7 @@ test_that("fetwfe errors when all units are treated in the first period", {
 # Test 11: Error when there are no never-treated units.
 # ------------------------------------------------------------------------------
 
-test_that("fetwfe errors with a panel having no never-treated units", {
+test_that("fetwfe errors with a panel having no never-treated units when allow_no_never_treated = FALSE", {
 	df_bad <- generate_bad_panel_data(N = 30, T = 10, seed = 123)
 
 	expect_error(
@@ -401,9 +401,10 @@ test_that("fetwfe errors with a panel having no never-treated units", {
 			treatment = "treatment",
 			covs = c("cov1", "cov2"),
 			response = "y",
-			verbose = FALSE
+			verbose = FALSE,
+			allow_no_never_treated = FALSE
 		)),
-		"No never-treated units detected in data to fit model; estimating treatment effects is not possible"
+		"allow_no_never_treated"
 	)
 })
 
@@ -1153,4 +1154,64 @@ test_that("order_by = 'pvalue' sorts CATT by ascending P_value with NAs last", {
 		as.character(res$catt_df$Cohort)
 	)]
 	expect_equal(printed_p_values, sort(printed_p_values))
+})
+
+# ------------------------------------------------------------------------------
+# Test: fetwfe auto-truncates a no-never-treated panel (default)
+# ------------------------------------------------------------------------------
+test_that("fetwfe auto-truncates a panel with no never-treated units (default)", {
+	df_bad <- generate_bad_panel_data(N = 200, T = 10, seed = 123)
+
+	expect_warning(
+		res <- fetwfe(
+			pdata = df_bad,
+			time_var = "time",
+			unit_var = "unit",
+			treatment = "treatment",
+			covs = c("cov1", "cov2"),
+			response = "y",
+			verbose = FALSE
+		),
+		"auto-truncated"
+	)
+	expect_s3_class(res, "fetwfe")
+	expect_true(is.finite(res$att_hat))
+	expect_s3_class(res$catt_df, "data.frame")
+	expect_true(res$T < 10)
+	expect_true(res$R < 9)
+})
+
+# ------------------------------------------------------------------------------
+# Test: fetwfe errors cleanly when truncation would yield < 2 retained cohorts
+# ------------------------------------------------------------------------------
+test_that("fetwfe errors cleanly when no-never-treated truncation would yield < 2 cohorts", {
+	# All units share a single cohort start time, no never-treated.
+	# Five units, six time periods, every unit starts treatment at t = 4.
+	N <- 5
+	T_periods <- 6
+	r_single <- 4
+	df_single <- data.frame(
+		time = rep(seq_len(T_periods), times = N),
+		unit = rep(paste0("u", seq_len(N)), each = T_periods),
+		treatment = rep(
+			c(rep(0L, r_single - 1L), rep(1L, T_periods - r_single + 1L)),
+			times = N
+		),
+		cov1 = rep(rnorm(N, mean = 0), each = T_periods),
+		cov2 = rep(rnorm(N, mean = 0), each = T_periods),
+		y = rnorm(N * T_periods)
+	)
+
+	expect_error(
+		suppressWarnings(fetwfe(
+			pdata = df_single,
+			time_var = "time",
+			unit_var = "unit",
+			treatment = "treatment",
+			covs = c("cov1", "cov2"),
+			response = "y",
+			verbose = FALSE
+		)),
+		"treated cohort"
+	)
 })

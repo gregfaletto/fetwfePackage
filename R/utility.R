@@ -512,3 +512,136 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 		NA_real_
 	)
 }
+
+#' @title Auto-truncate a panel that has no never-treated units
+#'
+#' @description
+#' Internal helper called by the four public estimator entry points
+#' (`fetwfe()`, `etwfe()`, `betwfe()`, `twfeCovs()`) when their
+#' `allow_no_never_treated` argument is TRUE (default). Detects whether
+#' the input panel `pdata` contains any never-treated units; if so,
+#' returns `pdata` unchanged. If not, identifies the latest cohort start
+#' time and drops rows at or after that time, issues a warning naming the
+#' dropped time periods, and returns the truncated panel. If
+#' `allow_no_never_treated = FALSE` and there are no never-treated units,
+#' stops with an informative error. If truncation is structurally
+#' impossible (would leave fewer than 2 time periods or fewer than 2
+#' treated cohorts), stops regardless of the argument.
+#'
+#' @param pdata A balanced panel `data.frame`.
+#' @param time_var Character string; name of the time variable column.
+#' @param unit_var Character string; name of the unit identifier column.
+#' @param treat_var Character string; name of the treatment indicator column.
+#' @param allow_no_never_treated Logical; if `FALSE`, stops with an error
+#'   when there are no never-treated units. If `TRUE` (default), auto-
+#'   truncates.
+#' @details The helper trusts the package's documented absorbing-state
+#'   assumption for the treatment column. If a unit's treatment is
+#'   non-absorbing (e.g., 0 -> 1 -> 0 -> 1), and the rows that violate
+#'   absorbing would be dropped by truncation, this helper will not catch
+#'   the violation (the truncated panel sees a clean absorbing history).
+#'   Users supplying non-absorbing data are already violating the
+#'   package's input contract; the responsibility for catching that sits
+#'   at `idCohorts` in the standard pipeline.
+#' @return The (possibly truncated) `pdata` data.frame.
+#' @keywords internal
+#' @noRd
+.truncate_if_no_never_treated <- function(
+	pdata,
+	time_var,
+	unit_var,
+	treat_var,
+	allow_no_never_treated = TRUE
+) {
+	stopifnot(is.logical(allow_no_never_treated))
+	stopifnot(length(allow_no_never_treated) == 1)
+	stopifnot(!is.na(allow_no_never_treated))
+
+	# Detect never-treated units.
+	treated_any <- tapply(
+		pdata[[treat_var]],
+		pdata[[unit_var]],
+		function(x) any(x == 1)
+	)
+	if (any(!treated_any)) {
+		return(pdata)
+	}
+
+	# All units are eventually treated.
+	if (!isTRUE(allow_no_never_treated)) {
+		stop(
+			"No never-treated units detected in data to fit model; ",
+			"estimating treatment effects is not possible. Set ",
+			"`allow_no_never_treated = TRUE` to enable automatic panel ",
+			"truncation, which drops time periods at and after the latest ",
+			"cohort's start time so the latest-cohort units become the ",
+			"never-treated comparison group."
+		)
+	}
+
+	# Identify each unit's first-treatment time.
+	unit_first_treat <- tapply(
+		seq_len(nrow(pdata)),
+		pdata[[unit_var]],
+		function(idx) {
+			treated_rows <- idx[pdata[[treat_var]][idx] == 1]
+			min(pdata[[time_var]][treated_rows])
+		}
+	)
+	r_max <- max(unit_first_treat)
+	times_sorted <- sort(unique(pdata[[time_var]]))
+
+	# If `r_max == times[1]`, every unit was treated from the very first
+	# time period (otherwise `r_max` would be larger). There is no
+	# pre-treatment period to retain; the existing pipeline's first-period
+	# filter in `idCohorts()` already reports this case with a clearer
+	# message ("All units were treated in the first time period..."), so
+	# defer to it rather than rewrite the diagnostic.
+	if (r_max <= times_sorted[1]) {
+		return(pdata)
+	}
+
+	retained_times <- times_sorted[times_sorted < r_max]
+	dropped_times <- times_sorted[times_sorted >= r_max]
+
+	# Impossible-truncation guards.
+	if (length(retained_times) < 2) {
+		stop(
+			"Cannot estimate treatment effects: panel has no never-treated ",
+			"units, and truncating to the largest sub-panel where any ",
+			"units are still untreated would leave only ",
+			length(retained_times),
+			" time period(s) (need at least 2)."
+		)
+	}
+
+	# After truncation, retained cohorts are those with r_i < r_max.
+	# prep_for_etwfe_core() downstream requires R >= 2 (at least two
+	# treated cohorts), so the guard here matches that constraint.
+	retained_cohorts <- setdiff(unique(unit_first_treat), r_max)
+	if (length(retained_cohorts) < 2) {
+		stop(
+			"Cannot estimate treatment effects: panel has no never-treated ",
+			"units, and the truncated panel would have only ",
+			length(retained_cohorts),
+			" treated cohort(s). FETWFE/ETWFE/BETWFE/twfeCovs each require ",
+			"at least 2 treated cohorts."
+		)
+	}
+
+	# Truncate.
+	truncated <- pdata[pdata[[time_var]] %in% retained_times, , drop = FALSE]
+	warning(
+		"No never-treated units in input data; auto-truncated panel by ",
+		"dropping time periods at or after ",
+		r_max,
+		" (dropped: ",
+		paste(dropped_times, collapse = ", "),
+		"). The units that started treatment at ",
+		r_max,
+		" serve as the never-treated comparison group in the truncated ",
+		"panel. Set `allow_no_never_treated = FALSE` to disable this ",
+		"behavior."
+	)
+	truncated
+}

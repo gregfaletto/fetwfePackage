@@ -20,7 +20,8 @@ fetwfe(
   q = 0.5,
   verbose = FALSE,
   alpha = 0.05,
-  add_ridge = FALSE
+  add_ridge = FALSE,
+  allow_no_never_treated = TRUE
 )
 }
 \arguments{
@@ -126,6 +127,15 @@ for the cohort average treatment effects that will be returned in \code{catt_df}
 \item{add_ridge}{(Optional.) Logical; if TRUE, adds a small amount of ridge
 regularization to the (untransformed) coefficients to stabilize estimation.
 Default is FALSE.}
+
+\item{allow_no_never_treated}{(Optional.) Logical; if \code{TRUE} (default) and
+the input panel contains no never-treated units, the panel is auto-truncated
+by dropping time periods at and after the latest cohort's start time --- the
+units in that latest cohort then serve as the never-treated comparison group
+in the retained sub-panel --- with a warning naming the dropped periods. If
+\code{FALSE}, the estimator stops with an error in this case (the package's
+behavior prior to version 1.5.6). The argument has no effect when the input
+already contains never-treated units. Default is \code{TRUE}.}
 }
 \value{
 An object of class \code{fetwfe} containing the following elements:
