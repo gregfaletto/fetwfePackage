@@ -476,3 +476,51 @@ getPsiRUnfused <- function(
 
 	return(psi_r)
 }
+
+
+#' @title Compute the unit-clustered sandwich variance on the selected support
+#' @description Internal helper used when `se_type = "cluster"`. Computes the
+#'   full Liang-Zeger CR1 sandwich variance matrix
+#'   `(X_S' X_S)^{-1} %*% sum_i X_{i.S}' eps_i eps_i' X_{i.S} %*% (X_S' X_S)^{-1}`
+#'   with units `i = 1, ..., N` as clusters and an `N/(N-1)` cluster-count
+#'   adjustment (matching `sandwich::vcovCL(cadjust = TRUE, type = "HC0")`).
+#'   The design `X_S` is internally centered (consistent with how
+#'   `getGramInv` centers the bread). The residuals must come from OLS on
+#'   the selected support, not bridge residuals; the two differ in finite
+#'   samples and only the OLS residuals are justified under the
+#'   oracle-property argument.
+#' @param X_S Numeric matrix, NT-by-p_S; the design matrix restricted to the
+#'   selected support, in the coordinate system the regression was solved in
+#'   (GLS-transformed for ETWFE/twfeCovs/BETWFE in beta-space; fusion-then-
+#'   GLS-transformed for FETWFE in theta-space). Will be centered internally.
+#' @param residuals Numeric vector of length NT; residuals from OLS on the
+#'   selected support.
+#' @param N Integer; number of units.
+#' @param T Integer; number of time periods (panel is balanced).
+#' @return A p_S-by-p_S symmetric matrix giving the cluster-robust sandwich
+#'   variance on the selected support.
+#' @references
+#' Liang, K.-Y., & Zeger, S. L. (1986). Longitudinal data analysis using
+#'   generalized linear models. *Biometrika* 73(1), 13-22.
+#' Bertrand, M., Duflo, E., & Mullainathan, S. (2004). How much should we
+#'   trust differences-in-differences estimates? *Quarterly Journal of
+#'   Economics* 119(1), 249-275.
+#' @keywords internal
+#' @noRd
+.compute_cluster_robust_sandwich <- function(X_S, residuals, N, T) {
+	stopifnot(nrow(X_S) == N * T)
+	stopifnot(length(residuals) == N * T)
+	X_S_centered <- scale(X_S, center = TRUE, scale = FALSE)
+	p_S <- ncol(X_S_centered)
+	gram_inv_full <- solve(crossprod(X_S_centered))
+	meat <- matrix(0, nrow = p_S, ncol = p_S)
+	for (i in seq_len(N)) {
+		rows_i <- ((i - 1) * T + 1):(i * T)
+		Xi <- X_S_centered[rows_i, , drop = FALSE]
+		eps_i <- residuals[rows_i]
+		XiEps <- crossprod(Xi, eps_i)
+		meat <- meat + tcrossprod(XiEps)
+	}
+	cadjust <- N / (N - 1)
+	cadjust * gram_inv_full %*% meat %*% gram_inv_full
+}
