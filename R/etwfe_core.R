@@ -16,6 +16,14 @@
 #' @param add_ridge (Optional.) Logical; if TRUE, adds a small amount of ridge
 #' regularization to the (untransformed) coefficients to stabilize estimation.
 #' Default is FALSE.
+#' @param allow_no_never_treated (Optional.) Logical; if `TRUE` (default) and
+#' the input panel contains no never-treated units, the panel is auto-truncated
+#' by dropping time periods at and after the latest cohort's start time --- the
+#' units in that latest cohort then serve as the never-treated comparison group
+#' in the retained sub-panel --- with a warning naming the dropped periods. If
+#' `FALSE`, the estimator stops with an error in this case (the package's
+#' behavior prior to version 1.5.6). The argument has no effect when the input
+#' already contains never-treated units. Default is `TRUE`.
 #' @return An object of class \code{etwfe} containing the following elements:
 #' \item{att_hat}{The
 #' estimated overall average treatment effect for a randomly selected treated
@@ -78,7 +86,8 @@ etwfeWithSimulatedData <- function(
 	simulated_obj,
 	verbose = FALSE,
 	alpha = 0.05,
-	add_ridge = FALSE
+	add_ridge = FALSE,
+	allow_no_never_treated = TRUE
 ) {
 	if (!inherits(simulated_obj, "FETWFE_simulated")) {
 		stop("simulated_obj must be an object of class 'FETWFE_simulated'")
@@ -106,7 +115,8 @@ etwfeWithSimulatedData <- function(
 		sig_eps_c_sq = sig_eps_c_sq,
 		verbose = verbose,
 		alpha = alpha,
-		add_ridge = add_ridge
+		add_ridge = add_ridge,
+		allow_no_never_treated = allow_no_never_treated
 	)
 
 	return(res)

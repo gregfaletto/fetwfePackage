@@ -94,6 +94,14 @@
 #' @param add_ridge (Optional.) Logical; if TRUE, adds a small amount of ridge
 #' regularization to the (untransformed) coefficients to stabilize estimation.
 #' Default is FALSE.
+#' @param allow_no_never_treated (Optional.) Logical; if `TRUE` (default) and
+#' the input panel contains no never-treated units, the panel is auto-truncated
+#' by dropping time periods at and after the latest cohort's start time --- the
+#' units in that latest cohort then serve as the never-treated comparison group
+#' in the retained sub-panel --- with a warning naming the dropped periods. If
+#' `FALSE`, the estimator stops with an error in this case (the package's
+#' behavior prior to version 1.5.6). The argument has no effect when the input
+#' already contains never-treated units. Default is `TRUE`.
 #' @return An object of class \code{fetwfe} containing the following elements:
 #' \item{att_hat}{The estimated overall average treatment effect for a randomly selected treated unit.}
 #' \item{att_se}{If `q < 1`, a standard error for the ATT. If `indep_counts` was provided, this standard error is asymptotically exact; if not, it is asymptotically conservative. If `q >= 1`, this will be NA.}
@@ -181,7 +189,8 @@ fetwfe <- function(
 	q = 0.5,
 	verbose = FALSE,
 	alpha = 0.05,
-	add_ridge = FALSE
+	add_ridge = FALSE,
+	allow_no_never_treated = TRUE
 ) {
 	# Check inputs
 	ret <- checkFetwfeInputs(
@@ -207,6 +216,14 @@ fetwfe <- function(
 	indep_count_data_available = ret$indep_count_data_available
 
 	rm(ret)
+
+	pdata <- .truncate_if_no_never_treated(
+		pdata,
+		time_var = time_var,
+		unit_var = unit_var,
+		treat_var = treatment,
+		allow_no_never_treated = allow_no_never_treated
+	)
 
 	res1 <- prep_for_etwfe_core(
 		pdata = pdata,
@@ -372,6 +389,14 @@ fetwfe <- function(
 #' @param add_ridge (Optional.) Logical; if TRUE, adds a small amount of ridge
 #' regularization to the (untransformed) coefficients to stabilize estimation.
 #' Default is FALSE.
+#' @param allow_no_never_treated (Optional.) Logical; if `TRUE` (default) and
+#' the input panel contains no never-treated units, the panel is auto-truncated
+#' by dropping time periods at and after the latest cohort's start time --- the
+#' units in that latest cohort then serve as the never-treated comparison group
+#' in the retained sub-panel --- with a warning naming the dropped periods. If
+#' `FALSE`, the estimator stops with an error in this case (the package's
+#' behavior prior to version 1.5.6). The argument has no effect when the input
+#' already contains never-treated units. Default is `TRUE`.
 #' @return An object of class \code{fetwfe} containing the following elements:
 #' \item{att_hat}{The estimated overall average treatment effect for a randomly selected treated unit.}
 #' \item{att_se}{If `q < 1`, a standard error for the ATT. If `indep_counts` was provided, this standard error is asymptotically exact; if not, it is asymptotically conservative. If `q >= 1`, this will be NA.}
@@ -430,7 +455,8 @@ fetwfeWithSimulatedData <- function(
 	q = 0.5,
 	verbose = FALSE,
 	alpha = 0.05,
-	add_ridge = FALSE
+	add_ridge = FALSE,
+	allow_no_never_treated = TRUE
 ) {
 	if (!inherits(simulated_obj, "FETWFE_simulated")) {
 		stop("simulated_obj must be an object of class 'FETWFE_simulated'")
@@ -462,7 +488,8 @@ fetwfeWithSimulatedData <- function(
 		q = q,
 		verbose = verbose,
 		alpha = alpha,
-		add_ridge = add_ridge
+		add_ridge = add_ridge,
+		allow_no_never_treated = allow_no_never_treated
 	)
 
 	return(res)
@@ -536,6 +563,14 @@ fetwfeWithSimulatedData <- function(
 #' @param add_ridge (Optional.) Logical; if TRUE, adds a small amount of ridge
 #' regularization to the (untransformed) coefficients to stabilize estimation.
 #' Default is FALSE.
+#' @param allow_no_never_treated (Optional.) Logical; if `TRUE` (default) and
+#' the input panel contains no never-treated units, the panel is auto-truncated
+#' by dropping time periods at and after the latest cohort's start time --- the
+#' units in that latest cohort then serve as the never-treated comparison group
+#' in the retained sub-panel --- with a warning naming the dropped periods. If
+#' `FALSE`, the estimator stops with an error in this case (the package's
+#' behavior prior to version 1.5.6). The argument has no effect when the input
+#' already contains never-treated units. Default is `TRUE`.
 #' @return An object of class \code{etwfe} containing the following elements:
 #' \item{att_hat}{The
 #' estimated overall average treatment effect for a randomly selected treated
@@ -600,7 +635,8 @@ etwfe <- function(
 	sig_eps_c_sq = NA,
 	verbose = FALSE,
 	alpha = 0.05,
-	add_ridge = FALSE
+	add_ridge = FALSE,
+	allow_no_never_treated = TRUE
 ) {
 	# Check inputs
 	ret <- checkEtwfeInputs(
@@ -622,6 +658,14 @@ etwfe <- function(
 	indep_count_data_available = ret$indep_count_data_available
 
 	rm(ret)
+
+	pdata <- .truncate_if_no_never_treated(
+		pdata,
+		time_var = time_var,
+		unit_var = unit_var,
+		treat_var = treatment,
+		allow_no_never_treated = allow_no_never_treated
+	)
 
 	res1 <- prep_for_etwfe_core(
 		pdata = pdata,

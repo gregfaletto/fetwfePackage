@@ -192,6 +192,13 @@ set.seed(23451)
 # 
 # The `fetwfe()` function will automatically take care of removing units that were treated in the
 # first time period.
+#
+# If your panel has no never-treated units at all (every unit is eventually
+# treated), `fetwfe()` will auto-truncate the panel by dropping the latest
+# time periods so that the latest-cohort units serve as the never-treated
+# comparison group, and issue a warning naming the dropped periods. Pass
+# `allow_no_never_treated = FALSE` if you would rather have the estimator
+# error out in that situation.
 
 # Call the estimator
 res <- fetwfe(

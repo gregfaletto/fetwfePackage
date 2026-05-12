@@ -393,7 +393,7 @@ test_that("betwfe errors when all units are treated in the first period", {
 # Test 11: Error when there are no never-treated units.
 # ------------------------------------------------------------------------------
 
-test_that("betwfe errors with a panel having no never-treated units", {
+test_that("betwfe errors with a panel having no never-treated units when allow_no_never_treated = FALSE", {
 	df_bad <- generate_bad_panel_data(N = 30, T = 10, seed = 123)
 
 	expect_error(
@@ -404,9 +404,10 @@ test_that("betwfe errors with a panel having no never-treated units", {
 			treatment = "treatment",
 			covs = c("cov1", "cov2"),
 			response = "y",
-			verbose = FALSE
+			verbose = FALSE,
+			allow_no_never_treated = FALSE
 		)),
-		"No never-treated units detected in data to fit model; estimating treatment effects is not possible"
+		"allow_no_never_treated"
 	)
 })
 
@@ -1217,4 +1218,60 @@ test_that("order_by = 'pvalue' sorts CATT by ascending P_value with NAs last", {
 		1
 	)
 	expect_equal(first_tokens, expected_cohorts)
+})
+
+# ------------------------------------------------------------------------------
+# Test: betwfe auto-truncates a no-never-treated panel (default)
+# ------------------------------------------------------------------------------
+test_that("betwfe auto-truncates a panel with no never-treated units (default)", {
+	df_bad <- generate_bad_panel_data(N = 200, T = 10, seed = 123)
+
+	expect_warning(
+		res <- betwfe(
+			pdata = df_bad,
+			time_var = "time",
+			unit_var = "unit",
+			treatment = "treatment",
+			covs = c("cov1", "cov2"),
+			response = "y",
+			verbose = FALSE
+		),
+		"auto-truncated"
+	)
+	expect_s3_class(res, "betwfe")
+	expect_true(is.finite(res$att_hat))
+	expect_s3_class(res$catt_df, "data.frame")
+})
+
+# ------------------------------------------------------------------------------
+# Test: betwfe errors cleanly when truncation would yield < 2 retained cohorts
+# ------------------------------------------------------------------------------
+test_that("betwfe errors cleanly when no-never-treated truncation would yield < 2 cohorts", {
+	N <- 5
+	T_periods <- 6
+	r_single <- 4
+	df_single <- data.frame(
+		time = rep(seq_len(T_periods), times = N),
+		unit = rep(paste0("u", seq_len(N)), each = T_periods),
+		treatment = rep(
+			c(rep(0L, r_single - 1L), rep(1L, T_periods - r_single + 1L)),
+			times = N
+		),
+		cov1 = rep(rnorm(N, mean = 0), each = T_periods),
+		cov2 = rep(rnorm(N, mean = 0), each = T_periods),
+		y = rnorm(N * T_periods)
+	)
+
+	expect_error(
+		suppressWarnings(betwfe(
+			pdata = df_single,
+			time_var = "time",
+			unit_var = "unit",
+			treatment = "treatment",
+			covs = c("cov1", "cov2"),
+			response = "y",
+			verbose = FALSE
+		)),
+		"treated cohort"
+	)
 })
