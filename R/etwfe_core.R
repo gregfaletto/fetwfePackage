@@ -408,8 +408,10 @@ etwfe_core <- function(
 	sig_eps_c_sq = NA,
 	verbose = FALSE,
 	alpha = 0.05,
-	add_ridge = FALSE
+	add_ridge = FALSE,
+	se_type = "default"
 ) {
+	se_type <- match.arg(se_type, c("default", "cluster"))
 	ret <- check_etwfe_core_inputs(
 		in_sample_counts = in_sample_counts,
 		N = N,
@@ -545,7 +547,9 @@ etwfe_core <- function(
 		N = N,
 		T = T,
 		p = p, # Total number of original parameters (columns in X_ints)
-		alpha = alpha
+		alpha = alpha,
+		se_type = se_type,
+		y_final = y_final
 	)
 
 	cohort_te_df <- res$cohort_te_df
@@ -554,6 +558,8 @@ etwfe_core <- function(
 	psi_mat <- res$psi_mat
 	gram_inv <- res$gram_inv
 	calc_ses <- res$calc_ses
+	sandwich_full <- res$sandwich_full
+	treat_block_mask <- res$treat_block_mask
 
 	rm(res)
 
@@ -584,7 +590,10 @@ etwfe_core <- function(
 		cohort_probs_overall = cohort_probs_overall, # In-sample pi_r (unconditional on treated)
 		first_inds = first_inds,
 		calc_ses = calc_ses,
-		indep_probs = FALSE
+		indep_probs = FALSE,
+		se_type = se_type,
+		sandwich_full = sandwich_full,
+		treat_block_mask = treat_block_mask
 	)
 
 	in_sample_att_hat <- in_sample_te_results$att_hat
@@ -606,7 +615,10 @@ etwfe_core <- function(
 			cohort_probs_overall = indep_cohort_probs_overall, # indep pi_r (unconditional)
 			first_inds = first_inds,
 			calc_ses = calc_ses,
-			indep_probs = TRUE
+			indep_probs = TRUE,
+			se_type = se_type,
+			sandwich_full = sandwich_full,
+			treat_block_mask = treat_block_mask
 		)
 		indep_att_hat <- indep_te_results$att_hat
 		indep_att_se <- indep_te_results$att_te_se
