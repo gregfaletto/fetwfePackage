@@ -1314,3 +1314,53 @@ test_that("fetwfe $se_type slot reflects the argument value", {
 	expect_identical(res_def$se_type, "default")
 	expect_identical(res_cls$se_type, "cluster")
 })
+
+# ------------------------------------------------------------------------------
+# Test: fetwfe runs end-to-end with zero covariates (covs = c() path).
+# The package's d = 0 path is exercised by test-genCoefs.R and
+# test-simulateData.R at the simulator level; this test surfaces the same
+# capability via the public fetwfeWithSimulatedData wrapper, matching the
+# referee request (Report.pdf points 12-13) for a no-covariate
+# demonstration alongside the with-covariates tests in this file.
+# ------------------------------------------------------------------------------
+test_that("fetwfe runs and gives sensible output with zero covariates", {
+	set.seed(2026)
+	sim_coefs <- genCoefs(
+		R = 3,
+		T = 6,
+		d = 0,
+		density = 0.5,
+		eff_size = 2,
+		seed = 2026
+	)
+	sim_data <- simulateData(
+		sim_coefs,
+		N = 120,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5
+	)
+
+	res <- fetwfeWithSimulatedData(sim_data)
+
+	expect_s3_class(res, "fetwfe")
+	expect_true(is.finite(res$att_hat))
+	expect_true(is.finite(res$att_se))
+	expect_gt(res$att_se, 0)
+	expect_length(res$catt_hats, 3)
+	expect_length(res$catt_ses, 3)
+	expect_s3_class(res$catt_df, "data.frame")
+	expect_true(all(
+		c(
+			"Cohort",
+			"Estimated TE",
+			"SE",
+			"ConfIntLow",
+			"ConfIntHigh",
+			"P_value",
+			"selected"
+		) %in%
+			colnames(res$catt_df)
+	))
+	# The covariate-related slots should reflect d = 0:
+	expect_identical(res$d, 0L)
+})

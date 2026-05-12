@@ -239,6 +239,8 @@ catt_df_pct
 
 For the data application, FETWFE yielded an overall ATT of approximately –1.84% change in the female suicide rate, similar to other estimates in the literature. In addition, the output table (stored in `result_emp$catt_df`) displays the cohort-specific estimates. (Note that standard errors for the individual cohort estimates are less reliable when the number of units per cohort is small.)
 
+The divorce-data analysis above uses three covariates. The package also supports the no-covariate case — pass `covs = c()` to any estimator, or generate data with `genCoefs(d = 0, ...)`. For a worked side-by-side comparison of `etwfe()` and `fetwfe()` with no covariates, see the "No-covariate setting" section of the companion vignette `etwfe_betwfe_vignette`.
+
 ## Testing the zero-effect null
 
 Empirical users of difference-in-differences routinely want to ask "is this treatment effect statistically distinguishable from zero?". The confidence intervals in `catt_df` answer that implicitly --- a CI that excludes 0 corresponds to rejecting `H_0: tau = 0` at level `alpha`. The package also surfaces a `P_value` column (two-sided `2 * pnorm(-|estimate / se|)`) and, for `fetwfe()` and `betwfe()`, a `selected` logical flag, both at the overall ATT level and per-cohort.
