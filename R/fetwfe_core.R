@@ -55,6 +55,17 @@
 #'   `cohort_probs_overall`) were estimated from an independent sample, leading
 #'   to a different SE formula (sum of variances) compared to when they are
 #'   estimated from the same sample (conservative SE including a covariance term).
+#' @param se_type Character; one of `"default"` (Assumption-F1 model-based SE)
+#'   or `"cluster"` (experimental unit-clustered Liang-Zeger sandwich SE).
+#'   Default `"default"`.
+#' @param sandwich_full Numeric matrix (or `NULL`); the full cluster-robust
+#'   sandwich variance on the selected support, as returned by
+#'   `getCohortATTsFinal()`. Required when `se_type = "cluster"` and
+#'   `calc_ses = TRUE`.
+#' @param treat_block_mask Logical vector (or `NULL`) of length
+#'   `nrow(sandwich_full)`, marking which selected columns correspond to
+#'   treatment-effect features. Required when `se_type = "cluster"` and
+#'   `calc_ses = TRUE`.
 #' @return A list containing:
 #'   \item{att_hat}{Numeric scalar; the estimated overall ATT.}
 #'   \item{att_te_se}{Numeric scalar; the standard error for `att_hat`. NA if
@@ -65,9 +76,12 @@
 #' @details The overall ATT (`att_hat`) is `cohort_tes %*% cohort_probs`.
 #'   If `calc_ses` is `TRUE`:
 #'   - `att_var_1` (variance from `theta_hat` estimation) is computed using
-#'     `psi_att = psi_mat %*% cohort_probs` and `gram_inv`.
+#'     `psi_att = psi_mat %*% cohort_probs` and `gram_inv` (or, under
+#'     `se_type = "cluster"`, via the zero-padded `psi_att_full` against
+#'     `sandwich_full`).
 #'   - `att_var_2` (variance from cohort probability estimation) is computed by
-#'     calling `getSecondVarTermDataApp`.
+#'     calling `getSecondVarTermDataApp`. It is unchanged under
+#'     `se_type = "cluster"`.
 #'   - `att_te_se` is `sqrt(att_var_1 + att_var_2)` if `indep_probs` is `TRUE`,
 #'     otherwise it's a conservative SE: `sqrt(att_var_1 + att_var_2 + 2*sqrt(att_var_1 * att_var_2))`.
 #'   - `att_te_se_no_prob` is `sqrt(att_var_1)`.
@@ -104,8 +118,13 @@ getTeResults2 <- function(
 	first_inds,
 	theta_hat_treat_sel,
 	calc_ses,
-	indep_probs = FALSE
+	indep_probs = FALSE,
+	se_type = "default",
+	sandwich_full = NULL,
+	treat_block_mask = NULL
 ) {
+	se_type <- match.arg(se_type, c("default", "cluster"))
+
 	stopifnot(all(!is.na(cohort_probs)))
 
 	# point estimate ATT
@@ -120,9 +139,24 @@ getTeResults2 <- function(
 		# first variance term: convergence of theta
 		psi_att <- psi_mat %*% cohort_probs
 
-		att_var_1 <- sig_eps_sq *
-			as.numeric(t(psi_att) %*% gram_inv %*% psi_att) /
-			(N * T)
+		if (identical(se_type, "cluster")) {
+			stopifnot(!is.null(sandwich_full))
+			stopifnot(!is.null(treat_block_mask))
+			stopifnot(is.logical(treat_block_mask))
+			stopifnot(length(treat_block_mask) == nrow(sandwich_full))
+			stopifnot(sum(treat_block_mask) == nrow(psi_mat))
+
+			psi_att_full <- numeric(length(treat_block_mask))
+			psi_att_full[treat_block_mask] <- psi_att
+
+			att_var_1 <- as.numeric(
+				t(psi_att_full) %*% sandwich_full %*% psi_att_full
+			)
+		} else {
+			att_var_1 <- sig_eps_sq *
+				as.numeric(t(psi_att) %*% gram_inv %*% psi_att) /
+				(N * T)
+		}
 
 		stopifnot(!is.na(att_var_1))
 
@@ -665,8 +699,10 @@ fetwfe_core <- function(
 	q = 0.5,
 	verbose = FALSE,
 	alpha = 0.05,
-	add_ridge = FALSE
+	add_ridge = FALSE,
+	se_type = "default"
 ) {
+	se_type <- match.arg(se_type, c("default", "cluster"))
 	ret <- check_etwfe_core_inputs(
 		in_sample_counts = in_sample_counts,
 		N = N,
@@ -1094,7 +1130,9 @@ fetwfe_core <- function(
 		fused = TRUE,
 		calc_ses = q < 1,
 		p = p, # Total number of original parameters (columns in X_ints)
-		alpha = alpha
+		alpha = alpha,
+		se_type = se_type,
+		y_final = y_final
 	)
 
 	cohort_te_df <- res$cohort_te_df
@@ -1104,6 +1142,8 @@ fetwfe_core <- function(
 	gram_inv <- res$gram_inv
 	d_inv_treat_sel <- res$d_inv_treat_sel
 	calc_ses <- res$calc_ses
+	sandwich_full <- res$sandwich_full
+	treat_block_mask <- res$treat_block_mask
 
 	rm(res)
 
@@ -1140,7 +1180,10 @@ fetwfe_core <- function(
 		first_inds = first_inds,
 		theta_hat_treat_sel = theta_hat_treat_sel_for_att, # Selected non-zero transformed treat coefs
 		calc_ses = calc_ses,
-		indep_probs = FALSE
+		indep_probs = FALSE,
+		se_type = se_type,
+		sandwich_full = sandwich_full,
+		treat_block_mask = treat_block_mask
 	)
 
 	in_sample_att_hat <- in_sample_te_results$att_hat
@@ -1169,7 +1212,10 @@ fetwfe_core <- function(
 			first_inds = first_inds,
 			theta_hat_treat_sel = theta_hat_treat_sel_for_att,
 			calc_ses = calc_ses,
-			indep_probs = TRUE
+			indep_probs = TRUE,
+			se_type = se_type,
+			sandwich_full = sandwich_full,
+			treat_block_mask = treat_block_mask
 		)
 		indep_att_hat <- indep_te_results$att_hat
 		indep_att_se <- indep_te_results$att_te_se
@@ -2203,6 +2249,13 @@ genInvTwoWayFusionTransformMat <- function(n_vars, first_inds, R) {
 #' @param p Integer; total number of parameters in the model.
 #' @param alpha Numeric scalar; significance level for confidence intervals
 #'   (e.g., 0.05 for 95% CIs).
+#' @param se_type Character; one of `"default"` (Assumption-F1 model-based SE)
+#'   or `"cluster"` (experimental unit-clustered Liang-Zeger sandwich SE on
+#'   the OLS-on-selected-support residuals). Default `"default"`.
+#' @param y_final Numeric vector; the (fusion-then-)GLS-transformed response of
+#'   length `N*T` (or `N*T + p` if a ridge augmentation was applied upstream).
+#'   Required when `se_type = "cluster"` and `calc_ses = TRUE`; ignored
+#'   otherwise.
 #' @return A list containing:
 #'   \item{cohort_te_df}{Dataframe with cohort names, estimated ATTs, SEs,
 #'     confidence interval bounds, a `P_value` column (two-sided
@@ -2217,6 +2270,14 @@ genInvTwoWayFusionTransformMat <- function(n_vars, first_inds, R) {
 #'   \item{d_inv_treat_sel}{(If `fused=TRUE`) Relevant block of the inverse
 #'     fusion matrix for selected treatment effects.}
 #'   \item{calc_ses}{Logical, indicating if SEs were actually calculated.}
+#'   \item{sandwich_full}{(`se_type = "cluster"` only.) The full cluster-robust
+#'     sandwich variance on the selected support, reusable downstream by
+#'     `getTeResults2()` / `getTeResultsOLS()` so the same matrix backs both
+#'     cohort and overall ATT SEs.}
+#'   \item{treat_block_mask}{(`se_type = "cluster"` only.) Logical vector of
+#'     length `length(sel_feat_inds)` marking which selected columns correspond
+#'     to treatment-effect features; used to zero-pad `psi_r` / `psi_att`
+#'     against `sandwich_full`.}
 #' @details The function first computes the Gram matrix inverse (`gram_inv`) if
 #'   `calc_ses` is `TRUE`. Then, for each cohort `r`, it calculates the average
 #'   of the relevant `tes`. If SEs are calculated, it uses `getPsiRFused` or
@@ -2259,8 +2320,12 @@ getCohortATTsFinal <- function(
 	fused,
 	calc_ses,
 	p,
-	alpha = 0.05
+	alpha = 0.05,
+	se_type = "default",
+	y_final = NULL
 ) {
+	se_type <- match.arg(se_type, c("default", "cluster"))
+
 	stopifnot(max(sel_treat_inds_shifted) <= num_treats)
 	stopifnot(min(sel_treat_inds_shifted) >= 1)
 	stopifnot(length(tes) == num_treats)
@@ -2286,6 +2351,31 @@ getCohortATTsFinal <- function(
 		calc_ses <- res$calc_ses
 	} else {
 		gram_inv <- NA
+	}
+
+	# Cluster-robust sandwich (computed once outside the cohort loop and
+	# reused for the overall ATT in getTeResults2() / getTeResultsOLS()).
+	sandwich_full <- NULL
+	treat_block_mask <- NULL
+
+	if (identical(se_type, "cluster") && calc_ses) {
+		stopifnot(!is.null(y_final))
+		stopifnot(length(y_final) >= N * T)
+
+		X_S <- X_final[, sel_feat_inds, drop = FALSE]
+		y_ <- y_final[seq_len(N * T)]
+		ols_fit <- stats::lm.fit(cbind(1, X_S), y_)
+
+		sandwich_full <- .compute_cluster_robust_sandwich(
+			X_S = X_S,
+			residuals = ols_fit$residuals,
+			N = N,
+			T = T
+		)
+
+		treat_block_mask <- sel_feat_inds %in% treat_inds
+		stopifnot(length(treat_block_mask) == length(sel_feat_inds))
+		stopifnot(sum(treat_block_mask) == length(sel_treat_inds_shifted))
 	}
 
 	## We need the tau sub-matrix of D^{-1} ONLY if we are in fused workflow
@@ -2392,17 +2482,27 @@ getCohortATTsFinal <- function(
 			psi_mat[, r] <- psi_r
 			# Get standard errors
 
-			## Variance of the treatment effect for cohort r is sigma^2 /(NT) x
-			# pt(psi_r) %*% gram_inv %*% psi_r  (see paper)
-			cohort_te_ses[r] <- sqrt(
-				sig_eps_sq *
-					as.numeric(
-						t(psi_r) %*%
-							gram_inv %*%
-							psi_r
-					) /
-					(N * T)
-			)
+			if (identical(se_type, "cluster")) {
+				psi_r_full <- numeric(length(sel_feat_inds))
+				psi_r_full[treat_block_mask] <- psi_r
+				cohort_te_ses[r] <- sqrt(as.numeric(
+					t(psi_r_full) %*%
+						sandwich_full %*%
+						psi_r_full
+				))
+			} else {
+				## Variance of the treatment effect for cohort r is
+				## sigma^2 /(NT) x t(psi_r) %*% gram_inv %*% psi_r (see paper)
+				cohort_te_ses[r] <- sqrt(
+					sig_eps_sq *
+						as.numeric(
+							t(psi_r) %*%
+								gram_inv %*%
+								psi_r
+						) /
+						(N * T)
+				)
+			}
 		}
 	}
 
@@ -2473,7 +2573,9 @@ getCohortATTsFinal <- function(
 			psi_mat = psi_mat,
 			gram_inv = gram_inv,
 			d_inv_treat_sel = d_inv_treat_sel,
-			calc_ses = calc_ses
+			calc_ses = calc_ses,
+			sandwich_full = sandwich_full,
+			treat_block_mask = treat_block_mask
 		)
 	} else {
 		ret <- list(
@@ -2482,7 +2584,9 @@ getCohortATTsFinal <- function(
 			cohort_te_ses = cohort_te_ses,
 			psi_mat = psi_mat,
 			gram_inv = gram_inv,
-			calc_ses = calc_ses
+			calc_ses = calc_ses,
+			sandwich_full = sandwich_full,
+			treat_block_mask = treat_block_mask
 		)
 	}
 	return(ret)

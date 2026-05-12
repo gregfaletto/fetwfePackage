@@ -102,6 +102,14 @@
 #' `FALSE`, the estimator stops with an error in this case (the package's
 #' behavior prior to version 1.5.6). The argument has no effect when the input
 #' already contains never-treated units. Default is `TRUE`.
+#' @param se_type Character; one of `"default"` (the package's
+#' Assumption-F1-based standard error from the paper) or `"cluster"`
+#' (an *experimental* unit-clustered Liang-Zeger sandwich SE on the
+#' bridge-selected support; see the companion vignette `inference_vignette`
+#' for the formula, the assumptions, and the theory-pending caveat).
+#' `"cluster"` is only meaningful when `q < 1` (the bridge oracle property
+#' is required); for `q >= 1` the SE will be `NA` regardless of `se_type`.
+#' Default is `"default"`.
 #' @return An object of class \code{fetwfe} containing the following elements:
 #' \item{att_hat}{The estimated overall average treatment effect for a randomly selected treated unit.}
 #' \item{att_se}{If `q < 1`, a standard error for the ATT. If `indep_counts` was provided, this standard error is asymptotically exact; if not, it is asymptotically conservative. If `q >= 1`, this will be NA.}
@@ -190,8 +198,11 @@ fetwfe <- function(
 	verbose = FALSE,
 	alpha = 0.05,
 	add_ridge = FALSE,
-	allow_no_never_treated = TRUE
+	allow_no_never_treated = TRUE,
+	se_type = "default"
 ) {
+	se_type <- match.arg(se_type, c("default", "cluster"))
+
 	# Check inputs
 	ret <- checkFetwfeInputs(
 		pdata = pdata,
@@ -271,7 +282,8 @@ fetwfe <- function(
 		q = q,
 		verbose = verbose,
 		alpha = alpha,
-		add_ridge = add_ridge
+		add_ridge = add_ridge,
+		se_type = se_type
 	)
 
 	if (indep_count_data_available) {
@@ -326,7 +338,8 @@ fetwfe <- function(
 		R = res$R,
 		d = res$d,
 		p = res$p,
-		alpha = alpha
+		alpha = alpha,
+		se_type = se_type
 	)
 
 	# Add internal outputs in a separate list
@@ -397,6 +410,14 @@ fetwfe <- function(
 #' `FALSE`, the estimator stops with an error in this case (the package's
 #' behavior prior to version 1.5.6). The argument has no effect when the input
 #' already contains never-treated units. Default is `TRUE`.
+#' @param se_type Character; one of `"default"` (the package's
+#' Assumption-F1-based standard error from the paper) or `"cluster"`
+#' (an *experimental* unit-clustered Liang-Zeger sandwich SE on the
+#' bridge-selected support; see the companion vignette `inference_vignette`
+#' for the formula, the assumptions, and the theory-pending caveat).
+#' `"cluster"` is only meaningful when `q < 1` (the bridge oracle property
+#' is required); for `q >= 1` the SE will be `NA` regardless of `se_type`.
+#' Default is `"default"`.
 #' @return An object of class \code{fetwfe} containing the following elements:
 #' \item{att_hat}{The estimated overall average treatment effect for a randomly selected treated unit.}
 #' \item{att_se}{If `q < 1`, a standard error for the ATT. If `indep_counts` was provided, this standard error is asymptotically exact; if not, it is asymptotically conservative. If `q >= 1`, this will be NA.}
@@ -456,8 +477,11 @@ fetwfeWithSimulatedData <- function(
 	verbose = FALSE,
 	alpha = 0.05,
 	add_ridge = FALSE,
-	allow_no_never_treated = TRUE
+	allow_no_never_treated = TRUE,
+	se_type = "default"
 ) {
+	se_type <- match.arg(se_type, c("default", "cluster"))
+
 	if (!inherits(simulated_obj, "FETWFE_simulated")) {
 		stop("simulated_obj must be an object of class 'FETWFE_simulated'")
 	}
@@ -489,7 +513,8 @@ fetwfeWithSimulatedData <- function(
 		verbose = verbose,
 		alpha = alpha,
 		add_ridge = add_ridge,
-		allow_no_never_treated = allow_no_never_treated
+		allow_no_never_treated = allow_no_never_treated,
+		se_type = se_type
 	)
 
 	return(res)
@@ -571,6 +596,12 @@ fetwfeWithSimulatedData <- function(
 #' `FALSE`, the estimator stops with an error in this case (the package's
 #' behavior prior to version 1.5.6). The argument has no effect when the input
 #' already contains never-treated units. Default is `TRUE`.
+#' @param se_type Character; one of `"default"` (the package's
+#' Assumption-F1-based standard error from the paper) or `"cluster"`
+#' (an *experimental* unit-clustered Liang-Zeger sandwich SE on the
+#' OLS-selected support; see the companion vignette `inference_vignette`
+#' for the formula, the assumptions, and the theory-pending caveat).
+#' Default is `"default"`.
 #' @return An object of class \code{etwfe} containing the following elements:
 #' \item{att_hat}{The
 #' estimated overall average treatment effect for a randomly selected treated
@@ -636,8 +667,11 @@ etwfe <- function(
 	verbose = FALSE,
 	alpha = 0.05,
 	add_ridge = FALSE,
-	allow_no_never_treated = TRUE
+	allow_no_never_treated = TRUE,
+	se_type = "default"
 ) {
+	se_type <- match.arg(se_type, c("default", "cluster"))
+
 	# Check inputs
 	ret <- checkEtwfeInputs(
 		pdata = pdata,
@@ -729,7 +763,8 @@ etwfe <- function(
 		sig_eps_c_sq = sig_eps_c_sq,
 		verbose = verbose,
 		alpha = alpha,
-		add_ridge = add_ridge
+		add_ridge = add_ridge,
+		se_type = se_type
 	)
 
 	if (indep_count_data_available) {
@@ -771,7 +806,8 @@ etwfe <- function(
 		d = res$d,
 		p = res$p,
 		alpha = alpha,
-		calc_ses = res$calc_ses
+		calc_ses = res$calc_ses,
+		se_type = se_type
 	)
 
 	# Add the etwfe class

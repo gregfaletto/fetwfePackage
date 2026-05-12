@@ -68,6 +68,8 @@ The function returns a list containing, for example, the estimated overall avera
 
 You can get the full documentation details by using `?fetwfe` in R when you have the package loaded.
 
+For a detailed discussion of how the package's standard errors are computed, the assumptions they rely on, and an experimental cluster-robust option (`se_type = "cluster"`) suitable as a sensitivity check, see the companion vignette `inference_vignette`.
+
 In the next sections, we'll walk through examples of how `fetwfe()` is used.
 
 ## Simulated Data Example

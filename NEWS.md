@@ -1,5 +1,25 @@
 # NEWS
 
+## Version 1.6.0 (2026-05-12)
+
+- Added an experimental `se_type = c("default", "cluster")` argument to
+  `fetwfe()`, `betwfe()`, `etwfe()`, `twfeCovs()` and their
+  `*WithSimulatedData()` wrappers. Setting `se_type = "cluster"`
+  replaces the package's Assumption-F1-based standard errors with a
+  unit-clustered Liang-Zeger sandwich on the bridge-selected support
+  (for FETWFE/BETWFE) or the OLS-selected support (for ETWFE/twfeCovs);
+  both `att_se` and `catt_ses` (and the derived confidence intervals
+  and p-values) are recomputed from this sandwich. For FETWFE/BETWFE,
+  `se_type = "cluster"` is meaningful only when `q < 1` (the bridge
+  oracle property is required); for `q >= 1` the SE remains `NA` as
+  before. The new option is experimental and the underlying theory is
+  pending; see the companion vignette `inference_vignette` for the
+  formula, the assumptions it relaxes from F1, and the theory-pending
+  caveat. Default is `"default"`, so existing callers see no behavior
+  change. The `print()` and `summary()` methods now label the SE line
+  "Std. Error (cluster-robust)" / "SE (cluster-robust)" when
+  `se_type = "cluster"` was used.
+
 ## Version 1.5.6 (2026-05-11)
 
 - The four estimators (`fetwfe()`, `betwfe()`, `etwfe()`, `twfeCovs()`)

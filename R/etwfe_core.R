@@ -24,6 +24,12 @@
 #' `FALSE`, the estimator stops with an error in this case (the package's
 #' behavior prior to version 1.5.6). The argument has no effect when the input
 #' already contains never-treated units. Default is `TRUE`.
+#' @param se_type Character; one of `"default"` (the package's
+#' Assumption-F1-based standard error from the paper) or `"cluster"`
+#' (an *experimental* unit-clustered Liang-Zeger sandwich SE on the
+#' OLS-selected support; see the companion vignette `inference_vignette`
+#' for the formula, the assumptions, and the theory-pending caveat).
+#' Default is `"default"`.
 #' @return An object of class \code{etwfe} containing the following elements:
 #' \item{att_hat}{The
 #' estimated overall average treatment effect for a randomly selected treated
@@ -87,8 +93,11 @@ etwfeWithSimulatedData <- function(
 	verbose = FALSE,
 	alpha = 0.05,
 	add_ridge = FALSE,
-	allow_no_never_treated = TRUE
+	allow_no_never_treated = TRUE,
+	se_type = "default"
 ) {
+	se_type <- match.arg(se_type, c("default", "cluster"))
+
 	if (!inherits(simulated_obj, "FETWFE_simulated")) {
 		stop("simulated_obj must be an object of class 'FETWFE_simulated'")
 	}
@@ -116,7 +125,8 @@ etwfeWithSimulatedData <- function(
 		verbose = verbose,
 		alpha = alpha,
 		add_ridge = add_ridge,
-		allow_no_never_treated = allow_no_never_treated
+		allow_no_never_treated = allow_no_never_treated,
+		se_type = se_type
 	)
 
 	return(res)
@@ -408,8 +418,10 @@ etwfe_core <- function(
 	sig_eps_c_sq = NA,
 	verbose = FALSE,
 	alpha = 0.05,
-	add_ridge = FALSE
+	add_ridge = FALSE,
+	se_type = "default"
 ) {
+	se_type <- match.arg(se_type, c("default", "cluster"))
 	ret <- check_etwfe_core_inputs(
 		in_sample_counts = in_sample_counts,
 		N = N,
@@ -545,7 +557,9 @@ etwfe_core <- function(
 		N = N,
 		T = T,
 		p = p, # Total number of original parameters (columns in X_ints)
-		alpha = alpha
+		alpha = alpha,
+		se_type = se_type,
+		y_final = y_final
 	)
 
 	cohort_te_df <- res$cohort_te_df
@@ -554,6 +568,8 @@ etwfe_core <- function(
 	psi_mat <- res$psi_mat
 	gram_inv <- res$gram_inv
 	calc_ses <- res$calc_ses
+	sandwich_full <- res$sandwich_full
+	treat_block_mask <- res$treat_block_mask
 
 	rm(res)
 
@@ -584,7 +600,10 @@ etwfe_core <- function(
 		cohort_probs_overall = cohort_probs_overall, # In-sample pi_r (unconditional on treated)
 		first_inds = first_inds,
 		calc_ses = calc_ses,
-		indep_probs = FALSE
+		indep_probs = FALSE,
+		se_type = se_type,
+		sandwich_full = sandwich_full,
+		treat_block_mask = treat_block_mask
 	)
 
 	in_sample_att_hat <- in_sample_te_results$att_hat
@@ -606,7 +625,10 @@ etwfe_core <- function(
 			cohort_probs_overall = indep_cohort_probs_overall, # indep pi_r (unconditional)
 			first_inds = first_inds,
 			calc_ses = calc_ses,
-			indep_probs = TRUE
+			indep_probs = TRUE,
+			se_type = se_type,
+			sandwich_full = sandwich_full,
+			treat_block_mask = treat_block_mask
 		)
 		indep_att_hat <- indep_te_results$att_hat
 		indep_att_se <- indep_te_results$att_te_se
