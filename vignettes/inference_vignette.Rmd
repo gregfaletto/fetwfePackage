@@ -1,0 +1,152 @@
+---
+title: "Standard errors in fetwfe: Assumption F1 and the experimental cluster-robust option"
+author: "Gregory Faletto"
+date: "`r Sys.Date()`"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    output_file: "FETWFE_Inference_Vignette.html"
+vignette: >
+  %\VignetteIndexEntry{Standard errors in fetwfe: Assumption F1 and the experimental cluster-robust option}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(fetwfe)
+```
+
+This vignette documents how `fetwfe()`, `betwfe()`, `etwfe()`, and `twfeCovs()` compute their standard errors, what assumptions those standard errors rely on, and how to opt into an *experimental* unit-clustered alternative when the default assumptions look restrictive. The four estimators share the same inferential machinery, so the discussion applies to all of them; we use `fetwfe()` in the running example.
+
+# 1. What `att_se` and `catt_ses` are under Assumption F1
+
+By default, the package's standard errors --- the `att_se` slot on the returned object and the entries of `catt_ses` --- are computed under paper Assumption F1 (Faletto 2025, [arXiv:2312.05985](https://arxiv.org/abs/2312.05985)). In words, F1 says:
+
+* **Mean zero idiosyncratic shocks.** Conditional on the unit random effect $c_i$, the cohort assignment $W_i$, and the covariates $X_i$, each observation-level error $u_{it}$ has mean zero.
+* **Compound-symmetric covariance.** $\mathrm{Var}(u_{i\cdot} \mid c_i, W_i, X_i) = \sigma_\varepsilon^2 I_T$. That is, the package allows for a unit-level random effect $c_i$ (estimated as `sig_eps_c_sq`) but assumes **no within-unit serial correlation beyond that random effect**, and the idiosyncratic variance $\sigma_\varepsilon^2$ (estimated as `sig_eps_sq`) is the same across units.
+* **Independent units.** The $N$ units are i.i.d. draws.
+
+Under F1, the regression-coefficient covariance contribution to the ATT standard error is
+
+$$
+\mathrm{Var}_1(\widehat{\tau}_{\text{ATT}})
+\;=\;
+\frac{\sigma_\varepsilon^2}{NT}\;\psi_{\text{att}}^\top \widehat G^{-1} \psi_{\text{att}},
+$$
+
+where $\widehat G^{-1}$ is the Gram inverse on the bridge-selected support and $\psi_{\text{att}}$ encodes the cohort-weighted ATT contrast. The cohort-specific SEs (`catt_ses`) have the same form with a cohort selector $\psi_r$ in place of $\psi_{\text{att}}$.
+
+The overall ATT carries a second variance term, $\mathrm{Var}_2$, that comes from estimating the cohort-membership probabilities $\widehat\pi_r$. This term scales like $1/N$ and is unrelated to the regression residuals.
+
+* If you pass `indep_counts`, the package treats the cohort-membership counts as coming from an independent split, so the two variance terms simply add: $\mathrm{Var}_1 + \mathrm{Var}_2$ is **asymptotically exact**.
+* If `indep_counts` is omitted (the common case), the package returns the **conservative** Cauchy-Schwarz bound $\mathrm{Var}_1 + \mathrm{Var}_2 + 2\sqrt{\mathrm{Var}_1\,\mathrm{Var}_2}$, which is valid under any covariance between the two pieces.
+
+Either way, the standard error printed and stored on the object is the square root of this combined variance.
+
+# 2. When Assumption F1 may be restrictive in applied DiD
+
+Assumption F1 is the workhorse setting in the paper and it is well-suited to the asymptotic theory underpinning Theorems 6.1--6.3. In applied DiD work, however, it is not unusual to suspect one or more of the following violations:
+
+## 2.1 Within-unit serial correlation beyond the random effect
+
+The unit random effect $c_i$ in F1 absorbs a single, time-constant deviation per unit. It does *not* model serial correlation in the idiosyncratic shocks: under F1, $u_{it}$ and $u_{i,t-1}$ are uncorrelated once $c_i$ is conditioned on. In practice, panel outcomes often exhibit residual time-series structure (mean reversion, lagged shocks, sticky deviations) that the random effect alone cannot explain. Bertrand, Duflo, and Mullainathan (2004) is the classic warning that ignoring within-unit serial correlation can drastically understate DiD standard errors.
+
+## 2.2 Heteroskedasticity across units
+
+F1 imposes a single $\sigma_\varepsilon^2$ across all units. If the residual variance differs across, say, large vs. small states, or volatile vs. stable industries, the model-based variance can be off in either direction relative to a heteroskedasticity-robust alternative.
+
+## 2.3 Higher-level clustering
+
+F1 treats units as i.i.d. If observations within a state-year, industry-year, or other higher-level grouping share unobserved shocks across multiple sampled units, the variance estimated under F1 will understate the true sampling variability. The package's current data model does not target this case directly: the natural opt-in cluster level (which is the level the experimental option below uses) is the unit itself.
+
+In all three cases, a textbook fix is to replace the model-based variance with a sandwich estimator that does not rely on the compound-symmetric covariance structure.
+
+# 3. Experimental: cluster-robust standard errors via `se_type = "cluster"`
+
+Starting in version 1.6.0, all four estimators (`fetwfe()`, `betwfe()`, `etwfe()`, `twfeCovs()`) and their `*WithSimulatedData()` wrappers accept an experimental `se_type` argument:
+
+```{r, eval = FALSE}
+fetwfe(..., se_type = "cluster")
+```
+
+Setting `se_type = "cluster"` swaps the model-based regression-coefficient variance $\mathrm{Var}_1$ for a **unit-clustered Liang-Zeger CR1 sandwich** computed on the bridge-selected support. The default (`se_type = "default"`) is unchanged.
+
+## 3.1 The formula
+
+Let $\widehat{\mathcal S}$ be the support selected by the bridge regression, $X_{\widehat{\mathcal S}}$ the corresponding design matrix in the coordinate system the regression was solved in (GLS-transformed for ETWFE/twfeCovs, fusion-then-GLS-transformed for FETWFE/BETWFE), and $\widehat\varepsilon$ the residuals from OLS on that selected support. The cluster-robust variance is
+
+$$
+V_{\text{CR}}
+\;=\;
+\frac{N}{N-1}\;
+(X_{\widehat{\mathcal S}}^\top X_{\widehat{\mathcal S}})^{-1}\;
+\Bigl(\sum_{i=1}^N X_{i\cdot\widehat{\mathcal S}}^\top \widehat\varepsilon_{i\cdot} \widehat\varepsilon_{i\cdot}^\top X_{i\cdot\widehat{\mathcal S}}\Bigr)\;
+(X_{\widehat{\mathcal S}}^\top X_{\widehat{\mathcal S}})^{-1},
+$$
+
+with units $i = 1, \dots, N$ as clusters and an $N/(N-1)$ small-sample adjustment (matching `sandwich::vcovCL(cadjust = TRUE, type = "HC0")`). The CATT SE for cohort $r$ is $\sqrt{\psi_r^\top V_{\text{CR}} \psi_r}$ (using a zero-padded $\psi_r$ on the full selected support); the ATT regression-coefficient variance is $\psi_{\text{att}}^\top V_{\text{CR}} \psi_{\text{att}}$, replacing $\mathrm{Var}_1$ above. The second variance term $\mathrm{Var}_2$ (from estimating cohort probabilities) is unchanged because it depends on empirical cohort proportions, not regression residuals; the conservative-vs-asymptotically-exact combination logic also carries through unchanged.
+
+For FETWFE and BETWFE, `se_type = "cluster"` is only meaningful when `q < 1` (the bridge oracle property is required); for `q >= 1` the cluster path returns `NA` just like the default. ETWFE and `twfeCovs` have no `q` argument, so the cluster path always runs when the Gram matrix is invertible.
+
+## 3.2 Why we call this experimental
+
+The CR1 sandwich is a textbook estimator and the package's implementation matches `sandwich::vcovCL()` to numerical precision on a clean panel without selection. What is *not* yet covered by the paper's theory is:
+
+* The asymptotic rate change. Under cluster-robust inference, the relevant rate is $\sqrt{N}$ rather than $\sqrt{NT}$; statements like Theorems 6.3 and 6.4 in the paper would need to be re-derived at the new rate.
+* Verification that the bridge oracle property of Theorem 6.2 still holds under the relaxed covariance structure that motivates cluster-robust SEs in the first place.
+* Sandwich consistency *after model selection*, i.e., that the CR1 sandwich evaluated at the bridge-selected support is a consistent estimator of the true asymptotic variance.
+
+These extensions are mechanically routine but conceptually non-trivial, and they are explicitly outside the scope of the 1.6.0 release. Until they land, `se_type = "cluster"` is exposed as an opt-in, clearly-labelled experimental feature.
+
+**Recommendation.** Until the theory lands, treat `se_type = "cluster"` as a sensitivity check: report both `se_type = "default"` and `se_type = "cluster"` in applied work, comment on the gap, and lean on the default for headline numbers.
+
+## 3.3 Worked example
+
+```{r}
+set.seed(2026)
+sim_coefs <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+sim_data  <- simulateData(
+  sim_coefs,
+  N = 120,
+  sig_eps_sq = 1,
+  sig_eps_c_sq = 0.5
+)
+
+res_default <- fetwfeWithSimulatedData(sim_data)
+res_cluster <- fetwfeWithSimulatedData(sim_data, se_type = "cluster")
+
+c(
+  default = res_default$att_se,
+  cluster = res_cluster$att_se
+)
+```
+
+On this F1-conforming simulated panel the two SEs are similar by construction: the data-generating process satisfies F1, so the model-based SE is already valid and the cluster-robust SE estimates the same underlying variance. Under a deliberately serially-correlated DGP (or under heteroskedasticity, or higher-level clustering) the cluster-robust SE will typically be larger.
+
+The `print()` and `summary()` methods label the SE so it is clear which one was used:
+
+```{r}
+print(res_cluster)
+```
+
+The CATT SEs and confidence intervals in `catt_df` are recomputed from the same cluster-robust sandwich; the CATT p-values follow accordingly.
+
+# 4. Summary
+
+* The default `se_type = "default"` returns the package's Assumption-F1-based standard error from Faletto (2025).
+* The experimental `se_type = "cluster"` returns a unit-clustered Liang-Zeger sandwich SE on the bridge-selected support. Use it as a sensitivity check when within-unit serial correlation, heteroskedasticity, or higher-level clustering looks plausible in your data. The theory backing this option formally is still in progress.
+
+# References
+
+Bertrand, M., Duflo, E., & Mullainathan, S. (2004). "How much should we trust differences-in-differences estimates?" *Quarterly Journal of Economics* 119(1), 249--275.
+
+Faletto, G. (2025). "Fused Extended Two-Way Fixed Effects for Difference-in-Differences with Staggered Adoptions." *arXiv preprint* [arXiv:2312.05985](https://arxiv.org/abs/2312.05985).
+
+Liang, K.-Y., & Zeger, S. L. (1986). "Longitudinal data analysis using generalized linear models." *Biometrika* 73(1), 13--22.
