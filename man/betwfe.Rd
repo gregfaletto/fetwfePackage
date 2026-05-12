@@ -134,6 +134,18 @@ estimated overall average treatment effect for a randomly selected treated
 unit.} \item{att_se}{If \code{q < 1}, a standard error for the ATT. If
 \code{indep_counts} was provided, this standard error is asymptotically exact; if
 not, it is asymptotically conservative. If \code{q >= 1}, this will be NA.}
+\item{att_p_value}{A two-sided p-value for the overall ATT against the
+null \code{H_0: tau = 0}, computed as \verb{2 * pnorm(-|att_hat / att_se|)}. \code{NA} if
+\code{att_se} is zero or \code{NA} (e.g., under the bridge solver's selected-out
+fallback).}
+\item{att_selected}{Logical scalar; \code{TRUE} if \code{att_hat} is not exactly zero,
+\code{FALSE} otherwise. BETWFE uses bridge regression directly on the
+coefficients (rather than on the fused restrictions used by FETWFE); under
+the bridge oracle property of Kock (2013), \code{att_selected = FALSE} is an
+analogous asymptotic statement that the truth is zero under a sparsity
+assumption different from the one Theorem 6.2 establishes for FETWFE. For
+ridge (\code{q = 2}) the bridge solver does not zero coefficients, so this will
+typically be \code{TRUE}.}
 \item{catt_hats}{A named vector containing the estimated average treatment
 effects for each cohort.} \item{catt_ses}{If \code{q < 1}, a named vector
 containing the (asymptotically exact, non-conservative) standard errors for
@@ -143,8 +155,11 @@ cohort conditional on being treated, which was used in calculating \code{att_hat
 If \code{indep_counts} was provided, \code{cohort_probs} was calculated from that;
 otherwise, it was calculated from the counts of units in each treated
 cohort in \code{pdata}.} \item{catt_df}{A dataframe displaying the cohort names,
-average treatment effects, standard errors, and \code{1 - alpha} confidence
-interval bounds.} \item{beta_hat}{The full vector of estimated coefficients.}
+average treatment effects, standard errors, \code{1 - alpha} confidence
+interval bounds, per-cohort p-values (\code{P_value}), and a \code{selected} logical
+flag (\code{TRUE} when the bridge penalty left the cohort's CATT nonzero). For
+selected-out cohorts (\code{selected = FALSE}), \code{P_value} is \code{NA}.}
+\item{beta_hat}{The full vector of estimated coefficients.}
 \item{treat_inds}{The indices of \code{beta_hat} corresponding to
 the treatment effects for each cohort at each time.}
 \item{treat_int_inds}{The indices of \code{beta_hat} corresponding to the

@@ -21,8 +21,9 @@
 #' @param alpha Numeric scalar; significance level for confidence intervals
 #'   (e.g., 0.05 for 95% CIs).
 #' @return A list containing:
-#'   \item{cohort_te_df}{Dataframe with cohort names, estimated ATTs, SEs, and
-#'     confidence interval bounds.}
+#'   \item{cohort_te_df}{Dataframe with cohort names, estimated ATTs, SEs,
+#'     confidence interval bounds, and a `P_value` column (two-sided
+#'     `2 * pnorm(-|estimate / se|)`, `NA` when `SE` is zero or `NA`).}
 #'   \item{cohort_tes}{Named numeric vector of estimated ATTs for each cohort.}
 #'   \item{cohort_te_ses}{Named numeric vector of standard errors for cohort ATTs.}
 #'   \item{psi_mat}{Matrix used in SE calculation for overall ATT.}
@@ -123,7 +124,8 @@ getCohortATTsFinalOLS <- function(
 			cohort_tes,
 			cohort_te_ses,
 			cohort_tes - stats::qnorm(1 - alpha / 2) * cohort_te_ses,
-			cohort_tes + stats::qnorm(1 - alpha / 2) * cohort_te_ses
+			cohort_tes + stats::qnorm(1 - alpha / 2) * cohort_te_ses,
+			.compute_p_values(cohort_tes, cohort_te_ses)
 		)
 
 		names(cohort_te_ses) <- c_names
@@ -134,7 +136,8 @@ getCohortATTsFinalOLS <- function(
 			cohort_tes,
 			rep(NA, R),
 			rep(NA, R),
-			rep(NA, R)
+			rep(NA, R),
+			rep(NA_real_, R)
 		)
 	}
 
@@ -143,7 +146,8 @@ getCohortATTsFinalOLS <- function(
 		"Estimated TE",
 		"SE",
 		"ConfIntLow",
-		"ConfIntHigh"
+		"ConfIntHigh",
+		"P_value"
 	)
 
 	stopifnot(length(tes) == nrow(psi_mat))

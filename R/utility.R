@@ -1,7 +1,7 @@
 #' @import glmnet
 #' @importFrom Matrix bdiag
 #' @importFrom expm sqrtm
-#' @importFrom stats qnorm predict coef model.matrix setNames lm
+#' @importFrom stats qnorm pnorm predict coef model.matrix setNames lm
 
 #-------------------------------------------------------------------------------
 # Helper Functions for Data Processing
@@ -483,4 +483,32 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 	stopifnot(ret >= 0)
 
 	return(ret)
+}
+
+#' @title Compute two-sided p-values from estimates and standard errors
+#'
+#' @description
+#' Internal helper used by `summary.*` / `print.*` methods and `catt_df`
+#' assemblers across the four estimator classes. Returns the standard
+#' `2 * pnorm(-|t|)` p-value for rows where the standard error is positive,
+#' and `NA_real_` for rows where the standard error is zero or `NA`. The
+#' zero-SE case happens when the estimator zeros a coefficient (selected
+#' out under FETWFE / BETWFE bridge regression with `q < 1`), or in
+#' degenerate fallback paths where SEs cannot be computed. Routing all
+#' p-value computation through this single helper avoids the
+#' `0 / 0 = NaN` trap and gives one canonical formula to audit.
+#'
+#' @param estimates Numeric vector of coefficient estimates.
+#' @param ses Numeric vector of standard errors, same length as `estimates`.
+#' @return A numeric vector the same length as `estimates`. Each entry is
+#'   `2 * pnorm(-abs(estimates[i] / ses[i]))` when `ses[i] > 0` and not
+#'   `NA`, and `NA_real_` otherwise.
+#' @keywords internal
+#' @noRd
+.compute_p_values <- function(estimates, ses) {
+	ifelse(
+		!is.na(ses) & ses > 0,
+		2 * pnorm(-abs(estimates / ses)),
+		NA_real_
+	)
 }

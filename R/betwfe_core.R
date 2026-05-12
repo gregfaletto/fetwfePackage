@@ -97,6 +97,18 @@
 #' unit.} \item{att_se}{If `q < 1`, a standard error for the ATT. If
 #' `indep_counts` was provided, this standard error is asymptotically exact; if
 #' not, it is asymptotically conservative. If `q >= 1`, this will be NA.}
+#' \item{att_p_value}{A two-sided p-value for the overall ATT against the
+#' null `H_0: tau = 0`, computed as `2 * pnorm(-|att_hat / att_se|)`. `NA` if
+#' `att_se` is zero or `NA` (e.g., under the bridge solver's selected-out
+#' fallback).}
+#' \item{att_selected}{Logical scalar; `TRUE` if `att_hat` is not exactly zero,
+#' `FALSE` otherwise. BETWFE uses bridge regression directly on the
+#' coefficients (rather than on the fused restrictions used by FETWFE); under
+#' the bridge oracle property of Kock (2013), `att_selected = FALSE` is an
+#' analogous asymptotic statement that the truth is zero under a sparsity
+#' assumption different from the one Theorem 6.2 establishes for FETWFE. For
+#' ridge (`q = 2`) the bridge solver does not zero coefficients, so this will
+#' typically be `TRUE`.}
 #' \item{catt_hats}{A named vector containing the estimated average treatment
 #' effects for each cohort.} \item{catt_ses}{If `q < 1`, a named vector
 #' containing the (asymptotically exact, non-conservative) standard errors for
@@ -106,8 +118,11 @@
 #' If `indep_counts` was provided, `cohort_probs` was calculated from that;
 #' otherwise, it was calculated from the counts of units in each treated
 #' cohort in `pdata`.} \item{catt_df}{A dataframe displaying the cohort names,
-#' average treatment effects, standard errors, and `1 - alpha` confidence
-#' interval bounds.} \item{beta_hat}{The full vector of estimated coefficients.}
+#' average treatment effects, standard errors, `1 - alpha` confidence
+#' interval bounds, per-cohort p-values (`P_value`), and a `selected` logical
+#' flag (`TRUE` when the bridge penalty left the cohort's CATT nonzero). For
+#' selected-out cohorts (`selected = FALSE`), `P_value` is `NA`.}
+#' \item{beta_hat}{The full vector of estimated coefficients.}
 #' \item{treat_inds}{The indices of `beta_hat` corresponding to
 #' the treatment effects for each cohort at each time.}
 #' \item{treat_int_inds}{The indices of `beta_hat` corresponding to the
@@ -312,9 +327,15 @@ betwfe <- function(
 		att_se <- res$in_sample_att_se
 		cohort_probs <- res$cohort_probs
 	}
+
+	att_p_value <- .compute_p_values(att_hat, att_se)
+	att_selected <- att_hat != 0
+
 	out <- list(
 		att_hat = att_hat,
 		att_se = att_se,
+		att_p_value = att_p_value,
+		att_selected = att_selected,
 		catt_hats = res$catt_hats,
 		catt_ses = res$catt_ses,
 		cohort_probs = cohort_probs,
@@ -396,6 +417,18 @@ betwfe <- function(
 #' unit.} \item{att_se}{If `q < 1`, a standard error for the ATT. If
 #' `indep_counts` was provided, this standard error is asymptotically exact; if
 #' not, it is asymptotically conservative. If `q >= 1`, this will be NA.}
+#' \item{att_p_value}{A two-sided p-value for the overall ATT against the
+#' null `H_0: tau = 0`, computed as `2 * pnorm(-|att_hat / att_se|)`. `NA` if
+#' `att_se` is zero or `NA` (e.g., under the bridge solver's selected-out
+#' fallback).}
+#' \item{att_selected}{Logical scalar; `TRUE` if `att_hat` is not exactly zero,
+#' `FALSE` otherwise. BETWFE uses bridge regression directly on the
+#' coefficients (rather than on the fused restrictions used by FETWFE); under
+#' the bridge oracle property of Kock (2013), `att_selected = FALSE` is an
+#' analogous asymptotic statement that the truth is zero under a sparsity
+#' assumption different from the one Theorem 6.2 establishes for FETWFE. For
+#' ridge (`q = 2`) the bridge solver does not zero coefficients, so this will
+#' typically be `TRUE`.}
 #' \item{catt_hats}{A named vector containing the estimated average treatment
 #' effects for each cohort.} \item{catt_ses}{If `q < 1`, a named vector
 #' containing the (asymptotically exact, non-conservative) standard errors for
@@ -405,8 +438,11 @@ betwfe <- function(
 #' If `indep_counts` was provided, `cohort_probs` was calculated from that;
 #' otherwise, it was calculated from the counts of units in each treated
 #' cohort in `pdata`.} \item{catt_df}{A dataframe displaying the cohort names,
-#' average treatment effects, standard errors, and `1 - alpha` confidence
-#' interval bounds.} \item{beta_hat}{The full vector of estimated coefficients.}
+#' average treatment effects, standard errors, `1 - alpha` confidence
+#' interval bounds, per-cohort p-values (`P_value`), and a `selected` logical
+#' flag (`TRUE` when the bridge penalty left the cohort's CATT nonzero). For
+#' selected-out cohorts (`selected = FALSE`), `P_value` is `NA`.}
+#' \item{beta_hat}{The full vector of estimated coefficients.}
 #' \item{treat_inds}{The indices of `beta_hat` corresponding to
 #' the treatment effects for each cohort at each time.}
 #' \item{treat_int_inds}{The indices of `beta_hat` corresponding to the
@@ -604,7 +640,7 @@ betwfeWithSimulatedData <- function(
 #'   \item{indep_att_se}{Standard error for `indep_att_hat` (NA if not applicable).}
 #'   \item{catt_hats}{A named vector of estimated CATTs for each cohort.}
 #'   \item{catt_ses}{A named vector of SEs for `catt_hats` (NA if `q >= 1`).}
-#'   \item{catt_df}{A data.frame summarizing CATTs, SEs, and confidence intervals.}
+#'   \item{catt_df}{A data.frame summarizing CATTs, SEs, confidence intervals, per-cohort p-values (`P_value`), and a `selected` logical flag (`TRUE` when the bridge penalty left the cohort's CATT nonzero).}
 #'   \item{beta_hat}{The vector of estimated coefficients.}
 #'   \item{treat_inds}{Indices in `beta_hat` corresponding to base treatment effects.}
 #'   \item{treat_int_inds}{Indices in `beta_hat` corresponding to treatment-covariate interactions.}
@@ -840,6 +876,8 @@ betwfe_core <- function(
 			SE = rep(ret_se, R),
 			ConfIntLow = rep(ret_se, R),
 			ConfIntHigh = rep(ret_se, R),
+			P_value = rep(NA_real_, R),
+			selected = rep(FALSE, R),
 			check.names = FALSE
 		)
 
@@ -923,6 +961,8 @@ betwfe_core <- function(
 			SE = rep(ret_se, R),
 			ConfIntLow = rep(ret_se, R),
 			ConfIntHigh = rep(ret_se, R),
+			P_value = rep(NA_real_, R),
+			selected = rep(FALSE, R),
 			check.names = FALSE
 		)
 

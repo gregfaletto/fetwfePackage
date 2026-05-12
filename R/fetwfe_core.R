@@ -624,7 +624,7 @@ getBetaBIC <- function(fit, N, T, p, X_mod, y, scale_center, scale_scale) {
 #'   \item{indep_att_se}{Standard error for `indep_att_hat` (NA if not applicable).}
 #'   \item{catt_hats}{A named vector of estimated CATTs for each cohort.}
 #'   \item{catt_ses}{A named vector of SEs for `catt_hats` (NA if `q >= 1`).}
-#'   \item{catt_df}{A data.frame summarizing CATTs, SEs, and confidence intervals.}
+#'   \item{catt_df}{A data.frame summarizing CATTs, SEs, confidence intervals, per-cohort p-values (`P_value`), and a `selected` logical flag (`TRUE` when the bridge penalty left the cohort's CATT nonzero).}
 #'   \item{theta_hat}{The vector of estimated coefficients in the *transformed* (fused) space, including the intercept as the first element.}
 #'   \item{beta_hat}{The vector of estimated coefficients in the *original* space (after untransforming `theta_hat`, excluding intercept).}
 #'   \item{treat_inds}{Indices in `beta_hat` corresponding to base treatment effects.}
@@ -885,6 +885,8 @@ fetwfe_core <- function(
 			SE = rep(ret_se, R),
 			ConfIntLow = rep(ret_se, R),
 			ConfIntHigh = rep(ret_se, R),
+			P_value = rep(NA_real_, R),
+			selected = rep(FALSE, R),
 			check.names = FALSE
 		)
 
@@ -969,6 +971,8 @@ fetwfe_core <- function(
 			SE = rep(ret_se, R),
 			ConfIntLow = rep(ret_se, R),
 			ConfIntHigh = rep(ret_se, R),
+			P_value = rep(NA_real_, R),
+			selected = rep(FALSE, R),
 			check.names = FALSE
 		)
 
@@ -2200,8 +2204,11 @@ genInvTwoWayFusionTransformMat <- function(n_vars, first_inds, R) {
 #' @param alpha Numeric scalar; significance level for confidence intervals
 #'   (e.g., 0.05 for 95% CIs).
 #' @return A list containing:
-#'   \item{cohort_te_df}{Dataframe with cohort names, estimated ATTs, SEs, and
-#'     confidence interval bounds.}
+#'   \item{cohort_te_df}{Dataframe with cohort names, estimated ATTs, SEs,
+#'     confidence interval bounds, a `P_value` column (two-sided
+#'     `2 * pnorm(-|estimate / se|)`, `NA` when `SE` is zero or `NA`), and a
+#'     `selected` logical column (`TRUE` when the bridge penalty left the
+#'     cohort's `Estimated TE` nonzero).}
 #'   \item{cohort_tes}{Named numeric vector of estimated ATTs for each cohort.}
 #'   \item{cohort_te_ses}{Named numeric vector of standard errors for cohort ATTs.}
 #'   \item{psi_mat}{Matrix used in SE calculation for overall ATT.}
@@ -2428,7 +2435,9 @@ getCohortATTsFinal <- function(
 			cohort_tes,
 			cohort_te_ses,
 			cohort_tes - stats::qnorm(1 - alpha / 2) * cohort_te_ses,
-			cohort_tes + stats::qnorm(1 - alpha / 2) * cohort_te_ses
+			cohort_tes + stats::qnorm(1 - alpha / 2) * cohort_te_ses,
+			.compute_p_values(cohort_tes, cohort_te_ses),
+			cohort_tes != 0
 		)
 
 		names(cohort_te_ses) <- c_names
@@ -2439,7 +2448,9 @@ getCohortATTsFinal <- function(
 			cohort_tes,
 			rep(NA, R),
 			rep(NA, R),
-			rep(NA, R)
+			rep(NA, R),
+			rep(NA_real_, R),
+			cohort_tes != 0
 		)
 	}
 
@@ -2448,7 +2459,9 @@ getCohortATTsFinal <- function(
 		"Estimated TE",
 		"SE",
 		"ConfIntLow",
-		"ConfIntHigh"
+		"ConfIntHigh",
+		"P_value",
+		"selected"
 	)
 
 	if (fused) {

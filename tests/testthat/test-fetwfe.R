@@ -1025,3 +1025,132 @@ test_that("tibbles work as input to fewtfe", {
 			colnames(result$catt_df)
 	))
 })
+
+# ------------------------------------------------------------------------------
+# Test: fetwfe surfaces P_value and selected in catt_df
+# ------------------------------------------------------------------------------
+test_that("fetwfe surfaces P_value and selected in catt_df", {
+	set.seed(2026)
+	sim <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+	dat <- simulateData(
+		sim,
+		N = 120,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5
+	)
+	res <- fetwfeWithSimulatedData(dat, verbose = FALSE)
+
+	expect_true("P_value" %in% colnames(res$catt_df))
+	expect_true("selected" %in% colnames(res$catt_df))
+	expect_type(res$catt_df$P_value, "double")
+	expect_type(res$catt_df$selected, "logical")
+
+	expect_true("att_p_value" %in% names(res))
+	expect_true("att_selected" %in% names(res))
+	expect_type(res$att_selected, "logical")
+	expect_length(res$att_p_value, 1)
+	expect_length(res$att_selected, 1)
+
+	# P_value semantics: in [0, 1] when not NA; NA exactly when the cohort
+	# is selected out (Estimated TE == 0).
+	non_na <- !is.na(res$catt_df$P_value)
+	expect_true(all(res$catt_df$P_value[non_na] >= 0))
+	expect_true(all(res$catt_df$P_value[non_na] <= 1))
+	expect_identical(
+		res$catt_df$selected,
+		res$catt_df[["Estimated TE"]] != 0
+	)
+	expect_true(all(is.na(res$catt_df$P_value[!res$catt_df$selected])))
+})
+
+# ------------------------------------------------------------------------------
+# Test: fetwfe produces at least one selected-out cohort in a sparse simulation
+# (sanity assertion: if the underlying grpreg solver ever stops returning
+# exact zeros, this test trips and we need to switch to a tolerance-based
+# `selected` definition.)
+# ------------------------------------------------------------------------------
+test_that("fetwfe produces at least one selected-out cohort in a sparse simulation", {
+	set.seed(2026)
+	sim <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+	dat <- simulateData(
+		sim,
+		N = 120,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5
+	)
+	res <- fetwfeWithSimulatedData(dat, verbose = FALSE)
+
+	expect_gt(sum(res$catt_df[["Estimated TE"]] == 0), 0)
+})
+
+# ------------------------------------------------------------------------------
+# Test: order_by = "pvalue" sorts by ascending P_value with NAs last
+# ------------------------------------------------------------------------------
+test_that("order_by = 'pvalue' sorts CATT by ascending P_value with NAs last", {
+	# Use a simulation that yields a mix of selected (non-NA P_value) and
+	# selected-out (NA P_value) cohorts so we can verify both the
+	# ascending sort AND the NA-last placement, not just one or the other.
+	set.seed(2026)
+	sim <- genCoefs(R = 4, T = 6, d = 2, density = 0.3, eff_size = 2)
+	dat <- simulateData(
+		sim,
+		N = 120,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5
+	)
+	res <- fetwfeWithSimulatedData(dat, verbose = FALSE)
+
+	# Guard: the test is only meaningful when both non-NA and NA P_values
+	# are present.
+	expect_gte(sum(!is.na(res$catt_df$P_value)), 2)
+	expect_gte(sum(is.na(res$catt_df$P_value)), 1)
+
+	output_lines <- capture.output(print(res, order_by = "pvalue"))
+
+	header_idx <- grep(
+		"Cohort Average Treatment Effects \\(CATT\\):",
+		output_lines
+	)
+	expect_length(header_idx, 1)
+
+	end_idx <- grep("^$|Model Details:", output_lines)
+	end_idx <- end_idx[end_idx > header_idx][1]
+	cohort_rows <- output_lines[(header_idx + 2):(end_idx - 1)]
+
+	first_tokens <- vapply(
+		strsplit(trimws(cohort_rows), "\\s+"),
+		`[`,
+		character(1),
+		1
+	)
+
+	expected_order <- order(
+		res$catt_df$P_value,
+		na.last = TRUE
+	)
+	expected_cohorts <- as.character(
+		res$catt_df$Cohort[expected_order]
+	)
+	expect_equal(first_tokens, expected_cohorts)
+
+	# Explicit assertion that the ascending-sort property holds across the
+	# printed non-NA rows, not just that the overall order matches one
+	# specific permutation. This catches a future regression where the
+	# sort logic accidentally became descending or unstable.
+	non_na_idx <- which(!is.na(res$catt_df$P_value))
+	first_non_na_cohort <- as.character(
+		res$catt_df$Cohort[non_na_idx][which.min(
+			res$catt_df$P_value[non_na_idx]
+		)]
+	)
+	expect_equal(first_tokens[1], first_non_na_cohort)
+	# Printed non-NA P_values appear in non-decreasing order.
+	printed_non_na_cohorts <- first_tokens[
+		first_tokens %in% as.character(res$catt_df$Cohort[non_na_idx])
+	]
+	printed_p_values <- res$catt_df$P_value[match(
+		printed_non_na_cohorts,
+		as.character(res$catt_df$Cohort)
+	)]
+	expect_equal(printed_p_values, sort(printed_p_values))
+})
