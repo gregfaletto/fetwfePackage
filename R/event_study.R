@@ -430,12 +430,15 @@ event_study <- function(x, alpha = NULL) {
 #' `getSecondVarTermDataApp` cannot be reused for the per-event-time case
 #' (its `psi_mat` argument is vestigial and its Jacobian time-averages over
 #' cohort blocks); see `.plans/feat-event-study-plot/plan_feedback_v2.md` and
-#' `_v2_response.md`. Post-execution review (round 1) additionally noted
-#' that `getSecondVarTermDataApp`'s Jacobian uses `cohort_probs_overall[r]`
-#' for off-diagonals where the textbook delta method would use
-#' `cohort_probs_overall[r_prime]`; investigating that discrepancy is a
-#' package-wide follow-up (see `.plans/follow-ups/issue-draft-fetwfe-var2-delta-method.md`)
-#' independent of this event-study work.
+#' `_v2_response.md`. Post-execution review confirmed that the existing
+#' `getSecondVarTermDataApp` deviates from paper Theorem 6.3's Jacobian
+#' (paper_arxiv.tex:2577-2592) by an off-by-one index — the off-diagonal
+#' coefficient uses the outer-loop `cohort_probs_overall[r]` where the
+#' paper specifies the column-index `cohort_probs_overall[r_prime]`. ETWFE's
+#' parallel `getSecondVarTermOLS` correctly uses the column index. Fixing
+#' both helpers in a single dedicated PR is tracked at
+#' `.plans/follow-ups/issue-draft-fetwfe-var2-delta-method.md`; this event-
+#' study helper inherits the bug pending that fix.
 #' @keywords internal
 #' @noRd
 .event_study_var2_fetwfe <- function(
