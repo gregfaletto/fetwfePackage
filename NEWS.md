@@ -1,5 +1,18 @@
 # NEWS
 
+## Version 1.6.1 (2026-05-12)
+
+- Added a no-covariate side-by-side demonstration of `etwfe()` and
+  `fetwfe()` to `vignettes/etwfe_betwfe_vignette.Rmd`. The main
+  vignette `vignettes/vignette.Rmd` now points readers at that
+  section near the divorce-data application. An explicit
+  `covs = c()` end-to-end test of the public `fetwfe()` entry point
+  was added to `tests/testthat/test-fetwfe.R`. The package already
+  supported the no-covariate case (the simulator's `d = 0` path is
+  exercised by `tests/testthat/test-genCoefs.R` and
+  `tests/testthat/test-simulateData.R`); this release closes the
+  showcase gap.
+
 ## Version 1.6.0 (2026-05-12)
 
 - Added an experimental `se_type = c("default", "cluster")` argument to

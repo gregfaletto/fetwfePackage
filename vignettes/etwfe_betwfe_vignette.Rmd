@@ -103,6 +103,62 @@ cat("betwfe sq. error:", (res_betwfe$att_hat - true_tes$att_true)^2, "\n")
 
 The bridge penalty in `betwfe()` shrinks the estimate toward zero relative to `etwfe()`. On this regime, that produces a noticeable bias — the textbook bias-variance trade-off in action. In other regimes (sparser true effects, or noisier data), the bias from regularization is more than offset by reduced variance, and `betwfe()` outperforms `etwfe()`.
 
+# No-covariate setting
+
+The examples above use a panel with `d = 2` time-invariant covariates. The package equally supports the no-covariate case by passing `covs = c()` to any estimator (or by generating data with `genCoefs(d = 0, ...)`). This section runs the same simulated regime with no covariates, side-by-side, so a user can see what `etwfe()` and `fetwfe()` look like in the simpler setting.
+
+```{r}
+sim_coefs_d0 <- genCoefs(
+  R         = 3,
+  T         = 6,
+  d         = 0,
+  density   = 0.5,
+  eff_size  = 2,
+  seed      = 20260510
+)
+
+sim_data_d0 <- simulateData(
+  sim_coefs_d0,
+  N            = 120,
+  sig_eps_sq   = 1,
+  sig_eps_c_sq = 1
+)
+
+true_tes_d0 <- getTes(sim_coefs_d0)
+cat("True overall ATT (no covariates):", true_tes_d0$att_true, "\n")
+```
+
+`etwfe()` in the no-covariate setting:
+
+```{r}
+res_etwfe_d0 <- etwfeWithSimulatedData(sim_data_d0)
+summary(res_etwfe_d0)
+```
+
+`fetwfe()` in the no-covariate setting:
+
+```{r}
+res_fetwfe_d0 <- fetwfeWithSimulatedData(sim_data_d0)
+summary(res_fetwfe_d0)
+```
+
+Side-by-side overall ATT estimates against the truth:
+
+```{r}
+cat("True ATT:        ", true_tes_d0$att_true, "\n")
+cat("etwfe() ATT:     ", res_etwfe_d0$att_hat, "\n")
+cat("fetwfe() ATT:    ", res_fetwfe_d0$att_hat, "\n")
+cat("etwfe sq. error: ", (res_etwfe_d0$att_hat - true_tes_d0$att_true)^2, "\n")
+cat("fetwfe sq. error:", (res_fetwfe_d0$att_hat - true_tes_d0$att_true)^2, "\n")
+```
+
+Two qualitative differences to note in the no-covariate regime:
+
+- **Smaller design matrix.** Without covariates and their cohort/time/treatment interactions, the underlying regression has many fewer columns, so both estimators converge faster and `etwfe()` becomes rank-stable at smaller cohort sizes (the `(d + 1)`-units-per-cohort floor that `etwfe()` enforces drops to just one unit per cohort).
+- **Standard errors typically widen.** Covariates that explain residual variance are absent, so the idiosyncratic-noise variance `sig_eps_sq` enters the SEs without that explanatory cushion. The signal-to-noise ratio on the treatment-effect coefficients drops, which is the trade-off for the simpler model.
+
+The package handles `covs = c()` end-to-end without any special-casing on the user's side: the data-prep pipeline (`prep_for_etwfe_core` in `R/etwfe_core.R`) dispatches on `d == 0` and skips the covariate-interaction columns automatically. The same applies to `betwfe()` and `twfeCovs()`.
+
 # When to use which
 
 `fetwfe()` is the recommended estimator for production use; `etwfe()` and `betwfe()` are useful as comparisons or as building blocks for understanding what `fetwfe()` is doing.
