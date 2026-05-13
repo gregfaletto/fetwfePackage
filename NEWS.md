@@ -1,5 +1,31 @@
 # NEWS
 
+## Version 1.7.0 (2026-05-13)
+
+- Added an exported `event_study(x, alpha)` function and S3 methods
+  `plot.fetwfe()`, `plot.etwfe()`, `plot.betwfe()` that compute and
+  visualize pooled event-time treatment-effect estimates with
+  confidence intervals. Pooling weights are sample-cohort-size weights
+  (matching `did::aggte(type = "dynamic")` convention); the variance
+  combines a regression-coefficient term and a cohort-probability term,
+  dispatching on `se_type` for the regression term (model-based under
+  default, cluster-robust sandwich under `se_type = "cluster"`) and on
+  `indep_counts` for the conservative-vs-asymptotically-exact
+  combination. Only post-treatment event times (`e >= 0`) are surfaced
+  in this initial release.
+- Added `ggplot2` to `Suggests:` (used by the new `plot.*` methods via
+  `requireNamespace()` guards; the package still installs and the
+  estimators still run without `ggplot2`).
+- Added the slot `cohort_probs_overall` (length-`R` numeric vector of
+  marginal cohort probabilities, using the indep-sample variant when
+  `indep_counts` was provided, else the in-sample variant) to the S3
+  outputs of `fetwfe()`, `etwfe()`, `betwfe()` and the list output of
+  `twfeCovs()`. Also added `indep_counts_used` (logical scalar) to the
+  same four outputs. The `fetwfe()` S3 output additionally gains
+  `theta_hat` in `$internal` (the full fused-coordinate coefficient
+  vector with intercept). These slots are required by the new
+  `event_study()` machinery and are useful for downstream tooling.
+
 ## Version 1.6.1 (2026-05-12)
 
 - Added a no-covariate side-by-side demonstration of `etwfe()` and

@@ -651,6 +651,8 @@ etwfe_core <- function(
 		treat_int_inds = treat_int_inds,
 		cohort_probs = cohort_probs,
 		indep_cohort_probs = indep_cohort_probs,
+		cohort_probs_overall = cohort_probs_overall,
+		indep_cohort_probs_overall = indep_cohort_probs_overall,
 		sig_eps_sq = sig_eps_sq,
 		sig_eps_c_sq = sig_eps_c_sq,
 		X_ints = X_ints,

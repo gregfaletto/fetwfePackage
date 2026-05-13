@@ -159,6 +159,21 @@ Two qualitative differences to note in the no-covariate regime:
 
 The package handles `covs = c()` end-to-end without any special-casing on the user's side: the data-prep pipeline (`prep_for_etwfe_core` in `R/etwfe_core.R`) dispatches on `d == 0` and skips the covariate-interaction columns automatically. The same applies to `betwfe()` and `twfeCovs()`.
 
+# Visualizing event-time effects
+
+Each of the three estimator outputs supports `plot()` (which dispatches to a method) and a companion `event_study()` helper that returns a tidy data frame of pooled-event-time treatment-effect estimates. The plot is an event study: x-axis is event time `e = t - r` (calendar time minus the cohort's first-treated time), y-axis is the cohort-weighted average of cell-level treatment-effect estimates at each event time, with confidence intervals. Pooling weights are sample-cohort-size weights (matching `did::aggte(type = "dynamic")` convention). The variance combines a regression-coefficient term and a cohort-probability term, mirroring the package's existing overall-ATT SE machinery.
+
+```{r}
+res_fetwfe <- fetwfeWithSimulatedData(sim_data)
+event_study(res_fetwfe)
+```
+
+```{r, eval = requireNamespace("ggplot2", quietly = TRUE)}
+plot(res_fetwfe)
+```
+
+`event_study()` returns the underlying data; `plot()` returns a ggplot2 object you can further customize. `ggplot2` is in `Suggests:`, so it must be installed to use the `plot()` methods; the estimators themselves work without it.
+
 # When to use which
 
 `fetwfe()` is the recommended estimator for production use; `etwfe()` and `betwfe()` are useful as comparisons or as building blocks for understanding what `fetwfe()` is doing.
