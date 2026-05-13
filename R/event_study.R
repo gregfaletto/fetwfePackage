@@ -78,6 +78,12 @@ event_study <- function(x, alpha = NULL) {
 	}
 	z <- stats::qnorm(1 - alpha / 2)
 
+	if (is.null(x$cohort_probs_overall)) {
+		stop(
+			"event_study(): cohort_probs_overall missing from object. Re-fit with etwfe() / betwfe() at version 1.7.0 or later."
+		)
+	}
+
 	beta_hat <- x$beta_hat
 	treat_inds <- x$treat_inds
 	num_treats <- length(treat_inds)
@@ -416,6 +422,20 @@ event_study <- function(x, alpha = NULL) {
 #' selection at `idx(r, e)`, and `cohort_probs_overall` masked to zero
 #' outside `V_e`. When `|V_e| = 1` the Jacobian rows vanish exactly and
 #' `var_2(e) = 0`.
+#'
+#' Design choice: this helper deliberately mirrors `getSecondVarTermDataApp`'s
+#' Jacobian construction (see `R/fetwfe_core.R` lines 2021-2048) so the
+#' FETWFE event-study variance is consistent with the package's existing
+#' FETWFE overall-ATT variance. Plan-review round 2 verified empirically that
+#' `getSecondVarTermDataApp` cannot be reused for the per-event-time case
+#' (its `psi_mat` argument is vestigial and its Jacobian time-averages over
+#' cohort blocks); see `.plans/feat-event-study-plot/plan_feedback_v2.md` and
+#' `_v2_response.md`. Post-execution review (round 1) additionally noted
+#' that `getSecondVarTermDataApp`'s Jacobian uses `cohort_probs_overall[r]`
+#' for off-diagonals where the textbook delta method would use
+#' `cohort_probs_overall[r_prime]`; investigating that discrepancy is a
+#' package-wide follow-up (see `.plans/follow-ups/issue-draft-fetwfe-var2-delta-method.md`)
+#' independent of this event-study work.
 #' @keywords internal
 #' @noRd
 .event_study_var2_fetwfe <- function(
