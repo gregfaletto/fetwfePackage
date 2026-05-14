@@ -182,13 +182,34 @@ test_that("FETWFE corrected var_2 matches a multinomial-resampling MC", {
 	}
 	mc_var <- var(g_draws)
 
-	var2_corrected <- .overall_var_2(fit, off_use_outer = FALSE)
+	# Route var2_corrected through the package helper directly so the MC
+	# assertion validates the production code (not just the in-test formula).
+	var2_corrected <- fetwfe:::getSecondVarTermDataApp(
+		psi_mat = matrix(
+			0,
+			nrow = length(fit$sel_treat_inds_shifted),
+			ncol = fit$R
+		),
+		sel_treat_inds_shifted = fit$sel_treat_inds_shifted,
+		tes = fit$res$beta_hat[fit$res$treat_inds],
+		cohort_probs_overall = fit$cohort_probs_overall,
+		first_inds = fit$first_inds,
+		theta_hat_treat_sel = fit$theta_hat_treat_sel,
+		num_treats = fit$num_treats,
+		N = fit$N,
+		T = fit$T,
+		R = fit$R,
+		fused = TRUE,
+		d_inv_treat_sel = fit$d_inv_treat_sel
+	)
+	# Buggy formula is reconstructed in-test (the helper after the fix no
+	# longer produces it); see Test 3 for the anti-regression structural check.
 	var2_buggy <- .overall_var_2(fit, off_use_outer = TRUE)
 
 	# Corrected var_2 should match MC within 5% at 10k draws.
 	expect_lt(abs(var2_corrected / mc_var - 1), 0.05)
 	# Buggy var_2 should be visibly off by at least 15% on this panel.
-	# (Reviewer's verification at 50k draws found ratio 0.7301 — 27% under.)
+	# (Plan-review round 1 verification at 50k draws found ratio 0.73.)
 	expect_gt(abs(var2_buggy / mc_var - 1), 0.15)
 })
 
