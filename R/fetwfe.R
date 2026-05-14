@@ -297,6 +297,7 @@ fetwfe <- function(
 		att_hat <- res$indep_att_hat
 		att_se <- res$indep_att_se
 		cohort_probs <- res$indep_cohort_probs
+		cohort_probs_overall <- res$indep_cohort_probs_overall
 	} else {
 		stopifnot(!is.na(res$in_sample_att_hat))
 
@@ -307,6 +308,7 @@ fetwfe <- function(
 		att_hat <- res$in_sample_att_hat
 		att_se <- res$in_sample_att_se
 		cohort_probs <- res$cohort_probs
+		cohort_probs_overall <- res$cohort_probs_overall
 	}
 
 	att_p_value <- .compute_p_values(att_hat, att_se)
@@ -321,6 +323,7 @@ fetwfe <- function(
 		catt_hats = res$catt_hats,
 		catt_ses = res$catt_ses,
 		cohort_probs = cohort_probs,
+		cohort_probs_overall = cohort_probs_overall,
 		catt_df = res$catt_df,
 		beta_hat = res$beta_hat,
 		treat_inds = res$treat_inds,
@@ -339,7 +342,8 @@ fetwfe <- function(
 		d = res$d,
 		p = res$p,
 		alpha = alpha,
-		se_type = se_type
+		se_type = se_type,
+		indep_counts_used = indep_count_data_available
 	)
 
 	# Add internal outputs in a separate list
@@ -348,6 +352,7 @@ fetwfe <- function(
 		y = res$y,
 		X_final = res$X_final,
 		y_final = res$y_final,
+		theta_hat = res$theta_hat,
 		calc_ses = res$calc_ses
 	)
 
@@ -774,10 +779,12 @@ etwfe <- function(
 		att_hat <- res$indep_att_hat
 		att_se <- res$indep_att_se
 		cohort_probs <- res$indep_cohort_probs
+		cohort_probs_overall <- res$indep_cohort_probs_overall
 	} else {
 		att_hat <- res$in_sample_att_hat
 		att_se <- res$in_sample_att_se
 		cohort_probs <- res$cohort_probs
+		cohort_probs_overall <- res$cohort_probs_overall
 	}
 
 	att_p_value <- .compute_p_values(att_hat, att_se)
@@ -790,6 +797,7 @@ etwfe <- function(
 		catt_hats = res$catt_hats,
 		catt_ses = res$catt_ses,
 		cohort_probs = cohort_probs,
+		cohort_probs_overall = cohort_probs_overall,
 		catt_df = res$catt_df,
 		beta_hat = res$beta_hat,
 		treat_inds = res$treat_inds,
@@ -807,7 +815,8 @@ etwfe <- function(
 		p = res$p,
 		alpha = alpha,
 		calc_ses = res$calc_ses,
-		se_type = se_type
+		se_type = se_type,
+		indep_counts_used = indep_count_data_available
 	)
 
 	# Add the etwfe class
