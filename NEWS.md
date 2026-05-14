@@ -10,16 +10,23 @@
   Theorem 6.3 (`paper_arxiv.tex:2577-2592`). The same fix is applied
   to the parallel `.event_study_var2_fetwfe()` helper introduced in
   1.7.0. **The reported `att_se` for `fetwfe()` shifts numerically**;
-  the change can be a few percent in typical regimes and 20-40% in
-  regimes with very unequal cohort sizes. The shift also propagates
+  the bug could either over- or under-estimate `att_var_2` depending
+  on the joint structure of cohort probabilities and per-cohort ATT
+  magnitudes. Observed magnitudes: ~30% underestimate on small
+  simulated panels with unequal cohorts (Test 2 of the new test
+  file); ~13% overestimate on the divorce-data example in the main
+  vignette (which has `R = 12` cohorts with very unequal sizes); a
+  few percent on near-uniform panels. The shift also propagates
   through `att_p_value` (computed from `att_se`) and through the
   event-study output (`event_study()` and `plot.fetwfe()` columns
   `se`, `ci_low`, `ci_high`, `p_value`). Empirical Monte Carlo
   validation against multinomial resampling of cohort probabilities
   confirms the corrected formula matches the true asymptotic variance
-  to within MC noise (under 1% at 10k draws), while the prior buggy
-  formula systematically underestimated when cohort sizes were
-  unequal. `etwfe()`, `betwfe()`, and `twfeCovs()` are unaffected
+  to within MC noise (under 1% at 10k draws). The bug was masked in
+  prior simulation studies because `simulateData()` uses a uniform
+  cohort-probability prior, and the buggy and correct formulas are
+  algebraically identical when all marginal cohort probabilities are
+  equal. `etwfe()`, `betwfe()`, and `twfeCovs()` are unaffected
   (their parallel `getSecondVarTermOLS()` did not have this bug).
   FETWFE cohort-level CATT SEs in `catt_df` are unaffected (they use
   only the regression-coefficient variance, not the cohort-
