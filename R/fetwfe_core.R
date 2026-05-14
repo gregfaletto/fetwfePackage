@@ -1980,12 +1980,18 @@ getSecondVarTermDataApp <- function(
 	stopifnot(nrow(Sigma_pi_hat) == R)
 	stopifnot(ncol(Sigma_pi_hat) == R)
 
-	# Jacobian
+	# Jacobian (paper Theorem 6.3, paper_arxiv.tex:2577-2592):
 	##
 	## J_{rs} =  (S-pi_r)/S^2      if r = s
-	##           -pi_r   /S^2      if r != s
+	##           -pi_s   /S^2      if r != s    (off-diagonal uses COLUMN index s)
 	##
-	## where S := sum(cohort_probs_overall)
+	## where S := sum(cohort_probs_overall).
+	##
+	## Note: prior to v1.8.0 (issue #46) the off-diagonal coefficient was
+	## indexed by the outer-loop row r instead of the column s; this matched
+	## the textbook delta-method gradient only when cohort probabilities
+	## were uniform. The fix uses the column index, matching the paper and
+	## ETWFE's parallel `getSecondVarTermOLS()`.
 	##
 	## Each column block of d_inv_treat_sel belongs to a selected theta coordinate;
 	## averaging the rows of cohorts gives the vector needed to multiply theta_sel.
@@ -2032,9 +2038,9 @@ getSecondVarTermDataApp <- function(
 					mean(d_inv_treat_sel[sel_inds[[r]], , drop = FALSE])
 			}
 
-			## off-diagonal: subtract sum_{s!=r} pi_r / S^2  x  block-mean of cohort s
+			## off-diagonal: subtract sum_{s!=r} pi_s / S^2  x  block-mean of cohort s
 			for (r_double_prime in setdiff(1:R, r)) {
-				cons_r_double_prime <- cohort_probs_overall[r] /
+				cons_r_double_prime <- cohort_probs_overall[r_double_prime] /
 					sum(cohort_probs_overall)^2
 
 				jacobian_mat[r, ] <- jacobian_mat[r, ] -

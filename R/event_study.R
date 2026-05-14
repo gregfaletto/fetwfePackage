@@ -423,22 +423,14 @@ event_study <- function(x, alpha = NULL) {
 #' outside `V_e`. When `|V_e| = 1` the Jacobian rows vanish exactly and
 #' `var_2(e) = 0`.
 #'
-#' Design choice: this helper deliberately mirrors `getSecondVarTermDataApp`'s
-#' Jacobian construction (see `R/fetwfe_core.R` lines 2021-2048) so the
-#' FETWFE event-study variance is consistent with the package's existing
-#' FETWFE overall-ATT variance. Plan-review round 2 verified empirically that
-#' `getSecondVarTermDataApp` cannot be reused for the per-event-time case
-#' (its `psi_mat` argument is vestigial and its Jacobian time-averages over
-#' cohort blocks); see `.plans/feat-event-study-plot/plan_feedback_v2.md` and
-#' `_v2_response.md`. Post-execution review confirmed that the existing
-#' `getSecondVarTermDataApp` deviates from paper Theorem 6.3's Jacobian
-#' (paper_arxiv.tex:2577-2592) by an off-by-one index — the off-diagonal
-#' coefficient uses the outer-loop `cohort_probs_overall[r]` where the
-#' paper specifies the column-index `cohort_probs_overall[r_prime]`. ETWFE's
-#' parallel `getSecondVarTermOLS` correctly uses the column index. Fixing
-#' both helpers in a single dedicated PR is tracked at
-#' `.plans/follow-ups/issue-draft-fetwfe-var2-delta-method.md`; this event-
-#' study helper inherits the bug pending that fix.
+#' Design choice: this helper is structurally parallel to
+#' `getSecondVarTermDataApp` in `R/fetwfe_core.R` (the cohort-block time-
+#' averaging is replaced by a single-row selection at `idx(r, e)`, and
+#' `cohort_probs_overall` is masked to zero outside `V_e`). Both helpers
+#' implement paper Theorem 6.3's Jacobian formula (`paper_arxiv.tex:2577-
+#' 2592`) where the off-diagonal coefficient `J_{rs} = -pi_s / S^2` uses the
+#' column-index marginal cohort probability. (Prior to v1.8.0 the off-
+#' diagonal coefficient was indexed by the outer-loop row; see issue #46.)
 #' @keywords internal
 #' @noRd
 .event_study_var2_fetwfe <- function(
@@ -468,15 +460,16 @@ event_study <- function(x, alpha = NULL) {
 
 	# Per-event-time Jacobian: R rows, length(sel_treat_inds_shifted) cols.
 	# Rows for r not in V_e are zero (and are zero-killed by Sigma_pi_hat).
+	# Diagonal: (S_V - pi_r)/S_V^2 * d_inv_treat_sel[idx(r, e), ]
+	# Off-diagonal: subtract pi_{r'}/S_V^2 * d_inv_treat_sel[idx(r', e), ]
+	# for r' in V_e \ {r}. Off-diagonal coefficient uses the COLUMN-index
+	# pi_{r'}, matching paper Theorem 6.3.
 	jacobian_e <- matrix(0, nrow = R, ncol = ncol(d_inv_treat_sel))
 	for (r in V_e) {
-		# Diagonal contribution: (S_V - pi_r) / S_V^2 * d_inv_treat_sel[idx(r, e), ]
 		cons_r <- (S_V - masked[r]) / S_V^2
 		jacobian_e[r, ] <- cons_r * d_inv_treat_sel[first_inds[r] + e, ]
-		# Off-diagonal: subtract pi_r / S_V^2 * d_inv_treat_sel[idx(r', e), ]
-		# for r' in V_e \ {r}.
-		cons_off <- masked[r] / S_V^2
 		for (r_prime in setdiff(V_e, r)) {
+			cons_off <- masked[r_prime] / S_V^2
 			jacobian_e[r, ] <- jacobian_e[r, ] -
 				cons_off * d_inv_treat_sel[first_inds[r_prime] + e, ]
 		}

@@ -1,5 +1,30 @@
 # NEWS
 
+## Version 1.8.0 (2026-05-13)
+
+- Fixed an off-by-one index in the Jacobian construction inside the
+  internal helper `getSecondVarTermDataApp()`, which backs FETWFE's
+  `att_var_2` — the cohort-probability variance component of the
+  overall ATT standard error. The corrected formula uses the inner-
+  loop / column-index marginal cohort probability per paper
+  Theorem 6.3 (`paper_arxiv.tex:2577-2592`). The same fix is applied
+  to the parallel `.event_study_var2_fetwfe()` helper introduced in
+  1.7.0. **The reported `att_se` for `fetwfe()` shifts numerically**;
+  the change can be a few percent in typical regimes and 20-40% in
+  regimes with very unequal cohort sizes. The shift also propagates
+  through `att_p_value` (computed from `att_se`) and through the
+  event-study output (`event_study()` and `plot.fetwfe()` columns
+  `se`, `ci_low`, `ci_high`, `p_value`). Empirical Monte Carlo
+  validation against multinomial resampling of cohort probabilities
+  confirms the corrected formula matches the true asymptotic variance
+  to within MC noise (under 1% at 10k draws), while the prior buggy
+  formula systematically underestimated when cohort sizes were
+  unequal. `etwfe()`, `betwfe()`, and `twfeCovs()` are unaffected
+  (their parallel `getSecondVarTermOLS()` did not have this bug).
+  FETWFE cohort-level CATT SEs in `catt_df` are unaffected (they use
+  only the regression-coefficient variance, not the cohort-
+  probability variance). Closes #46.
+
 ## Version 1.7.0 (2026-05-13)
 
 - Added an exported `event_study(x, alpha)` function and S3 methods
