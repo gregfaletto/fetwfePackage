@@ -49,15 +49,17 @@
 #' noise assumed to apply to each observation. See Section 2 of Faletto (2025)
 #' for details. It is best to provide this variance if it is known (for example,
 #' if you are using simulated data). If this variance is unknown, this argument
-#' can be omitted, and the variance will be estimated using the estimator from
-#' Pesaran (2015, Section 26.5.1) with ridge regression. Default is NA.
+#' can be omitted, and the variance will be estimated by
+#' REML on the linear mixed-effects model `y ~ X + (1 | unit)` via
+#' `lme4::lmer` (Bates et al. 2015; Patterson & Thompson 1971). Default is NA.
 #' @param sig_eps_c_sq (Optional.) Numeric; the variance of the unit-level IID
 #' noise (random effects) assumed to apply to each observation. See Section 2 of
 #' Faletto (2025) for details. It is best to provide this variance if it is
 #' known (for example, if you are using simulated data). If this variance is
 #' unknown, this argument can be omitted, and the variance will be estimated
-#' using the estimator from Pesaran (2015, Section 26.5.1) with ridge
-#' regression. Default is NA.
+#' by REML via `lme4::lmer` on the
+#' linear mixed-effects model `y ~ X + (1 | unit)` (Bates et al. 2015;
+#' Patterson & Thompson 1971). Default is NA.
 #' @param lambda.max (Optional.) Numeric. A penalty parameter `lambda` will be
 #' selected over a grid search by BIC in order to select a single model. The
 #' largest `lambda` in the grid will be `lambda.max`. If no `lambda.max` is
@@ -194,9 +196,17 @@
 #' Difference-in-Differences with Staggered Adoptions.
 #' \emph{arXiv preprint arXiv:2312.05985}.
 #' \url{https://arxiv.org/abs/2312.05985}.
-#' Pesaran, M. H. . Time Series and Panel Data Econometrics. Number 9780198759980 in OUP
-#' Catalogue. Oxford University Press, 2015. URL
-#' \url{https://ideas.repec.org/b/oxp/obooks/9780198759980.html}.
+#'
+#' Bates, D., Maechler, M., Bolker, B., & Walker, S. (2015). Fitting
+#' Linear Mixed-Effects Models Using lme4. \emph{Journal of Statistical
+#' Software}, 67(1), 1-48. \doi{10.18637/jss.v067.i01}.
+#'
+#' Patterson, H. D., & Thompson, R. (1971). Recovery of inter-block
+#' information when block sizes are unequal. \emph{Biometrika}, 58(3),
+#' 545-554.
+#'
+#' Pinheiro, J. C., & Bates, D. M. (2000). \emph{Mixed-Effects Models in
+#' S and S-PLUS}. Springer.
 #' @examples
 #' set.seed(23451)
 #'
@@ -213,8 +223,8 @@
 #'     treatment = "changed",
 #'     covs = c("murderrate", "lnpersinc", "afdcrolls"),
 #'     response = "suiciderate_elast_jag",
-#'     sig_eps_sq = 0.1025361,
-#'     sig_eps_c_sq = 4.227651e-35,
+#'     sig_eps_sq = 0.0344,
+#'     sig_eps_c_sq = 0.1507,
 #'     verbose = TRUE)
 #'
 #' # Average treatment effect on the treated units (in percentage point

@@ -1,5 +1,55 @@
 # NEWS
 
+## Version 1.9.1 (2026-05-15)
+
+- Fixed two coupled bugs in the internal variance-component estimator
+  `estOmegaSqrtInv()` (`R/core_funcs.R`). The previous implementation used
+  the within-estimator procedure of Pesaran (2015, §26.5.1) with: (a) a
+  wrong-LHS in the alpha-hat residual formula that collapsed it to a
+  constant across units, and (b) a copy-on-modify trap in the in-place
+  X-demeaning loop that left `glmnet` fitting on un-demeaned X.
+  Combined, these caused `sig_eps_c_sq_hat` to return as essentially zero
+  (~1e-32) regardless of truth, which degenerated the GLS weighting step
+  to the identity. Model-based standard errors for `fetwfe()` / `etwfe()` /
+  `betwfe()` therefore treated clustered errors as i.i.d. whenever the
+  user did not pre-supply `sig_eps_c_sq`. The estimator has been replaced
+  by REML on the linear mixed-effects model `y ~ X + (1 | unit)` via
+  `lme4::lmer` (Bates, Maechler, Bolker, & Walker 2015; Patterson &
+  Thompson 1971; Pinheiro & Bates 2000). REML is the standard procedure
+  for variance components in random-intercept models, handles FETWFE's
+  design (with its time-invariant columns) natively, and aligns the
+  implementation with the random-effects GLS framework the paper assumes.
+
+  `lme4` has been added to `Suggests:` (not `Imports:`) and is gated by
+  `requireNamespace("lme4", quietly = TRUE)`. When the package is not
+  installed and the user has not supplied `sig_eps_sq` / `sig_eps_c_sq`
+  directly, `fetwfe()` (and siblings) error with a clear message pointing
+  at `install.packages("lme4")` or supplying the variance components
+  manually.
+
+  **User-visible impact: both standard errors and point estimates will
+  shift after upgrade.** Reported SE values for `fetwfe()` / `etwfe()` /
+  `betwfe()` will be larger on panels with substantial unit-level
+  variance, reflecting clustered noise rather than i.i.d. noise. Point
+  estimates will also shift, because the GLS weighting step --- which
+  was effectively a no-op under the bug --- now actually re-weights the
+  design matrix before the bridge regression. On the package's flagship
+  divorce-data example (`vignettes/vignette.Rmd`), the overall ATT
+  changes from ~-1.84% to 0.00% with every cohort selected out under
+  the corrected estimator (the previous value was an artifact of the bug
+  preserving cohort 1970's between-unit jump that should have been
+  absorbed by the random intercept). The vignette has been updated
+  accordingly. The paper's empirical section will be updated in a
+  forthcoming revision to the arXiv preprint.
+
+  Users who supplied `sig_eps_sq` and `sig_eps_c_sq` manually are
+  unaffected. Users using `se_type = "cluster"` get unchanged
+  cluster-robust SEs (the cluster path doesn't depend on
+  `estOmegaSqrtInv`), but their point estimates still shift since the
+  GLS-transformed regression is shared across SE methods.
+
+  Resolves the bug surfaced in the May 2026 internal code review.
+
 ## Version 1.9.0 (2026-05-15)
 
 - Added broom-package S3 methods `tidy()` / `glance()` / `augment()` for

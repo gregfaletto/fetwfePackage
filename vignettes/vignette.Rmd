@@ -256,7 +256,17 @@ catt_df_pct[["ConfIntHigh"]] <- 100 * catt_df_pct[["ConfIntHigh"]]
 catt_df_pct
 ```
 
-For the data application, FETWFE yielded an overall ATT of approximately –1.84% change in the female suicide rate, similar to other estimates in the literature. In addition, the output table (stored in `result_emp$catt_df`) displays the cohort-specific estimates. (Note that standard errors for the individual cohort estimates are less reliable when the number of units per cohort is small.)
+For the data application, FETWFE returns an overall ATT of approximately 0% with every cohort selected out (`selected = FALSE`) under the corrected REML-based variance-component estimator introduced in version 1.9.1. Under the package's restriction-selection-consistency interpretation (Theorem 6.2; see "Testing the zero-effect null" below), this is an asymptotic statement that the treatment had no detectable effect on the female suicide rate in this panel.
+
+This contrasts with various DiD estimates reported in the literature, including the package's own prior versions which reported `~−1.84%` here. Two things explain that gap.
+
+First, the divorce panel has a noisy small-sample structure: 9 of 51 states are dropped (treated in period 1), 4 cohorts contain a single state each (those adopting in 1976, 1980, 1984, 1985), only 4 states remain never-treated, and 214 of 909 design-matrix columns are aliased. The conditions FETWFE's theory requires for sharp inference (full-rank design, cohorts with at least `d + 1` units) are not fully satisfied here.
+
+Second, the previous `−1.84%` estimate was an artifact of a bug (fixed in 1.9.1) in the variance-component estimator that made `sig_eps_c_sq_hat ≈ 0`, degenerating the GLS step. Under the corrected estimator the panel has σ_c²/σ_ε² ≈ 4 (substantial within-state correlation, cross-confirmed via `lme4::lmer` and `plm::plm`'s Swamy-Arora), and the BIC-selected bridge solution prefers the zero-treatment model by a wide margin (ΔBIC ≈ 43). On a panel with this much between-unit noise and so few units per cohort, FETWFE's BIC penalty correctly judges any heterogeneous treatment-effect pattern not worth the parameter cost — exactly the documented finite-sample behavior described in the next section.
+
+Other DiD estimators show similar imprecision on this panel: Callaway-Sant'Anna returns roughly `−9.7% (SE 11.7%, not significant)`, plain TWFE OLS returns `+0.57% (not significant)`. Without strong unit-level variance correction the bug retained the −1.8%-ish signal because the GLS step was effectively identity; under correct GLS, the signal is absorbed into the random intercept.
+
+The output table (stored in `res$catt_df`) displays cohort-specific estimates and the `selected` flag.
 
 The divorce-data analysis above uses three covariates. The package also supports the no-covariate case — pass `covs = c()` to any estimator, or generate data with `genCoefs(d = 0, ...)`. For a worked side-by-side comparison of `etwfe()` and `fetwfe()` with no covariates, see the "No-covariate setting" section of the companion vignette `etwfe_betwfe_vignette`.
 
