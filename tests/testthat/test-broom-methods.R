@@ -221,10 +221,9 @@ test_that("fitted objects carry y_mean and response_col_name slots", {
 	}
 })
 
-test_that("augment.fetwfe returns data + .fitted + .resid with reconstruction (response defaulted)", {
+test_that("augment.fetwfe returns data + .fitted + .resid with reconstruction", {
 	setup <- .simulated_setup()
 	res <- fetwfeWithSimulatedData(setup$sim)
-	# Default-response path: no `response =` argument; uses res$response_col_name.
 	aug <- broom::augment(res, data = setup$sim$pdata)
 	expect_s3_class(aug, "data.frame")
 	expect_equal(nrow(aug), nrow(setup$sim$pdata))
@@ -235,28 +234,31 @@ test_that("augment.fetwfe returns data + .fitted + .resid with reconstruction (r
 	expect_equal(aug$.fitted + aug$.resid, aug$y, tolerance = 1e-8)
 })
 
-test_that("augment.fetwfe also accepts explicit response argument (backward compat)", {
-	setup <- .simulated_setup()
-	res <- fetwfeWithSimulatedData(setup$sim)
-	# Explicit-response path: should produce identical output to the default path.
-	aug_default <- broom::augment(res, data = setup$sim$pdata)
-	aug_explicit <- broom::augment(res, data = setup$sim$pdata, response = "y")
-	expect_identical(aug_default, aug_explicit)
-})
-
 test_that("augment errors without data argument", {
 	res <- .fetwfe_fixture()
 	expect_error(broom::augment(res), "data")
 })
 
-test_that("augment errors when response is NULL and no slot is present", {
+test_that("augment errors when fitted object lacks response_col_name slot", {
 	setup <- .simulated_setup()
 	res <- fetwfeWithSimulatedData(setup$sim)
-	# Simulate a fitted object that came from an older version without the slot.
+	# Simulate a fitted object from a pre-1.9.0 dev build (no slot).
 	res$response_col_name <- NULL
 	expect_error(
 		broom::augment(res, data = setup$sim$pdata),
-		"response_col_name|response"
+		"response_col_name"
+	)
+})
+
+test_that("augment errors when response column is missing from data", {
+	setup <- .simulated_setup()
+	res <- fetwfeWithSimulatedData(setup$sim)
+	# Drop the response column from `data` so the lookup fails.
+	data_without_y <- setup$sim$pdata
+	data_without_y$y <- NULL
+	expect_error(
+		broom::augment(res, data = data_without_y),
+		"response column 'y'"
 	)
 })
 
@@ -265,28 +267,15 @@ test_that("augment errors on row-count mismatch with first-period hint", {
 	res <- fetwfeWithSimulatedData(setup$sim)
 	bad_data <- setup$sim$pdata[1:10, , drop = FALSE]
 	expect_error(
-		broom::augment(res, data = bad_data, response = "y"),
+		broom::augment(res, data = bad_data),
 		"first time period"
-	)
-})
-
-test_that("augment errors when response column not found", {
-	setup <- .simulated_setup()
-	res <- fetwfeWithSimulatedData(setup$sim)
-	expect_error(
-		broom::augment(res, data = setup$sim$pdata, response = "nonexistent"),
-		"not found"
 	)
 })
 
 test_that("augment.etwfe and augment.betwfe work with flat X_ints slot", {
 	setup <- .simulated_setup()
 	res_etwfe <- etwfeWithSimulatedData(setup$sim)
-	aug_etwfe <- broom::augment(
-		res_etwfe,
-		data = setup$sim$pdata,
-		response = "y"
-	)
+	aug_etwfe <- broom::augment(res_etwfe, data = setup$sim$pdata)
 	expect_equal(
 		aug_etwfe$.fitted + aug_etwfe$.resid,
 		aug_etwfe$y,
@@ -294,11 +283,7 @@ test_that("augment.etwfe and augment.betwfe work with flat X_ints slot", {
 	)
 
 	res_betwfe <- betwfeWithSimulatedData(setup$sim)
-	aug_betwfe <- broom::augment(
-		res_betwfe,
-		data = setup$sim$pdata,
-		response = "y"
-	)
+	aug_betwfe <- broom::augment(res_betwfe, data = setup$sim$pdata)
 	expect_equal(
 		aug_betwfe$.fitted + aug_betwfe$.resid,
 		aug_betwfe$y,

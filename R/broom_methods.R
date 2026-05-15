@@ -158,38 +158,36 @@ NULL
 #'
 #' @description
 #' Computes `.fitted = X %*% beta_hat + x$y_mean` and
-#' `.resid = data[[response]] - .fitted`, then column-binds to `data`. The
-#' mean-add is needed because the estimator centers `y` during fitting and
-#' returns coefficients on the centered scale; the response mean is stored
-#' on the fitted object so we can shift back without re-deriving it from
-#' `data` (which may already have been transformed by the user).
+#' `.resid = data[[x$response_col_name]] - .fitted`, then column-binds to
+#' `data`. The mean-add is needed because the estimator centers `y` during
+#' fitting and returns coefficients on the centered scale; the response
+#' mean and column name are stored on the fitted object so the caller only
+#' has to supply the panel.
 #' @keywords internal
 #' @noRd
-.augment_estimator_output <- function(x, data, response = NULL, ...) {
+.augment_estimator_output <- function(x, data, ...) {
 	if (missing(data)) {
 		stop(
 			"augment(): the fitted object does not store the original panel ",
 			"data; supply `data = <your post-idCohorts() panel>`."
 		)
 	}
+
+	response <- x$response_col_name
 	if (is.null(response)) {
-		response <- x$response_col_name
-		if (is.null(response)) {
-			stop(
-				"augment(): `response` is NULL and the fitted object does ",
-				"not carry `response_col_name`. Supply ",
-				"`response = <name of original response column>` explicitly."
-			)
-		}
-	}
-	if (!is.character(response) || length(response) != 1L) {
-		stop("augment(): `response` must be a single column name.")
+		stop(
+			"augment(): the fitted object does not carry `response_col_name` ",
+			"(expected on objects produced by fetwfe / etwfe / betwfe / ",
+			"twfeCovs from package version 1.9.0 and later). This looks ",
+			"like a fitted object from an earlier dev build."
+		)
 	}
 	if (!(response %in% names(data))) {
 		stop(
-			"augment(): column '",
+			"augment(): the response column '",
 			response,
-			"' not found in `data`."
+			"' (from `x$response_col_name`) is not in `data`. Rename or ",
+			"restore that column before calling augment()."
 		)
 	}
 
@@ -215,7 +213,13 @@ NULL
 		stop("augment(): column '", response, "' must be numeric.")
 	}
 
-	y_mean <- if (!is.null(x$y_mean)) x$y_mean else mean(y_obs)
+	y_mean <- x$y_mean
+	if (is.null(y_mean)) {
+		stop(
+			"augment(): the fitted object does not carry `y_mean`. This ",
+			"looks like a fitted object from an earlier dev build."
+		)
+	}
 
 	fitted_centered <- as.vector(X %*% beta)
 	.fitted <- fitted_centered + y_mean
@@ -480,25 +484,22 @@ glance.betwfe <- function(x, ...) {
 #' Augment user-supplied data with fitted values and residuals from a fetwfe fit
 #'
 #' Computes `.fitted = X %*% beta_hat + x$y_mean` and
-#' `.resid = data[[response]] - .fitted`, then column-binds those two
-#' columns onto `data`. `y_mean` is stored on the fitted object during
-#' fitting (the estimator internally centers `y` before solving), so
-#' fitted values come back on the original-response scale without the
-#' caller needing to recompute the mean.
+#' `.resid = data[[x$response_col_name]] - .fitted`, then column-binds those
+#' two columns onto `data`. The response mean and column name are stored on
+#' the fitted object during fitting (the estimator internally centers `y`
+#' before solving), so fitted values come back on the original-response
+#' scale without the caller having to remember either.
 #'
-#' `data` is required (the package does not store the original panel).
-#' `response` defaults to `x$response_col_name`, which is set at fit
-#' time, so passing it explicitly is rarely needed; pass it to override
-#' the stored name. `data` must have the same row count as the fitted
-#' design — first-period-treated units (whose treatment effect cannot
-#' be identified) are dropped during fitting, so they must also be
-#' absent from `data`.
+#' `data` must have the same row count as the fitted design and must
+#' contain the response column under its original name. First-period-
+#' treated units (whose treatment effect cannot be identified) are dropped
+#' during fitting, so they must also be absent from `data`.
 #'
 #' @param x An object of class `"fetwfe"`.
 #' @param data A balanced panel `data.frame` with one row per
-#'   unit-period, with first-period-treated units already removed.
-#' @param response Character; name of the original (uncentered)
-#'   response column in `data`. Defaults to `x$response_col_name`.
+#'   unit-period, with first-period-treated units already removed, and
+#'   with the response column under the same name used at fit time
+#'   (see `x$response_col_name`).
 #' @param ... Unused.
 #' @return A copy of `data` with two extra numeric columns: `.fitted`
 #'   and `.resid`.
@@ -511,8 +512,8 @@ glance.betwfe <- function(x, ...) {
 #'   broom::augment(res, data = sim$pdata)
 #' }
 #' @export
-augment.fetwfe <- function(x, data, response = NULL, ...) {
-	.augment_estimator_output(x, data, response, ...)
+augment.fetwfe <- function(x, data, ...) {
+	.augment_estimator_output(x, data, ...)
 }
 
 #' Augment user-supplied data with fitted values and residuals from an etwfe fit
@@ -521,8 +522,7 @@ augment.fetwfe <- function(x, data, response = NULL, ...) {
 #'
 #' @param x An object of class `"etwfe"`.
 #' @param data A balanced panel `data.frame` (first-period-treated
-#'   units removed).
-#' @param response Character column name; defaults to
+#'   units removed) with the response column under
 #'   `x$response_col_name`.
 #' @param ... Unused.
 #' @return `data` with `.fitted` and `.resid` columns appended.
@@ -535,8 +535,8 @@ augment.fetwfe <- function(x, data, response = NULL, ...) {
 #'   broom::augment(res, data = sim$pdata)
 #' }
 #' @export
-augment.etwfe <- function(x, data, response = NULL, ...) {
-	.augment_estimator_output(x, data, response, ...)
+augment.etwfe <- function(x, data, ...) {
+	.augment_estimator_output(x, data, ...)
 }
 
 #' Augment user-supplied data with fitted values and residuals from a betwfe fit
@@ -545,8 +545,7 @@ augment.etwfe <- function(x, data, response = NULL, ...) {
 #'
 #' @param x An object of class `"betwfe"`.
 #' @param data A balanced panel `data.frame` (first-period-treated
-#'   units removed).
-#' @param response Character column name; defaults to
+#'   units removed) with the response column under
 #'   `x$response_col_name`.
 #' @param ... Unused.
 #' @return `data` with `.fitted` and `.resid` columns appended.
@@ -559,6 +558,6 @@ augment.etwfe <- function(x, data, response = NULL, ...) {
 #'   broom::augment(res, data = sim$pdata)
 #' }
 #' @export
-augment.betwfe <- function(x, data, response = NULL, ...) {
-	.augment_estimator_output(x, data, response, ...)
+augment.betwfe <- function(x, data, ...) {
+	.augment_estimator_output(x, data, ...)
 }

@@ -4,15 +4,13 @@
 \alias{augment.betwfe}
 \title{Augment user-supplied data with fitted values and residuals from a betwfe fit}
 \usage{
-\method{augment}{betwfe}(x, data, response = NULL, ...)
+\method{augment}{betwfe}(x, data, ...)
 }
 \arguments{
 \item{x}{An object of class \code{"betwfe"}.}
 
 \item{data}{A balanced panel \code{data.frame} (first-period-treated
-units removed).}
-
-\item{response}{Character column name; defaults to
+units removed) with the response column under
 \code{x$response_col_name}.}
 
 \item{...}{Unused.}

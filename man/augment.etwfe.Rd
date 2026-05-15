@@ -4,15 +4,13 @@
 \alias{augment.etwfe}
 \title{Augment user-supplied data with fitted values and residuals from an etwfe fit}
 \usage{
-\method{augment}{etwfe}(x, data, response = NULL, ...)
+\method{augment}{etwfe}(x, data, ...)
 }
 \arguments{
 \item{x}{An object of class \code{"etwfe"}.}
 
 \item{data}{A balanced panel \code{data.frame} (first-period-treated
-units removed).}
-
-\item{response}{Character column name; defaults to
+units removed) with the response column under
 \code{x$response_col_name}.}
 
 \item{...}{Unused.}

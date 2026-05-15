@@ -4,16 +4,15 @@
 \alias{augment.fetwfe}
 \title{Augment user-supplied data with fitted values and residuals from a fetwfe fit}
 \usage{
-\method{augment}{fetwfe}(x, data, response = NULL, ...)
+\method{augment}{fetwfe}(x, data, ...)
 }
 \arguments{
 \item{x}{An object of class \code{"fetwfe"}.}
 
 \item{data}{A balanced panel \code{data.frame} with one row per
-unit-period, with first-period-treated units already removed.}
-
-\item{response}{Character; name of the original (uncentered)
-response column in \code{data}. Defaults to \code{x$response_col_name}.}
+unit-period, with first-period-treated units already removed, and
+with the response column under the same name used at fit time
+(see \code{x$response_col_name}).}
 
 \item{...}{Unused.}
 }
@@ -23,20 +22,17 @@ and \code{.resid}.
 }
 \description{
 Computes \code{.fitted = X \%*\% beta_hat + x$y_mean} and
-\code{.resid = data[[response]] - .fitted}, then column-binds those two
-columns onto \code{data}. \code{y_mean} is stored on the fitted object during
-fitting (the estimator internally centers \code{y} before solving), so
-fitted values come back on the original-response scale without the
-caller needing to recompute the mean.
+\code{.resid = data[[x$response_col_name]] - .fitted}, then column-binds those
+two columns onto \code{data}. The response mean and column name are stored on
+the fitted object during fitting (the estimator internally centers \code{y}
+before solving), so fitted values come back on the original-response
+scale without the caller having to remember either.
 }
 \details{
-\code{data} is required (the package does not store the original panel).
-\code{response} defaults to \code{x$response_col_name}, which is set at fit
-time, so passing it explicitly is rarely needed; pass it to override
-the stored name. \code{data} must have the same row count as the fitted
-design — first-period-treated units (whose treatment effect cannot
-be identified) are dropped during fitting, so they must also be
-absent from \code{data}.
+\code{data} must have the same row count as the fitted design and must
+contain the response column under its original name. First-period-
+treated units (whose treatment effect cannot be identified) are dropped
+during fitting, so they must also be absent from \code{data}.
 }
 \examples{
 \dontrun{
