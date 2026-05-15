@@ -4,44 +4,6 @@
 NULL
 
 #—--------------------------------------------------------------------
-# Utility: truncate / reorder cohort table
-#—--------------------------------------------------------------------
-.truncate_catt <- function(
-	catt_df,
-	max_cohorts = getOption("fetwfe.max_cohorts", 10),
-	order_by = c("cohort", "estimate", "abs_estimate", "pvalue", "none")
-) {
-	order_by <- match.arg(order_by)
-
-	idx <- switch(
-		order_by,
-		cohort = order(catt_df$Cohort),
-		estimate = order(catt_df$`Estimated TE`),
-		abs_estimate = order(abs(catt_df$`Estimated TE`), decreasing = TRUE),
-		pvalue = order(catt_df$P_value),
-		none = seq_len(nrow(catt_df))
-	)
-	catt_df <- catt_df[idx, , drop = FALSE]
-
-	if (nrow(catt_df) > max_cohorts) {
-		attr(catt_df, "truncated") <- TRUE
-		attr(catt_df, "n_discarded") <- nrow(catt_df) - max_cohorts
-		catt_df <- catt_df[seq_len(max_cohorts), , drop = FALSE]
-	} else {
-		attr(catt_df, "truncated") <- FALSE
-	}
-	catt_df
-}
-
-#—--------------------------------------------------------------------
-# Simple printer for cohort table (no colour)
-#—--------------------------------------------------------------------
-.print_catt_tbl <- function(df) {
-	print(df, row.names = FALSE, right = TRUE)
-	invisible()
-}
-
-#—--------------------------------------------------------------------
 # coef() method (unchanged)
 #—--------------------------------------------------------------------
 #' @export
