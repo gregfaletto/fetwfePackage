@@ -1,5 +1,25 @@
 # NEWS
 
+## Version 1.9.0 (2026-05-15)
+
+- Added broom-package S3 methods `tidy()` / `glance()` / `augment()` for
+  `fetwfe()` / `etwfe()` / `betwfe()` outputs, plus `tidy()` for the
+  outputs of `event_study()` and `getTes()`, so users can pipe estimator
+  output directly into `ggplot2` / `modelsummary` / `gt` workflows
+  without reading the package class documentation. `tidy()` returns
+  a long data frame with broom-standard columns (`term`, `estimate`,
+  `std.error`, `statistic`, `p.value`, `conf.low`, `conf.high`; plus
+  `selected` for `fetwfe` / `betwfe`), one row for the overall ATT
+  and one per cohort; `glance()` returns a one-row model-level summary
+  (13 columns for `fetwfe` / `betwfe`, 11 for `etwfe` without the
+  `lambda_star*` columns); `augment(x, data, response)` appends
+  `.fitted` and `.resid` to the user-supplied (post-`idCohorts()`)
+  panel, with the response mean added back so fitted values are on
+  the original-response scale. The methods are registered via the
+  [generics](https://cran.r-project.org/package=generics) package
+  (added to `Imports:`); `broom` joins `Suggests:` for the
+  vignette demo. Resolves #27.
+
 ## Version 1.8.0 (2026-05-13)
 
 - Fixed an off-by-one index in the Jacobian construction inside the
