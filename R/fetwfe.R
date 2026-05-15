@@ -136,6 +136,20 @@
 #' \item{d}{The final number of covariates that appear in the final data set (after any covariates may have been removed because they contained missing values or all contained the same value for every unit).}
 #' \item{p}{The final number of columns in the full set of covariates used to estimate the model.}
 #' \item{alpha}{The alpha level used for confidence intervals.}
+#' \item{y_mean}{Numeric scalar; the mean of the original (pre-centering)
+#'   response. Stored so downstream methods (`augment()`, `predict()`)
+#'   can return fitted values on the original-response scale.}
+#' \item{response_col_name}{Character scalar; the name of the response
+#'   column in the original `pdata`. Consumed by `augment.<class>()`.}
+#' \item{time_var, unit_var, treatment}{Character scalars; the
+#'   `time_var` / `unit_var` / `treatment` arguments the user passed.
+#'   Consumed by `augment.<class>()` when auto-aligning a user-supplied
+#'   panel to the fitted design (e.g., dropping first-period-treated
+#'   units the estimator removed internally, and sorting rows to match
+#'   the design matrix's internal `(unit, time)` order).}
+#' \item{covs}{Character vector; the original `covs` argument the user
+#'   passed (before any factor expansion the estimator performed
+#'   internally). Consumed by `augment.<class>()`.}
 #' \item{internal}{A list containing internal outputs that are typically not needed for interpretation:
 #'   \describe{
 #'     \item{X_ints}{The design matrix created containing all interactions, time and cohort dummies, etc.}
@@ -462,6 +476,20 @@ fetwfe <- function(
 #' \item{d}{The final number of covariates that appear in the final data set (after any covariates may have been removed because they contained missing values or all contained the same value for every unit).}
 #' \item{p}{The final number of columns in the full set of covariates used to estimate the model.}
 #' \item{alpha}{The alpha level used for confidence intervals.}
+#' \item{y_mean}{Numeric scalar; the mean of the original (pre-centering)
+#'   response. Stored so downstream methods (`augment()`, `predict()`)
+#'   can return fitted values on the original-response scale.}
+#' \item{response_col_name}{Character scalar; the name of the response
+#'   column in the original `pdata`. Consumed by `augment.<class>()`.}
+#' \item{time_var, unit_var, treatment}{Character scalars; the
+#'   `time_var` / `unit_var` / `treatment` arguments the user passed.
+#'   Consumed by `augment.<class>()` when auto-aligning a user-supplied
+#'   panel to the fitted design (e.g., dropping first-period-treated
+#'   units the estimator removed internally, and sorting rows to match
+#'   the design matrix's internal `(unit, time)` order).}
+#' \item{covs}{Character vector; the original `covs` argument the user
+#'   passed (before any factor expansion the estimator performed
+#'   internally). Consumed by `augment.<class>()`.}
 #' \item{internal}{A list containing internal outputs that are typically not needed for interpretation:
 #'   \describe{
 #'     \item{X_ints}{The design matrix created containing all interactions, time and cohort dummies, etc.}

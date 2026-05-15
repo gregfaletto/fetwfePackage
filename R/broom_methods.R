@@ -198,27 +198,25 @@ NULL
 
 	X <- .get_X_ints(x)
 
+	# The four metadata slots are needed both for auto-trim (idCohorts) and
+	# for sorting `data` into X_ints' row order. Validate them up front.
+	needed_slots <- c("time_var", "unit_var", "treatment", "covs")
+	missing_slots <- needed_slots[
+		vapply(needed_slots, function(s) is.null(x[[s]]), logical(1))
+	]
+	if (length(missing_slots) > 0) {
+		stop(
+			"augment(): the fitted object is missing slots ",
+			paste(missing_slots, collapse = ", "),
+			" needed to align `data` with the fitted design. This looks ",
+			"like a fitted object from an earlier dev build."
+		)
+	}
+
 	# Auto-align row counts via idCohorts() when needed (the same drop the
 	# estimator applied internally during fitting). Skip when the user has
 	# already pre-trimmed, in which case `data` is used as-is.
 	if (nrow(data) != nrow(X)) {
-		needed_slots <- c("time_var", "unit_var", "treatment", "covs")
-		missing_slots <- needed_slots[
-			vapply(needed_slots, function(s) is.null(x[[s]]), logical(1))
-		]
-		if (length(missing_slots) > 0) {
-			stop(
-				"augment(): `nrow(data)` (",
-				nrow(data),
-				") != fitted design (",
-				nrow(X),
-				"), and the fitted object is missing slots ",
-				paste(missing_slots, collapse = ", "),
-				" needed to auto-align. This looks like a fitted object from ",
-				"an earlier dev build; pre-trim `data` manually to match ",
-				"the fitted panel (drop units treated at the first time period)."
-			)
-		}
 		ret <- idCohorts(
 			df = data,
 			time_var = x$time_var,
@@ -239,6 +237,17 @@ NULL
 			)
 		}
 	}
+
+	# Sort data into the same (unit_var, time_var) ascending order that
+	# prepXints used when building X_ints (see `R/etwfe_core.R:1254` and
+	# `R/etwfe_core.R:1403`). Without this, .fitted[i] would correspond to a
+	# different (unit, time) than data[i, ] when the user's panel comes in a
+	# different order from what the estimator saw internally.
+	data <- data[
+		order(data[[x$unit_var]], data[[x$time_var]], decreasing = FALSE),
+		,
+		drop = FALSE
+	]
 
 	y_obs <- data[[response]]
 	if (!is.numeric(y_obs)) {

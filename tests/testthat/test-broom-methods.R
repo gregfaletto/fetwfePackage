@@ -271,6 +271,67 @@ test_that("augment errors when data row count cannot be reconciled with fit", {
 	expect_error(broom::augment(res, data = bad_data))
 })
 
+test_that("augment aligns rows to X_ints regardless of input row order", {
+	# Latent-bug guard: if the user's `data` is in a different row order
+	# from what the estimator sorted into when building X_ints, augment must
+	# sort `data` to (unit, time) order so .fitted[i] corresponds to the
+	# same observation as data[i, ]. Without this sort, .fitted gets glued
+	# to the wrong rows and downstream interpretation is silently wrong.
+	# (The `.fitted + .resid == y` round-trip holds by construction even
+	# under misalignment, so a stronger check is needed.)
+	setup <- .simulated_setup()
+	res <- fetwfeWithSimulatedData(setup$sim)
+	aug_orig <- broom::augment(res, data = setup$sim$pdata)
+	set.seed(99)
+	shuf_idx <- sample(nrow(setup$sim$pdata))
+	aug_shuf <- broom::augment(res, data = setup$sim$pdata[shuf_idx, ])
+	# Match shuffled output back to original by (unit, time) and check
+	# .fitted values are identical.
+	key_o <- paste(aug_orig$unit, aug_orig$time, sep = "_")
+	key_s <- paste(aug_shuf$unit, aug_shuf$time, sep = "_")
+	m <- match(key_o, key_s)
+	expect_equal(aug_orig$.fitted, aug_shuf$.fitted[m])
+})
+
+test_that("augment works with factor covariates in the user's data", {
+	# Factor covariates: the estimator expands them to dummies internally
+	# via processFactors() during fitting; the user's pdata keeps the
+	# original factor column. augment should produce correct fitted values
+	# (computed from the pre-expanded X_ints) and return the panel with
+	# the factor column intact.
+	setup <- .simulated_setup()
+	pdata <- setup$sim$pdata
+	# Random factor with enough variation across units that the dummies
+	# survive processCovs (which drops covariates whose first-period value
+	# is constant across all units).
+	set.seed(13)
+	unit_to_group <- setNames(
+		sample(c("a", "b", "c"), length(unique(pdata$unit)), replace = TRUE),
+		unique(pdata$unit)
+	)
+	pdata$group <- factor(unit_to_group[pdata$unit])
+	res <- fetwfe(
+		pdata = pdata,
+		time_var = "time",
+		unit_var = "unit",
+		treatment = "treatment",
+		response = "y",
+		covs = c("cov1", "cov2", "group"),
+		q = 0.5,
+		verbose = FALSE
+	)
+	# Stored covs slot keeps the ORIGINAL covs (pre-expansion), not the
+	# dummy column names — so idCohorts in augment can find the right cols.
+	expect_identical(res$covs, c("cov1", "cov2", "group"))
+	aug <- broom::augment(res, data = pdata)
+	expect_equal(nrow(aug), nrow(pdata))
+	# Round-trip holds (sanity, not row-alignment proof — see preceding test).
+	expect_equal(aug$.fitted + aug$.resid, aug$y, tolerance = 1e-8)
+	# Factor column is preserved in the output.
+	expect_true("group" %in% names(aug))
+	expect_s3_class(aug$group, "factor")
+})
+
 test_that("augment auto-trims first-period-treated units when present in data", {
 	setup <- .simulated_setup()
 	# Take the simulated panel and mark one never-treated unit as treated at
@@ -395,6 +456,23 @@ test_that("FETWFE_tes carries cohort_times slot (simulator convention)", {
 	expect_true(!is.null(tes$cohort_times))
 	# Simulator convention: cohort r adopts at calendar time r + 1.
 	expect_equal(tes$cohort_times, as.integer(seq_len(tes$R) + 1L))
+})
+
+test_that("FETWFE_tes cohort_times agree with simulateData()'s actual cohort assignment (assertion guarding the convention)", {
+	# Cross-class invariant: `getTes(coefs)$cohort_times` is supposed to label
+	# cohorts the same way `fetwfe(simulateData(coefs))$catt_df$Cohort` does,
+	# so `tidy.FETWFE_tes` rows align with `tidy.<estimator>` rows on the
+	# same simulated panel. If `simulateData()` ever changes its cohort-
+	# assignment scheme (e.g., adopts at non-sequential times), this test
+	# fails and `getTes()` needs to be updated to derive `cohort_times` from
+	# whatever new convention the simulator uses.
+	setup <- .simulated_setup()
+	res <- fetwfeWithSimulatedData(setup$sim)
+	tes <- getTes(setup$coefs)
+	# `catt_df$Cohort` is character ("2", "3", ...); coerce to integer for
+	# comparison.
+	cohort_labels_from_fit <- as.integer(res$catt_df$Cohort)
+	expect_equal(cohort_labels_from_fit, tes$cohort_times)
 })
 
 test_that("tidy.FETWFE_tes labels cohorts by adoption time (matches estimator tidy)", {

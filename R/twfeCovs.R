@@ -129,6 +129,15 @@
 #' have been removed because they contained missing values or all contained the
 #' same value for every unit).} \item{p}{The final number of columns in the full
 #' set of covariates used to estimate the model.}
+#' \item{y_mean}{Numeric scalar; mean of the original (pre-centering) response.
+#' Stored so downstream methods (`augment()`, `predict()`) can return fitted
+#' values on the original-response scale.}
+#' \item{response_col_name}{Character scalar; the response column name in
+#' the original `pdata`. Reserved for future `augment()` / `predict()` methods.}
+#' \item{time_var, unit_var, treatment}{Character scalars; the corresponding
+#' arguments the user passed.}
+#' \item{covs}{Character vector; the original `covs` argument (pre-factor-
+#' expansion).}
 #' @author Gregory Faletto
 #' @references
 #' Faletto, G (2025). Fused Extended Two-Way Fixed Effects for

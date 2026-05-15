@@ -157,6 +157,15 @@ of covariates that appear in the final data set (after any covariates may
 have been removed because they contained missing values or all contained the
 same value for every unit).} \item{p}{The final number of columns in the full
 set of covariates used to estimate the model.}
+\item{y_mean}{Numeric scalar; mean of the original (pre-centering) response.
+Stored so downstream methods (\code{augment()}, \code{predict()}) can return fitted
+values on the original-response scale.}
+\item{response_col_name}{Character scalar; the response column name in
+the original \code{pdata}. Reserved for future \code{augment()} / \code{predict()} methods.}
+\item{time_var, unit_var, treatment}{Character scalars; the corresponding
+arguments the user passed.}
+\item{covs}{Character vector; the original \code{covs} argument (pre-factor-
+expansion).}
 }
 \description{
 \strong{WARNING: This function should NOT be used for estimation. It
