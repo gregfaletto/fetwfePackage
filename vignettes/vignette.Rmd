@@ -169,7 +169,7 @@ When you run this code, the function internally performs all the necessary data 
 
 ## Tidy outputs
 
-The fitted object also plays nicely with the [broom](https://broom.tidymodels.org/) package: `broom::tidy()` reshapes the overall ATT and per-cohort CATTs into a long data frame with standard `term` / `estimate` / `std.error` / `statistic` / `p.value` / `conf.low` / `conf.high` columns, and `broom::glance()` returns a one-row model-level summary. This makes it easy to pipe estimates into `ggplot2` or `modelsummary` without reading the package's class documentation.
+The fitted object also plays nicely with the [broom](https://broom.tidymodels.org/) package: `broom::tidy()` reshapes the overall ATT and per-cohort CATTs into a long data frame with standard `term` / `estimate` / `std.error` / `statistic` / `p.value` / `conf.low` / `conf.high` columns; `broom::glance()` returns a one-row model-level summary; and `broom::augment(res, data = pdata)` appends `.fitted` and `.resid` columns. This makes it easy to pipe estimates into `ggplot2` or `modelsummary` without reading the package's class documentation.
 
 ```{r tidy-demo, eval = requireNamespace("broom", quietly = TRUE) && requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("dplyr", quietly = TRUE)}
 library(broom)

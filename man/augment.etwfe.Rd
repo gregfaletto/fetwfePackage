@@ -4,14 +4,16 @@
 \alias{augment.etwfe}
 \title{Augment user-supplied data with fitted values and residuals from an etwfe fit}
 \usage{
-\method{augment}{etwfe}(x, data, response, ...)
+\method{augment}{etwfe}(x, data, response = NULL, ...)
 }
 \arguments{
 \item{x}{An object of class \code{"etwfe"}.}
 
-\item{data}{Post-\code{idCohorts()} panel.}
+\item{data}{A balanced panel \code{data.frame} (first-period-treated
+units removed).}
 
-\item{response}{Character column name.}
+\item{response}{Character column name; defaults to
+\code{x$response_col_name}.}
 
 \item{...}{Unused.}
 }
@@ -27,6 +29,6 @@ Same shape as \code{\link[=augment.fetwfe]{augment.fetwfe()}}, dispatched on cla
                                eff_size = 2),
                       N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
   res <- etwfeWithSimulatedData(sim)
-  broom::augment(res, data = sim$pdata, response = "y")
+  broom::augment(res, data = sim$pdata)
 }
 }

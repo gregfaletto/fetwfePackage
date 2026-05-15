@@ -4,17 +4,16 @@
 \alias{augment.fetwfe}
 \title{Augment user-supplied data with fitted values and residuals from a fetwfe fit}
 \usage{
-\method{augment}{fetwfe}(x, data, response, ...)
+\method{augment}{fetwfe}(x, data, response = NULL, ...)
 }
 \arguments{
 \item{x}{An object of class \code{"fetwfe"}.}
 
 \item{data}{A balanced panel \code{data.frame} with one row per
-unit-period, already preprocessed by \code{idCohorts()} so the row
-count matches the fitted design.}
+unit-period, with first-period-treated units already removed.}
 
 \item{response}{Character; name of the original (uncentered)
-response column in \code{data}.}
+response column in \code{data}. Defaults to \code{x$response_col_name}.}
 
 \item{...}{Unused.}
 }
@@ -23,19 +22,21 @@ A copy of \code{data} with two extra numeric columns: \code{.fitted}
 and \code{.resid}.
 }
 \description{
-Computes \code{.fitted = X \%*\% beta_hat + mean(data[[response]])} and
+Computes \code{.fitted = X \%*\% beta_hat + x$y_mean} and
 \code{.resid = data[[response]] - .fitted}, then column-binds those two
-columns onto \code{data}. The mean-add is necessary because the
-estimator centers \code{y} during fitting (\code{R/etwfe_core.R:1706}) and does
-not store the response mean.
+columns onto \code{data}. \code{y_mean} is stored on the fitted object during
+fitting (the estimator internally centers \code{y} before solving), so
+fitted values come back on the original-response scale without the
+caller needing to recompute the mean.
 }
 \details{
-Both arguments are required: \code{data} because the package does not
-store the original panel on the fitted object, and \code{response}
-because the package does not store the response column name. \code{data}
-must already have first-period-treated units dropped (the same
-transformation \code{idCohorts()} applies internally during fitting);
-the method errors with a clear message if the row counts disagree.
+\code{data} is required (the package does not store the original panel).
+\code{response} defaults to \code{x$response_col_name}, which is set at fit
+time, so passing it explicitly is rarely needed; pass it to override
+the stored name. \code{data} must have the same row count as the fitted
+design — first-period-treated units (whose treatment effect cannot
+be identified) are dropped during fitting, so they must also be
+absent from \code{data}.
 }
 \examples{
 \dontrun{
@@ -43,6 +44,6 @@ the method errors with a clear message if the row counts disagree.
                                eff_size = 2),
                       N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
   res <- fetwfeWithSimulatedData(sim)
-  broom::augment(res, data = sim$pdata, response = "y")
+  broom::augment(res, data = sim$pdata)
 }
 }

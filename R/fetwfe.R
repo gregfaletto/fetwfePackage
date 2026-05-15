@@ -252,6 +252,7 @@ fetwfe <- function(
 	covs <- res1$covs
 	X_ints <- res1$X_ints
 	y <- res1$y
+	y_mean <- res1$y_mean
 	N <- res1$N
 	T <- res1$T
 	d <- res1$d
@@ -343,7 +344,9 @@ fetwfe <- function(
 		p = res$p,
 		alpha = alpha,
 		se_type = se_type,
-		indep_counts_used = indep_count_data_available
+		indep_counts_used = indep_count_data_available,
+		y_mean = y_mean,
+		response_col_name = response
 	)
 
 	# Add internal outputs in a separate list
@@ -722,6 +725,7 @@ etwfe <- function(
 	covs <- res1$covs
 	X_ints <- res1$X_ints
 	y <- res1$y
+	y_mean <- res1$y_mean
 	N <- res1$N
 	T <- res1$T
 	d <- res1$d
@@ -816,7 +820,9 @@ etwfe <- function(
 		alpha = alpha,
 		calc_ses = res$calc_ses,
 		se_type = se_type,
-		indep_counts_used = indep_count_data_available
+		indep_counts_used = indep_count_data_available,
+		y_mean = y_mean,
+		response_col_name = response
 	)
 
 	# Add the etwfe class

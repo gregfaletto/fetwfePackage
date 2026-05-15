@@ -12,13 +12,19 @@
   `selected` for `fetwfe` / `betwfe`), one row for the overall ATT
   and one per cohort; `glance()` returns a one-row model-level summary
   (13 columns for `fetwfe` / `betwfe`, 11 for `etwfe` without the
-  `lambda_star*` columns); `augment(x, data, response)` appends
-  `.fitted` and `.resid` to the user-supplied (post-`idCohorts()`)
-  panel, with the response mean added back so fitted values are on
-  the original-response scale. The methods are registered via the
-  [generics](https://cran.r-project.org/package=generics) package
-  (added to `Imports:`); `broom` joins `Suggests:` for the
-  vignette demo. Resolves #27.
+  `lambda_star*` columns); `augment(x, data)` appends `.fitted` and
+  `.resid` to the user-supplied panel. The methods are registered via
+  the [generics](https://cran.r-project.org/package=generics) package
+  (added to `Imports:`); `broom` joins `Suggests:` for the vignette
+  demo.
+- Added `y_mean` (scalar; mean of the original response, pre-centering)
+  and `response_col_name` (character; the name of the response column
+  the estimator was fit against) to the return lists of `fetwfe()` /
+  `etwfe()` / `betwfe()` / `twfeCovs()`. These slots are populated at
+  fit time and consumed by `augment.<class>()` to return `.fitted` on
+  the original-response scale without the user having to pass the
+  response column name. Existing callers are unaffected; the slots are
+  additive. Resolves #27.
 
 ## Version 1.8.0 (2026-05-13)
 

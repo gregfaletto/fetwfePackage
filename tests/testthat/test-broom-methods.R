@@ -206,10 +206,26 @@ test_that("glance.betwfe matches fetwfe schema (13 columns)", {
 # augment.<class>
 # ------------------------------------------------------------------------------
 
-test_that("augment.fetwfe returns data + .fitted + .resid with reconstruction", {
+test_that("fitted objects carry y_mean and response_col_name slots", {
+	setup <- .simulated_setup()
+	for (fit_fn in list(
+		fetwfeWithSimulatedData,
+		etwfeWithSimulatedData,
+		betwfeWithSimulatedData
+	)) {
+		res <- fit_fn(setup$sim)
+		expect_true(is.numeric(res$y_mean))
+		expect_equal(length(res$y_mean), 1L)
+		expect_equal(res$y_mean, mean(setup$sim$pdata$y))
+		expect_identical(res$response_col_name, "y")
+	}
+})
+
+test_that("augment.fetwfe returns data + .fitted + .resid with reconstruction (response defaulted)", {
 	setup <- .simulated_setup()
 	res <- fetwfeWithSimulatedData(setup$sim)
-	aug <- broom::augment(res, data = setup$sim$pdata, response = "y")
+	# Default-response path: no `response =` argument; uses res$response_col_name.
+	aug <- broom::augment(res, data = setup$sim$pdata)
 	expect_s3_class(aug, "data.frame")
 	expect_equal(nrow(aug), nrow(setup$sim$pdata))
 	expect_true(all(c(".fitted", ".resid") %in% names(aug)))
@@ -219,15 +235,29 @@ test_that("augment.fetwfe returns data + .fitted + .resid with reconstruction", 
 	expect_equal(aug$.fitted + aug$.resid, aug$y, tolerance = 1e-8)
 })
 
+test_that("augment.fetwfe also accepts explicit response argument (backward compat)", {
+	setup <- .simulated_setup()
+	res <- fetwfeWithSimulatedData(setup$sim)
+	# Explicit-response path: should produce identical output to the default path.
+	aug_default <- broom::augment(res, data = setup$sim$pdata)
+	aug_explicit <- broom::augment(res, data = setup$sim$pdata, response = "y")
+	expect_identical(aug_default, aug_explicit)
+})
+
 test_that("augment errors without data argument", {
 	res <- .fetwfe_fixture()
 	expect_error(broom::augment(res), "data")
 })
 
-test_that("augment errors without response argument", {
+test_that("augment errors when response is NULL and no slot is present", {
 	setup <- .simulated_setup()
 	res <- fetwfeWithSimulatedData(setup$sim)
-	expect_error(broom::augment(res, data = setup$sim$pdata), "response")
+	# Simulate a fitted object that came from an older version without the slot.
+	res$response_col_name <- NULL
+	expect_error(
+		broom::augment(res, data = setup$sim$pdata),
+		"response_col_name|response"
+	)
 })
 
 test_that("augment errors on row-count mismatch with first-period hint", {

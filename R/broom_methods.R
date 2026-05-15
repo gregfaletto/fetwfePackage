@@ -157,27 +157,30 @@ NULL
 #' @title Shared augment implementation for fetwfe / etwfe / betwfe
 #'
 #' @description
-#' Computes `.fitted = X %*% beta_hat + mean(data[[response]])` and
+#' Computes `.fitted = X %*% beta_hat + x$y_mean` and
 #' `.resid = data[[response]] - .fitted`, then column-binds to `data`. The
-#' mean-add is needed because the estimator centers `y` during fitting
-#' (`R/etwfe_core.R:1706`) and does not store the mean.
+#' mean-add is needed because the estimator centers `y` during fitting and
+#' returns coefficients on the centered scale; the response mean is stored
+#' on the fitted object so we can shift back without re-deriving it from
+#' `data` (which may already have been transformed by the user).
 #' @keywords internal
 #' @noRd
-.augment_estimator_output <- function(x, data, response, ...) {
+.augment_estimator_output <- function(x, data, response = NULL, ...) {
 	if (missing(data)) {
 		stop(
 			"augment(): the fitted object does not store the original panel ",
-			"data; supply `data = <your post-idCohorts() panel>` and ",
-			"`response = <name of original response column>`."
+			"data; supply `data = <your post-idCohorts() panel>`."
 		)
 	}
-	if (missing(response)) {
-		stop(
-			"augment(): supply `response = <name of original response ",
-			"column>` so fitted values can be returned on the original-",
-			"response scale (the estimator centers `y` internally during ",
-			"fitting and does not store the response mean)."
-		)
+	if (is.null(response)) {
+		response <- x$response_col_name
+		if (is.null(response)) {
+			stop(
+				"augment(): `response` is NULL and the fitted object does ",
+				"not carry `response_col_name`. Supply ",
+				"`response = <name of original response column>` explicitly."
+			)
+		}
 	}
 	if (!is.character(response) || length(response) != 1L) {
 		stop("augment(): `response` must be a single column name.")
@@ -211,7 +214,8 @@ NULL
 	if (!is.numeric(y_obs)) {
 		stop("augment(): column '", response, "' must be numeric.")
 	}
-	y_mean <- mean(y_obs)
+
+	y_mean <- if (!is.null(x$y_mean)) x$y_mean else mean(y_obs)
 
 	fitted_centered <- as.vector(X %*% beta)
 	.fitted <- fitted_centered + y_mean
@@ -475,25 +479,26 @@ glance.betwfe <- function(x, ...) {
 
 #' Augment user-supplied data with fitted values and residuals from a fetwfe fit
 #'
-#' Computes `.fitted = X %*% beta_hat + mean(data[[response]])` and
+#' Computes `.fitted = X %*% beta_hat + x$y_mean` and
 #' `.resid = data[[response]] - .fitted`, then column-binds those two
-#' columns onto `data`. The mean-add is necessary because the
-#' estimator centers `y` during fitting (`R/etwfe_core.R:1706`) and does
-#' not store the response mean.
+#' columns onto `data`. `y_mean` is stored on the fitted object during
+#' fitting (the estimator internally centers `y` before solving), so
+#' fitted values come back on the original-response scale without the
+#' caller needing to recompute the mean.
 #'
-#' Both arguments are required: `data` because the package does not
-#' store the original panel on the fitted object, and `response`
-#' because the package does not store the response column name. `data`
-#' must already have first-period-treated units dropped (the same
-#' transformation `idCohorts()` applies internally during fitting);
-#' the method errors with a clear message if the row counts disagree.
+#' `data` is required (the package does not store the original panel).
+#' `response` defaults to `x$response_col_name`, which is set at fit
+#' time, so passing it explicitly is rarely needed; pass it to override
+#' the stored name. `data` must have the same row count as the fitted
+#' design — first-period-treated units (whose treatment effect cannot
+#' be identified) are dropped during fitting, so they must also be
+#' absent from `data`.
 #'
 #' @param x An object of class `"fetwfe"`.
 #' @param data A balanced panel `data.frame` with one row per
-#'   unit-period, already preprocessed by `idCohorts()` so the row
-#'   count matches the fitted design.
+#'   unit-period, with first-period-treated units already removed.
 #' @param response Character; name of the original (uncentered)
-#'   response column in `data`.
+#'   response column in `data`. Defaults to `x$response_col_name`.
 #' @param ... Unused.
 #' @return A copy of `data` with two extra numeric columns: `.fitted`
 #'   and `.resid`.
@@ -503,10 +508,10 @@ glance.betwfe <- function(x, ...) {
 #'                                eff_size = 2),
 #'                       N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
 #'   res <- fetwfeWithSimulatedData(sim)
-#'   broom::augment(res, data = sim$pdata, response = "y")
+#'   broom::augment(res, data = sim$pdata)
 #' }
 #' @export
-augment.fetwfe <- function(x, data, response, ...) {
+augment.fetwfe <- function(x, data, response = NULL, ...) {
 	.augment_estimator_output(x, data, response, ...)
 }
 
@@ -515,8 +520,10 @@ augment.fetwfe <- function(x, data, response, ...) {
 #' Same shape as [augment.fetwfe()], dispatched on class `"etwfe"`.
 #'
 #' @param x An object of class `"etwfe"`.
-#' @param data Post-`idCohorts()` panel.
-#' @param response Character column name.
+#' @param data A balanced panel `data.frame` (first-period-treated
+#'   units removed).
+#' @param response Character column name; defaults to
+#'   `x$response_col_name`.
 #' @param ... Unused.
 #' @return `data` with `.fitted` and `.resid` columns appended.
 #' @examples
@@ -525,10 +532,10 @@ augment.fetwfe <- function(x, data, response, ...) {
 #'                                eff_size = 2),
 #'                       N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
 #'   res <- etwfeWithSimulatedData(sim)
-#'   broom::augment(res, data = sim$pdata, response = "y")
+#'   broom::augment(res, data = sim$pdata)
 #' }
 #' @export
-augment.etwfe <- function(x, data, response, ...) {
+augment.etwfe <- function(x, data, response = NULL, ...) {
 	.augment_estimator_output(x, data, response, ...)
 }
 
@@ -537,8 +544,10 @@ augment.etwfe <- function(x, data, response, ...) {
 #' Same shape as [augment.fetwfe()], dispatched on class `"betwfe"`.
 #'
 #' @param x An object of class `"betwfe"`.
-#' @param data Post-`idCohorts()` panel.
-#' @param response Character column name.
+#' @param data A balanced panel `data.frame` (first-period-treated
+#'   units removed).
+#' @param response Character column name; defaults to
+#'   `x$response_col_name`.
 #' @param ... Unused.
 #' @return `data` with `.fitted` and `.resid` columns appended.
 #' @examples
@@ -547,9 +556,9 @@ augment.etwfe <- function(x, data, response, ...) {
 #'                                eff_size = 2),
 #'                       N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
 #'   res <- betwfeWithSimulatedData(sim)
-#'   broom::augment(res, data = sim$pdata, response = "y")
+#'   broom::augment(res, data = sim$pdata)
 #' }
 #' @export
-augment.betwfe <- function(x, data, response, ...) {
+augment.betwfe <- function(x, data, response = NULL, ...) {
 	.augment_estimator_output(x, data, response, ...)
 }

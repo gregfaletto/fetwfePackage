@@ -767,6 +767,7 @@ prep_for_etwfe_core <- function(
 
 	X_ints <- res$X_ints
 	y <- res$y
+	y_mean <- res$y_mean
 	N <- res$N
 	T <- res$T
 	d <- res$d
@@ -825,6 +826,7 @@ prep_for_etwfe_core <- function(
 		covs = covs,
 		X_ints = X_ints,
 		y = y,
+		y_mean = y_mean,
 		N = N,
 		T = T,
 		d = d,
@@ -1106,6 +1108,7 @@ prepXints <- function(
 	)
 
 	y <- ret$y # response
+	y_mean <- ret$y_mean # mean of pre-centered response (preserved on output)
 	cohort_treat_names <- ret$cohort_treat_names # List of names of treatment
 	# dummies for each cohort
 	time_var_names <- ret$time_var_names # Names of time dummies
@@ -1151,6 +1154,7 @@ prepXints <- function(
 	return(list(
 		X_ints = X_ints,
 		y = y,
+		y_mean = y_mean,
 		N = N,
 		T = T,
 		d = d,
@@ -1702,14 +1706,17 @@ addDummies <- function(
 
 	stopifnot(length(cohort_vars) == n_cohorts)
 
-	# Center response
-	y <- df[, resp_var] - mean(df[, resp_var])
+	# Center response (and retain the mean so augment() / predict() can
+	# return fitted values on the original-response scale).
+	y_mean <- mean(df[, resp_var])
+	y <- df[, resp_var] - y_mean
 
 	return(list(
 		time_var_mat = time_var_mat,
 		cohort_var_mat = cohort_var_mat,
 		treat_var_mat = treat_var_mat,
 		y = y,
+		y_mean = y_mean,
 		cohort_treat_names = cohort_treat_names,
 		time_var_names = time_var_names,
 		cohort_vars = cohort_vars,
