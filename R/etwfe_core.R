@@ -703,6 +703,9 @@ etwfe_core <- function(
 #'   \item{X_ints}{Design matrix with unit FE, time FE, covariates,
 #'     treatment dummies and their interactions (dimensions \(N T \times p\)).}
 #'   \item{y}{Centred response vector of length \(N T\).}
+#'   \item{y_mean}{Mean of the original (pre-centering) response. Preserved so
+#'     downstream methods (`augment()`, `predict()`) can return fitted values
+#'     on the original response scale.}
 #'   \item{N, T}{Integers - number of unique units and time periods.}
 #'   \item{d}{Integer - number of *raw* covariates after processing.}
 #'   \item{p}{Integer - total number of columns in `X_ints`.}
@@ -767,6 +770,7 @@ prep_for_etwfe_core <- function(
 
 	X_ints <- res$X_ints
 	y <- res$y
+	y_mean <- res$y_mean
 	N <- res$N
 	T <- res$T
 	d <- res$d
@@ -825,6 +829,7 @@ prep_for_etwfe_core <- function(
 		covs = covs,
 		X_ints = X_ints,
 		y = y,
+		y_mean = y_mean,
 		N = N,
 		T = T,
 		d = d,
@@ -955,6 +960,7 @@ processFactors <- function(pdata, covs) {
 #'   \item{X_ints}{The fully constructed design matrix with all fixed effects,
 #'     covariates, treatment dummies, and their interactions.}
 #'   \item{y}{The centered response vector.}
+#'   \item{y_mean}{Mean of the original (pre-centering) response.}
 #'   \item{N}{The final number of unique units after processing.}
 #'   \item{T}{The number of unique time periods.}
 #'   \item{d}{The final number of covariates after processing.}
@@ -1106,6 +1112,7 @@ prepXints <- function(
 	)
 
 	y <- ret$y # response
+	y_mean <- ret$y_mean # mean of pre-centered response (preserved on output)
 	cohort_treat_names <- ret$cohort_treat_names # List of names of treatment
 	# dummies for each cohort
 	time_var_names <- ret$time_var_names # Names of time dummies
@@ -1151,6 +1158,7 @@ prepXints <- function(
 	return(list(
 		X_ints = X_ints,
 		y = y,
+		y_mean = y_mean,
 		N = N,
 		T = T,
 		d = d,
@@ -1507,6 +1515,7 @@ genTreatVarsRealData <- function(
 #'   \item{cohort_var_mat}{Matrix of cohort dummies (`N*T` rows, `n_cohorts` columns).}
 #'   \item{treat_var_mat}{Matrix of treatment-period dummies (`N*T` rows, `num_treats` columns).}
 #'   \item{y}{The centered response vector.}
+#'   \item{y_mean}{Mean of the original (pre-centering) response.}
 #'   \item{cohort_treat_names}{A list (names are cohort adoption times) where each
 #'     element is a character vector of names for the treatment-period dummy
 #'     variables for that cohort (e.g., "c1_t2", "c1_t3").}
@@ -1702,14 +1711,17 @@ addDummies <- function(
 
 	stopifnot(length(cohort_vars) == n_cohorts)
 
-	# Center response
-	y <- df[, resp_var] - mean(df[, resp_var])
+	# Center response (and retain the mean so augment() / predict() can
+	# return fitted values on the original-response scale).
+	y_mean <- mean(df[, resp_var])
+	y <- df[, resp_var] - y_mean
 
 	return(list(
 		time_var_mat = time_var_mat,
 		cohort_var_mat = cohort_var_mat,
 		treat_var_mat = treat_var_mat,
 		y = y,
+		y_mean = y_mean,
 		cohort_treat_names = cohort_treat_names,
 		time_var_names = time_var_names,
 		cohort_vars = cohort_vars,

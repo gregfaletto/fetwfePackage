@@ -1,5 +1,34 @@
 # NEWS
 
+## Version 1.9.0 (2026-05-15)
+
+- Added broom-package S3 methods `tidy()` / `glance()` / `augment()` for
+  `fetwfe()` / `etwfe()` / `betwfe()` outputs, plus `tidy()` for the
+  outputs of `event_study()` and `getTes()`, so users can pipe estimator
+  output directly into `ggplot2` / `modelsummary` / `gt` workflows
+  without reading the package class documentation. `tidy()` returns a
+  long data frame with broom-standard columns (`term`, `estimate`,
+  `std.error`, `statistic`, `p.value`, `conf.low`, `conf.high`; plus
+  `selected` for `fetwfe` / `betwfe`), one row for the overall ATT and
+  one per cohort. `glance()` returns a one-row model-level summary (13
+  columns for `fetwfe` / `betwfe`, 11 for `etwfe` without the
+  `lambda_star*` columns). `augment(x, data)` appends `.fitted` and
+  `.resid` to the user-supplied panel and auto-trims first-period-
+  treated units (the same drop the estimator applies internally during
+  fitting), so the call works with either the original `pdata` passed
+  to the estimator or a pre-trimmed panel. `tidy.fetwfe_event_study()`
+  accepts `conf.int` / `conf.level` for CI control. The estimator
+  outputs gain six additive metadata slots — `y_mean`,
+  `response_col_name`, `time_var`, `unit_var`, `treatment`, `covs` —
+  populated at fit time and consumed by `augment()` (and a future
+  `predict()`) so users don't have to re-pass any of them. `getTes()`
+  output gains a `cohort_times` slot (the simulator's adoption-time
+  labels, `2..(R+1)`) so `tidy.FETWFE_tes()` labels cohorts the same
+  way `tidy.<estimator>()` labels them on a fitted panel. Methods are
+  registered via the [generics](https://cran.r-project.org/package=generics)
+  package (added to `Imports:`); `broom` joins `Suggests:` for the
+  vignette demo. Resolves #27.
+
 ## Version 1.8.0 (2026-05-13)
 
 - Fixed an off-by-one index in the Jacobian construction inside the

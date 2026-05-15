@@ -129,6 +129,15 @@
 #' have been removed because they contained missing values or all contained the
 #' same value for every unit).} \item{p}{The final number of columns in the full
 #' set of covariates used to estimate the model.}
+#' \item{y_mean}{Numeric scalar; mean of the original (pre-centering) response.
+#' Stored so downstream methods (`augment()`, `predict()`) can return fitted
+#' values on the original-response scale.}
+#' \item{response_col_name}{Character scalar; the response column name in
+#' the original `pdata`. Reserved for future `augment()` / `predict()` methods.}
+#' \item{time_var, unit_var, treatment}{Character scalars; the corresponding
+#' arguments the user passed.}
+#' \item{covs}{Character vector; the original `covs` argument (pre-factor-
+#' expansion).}
 #' @author Gregory Faletto
 #' @references
 #' Faletto, G (2025). Fused Extended Two-Way Fixed Effects for
@@ -153,6 +162,8 @@ twfeCovs <- function(
 	se_type = "default"
 ) {
 	se_type <- match.arg(se_type, c("default", "cluster"))
+
+	covs_orig <- covs
 
 	# Check inputs
 	ret <- checkEtwfeInputs(
@@ -199,6 +210,7 @@ twfeCovs <- function(
 	covs <- res1$covs
 	X_ints <- res1$X_ints
 	y <- res1$y
+	y_mean <- res1$y_mean
 	N <- res1$N
 	T <- res1$T
 	d <- res1$d
@@ -291,7 +303,13 @@ twfeCovs <- function(
 		p = res$p,
 		calc_ses = res$calc_ses,
 		se_type = se_type,
-		indep_counts_used = indep_count_data_available
+		indep_counts_used = indep_count_data_available,
+		y_mean = y_mean,
+		response_col_name = response,
+		time_var = time_var,
+		unit_var = unit_var,
+		treatment = treatment,
+		covs = covs_orig
 	))
 }
 
