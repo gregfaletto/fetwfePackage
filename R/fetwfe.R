@@ -203,6 +203,12 @@ fetwfe <- function(
 ) {
 	se_type <- match.arg(se_type, c("default", "cluster"))
 
+	# Capture original user-supplied args so they can be stored on the output
+	# for downstream methods (augment / predict) that need to re-prep `data`.
+	# `covs` in particular gets reassigned later to its post-factor-expansion
+	# form; we want the original on the output.
+	covs_orig <- covs
+
 	# Check inputs
 	ret <- checkFetwfeInputs(
 		pdata = pdata,
@@ -346,7 +352,11 @@ fetwfe <- function(
 		se_type = se_type,
 		indep_counts_used = indep_count_data_available,
 		y_mean = y_mean,
-		response_col_name = response
+		response_col_name = response,
+		time_var = time_var,
+		unit_var = unit_var,
+		treatment = treatment,
+		covs = covs_orig
 	)
 
 	# Add internal outputs in a separate list
@@ -680,6 +690,8 @@ etwfe <- function(
 ) {
 	se_type <- match.arg(se_type, c("default", "cluster"))
 
+	covs_orig <- covs
+
 	# Check inputs
 	ret <- checkEtwfeInputs(
 		pdata = pdata,
@@ -822,7 +834,11 @@ etwfe <- function(
 		se_type = se_type,
 		indep_counts_used = indep_count_data_available,
 		y_mean = y_mean,
-		response_col_name = response
+		response_col_name = response,
+		time_var = time_var,
+		unit_var = unit_var,
+		treatment = treatment,
+		covs = covs_orig
 	)
 
 	# Add the etwfe class

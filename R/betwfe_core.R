@@ -251,6 +251,8 @@ betwfe <- function(
 ) {
 	se_type <- match.arg(se_type, c("default", "cluster"))
 
+	covs_orig <- covs
+
 	# Check inputs
 	ret <- checkFetwfeInputs(
 		pdata = pdata,
@@ -398,7 +400,11 @@ betwfe <- function(
 		se_type = se_type,
 		indep_counts_used = indep_count_data_available,
 		y_mean = y_mean,
-		response_col_name = response
+		response_col_name = response,
+		time_var = time_var,
+		unit_var = unit_var,
+		treatment = treatment,
+		covs = covs_orig
 	)
 	class(out) <- "betwfe"
 	return(out)

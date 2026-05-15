@@ -384,13 +384,21 @@ getTes <- function(coefs_obj) {
 
 	att_true <- as.numeric(mean(actual_cohort_tes))
 
+	# Cohort adoption times in the simulator's convention: cohort r adopts
+	# at calendar time r + 1 (cohort 0 = never-treated, by convention
+	# encoded in the panel's `time` integer values 1..T). Stored so
+	# downstream tooling (e.g., `tidy.FETWFE_tes`) can label rows with the
+	# same scheme that `tidy.<estimator>` uses on a fitted panel.
+	cohort_times <- as.integer(seq_len(R) + 1L)
+
 	out <- list(
 		att_true = att_true,
 		actual_cohort_tes = actual_cohort_tes,
 		R = R,
 		T = T,
 		d = d,
-		seed = coefs_obj$seed
+		seed = coefs_obj$seed,
+		cohort_times = cohort_times
 	)
 	class(out) <- "FETWFE_tes"
 	return(out)

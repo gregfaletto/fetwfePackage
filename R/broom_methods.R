@@ -46,10 +46,10 @@ NULL
 	att_term <- "ATT"
 	att_estimate <- x$att_hat
 	att_se <- x$att_se
-	att_statistic <- if (is.na(att_se) || att_se == 0) {
-		NA_real_
-	} else {
+	att_statistic <- if (!is.na(att_se) && att_se > 0) {
 		att_estimate / att_se
+	} else {
+		NA_real_
 	}
 	att_pvalue <- x$att_p_value
 
@@ -159,17 +159,22 @@ NULL
 #' @description
 #' Computes `.fitted = X %*% beta_hat + x$y_mean` and
 #' `.resid = data[[x$response_col_name]] - .fitted`, then column-binds to
-#' `data`. The mean-add is needed because the estimator centers `y` during
-#' fitting and returns coefficients on the centered scale; the response
-#' mean and column name are stored on the fitted object so the caller only
-#' has to supply the panel.
+#' the (possibly auto-trimmed) panel. If `nrow(data) != nrow(X_ints)`, the
+#' method calls the package's internal cohort-identification routine on
+#' `data` using the `time_var` / `unit_var` / `treatment` / `covs` slots
+#' stashed at fit time, which drops units treated in the first time
+#' period (their treatment effect is unidentifiable). The returned data
+#' frame therefore corresponds to the panel the estimator actually fit
+#' on — broom's `augment.lm` convention of returning the model frame
+#' rather than the user's input.
 #' @keywords internal
 #' @noRd
 .augment_estimator_output <- function(x, data, ...) {
 	if (missing(data)) {
 		stop(
 			"augment(): the fitted object does not store the original panel ",
-			"data; supply `data = <your post-idCohorts() panel>`."
+			"data; supply `data = <pdata you originally passed to the ",
+			"estimator>`."
 		)
 	}
 
@@ -192,26 +197,55 @@ NULL
 	}
 
 	X <- .get_X_ints(x)
-	beta <- x$beta_hat
 
+	# Auto-align row counts via idCohorts() when needed (the same drop the
+	# estimator applied internally during fitting). Skip when the user has
+	# already pre-trimmed, in which case `data` is used as-is.
 	if (nrow(data) != nrow(X)) {
-		stop(
-			"augment(): `data` has ",
-			nrow(data),
-			" rows but the fitted design has ",
-			nrow(X),
-			" (= x$N * x$T). `data` should match the panel the estimator ",
-			"actually fit on; the estimator drops any units treated in the ",
-			"first time period before fitting because their treatment effect ",
-			"cannot be identified, so any such units must be removed from ",
-			"`data` before calling augment()."
+		needed_slots <- c("time_var", "unit_var", "treatment", "covs")
+		missing_slots <- needed_slots[
+			vapply(needed_slots, function(s) is.null(x[[s]]), logical(1))
+		]
+		if (length(missing_slots) > 0) {
+			stop(
+				"augment(): `nrow(data)` (",
+				nrow(data),
+				") != fitted design (",
+				nrow(X),
+				"), and the fitted object is missing slots ",
+				paste(missing_slots, collapse = ", "),
+				" needed to auto-align. This looks like a fitted object from ",
+				"an earlier dev build; pre-trim `data` manually to match ",
+				"the fitted panel (drop units treated at the first time period)."
+			)
+		}
+		ret <- idCohorts(
+			df = data,
+			time_var = x$time_var,
+			unit_var = x$unit_var,
+			treat_var = x$treatment,
+			covs = x$covs
 		)
+		data <- ret$df
+		if (nrow(data) != nrow(X)) {
+			stop(
+				"augment(): even after auto-trimming via idCohorts(), `data` ",
+				"has ",
+				nrow(data),
+				" rows but the fitted design has ",
+				nrow(X),
+				". The panel structure does not match what the estimator was ",
+				"fit on."
+			)
+		}
 	}
 
 	y_obs <- data[[response]]
 	if (!is.numeric(y_obs)) {
 		stop("augment(): column '", response, "' must be numeric.")
 	}
+
+	beta <- x$beta_hat
 
 	y_mean <- x$y_mean
 	if (is.null(y_mean)) {
@@ -330,18 +364,30 @@ tidy.betwfe <- function(
 #' Tidy a `fetwfe_event_study` object
 #'
 #' Returns a `broom`-style tidy data frame for the output of
-#' [event_study()]. Renames the existing columns to broom conventions
-#' (`se` → `std.error`, `ci_low` / `ci_high` → `conf.low` / `conf.high`,
-#' `p_value` → `p.value`) and adds a `term` column (`"e<event_time>"`)
-#' plus a `statistic` column (`estimate / std.error`) so the schema
-#' matches `tidy.<estimator>()` for downstream `bind_rows()` consumers.
+#' [event_study()]. Renames existing columns to broom conventions
+#' (`se` → `std.error`, `p_value` → `p.value`) and adds a `term`
+#' column (`"e<event_time>"`) plus a `statistic` column
+#' (`estimate / std.error`) so the schema matches `tidy.<estimator>()`
+#' for downstream `bind_rows()` consumers.
+#'
+#' The `event_study()` output stores Wald CIs at the alpha passed at
+#' computation time. When `conf.int = TRUE` (the default), `conf.low` /
+#' `conf.high` are recomputed from `estimate` and `std.error` at the
+#' supplied `conf.level`, which can therefore differ from the
+#' computation-time alpha. When `conf.int = FALSE`, the CI columns are
+#' omitted.
 #'
 #' @param x An object of class `"fetwfe_event_study"` returned by
 #'   [event_study()].
+#' @param conf.int Logical; include `conf.low` / `conf.high` columns.
+#' @param conf.level Numeric in (0, 1). Confidence level for the CI
+#'   columns; defaults to `0.95` (`event_study()` does not store the
+#'   alpha it was called with, so there is no fitted-object value to
+#'   default to).
 #' @param ... Unused.
 #' @return A data frame with one row per event-time and columns `term`,
 #'   `event_time`, `n_cohorts`, `estimate`, `std.error`, `statistic`,
-#'   `p.value`, `conf.low`, `conf.high`.
+#'   `p.value`, and (when `conf.int = TRUE`) `conf.low` / `conf.high`.
 #' @examples
 #' \dontrun{
 #'   res <- fetwfeWithSimulatedData(
@@ -351,13 +397,19 @@ tidy.betwfe <- function(
 #'   broom::tidy(event_study(res))
 #' }
 #' @export
-tidy.fetwfe_event_study <- function(x, ...) {
+tidy.fetwfe_event_study <- function(
+	x,
+	conf.int = TRUE,
+	conf.level = 0.95,
+	...
+) {
+	stopifnot(conf.level > 0, conf.level < 1)
 	statistic <- ifelse(
 		!is.na(x$se) & x$se > 0,
 		x$estimate / x$se,
 		NA_real_
 	)
-	data.frame(
+	out <- data.frame(
 		term = paste0("e", x$event_time),
 		event_time = x$event_time,
 		n_cohorts = x$n_cohorts,
@@ -365,10 +417,14 @@ tidy.fetwfe_event_study <- function(x, ...) {
 		std.error = x$se,
 		statistic = statistic,
 		p.value = x$p_value,
-		conf.low = x$ci_low,
-		conf.high = x$ci_high,
 		stringsAsFactors = FALSE
 	)
+	if (conf.int) {
+		z <- stats::qnorm(1 - (1 - conf.level) / 2)
+		out$conf.low <- x$estimate - z * x$se
+		out$conf.high <- x$estimate + z * x$se
+	}
+	out
 }
 
 #' Tidy a `FETWFE_tes` simulation truth object
@@ -376,11 +432,12 @@ tidy.fetwfe_event_study <- function(x, ...) {
 #' Returns a `broom`-style tidy data frame for the population-truth
 #' object returned by [getTes()]. Row 1 is the overall true ATT
 #' (`term = "ATT_true"`); subsequent rows are the true cohort ATTs
-#' (`term = "Cohort <integer>"`, matching `print.FETWFE_tes`'s
-#' rendering, since `actual_cohort_tes` is an unnamed numeric vector).
-#' Standard error / statistic / p-value / CI columns are all
-#' `NA_real_` — there is no sampling distribution for a population
-#' truth.
+#' (`term = "Cohort <adoption-time>"`, using the simulator's
+#' convention that cohort `r` adopts at calendar time `r + 1`, so
+#' the labels match what `tidy.<estimator>` uses on a fitted panel
+#' generated from the same `FETWFE_coefs`). Standard error /
+#' statistic / p-value / CI columns are all `NA_real_` — there is
+#' no sampling distribution for a population truth.
 #'
 #' @param x An object of class `"FETWFE_tes"` returned by [getTes()].
 #' @param ... Unused.
@@ -393,7 +450,14 @@ tidy.fetwfe_event_study <- function(x, ...) {
 #' @export
 tidy.FETWFE_tes <- function(x, ...) {
 	R <- length(x$actual_cohort_tes)
-	terms <- c("ATT_true", paste0("Cohort ", seq_len(R)))
+	cohort_times <- if (!is.null(x$cohort_times)) {
+		x$cohort_times
+	} else {
+		# Fallback for pre-1.9.0 dev objects without the slot: use the
+		# simulator's convention that cohort r adopts at calendar time r + 1.
+		as.integer(seq_len(R) + 1L)
+	}
+	terms <- c("ATT_true", paste0("Cohort ", cohort_times))
 	estimates <- c(x$att_true, x$actual_cohort_tes)
 	data.frame(
 		term = terms,

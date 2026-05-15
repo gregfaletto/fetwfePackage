@@ -262,14 +262,64 @@ test_that("augment errors when response column is missing from data", {
 	)
 })
 
-test_that("augment errors on row-count mismatch with first-period hint", {
+test_that("augment errors when data row count cannot be reconciled with fit", {
 	setup <- .simulated_setup()
 	res <- fetwfeWithSimulatedData(setup$sim)
+	# 10 arbitrary rows from the panel won't form a balanced panel idCohorts
+	# can process; the error propagates out of idCohorts.
 	bad_data <- setup$sim$pdata[1:10, , drop = FALSE]
-	expect_error(
-		broom::augment(res, data = bad_data),
-		"first time period"
+	expect_error(broom::augment(res, data = bad_data))
+})
+
+test_that("augment auto-trims first-period-treated units when present in data", {
+	setup <- .simulated_setup()
+	# Take the simulated panel and mark one never-treated unit as treated at
+	# time 1, simulating a real-data panel that needs idCohorts trimming.
+	# The estimator will drop this unit at fit time; augment should drop the
+	# same rows when given the original (pre-trim) panel.
+	pdata <- setup$sim$pdata
+	# Pick a unit that's never treated in the simulator output.
+	never_treated_units <- unique(
+		pdata$unit[
+			vapply(
+				unique(pdata$unit),
+				function(u) {
+					all(pdata$treatment[pdata$unit == u] == 0)
+				},
+				logical(1)
+			)
+		]
 	)
+	skip_if(
+		length(never_treated_units) == 0,
+		"no never-treated units in fixture"
+	)
+	u <- never_treated_units[1]
+	# Treatment must be absorbing (once treated, always treated), so set it
+	# to 1 for all of this unit's periods. The estimator will detect that
+	# treatment began at time 1 and drop the unit.
+	pdata$treatment[pdata$unit == u] <- 1L
+
+	# Fit on the modified panel — fetwfe internally drops the period-1-treated
+	# unit, so X_ints has (N - 1) * T rows.
+	res <- fetwfe(
+		pdata = pdata,
+		time_var = "time",
+		unit_var = "unit",
+		treatment = "treatment",
+		response = "y",
+		covs = c("cov1", "cov2"),
+		q = 0.5,
+		verbose = FALSE
+	)
+	# Passing the original (un-trimmed) panel — augment should auto-trim.
+	aug <- broom::augment(res, data = pdata)
+	expect_equal(nrow(aug), res$N * res$T)
+	expect_true(all(c(".fitted", ".resid") %in% names(aug)))
+	# Dropped unit should not appear in the augmented output.
+	expect_false(u %in% aug$unit)
+	# Round-trip property still holds on the trimmed panel.
+	expect_equal(aug$.fitted + aug$.resid, aug$y, tolerance = 1e-8)
 })
 
 test_that("augment.etwfe and augment.betwfe work with flat X_ints slot", {
@@ -318,7 +368,44 @@ test_that("tidy.fetwfe_event_study returns broom-schema columns", {
 	expect_match(td$term, "^e\\d+$")
 })
 
-test_that("tidy.FETWFE_tes has NA_real_ for SE columns and integer cohort terms", {
+test_that("tidy.fetwfe_event_study respects conf.int = FALSE", {
+	res <- .fetwfe_fixture()
+	es <- event_study(res)
+	td <- broom::tidy(es, conf.int = FALSE)
+	expect_false("conf.low" %in% names(td))
+	expect_false("conf.high" %in% names(td))
+})
+
+test_that("tidy.fetwfe_event_study recomputes CIs at a custom conf.level", {
+	res <- .fetwfe_fixture()
+	es <- event_study(res)
+	td_95 <- broom::tidy(es, conf.level = 0.95)
+	td_99 <- broom::tidy(es, conf.level = 0.99)
+	# 99% widths should be wider than 95% widths everywhere (allowing
+	# tiny floating-point slack).
+	expect_true(all(
+		(td_99$conf.high - td_99$conf.low) >=
+			(td_95$conf.high - td_95$conf.low) - 1e-10
+	))
+})
+
+test_that("FETWFE_tes carries cohort_times slot (simulator convention)", {
+	setup <- .simulated_setup()
+	tes <- getTes(setup$coefs)
+	expect_true(!is.null(tes$cohort_times))
+	# Simulator convention: cohort r adopts at calendar time r + 1.
+	expect_equal(tes$cohort_times, as.integer(seq_len(tes$R) + 1L))
+})
+
+test_that("tidy.FETWFE_tes labels cohorts by adoption time (matches estimator tidy)", {
+	setup <- .simulated_setup()
+	tes <- getTes(setup$coefs)
+	td <- broom::tidy(tes)
+	# Cohort labels should be the adoption times, not 1..R indices.
+	expect_equal(td$term[-1], paste0("Cohort ", tes$cohort_times))
+})
+
+test_that("tidy.FETWFE_tes has NA_real_ for SE columns and Cohort <time> terms", {
 	setup <- .simulated_setup()
 	tes <- getTes(setup$coefs)
 	td <- broom::tidy(tes)

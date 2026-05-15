@@ -6,25 +6,28 @@
   `fetwfe()` / `etwfe()` / `betwfe()` outputs, plus `tidy()` for the
   outputs of `event_study()` and `getTes()`, so users can pipe estimator
   output directly into `ggplot2` / `modelsummary` / `gt` workflows
-  without reading the package class documentation. `tidy()` returns
-  a long data frame with broom-standard columns (`term`, `estimate`,
+  without reading the package class documentation. `tidy()` returns a
+  long data frame with broom-standard columns (`term`, `estimate`,
   `std.error`, `statistic`, `p.value`, `conf.low`, `conf.high`; plus
-  `selected` for `fetwfe` / `betwfe`), one row for the overall ATT
-  and one per cohort; `glance()` returns a one-row model-level summary
-  (13 columns for `fetwfe` / `betwfe`, 11 for `etwfe` without the
-  `lambda_star*` columns); `augment(x, data)` appends `.fitted` and
-  `.resid` to the user-supplied panel. The methods are registered via
-  the [generics](https://cran.r-project.org/package=generics) package
-  (added to `Imports:`); `broom` joins `Suggests:` for the vignette
-  demo.
-- Added `y_mean` (scalar; mean of the original response, pre-centering)
-  and `response_col_name` (character; the name of the response column
-  the estimator was fit against) to the return lists of `fetwfe()` /
-  `etwfe()` / `betwfe()` / `twfeCovs()`. These slots are populated at
-  fit time and consumed by `augment.<class>()` to return `.fitted` on
-  the original-response scale without the user having to pass the
-  response column name. Existing callers are unaffected; the slots are
-  additive. Resolves #27.
+  `selected` for `fetwfe` / `betwfe`), one row for the overall ATT and
+  one per cohort. `glance()` returns a one-row model-level summary (13
+  columns for `fetwfe` / `betwfe`, 11 for `etwfe` without the
+  `lambda_star*` columns). `augment(x, data)` appends `.fitted` and
+  `.resid` to the user-supplied panel and auto-trims first-period-
+  treated units (the same drop the estimator applies internally during
+  fitting), so the call works with either the original `pdata` passed
+  to the estimator or a pre-trimmed panel. `tidy.fetwfe_event_study()`
+  accepts `conf.int` / `conf.level` for CI control. The estimator
+  outputs gain six additive metadata slots — `y_mean`,
+  `response_col_name`, `time_var`, `unit_var`, `treatment`, `covs` —
+  populated at fit time and consumed by `augment()` (and a future
+  `predict()`) so users don't have to re-pass any of them. `getTes()`
+  output gains a `cohort_times` slot (the simulator's adoption-time
+  labels, `2..(R+1)`) so `tidy.FETWFE_tes()` labels cohorts the same
+  way `tidy.<estimator>()` labels them on a fitted panel. Methods are
+  registered via the [generics](https://cran.r-project.org/package=generics)
+  package (added to `Imports:`); `broom` joins `Suggests:` for the
+  vignette demo. Resolves #27.
 
 ## Version 1.8.0 (2026-05-13)
 

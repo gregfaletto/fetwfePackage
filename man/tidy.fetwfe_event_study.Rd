@@ -4,26 +4,41 @@
 \alias{tidy.fetwfe_event_study}
 \title{Tidy a \code{fetwfe_event_study} object}
 \usage{
-\method{tidy}{fetwfe_event_study}(x, ...)
+\method{tidy}{fetwfe_event_study}(x, conf.int = TRUE, conf.level = 0.95, ...)
 }
 \arguments{
 \item{x}{An object of class \code{"fetwfe_event_study"} returned by
 \code{\link[=event_study]{event_study()}}.}
+
+\item{conf.int}{Logical; include \code{conf.low} / \code{conf.high} columns.}
+
+\item{conf.level}{Numeric in (0, 1). Confidence level for the CI
+columns; defaults to \code{0.95} (\code{event_study()} does not store the
+alpha it was called with, so there is no fitted-object value to
+default to).}
 
 \item{...}{Unused.}
 }
 \value{
 A data frame with one row per event-time and columns \code{term},
 \code{event_time}, \code{n_cohorts}, \code{estimate}, \code{std.error}, \code{statistic},
-\code{p.value}, \code{conf.low}, \code{conf.high}.
+\code{p.value}, and (when \code{conf.int = TRUE}) \code{conf.low} / \code{conf.high}.
 }
 \description{
 Returns a \code{broom}-style tidy data frame for the output of
-\code{\link[=event_study]{event_study()}}. Renames the existing columns to broom conventions
-(\code{se} → \code{std.error}, \code{ci_low} / \code{ci_high} → \code{conf.low} / \code{conf.high},
-\code{p_value} → \code{p.value}) and adds a \code{term} column (\code{"e<event_time>"})
-plus a \code{statistic} column (\code{estimate / std.error}) so the schema
-matches \verb{tidy.<estimator>()} for downstream \code{bind_rows()} consumers.
+\code{\link[=event_study]{event_study()}}. Renames existing columns to broom conventions
+(\code{se} → \code{std.error}, \code{p_value} → \code{p.value}) and adds a \code{term}
+column (\code{"e<event_time>"}) plus a \code{statistic} column
+(\code{estimate / std.error}) so the schema matches \verb{tidy.<estimator>()}
+for downstream \code{bind_rows()} consumers.
+}
+\details{
+The \code{event_study()} output stores Wald CIs at the alpha passed at
+computation time. When \code{conf.int = TRUE} (the default), \code{conf.low} /
+\code{conf.high} are recomputed from \code{estimate} and \code{std.error} at the
+supplied \code{conf.level}, which can therefore differ from the
+computation-time alpha. When \code{conf.int = FALSE}, the CI columns are
+omitted.
 }
 \examples{
 \dontrun{

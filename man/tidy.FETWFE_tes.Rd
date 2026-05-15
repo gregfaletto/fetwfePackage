@@ -18,11 +18,12 @@ A data frame with \code{R + 1} rows.
 Returns a \code{broom}-style tidy data frame for the population-truth
 object returned by \code{\link[=getTes]{getTes()}}. Row 1 is the overall true ATT
 (\code{term = "ATT_true"}); subsequent rows are the true cohort ATTs
-(\code{term = "Cohort <integer>"}, matching \code{print.FETWFE_tes}'s
-rendering, since \code{actual_cohort_tes} is an unnamed numeric vector).
-Standard error / statistic / p-value / CI columns are all
-\code{NA_real_} — there is no sampling distribution for a population
-truth.
+(\code{term = "Cohort <adoption-time>"}, using the simulator's
+convention that cohort \code{r} adopts at calendar time 1, so
+the labels match what \verb{tidy.<estimator>} uses on a fitted panel
+generated from the same \code{FETWFE_coefs}). Standard error /
+statistic / p-value / CI columns are all \code{NA_real_} — there is
+no sampling distribution for a population truth.
 }
 \examples{
 \dontrun{

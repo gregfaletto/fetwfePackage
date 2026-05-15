@@ -703,6 +703,9 @@ etwfe_core <- function(
 #'   \item{X_ints}{Design matrix with unit FE, time FE, covariates,
 #'     treatment dummies and their interactions (dimensions \(N T \times p\)).}
 #'   \item{y}{Centred response vector of length \(N T\).}
+#'   \item{y_mean}{Mean of the original (pre-centering) response. Preserved so
+#'     downstream methods (`augment()`, `predict()`) can return fitted values
+#'     on the original response scale.}
 #'   \item{N, T}{Integers - number of unique units and time periods.}
 #'   \item{d}{Integer - number of *raw* covariates after processing.}
 #'   \item{p}{Integer - total number of columns in `X_ints`.}
@@ -957,6 +960,7 @@ processFactors <- function(pdata, covs) {
 #'   \item{X_ints}{The fully constructed design matrix with all fixed effects,
 #'     covariates, treatment dummies, and their interactions.}
 #'   \item{y}{The centered response vector.}
+#'   \item{y_mean}{Mean of the original (pre-centering) response.}
 #'   \item{N}{The final number of unique units after processing.}
 #'   \item{T}{The number of unique time periods.}
 #'   \item{d}{The final number of covariates after processing.}
@@ -1511,6 +1515,7 @@ genTreatVarsRealData <- function(
 #'   \item{cohort_var_mat}{Matrix of cohort dummies (`N*T` rows, `n_cohorts` columns).}
 #'   \item{treat_var_mat}{Matrix of treatment-period dummies (`N*T` rows, `num_treats` columns).}
 #'   \item{y}{The centered response vector.}
+#'   \item{y_mean}{Mean of the original (pre-centering) response.}
 #'   \item{cohort_treat_names}{A list (names are cohort adoption times) where each
 #'     element is a character vector of names for the treatment-period dummy
 #'     variables for that cohort (e.g., "c1_t2", "c1_t3").}
