@@ -74,9 +74,14 @@ test_that("tidy.fetwfe returns broom-schema columns with selected", {
 	expect_equal(nrow(td), res$R + 1L)
 	expect_equal(td$term[1], "ATT")
 	expect_match(td$term[-1], "^Cohort ")
-	# Cohort rows are sorted ascending by cohort label.
+	# Cohort rows are sorted ascending by NUMERIC cohort label. Note
+	# `sort()` on character is lexicographic, which would give the wrong
+	# answer for cohort labels ≥ 10 (see GitHub #53, fixed in v1.9.3 by
+	# the composite numeric-first sort key). Assert numeric ordering
+	# explicitly so this test catches any future regression on panels
+	# with ≥ 10 cohorts.
 	cohort_labels <- sub("^Cohort ", "", td$term[-1])
-	expect_equal(cohort_labels, sort(cohort_labels))
+	expect_equal(as.numeric(cohort_labels), sort(as.numeric(cohort_labels)))
 })
 
 test_that("tidy.etwfe has no selected column (no regularized selection)", {

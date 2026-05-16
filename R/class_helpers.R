@@ -37,7 +37,15 @@
 
 	idx <- switch(
 		order_by,
-		cohort = order(catt_df$Cohort),
+		# Composite sort key: numeric-cohort-time first, character as
+		# tiebreak. The character fallback only matters if some labels
+		# aren't numerically coercible (hypothetical -- catt_df$Cohort is
+		# always as.character(integer time) given the package's
+		# `is.integer(time_var)` input validation).
+		cohort = order(
+			suppressWarnings(as.numeric(catt_df$Cohort)),
+			catt_df$Cohort
+		),
 		estimate = order(catt_df$`Estimated TE`),
 		abs_estimate = order(abs(catt_df$`Estimated TE`), decreasing = TRUE),
 		pvalue = order(catt_df$P_value),

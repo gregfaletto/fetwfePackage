@@ -54,7 +54,16 @@ NULL
 	att_pvalue <- x$att_p_value
 
 	catt <- x$catt_df
-	catt <- catt[order(catt$Cohort), , drop = FALSE]
+	# Composite sort key: numeric-cohort-time first, character tiebreak.
+	# See R/class_helpers.R::.truncate_catt for the rationale.
+	catt <- catt[
+		order(
+			suppressWarnings(as.numeric(catt$Cohort)),
+			catt$Cohort
+		),
+		,
+		drop = FALSE
+	]
 	cohort_terms <- paste0("Cohort ", catt$Cohort)
 	cohort_estimates <- catt[["Estimated TE"]]
 	cohort_ses <- catt$SE
