@@ -235,7 +235,14 @@ test_that("augment.fetwfe returns data + .fitted + .resid with reconstruction", 
 	expect_true(all(c(".fitted", ".resid") %in% names(aug)))
 	expect_true(is.numeric(aug$.fitted))
 	expect_true(is.numeric(aug$.resid))
-	# .fitted + .resid reconstructs the original (uncentered) response.
+	# NOTE: the round-trip identity `.fitted + .resid == y` is tautological
+	# — `.resid` is defined as `y - .fitted`, so this holds by construction
+	# even when `.fitted` is glued to the wrong rows (the augment row-order
+	# bug fixed in PR #48). The load-bearing correctness check for row
+	# alignment lives in the "augment aligns rows to X_ints regardless of
+	# input row order" block below. The assertion here is kept as a guard
+	# against NaN propagation or factor coercion accidents, not as a
+	# correctness check. See issue #57.
 	expect_equal(aug$.fitted + aug$.resid, aug$y, tolerance = 1e-8)
 })
 
@@ -512,11 +519,57 @@ test_that("tidy.FETWFE_tes has NA_real_ for SE columns and Cohort <time> terms",
 # Dispatch
 # ------------------------------------------------------------------------------
 
-test_that("broom::tidy / broom::glance / broom::augment dispatch to package methods", {
+test_that("broom S3 methods are registered AND dispatch correctly for fetwfe / etwfe / betwfe", {
 	skip_if_not_installed("broom")
-	res <- .fetwfe_fixture()
-	# `broom::tidy(res)` should hit `tidy.fetwfe` via S3 dispatch.
-	td_via_broom <- broom::tidy(res)
-	td_direct <- broom::tidy(res)
-	expect_identical(td_via_broom, td_direct)
+	# Replaces a prior tautology (calling `broom::tidy(res)` twice and
+	# asserting identity) that passed even when no S3 method was
+	# registered. Issue #57.
+	#
+	# This test exercises actual S3 dispatch through the broom generics
+	# rather than just `getS3method()` lookup. The distinction matters:
+	# `getS3method(generic, class, optional = TRUE)` finds a method by
+	# name (`paste(generic, class, sep = ".")`) in the package namespace
+	# even when the `S3method(generic, class)` line is missing from
+	# NAMESPACE — so it does NOT catch missing-registration regressions.
+	# Calling `broom::tidy(res)` and checking the result, by contrast,
+	# routes through R's S3 dispatch table, which DOES use the NAMESPACE
+	# registration. Mutation test: remove an `S3method(...)` line from
+	# NAMESPACE; the corresponding `broom::tidy/glance/augment` call
+	# below falls through to the broom default (returns a character
+	# error message instead of a data.frame), and the `expect_s3_class`
+	# assertion fails.
+	setup <- .simulated_setup()
+	fits <- list(
+		fetwfe = fetwfeWithSimulatedData(setup$sim),
+		etwfe = etwfeWithSimulatedData(setup$sim),
+		betwfe = betwfeWithSimulatedData(setup$sim)
+	)
+	for (cls in names(fits)) {
+		res <- fits[[cls]]
+		expect_s3_class(broom::tidy(res), "data.frame")
+		expect_s3_class(broom::glance(res), "data.frame")
+		expect_s3_class(
+			broom::augment(res, data = setup$sim$pdata),
+			"data.frame"
+		)
+	}
+	# Belt-and-suspenders: also confirm the method name lookups succeed
+	# (catches renames even when registration is intact).
+	for (cls in c("fetwfe", "etwfe", "betwfe")) {
+		for (gen in c("tidy", "glance", "augment")) {
+			expect_false(
+				is.null(getS3method(gen, cls, optional = TRUE)),
+				info = paste0("Missing S3 method: ", gen, ".", cls)
+			)
+		}
+	}
+	# event-study + cohort-level tidy methods.
+	es <- event_study(fits$fetwfe)
+	expect_s3_class(broom::tidy(es), "data.frame")
+	expect_false(
+		is.null(getS3method("tidy", "fetwfe_event_study", optional = TRUE))
+	)
+	expect_false(
+		is.null(getS3method("tidy", "FETWFE_tes", optional = TRUE))
+	)
 })

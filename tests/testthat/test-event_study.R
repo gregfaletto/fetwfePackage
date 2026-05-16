@@ -174,23 +174,23 @@ test_that("event_study FETWFE: all-zero-theta-block produces all-zero estimates"
 		eff_size = 0.01
 	)
 	res <- fetwfeWithSimulatedData(sim, q = 0.5)
-	# Only run the assertion if the bridge actually selected nothing
-	theta_hat <- res$internal$theta_hat
-	if (
-		!is.null(theta_hat) &&
-			all(theta_hat[2:(res$p + 1)][res$treat_inds] == 0)
-	) {
-		es <- event_study(res)
-		expect_true(all(es$estimate == 0))
-		expect_true(all(es$se == 0 | is.na(es$se)))
-	} else {
-		# If the bridge happened to select something on this seed, skip.
-		# The qualitative property is still asserted on a different test that
-		# constructs a known-zero case.
-		skip(
-			"Bridge selected non-zero treatment block on this seed; skipping all-zero test."
-		)
-	}
+	# Construct the all-zero case deterministically by post-patching BOTH
+	# theta_hat (the bridge-space coefficient) AND beta_hat (the
+	# back-transformed coefficient that event_study.fetwfe() actually
+	# reads at R/event_study.R:274). The fit-time all-zero early-exit at
+	# R/fetwfe_core.R:904-939 zeroes both representations together; the
+	# test mirrors that. Previously this block conditionally skipped if
+	# the bridge happened not to zero the treatment block on the test
+	# seed — fragile under a seed bump or genCoefs change. See issue #57.
+	res$internal$theta_hat[2:(res$p + 1)][res$treat_inds] <- 0
+	res$beta_hat[res$treat_inds] <- 0
+	stopifnot(
+		all(res$internal$theta_hat[2:(res$p + 1)][res$treat_inds] == 0),
+		all(res$beta_hat[res$treat_inds] == 0)
+	)
+	es <- event_study(res)
+	expect_true(all(es$estimate == 0))
+	expect_true(all(es$se == 0 | is.na(es$se)))
 })
 
 # ------------------------------------------------------------------------------
@@ -212,6 +212,47 @@ test_that("event_study se_type = 'cluster' returns finite SEs", {
 	expect_true(any(finite_cls))
 	# Point estimates are the same (only variance differs by se_type)
 	expect_equal(es_def$estimate, es_cls$estimate, tolerance = 1e-10)
+})
+
+test_that(".compute_cluster_robust_sandwich matches hand-rolled Liang-Zeger on a small fixture", {
+	# Bug-discrimination test for the cluster-robust SE machinery.
+	# The integration test above only verifies finiteness; this one
+	# verifies the actual numerical formula. A 50% miscalibration in
+	# .compute_cluster_robust_sandwich would pass the integration check
+	# but fail here. Mutation test: change `cadjust <- N / (N - 1)` in
+	# R/ols_calcs.R:623 to `cadjust <- 1` and re-run; this test fails
+	# (diff ~6e-4 vs 1e-10 tolerance). See issue #57.
+	set.seed(31)
+	N <- 25L
+	T <- 4L
+	p_S <- 3L
+	X_S <- matrix(rnorm(N * T * p_S), nrow = N * T, ncol = p_S)
+	residuals <- rnorm(N * T)
+
+	V_pkg <- fetwfe:::.compute_cluster_robust_sandwich(
+		X_S,
+		residuals,
+		N = N,
+		T = T
+	)
+
+	# Hand-rolled Liang-Zeger sandwich (Liang & Zeger 1986):
+	#   bread:    (X'X)^{-1} on column-demeaned X
+	#   meat:     sum_i (Xi' eps_i)(Xi' eps_i)'
+	#   sandwich: cadjust * bread * meat * bread, cadjust = N / (N - 1)
+	Xc <- scale(X_S, center = TRUE, scale = FALSE)
+	bread <- solve(crossprod(Xc))
+	meat <- matrix(0, p_S, p_S)
+	for (i in seq_len(N)) {
+		rows_i <- ((i - 1L) * T + 1L):(i * T)
+		Xi <- Xc[rows_i, , drop = FALSE]
+		eps_i <- residuals[rows_i]
+		score_i <- crossprod(Xi, eps_i)
+		meat <- meat + tcrossprod(score_i)
+	}
+	V_hand <- (N / (N - 1)) * bread %*% meat %*% bread
+
+	expect_equal(V_pkg, V_hand, tolerance = 1e-10)
 })
 
 # ------------------------------------------------------------------------------
