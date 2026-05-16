@@ -70,19 +70,25 @@ idCohorts <- function(df, time_var, unit_var, treat_var, covs) {
 	}
 	names(cohorts) <- times
 
+	# Collect per-unit violations across BOTH balance and absorbing-state
+	# checks, then stop() once at the end with a grouped listing. Previously
+	# each check stop()-ed on the first offending unit, forcing the user
+	# into one error round-trip per malformed unit. See issue #64.
+	balance_violations <- character(0)
+	absorbing_violations <- character(0)
+
 	for (s in units) {
 		df_s <- df[df[, unit_var] == s, ]
-		# Assume this is a balanced panel
+
+		# Balance check (gates the absorbing-state check on the same unit;
+		# we can't trust the per-period treatment vector when observations
+		# are missing).
 		if (nrow(df_s) != T) {
-			stop(paste0(
-				paste(
-					"Panel does not appear to be balanced (unit",
-					s,
-					"does not have exactly T observations for T =",
-					T
-				),
-				")"
-			))
+			balance_violations <- c(
+				balance_violations,
+				paste0("unit ", s, " has ", nrow(df_s), " observations")
+			)
+			next
 		}
 
 		if (any(df_s[, treat_var] == 1)) {
@@ -97,23 +103,65 @@ idCohorts <- function(df, time_var, unit_var, treat_var, covs) {
 				time_var
 			]
 
-			# Make sure treatment is absorbing
+			# Absorbing-state check.
 			# Check from the actual_treat_time onwards in the original df for unit s
 			original_unit_times_from_treatment <- df[
 				(df[, unit_var] == s) & (df[, time_var] >= actual_treat_time),
 				treat_var
 			]
 			if (any(original_unit_times_from_treatment != 1)) {
-				stop(paste(
-					"Treatment does not appear to be an absorbing state for unit",
-					s
-				))
+				absorbing_violations <- c(absorbing_violations, as.character(s))
+				# Do NOT append to cohorts: only units that pass BOTH the
+				# balance and absorbing-state checks contribute to cohort
+				# membership. (load-bearing: without `next`, this unit would
+				# leak into the cohorts list before stop() fires below.)
+				next
 			}
 			cohorts[[as.character(actual_treat_time)]] <- c(
 				cohorts[[as.character(actual_treat_time)]],
 				s
 			)
 		}
+	}
+
+	if (
+		length(balance_violations) > 0 ||
+			length(absorbing_violations) > 0
+	) {
+		# unit_var is required to be character (enforced at the public
+		# entry points; see e.g. R/etwfe_core.R:208), so sort() is
+		# lexicographic. For unit names like "unit10" / "unit2", the
+		# ordering is "unit10" < "unit2" < "unit3"; that's the same
+		# lex order as v1.9.3's cohort-sort caveat (#53).
+		msgs <- character(0)
+		if (length(balance_violations) > 0) {
+			msgs <- c(
+				msgs,
+				paste0(
+					"Panel does not appear to be balanced (expected T = ",
+					T,
+					" observations per unit). Violations:\n  ",
+					paste(
+						.truncate_violations(sort(balance_violations)),
+						collapse = "\n  "
+					)
+				)
+			)
+		}
+		if (length(absorbing_violations) > 0) {
+			msgs <- c(
+				msgs,
+				paste0(
+					"Treatment does not appear to be an absorbing state. ",
+					"Violations (units whose treatment was 1 and later 0):\n  ",
+					paste(
+						.truncate_violations(sort(absorbing_violations)),
+						collapse = "\n  "
+					)
+				)
+			)
+		}
+		stop(paste(msgs, collapse = "\n"))
 	}
 
 	stopifnot(length(unlist(cohorts)) <= N)
@@ -175,6 +223,29 @@ idCohorts <- function(df, time_var, unit_var, treat_var, covs) {
 	stopifnot(length(unlist(cohorts)) <= N)
 
 	return(list(df = df, cohorts = cohorts, units = units, times = times))
+}
+
+#' @title Truncate a violations listing for an error message
+#' @description Used by `idCohorts()` to cap a long list of per-unit
+#'   violations at a small representative sample, so a user with hundreds
+#'   of malformed units does not get a multi-page error message. Returns
+#'   the first `max_show` entries verbatim followed by `"... and N more"`
+#'   when the input exceeds `max_show`; returns the input unchanged
+#'   otherwise.
+#' @param xs Character vector of violation descriptions.
+#' @param max_show Integer scalar; maximum number of entries to show
+#'   verbatim before truncating. Defaults to 20.
+#' @return Character vector of length `min(length(xs), max_show + 1)`.
+#' @keywords internal
+#' @noRd
+.truncate_violations <- function(xs, max_show = 20L) {
+	if (length(xs) <= max_show) {
+		return(xs)
+	}
+	c(
+		xs[seq_len(max_show)],
+		paste0("... and ", length(xs) - max_show, " more")
+	)
 }
 
 

@@ -1,5 +1,26 @@
 # NEWS
 
+## Version 1.9.6 (2026-05-16)
+
+- `R/utility.R::idCohorts()` now reports every malformed unit at once
+  rather than stopping on the first. Previously a user with multiple
+  malformed units had to fix one, re-run, hit the next stop, fix
+  again, re-run — one error round-trip per bad unit. After this
+  change, both the balance check (every unit must appear in exactly
+  T periods) and the absorbing-state check (treatment, once 1, must
+  stay 1) collect violations across the entire unit loop and produce
+  a single grouped error message with all offending units listed
+  alphabetically (lexicographically; the unit name column is required
+  to be character). Listings over 20 entries per bucket are truncated with
+  a trailing summary count. The error message wording starts with
+  the canonical prefixes "Panel does not appear to be balanced" and
+  "Treatment does not appear to be an absorbing state" so downstream
+  grep-based consumers still match. The cohort-level stops at
+  `R/utility.R:191-195` ("all units treated in the first period") and
+  `:211-214` are end-of-loop validation, not per-unit, and remain
+  unchanged. Resolves GitHub #64. This was item 5 of #56, deferred
+  from v1.9.5 because it changes user-visible error wording.
+
 ## Version 1.9.5 (2026-05-16)
 
 - Small consistency cleanups surfaced by an internal code review;
