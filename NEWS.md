@@ -1,5 +1,23 @@
 # NEWS
 
+## Version 1.9.3 (2026-05-16)
+
+- Fixed a latent bug in two internal helpers — `.truncate_catt()`
+  (`R/class_helpers.R`) and `.tidy_estimator_output()`
+  (`R/broom_methods.R`) — both of which sorted `catt_df` rows via
+  `order(catt_df$Cohort)`. The `Cohort` column is character, so R's
+  default `order()` sorted lexicographically: `"10"` and `"11"` came
+  before `"2"` and `"3"`. Two visible consequences on panels with
+  ≥ 10 unique cohort adoption times: (a) `tidy.<class>()` row order was
+  alphabetical rather than chronological; (b) `print.<class>()` and
+  `summary.<class>()` (which call `.truncate_catt()` with
+  `max_cohorts`) silently dropped the wrong cohorts — the *earliest*
+  ones, treated as "later" alphabetically. Both helpers now use a
+  composite key `order(suppressWarnings(as.numeric(.)), .)` that
+  sorts numerically with a character tiebreak. Behavior on panels with
+  ≤ 9 cohorts (every existing test fixture) is bit-identical to
+  pre-fix. Resolves GitHub #53.
+
 ## Version 1.9.2 (2026-05-16)
 
 - Fixed a bug in `betwfe()`'s standard-error calculation under partial
