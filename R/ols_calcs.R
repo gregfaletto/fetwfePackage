@@ -510,11 +510,11 @@ getSecondVarTermOLS <- function(
 #'   fusion penalization is applied to the treatment effects (or when calculating
 #'   SEs as if it were an OLS on selected variables). This vector is used in
 #'   standard error calculations for the cohort's Average Treatment Effect on
-#'   the Treated (ATT). In particular, this vector contains the constants
-#'   `1 / (T - r + 1)` that are multiplied by the cohort treatment effects
-#'   at each time, then summed, to get the average treatment effect for cohort
-#'   `r`. The vector `psi_r` places these constants in the correct positions so
-#'   that the inner product works as intended.
+#'   the Treated (ATT). Specifically, `psi_r` places the constant
+#'   `1 / k_full` (where `k_full = last_ind_r - first_ind_r + 1` is the
+#'   cohort's full treatment-block size) at each position corresponding to a
+#'   selected treatment effect in cohort `r`, and zero elsewhere — so that
+#'   `t(psi_r) %*% theta_hat_treat_sel == cohort_tes[r]`.
 #' @param first_ind_r Integer; the index of the first treatment effect for
 #'   cohort `r` within the `num_treats` block of treatment effects.
 #' @param last_ind_r Integer; the index of the last treatment effect for
@@ -523,16 +523,24 @@ getSecondVarTermOLS <- function(
 #'   treatment effects within the `num_treats` block, shifted to start from 1.
 #' @param gram_inv Numeric matrix; the inverse of the Gram matrix for the
 #'   selected treatment effect features.
-#' @return A numeric vector `psi_r` of length equal to
-#'   `length(sel_treat_inds_shifted)`. It contains weights (typically 1/k for
-#'   k selected effects in cohort r, 0 otherwise) to average the selected
-#'   treatment effect coefficients for cohort `r`.
-#' @details The function identifies which of the `sel_treat_inds_shifted` fall
-#'   within the range `[first_ind_r, last_ind_r]`. For these identified
-#'   indices in `psi_r`, it assigns a value of 1. `psi_r` is then normalized by
-#'   dividing by its sum, effectively creating an averaging vector for the
-#'   selected treatment effects belonging to cohort `r`. If no treatment effects
-#'   for cohort `r` were selected, `psi_r` will be a zero vector.
+#' @return A numeric vector `psi_r` of length
+#'   `length(sel_treat_inds_shifted)`. Positions corresponding to selected
+#'   treatment effects in cohort `r` carry `1 / k_full`; other positions are
+#'   zero. Returns a zero vector if no coefficients in cohort `r`'s block are
+#'   selected.
+#' @details The function identifies which of `sel_treat_inds_shifted` fall
+#'   within the cohort-r block `[first_ind_r, last_ind_r]`. For those
+#'   identified indices, `psi_r` is set to `1 / k_full`, where
+#'   `k_full = last_ind_r - first_ind_r + 1` is the cohort's full
+#'   treatment-block size. This normalization (rather than dividing by the
+#'   *selected* count `k_sel`) is what makes
+#'   `t(psi_r) %*% theta_hat_treat_sel == cohort_tes[r]`, since the
+#'   cohort point estimate `cohort_tes[r] = mean(tes[first_ind_r:last_ind_r])`
+#'   averages over the full block (unselected entries are exact zeros
+#'   post-bridge). If no coefficients in cohort r's block are selected,
+#'   `psi_r` is a zero vector. For ETWFE / `twfeCovs()` callers
+#'   (which pass `sel_treat_inds_shifted = 1:num_treats`, so `k_sel = k_full`),
+#'   this is bit-identical to the previous divide-by-sum normalization.
 #' @keywords internal
 #' @noRd
 getPsiRUnfused <- function(
@@ -541,6 +549,9 @@ getPsiRUnfused <- function(
 	sel_treat_inds_shifted,
 	gram_inv
 ) {
+	k_full <- last_ind_r - first_ind_r + 1
+	stopifnot(k_full >= 1)
+
 	which_inds_ir <- sel_treat_inds_shifted %in% (first_ind_r:last_ind_r)
 
 	psi_r <- rep(0, length(sel_treat_inds_shifted))
@@ -559,11 +570,7 @@ getPsiRUnfused <- function(
 		stopifnot(max(inds_r) <= ncol(gram_inv))
 		stopifnot(min(inds_r) >= 0)
 
-		psi_r[inds_r] <- 1
-
-		stopifnot(sum(psi_r) > 0)
-
-		psi_r <- psi_r / sum(psi_r)
+		psi_r[inds_r] <- 1 / k_full
 	}
 
 	return(psi_r)

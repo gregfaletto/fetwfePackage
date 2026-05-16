@@ -1,5 +1,33 @@
 # NEWS
 
+## Version 1.9.2 (2026-05-16)
+
+- Fixed a bug in `betwfe()`'s standard-error calculation under partial
+  selection. The internal `getPsiRUnfused()` helper was normalizing the
+  weight vector `psi_r` by `k_sel` (the count of *selected* coefficients
+  in a cohort's treatment block) rather than `k_full` (the full block
+  size). The cohort point estimate
+  `cohort_tes[r] = mean(tes[first_ind_r:last_ind_r])` averages over the
+  full block (unselected entries are exact zeros post-bridge), so the
+  variance formula's `psi_r` weighting targeted the wrong estimand
+  whenever the bridge solver zeroed out some-but-not-all of a cohort's
+  coefficients. The bug violated BETWFE's documented "asymptotically
+  exact, non-conservative" SE promise. Effect on user-visible output: on
+  panels with partial selection, `betwfe()`'s reported `catt_df$SE`,
+  `catt_df$ConfIntLow`, `catt_df$ConfIntHigh`, and `catt_df$P_value`
+  shift — per-cohort SEs shrink by factor `k_full / k_sel`. The overall
+  `att_se` direction is counterintuitive: it can *grow*, because the
+  corrected per-cohort CATT vector is more dispersed across cohorts than
+  the pre-fix mean-over-selected-only version, and the `att_var_2`
+  component is a quadratic form in cohort dispersion. Empirical
+  magnitudes are ~2× shifts in either direction on representative
+  partial-selection panels. Point estimates (`att_hat`,
+  `catt_df$Estimated TE`) are unaffected. FETWFE, ETWFE, and `twfeCovs()`
+  are unaffected (FETWFE uses a different `psi_r` constructor; ETWFE and
+  twfeCovs never partial-select). Users with `se_type = "cluster"` also
+  see SEs shift on partial-selection BETWFE fits (the cluster-robust
+  path uses the same `psi_r` weighting).
+
 ## Version 1.9.1 (2026-05-15)
 
 - Fixed two coupled bugs in the internal variance-component estimator
