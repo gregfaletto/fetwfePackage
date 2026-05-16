@@ -448,28 +448,51 @@ getGramInv <- function(
 
 
 # estOmegaSqrtInv
-#' @title Estimate Noise Variance Components and Omega Matrix
+#' @title Estimate Noise Variance Components by REML
 #' @description Estimates the idiosyncratic error variance (`sig_eps_sq`) and
-#'   the unit-level random effect variance (`sig_eps_c_sq`) using the method
-#'   described by Pesaran (2015, Section 26.5.1) with ridge regression.
-#'   This function is called when these variances are not provided by the user.
-#' @param y Numeric vector; the observed response variable, length `N*T`.
+#'   the unit-level random effect variance (`sig_eps_c_sq`) via REML on the
+#'   linear mixed-effects model `y ~ X + (1 | unit)`, using `lme4::lmer`.
+#'   This matches the random-effects covariance structure (`Omega = sig_eps_sq * I_T
+#'   + sig_eps_c_sq * 1_T 1_T'`) the package's GLS framework assumes. Called
+#'   when these variances are not provided by the user.
+#' @param y Numeric vector; the observed response variable, length `N*T`,
+#'   in canonical `(unit, time)` order (rows `1..T` are unit 1, etc.).
 #' @param X_ints Numeric matrix; the design matrix including all fixed effects,
 #'   covariates, treatment dummies, and interactions. `N*T` rows.
 #' @param N Integer; the total number of unique units.
 #' @param T Integer; the total number of time periods.
 #' @param p Integer; the number of columns in `X_ints`.
 #' @return A list containing two named elements:
-#'   \item{sig_eps_sq}{Estimated variance of the idiosyncratic error term.}
-#'   \item{sig_eps_c_sq}{Estimated variance of the unit-level random effect.}
-#' @details The function first demeans `y` and `X_ints` within each unit (fixed
-#'   effects transformation). Then, it fits a ridge regression (`alpha=0` in
-#'   `glmnet::cv.glmnet`) to the demeaned data. Residuals from this model are
-#'   used to estimate `sigma_hat_sq` (which corresponds to `sig_eps_sq`).
-#'   The estimated unit-specific intercepts (`alpha_hat`) are then used to
-#'   estimate `sigma_c_sq_hat` (corresponding to `sig_eps_c_sq`).
-#' @references Pesaran, M. H. (2015). Time Series and Panel Data Econometrics.
-#'   Oxford University Press.
+#'   \item{sig_eps_sq}{REML estimate of the idiosyncratic error variance.}
+#'   \item{sig_eps_c_sq}{REML estimate of the unit-level random-effect variance.}
+#' @details The function builds an `lme4`-friendly data frame with the
+#'   response, a unit-membership factor, and `X_ints` columns, then calls
+#'   `lme4::lmer(..., REML = TRUE)` to estimate the variance components via
+#'   restricted maximum likelihood. Requires `lme4` to be installed
+#'   (`Suggests:` dependency, gated by `requireNamespace`); errors with a
+#'   clear message if not. lme4's "different scales" warning and
+#'   "rank deficient" message — expected on FETWFE-scale designs where
+#'   cohort dummies are 0/1 and covariates are arbitrary — are suppressed.
+#'
+#'   Prior versions of this package implemented the within-estimator
+#'   procedure of Pesaran (2015, Section 26.5.1). That implementation
+#'   contained two coupled bugs that caused `sig_eps_c_sq` to be returned
+#'   as numerically zero, degenerating the downstream GLS step. The REML
+#'   implementation here fixes both the bug and a methodological mismatch:
+#'   the within-estimator drops time-invariant columns from `X_ints` (cohort
+#'   dummies, time-invariant covariates, cohort-by-covariate interactions),
+#'   which biases `sig_eps_c_sq` upward when the true coefficients on those
+#'   columns are nonzero. REML handles them natively.
+#' @references Bates, D., Maechler, M., Bolker, B., & Walker, S. (2015).
+#'   Fitting Linear Mixed-Effects Models Using lme4. *Journal of Statistical
+#'   Software*, 67(1), 1-48. \doi{10.18637/jss.v067.i01}.
+#'
+#'   Patterson, H. D., & Thompson, R. (1971). Recovery of inter-block
+#'   information when block sizes are unequal. *Biometrika*, 58(3),
+#'   545-554.
+#'
+#'   Pinheiro, J. C., & Bates, D. M. (2000). *Mixed-Effects Models in S
+#'   and S-PLUS*. Springer.
 #' @keywords internal
 #' @noRd
 estOmegaSqrtInv <- function(y, X_ints, N, T, p) {
@@ -478,47 +501,62 @@ estOmegaSqrtInv <- function(y, X_ints, N, T, p) {
 	}
 	stopifnot(N > 1)
 
-	# Estimate standard deviations
-	y_fe <- y
-	X_ints_fe <- X_ints
-	for (i in 1:N) {
-		inds_i <- ((i - 1) * T + 1):(i * T)
-		stopifnot(length(inds_i) == T)
-		y_fe[inds_i] <- y[inds_i] - mean(y[inds_i])
-		X_ints[inds_i, ] <- X_ints[inds_i, ] - colMeans(X_ints[inds_i, ])
+	if (!requireNamespace("lme4", quietly = TRUE)) {
+		stop(
+			"Variance-component estimation requires the 'lme4' package. ",
+			"Install it via install.packages('lme4'), or supply ",
+			"`sig_eps_sq` and `sig_eps_c_sq` directly to the estimator.",
+			call. = FALSE
+		)
 	}
 
-	lin_mod_fe <- glmnet::cv.glmnet(x = X_ints_fe, y = y_fe, alpha = 0)
+	# The package's prepXints() places rows in canonical (unit, time) order,
+	# so unit IDs are rep(1..N, each = T).
+	unit_id <- factor(rep(seq_len(N), each = T))
 
-	# Get residuals
-	y_hat_fe <- stats::predict(lin_mod_fe, s = "lambda.min", newx = X_ints_fe)
+	# Build a data frame for lme4. Rename X_ints columns to generic names so
+	# the formula parser doesn't choke on special characters (`:`, `*`, `(`)
+	# in the original interaction column names.
+	X_named <- X_ints
+	colnames(X_named) <- paste0("Xcol_", seq_len(p))
+	df <- data.frame(
+		y_resp = y,
+		unit = unit_id,
+		X_named,
+		check.names = FALSE
+	)
+	rhs <- paste0("Xcol_", seq_len(p), collapse = " + ")
+	fmla <- stats::as.formula(paste0("y_resp ~ ", rhs, " + (1 | unit)"))
 
-	# Get coefficients
-	beta_hat_fe <- stats::coef(lin_mod_fe, s = "lambda.min")[2:(p + 1)]
+	# Fit y ~ X + (1 | unit) by REML. lme4 emits a "different scales"
+	# warning and a "rank deficient" message on most FETWFE-scale designs;
+	# both are informational (cohort dummies are 0/1, covariates are
+	# arbitrary; aliased columns are dropped automatically). Suppress both.
+	fit <- tryCatch(
+		suppressWarnings(suppressMessages(
+			lme4::lmer(fmla, data = df, REML = TRUE)
+		)),
+		error = function(e) {
+			stop(
+				"lme4::lmer failed to fit the variance-component model: ",
+				conditionMessage(e),
+				".\nConsider supplying `sig_eps_sq` and `sig_eps_c_sq` ",
+				"directly to the estimator.",
+				call. = FALSE
+			)
+		}
+	)
 
-	resids <- y_fe - y_hat_fe
+	# Extract variance components. VarCorr(fit)$unit is the 1x1 covariance
+	# matrix of the random intercept; attr(., "sc") is the residual std dev.
+	vc <- lme4::VarCorr(fit)
+	sigma_c_sq_hat <- as.numeric(vc$unit[1, 1])
+	sigma_hat_sq <- as.numeric(attr(vc, "sc"))^2
 
-	tau <- rep(1, T)
-	M <- diag(rep(1, T)) - outer(tau, tau) / T
-
-	sigma_hat_sq <- 0
-	alpha_hat <- rep(as.numeric(NA), N)
-
-	for (i in 1:N) {
-		inds_i <- ((i - 1) * T + 1):(i * T)
-		sigma_hat_sq <- sigma_hat_sq +
-			as.numeric(resids[inds_i] %*% M %*% resids[inds_i])
-		alpha_hat[i] <- mean(y_hat_fe[inds_i]) -
-			colMeans(X_ints_fe[inds_i, ] %*% beta_hat_fe)
-	}
-
-	stopifnot(all(!is.na(alpha_hat)))
-
-	sigma_hat_sq <- sigma_hat_sq / (N * (T - 1) - p)
-
-	sigma_c_sq_hat <- sum((alpha_hat - mean(alpha_hat))^2) / (N - 1)
-
-	return(list(sig_eps_sq = sigma_hat_sq, sig_eps_c_sq = sigma_c_sq_hat))
+	return(list(
+		sig_eps_sq = sigma_hat_sq,
+		sig_eps_c_sq = sigma_c_sq_hat
+	))
 }
 
 #' @title Validate Inputs for the ETWFE Core Estimator

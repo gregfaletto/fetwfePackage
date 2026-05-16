@@ -834,8 +834,8 @@ test_that("data application works with ridge penalty", {
 		treatment = "changed",
 		covs = c("murderrate", "lnpersinc", "afdcrolls"),
 		response = "suiciderate_elast_jag",
-		sig_eps_sq = 0.1025361,
-		sig_eps_c_sq = 4.227651e-35,
+		sig_eps_sq = 0.0344,
+		sig_eps_c_sq = 0.1507,
 		verbose = TRUE,
 		add_ridge = TRUE
 	))

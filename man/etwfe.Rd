@@ -74,16 +74,18 @@ if \code{q < 1}.)}
 noise assumed to apply to each observation. See Section 2 of Faletto (2025)
 for details. It is best to provide this variance if it is known (for example,
 if you are using simulated data). If this variance is unknown, this argument
-can be omitted, and the variance will be estimated using the estimator from
-Pesaran (2015, Section 26.5.1) with ridge regression. Default is NA.}
+can be omitted, and the variance will be estimated by
+REML on the linear mixed-effects model \code{y ~ X + (1 | unit)} via
+\code{lme4::lmer} (Bates et al. 2015; Patterson & Thompson 1971). Default is NA.}
 
 \item{sig_eps_c_sq}{(Optional.) Numeric; the variance of the unit-level IID
 noise (random effects) assumed to apply to each observation. See Section 2 of
 Faletto (2025) for details. It is best to provide this variance if it is
 known (for example, if you are using simulated data). If this variance is
 unknown, this argument can be omitted, and the variance will be estimated
-using the estimator from Pesaran (2015, Section 26.5.1) with ridge
-regression. Default is NA.}
+by REML via \code{lme4::lmer} on the
+linear mixed-effects model \code{y ~ X + (1 | unit)} (Bates et al. 2015;
+Patterson & Thompson 1971). Default is NA.}
 
 \item{verbose}{Logical; if TRUE, more details on the progress of the function will
 be printed as the function executes. Default is FALSE.}
@@ -168,6 +170,17 @@ Wooldridge, J. M. (2021). Two-way fixed effects, the two-way mundlak
 regression, and difference-in-differences estimators.
 \emph{Available at SSRN 3906345}.
 \doi{10.2139/ssrn.3906345}.
+
+Bates, D., Maechler, M., Bolker, B., & Walker, S. (2015). Fitting
+Linear Mixed-Effects Models Using lme4. \emph{Journal of Statistical
+Software}, 67(1), 1-48. \doi{10.18637/jss.v067.i01}.
+
+Patterson, H. D., & Thompson, R. (1971). Recovery of inter-block
+information when block sizes are unequal. \emph{Biometrika}, 58(3),
+545-554.
+
+Pinheiro, J. C., & Bates, D. M. (2000). \emph{Mixed-Effects Models in
+S and S-PLUS}. Springer.
 }
 \author{
 Gregory Faletto
