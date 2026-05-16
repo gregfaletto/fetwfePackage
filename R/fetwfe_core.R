@@ -2019,10 +2019,13 @@ getSecondVarTermDataApp <- function(
 			sel_inds[[r]] <- first_ind_r:last_ind_r
 			if (r > 1) {
 				stopifnot(min(sel_inds[[r]]) > max(sel_inds[[r - 1]]))
-				stopifnot(length(sel_inds[[r]]) < length(sel_inds[[r - 1]]))
+				stopifnot(length(sel_inds[[r]]) <= length(sel_inds[[r - 1]]))
 			}
 		}
 		stopifnot(all.equal(unlist(sel_inds), 1:num_treats))
+
+		stopifnot(length(cohort_probs_overall) == R)
+		stopifnot(sum(cohort_probs_overall) < 1 - 1e-6)
 
 		for (r in 1:R) {
 			## diagonal contribution

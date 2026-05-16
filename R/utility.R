@@ -74,11 +74,14 @@ idCohorts <- function(df, time_var, unit_var, treat_var, covs) {
 		df_s <- df[df[, unit_var] == s, ]
 		# Assume this is a balanced panel
 		if (nrow(df_s) != T) {
-			stop(paste(
-				"Panel does not appear to be balanced (unit",
-				s,
-				"does not have exactly T observations for T =",
-				T
+			stop(paste0(
+				paste(
+					"Panel does not appear to be balanced (unit",
+					s,
+					"does not have exactly T observations for T =",
+					T
+				),
+				")"
 			))
 		}
 
