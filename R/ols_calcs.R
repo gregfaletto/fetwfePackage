@@ -142,8 +142,7 @@ getCohortATTsFinalOLS <- function(
 		psi_r <- getPsiRUnfused(
 			first_ind_r,
 			last_ind_r,
-			sel_treat_inds_shifted = 1:num_treats,
-			gram_inv = gram_inv
+			sel_treat_inds_shifted = 1:num_treats
 		)
 
 		stopifnot(length(psi_r) == num_treats)
@@ -521,8 +520,6 @@ getSecondVarTermOLS <- function(
 #'   cohort `r` within the `num_treats` block.
 #' @param sel_treat_inds_shifted Integer vector; indices of all selected
 #'   treatment effects within the `num_treats` block, shifted to start from 1.
-#' @param gram_inv Numeric matrix; the inverse of the Gram matrix for the
-#'   selected treatment effect features.
 #' @return A numeric vector `psi_r` of length
 #'   `length(sel_treat_inds_shifted)`. Positions corresponding to selected
 #'   treatment effects in cohort `r` carry `1 / k_full`; other positions are
@@ -546,8 +543,7 @@ getSecondVarTermOLS <- function(
 getPsiRUnfused <- function(
 	first_ind_r,
 	last_ind_r,
-	sel_treat_inds_shifted,
-	gram_inv
+	sel_treat_inds_shifted
 ) {
 	k_full <- last_ind_r - first_ind_r + 1
 	stopifnot(k_full >= 1)
@@ -565,10 +561,6 @@ getPsiRUnfused <- function(
 		stopifnot(length(inds_r) == length(unique(inds_r)))
 		stopifnot(length(inds_r) <= length(sel_treat_inds_shifted))
 		stopifnot(all(inds_r %in% 1:length(sel_treat_inds_shifted)))
-
-		stopifnot(max(inds_r) <= nrow(gram_inv))
-		stopifnot(max(inds_r) <= ncol(gram_inv))
-		stopifnot(min(inds_r) >= 0)
 
 		psi_r[inds_r] <- 1 / k_full
 	}

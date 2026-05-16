@@ -19,8 +19,7 @@ test_that("getPsiRUnfused invariant: t(psi_r) %*% theta_sel == cohort_tes[r]", {
 	psi_r <- fetwfe:::getPsiRUnfused(
 		first_ind_r = 1,
 		last_ind_r = 4,
-		sel_treat_inds_shifted = c(1L, 2L, 5L),
-		gram_inv = diag(3)
+		sel_treat_inds_shifted = c(1L, 2L, 5L)
 	)
 	# Post-fix: psi_r = c(1/4, 1/4, 0).
 	expect_equal(psi_r, c(0.25, 0.25, 0))
@@ -43,8 +42,7 @@ test_that("getPsiRUnfused is bit-identical to pre-fix on full-selection (ETWFE/t
 	psi_r <- fetwfe:::getPsiRUnfused(
 		first_ind_r = 1,
 		last_ind_r = 4,
-		sel_treat_inds_shifted = seq_len(num_treats),
-		gram_inv = diag(num_treats)
+		sel_treat_inds_shifted = seq_len(num_treats)
 	)
 	# Cohort 1 occupies indices 1..4 (k_full=4), all selected.
 	expect_equal(psi_r, c(0.25, 0.25, 0.25, 0.25, 0, 0, 0))

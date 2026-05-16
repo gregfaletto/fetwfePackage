@@ -224,7 +224,6 @@ getTeResults2 <- function(
 #'   Default `NA`.
 #' @param lambda.max Numeric or NA; maximum lambda for `gBridge`. Default `NA`.
 #' @param lambda.min Numeric or NA; minimum lambda for `gBridge`. Default `NA`.
-#' @param nlambda Integer; number of lambdas for `gBridge`. Default `100`.
 #' @param q Numeric; Lq penalty exponent for `gBridge`. Default `0.5`.
 #' @param verbose Logical; if TRUE, print progress. Default `FALSE`.
 #' @param alpha Numeric; significance level for confidence intervals. Default `0.05`.
@@ -260,7 +259,6 @@ checkFetwfeInputs <- function(
 	sig_eps_c_sq = NA,
 	lambda.max = NA,
 	lambda.min = NA,
-	nlambda = 100,
 	q = 0.5,
 	verbose = FALSE,
 	alpha = 0.05,
@@ -765,7 +763,7 @@ fetwfe_core <- function(
 		first_inds = first_inds
 	)
 
-	res <- prep_for_etwfe_regresion(
+	res <- prep_for_etwfe_regression(
 		verbose = verbose,
 		sig_eps_sq = sig_eps_sq,
 		sig_eps_c_sq = sig_eps_c_sq,
@@ -2487,8 +2485,7 @@ getCohortATTsFinal <- function(
 				psi_r <- getPsiRUnfused(
 					first_ind_r,
 					last_ind_r,
-					sel_treat_inds_shifted,
-					gram_inv
+					sel_treat_inds_shifted
 				)
 			}
 

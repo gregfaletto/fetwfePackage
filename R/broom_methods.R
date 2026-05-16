@@ -230,8 +230,7 @@ NULL
 			df = data,
 			time_var = x$time_var,
 			unit_var = x$unit_var,
-			treat_var = x$treatment,
-			covs = x$covs
+			treat_var = x$treatment
 		)
 		# idCohorts() filters first-period-treated units at the UNIT level
 		# (R/utility.R:126) and drops the treat_var column. Augment needs the

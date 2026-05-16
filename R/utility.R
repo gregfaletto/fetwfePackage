@@ -25,7 +25,6 @@
 #' @param time_var Character string; name of the time variable column.
 #' @param unit_var Character string; name of the unit identifier column.
 #' @param treat_var Character string; name of the treatment indicator column.
-#' @param covs Character vector; names of covariate columns (used for subsetting `df`).
 #'
 #' @details
 #' The function iterates through each unit to determine its cohort assignment based
@@ -52,7 +51,7 @@
 #'     present in the original data.}
 #' @keywords internal
 #' @noRd
-idCohorts <- function(df, time_var, unit_var, treat_var, covs) {
+idCohorts <- function(df, time_var, unit_var, treat_var) {
 	stopifnot(time_var %in% colnames(df))
 	stopifnot(unit_var %in% colnames(df))
 	stopifnot(treat_var %in% colnames(df))
@@ -430,32 +429,7 @@ getP <- function(R, T, d, num_treats) {
 #' The formula for the starting index of the `r`-th cohort's treatment effects
 #' (1-indexed `r` from 1 to `R`):
 #' `f_inds[r] = 1 + sum_{k=1}^{r-1} (T - k) = 1 + (r-1)T - (r-1)r/2`.
-#'
-#' Gemini check:
-#' The paper's formula `1 + (r - 1)*(2*T - r)/2` seems to be for a slightly
-#' different definition of `num_treats` or indexing. This function should align
-#' with how `treat_var_mat` is constructed in `addDummies` and `num_treats`
-#' is calculated there.
-#' Let's re-evaluate the formula based on typical DiD setups:
-#' Cohort 1 (starts at time 2) has T-1 effects.
-#' Cohort 2 (starts at time 3) has T-2 effects.
-#' ...
-#' Cohort R (starts at time R+1) has T-R effects.
-#' `first_inds[1] = 1`
-#' `first_inds[2] = (T-1) + 1`
-#' `first_inds[3] = (T-1) + (T-2) + 1`
-#' So, `first_inds[r] = 1 + sum_{j=1}^{r-1} (T-j)`.
-#'
-#' The current code uses: `f_inds[r] <- 1 + (r - 1)*(2*T - r)/2`.
-#' Let's test this formula:
-#' r=1: 1
-#' r=2: 1 + 1*(2T-2)/2 = 1 + T - 1 = T
-#' r=3: 1 + 2*(2T-3)/2 = 1 + 2T - 3 = 2T - 2
-#' This implies the number of effects for cohort 1 is T-1 (indices 1 to T-1).
-#' Number of effects for cohort 2 is (2T-2) - T = T-2.
-#' This seems to match the sequence T-1, T-2, ..., T-R.
-#' Total number of treats (`num_treats`) from `getNumTreats(R,T)` is `T*R - R*(R+1)/2`.
-#' This is `sum_{j=1 to R} (T-j)`. This is consistent.
+#' Equivalently, `1 + (r - 1)*(2*T - r)/2` (algebraic restatement).
 #'
 #' @return An integer vector of length `R`, where `f_inds[r]` is the 1-based
 #'   starting index of the `r`-th cohort's treatment effects in the combined block.
@@ -488,39 +462,6 @@ getFirstInds <- function(R, T) {
 	# Last cohort has T - R treatment effects to estimate. So last first_ind
 	# should be at position num_treats - (T - R) + 1 = num_treats - T + R + 1.
 	stopifnot(f_inds[R] == n_treats - T + R + 1)
-
-	# Additional checks from Gemini below
-
-	stopifnot(all(f_inds <= n_treats) || R == 0)
-	if (R > 0) {
-		stopifnot(f_inds[1] == 1)
-	}
-
-	# Last first_ind: f_inds[R] = 1 + sum_{j=1}^{R-1} (T-j)
-	# Total effects = sum_{j=1}^{R} (T-j) = n_treats
-	# Last block of effects for cohort R has T-R effects.
-	# So f_inds[R] should be n_treats - (T-R) + 1.
-	if (R > 0) {
-		stopifnot(f_inds[R] == n_treats - (T - R) + 1)
-	}
-
-	# The original formula was: `1 + (r - 1)*(2*T - r)/2`
-	# Let's re-check the paper's formula logic, it implies number of effects for cohort `k` (1-indexed) is `T-k`.
-	# sum_{j=1}^{r-1} (T-j) = (r-1)T - (r-1)r/2. So f_inds[r] = 1 + (r-1)T - r(r-1)/2.
-	# (r-1)*(2T-r)/2 = (r-1)T - r(r-1)/2. Yes, they are the same.
-
-	# Using the paper's original loop for safety, assuming it's correct with getNumTreats
-	f_inds_paper <- integer(R)
-	if (R > 0) {
-		for (r_val in 1:R) {
-			# r_val is 1-indexed cohort number
-			f_inds_paper[r_val] <- 1 + (r_val - 1) * (2 * T - r_val) / 2 # This is not sum of T-k, but related to cumulative sum for triangular numbers.
-			# This formula is sum_{k=0}^{r-2} (T-1-k) if T-1 is max effects
-			# Or sum_{j=0}^{r-1-1} ( (T-1) - j )
-			# Let's use the direct sum formulation which is clearer.
-		}
-		stopifnot(f_inds == f_inds_paper) # Verify my derivation matches paper's formula
-	}
 
 	return(f_inds)
 }

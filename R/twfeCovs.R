@@ -616,7 +616,7 @@ twfeCovs_core <- function(
 
 	stopifnot(length(c_names) == R)
 
-	res <- prep_for_etwfe_regresion(
+	res <- prep_for_etwfe_regression(
 		verbose = verbose,
 		sig_eps_sq = sig_eps_sq,
 		sig_eps_c_sq = sig_eps_c_sq,

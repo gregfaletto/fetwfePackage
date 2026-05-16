@@ -38,8 +38,7 @@
 			df = df,
 			time_var = "time",
 			unit_var = "unit",
-			treat_var = "treat",
-			covs = NULL
+			treat_var = "treat"
 		),
 		error = function(e) conditionMessage(e)
 	)
