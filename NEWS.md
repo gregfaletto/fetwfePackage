@@ -1,5 +1,54 @@
 # NEWS
 
+## Version 1.9.5 (2026-05-16)
+
+- Small consistency cleanups surfaced by an internal code review;
+  bundled as one PR. None of these fire under current package usage,
+  but each is wrong on inspection and would bite a future refactor of
+  the surrounding machinery. Resolves GitHub #56.
+- (Item 1) `R/event_study.R::.assemble_event_study_df()` now calls
+  the canonical `.compute_p_values()` helper (`R/utility.R:508`)
+  rather than re-implementing the p-value computation inline. The
+  previous inline form used `is.na(ses) | ses == 0` to mask NA / zero
+  SEs; the canonical helper additionally masks negative SEs. The
+  package's own SE machinery never produces negative SEs (everything
+  comes out of `sqrt(...)`), so on every code path users currently
+  exercise the output is bit-identical. The change is a defensive
+  alignment against future refactors of the SE machinery.
+- (Item 2) `R/fetwfe_core.R::getSecondVarTermDataApp()` line 2022
+  relaxes `stopifnot(length(sel_inds[[r]]) < length(sel_inds[[r-1]]))`
+  to `<=`, matching the OLS analogue at `R/ols_calcs.R:449`. Both
+  assertions guard the same invariant; under the package's standard
+  cohort layout (`first_inds = getFirstInds(R, T)`) block sizes are
+  strictly decreasing and both forms pass. Behavior unchanged on
+  current usage; the relaxation is a no-op except for any future
+  non-standard cohort layout.
+- (Item 3) `R/ols_calcs.R::getSecondVarTermOLS()` line 465 changes
+  the `Sigma_pi_hat`-degeneracy threshold literal from `10e-6`
+  (= 1e-5) to `1e-6`. The previous literal reads naturally as `1e-6`
+  to an R reader who hasn't done the arithmetic; the change aligns
+  the typed literal with that reading. The assertion is
+  `stopifnot(sum(cohort_probs_overall) < 1 - eps)` and the change
+  *loosens* the rejection band from width `1e-5` to width `1e-6`.
+  The relaxed band is still well above floating-point precision, and
+  the guard is unreachable in normal operation: under
+  `allow_no_never_treated = TRUE` (default) the panel is auto-truncated
+  so `sum(cohort_probs_overall) <= (N-1)/N`, with margin `>= 1/N`
+  for `N >= 50`. The symmetric guard
+  (`stopifnot(length(cohort_probs_overall) == R)` and
+  `stopifnot(sum(cohort_probs_overall) < 1 - 1e-6)`) is added to the
+  FETWFE analogue `R/fetwfe_core.R::getSecondVarTermDataApp()`,
+  which previously had no such guard.
+- (Item 4) `R/utility.R::idCohorts()` panel-balance `stop()` message
+  now has balanced parentheses. The previous message read
+  `"Panel does not appear to be balanced (unit X does not have
+  exactly T observations for T = 3"` — the open parenthesis after
+  "balanced" was never closed. Cosmetic.
+- One additional item from the same review — `idCohorts()` collects
+  all malformed units rather than stopping on the first — is deferred
+  to a follow-up because it changes user-visible error wording in a
+  way that deserves its own framing.
+
 ## Version 1.9.4 (2026-05-16)
 
 - Fixed a latent bug in `augment.fetwfe()` / `augment.etwfe()` /

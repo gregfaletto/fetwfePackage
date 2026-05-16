@@ -462,7 +462,7 @@ getSecondVarTermOLS <- function(
 	)
 
 	stopifnot(length(cohort_probs_overall) == R)
-	stopifnot(sum(cohort_probs_overall) < 1 - 10e-6)
+	stopifnot(sum(cohort_probs_overall) < 1 - 1e-6)
 
 	for (r in 1:R) {
 		# All terms in rth column have the same value except the diagonal term

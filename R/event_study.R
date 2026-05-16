@@ -498,11 +498,7 @@ event_study <- function(x, alpha = NULL) {
 ) {
 	ci_low <- estimates - z * ses
 	ci_high <- estimates + z * ses
-	p_value <- ifelse(
-		is.na(ses) | ses == 0,
-		NA_real_,
-		2 * stats::pnorm(-abs(estimates / ses))
-	)
+	p_value <- .compute_p_values(estimates, ses)
 	out <- data.frame(
 		event_time = as.integer(event_times),
 		n_cohorts = as.integer(n_cohorts),
