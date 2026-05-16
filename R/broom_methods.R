@@ -233,11 +233,25 @@ NULL
 			treat_var = x$treatment,
 			covs = x$covs
 		)
-		data <- ret$df
+		# idCohorts() filters first-period-treated units at the UNIT level
+		# (R/utility.R:126) and drops the treat_var column. Augment needs the
+		# unit-level filter but wants to preserve every column the user
+		# supplied (treatment, plus any extras like state names or panel
+		# IDs). So we use ret$df only to identify the surviving unit set,
+		# and filter the user's original `data` directly. Invariant relied
+		# on: idCohorts has no partial-time row drops. If that ever changes,
+		# the unit-set filter here will under-trim and the nrow() check
+		# below will fire.
+		kept_units <- unique(ret$df[[x$unit_var]])
+		data <- data[
+			data[[x$unit_var]] %in% kept_units,
+			,
+			drop = FALSE
+		]
 		if (nrow(data) != nrow(X)) {
 			stop(
-				"augment(): even after auto-trimming via idCohorts(), `data` ",
-				"has ",
+				"augment(): even after auto-trimming first-period-treated ",
+				"units via idCohorts(), `data` has ",
 				nrow(data),
 				" rows but the fitted design has ",
 				nrow(X),

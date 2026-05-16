@@ -1,5 +1,24 @@
 # NEWS
 
+## Version 1.9.4 (2026-05-16)
+
+- Fixed a latent bug in `augment.fetwfe()` / `augment.etwfe()` /
+  `augment.betwfe()` (`R/broom_methods.R::.augment_estimator_output()`):
+  when a user passed an un-trimmed panel that contained first-period-
+  treated units (so the augment auto-trim path fired), the returned
+  data frame silently dropped the `treatment` column. This was caused
+  by augment assigning `data <- ret$df` from `idCohorts()`, which
+  strips `treat_var` from its output (`R/utility.R:149`). The no-trim
+  path (pre-trimmed input where `nrow(data) == nrow(X_ints)`) was
+  unaffected — it preserved every user column. The fix keeps the
+  unit-level filtering that `idCohorts()` performs but identifies the
+  surviving units from `idCohorts()`'s output and filters the user's
+  original `data` directly, so the auto-trim path now preserves the
+  `treatment` column and any other extra columns the user supplied
+  (e.g., state names, panel IDs) — matching the no-trim path. Point
+  estimates, standard errors, and the no-trim path are unchanged.
+  Resolves GitHub #51.
+
 ## Version 1.9.3 (2026-05-16)
 
 - Fixed a latent bug in two internal helpers — `.truncate_catt()`
