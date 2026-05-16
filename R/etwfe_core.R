@@ -442,7 +442,7 @@ etwfe_core <- function(
 
 	stopifnot(length(c_names) == R)
 
-	res <- prep_for_etwfe_regresion(
+	res <- prep_for_etwfe_regression(
 		verbose = verbose,
 		sig_eps_sq = sig_eps_sq,
 		sig_eps_c_sq = sig_eps_c_sq,
@@ -1026,8 +1026,7 @@ prepXints <- function(
 		df = data,
 		time_var = time_var,
 		unit_var = unit_var,
-		treat_var = treatment,
-		covs = covs
+		treat_var = treatment
 	)
 
 	data <- ret$df

@@ -1,5 +1,32 @@
 # NEWS
 
+## Version 1.9.7 (2026-05-16)
+
+- Internal cleanup pass: dropped four unused parameters from internal
+  helpers, removed one block of redundant self-validating assertions,
+  and corrected a typo in an internal helper name. No public API
+  changes; no behavior changes. Resolves GitHub #59.
+- `idCohorts()` (`R/utility.R`) no longer accepts the unused `covs`
+  argument. Two internal call sites updated.
+- `genTreatVarsSim()` (`R/gen_funcs.R`) no longer accepts the unused
+  `d` argument. One internal call site updated.
+- `getPsiRUnfused()` (`R/ols_calcs.R`) no longer accepts the unused
+  `gram_inv` argument. Three internal assertions on `gram_inv`
+  dimensions were redundant with conditions already enforced
+  upstream and have been removed. Two source call sites and two
+  test call sites updated.
+- `checkFetwfeInputs()` (`R/fetwfe_core.R`) no longer accepts the
+  unused `nlambda` argument. Three call sites updated. `nlambda`
+  itself remains unchanged on the public entry points (`fetwfe()`,
+  `betwfe()`, `twfeCovs()`) where it is forwarded to `gBridge`.
+- `getFirstInds()` (`R/utility.R`) no longer runs a block of
+  assertions that re-derived its own closed-form formula and
+  compared the result to itself. The first three assertions on the
+  cardinality of `f_inds` are preserved.
+- Renamed the internal helper `prep_for_etwfe_regresion` to
+  `prep_for_etwfe_regression` (typo correction). The function is
+  `@noRd`, not exported, so the rename is internal.
+
 ## Version 1.9.6 (2026-05-16)
 
 - `R/utility.R::idCohorts()` now reports every malformed unit at once

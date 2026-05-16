@@ -616,8 +616,7 @@ simulateDataCore <- function(
 		assignments,
 		cohort_inds,
 		N_UNTREATED = assignments[1],
-		first_inds_test = first_inds_test,
-		d = d
+		first_inds_test = first_inds_test
 	)
 	treat_mat_long <- res_treat$treat_mat_long
 	first_inds <- res_treat$first_inds
@@ -734,7 +733,6 @@ simulateDataCore <- function(
 		sig_eps_c_sq = sig_eps_c_sq,
 		lambda.max = NA,
 		lambda.min = NA,
-		nlambda = 100,
 		q = 0.5,
 		verbose = FALSE,
 		alpha = 0.05,
@@ -1267,7 +1265,6 @@ genAssignments <- function(N, R, guarantee_rank_condition = FALSE, d = NA) {
 #' @param N_UNTREATED Integer. Number of never-treated units.
 #' @param first_inds_test Integer vector. Pre-calculated indices of the first treatment
 #'   effect for each cohort (used for assertion).
-#' @param d Integer. Number of covariates (used for assertions within context, not directly in logic here).
 #'
 #' @return A list containing:
 #'   \item{treat_mat_long}{An NT x n_treats matrix of treatment dummy variables.
@@ -1285,8 +1282,7 @@ genTreatVarsSim <- function(
 	assignments,
 	cohort_inds,
 	N_UNTREATED,
-	first_inds_test,
-	d
+	first_inds_test
 ) {
 	# Treatment indicators
 	treat_mat_long <- matrix(0, N * T, n_treats)

@@ -286,7 +286,6 @@ betwfe <- function(
 		sig_eps_c_sq = sig_eps_c_sq,
 		lambda.max = lambda.max,
 		lambda.min = lambda.min,
-		nlambda = nlambda,
 		q = q,
 		verbose = verbose,
 		alpha = alpha,
@@ -807,7 +806,7 @@ betwfe_core <- function(
 	stopifnot(q > 0)
 	stopifnot(q <= 2)
 
-	res <- prep_for_etwfe_regresion(
+	res <- prep_for_etwfe_regression(
 		verbose = verbose,
 		sig_eps_sq = sig_eps_sq,
 		sig_eps_c_sq = sig_eps_c_sq,

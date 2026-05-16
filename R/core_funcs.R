@@ -85,7 +85,7 @@
 #'   }
 #' @keywords internal
 #' @noRd
-prep_for_etwfe_regresion <- function(
+prep_for_etwfe_regression <- function(
 	verbose,
 	sig_eps_sq,
 	sig_eps_c_sq,

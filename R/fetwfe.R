@@ -246,7 +246,6 @@ fetwfe <- function(
 		sig_eps_c_sq = sig_eps_c_sq,
 		lambda.max = lambda.max,
 		lambda.min = lambda.min,
-		nlambda = nlambda,
 		q = q,
 		verbose = verbose,
 		alpha = alpha,
