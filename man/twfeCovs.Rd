@@ -68,8 +68,8 @@ All entries of \code{indep_counts} must be strictly positive (if you are concern
 that this might not work out, maybe your data set is on the small side and
 it's best to just leave your full data set in \code{pdata}). The sum of all the
 counts in \code{indep_counts} must match the total number of units in \code{pdata}.
-Default is NA (in which case conservative standard errors will be calculated
-if \code{q < 1}.)}
+Default is NA (in which case the conservative standard error formula will
+be used).}
 
 \item{sig_eps_sq}{(Optional.) Numeric; the variance of the row-level IID
 noise assumed to apply to each observation. See Section 2 of Faletto (2025)
@@ -168,6 +168,15 @@ the original \code{pdata}. Reserved for future \code{augment()} / \code{predict(
 arguments the user passed.}
 \item{covs}{Character vector; the original \code{covs} argument (pre-factor-
 expansion).}
+\item{calc_ses}{Logical indicating whether standard errors were calculated.}
+\item{cohort_probs_overall}{A vector of the estimated cohort probabilities
+on the overall sample (treated and untreated), used in computing the
+variance of the overall ATT.}
+\item{indep_counts_used}{Logical scalar; \code{TRUE} if a valid \code{indep_counts}
+argument was provided and used for asymptotically-exact ATT inference,
+\code{FALSE} otherwise.}
+\item{se_type}{Character scalar; the \code{se_type} argument the user passed
+(\code{"default"} or \code{"cluster"}).}
 }
 \description{
 \strong{WARNING: This function should NOT be used for estimation. It
@@ -178,6 +187,31 @@ the treated units). It is implemented only for the sake of the simulation
 studies in Faletto (2025). This estimator is only unbiased under the
 assumptions that treatment effects are homogeneous across covariates and are
 identical within cohorts across all times since treatment.
+}
+\examples{
+\dontrun{
+set.seed(23451)
+
+library(bacondecomp)
+
+data(divorce)
+
+# No `covs` here: twfeCovs is pure OLS (no bridge penalty), so it cannot
+# handle the rank-deficient design that the bacondecomp::divorce panel
+# produces when small cohorts and three covariates are combined.
+res <- twfeCovs(
+    pdata = divorce[divorce$sex == 2, ],
+    time_var = "year",
+    unit_var = "st",
+    treatment = "changed",
+    response = "suiciderate_elast_jag",
+    sig_eps_sq = 0.0344,
+    sig_eps_c_sq = 0.1507,
+    verbose = TRUE)
+
+# Print results
+print(res, max_cohorts = Inf)
+}
 }
 \references{
 Faletto, G (2025). Fused Extended Two-Way Fixed Effects for

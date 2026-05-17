@@ -1,5 +1,32 @@
 # NEWS
 
+## Version 1.9.8 (2026-05-16)
+
+- Documentation sweep: refreshed `@return` blocks on `etwfe()`,
+  `betwfe()`, `twfeCovs()`, and their `*WithSimulatedData()` wrappers
+  to match current slot inventories (slots added since v1.5.5 /
+  v1.7.0 / v1.9.0 were missing from the docs). Also added the
+  `theta_hat` sub-slot to the `internal` listing for `fetwfe()` and
+  `fetwfeWithSimulatedData()`. Added `@examples` blocks to `etwfe()`
+  and `twfeCovs()` (the other public estimator entry points already
+  had them). Removed copy-paste references to a bridge-penalty `q`
+  parameter from `twfeCovs.R` and `etwfe_core.R` docs (neither
+  function takes a `q` argument; both are pure OLS). Removed a
+  self-referential `@inheritParams getTeResults2` line from
+  `getTeResults2`'s own documentation block. Cleaned up `etwfe_core()` and
+  `twfeCovs_core()` `@return` blocks, which previously listed
+  bridge-only slots (`theta_hat`, `lambda.*`) those functions never
+  return. Updated a stale mock value in `test-class-helpers.R`
+  (`se_type = "standard"` → `"default"` to mirror the live
+  `match.arg()` choice). Resolves GitHub #55.
+- `attgtToFetwfeDf()` and `etwfeToFetwfeDf()` gain a `verbose = FALSE`
+  argument; the previously-unconditional "Dropped N unit-period(s)
+  treated in the first period" message is now gated on `verbose`.
+  Default-silenced to match the project convention that
+  non-interactive code paths should not emit console output without
+  opt-in. Users who want the message back can call with
+  `verbose = TRUE`.
+
 ## Version 1.9.7 (2026-05-16)
 
 - Internal cleanup pass: dropped four unused parameters from internal

@@ -231,6 +231,16 @@ arguments the user passed. Consumed by \code{augment.betwfe()} when auto-alignin
 a user-supplied panel to the fitted design.}
 \item{covs}{Character vector; the original \code{covs} argument (pre-factor-
 expansion). Consumed by \code{augment.betwfe()}.}
+\item{alpha}{The alpha level used for confidence intervals.}
+\item{calc_ses}{Logical indicating whether standard errors were calculated.}
+\item{cohort_probs_overall}{A vector of the estimated cohort probabilities
+on the overall sample (treated and untreated), used in computing the
+variance of the overall ATT.}
+\item{indep_counts_used}{Logical scalar; \code{TRUE} if a valid \code{indep_counts}
+argument was provided and used for asymptotically-exact ATT inference,
+\code{FALSE} otherwise.}
+\item{se_type}{Character scalar; the \code{se_type} argument the user passed
+(\code{"default"} or \code{"cluster"}).}
 }
 \description{
 Implementation of extended two-way fixed effects with a bridge

@@ -159,11 +159,58 @@ of covariates that appear in the final data set (after any covariates may
 have been removed because they contained missing values or all contained the
 same value for every unit).} \item{p}{The final number of columns in the full
 set of covariates used to estimate the model.}
+\item{alpha}{The alpha level used for confidence intervals.}
+\item{calc_ses}{Logical indicating whether standard errors were calculated.}
+\item{cohort_probs_overall}{A vector of the estimated cohort probabilities
+on the overall sample (treated and untreated), used in computing the
+variance of the overall ATT.}
+\item{indep_counts_used}{Logical scalar; \code{TRUE} if a valid \code{indep_counts}
+argument was provided and used for asymptotically-exact ATT inference,
+\code{FALSE} otherwise.}
+\item{se_type}{Character scalar; the \code{se_type} argument the user passed
+(\code{"default"} or \code{"cluster"}).}
+\item{y_mean}{Numeric scalar; the mean of the original (pre-centering)
+response. Stored so downstream methods (\code{augment()}, \code{predict()})
+can return fitted values on the original-response scale.}
+\item{response_col_name}{Character scalar; the name of the response
+column in the original \code{pdata}. Consumed by \verb{augment.<class>()}.}
+\item{time_var, unit_var, treatment}{Character scalars; the
+\code{time_var} / \code{unit_var} / \code{treatment} arguments the user passed.
+Consumed by \verb{augment.<class>()} when auto-aligning a user-supplied
+panel to the fitted design.}
+\item{covs}{Character vector; the original \code{covs} argument the user
+passed (before any factor expansion the estimator performed
+internally). Consumed by \verb{augment.<class>()}.}
 }
 \description{
 Implementation of extended two-way fixed effects.
 Estimates overall ATT as well as CATT (cohort average treatment effects on
 the treated units).
+}
+\examples{
+\dontrun{
+set.seed(23451)
+
+library(bacondecomp)
+
+data(divorce)
+
+# No `covs` here: etwfe is pure OLS (no bridge penalty), so it cannot
+# handle the rank-deficient design that the bacondecomp::divorce panel
+# produces when small cohorts and three covariates are combined.
+res <- etwfe(
+    pdata = divorce[divorce$sex == 2, ],
+    time_var = "year",
+    unit_var = "st",
+    treatment = "changed",
+    response = "suiciderate_elast_jag",
+    sig_eps_sq = 0.0344,
+    sig_eps_c_sq = 0.1507,
+    verbose = TRUE)
+
+# Print results
+print(res, max_cohorts = Inf)
+}
 }
 \references{
 Wooldridge, J. M. (2021). Two-way fixed effects, the two-way mundlak
