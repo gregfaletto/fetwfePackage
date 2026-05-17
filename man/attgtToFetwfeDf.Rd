@@ -13,7 +13,8 @@ attgtToFetwfeDf(
   covars = character(0),
   drop_first_period_treated = TRUE,
   out_names = list(time = "time_var", unit = "unit_var", treatment = "treatment",
-    response = "response")
+    response = "response"),
+  verbose = FALSE
 )
 }
 \arguments{
@@ -47,6 +48,10 @@ dropping them here keeps the returned dataframe cleaner.}
 resulting dataframe. Defaults are \code{list(time = "time", unit = "unit", treatment = "treatment", response = "y")}. Override if you prefer
 different names (for instance, to keep the original \code{yname}). The vector
 \emph{must} contain exactly these four names.}
+
+\item{verbose}{Logical. If \code{TRUE}, a \code{message()} reports the count of
+first-period-treated unit-period rows dropped when
+\code{drop_first_period_treated = TRUE}. Default \code{FALSE} (silent).}
 }
 \value{
 A \code{data.frame} with columns \code{time}, \code{unit}, \code{treatment}, \code{y}, and any

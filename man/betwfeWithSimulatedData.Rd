@@ -151,6 +151,25 @@ of covariates that appear in the final data set (after any covariates may
 have been removed because they contained missing values or all contained the
 same value for every unit).} \item{p}{The final number of columns in the full
 set of covariates used to estimate the model.}
+\item{alpha}{The alpha level used for confidence intervals.}
+\item{calc_ses}{Logical indicating whether standard errors were calculated.}
+\item{cohort_probs_overall}{A vector of the estimated cohort probabilities
+on the overall sample (treated and untreated), used in computing the
+variance of the overall ATT.}
+\item{indep_counts_used}{Logical scalar; \code{TRUE} if a valid \code{indep_counts}
+argument was provided and used for asymptotically-exact ATT inference,
+\code{FALSE} otherwise.}
+\item{se_type}{Character scalar; the \code{se_type} argument the user passed
+(\code{"default"} or \code{"cluster"}).}
+\item{y_mean}{Numeric scalar; mean of the original (pre-centering) response.
+Stored so downstream methods (\code{augment()}, \code{predict()}) can return fitted
+values on the original-response scale.}
+\item{response_col_name}{Character scalar; the response column name in
+the original \code{pdata}. Consumed by \code{augment.betwfe()}.}
+\item{time_var, unit_var, treatment}{Character scalars; the corresponding
+arguments the user passed.}
+\item{covs}{Character vector; the original \code{covs} argument (pre-factor-
+expansion).}
 }
 \description{
 This function runs the bridge-penalized extended two-way fixed effects estimator (\code{betwfe()}) on

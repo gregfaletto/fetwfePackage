@@ -75,6 +75,26 @@
 #' have been removed because they contained missing values or all contained the
 #' same value for every unit).} \item{p}{The final number of columns in the full
 #' set of covariates used to estimate the model.}
+#' \item{alpha}{The alpha level used for confidence intervals.}
+#' \item{calc_ses}{Logical indicating whether standard errors were calculated.}
+#' \item{cohort_probs_overall}{A vector of the estimated cohort probabilities
+#' on the overall sample (treated and untreated), used in computing the
+#' variance of the overall ATT.}
+#' \item{indep_counts_used}{Logical scalar; `TRUE` if a valid `indep_counts`
+#' argument was provided and used for asymptotically-exact ATT inference,
+#' `FALSE` otherwise.}
+#' \item{se_type}{Character scalar; the `se_type` argument the user passed
+#' (`"default"` or `"cluster"`).}
+#' \item{y_mean}{Numeric scalar; the mean of the original (pre-centering)
+#'   response. Stored so downstream methods (`augment()`, `predict()`) can
+#'   return fitted values on the original-response scale.}
+#' \item{response_col_name}{Character scalar; the name of the response
+#'   column in the original `pdata`. Consumed by `augment.<class>()`.}
+#' \item{time_var, unit_var, treatment}{Character scalars; the
+#'   `time_var` / `unit_var` / `treatment` arguments the user passed.}
+#' \item{covs}{Character vector; the original `covs` argument the user
+#'   passed (before any factor expansion the estimator performed
+#'   internally).}
 #'
 #' @examples
 #' \dontrun{
@@ -361,7 +381,8 @@ checkEtwfeInputs <- function(
 #'       \item Extracts cohort-specific average treatment effects (CATTs) from
 #'         `beta_hat`.
 #'       \item Calls `getCohortATTsFinal` to calculate CATT point estimates,
-#'         standard errors (if `q < 1`), and confidence intervals. This involves
+#'         standard errors (when the Gram matrix is invertible), and
+#'         confidence intervals. This involves
 #'         computing the Gram matrix and related quantities.
 #'     }
 #'   \item **Overall ATT Calculation:** Calls `getTeResultsOLS` to calculate the
@@ -370,8 +391,8 @@ checkEtwfeInputs <- function(
 #'     if `indep_counts` were provided.
 #' }
 #' The standard errors for CATTs are asymptotically exact. For ATT, if
-#' `indep_counts` are provided, the SE is asymptotically exact; otherwise, it's
-#' asymptotically conservative (if `q < 1`).
+#' `indep_counts` are provided, the SE is asymptotically exact; otherwise, it
+#' is asymptotically conservative.
 #'
 #' @return A list containing detailed estimation results:
 #'   \item{in_sample_att_hat}{Estimated overall ATT using in-sample cohort probabilities.}
@@ -380,25 +401,20 @@ checkEtwfeInputs <- function(
 #'   \item{indep_att_hat}{Estimated overall ATT using `indep_counts` cohort probabilities (NA if `indep_counts` not provided).}
 #'   \item{indep_att_se}{Standard error for `indep_att_hat` (NA if not applicable).}
 #'   \item{catt_hats}{A named vector of estimated CATTs for each cohort.}
-#'   \item{catt_ses}{A named vector of SEs for `catt_hats` (NA if `q >= 1`).}
+#'   \item{catt_ses}{A named vector of SEs for `catt_hats` (NA when the Gram matrix is not invertible).}
 #'   \item{catt_df}{A data.frame summarizing CATTs, SEs, and confidence intervals.}
-#'   \item{theta_hat}{The vector of estimated coefficients in the *transformed* (fused) space, including the intercept as the first element.}
-#'   \item{beta_hat}{The vector of estimated coefficients in the *original* space (after untransforming `theta_hat`, excluding intercept).}
+#'   \item{beta_hat}{The vector of estimated coefficients in the *original*
+#'     space (no bridge fusion transformation; etwfe is pure OLS).}
 #'   \item{treat_inds}{Indices in `beta_hat` corresponding to base treatment effects.}
 #'   \item{treat_int_inds}{Indices in `beta_hat` corresponding to treatment-covariate interactions.}
 #'   \item{cohort_probs}{Estimated cohort probabilities conditional on being treated, from `in_sample_counts`.}
 #'   \item{indep_cohort_probs}{Estimated cohort probabilities from `indep_counts` (NA if not provided).}
 #'   \item{sig_eps_sq}{The (possibly estimated) variance of observation-level noise.}
 #'   \item{sig_eps_c_sq}{The (possibly estimated) variance of unit-level random effects.}
-#'   \item{lambda.max}{The maximum lambda value used in `grpreg`.}
-#'   \item{lambda.max_model_size}{Model size for `lambda.max`.}
-#'   \item{lambda.min}{The minimum lambda value used in `grpreg`.}
-#'   \item{lambda.min_model_size}{Model size for `lambda.min`.}
-#'   \item{lambda_star}{The lambda value selected by BIC.}
-#'   \item{lambda_star_model_size}{Model size for `lambda_star`.}
 #'   \item{X_ints}{The original input design matrix from `prepXints`.}
 #'   \item{y}{The original input centered response vector from `prepXints`.}
-#'   \item{X_final}{The design matrix after fusion transformation and GLS weighting.}
+#'   \item{X_final}{The design matrix after GLS weighting (no fusion
+#'     transformation for `etwfe_core`).}
 #'   \item{y_final}{The response vector after GLS weighting.}
 #'   \item{N, T, R, d, p}{Dimensions used in estimation.}
 #' @keywords internal

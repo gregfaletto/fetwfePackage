@@ -96,7 +96,6 @@
 #' * `d_inv_treat_sel` from the same routine
 #' * the Jacobian \(J\) is built in
 #'   \code{getSecondVarTermDataApp()} using `d_inv_treat_sel`
-#' @inheritParams getTeResults2
 #' @seealso \code{getSecondVarTermDataApp()}
 #' @keywords internal
 #' @noRd

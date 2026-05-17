@@ -34,7 +34,10 @@
 		att_hat = 0.3,
 		att_se = 0.05,
 		att_p_value = 0.01,
-		se_type = "standard",
+		# se_type must mirror the live `match.arg(c("default", "cluster"))`
+		# choice in the estimator entry points; "standard" was a stale
+		# mock value (issue #55).
+		se_type = "default",
 		catt_df = .make_catt_df_5(),
 		N = 100,
 		T = 6,

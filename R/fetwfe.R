@@ -138,6 +138,14 @@
 #' \item{d}{The final number of covariates that appear in the final data set (after any covariates may have been removed because they contained missing values or all contained the same value for every unit).}
 #' \item{p}{The final number of columns in the full set of covariates used to estimate the model.}
 #' \item{alpha}{The alpha level used for confidence intervals.}
+#' \item{cohort_probs_overall}{A vector of the estimated cohort probabilities
+#' on the overall sample (treated and untreated), used in computing the
+#' variance of the overall ATT.}
+#' \item{indep_counts_used}{Logical scalar; `TRUE` if a valid `indep_counts`
+#' argument was provided and used for asymptotically-exact ATT inference,
+#' `FALSE` otherwise.}
+#' \item{se_type}{Character scalar; the `se_type` argument the user passed
+#' (`"default"` or `"cluster"`).}
 #' \item{y_mean}{Numeric scalar; the mean of the original (pre-centering)
 #'   response. Stored so downstream methods (`augment()`, `predict()`)
 #'   can return fitted values on the original-response scale.}
@@ -158,6 +166,7 @@
 #'     \item{y}{The vector of responses, containing `nrow(X_ints)` entries.}
 #'     \item{X_final}{The design matrix after applying the change in coordinates to fit the model and also multiplying on the left by the square root inverse of the estimated covariance matrix for each unit.}
 #'     \item{y_final}{The final response after multiplying on the left by the square root inverse of the estimated covariance matrix for each unit.}
+#'     \item{theta_hat}{The vector of estimated coefficients in the transformed (fused) space, including the intercept as the first element.}
 #'     \item{calc_ses}{Logical indicating whether standard errors were calculated.}
 #'   }
 #' }
@@ -485,6 +494,14 @@ fetwfe <- function(
 #' \item{d}{The final number of covariates that appear in the final data set (after any covariates may have been removed because they contained missing values or all contained the same value for every unit).}
 #' \item{p}{The final number of columns in the full set of covariates used to estimate the model.}
 #' \item{alpha}{The alpha level used for confidence intervals.}
+#' \item{cohort_probs_overall}{A vector of the estimated cohort probabilities
+#' on the overall sample (treated and untreated), used in computing the
+#' variance of the overall ATT.}
+#' \item{indep_counts_used}{Logical scalar; `TRUE` if a valid `indep_counts`
+#' argument was provided and used for asymptotically-exact ATT inference,
+#' `FALSE` otherwise.}
+#' \item{se_type}{Character scalar; the `se_type` argument the user passed
+#' (`"default"` or `"cluster"`).}
 #' \item{y_mean}{Numeric scalar; the mean of the original (pre-centering)
 #'   response. Stored so downstream methods (`augment()`, `predict()`)
 #'   can return fitted values on the original-response scale.}
@@ -505,6 +522,7 @@ fetwfe <- function(
 #'     \item{y}{The vector of responses, containing `nrow(X_ints)` entries.}
 #'     \item{X_final}{The design matrix after applying the change in coordinates to fit the model and also multiplying on the left by the square root inverse of the estimated covariance matrix for each unit.}
 #'     \item{y_final}{The final response after multiplying on the left by the square root inverse of the estimated covariance matrix for each unit.}
+#'     \item{theta_hat}{The vector of estimated coefficients in the transformed (fused) space, including the intercept as the first element.}
 #'     \item{calc_ses}{Logical indicating whether standard errors were calculated.}
 #'   }
 #' }
@@ -704,6 +722,28 @@ fetwfeWithSimulatedData <- function(
 #' have been removed because they contained missing values or all contained the
 #' same value for every unit).} \item{p}{The final number of columns in the full
 #' set of covariates used to estimate the model.}
+#' \item{alpha}{The alpha level used for confidence intervals.}
+#' \item{calc_ses}{Logical indicating whether standard errors were calculated.}
+#' \item{cohort_probs_overall}{A vector of the estimated cohort probabilities
+#' on the overall sample (treated and untreated), used in computing the
+#' variance of the overall ATT.}
+#' \item{indep_counts_used}{Logical scalar; `TRUE` if a valid `indep_counts`
+#' argument was provided and used for asymptotically-exact ATT inference,
+#' `FALSE` otherwise.}
+#' \item{se_type}{Character scalar; the `se_type` argument the user passed
+#' (`"default"` or `"cluster"`).}
+#' \item{y_mean}{Numeric scalar; the mean of the original (pre-centering)
+#'   response. Stored so downstream methods (`augment()`, `predict()`)
+#'   can return fitted values on the original-response scale.}
+#' \item{response_col_name}{Character scalar; the name of the response
+#'   column in the original `pdata`. Consumed by `augment.<class>()`.}
+#' \item{time_var, unit_var, treatment}{Character scalars; the
+#'   `time_var` / `unit_var` / `treatment` arguments the user passed.
+#'   Consumed by `augment.<class>()` when auto-aligning a user-supplied
+#'   panel to the fitted design.}
+#' \item{covs}{Character vector; the original `covs` argument the user
+#'   passed (before any factor expansion the estimator performed
+#'   internally). Consumed by `augment.<class>()`.}
 #' @author Gregory Faletto
 #' @references
 #' Wooldridge, J. M. (2021). Two-way fixed effects, the two-way mundlak
@@ -721,6 +761,30 @@ fetwfeWithSimulatedData <- function(
 #'
 #' Pinheiro, J. C., & Bates, D. M. (2000). \emph{Mixed-Effects Models in
 #' S and S-PLUS}. Springer.
+#' @examples
+#' \dontrun{
+#' set.seed(23451)
+#'
+#' library(bacondecomp)
+#'
+#' data(divorce)
+#'
+#' # No `covs` here: etwfe is pure OLS (no bridge penalty), so it cannot
+#' # handle the rank-deficient design that the bacondecomp::divorce panel
+#' # produces when small cohorts and three covariates are combined.
+#' res <- etwfe(
+#'     pdata = divorce[divorce$sex == 2, ],
+#'     time_var = "year",
+#'     unit_var = "st",
+#'     treatment = "changed",
+#'     response = "suiciderate_elast_jag",
+#'     sig_eps_sq = 0.0344,
+#'     sig_eps_c_sq = 0.1507,
+#'     verbose = TRUE)
+#'
+#' # Print results
+#' print(res, max_cohorts = Inf)
+#' }
 #' @export
 etwfe <- function(
 	pdata,

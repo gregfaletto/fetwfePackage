@@ -35,6 +35,9 @@
 #'   treatment = "treatment", response = "y")`. Override if you prefer
 #'   different names (for instance, to keep the original `yname`). The vector
 #'   *must* contain exactly these four names.
+#' @param verbose Logical. If `TRUE`, a `message()` reports the count of
+#'   first-period-treated unit-period rows dropped when
+#'   `drop_first_period_treated = TRUE`. Default `FALSE` (silent).
 #'
 #' @return A `data.frame` with columns `time`, `unit`, `treatment`, `y`, and any
 #'   covariates requested in `covars`, ready to be fed to
@@ -88,14 +91,16 @@ attgtToFetwfeDf <- function(
 		unit = "unit_var",
 		treatment = "treatment",
 		response = "response"
-	)
+	),
+	verbose = FALSE
 ) {
 	.fetwfe_df_core(
 		data = data,
 		vars = list(y = yname, t = tname, id = idname, g = gname),
 		covars = covars,
 		drop_first_period_treated = drop_first_period_treated,
-		out_names = out_names
+		out_names = out_names,
+		verbose = verbose
 	)
 }
 
@@ -127,6 +132,9 @@ attgtToFetwfeDf <- function(
 #' @param out_names Named list giving the column names that the returned dataframe should have.
 #'   The default (`time`, `unit`, `treatment`, `y`) matches the arguments usually supplied to
 #'   `fetwfe()`. **Do not change the *names* of this list** – only the *values* – and keep all four.
+#' @param verbose Logical. If `TRUE`, a `message()` reports the count of
+#'   first-period-treated unit-period rows dropped when
+#'   `drop_first_period_treated = TRUE`. Default `FALSE` (silent).
 #'
 #' @return A tidy `data.frame` with (in this order)
 #'   * `time`       integer,
@@ -182,14 +190,16 @@ etwfeToFetwfeDf <- function(
 		unit = "unit_var",
 		treatment = "treatment",
 		response = "response"
-	)
+	),
+	verbose = FALSE
 ) {
 	.fetwfe_df_core(
 		data = data,
 		vars = list(y = yvar, t = tvar, id = idvar, g = gvar),
 		covars = covars,
 		drop_first_period_treated = drop_first_period_treated,
-		out_names = out_names
+		out_names = out_names,
+		verbose = verbose
 	)
 }
 
@@ -228,6 +238,9 @@ etwfeToFetwfeDf <- function(
 #'   in the returned data frame.  Defaults are
 #'   `list(time = "time_var", unit = "unit_var", treatment = "treatment",
 #'	 response = "response")`.
+#' @param verbose Logical. If `TRUE`, a `message()` reports the count of
+#'   first-period-treated unit-period rows dropped when
+#'   `drop_first_period_treated = TRUE`. Default `FALSE` (silent).
 #'
 #' @return A tidy `data.frame` with columns, in this order:
 #' \itemize{
@@ -263,7 +276,8 @@ etwfeToFetwfeDf <- function(
 		unit = "unit_var",
 		treatment = "treatment",
 		response = "response"
-	)
+	),
+	verbose = FALSE
 ) {
 	stopifnot(is.data.frame(data))
 	required <- unlist(vars, use.names = FALSE)
@@ -314,11 +328,13 @@ etwfeToFetwfeDf <- function(
 		treated_first <- df[[vars$g]] != 0 & df[[vars$g]] <= first_period
 		if (any(treated_first)) {
 			df <- df[!treated_first, ]
-			message(
-				"Dropped ",
-				sum(treated_first),
-				" unit-period(s) treated in the first period."
-			)
+			if (isTRUE(verbose)) {
+				message(
+					"Dropped ",
+					sum(treated_first),
+					" unit-period(s) treated in the first period."
+				)
+			}
 		}
 	}
 

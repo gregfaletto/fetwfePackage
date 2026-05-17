@@ -14,7 +14,8 @@ etwfeToFetwfeDf(
   covars = character(0),
   drop_first_period_treated = TRUE,
   out_names = list(time = "time_var", unit = "unit_var", treatment = "treatment",
-    response = "response")
+    response = "response"),
+  verbose = FALSE
 )
 }
 \arguments{
@@ -39,6 +40,10 @@ here keeps the returned dataframe clean.)  Default \code{TRUE}.}
 \item{out_names}{Named list giving the column names that the returned dataframe should have.
 The default (\code{time}, \code{unit}, \code{treatment}, \code{y}) matches the arguments usually supplied to
 \code{fetwfe()}. \strong{Do not change the \emph{names} of this list} – only the \emph{values} – and keep all four.}
+
+\item{verbose}{Logical. If \code{TRUE}, a \code{message()} reports the count of
+first-period-treated unit-period rows dropped when
+\code{drop_first_period_treated = TRUE}. Default \code{FALSE} (silent).}
 }
 \value{
 A tidy \code{data.frame} with (in this order)

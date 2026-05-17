@@ -49,8 +49,8 @@
 #' that this might not work out, maybe your data set is on the small side and
 #' it's best to just leave your full data set in `pdata`). The sum of all the
 #' counts in `indep_counts` must match the total number of units in `pdata`.
-#' Default is NA (in which case conservative standard errors will be calculated
-#' if `q < 1`.)
+#' Default is NA (in which case the conservative standard error formula will
+#' be used).
 #' @param sig_eps_sq (Optional.) Numeric; the variance of the row-level IID
 #' noise assumed to apply to each observation. See Section 2 of Faletto (2025)
 #' for details. It is best to provide this variance if it is known (for example,
@@ -140,6 +140,15 @@
 #' arguments the user passed.}
 #' \item{covs}{Character vector; the original `covs` argument (pre-factor-
 #' expansion).}
+#' \item{calc_ses}{Logical indicating whether standard errors were calculated.}
+#' \item{cohort_probs_overall}{A vector of the estimated cohort probabilities
+#' on the overall sample (treated and untreated), used in computing the
+#' variance of the overall ATT.}
+#' \item{indep_counts_used}{Logical scalar; `TRUE` if a valid `indep_counts`
+#' argument was provided and used for asymptotically-exact ATT inference,
+#' `FALSE` otherwise.}
+#' \item{se_type}{Character scalar; the `se_type` argument the user passed
+#' (`"default"` or `"cluster"`).}
 #' @author Gregory Faletto
 #' @references
 #' Faletto, G (2025). Fused Extended Two-Way Fixed Effects for
@@ -157,6 +166,30 @@
 #'
 #' Pinheiro, J. C., & Bates, D. M. (2000). \emph{Mixed-Effects Models in
 #' S and S-PLUS}. Springer.
+#' @examples
+#' \dontrun{
+#' set.seed(23451)
+#'
+#' library(bacondecomp)
+#'
+#' data(divorce)
+#'
+#' # No `covs` here: twfeCovs is pure OLS (no bridge penalty), so it cannot
+#' # handle the rank-deficient design that the bacondecomp::divorce panel
+#' # produces when small cohorts and three covariates are combined.
+#' res <- twfeCovs(
+#'     pdata = divorce[divorce$sex == 2, ],
+#'     time_var = "year",
+#'     unit_var = "st",
+#'     treatment = "changed",
+#'     response = "suiciderate_elast_jag",
+#'     sig_eps_sq = 0.0344,
+#'     sig_eps_c_sq = 0.1507,
+#'     verbose = TRUE)
+#'
+#' # Print results
+#' print(res, max_cohorts = Inf)
+#' }
 #' @export
 twfeCovs <- function(
 	pdata,
@@ -361,17 +394,19 @@ twfeCovs <- function(
 #' Default is `"default"`.
 #' @return A named list with the following elements: \item{att_hat}{The
 #' estimated overall average treatment effect for a randomly selected treated
-#' unit.} \item{att_se}{If `q < 1`, a standard error for the ATT. If
-#' `indep_counts` was provided, this standard error is asymptotically exact; if
-#' not, it is asymptotically conservative. If `q >= 1`, this will be NA.}
+#' unit.} \item{att_se}{A standard error for the ATT. If `indep_counts` was
+#' provided, this standard error is asymptotically exact; otherwise, it is
+#' asymptotically conservative. If the Gram matrix is not invertible, this
+#' will be NA.}
 #' \item{att_p_value}{A two-sided p-value for the overall ATT against the
 #' null `H_0: tau = 0`, computed as `2 * pnorm(-|att_hat / att_se|)`. `NA` if
 #' `att_se` is zero or `NA`. Standard post-OLS interpretation; `twfeCovs` does
 #' not perform selection.}
 #' \item{catt_hats}{A named vector containing the estimated average treatment
-#' effects for each cohort.} \item{catt_ses}{If `q < 1`, a named vector
-#' containing the (asymptotically exact, non-conservative) standard errors for
-#' the estimated average treatment effects within each cohort.}
+#' effects for each cohort.} \item{catt_ses}{A named vector containing the
+#' (asymptotically exact, non-conservative) standard errors for the estimated
+#' average treatment effects within each cohort. If the Gram matrix is not
+#' invertible, the entries are NA.}
 #' \item{cohort_probs}{A vector of the estimated probabilities of being in each
 #' cohort conditional on being treated, which was used in calculating `att_hat`.
 #' If `indep_counts` was provided, `cohort_probs` was calculated from that;
@@ -405,6 +440,24 @@ twfeCovs <- function(
 #' have been removed because they contained missing values or all contained the
 #' same value for every unit).} \item{p}{The final number of columns in the full
 #' set of covariates used to estimate the model.}
+#' \item{calc_ses}{Logical indicating whether standard errors were calculated.}
+#' \item{cohort_probs_overall}{A vector of the estimated cohort probabilities
+#' on the overall sample (treated and untreated), used in computing the
+#' variance of the overall ATT.}
+#' \item{indep_counts_used}{Logical scalar; `TRUE` if a valid `indep_counts`
+#' argument was provided and used for asymptotically-exact ATT inference,
+#' `FALSE` otherwise.}
+#' \item{se_type}{Character scalar; the `se_type` argument the user passed
+#' (`"default"` or `"cluster"`).}
+#' \item{y_mean}{Numeric scalar; mean of the original (pre-centering) response.
+#' Stored so downstream methods (`augment()`, `predict()`) can return fitted
+#' values on the original-response scale.}
+#' \item{response_col_name}{Character scalar; the response column name in
+#' the original `pdata`.}
+#' \item{time_var, unit_var, treatment}{Character scalars; the corresponding
+#' arguments the user passed.}
+#' \item{covs}{Character vector; the original `covs` argument (pre-factor-
+#' expansion).}
 #'
 #' @examples
 #' \dontrun{
@@ -541,7 +594,8 @@ twfeCovsWithSimulatedData <- function(
 #'       \item Extracts cohort-specific average treatment effects (CATTs) from
 #'         `beta_hat`.
 #'       \item Calls `getCohortATTsFinal` to calculate CATT point estimates,
-#'         standard errors (if `q < 1`), and confidence intervals. This involves
+#'         standard errors (when the Gram matrix is invertible), and
+#'         confidence intervals. This involves
 #'         computing the Gram matrix and related quantities.
 #'     }
 #'   \item **Overall ATT Calculation:** Calls `getTeResultsOLS` to calculate the
@@ -550,8 +604,8 @@ twfeCovsWithSimulatedData <- function(
 #'     if `indep_counts` were provided.
 #' }
 #' The standard errors for CATTs are asymptotically exact. For ATT, if
-#' `indep_counts` are provided, the SE is asymptotically exact; otherwise, it's
-#' asymptotically conservative (if `q < 1`).
+#' `indep_counts` are provided, the SE is asymptotically exact; otherwise, it
+#' is asymptotically conservative.
 #'
 #' @return A list containing detailed estimation results:
 #'   \item{in_sample_att_hat}{Estimated overall ATT using in-sample cohort probabilities.}
@@ -560,10 +614,10 @@ twfeCovsWithSimulatedData <- function(
 #'   \item{indep_att_hat}{Estimated overall ATT using `indep_counts` cohort probabilities (NA if `indep_counts` not provided).}
 #'   \item{indep_att_se}{Standard error for `indep_att_hat` (NA if not applicable).}
 #'   \item{catt_hats}{A named vector of estimated CATTs for each cohort.}
-#'   \item{catt_ses}{A named vector of SEs for `catt_hats` (NA if `q >= 1`).}
+#'   \item{catt_ses}{A named vector of SEs for `catt_hats` (NA when the Gram matrix is not invertible).}
 #'   \item{catt_df}{A data.frame summarizing CATTs, SEs, confidence intervals, and per-cohort p-values (`P_value`).}
-#'   \item{theta_hat}{The vector of estimated coefficients in the *transformed* (fused) space, including the intercept as the first element.}
-#'   \item{beta_hat}{The vector of estimated coefficients in the *original* space (after untransforming `theta_hat`, excluding intercept).}
+#'   \item{beta_hat}{The vector of estimated coefficients in the *original*
+#'     space (no bridge fusion transformation; `twfeCovs` is pure OLS).}
 #'   \item{treat_inds}{Indices in `beta_hat` corresponding to base treatment effects.}
 #'   \item{treat_int_inds}{Indices in `beta_hat` corresponding to treatment-covariate interactions.}
 #'   \item{cohort_probs}{Estimated cohort probabilities conditional on being treated, from `in_sample_counts`.}
@@ -572,7 +626,8 @@ twfeCovsWithSimulatedData <- function(
 #'   \item{sig_eps_c_sq}{The (possibly estimated) variance of unit-level random effects.}
 #'   \item{X_ints}{The original input design matrix from `prepXints`.}
 #'   \item{y}{The original input centered response vector from `prepXints`.}
-#'   \item{X_final}{The design matrix after fusion transformation and GLS weighting.}
+#'   \item{X_final}{The design matrix after GLS weighting (no fusion
+#'     transformation for `twfeCovs_core`).}
 #'   \item{y_final}{The response vector after GLS weighting.}
 #'   \item{N, T, R, d, p}{Dimensions used in estimation.}
 #' @keywords internal

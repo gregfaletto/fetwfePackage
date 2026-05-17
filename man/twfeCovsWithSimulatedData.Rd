@@ -46,17 +46,19 @@ Default is \code{"default"}.}
 \value{
 A named list with the following elements: \item{att_hat}{The
 estimated overall average treatment effect for a randomly selected treated
-unit.} \item{att_se}{If \code{q < 1}, a standard error for the ATT. If
-\code{indep_counts} was provided, this standard error is asymptotically exact; if
-not, it is asymptotically conservative. If \code{q >= 1}, this will be NA.}
+unit.} \item{att_se}{A standard error for the ATT. If \code{indep_counts} was
+provided, this standard error is asymptotically exact; otherwise, it is
+asymptotically conservative. If the Gram matrix is not invertible, this
+will be NA.}
 \item{att_p_value}{A two-sided p-value for the overall ATT against the
 null \code{H_0: tau = 0}, computed as \verb{2 * pnorm(-|att_hat / att_se|)}. \code{NA} if
 \code{att_se} is zero or \code{NA}. Standard post-OLS interpretation; \code{twfeCovs} does
 not perform selection.}
 \item{catt_hats}{A named vector containing the estimated average treatment
-effects for each cohort.} \item{catt_ses}{If \code{q < 1}, a named vector
-containing the (asymptotically exact, non-conservative) standard errors for
-the estimated average treatment effects within each cohort.}
+effects for each cohort.} \item{catt_ses}{A named vector containing the
+(asymptotically exact, non-conservative) standard errors for the estimated
+average treatment effects within each cohort. If the Gram matrix is not
+invertible, the entries are NA.}
 \item{cohort_probs}{A vector of the estimated probabilities of being in each
 cohort conditional on being treated, which was used in calculating \code{att_hat}.
 If \code{indep_counts} was provided, \code{cohort_probs} was calculated from that;
@@ -90,6 +92,24 @@ of covariates that appear in the final data set (after any covariates may
 have been removed because they contained missing values or all contained the
 same value for every unit).} \item{p}{The final number of columns in the full
 set of covariates used to estimate the model.}
+\item{calc_ses}{Logical indicating whether standard errors were calculated.}
+\item{cohort_probs_overall}{A vector of the estimated cohort probabilities
+on the overall sample (treated and untreated), used in computing the
+variance of the overall ATT.}
+\item{indep_counts_used}{Logical scalar; \code{TRUE} if a valid \code{indep_counts}
+argument was provided and used for asymptotically-exact ATT inference,
+\code{FALSE} otherwise.}
+\item{se_type}{Character scalar; the \code{se_type} argument the user passed
+(\code{"default"} or \code{"cluster"}).}
+\item{y_mean}{Numeric scalar; mean of the original (pre-centering) response.
+Stored so downstream methods (\code{augment()}, \code{predict()}) can return fitted
+values on the original-response scale.}
+\item{response_col_name}{Character scalar; the response column name in
+the original \code{pdata}.}
+\item{time_var, unit_var, treatment}{Character scalars; the corresponding
+arguments the user passed.}
+\item{covs}{Character vector; the original \code{covs} argument (pre-factor-
+expansion).}
 }
 \description{
 This function runs the bridge-penalized extended two-way fixed effects estimator (\code{twfeCovs()}) on
