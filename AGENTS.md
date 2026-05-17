@@ -170,3 +170,37 @@ update its `test-*.R` file in the same PR.
 - API behavior → the roxygen header on the user-facing function is
   authoritative; `man/*.Rd` is regenerated from it.
 - Recent changes → `NEWS.md` and `git log`.
+
+## Class constructor validators
+
+Each S3-classed estimator object (`fetwfe`, `etwfe`, `betwfe`, `twfeCovs`) is
+checked against a runtime `.validate_<class>(x)` helper called at the bottom of
+the entry-point function before class assignment. The validators encode the
+documented cross-slot contracts of each class — slot inventory, SE consistency
+(if `calc_ses = FALSE` then `att_se` and `catt_ses` must all be NA), selection
+consistency, p-value NA-derivation, catt_df shape, cohort-probability
+structural sanity, dimensions, lambda monotonicity, type sanity. See issue #85
+for the design rationale.
+
+When adding a new public function that constructs an instance of one of these
+classes, **call the appropriate `.validate_<class>(out)` helper immediately
+before `class(out) <- "<class>"`**. The validator catches malformed output at
+construction time rather than at downstream-method-confusion time.
+
+When adding a new method that READS from a class object (`event_study`,
+`augment`, `tidy`, `glance`, `plot`, `coef`, future `predict`, etc.), call the
+matching `.check_<class>_for_<method>()` helper at the top of the method
+(infrastructure added by issue #86). This re-validates the object and asserts
+any method-specific contracts. The pattern is what would have prevented #73
+(`event_study()` reporting finite SEs when the fit's `calc_ses` was FALSE).
+
+When adding a new slot to a class's `@return`:
+
+1. Add the slot to `.EXPECTED_SLOTS_<CLASS>` in `R/<class>_class.R` (or
+   `R/twfeCovs.R` for twfeCovs).
+2. Add the corresponding `\item{name}{description}` to the `@return` block.
+3. Add a contract assertion in the validator if there's a non-trivial
+   invariant.
+4. The `tests/testthat/test-doc-slot-parity.R` (#70) will catch docs-vs-code
+   drift; the `tests/testthat/test-class-validators.R` cross-class consistency
+   block will catch validator-vs-code drift.

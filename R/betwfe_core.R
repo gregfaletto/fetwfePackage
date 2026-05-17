@@ -435,6 +435,8 @@ betwfe <- function(
 		treatment = treatment,
 		covs = covs_orig
 	)
+	# Validate constructed object's contracts (#85).
+	.validate_betwfe(out)
 	class(out) <- "betwfe"
 	return(out)
 }

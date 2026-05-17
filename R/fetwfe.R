@@ -401,6 +401,11 @@ fetwfe <- function(
 		calc_ses = res$calc_ses
 	)
 
+	# Validate constructed object's contracts (#85). Catches malformed
+	# output at construction time rather than at downstream-method
+	# confusion time.
+	.validate_fetwfe(out)
+
 	# Add the fetwfe class
 	class(out) <- "fetwfe"
 
@@ -954,6 +959,9 @@ etwfe <- function(
 		treatment = treatment,
 		covs = covs_orig
 	)
+
+	# Validate constructed object's contracts (#85).
+	.validate_etwfe(out)
 
 	# Add the etwfe class
 	class(out) <- "etwfe"
