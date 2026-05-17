@@ -27,6 +27,8 @@ Suggests:
     did,
     ggplot2,
     broom,
-    lme4
+    lme4,
+    testthat (>= 3.0.0),
+    tibble
 VignetteBuilder:
     knitr
