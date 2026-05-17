@@ -3,15 +3,15 @@
 #' @name etwfe-class
 NULL
 
-#—--------------------------------------------------------------------
+#----------------------------------------------------------------------
 # coef() method
-#—--------------------------------------------------------------------
+#----------------------------------------------------------------------
 #' @export
 coef.etwfe <- function(object, ...) object$beta_hat
 
-#—--------------------------------------------------------------------
+#----------------------------------------------------------------------
 # print() method for etwfe objects
-#—--------------------------------------------------------------------
+#----------------------------------------------------------------------
 #' @export
 print.etwfe <- function(
 	x,
@@ -90,9 +90,9 @@ print.etwfe <- function(
 	invisible(x)
 }
 
-#—--------------------------------------------------------------------
+#----------------------------------------------------------------------
 # summary()
-#—--------------------------------------------------------------------
+#----------------------------------------------------------------------
 #' @export
 summary.etwfe <- function(object, full_catt = FALSE, ...) {
 	list(
@@ -164,5 +164,81 @@ print.summary.etwfe <- function(x, ...) {
 	cat(sprintf("  Covariates (d)      : %d\n", x$model_info$d))
 	cat(sprintf("  Features (p)        : %d\n", x$model_info$p))
 
+	invisible(x)
+}
+
+#-------------------------------------------------------------------------------
+# Constructor validator (#85). See R/fetwfe_class.R for the design rationale.
+# ETWFE differs from FETWFE in: no `att_selected`, no `internal` sublist
+# (X_ints/y/X_final/y_final/calc_ses are top-level), no lambda.* slots
+# (pure OLS -- no bridge regularization).
+#-------------------------------------------------------------------------------
+
+.EXPECTED_SLOTS_ETWFE <- c(
+	"att_hat",
+	"att_se",
+	"att_p_value",
+	"catt_hats",
+	"catt_ses",
+	"cohort_probs",
+	"cohort_probs_overall",
+	"catt_df",
+	"beta_hat",
+	"treat_inds",
+	"treat_int_inds",
+	"sig_eps_sq",
+	"sig_eps_c_sq",
+	"X_ints",
+	"y",
+	"X_final",
+	"y_final",
+	"N",
+	"T",
+	"R",
+	"d",
+	"p",
+	"alpha",
+	"calc_ses",
+	"indep_counts_used",
+	"se_type",
+	"y_mean",
+	"response_col_name",
+	"time_var",
+	"unit_var",
+	"treatment",
+	"covs"
+)
+
+#' @title Validate an `etwfe`-classed object's contracts
+#' @keywords internal
+#' @noRd
+.validate_etwfe <- function(x) {
+	cls <- "etwfe"
+	.stop_if_missing_slots(x, .EXPECTED_SLOTS_ETWFE, cls)
+	.check_type_sanity(x, cls, has_alpha = TRUE, has_att_selected = FALSE)
+	.check_se_consistency(x, calc_ses_path = "calc_ses", cls)
+	.check_p_value_na(x, cls)
+	.check_catt_df_shape(x, cls)
+	.check_cohort_probs(x, cls)
+	.assert_contract(
+		length(x$beta_hat) == x$p,
+		"C6 length(beta_hat) == p",
+		cls
+	)
+	.assert_contract(
+		length(x$y) == x$N * x$T,
+		"C6 length(y) == N * T",
+		cls
+	)
+	.assert_contract(
+		nrow(x$X_ints) == x$N * x$T,
+		"C6 nrow(X_ints) == N * T",
+		cls
+	)
+	.assert_contract(
+		is.logical(x$calc_ses) && length(x$calc_ses) == 1L,
+		"C8 calc_ses is length-1 logical",
+		cls
+	)
 	invisible(x)
 }

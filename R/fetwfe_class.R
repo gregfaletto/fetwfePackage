@@ -184,3 +184,106 @@ print.summary.fetwfe <- function(x, ...) {
 
 	invisible(x)
 }
+
+#-------------------------------------------------------------------------------
+# Constructor validator (#85). Asserts the documented invariants for a
+# `fetwfe`-classed object every time one is constructed. Called from the
+# bottom of `fetwfe()` (R/fetwfe.R) before `class(out) <- "fetwfe"`.
+#
+# The list of expected slots is the source-of-truth for what a well-formed
+# `fetwfe` object looks like; the doc-slot-parity test (#70) cross-checks
+# that this list matches the rendered @return docs.
+#-------------------------------------------------------------------------------
+
+.EXPECTED_SLOTS_FETWFE <- c(
+	"att_hat",
+	"att_se",
+	"att_p_value",
+	"att_selected",
+	"catt_hats",
+	"catt_ses",
+	"cohort_probs",
+	"cohort_probs_overall",
+	"catt_df",
+	"beta_hat",
+	"treat_inds",
+	"treat_int_inds",
+	"sig_eps_sq",
+	"sig_eps_c_sq",
+	"lambda.max",
+	"lambda.max_model_size",
+	"lambda.min",
+	"lambda.min_model_size",
+	"lambda_star",
+	"lambda_star_model_size",
+	"N",
+	"T",
+	"R",
+	"d",
+	"p",
+	"alpha",
+	"indep_counts_used",
+	"se_type",
+	"y_mean",
+	"response_col_name",
+	"time_var",
+	"unit_var",
+	"treatment",
+	"covs",
+	"internal"
+)
+
+.EXPECTED_INTERNAL_SLOTS_FETWFE <- c(
+	"X_ints",
+	"y",
+	"X_final",
+	"y_final",
+	"theta_hat",
+	"calc_ses"
+)
+
+#' @title Validate a `fetwfe`-classed object's contracts
+#' @description
+#' Asserts the cross-slot invariants of a well-formed `fetwfe` object.
+#' Stops with a structured error message on violation. Called from the
+#' bottom of `fetwfe()` (R/fetwfe.R) before class assignment. Also callable
+#' externally (`fetwfe:::.validate_fetwfe(x)`) for use by method-entry
+#' preconditions (#86).
+#' @param x An object to validate as `fetwfe`-shaped.
+#' @return `invisible(x)` if all contracts hold; `stop()`s otherwise.
+#' @keywords internal
+#' @noRd
+.validate_fetwfe <- function(x) {
+	cls <- "fetwfe"
+	.stop_if_missing_slots(x, .EXPECTED_SLOTS_FETWFE, cls)
+	.stop_if_missing_slots(
+		x$internal,
+		.EXPECTED_INTERNAL_SLOTS_FETWFE,
+		cls,
+		where = "internal"
+	)
+	.check_type_sanity(x, cls, has_alpha = TRUE, has_att_selected = TRUE)
+	.check_se_consistency(x, calc_ses_path = "internal$calc_ses", cls)
+	.check_selection_consistency(x, cls)
+	.check_p_value_na(x, cls)
+	.check_catt_df_shape(x, cls)
+	.check_cohort_probs(x, cls)
+	.check_lambda_monotonicity(x, cls)
+	# C6 dimensions (internal-nested for fetwfe)
+	.assert_contract(
+		length(x$beta_hat) == x$p,
+		"C6 length(beta_hat) == p",
+		cls
+	)
+	.assert_contract(
+		length(x$internal$y) == x$N * x$T,
+		"C6 length(internal$y) == N * T",
+		cls
+	)
+	.assert_contract(
+		nrow(x$internal$X_ints) == x$N * x$T,
+		"C6 nrow(internal$X_ints) == N * T",
+		cls
+	)
+	invisible(x)
+}

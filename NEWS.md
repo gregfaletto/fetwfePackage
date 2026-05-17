@@ -1,5 +1,28 @@
 # NEWS
 
+## Version 1.9.9 (2026-05-17)
+
+- Added internal constructor validators for each estimator class
+  (`fetwfe`, `etwfe`, `betwfe`, `twfeCovs`). Each entry-point function
+  now runs `.validate_<class>(out)` immediately before class assignment.
+  The validators encode the documented cross-slot contracts: slot
+  inventory (matches `@return` docs), SE consistency (if `calc_ses`
+  is FALSE then `att_se` and `catt_ses` must all be NA), selection
+  consistency (`att_selected` iff `att_hat != 0` for the classes that
+  have it), p-value NA-derivation, catt_df shape, cohort-probability
+  structural sanity, beta_hat / y / X_ints dimensions, lambda
+  monotonicity (for the bridge estimators), and type sanity. Resolves
+  GitHub #85. This is the first of three foundation PRs (with #86
+  method-entry preconditions and #87 drift-sentinel subagent) designed
+  to prevent the drift class that produced multiple recent cleanup PRs.
+- No public API change. No behavior change on well-formed objects: the
+  validators only fire if an object would be malformed (which currently
+  cannot happen via the public estimator path; verified empirically
+  against q in {0.5, 1, 2} and the all-zero-theta fallback). Shared
+  contract-checking helpers live in `R/class_helpers.R`; the per-class
+  validators live in `R/<class>_class.R` (or `R/twfeCovs.R` for
+  twfeCovs pending a class file in #76).
+
 ## Version 1.9.8 (2026-05-16)
 
 - Documentation sweep: refreshed `@return` blocks on `etwfe()`,
