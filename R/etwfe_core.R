@@ -169,10 +169,6 @@ etwfeWithSimulatedData <- function(
 #' @param sig_eps_sq Numeric or NA; variance of idiosyncratic noise. Default `NA`.
 #' @param sig_eps_c_sq Numeric or NA; variance of unit-level random effects.
 #'   Default `NA`.
-#' @param lambda.max Numeric or NA; maximum lambda for `gBridge`. Default `NA`.
-#' @param lambda.min Numeric or NA; minimum lambda for `gBridge`. Default `NA`.
-#' @param nlambda Integer; number of lambdas for `gBridge`. Default `100`.
-#' @param q Numeric; Lq penalty exponent for `gBridge`. Default `0.5`.
 #' @param verbose Logical; if TRUE, print progress. Default `FALSE`.
 #' @param alpha Numeric; significance level for confidence intervals. Default `0.05`.
 #' @param add_ridge Logical; if TRUE, add small ridge penalty. Default `FALSE`.
@@ -188,9 +184,6 @@ etwfeWithSimulatedData <- function(
 #'     must be numeric, integer, or factor.
 #'   - `indep_counts` if provided, must be positive integers.
 #'   - `sig_eps_sq`, `sig_eps_c_sq` if provided, must be non-negative numerics.
-#'   - `lambda.max`, `lambda.min` if provided, must be valid numerics
-#'     (`lambda.max > lambda.min >= 0`).
-#'   - `q` must be in `(0, 2]`.
 #'   - `alpha` must be in `(0, 1)`.
 #'   Issues a warning if `alpha > 0.5`.
 #' @keywords internal
@@ -323,15 +316,6 @@ checkEtwfeInputs <- function(
 #'   IID noise. If `NA`, it will be estimated. Default is `NA`.
 #' @param sig_eps_c_sq (Optional) Numeric; the known variance of the unit-level IID
 #'   noise (random effects). If `NA`, it will be estimated. Default is `NA`.
-#' @param lambda.max (Optional) Numeric; the maximum `lambda` penalty parameter for
-#'   the bridge regression grid search. If `NA`, `grpreg` selects it. Default is `NA`.
-#' @param lambda.min (Optional) Numeric; the minimum `lambda` penalty parameter.
-#'   If `NA`, `grpreg` selects it. Default is `NA`.
-#' @param nlambda (Optional) Integer; the number of `lambda` values in the grid.
-#'   Default is 100.
-#' @param q (Optional) Numeric; the power of the Lq penalty for fusion regularization
-#'   (0 < q <= 2). `q=0.5` is default, `q=1` is lasso, `q=2` is ridge.
-#'   Default is 0.5.
 #' @param verbose Logical; if `TRUE`, prints progress messages. Default is `FALSE`.
 #' @param alpha Numeric; significance level for confidence intervals (e.g., 0.05 for
 #'   95% CIs). Default is 0.05.
@@ -341,54 +325,32 @@ checkEtwfeInputs <- function(
 #' @details
 #' The function executes the following main steps:
 #' \enumerate{
-#'   \item **Input Checks:** Validates the provided parameters.
-#'   \item **Coordinate Transformation:** Calls `transformXintImproved` to transform
-#'     `X_ints` into `X_mod`. This transformation allows a standard bridge
-#'     regression penalty on `X_mod` to achieve the desired fusion penalties
-#'     on the original coefficients.
-#'   \item **Variance Component Handling:**
-#'     \itemize{
-#'       \item If `sig_eps_sq` or `sig_eps_c_sq` are `NA`, `estOmegaSqrtInv` is
-#'         called to estimate them from the data using a fixed-effects ridge
-#'         regression.
-#'       \item Constructs the covariance matrix `Omega` and its inverse square
-#'         root `Omega_sqrt_inv`.
-#'       \item Pre-multiplies `y` and `X_mod` by `sqrt(sig_eps_sq) * Omega_sqrt_inv`
-#'         (via Kronecker product) to obtain `y_final` and `X_final`, effectively
-#'         performing a GLS transformation.
-#'     }
-#'   \item **Optional Ridge Penalty:** If `add_ridge` is `TRUE`, `X_final_scaled`
-#'     (scaled version of `X_final`) and `y_final` are augmented to add an L2
-#'     penalty on the *original* (untransformed) coefficient scale. This involves
-#'     using `genFullInvFusionTransformMat` to get the inverse of the overall
-#'     fusion transformation matrix.
-#'   \item **Cohort Probabilities:** Calculates cohort membership probabilities
-#'     conditional on being treated, using `in_sample_counts` and `indep_counts`
-#'     if available.
-#'   \item **Bridge Regression:** Fits a bridge regression model using
-#'     `grpreg::gBridge` on `X_final_scaled` and `y_final` with the specified `q`
-#'     and lambda sequence.
-#'   \item **Coefficient Selection (BIC):** Calls `getBetaBIC` to select the
-#'     optimal `lambda` using BIC and retrieve the corresponding estimated
-#'     coefficients (`theta_hat` in the transformed space).
-#'   \item **Handle Zero-Feature Case:** If BIC selects a model with zero features,
-#'     treatment effects are set to zero.
-#'   \item **Coefficient Untransformation:** Calls `untransformCoefImproved` to
-#'     transform `theta_hat` back to the original coefficient space, yielding
-#'     `beta_hat`. If `add_ridge` was true, `beta_hat` is scaled.
-#'   \item **Treatment Effect Calculation:**
-#'     \itemize{
-#'       \item Extracts cohort-specific average treatment effects (CATTs) from
-#'         `beta_hat`.
-#'       \item Calls `getCohortATTsFinal` to calculate CATT point estimates,
-#'         standard errors (when the Gram matrix is invertible), and
-#'         confidence intervals. This involves
-#'         computing the Gram matrix and related quantities.
-#'     }
-#'   \item **Overall ATT Calculation:** Calls `getTeResultsOLS` to calculate the
-#'     overall average treatment effect on the treated (ATT) and its standard
-#'     error, using both in-sample probabilities and independent probabilities
-#'     if `indep_counts` were provided.
+#'   \item **Input Checks:** Validates the provided parameters via
+#'     `check_etwfe_core_inputs()`.
+#'   \item **Design preparation + GLS weighting:** Calls
+#'     `prep_for_etwfe_regression(X_mod = X_ints, is_fetwfe = FALSE)`. This
+#'     estimates the variance components via REML (`estOmegaSqrtInv()`) when
+#'     `sig_eps_sq` or `sig_eps_c_sq` are `NA`, then GLS-weights the design and
+#'     response by `sqrt(sig_eps_sq) * Omega_sqrt_inv` via a Kronecker product.
+#'     No fusion transformation is applied (`X_mod = X_ints`); the OLS path
+#'     fits on the original coefficient parameterization. Also computes cohort
+#'     membership probabilities from `in_sample_counts` and (if provided)
+#'     `indep_counts`.
+#'   \item **Optional ridge penalty:** If `add_ridge = TRUE`, `X_final_scaled`
+#'     and `y_final` are augmented to add a small L2 penalty on the
+#'     coefficients. The fitted coefficients are then multiplied by
+#'     `(1 + lambda_ridge)` per the elastic-net adjustment.
+#'   \item **OLS regression:** Fits `lm(y ~ . + 0, df)` on the GLS-weighted
+#'     design. No bridge penalty, no `lambda` grid, no BIC selection step.
+#'     The coefficient vector is in the original (untransformed) parameter
+#'     space and is returned as `beta_hat`.
+#'   \item **Cohort-specific treatment effects:** Calls
+#'     `getCohortATTsFinalOLS()` to compute per-cohort point estimates,
+#'     standard errors (when the Gram matrix is invertible), and confidence
+#'     intervals.
+#'   \item **Overall ATT:** Calls `getTeResultsOLS()` for the overall ATT
+#'     point estimate and SE, using both in-sample probabilities and
+#'     independent probabilities when `indep_counts` is provided.
 #' }
 #' The standard errors for CATTs are asymptotically exact. For ATT, if
 #' `indep_counts` are provided, the SE is asymptotically exact; otherwise, it
@@ -496,7 +458,7 @@ etwfe_core <- function(
 
 	#
 	#
-	# Step 4: estimate OLS regression and extract fitted coefficients
+	# OLS regression and fitted-coefficient extraction
 	#
 	#
 
@@ -556,7 +518,7 @@ etwfe_core <- function(
 
 	#
 	#
-	# Step 6: calculate cohort-specific treatment effects and standard
+	# Calculate cohort-specific treatment effects and standard
 	# errors
 	#
 	#
@@ -594,7 +556,7 @@ etwfe_core <- function(
 
 	#
 	#
-	# Step 7: calculate overall average treatment effect on treated units
+	# Calculate overall average treatment effect on treated units
 	#
 	#
 
