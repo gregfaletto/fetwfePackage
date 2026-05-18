@@ -73,6 +73,12 @@ event_study <- function(x, alpha = NULL) {
 #' @keywords internal
 #' @noRd
 .event_study_etwfe_betwfe <- function(x, alpha = NULL) {
+	# Method-entry precondition (#86). Validates the fitted object and
+	# derives `has_valid_ses` — the contract gate that fixes #73
+	# (event_study reporting finite SEs when the fit's att_se is NA
+	# for q >= 1).
+	contract <- .check_for_event_study(x)
+
 	if (is.null(alpha)) {
 		alpha <- x$alpha
 	}
@@ -109,9 +115,9 @@ event_study <- function(x, alpha = NULL) {
 		sel_treat_inds_shifted <- which(beta_hat[treat_inds] != 0)
 	}
 
-	calc_ses <- TRUE
+	calc_ses <- contract$has_valid_ses
 	gram_inv <- NULL
-	if (length(sel_treat_inds_shifted) > 0) {
+	if (calc_ses && length(sel_treat_inds_shifted) > 0) {
 		res_gram <- getGramInv(
 			N = N,
 			T = T,
@@ -244,6 +250,12 @@ event_study <- function(x, alpha = NULL) {
 #' @keywords internal
 #' @noRd
 .event_study_fetwfe <- function(x, alpha = NULL) {
+	# Method-entry precondition (#86). Validates the fitted object and
+	# derives `has_valid_ses` — the contract gate that fixes #73
+	# (event_study reporting finite SEs when the fit's att_se is NA
+	# for q >= 1).
+	contract <- .check_for_event_study(x)
+
 	if (is.null(alpha)) {
 		alpha <- x$alpha
 	}
@@ -294,9 +306,9 @@ event_study <- function(x, alpha = NULL) {
 		d_inv_treat_sel <- NULL
 	}
 
-	calc_ses <- TRUE
+	calc_ses <- contract$has_valid_ses
 	gram_inv <- NULL
-	if (length(sel_treat_inds_shifted) > 0) {
+	if (calc_ses && length(sel_treat_inds_shifted) > 0) {
 		res_gram <- getGramInv(
 			N = N,
 			T = T,
@@ -531,6 +543,7 @@ plot.betwfe <- function(x, ...) {
 #' @keywords internal
 #' @noRd
 .plot_event_study <- function(x, alpha = NULL, ...) {
+	.check_for_plot(x)
 	if (!requireNamespace("ggplot2", quietly = TRUE)) {
 		stop(
 			"Install ggplot2 to use plot.fetwfe() / plot.etwfe() / plot.betwfe(): install.packages('ggplot2')"

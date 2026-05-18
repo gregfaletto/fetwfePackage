@@ -61,21 +61,61 @@ test_that(".truncate_catt full-output sort order is numeric (no truncation)", {
 test_that("tidy.<class> sorts cohorts numerically when labels include >= 10", {
 	skip_if_not_installed("broom")
 
-	# Build a minimal fetwfe-classed object with a catt_df containing
-	# cohorts >= 10. This bypasses the full estimator pipeline; we only
-	# need .tidy_estimator_output to be exercised.
+	# Build a fully-validator-compliant fetwfe-classed object with a
+	# catt_df containing cohorts >= 10. Most slots are NA/0/empty
+	# placeholders; only catt_df, R, alpha, and the SE-consistency
+	# slots need to be coherent. The constructor validator from #85
+	# (called by .check_for_tidy from #86) requires the full slot
+	# inventory; pre-#85 versions of this test got away with a
+	# minimal mock.
+	R_test <- 11L
+	T_test <- 13L
+	d_test <- 2L
+	p_test <- 50L
+	num_treats <- T_test * R_test - R_test * (R_test + 1L) / 2L # 88
 	obj <- list(
 		att_hat = 0.05,
 		att_se = 0.01,
 		att_p_value = 0.001,
 		att_selected = TRUE,
-		alpha = 0.05,
+		catt_hats = setNames(rep(0.01, R_test), as.character(2:12)),
+		catt_ses = setNames(rep(0.005, R_test), as.character(2:12)),
+		cohort_probs = rep(1 / (R_test + 5L), R_test), # < 1/(R+1) each so sum < 1
+		cohort_probs_overall = rep(1 / (R_test + 5L), R_test),
 		catt_df = .make_catt_df_11(),
-		N = 100,
-		T = 13,
-		R = 11,
-		d = 2,
-		p = 50
+		beta_hat = rep(0, p_test),
+		treat_inds = seq_len(num_treats),
+		treat_int_inds = (num_treats + 1L):p_test,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		lambda.max = 1,
+		lambda.max_model_size = 1L,
+		lambda.min = 0.01,
+		lambda.min_model_size = p_test + 1L,
+		lambda_star = 0.1,
+		lambda_star_model_size = 5L,
+		N = 100L,
+		T = T_test,
+		R = R_test,
+		d = d_test,
+		p = p_test,
+		alpha = 0.05,
+		indep_counts_used = FALSE,
+		se_type = "default",
+		y_mean = 0,
+		response_col_name = "y",
+		time_var = "time",
+		unit_var = "unit",
+		treatment = "treatment",
+		covs = c("cov1", "cov2"),
+		internal = list(
+			X_ints = matrix(0, 100L * T_test, p_test),
+			y = rep(0, 100L * T_test),
+			X_final = matrix(0, 100L * T_test, p_test),
+			y_final = rep(0, 100L * T_test),
+			theta_hat = rep(0, p_test + 1L),
+			calc_ses = TRUE
+		)
 	)
 	class(obj) <- "fetwfe"
 

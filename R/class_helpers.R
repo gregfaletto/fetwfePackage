@@ -420,3 +420,103 @@
 		)
 	}
 }
+
+#-------------------------------------------------------------------------------
+# Method-entry preconditions (issue #86).
+#
+# Each downstream method that reads from a fitted estimator object calls
+# a .check_for_<method>(x) helper at its top. The helper:
+#   (1) Re-runs the constructor validator from #85 (defense-in-depth;
+#       the object may have been hand-modified between construction and
+#       method call).
+#   (2) Returns a small named list of method-relevant invariants the
+#       method can use rather than re-deriving them.
+#
+# This is what fixes #73: .check_for_event_study(x) returns
+# `has_valid_ses` derived from `x$internal$calc_ses` (fetwfe) or
+# `x$calc_ses` (etwfe/betwfe), and the event_study dispatchers
+# AND-gate their SE-computation branch on it.
+#-------------------------------------------------------------------------------
+
+#' @title Universal dispatcher: validate any estimator-class object
+#' @description Dispatches via `inherits()` to the appropriate
+#' `.validate_<class>` helper from #85. twfeCovs is not currently
+#' classed (#76 will add `class(out) <- "twfeCovs"`); when that lands,
+#' a corresponding branch can be added here. No current method
+#' precondition routes a twfeCovs object through this dispatcher.
+#' @keywords internal
+#' @noRd
+.assert_estimator_object <- function(x) {
+	if (inherits(x, "fetwfe")) {
+		.validate_fetwfe(x)
+	} else if (inherits(x, "etwfe")) {
+		.validate_etwfe(x)
+	} else if (inherits(x, "betwfe")) {
+		.validate_betwfe(x)
+	} else {
+		stop(
+			"Expected a `fetwfe`, `etwfe`, or `betwfe` object; got class(es): ",
+			paste(class(x), collapse = ", "),
+			call. = FALSE
+		)
+	}
+	invisible(x)
+}
+
+#' @title Method precondition: event_study
+#' @description Validates the input + derives `has_valid_ses` (the
+#' contract gate that fixes #73). `calc_ses` lives in different paths
+#' across classes: nested under `$internal` for fetwfe; top-level for
+#' etwfe/betwfe.
+#' @return list(has_valid_ses = logical).
+#' @keywords internal
+#' @noRd
+.check_for_event_study <- function(x) {
+	.assert_estimator_object(x)
+	calc_ses <- if (inherits(x, "fetwfe")) {
+		x$internal$calc_ses
+	} else {
+		x$calc_ses
+	}
+	list(has_valid_ses = isTRUE(calc_ses))
+}
+
+#' @title Method precondition: augment
+#' @keywords internal
+#' @noRd
+.check_for_augment <- function(x) {
+	.assert_estimator_object(x)
+	invisible(x)
+}
+
+#' @title Method precondition: tidy
+#' @keywords internal
+#' @noRd
+.check_for_tidy <- function(x) {
+	.assert_estimator_object(x)
+	invisible(x)
+}
+
+#' @title Method precondition: glance
+#' @keywords internal
+#' @noRd
+.check_for_glance <- function(x) {
+	.assert_estimator_object(x)
+	invisible(x)
+}
+
+#' @title Method precondition: plot
+#' @keywords internal
+#' @noRd
+.check_for_plot <- function(x) {
+	.assert_estimator_object(x)
+	invisible(x)
+}
+
+#' @title Method precondition: coef
+#' @keywords internal
+#' @noRd
+.check_for_coef <- function(x) {
+	.assert_estimator_object(x)
+	invisible(x)
+}
