@@ -520,3 +520,336 @@
 	.assert_estimator_object(x)
 	invisible(x)
 }
+
+#-------------------------------------------------------------------------------
+# Consolidated print/summary/print.summary bodies for the three S3 classes
+# (`fetwfe`, `etwfe`, `betwfe`). Each per-class method in R/<class>_class.R
+# is now a thin wrapper that pre-resolves the per-class options
+# (header text, gating flags, path-extractor functions, max_cohorts /
+# order_by) and delegates here. Issue #77 step 2 / PR following PR #90.
+#
+# Byte-identity of the output is enforced by the six snapshots at
+# tests/testthat/_snaps/print-method-snapshot.md (PR #90).
+#-------------------------------------------------------------------------------
+
+#' @title Consolidated body of `print.<class>` for the three estimator classes
+#'
+#' @description
+#' Internal helper called by `print.fetwfe()`, `print.etwfe()`, and
+#' `print.betwfe()`. The three per-class methods differ only in (a) the
+#' header banner, (b) whether the `Selected:` row appears under the
+#' Overall-ATT block, (c) whether the `Selected size` / `Lambda*` rows
+#' appear in Model Details, and (d) where `X_ints`, `y`, and `calc_ses`
+#' live on the fit object (top-level for `etwfe` / `betwfe`, nested under
+#' `$internal` for `fetwfe`). All four are passed in by the caller; the
+#' helper renders the full output.
+#'
+#' @param x The fit object (one of `"fetwfe"` / `"etwfe"` / `"betwfe"`).
+#' @param header Single string containing the title line plus its `====`
+#'   divider plus two trailing newlines (e.g.
+#'   `"Foo Results\n===\n\n"`). Passed verbatim to `cat()`. The
+#'   title-versus-divider length relationship is inconsistent across the
+#'   three classes, so the helper does not compute the divider --
+#'   each per-class wrapper passes its full banner as a literal string.
+#' @param show_att_selected Logical; if `TRUE`, render the
+#'   `Selected:` row under the Overall ATT block. `fetwfe` / `betwfe`
+#'   pass `TRUE`; `etwfe` passes `FALSE` (etwfe is pure OLS with no
+#'   selection).
+#' @param show_lambda Logical; if `TRUE`, render `Selected size:` and
+#'   `Lambda*:` rows under Model Details. Same pattern as
+#'   `show_att_selected`.
+#' @param X_ints_path,y_path,calc_ses_path Path-extractor functions that
+#'   read `X_ints`, `y`, and `calc_ses` off `x`. For `fetwfe` these
+#'   return `x$internal$X_ints` / `x$internal$y` / `x$internal$calc_ses`;
+#'   for `etwfe` / `betwfe` they return the top-level fields. Functions
+#'   are passed (not path strings) for readability.
+#' @param max_cohorts Integer; pre-resolved
+#'   `getOption("<class>.max_cohorts", 10)` value. The wrapper resolves
+#'   the per-class option key (`fetwfe.max_cohorts` etc.) and passes
+#'   the integer.
+#' @param order_by Character; pre-validated (via `match.arg()` in the
+#'   wrapper) one of `"cohort"`, `"estimate"`, `"abs_estimate"`,
+#'   `"pvalue"`, `"none"`.
+#' @param show_internal Logical; if `TRUE`, render the `Internal Details:`
+#'   block (X dims / y length / SEs computed). Passed through from the
+#'   wrapper's `show_internal` argument.
+#' @param ... Currently ignored (accepted for S3-method-arg compatibility).
+#' @return `invisible(x)`.
+#' @keywords internal
+#' @noRd
+.print_estimator_output <- function(
+	x,
+	header,
+	show_att_selected,
+	show_lambda,
+	X_ints_path,
+	y_path,
+	calc_ses_path,
+	max_cohorts,
+	order_by,
+	show_internal,
+	...
+) {
+	cat(header)
+
+	## Overall ATT
+	ci_pct <- 100 * (1 - x$alpha)
+	ci_low <- x$att_hat - qnorm(1 - x$alpha / 2) * x$att_se
+	ci_high <- x$att_hat + qnorm(1 - x$alpha / 2) * x$att_se
+	cat(sprintf(
+		"Overall Average Treatment Effect (ATT):\n  Estimate:   %.4f\n",
+		x$att_hat
+	))
+	if (identical(x$se_type, "cluster")) {
+		cat(sprintf(
+			"  Std. Error (cluster-robust): %.4f\n",
+			x$att_se
+		))
+	} else {
+		cat(sprintf("  Std. Error: %.4f\n", x$att_se))
+	}
+	if (!is.null(x$att_p_value) && !is.na(x$att_p_value)) {
+		cat(sprintf("  P-value:    %.4g\n", x$att_p_value))
+	} else {
+		cat("  P-value:    NA\n")
+	}
+	if (show_att_selected) {
+		cat(sprintf("  Selected:   %s\n", x$att_selected))
+	}
+	cat(sprintf(
+		"  %.0f%% CI:    [%.4f, %.4f]\n\n",
+		ci_pct,
+		ci_low,
+		ci_high
+	))
+
+	## Cohort effects
+	catt_df <- .truncate_catt(x$catt_df, max_cohorts, order_by)
+	cat("Cohort Average Treatment Effects (CATT):\n")
+	.print_catt_tbl(catt_df)
+	if (isTRUE(attr(catt_df, "truncated"))) {
+		cat(sprintf(
+			"  ... and %d more cohorts.\n",
+			attr(catt_df, "n_discarded")
+		))
+	}
+	cat("\n")
+
+	## Model info
+	cat("Model Details:\n")
+	cat(sprintf("  Units (N)           : %d\n", x$N))
+	cat(sprintf("  Time periods (T)    : %d\n", x$T))
+	cat(sprintf("  Treated cohorts (R) : %d\n", x$R))
+	cat(sprintf("  Covariates (d)      : %d\n", x$d))
+	cat(sprintf("  Features (p)        : %d\n", x$p))
+	if (show_lambda) {
+		cat(sprintf("  Selected size       : %d\n", x$lambda_star_model_size))
+		cat(sprintf("  Lambda*             : %.4f\n", x$lambda_star))
+	}
+
+	if (show_internal) {
+		cat("\nInternal Details:\n")
+		cat(
+			"  X dims     :",
+			paste(dim(X_ints_path(x)), collapse = " x "),
+			"\n"
+		)
+		cat("  y length   :", length(y_path(x)), "\n")
+		cat("  SEs computed:", calc_ses_path(x), "\n")
+	}
+
+	invisible(x)
+}
+
+#' @title Consolidated body of `summary.<class>` for the three estimator classes
+#'
+#' @description
+#' Internal helper called by `summary.fetwfe()`, `summary.etwfe()`, and
+#' `summary.betwfe()`. Builds the summary list whose `print` method is
+#' dispatched on `output_class`. The three per-class summaries differ in
+#' (a) the assigned class name (`"summary.fetwfe"` / `"summary.etwfe"` /
+#' `"summary.betwfe"`), (b) whether `att_selected` appears between
+#' `att` and `catt` (fetwfe / betwfe only), and (c) whether
+#' `lambda_star` / `model_size` appear inside `model_info` between
+#' `p` and `sig_eps_sq` (fetwfe / betwfe only).
+#'
+#' **List-key ordering is contractual.** `att_selected` (when present)
+#' must come between `att` and `catt`; `lambda_star` / `model_size`
+#' (when present) must come between `p` and `sig_eps_sq` inside
+#' `model_info`. The snapshot tests do not catch ordering drift
+#' (they access by name, not by position), but downstream users who
+#' deparse the structure or write order-sensitive tests would see it.
+#' The implementation builds the full union list and reorders via
+#' a name-vector selection to keep a single source of truth.
+#'
+#' @param object The fit object.
+#' @param output_class Character; one of `"summary.fetwfe"`,
+#'   `"summary.etwfe"`, `"summary.betwfe"`. Set as the class of
+#'   the returned list.
+#' @param include_att_selected Logical; if `TRUE`, include
+#'   `att_selected = object$att_selected` between `att` and
+#'   `catt`. fetwfe / betwfe pass `TRUE`; etwfe passes `FALSE`.
+#' @param include_lambda Logical; if `TRUE`, include
+#'   `lambda_star` and `model_size` between `p` and `sig_eps_sq`
+#'   inside `model_info`. Same gating as `include_att_selected`.
+#' @param full_catt Logical; passed through from the wrapper's
+#'   `full_catt` argument. If `TRUE`, the un-truncated `catt_df`
+#'   appears; otherwise the helper truncates to the first 20
+#'   rows.
+#' @return A list with class set to `output_class`.
+#' @keywords internal
+#' @noRd
+.summary_estimator_output <- function(
+	object,
+	output_class,
+	include_att_selected,
+	include_lambda,
+	full_catt
+) {
+	# Build the FULL union list with every possible field, then drop
+	# the fields that don't belong to this class via name-vector
+	# selection. Single source of truth for field contents; the
+	# `keep` vector encodes the contractual ordering.
+	#
+	# The per-summary preview truncation defaults to `max_cohorts = 20`
+	# (kept verbatim from the pre-refactor `summary.<class>` bodies);
+	# the print-side default is 10. Summary keeps a larger preview
+	# because it is a one-shot interactive inspection rather than a
+	# screen-formatted layout.
+	out <- list(
+		att = c(
+			estimate = object$att_hat,
+			se = object$att_se,
+			p_value = object$att_p_value
+		),
+		att_selected = object$att_selected,
+		catt = if (full_catt) {
+			object$catt_df
+		} else {
+			.truncate_catt(object$catt_df, max_cohorts = 20)
+		},
+		model_info = list(
+			N = object$N,
+			T = object$T,
+			R = object$R,
+			d = object$d,
+			p = object$p,
+			lambda_star = object$lambda_star,
+			model_size = object$lambda_star_model_size,
+			sig_eps_sq = object$sig_eps_sq,
+			sig_eps_c_sq = object$sig_eps_c_sq
+		),
+		alpha = object$alpha,
+		se_type = object$se_type
+	)
+
+	keep <- c(
+		"att",
+		if (include_att_selected) "att_selected",
+		"catt",
+		"model_info",
+		"alpha",
+		"se_type"
+	)
+	out <- out[keep]
+
+	out$model_info <- out$model_info[c(
+		"N",
+		"T",
+		"R",
+		"d",
+		"p",
+		if (include_lambda) c("lambda_star", "model_size"),
+		"sig_eps_sq",
+		"sig_eps_c_sq"
+	)]
+
+	structure(out, class = output_class)
+}
+
+#' @title Consolidated body of `print.summary.<class>` for the three classes
+#'
+#' @description
+#' Internal helper called by `print.summary.fetwfe()`,
+#' `print.summary.etwfe()`, and `print.summary.betwfe()`. The three
+#' per-class methods differ only in (a) the header banner, (b) whether
+#' the `Selected:` line appears under the one-line ATT, and (c) whether
+#' the `Selected size` / `Lambda*` rows appear under Model Details.
+#' All three are passed in by the caller.
+#'
+#' Reads `lambda_star` / `model_size` from `x$model_info$...` (the
+#' nested summary-list shape produced by
+#' `.summary_estimator_output()`), NOT from the top-level
+#' `lambda_star_model_size` / `lambda_star` slots that
+#' `.print_estimator_output()` reads.
+#'
+#' @param x A summary object (one of `"summary.fetwfe"` /
+#'   `"summary.etwfe"` / `"summary.betwfe"`).
+#' @param header Single string containing the title plus its
+#'   `===` divider plus two trailing newlines, verbatim. Same
+#'   shape as in `.print_estimator_output()`.
+#' @param show_att_selected Logical; if `TRUE`, render
+#'   `Selected: <value>` after the one-line Overall ATT. fetwfe /
+#'   betwfe pass `TRUE`; etwfe passes `FALSE`. Spacing matches the
+#'   existing snapshots: one blank line after the Overall ATT line
+#'   in all three cases.
+#' @param show_lambda Logical; if `TRUE`, render `Selected size:` and
+#'   `Lambda*:` rows under Model Details.
+#' @return `invisible(x)`.
+#' @keywords internal
+#' @noRd
+.print_summary_estimator_output <- function(
+	x,
+	header,
+	show_att_selected,
+	show_lambda
+) {
+	cat(header)
+
+	ci_pct <- 100 * (1 - x$alpha)
+	ci_low <- x$att["estimate"] - qnorm(1 - x$alpha / 2) * x$att["se"]
+	ci_high <- x$att["estimate"] + qnorm(1 - x$alpha / 2) * x$att["se"]
+	p_val <- x$att["p_value"]
+	p_str <- if (is.na(p_val)) "NA" else sprintf("%.4g", p_val)
+	se_label <- if (identical(x$se_type, "cluster")) {
+		"SE (cluster-robust)"
+	} else {
+		"SE"
+	}
+	cat(sprintf(
+		"Overall ATT: %.4f  (%s = %.4f, p = %s, %.0f%% CI = [%.4f, %.4f])\n",
+		x$att["estimate"],
+		se_label,
+		x$att["se"],
+		p_str,
+		ci_pct,
+		ci_low,
+		ci_high
+	))
+	if (show_att_selected) {
+		cat(sprintf("Selected: %s\n\n", x$att_selected))
+	} else {
+		cat("\n")
+	}
+
+	cat("CATT (preview):\n")
+	.print_catt_tbl(x$catt)
+	if (isTRUE(attr(x$catt, "truncated"))) {
+		cat(sprintf("  ... + %d more cohorts.\n", attr(x$catt, "n_discarded")))
+	}
+	cat("\n")
+
+	## Model info
+	cat("Model Details:\n")
+	cat(sprintf("  Units (N)           : %d\n", x$model_info$N))
+	cat(sprintf("  Time periods (T)    : %d\n", x$model_info$T))
+	cat(sprintf("  Treated cohorts (R) : %d\n", x$model_info$R))
+	cat(sprintf("  Covariates (d)      : %d\n", x$model_info$d))
+	cat(sprintf("  Features (p)        : %d\n", x$model_info$p))
+	if (show_lambda) {
+		cat(sprintf("  Selected size       : %d\n", x$model_info$model_size))
+		cat(sprintf("  Lambda*             : %.4f\n", x$model_info$lambda_star))
+	}
+
+	invisible(x)
+}

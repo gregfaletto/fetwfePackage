@@ -13,7 +13,9 @@ coef.etwfe <- function(object, ...) {
 }
 
 #----------------------------------------------------------------------
-# print() method for etwfe objects
+# print() / summary() / print.summary() methods. Method bodies live in
+# R/class_helpers.R; each per-class method here is a thin wrapper.
+# See R/fetwfe_class.R for the design rationale (issue #77 step 2).
 #----------------------------------------------------------------------
 #' @export
 print.etwfe <- function(
@@ -23,151 +25,40 @@ print.etwfe <- function(
 	show_internal = FALSE,
 	...
 ) {
-	order_by <- match.arg(order_by)
-
-	cat(
-		"Extended Two-Way Fixed Effects Results\n",
-		"=====================================\n\n",
-		sep = ""
+	.print_estimator_output(
+		x,
+		header = "Extended Two-Way Fixed Effects Results\n=====================================\n\n",
+		show_att_selected = FALSE,
+		show_lambda = FALSE,
+		X_ints_path = function(x) x$X_ints,
+		y_path = function(x) x$y,
+		calc_ses_path = function(x) x$calc_ses,
+		max_cohorts = max_cohorts,
+		order_by = match.arg(order_by),
+		show_internal = show_internal,
+		...
 	)
-
-	## Overall ATT
-	ci_pct <- 100 * (1 - x$alpha)
-	ci_low <- x$att_hat - qnorm(1 - x$alpha / 2) * x$att_se
-	ci_high <- x$att_hat + qnorm(1 - x$alpha / 2) * x$att_se
-	cat(sprintf(
-		"Overall Average Treatment Effect (ATT):\n  Estimate:   %.4f\n",
-		x$att_hat
-	))
-	if (identical(x$se_type, "cluster")) {
-		cat(sprintf(
-			"  Std. Error (cluster-robust): %.4f\n",
-			x$att_se
-		))
-	} else {
-		cat(sprintf("  Std. Error: %.4f\n", x$att_se))
-	}
-	if (!is.null(x$att_p_value) && !is.na(x$att_p_value)) {
-		cat(sprintf("  P-value:    %.4g\n", x$att_p_value))
-	} else {
-		cat("  P-value:    NA\n")
-	}
-	cat(sprintf(
-		"  %.0f%% CI:    [%.4f, %.4f]\n\n",
-		ci_pct,
-		ci_low,
-		ci_high
-	))
-
-	## Cohort effects
-	catt_df <- .truncate_catt(x$catt_df, max_cohorts, order_by)
-	cat("Cohort Average Treatment Effects (CATT):\n")
-	.print_catt_tbl(catt_df)
-	if (isTRUE(attr(catt_df, "truncated"))) {
-		cat(sprintf(
-			"  ... and %d more cohorts.\n",
-			attr(catt_df, "n_discarded")
-		))
-	}
-	cat("\n")
-
-	## Model info
-	cat("Model Details:\n")
-	cat(sprintf("  Units (N)           : %d\n", x$N))
-	cat(sprintf("  Time periods (T)    : %d\n", x$T))
-	cat(sprintf("  Treated cohorts (R) : %d\n", x$R))
-	cat(sprintf("  Covariates (d)      : %d\n", x$d))
-	cat(sprintf("  Features (p)        : %d\n", x$p))
-
-	if (show_internal) {
-		cat("\nInternal Details:\n")
-		cat(
-			"  X dims     :",
-			paste(dim(x$X_ints), collapse = " x "),
-			"\n"
-		)
-		cat("  y length   :", length(x$y), "\n")
-		cat("  SEs computed:", x$calc_ses, "\n")
-	}
-
-	invisible(x)
 }
 
-#----------------------------------------------------------------------
-# summary()
-#----------------------------------------------------------------------
 #' @export
 summary.etwfe <- function(object, full_catt = FALSE, ...) {
-	list(
-		att = c(
-			estimate = object$att_hat,
-			se = object$att_se,
-			p_value = object$att_p_value
-		),
-		catt = if (full_catt) {
-			object$catt_df
-		} else {
-			.truncate_catt(object$catt_df, max_cohorts = 20)
-		},
-		model_info = list(
-			N = object$N,
-			T = object$T,
-			R = object$R,
-			d = object$d,
-			p = object$p,
-			sig_eps_sq = object$sig_eps_sq,
-			sig_eps_c_sq = object$sig_eps_c_sq
-		),
-		alpha = object$alpha,
-		se_type = object$se_type
-	) |>
-		structure(class = "summary.etwfe")
+	.summary_estimator_output(
+		object,
+		output_class = "summary.etwfe",
+		include_att_selected = FALSE,
+		include_lambda = FALSE,
+		full_catt = full_catt
+	)
 }
 
 #' @export
 print.summary.etwfe <- function(x, ...) {
-	cat(
-		"Summary of Extended Two-Way Fixed Effects\n",
-		"========================================\n\n",
-		sep = ""
+	.print_summary_estimator_output(
+		x,
+		header = "Summary of Extended Two-Way Fixed Effects\n========================================\n\n",
+		show_att_selected = FALSE,
+		show_lambda = FALSE
 	)
-	ci_pct <- 100 * (1 - x$alpha)
-	ci_low <- x$att["estimate"] - qnorm(1 - x$alpha / 2) * x$att["se"]
-	ci_high <- x$att["estimate"] + qnorm(1 - x$alpha / 2) * x$att["se"]
-	p_val <- x$att["p_value"]
-	p_str <- if (is.na(p_val)) "NA" else sprintf("%.4g", p_val)
-	se_label <- if (identical(x$se_type, "cluster")) {
-		"SE (cluster-robust)"
-	} else {
-		"SE"
-	}
-	cat(sprintf(
-		"Overall ATT: %.4f  (%s = %.4f, p = %s, %.0f%% CI = [%.4f, %.4f])\n\n",
-		x$att["estimate"],
-		se_label,
-		x$att["se"],
-		p_str,
-		ci_pct,
-		ci_low,
-		ci_high
-	))
-
-	cat("CATT (preview):\n")
-	.print_catt_tbl(x$catt)
-	if (isTRUE(attr(x$catt, "truncated"))) {
-		cat(sprintf("  ... + %d more cohorts.\n", attr(x$catt, "n_discarded")))
-	}
-	cat("\n")
-
-	## Model info
-	cat("Model Details:\n")
-	cat(sprintf("  Units (N)           : %d\n", x$model_info$N))
-	cat(sprintf("  Time periods (T)    : %d\n", x$model_info$T))
-	cat(sprintf("  Treated cohorts (R) : %d\n", x$model_info$R))
-	cat(sprintf("  Covariates (d)      : %d\n", x$model_info$d))
-	cat(sprintf("  Features (p)        : %d\n", x$model_info$p))
-
-	invisible(x)
 }
 
 #-------------------------------------------------------------------------------

@@ -1,5 +1,13 @@
 # NEWS
 
+## Version 1.9.11 (2026-05-18)
+
+- Refactored the three `print.<class>` / `summary.<class>` /
+  `print.summary.<class>` method bodies (across `fetwfe()`,
+  `etwfe()`, `betwfe()`) to share three new internal helpers in
+  `R/class_helpers.R`. Output is byte-identical to v1.9.10 (locked
+  by the snapshot guardrail added in PR #90). Resolves #77.
+
 ## Version 1.9.10 (2026-05-17)
 
 - Fixed a cross-method consistency bug in `event_study()` (GitHub #73):
