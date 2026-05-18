@@ -7,7 +7,10 @@ NULL
 # coef() method
 #----------------------------------------------------------------------
 #' @export
-coef.etwfe <- function(object, ...) object$beta_hat
+coef.etwfe <- function(object, ...) {
+	.check_for_coef(object)
+	object$beta_hat
+}
 
 #----------------------------------------------------------------------
 # print() method for etwfe objects

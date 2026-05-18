@@ -1,5 +1,25 @@
 # NEWS
 
+## Version 1.9.10 (2026-05-17)
+
+- Fixed a cross-method consistency bug in `event_study()` (GitHub #73):
+  the function previously reported finite SEs and p-values for `q >= 1`
+  fits even though the corresponding `fetwfe()` / `betwfe()` objects
+  correctly return `att_se = NA` in that regime (the bridge oracle
+  property is required for the model-based SEs). After this fix,
+  `event_study()` propagates the fit's `calc_ses` status: when the fit
+  has no valid SEs, `event_study()` returns NA SEs and NA p-values,
+  matching the parent object's contract. The point estimates remain
+  valid (and finite) in both regimes. Same fix applies under
+  `se_type = "cluster"`.
+- Added internal method-entry preconditions for cross-class consumers
+  (`event_study`, `augment`, `tidy`, `glance`, `plot`, `coef`). Each
+  such method now re-validates the input fitted object before computing
+  on it, catching hand-modified or programmatically-malformed inputs
+  early with a clear error message. Foundation PR beta of three (with
+  Foundation alpha #85 already shipped and Foundation gamma #87
+  drift-sentinel subagent queued). Resolves GitHub #86.
+
 ## Version 1.9.9 (2026-05-17)
 
 - Added internal constructor validators for each estimator class

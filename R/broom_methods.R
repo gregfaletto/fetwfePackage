@@ -39,6 +39,7 @@ NULL
 	conf.level = 1 - x$alpha,
 	include_selected = inherits(x, c("fetwfe", "betwfe"))
 ) {
+	.check_for_tidy(x)
 	stopifnot(conf.level > 0, conf.level < 1)
 
 	z <- stats::qnorm(1 - (1 - conf.level) / 2)
@@ -109,6 +110,7 @@ NULL
 #' @keywords internal
 #' @noRd
 .glance_fetwfe_betwfe <- function(x) {
+	.check_for_glance(x)
 	data.frame(
 		nobs = x$N * x$T,
 		n_units = x$N,
@@ -131,6 +133,7 @@ NULL
 #' @keywords internal
 #' @noRd
 .glance_etwfe <- function(x) {
+	.check_for_glance(x)
 	data.frame(
 		nobs = x$N * x$T,
 		n_units = x$N,
@@ -179,6 +182,7 @@ NULL
 #' @keywords internal
 #' @noRd
 .augment_estimator_output <- function(x, data, ...) {
+	.check_for_augment(x)
 	if (missing(data)) {
 		stop(
 			"augment(): the fitted object does not store the original panel ",
