@@ -1,5 +1,20 @@
 # NEWS
 
+## Version 1.9.16 (2026-05-18)
+
+- Extracted two micro-helpers to `R/utility.R` and standardized one
+  threshold convention (GitHub #83):
+  (1) `.cohort_block_inds(r, R, first_inds, num_treats)` replaces 6
+  inline `first_ind_r <- first_inds[r]; last_ind_r <- if (r < R) ...
+  else num_treats` constructions across `R/core_funcs.R`,
+  `R/fetwfe_core.R`, `R/gen_funcs.R`, and `R/ols_calcs.R`.
+  (2) `.multinomial_cov(probs)` replaces 3 inline `Sigma_pi_hat <-
+  -outer(probs, probs); diag(...) <- probs * (1 - probs)` blocks
+  across `R/fetwfe_core.R`, `R/ols_calcs.R`, and `R/event_study.R`.
+  (3) `R/core_funcs.R`'s 4 occurrences of `10^(-6)` replaced with
+  `1e-6` to match the rest of the package (bit-identical value;
+  pure cosmetic). No user-visible behavior change.
+
 ## Version 1.9.15 (2026-05-18)
 
 - Consolidated the cluster-robust sandwich assembly across 4 call

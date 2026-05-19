@@ -670,3 +670,54 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 	)
 	truncated
 }
+
+#' @title Cohort-r treatment-coefficient index range
+#' @description
+#' For cohort `r` (one of `1:R`), returns the integer range
+#' `first_ind_r:last_ind_r` indexing into a length-`num_treats`
+#' treatment-coefficient vector. The closed-form is
+#' `first_ind_r = first_inds[r]` and
+#' `last_ind_r = if (r < R) first_inds[r + 1] - 1 else num_treats`.
+#' Used inside `for (r in 1:R)` cohort loops in `getCohortATTsFinal`,
+#' `getCohortATTsFinalOLS`, `getSecondVarTermDataApp`,
+#' `getSecondVarTermOLS`, `prep_for_etwfe_regression`, and
+#' `getActualCohortTes`. Consolidated by GitHub #83.
+#' @param r Integer; the cohort index, `1 <= r <= R`.
+#' @param R Integer; total number of treated cohorts.
+#' @param first_inds Integer vector; the per-cohort starting indices
+#'   (length `R`), as returned by `getFirstInds()`.
+#' @param num_treats Integer; the total number of treatment coefficients
+#'   (one per (cohort, time) pair), as returned by `getNumTreats()`.
+#' @return Integer vector; the range `first_ind_r:last_ind_r`.
+#' @seealso `getFirstInds()`, `getNumTreats()`.
+#' @keywords internal
+#' @noRd
+.cohort_block_inds <- function(r, R, first_inds, num_treats) {
+	first_ind_r <- first_inds[r]
+	last_ind_r <- if (r < R) first_inds[r + 1] - 1 else num_treats
+	first_ind_r:last_ind_r
+}
+
+#' @title Multinomial covariance matrix from cohort-membership probabilities
+#' @description
+#' Returns the `length(probs) x length(probs)` covariance matrix of the
+#' multinomial random variable with cell probabilities `probs` and a
+#' single trial (or, equivalently, the per-observation covariance of the
+#' indicator vector for cohort membership). The closed-form is
+#' `S = -outer(probs, probs); diag(S) <- probs * (1 - probs)`.
+#' Used inside the variance-term-2 machinery at `getSecondVarTermDataApp`
+#' (R/fetwfe_core.R), `getSecondVarTermOLS` (R/ols_calcs.R), and
+#' `.event_study_var2_fetwfe` (R/event_study.R). Consolidated by
+#' GitHub #83.
+#' @param probs Numeric vector of length `R`; cohort-membership
+#'   probabilities P(W = r) for r in 1:R. Should sum to less than 1
+#'   (the residual mass is the never-treated probability).
+#' @return Numeric matrix of dimensions `length(probs) x length(probs)`;
+#'   the symmetric covariance matrix.
+#' @keywords internal
+#' @noRd
+.multinomial_cov <- function(probs) {
+	S <- -outer(probs, probs)
+	diag(S) <- probs * (1 - probs)
+	S
+}
