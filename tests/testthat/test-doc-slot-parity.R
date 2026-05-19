@@ -192,3 +192,113 @@ test_that("every exported function has an @examples block", {
 		}
 	}
 })
+
+# ------------------------------------------------------------------------------
+# Test 3: cross-class slot parity (issue #93 Gap 1).
+#
+# For each slot name in the union of the four .EXPECTED_SLOTS_<CLASS> vectors
+# (treating fetwfe's $internal sublist as flattened — its child slots are
+# top-level in the other classes), assert the slot appears in EITHER all four
+# classes (the default) OR in exactly the classes listed in a `DIVERGENT_SLOTS`
+# table entry. The table records intentional divergences with a rationale.
+#
+# What this catches: a PR that adds a new slot to one estimator's output
+# without adding it to the others (or that intentionally diverges without
+# documenting the rationale). Test 1 above already catches per-class
+# code-vs-doc drift; this Test 3 catches CROSS-class drift.
+# ------------------------------------------------------------------------------
+
+test_that("cross-class slot inventory matches the documented divergence table", {
+	# Divergent slots: ones that DON'T appear in all 4 classes by design.
+	# Each entry's `classes` is the exact set the slot should appear in;
+	# `rationale` documents why.
+	DIVERGENT_SLOTS <- list(
+		"alpha" = list(
+			classes = c("fetwfe", "etwfe", "betwfe"),
+			rationale = "twfeCovs has no inference output (no SEs, p-values, or CIs), so no alpha."
+		),
+		"att_selected" = list(
+			classes = c("fetwfe", "betwfe"),
+			rationale = "Only the selection-based (bridge-penalty) estimators perform selection."
+		),
+		"lambda.max" = list(
+			classes = c("fetwfe", "betwfe"),
+			rationale = "Only bridge-penalty estimators have a lambda regularization path."
+		),
+		"lambda.max_model_size" = list(
+			classes = c("fetwfe", "betwfe"),
+			rationale = "Only bridge-penalty estimators have a lambda regularization path."
+		),
+		"lambda.min" = list(
+			classes = c("fetwfe", "betwfe"),
+			rationale = "Only bridge-penalty estimators have a lambda regularization path."
+		),
+		"lambda.min_model_size" = list(
+			classes = c("fetwfe", "betwfe"),
+			rationale = "Only bridge-penalty estimators have a lambda regularization path."
+		),
+		"lambda_star" = list(
+			classes = c("fetwfe", "betwfe"),
+			rationale = "Only bridge-penalty estimators have a lambda regularization path."
+		),
+		"lambda_star_model_size" = list(
+			classes = c("fetwfe", "betwfe"),
+			rationale = "Only bridge-penalty estimators have a lambda regularization path."
+		),
+		"theta_hat" = list(
+			classes = c("fetwfe"),
+			rationale = "Only fetwfe applies the bridge fusion transform; theta_hat is the transformed coefficient vector."
+		)
+	)
+
+	# Effective slot set per class: fetwfe's $internal sublist is flattened
+	# so its child slots count as top-level for cross-class comparison.
+	# (User-access paths are different — fit$X_ints vs fit$internal$X_ints —
+	# but the value, semantic, and presence are equivalent across classes.)
+	effective_slots <- list(
+		fetwfe = c(
+			setdiff(fetwfe:::.EXPECTED_SLOTS_FETWFE, "internal"),
+			fetwfe:::.EXPECTED_INTERNAL_SLOTS_FETWFE
+		),
+		etwfe = fetwfe:::.EXPECTED_SLOTS_ETWFE,
+		betwfe = fetwfe:::.EXPECTED_SLOTS_BETWFE,
+		twfeCovs = fetwfe:::.EXPECTED_SLOTS_TWFECOVS
+	)
+	all_classes <- names(effective_slots)
+	universe <- unique(unlist(effective_slots))
+
+	for (slot in universe) {
+		observed <- all_classes[sapply(
+			effective_slots,
+			function(s) slot %in% s
+		)]
+		if (slot %in% names(DIVERGENT_SLOTS)) {
+			expected <- DIVERGENT_SLOTS[[slot]]$classes
+			rationale <- DIVERGENT_SLOTS[[slot]]$rationale
+		} else {
+			expected <- all_classes
+			rationale <- "(no DIVERGENT_SLOTS entry — slot expected in all 4 classes)"
+		}
+		expect_true(
+			setequal(observed, expected),
+			info = paste0(
+				"Cross-class slot parity mismatch for `",
+				slot,
+				"`:\n",
+				"  observed in classes: ",
+				paste(observed, collapse = ", "),
+				"\n",
+				"  expected in classes: ",
+				paste(expected, collapse = ", "),
+				"\n",
+				"  rationale: ",
+				rationale,
+				"\n",
+				"  Fix: either add `",
+				slot,
+				"` to the missing class(es)' .EXPECTED_SLOTS_<CLASS> vector, ",
+				"or add/update a DIVERGENT_SLOTS entry in this test with a rationale."
+			)
+		)
+	}
+})
