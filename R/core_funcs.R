@@ -110,13 +110,118 @@ prep_for_etwfe_regression <- function(
 	is_fetwfe,
 	is_twfe_covs = FALSE
 ) {
+	gls <- .estimate_variance_and_gls(
+		y = y,
+		X_ints = X_ints,
+		X_mod = X_mod,
+		sig_eps_sq = sig_eps_sq,
+		sig_eps_c_sq = sig_eps_c_sq,
+		N = N,
+		T = T,
+		p = p,
+		verbose = verbose
+	)
+	y_final <- gls$y_gls
+	X_final <- gls$X_gls
+	sig_eps_sq <- gls$sig_eps_sq
+	sig_eps_c_sq <- gls$sig_eps_c_sq
+
+	if (is_twfe_covs) {
+		coll <- .collapse_design_for_twfe_covs(
+			X_gls = X_final,
+			N = N,
+			T = T,
+			R = R,
+			d = d,
+			num_treats = num_treats,
+			first_inds = first_inds
+		)
+		X_final <- coll$X_collapsed
+		p <- coll$p_short
+	}
+
+	X_final_scaled <- my_scale(X_final)
+	stopifnot(ncol(X_final_scaled) == p)
+	scale_center <- attr(X_final_scaled, "scaled:center")
+	scale_scale <- attr(X_final_scaled, "scaled:scale")
+
+	ridge <- .append_ridge_rows(
+		X_scaled = X_final_scaled,
+		y_gls = y_final,
+		p = p,
+		add_ridge = add_ridge,
+		is_fetwfe = is_fetwfe,
+		first_inds = first_inds,
+		T = T,
+		R = R,
+		d = d,
+		num_treats = num_treats,
+		sig_eps_sq = sig_eps_sq,
+		sig_eps_c_sq = sig_eps_c_sq,
+		N = N
+	)
+	X_final_scaled <- ridge$X_scaled
+	y_final <- ridge$y_final
+	lambda_ridge <- ridge$lambda_ridge
+
+	probs <- .compute_cohort_probs(
+		in_sample_counts = in_sample_counts,
+		indep_counts = indep_counts,
+		N = N,
+		R = R,
+		indep_count_data_available = indep_count_data_available
+	)
+
+	list(
+		X_final_scaled = X_final_scaled,
+		X_final = X_final,
+		y_final = y_final,
+		scale_center = scale_center,
+		scale_scale = scale_scale,
+		cohort_probs = probs$cohort_probs,
+		cohort_probs_overall = probs$cohort_probs_overall,
+		indep_cohort_probs = probs$indep_cohort_probs,
+		indep_cohort_probs_overall = probs$indep_cohort_probs_overall,
+		sig_eps_sq = sig_eps_sq,
+		sig_eps_c_sq = sig_eps_c_sq,
+		lambda_ridge = lambda_ridge
+	)
+}
+
+#' @title Estimate variance components and apply GLS whitening
+#' @description If `sig_eps_sq` or `sig_eps_c_sq` is NA, estimate both via
+#'   `estOmegaSqrtInv()` (REML on `y ~ X + (1 | unit)`). Then build
+#'   `Omega = sig_eps_sq * I_T + sig_eps_c_sq * J_T`, take its
+#'   matrix square root inverse, and apply the kronecker-product GLS
+#'   transform to `y` and `X_mod`.
+#' @param y Numeric vector of length `N*T`; raw response.
+#' @param X_ints Numeric matrix used by REML when variance components are
+#'   NA.
+#' @param X_mod Numeric matrix to GLS-transform.
+#' @param sig_eps_sq,sig_eps_c_sq Numeric or NA; row-level / unit-level
+#'   variance components.
+#' @param N,T,p Integers; units, time periods, design columns.
+#' @param verbose Logical; if TRUE, print timing messages.
+#' @return List with `y_gls`, `X_gls`, `sig_eps_sq`, `sig_eps_c_sq`.
+#' @keywords internal
+#' @noRd
+.estimate_variance_and_gls <- function(
+	y,
+	X_ints,
+	X_mod,
+	sig_eps_sq,
+	sig_eps_c_sq,
+	N,
+	T,
+	p,
+	verbose
+) {
 	if (verbose) {
 		message("Getting omega sqrt inverse estimate...")
 		t0 <- Sys.time()
 	}
 
 	if (is.na(sig_eps_sq) | is.na(sig_eps_c_sq)) {
-		# Get omega_sqrt_inv matrix to multiply y and X_mod by on the left
 		omega_res <- estOmegaSqrtInv(
 			y,
 			X_ints,
@@ -140,7 +245,6 @@ prep_for_etwfe_regression <- function(
 	stopifnot(!is.na(sig_eps_sq) & !is.na(sig_eps_c_sq))
 
 	Omega <- diag(rep(sig_eps_sq, T)) + matrix(sig_eps_c_sq, T, T)
-
 	Omega_sqrt_inv <- expm::sqrtm(solve(Omega))
 
 	if (verbose) {
@@ -148,127 +252,180 @@ prep_for_etwfe_regression <- function(
 		message(Sys.time() - t0)
 	}
 
-	y_final <- kronecker(diag(N), sqrt(sig_eps_sq) * Omega_sqrt_inv) %*% y
-	X_final <- kronecker(diag(N), sqrt(sig_eps_sq) * Omega_sqrt_inv) %*% X_mod
+	y_gls <- kronecker(diag(N), sqrt(sig_eps_sq) * Omega_sqrt_inv) %*% y
+	X_gls <- kronecker(diag(N), sqrt(sig_eps_sq) * Omega_sqrt_inv) %*% X_mod
 
-	stopifnot(ncol(X_final) == p)
+	stopifnot(ncol(X_gls) == p)
 
-	#
-	#
-	# twfeCovs modifications
-	#
-	#
+	list(
+		y_gls = y_gls,
+		X_gls = X_gls,
+		sig_eps_sq = sig_eps_sq,
+		sig_eps_c_sq = sig_eps_c_sq
+	)
+}
 
-	if (is_twfe_covs) {
-		stopifnot(nrow(X_final) == N * T)
-		# stopifnot(nrow(X_final_scaled) == N * T)
+#' @title Collapse the twfeCovs design matrix
+#' @description Drop treatment-effect interaction columns and the
+#'   covariate-by-time / covariate-by-cohort interaction columns, then
+#'   collapse the per-cohort treatment dummies into one column per
+#'   cohort. Called from the orchestrator only when
+#'   `is_twfe_covs = TRUE`.
+#' @param X_gls Numeric matrix; GLS-transformed design.
+#' @param N,T,R,d Integers; units, time periods, treated cohorts,
+#'   covariates.
+#' @param num_treats Integer; treatment-column count in the pre-collapse
+#'   design.
+#' @param first_inds Integer vector; first-index-within-cohort offsets.
+#' @return List with `X_collapsed` (post-collapse design) and `p_short`
+#'   (column count `= R + T - 1 + d + R`).
+#' @keywords internal
+#' @noRd
+.collapse_design_for_twfe_covs <- function(
+	X_gls,
+	N,
+	T,
+	R,
+	d,
+	num_treats,
+	first_inds
+) {
+	stopifnot(nrow(X_gls) == N * T)
 
-		# Drop columns corresponding to treatment effect interactions
-		X_final <- X_final[, 1:(R + T - 1 + d * (1 + R + T - 1) + num_treats)]
-		# X_final_scaled <- X_final_scaled[, 1:(R + T - 1 + d * (1 + R + T - 1) + num_treats)]
+	X <- X_gls[, 1:(R + T - 1 + d * (1 + R + T - 1) + num_treats)]
 
-		# Drop columns corresponding to interactions between X and time, cohorts
-		first_treat_ind <- R + T - 1 + d * (1 + R + T - 1)
-		treat_inds <- first_treat_ind:(first_treat_ind + num_treats - 1)
+	first_treat_ind <- R + T - 1 + d * (1 + R + T - 1)
+	treat_inds <- first_treat_ind:(first_treat_ind + num_treats - 1)
+	stopifnot(length(treat_inds) == num_treats)
 
-		stopifnot(length(treat_inds) == num_treats)
+	X <- X[, c(1:(R + T - 1 + d), treat_inds)]
+	stopifnot(nrow(X) == N * T)
 
-		X_final <- X_final[, c(1:(R + T - 1 + d), treat_inds)]
-		# X_final_scaled <- X_final_scaled[, c(1:(R + T - 1 + d), treat_inds)]
+	treat_inds_mat <- matrix(as.numeric(NA), nrow = N * T, ncol = R)
+	for (r in 1:R) {
+		inds_r <- .cohort_block_inds(r, R, first_inds, num_treats)
+		cols_r <- R + T - 1 + d + inds_r
+		treat_inds_mat[, r] <- rowSums(X[, cols_r, drop = FALSE])
+	}
+	stopifnot(all(!is.na(treat_inds_mat)))
 
-		stopifnot(nrow(X_final) == N * T)
+	X_collapsed <- cbind(X[, 1:(R + T - 1 + d)], treat_inds_mat)
 
-		# Collapse together all columns corresponding to the same cohort
-		# stopifnot(nrow(X_final_scaled) == N * T)
-		treat_inds_mat <- matrix(as.numeric(NA), nrow = N * T, ncol = R)
+	p_short <- R + T - 1 + d + R
+	stopifnot(ncol(X_collapsed) == p_short)
 
-		for (r in 1:R) {
-			inds_r <- .cohort_block_inds(r, R, first_inds, num_treats)
-			cols_r <- R + T - 1 + d + inds_r
-			treat_inds_mat[, r] <- rowSums(X_final[, cols_r, drop = FALSE])
-		}
+	list(X_collapsed = X_collapsed, p_short = p_short)
+}
 
-		stopifnot(all(!is.na(treat_inds_mat)))
-
-		X_final <- cbind(X_final[, 1:(R + T - 1 + d)], treat_inds_mat)
-		# X_final_scaled <- cbind(X_final_scaled[, 1:(R + T - 1 + d)], treat_inds_mat)
-
-		p_short <- R + T - 1 + d + R
-
-		stopifnot(ncol(X_final) == p_short)
-		# stopifnot(ncol(X_final_scaled) == p_short)
-
-		treat_inds_short <- (R + T - 1 + d + 1):p_short
-
-		stopifnot(length(treat_inds_short) == R)
-
-		#
-		#
-		# Wrap up, store needed values
-		#
-		#
-
-		p <- p_short
-		treat_inds <- treat_inds_short
-		num_treats <- R
+#' @title Append ridge-augmentation rows to the scaled design
+#' @description When `add_ridge = TRUE`, build the augmentation matrix
+#'   (`D_inverse` from the fusion transform for FETWFE; `diag(p)` for
+#'   ETWFE / BETWFE / twfeCovs), then append
+#'   `sqrt(lambda_ridge) * mat` rows to `X_scaled` and zeros to `y_gls`.
+#'   When `add_ridge = FALSE`, returns inputs unchanged with
+#'   `lambda_ridge = NA`. The long arg list reflects two semantic
+#'   groups: `(N, T, p, sig_eps_sq, sig_eps_c_sq)` feed the
+#'   `lambda_ridge` formula; `(is_fetwfe, first_inds, T, R, d,
+#'   num_treats)` feed the `D_inverse` construction.
+#' @param X_scaled Numeric matrix; the scaled, GLS-transformed design.
+#' @param y_gls Numeric vector; the GLS-transformed response.
+#' @param p Integer; column count of `X_scaled`.
+#' @param add_ridge Logical.
+#' @param is_fetwfe Logical; selects fusion-inverse vs identity.
+#' @param first_inds,T,R,d,num_treats Args for
+#'   `genFullInvFusionTransformMat()` (only used when
+#'   `is_fetwfe = TRUE`).
+#' @param sig_eps_sq,sig_eps_c_sq,N Numeric / integer; inputs to the
+#'   `lambda_ridge = 1e-5 * (sig_eps_sq + sig_eps_c_sq) * sqrt(p/(N*T))`
+#'   formula.
+#' @return List with the (possibly-augmented) `X_scaled`, `y_final`,
+#'   and `lambda_ridge`.
+#' @keywords internal
+#' @noRd
+.append_ridge_rows <- function(
+	X_scaled,
+	y_gls,
+	p,
+	add_ridge,
+	is_fetwfe,
+	first_inds,
+	T,
+	R,
+	d,
+	num_treats,
+	sig_eps_sq,
+	sig_eps_c_sq,
+	N
+) {
+	if (!add_ridge) {
+		return(list(
+			X_scaled = X_scaled,
+			y_final = y_gls,
+			lambda_ridge = as.numeric(NA)
+		))
 	}
 
-	#
-	#
-	# Optional: if using ridge regularization on untransformed coefficients,
-	# add those rows now
-	#
-	#
+	mat_to_multiply <- diag(p)
 
-	X_final_scaled <- my_scale(X_final)
-	stopifnot(ncol(X_final_scaled) == p)
-	scale_center <- attr(X_final_scaled, "scaled:center")
-	scale_scale <- attr(X_final_scaled, "scaled:scale")
-
-	if (add_ridge) {
-		# Initialize identity matrix
-		mat_to_multiply <- diag(p)
-
-		if (is_fetwfe) {
-			# First need to get D^{-1}:
-			D_inverse <- genFullInvFusionTransformMat(
-				first_inds = first_inds,
-				T = T,
-				R = R,
-				d = d,
-				num_treats = num_treats
-			)
-
-			stopifnot(ncol(D_inverse) == p)
-			stopifnot(nrow(D_inverse) == p)
-
-			mat_to_multiply <- D_inverse
-		}
-
-		# Now add rows to X_final_scaled
-		lambda_ridge <- 0.00001 *
-			(sig_eps_sq + sig_eps_c_sq) *
-			sqrt(p / (N * T))
-
-		X_final_scaled <- rbind(
-			X_final_scaled,
-			sqrt(lambda_ridge) * mat_to_multiply
+	if (is_fetwfe) {
+		D_inverse <- genFullInvFusionTransformMat(
+			first_inds = first_inds,
+			T = T,
+			R = R,
+			d = d,
+			num_treats = num_treats
 		)
-		y_final <- c(y_final, rep(0, p))
 
-		stopifnot(length(y_final) == N * T + p)
-		stopifnot(nrow(X_final_scaled) == N * T + p)
-	} else {
-		lambda_ridge <- as.numeric(NA)
+		stopifnot(ncol(D_inverse) == p)
+		stopifnot(nrow(D_inverse) == p)
+
+		mat_to_multiply <- D_inverse
 	}
 
-	#
-	#
-	# Step 2: get cohort-specific sample proportions (estimated treatment
-	# probabilities)
-	#
-	#
+	lambda_ridge <- 0.00001 *
+		(sig_eps_sq + sig_eps_c_sq) *
+		sqrt(p / (N * T))
 
+	X_scaled <- rbind(
+		X_scaled,
+		sqrt(lambda_ridge) * mat_to_multiply
+	)
+	y_final <- c(y_gls, rep(0, p))
+
+	stopifnot(length(y_final) == N * T + p)
+	stopifnot(nrow(X_scaled) == N * T + p)
+
+	list(
+		X_scaled = X_scaled,
+		y_final = y_final,
+		lambda_ridge = lambda_ridge
+	)
+}
+
+#' @title Compute in-sample (and optionally independent) cohort probabilities
+#' @description Convert raw cohort counts into two normalizations:
+#'   within-treated (`cohort_probs`, sums to 1) and overall
+#'   (`cohort_probs_overall`, equals `count_r / N`). If
+#'   `indep_count_data_available = TRUE`, do the same for `indep_counts`;
+#'   otherwise the indep-side outputs are NA.
+#' @param in_sample_counts Integer vector of length `R + 1`; counts of
+#'   never-treated + treated cohorts in the working panel.
+#' @param indep_counts Integer vector of length `R + 1` or NA;
+#'   independent-sample counts.
+#' @param N Integer; total units.
+#' @param R Integer; treated cohorts.
+#' @param indep_count_data_available Logical.
+#' @return List with `cohort_probs`, `cohort_probs_overall`,
+#'   `indep_cohort_probs`, `indep_cohort_probs_overall`.
+#' @keywords internal
+#' @noRd
+.compute_cohort_probs <- function(
+	in_sample_counts,
+	indep_counts,
+	N,
+	R,
+	indep_count_data_available
+) {
 	cohort_probs <- in_sample_counts[2:(R + 1)] /
 		sum(in_sample_counts[2:(R + 1)])
 
@@ -299,9 +456,7 @@ prep_for_etwfe_regression <- function(
 		stopifnot(
 			abs(
 				1 -
-					sum(
-						indep_cohort_probs_overall
-					) -
+					sum(indep_cohort_probs_overall) -
 					indep_counts[1] / N
 			) <
 				1e-6
@@ -311,20 +466,12 @@ prep_for_etwfe_regression <- function(
 		indep_cohort_probs_overall <- NA
 	}
 
-	return(list(
-		X_final_scaled = X_final_scaled,
-		X_final = X_final,
-		y_final = y_final,
-		scale_center = scale_center,
-		scale_scale = scale_scale,
+	list(
 		cohort_probs = cohort_probs,
 		cohort_probs_overall = cohort_probs_overall,
 		indep_cohort_probs = indep_cohort_probs,
-		indep_cohort_probs_overall = indep_cohort_probs_overall,
-		sig_eps_sq = sig_eps_sq,
-		sig_eps_c_sq = sig_eps_c_sq,
-		lambda_ridge = lambda_ridge
-	))
+		indep_cohort_probs_overall = indep_cohort_probs_overall
+	)
 }
 
 
