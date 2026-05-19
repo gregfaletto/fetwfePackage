@@ -283,8 +283,8 @@ betwfe <- function(
 
 	covs_orig <- covs
 
-	# Check inputs
-	ret <- checkFetwfeInputs(
+	# Steps 3-5: input validation + auto-truncation + design-matrix prep.
+	prep <- .run_estimator_input_prep(
 		pdata = pdata,
 		time_var = time_var,
 		unit_var = unit_var,
@@ -299,49 +299,27 @@ betwfe <- function(
 		q = q,
 		verbose = verbose,
 		alpha = alpha,
-		add_ridge = add_ridge
+		add_ridge = add_ridge,
+		allow_no_never_treated = allow_no_never_treated,
+		estimator_type = "fetwfe"
 	)
 
-	pdata <- ret$pdata
-	indep_count_data_available = ret$indep_count_data_available
+	pdata <- prep$pdata
+	covs <- prep$covs
+	X_ints <- prep$X_ints
+	y <- prep$y
+	y_mean <- prep$y_mean
+	N <- prep$N
+	T <- prep$T
+	d <- prep$d
+	p <- prep$p
+	in_sample_counts <- prep$in_sample_counts
+	num_treats <- prep$num_treats
+	first_inds <- prep$first_inds
+	R <- prep$R
+	indep_count_data_available <- prep$indep_count_data_available
 
-	rm(ret)
-
-	pdata <- .truncate_if_no_never_treated(
-		pdata,
-		time_var = time_var,
-		unit_var = unit_var,
-		treat_var = treatment,
-		allow_no_never_treated = allow_no_never_treated
-	)
-
-	res1 <- prep_for_etwfe_core(
-		pdata = pdata,
-		response = response,
-		time_var = time_var,
-		unit_var = unit_var,
-		treatment = treatment,
-		covs = covs,
-		verbose = verbose,
-		indep_count_data_available = indep_count_data_available,
-		indep_counts = indep_counts
-	)
-
-	pdata <- res1$pdata
-	covs <- res1$covs
-	X_ints <- res1$X_ints
-	y <- res1$y
-	y_mean <- res1$y_mean
-	N <- res1$N
-	T <- res1$T
-	d <- res1$d
-	p <- res1$p
-	in_sample_counts <- res1$in_sample_counts
-	num_treats <- res1$num_treats
-	first_inds <- res1$first_inds
-	R <- res1$R
-
-	rm(res1)
+	rm(prep)
 
 	res <- betwfe_core(
 		X_ints = X_ints,
@@ -366,30 +344,15 @@ betwfe <- function(
 		se_type = se_type
 	)
 
-	if (indep_count_data_available) {
-		stopifnot(!is.na(res$indep_att_hat))
-
-		if ((q < 1) & res$calc_ses) {
-			stopifnot(!is.na(res$indep_att_se))
-		}
-
-		stopifnot(all(!is.na(res$indep_cohort_probs)))
-		att_hat <- res$indep_att_hat
-		att_se <- res$indep_att_se
-		cohort_probs <- res$indep_cohort_probs
-		cohort_probs_overall <- res$indep_cohort_probs_overall
-	} else {
-		stopifnot(!is.na(res$in_sample_att_hat))
-
-		if ((q < 1) & res$calc_ses) {
-			stopifnot(!is.na(res$in_sample_att_se))
-		}
-
-		att_hat <- res$in_sample_att_hat
-		att_se <- res$in_sample_att_se
-		cohort_probs <- res$cohort_probs
-		cohort_probs_overall <- res$cohort_probs_overall
-	}
+	att_branch <- .select_att_branch(
+		res,
+		indep_count_data_available = indep_count_data_available,
+		q = q
+	)
+	att_hat <- att_branch$att_hat
+	att_se <- att_branch$att_se
+	cohort_probs <- att_branch$cohort_probs
+	cohort_probs_overall <- att_branch$cohort_probs_overall
 
 	att_p_value <- .compute_p_values(att_hat, att_se)
 	att_selected <- att_hat != 0
