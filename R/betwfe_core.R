@@ -1134,7 +1134,6 @@ betwfe_core <- function(
 		T = T,
 		fused = FALSE,
 		calc_ses = q < 1,
-		p = p, # Total number of original parameters (columns in X_ints)
 		alpha = alpha,
 		se_type = se_type,
 		y_final = y_final

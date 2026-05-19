@@ -99,9 +99,7 @@ test_that("getSecondVarTermOLS does NOT fire on sums inside the old (loose) band
 		R = 2L
 	)
 	fetwfe:::getSecondVarTermDataApp(
-		psi_mat = matrix(0, nrow = 3L, ncol = 2L),
 		sel_treat_inds_shifted = 1:3,
-		tes = c(1, 2, 3),
 		cohort_probs_overall = cohort_probs_overall,
 		first_inds = c(1L, 3L),
 		theta_hat_treat_sel = c(0.1, 0.2, 0.3),
@@ -109,7 +107,6 @@ test_that("getSecondVarTermOLS does NOT fire on sums inside the old (loose) band
 		N = 100L,
 		T = 3L,
 		R = 2L,
-		fused = TRUE,
 		d_inv_treat_sel = d_inv
 	)
 }

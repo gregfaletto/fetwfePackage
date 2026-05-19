@@ -1,5 +1,46 @@
 # NEWS
 
+## Version 1.9.17 (2026-05-19)
+
+- Small consistency-and-cleanup bundle (GitHub #76). Eight items:
+  (1) `twfeCovs()` now returns an object with class `"twfeCovs"`, with
+  minimal-stub `print.twfeCovs()` and `coef.twfeCovs()` methods to bring
+  it into parity with the three sibling estimators (`fetwfe`, `etwfe`,
+  `betwfe`). A new `R/twfeCovs_class.R` file holds these alongside a
+  NULL doc stub. The class dispatcher in `.assert_estimator_object()`
+  was extended to recognize `twfeCovs`. Live `print()` and `coef()`
+  behavior is preserved exactly.
+  (2) Three `augment.*` docstrings (for `fetwfe`, `etwfe`, `betwfe`)
+  were rewritten to reflect the actual auto-trim + auto-sort behavior
+  of `.augment_estimator_output()`. The pre-fix docstrings claimed the
+  user must pre-trim and pre-sort; that has been wrong since #27.
+  (3a) `checkEtwfeInputs()` `@title` now correctly references the
+  `etwfe` / `betwfe` / `twfeCovs` functions (was: `fetwfe`).
+  (6) Deleted the unused, internal `genInvFusionTransformMat()` helper.
+  Confirmed zero callers before removal.
+  (7a) Removed Test 4 from `tests/testthat/test-fetwfe-var2-fix.R`:
+  its "hand-computed" reference reproduced the helper's own loop
+  structure step-for-step, so passing only confirmed the helper was
+  self-consistent, not that it matched an independent target. Tests 2
+  (Monte Carlo validation) and 3 (anti-regression) are the
+  load-bearing var2 coverage.
+  (7b) Demoted the tautological `.fitted + .resid == y` round-trip
+  expectation in `tests/testthat/test-augment-treatment-parity.R` to
+  a comment. The load-bearing row-order check is preserved.
+  (8a) Dropped unused `p` argument from `getCohortATTsFinal()`.
+  (8b) Dropped unused `psi_mat` and `tes` arguments from
+  `getSecondVarTermDataApp()`, with corresponding test call-site
+  updates.
+  (8c) Dropped the dead `fused = FALSE` branch (and the `fused`
+  argument) from `getSecondVarTermDataApp()`, along with the
+  corresponding roxygen `@param fused` block and stale docstring
+  sentence about the fused-only restriction.
+- The issue's Item 5 (NULL-alpha defensive fix in `tidy.*`) was
+  surveyed and skipped: the post-#85 constructor validators catch
+  NULL `alpha` before any `tidy.*()` method runs, so the proposed
+  defensive default would be unreachable. See `.plans/cleanup-bundle-76/PLAN.md`
+  Decision D7 for the full trace.
+
 ## Version 1.9.16 (2026-05-18)
 
 - Extracted two micro-helpers to `R/utility.R` and standardized one

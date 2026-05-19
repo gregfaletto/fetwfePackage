@@ -440,10 +440,8 @@
 
 #' @title Universal dispatcher: validate any estimator-class object
 #' @description Dispatches via `inherits()` to the appropriate
-#' `.validate_<class>` helper from #85. twfeCovs is not currently
-#' classed (#76 will add `class(out) <- "twfeCovs"`); when that lands,
-#' a corresponding branch can be added here. No current method
-#' precondition routes a twfeCovs object through this dispatcher.
+#' `.validate_<class>` helper from #85. As of #76, `twfeCovs` is now
+#' a classed list and its `.validate_twfeCovs` branch is wired up.
 #' @keywords internal
 #' @noRd
 .assert_estimator_object <- function(x) {
@@ -453,9 +451,11 @@
 		.validate_etwfe(x)
 	} else if (inherits(x, "betwfe")) {
 		.validate_betwfe(x)
+	} else if (inherits(x, "twfeCovs")) {
+		.validate_twfeCovs(x)
 	} else {
 		stop(
-			"Expected a `fetwfe`, `etwfe`, or `betwfe` object; got class(es): ",
+			"Expected a `fetwfe`, `etwfe`, `betwfe`, or `twfeCovs` object; got class(es): ",
 			paste(class(x), collapse = ", "),
 			call. = FALSE
 		)
