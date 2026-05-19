@@ -4,15 +4,29 @@
 \alias{tidy.FETWFE_tes}
 \title{Tidy a \code{FETWFE_tes} simulation truth object}
 \usage{
-\method{tidy}{FETWFE_tes}(x, ...)
+\method{tidy}{FETWFE_tes}(x, conf.int = TRUE, conf.level = 0.95, ...)
 }
 \arguments{
 \item{x}{An object of class \code{"FETWFE_tes"} returned by \code{\link[=getTes]{getTes()}}.}
 
+\item{conf.int}{Logical; include \code{conf.low} / \code{conf.high} columns.
+Defaults to \code{TRUE} to match the sibling tidy methods and preserve
+pre-#84 backward compatibility. Population-truth objects have no
+sampling distribution, so the CI columns are always filled with
+\code{NA_real_} when included.}
+
+\item{conf.level}{Numeric in (0, 1). Accepted for broom-convention
+parity but unused (no CIs to compute for a population truth);
+validated regardless. Defaults to \code{0.95} (\code{FETWFE_tes} objects do
+not carry an alpha slot, so there is no fitted-object value to
+default to).}
+
 \item{...}{Unused.}
 }
 \value{
-A data frame with \code{R + 1} rows.
+A data frame with \code{R + 1} rows and columns \code{term},
+\code{estimate}, \code{std.error}, \code{statistic}, \code{p.value}, and (when
+\code{conf.int = TRUE}) \code{conf.low} / \code{conf.high}.
 }
 \description{
 Returns a \code{broom}-style tidy data frame for the population-truth
@@ -22,8 +36,11 @@ object returned by \code{\link[=getTes]{getTes()}}. Row 1 is the overall true AT
 convention that cohort \code{r} adopts at calendar time 1, so
 the labels match what \verb{tidy.<estimator>} uses on a fitted panel
 generated from the same \code{FETWFE_coefs}). Standard error /
-statistic / p-value / CI columns are all \code{NA_real_} — there is
-no sampling distribution for a population truth.
+statistic / p-value columns are always \code{NA_real_} — there is no
+sampling distribution for a population truth. When
+\code{conf.int = TRUE} (default, matching the sibling tidy methods),
+\code{conf.low} / \code{conf.high} columns are included and also set to
+\code{NA_real_}. When \code{conf.int = FALSE}, those columns are omitted.
 }
 \examples{
 \dontrun{

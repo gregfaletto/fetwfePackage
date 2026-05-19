@@ -471,19 +471,35 @@ tidy.fetwfe_event_study <- function(
 #' convention that cohort `r` adopts at calendar time `r + 1`, so
 #' the labels match what `tidy.<estimator>` uses on a fitted panel
 #' generated from the same `FETWFE_coefs`). Standard error /
-#' statistic / p-value / CI columns are all `NA_real_` — there is
-#' no sampling distribution for a population truth.
+#' statistic / p-value columns are always `NA_real_` — there is no
+#' sampling distribution for a population truth. When
+#' `conf.int = TRUE` (default, matching the sibling tidy methods),
+#' `conf.low` / `conf.high` columns are included and also set to
+#' `NA_real_`. When `conf.int = FALSE`, those columns are omitted.
 #'
 #' @param x An object of class `"FETWFE_tes"` returned by [getTes()].
+#' @param conf.int Logical; include `conf.low` / `conf.high` columns.
+#'   Defaults to `TRUE` to match the sibling tidy methods and preserve
+#'   pre-#84 backward compatibility. Population-truth objects have no
+#'   sampling distribution, so the CI columns are always filled with
+#'   `NA_real_` when included.
+#' @param conf.level Numeric in (0, 1). Accepted for broom-convention
+#'   parity but unused (no CIs to compute for a population truth);
+#'   validated regardless. Defaults to `0.95` (`FETWFE_tes` objects do
+#'   not carry an alpha slot, so there is no fitted-object value to
+#'   default to).
 #' @param ... Unused.
-#' @return A data frame with `R + 1` rows.
+#' @return A data frame with `R + 1` rows and columns `term`,
+#'   `estimate`, `std.error`, `statistic`, `p.value`, and (when
+#'   `conf.int = TRUE`) `conf.low` / `conf.high`.
 #' @examples
 #' \dontrun{
 #'   coefs <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
 #'   broom::tidy(getTes(coefs))
 #' }
 #' @export
-tidy.FETWFE_tes <- function(x, ...) {
+tidy.FETWFE_tes <- function(x, conf.int = TRUE, conf.level = 0.95, ...) {
+	stopifnot(conf.level > 0, conf.level < 1)
 	R <- length(x$actual_cohort_tes)
 	cohort_times <- if (!is.null(x$cohort_times)) {
 		x$cohort_times
@@ -494,16 +510,19 @@ tidy.FETWFE_tes <- function(x, ...) {
 	}
 	terms <- c("ATT_true", paste0("Cohort ", cohort_times))
 	estimates <- c(x$att_true, x$actual_cohort_tes)
-	data.frame(
+	out <- data.frame(
 		term = terms,
 		estimate = estimates,
 		std.error = rep(NA_real_, R + 1L),
 		statistic = rep(NA_real_, R + 1L),
 		p.value = rep(NA_real_, R + 1L),
-		conf.low = rep(NA_real_, R + 1L),
-		conf.high = rep(NA_real_, R + 1L),
 		stringsAsFactors = FALSE
 	)
+	if (conf.int) {
+		out$conf.low <- rep(NA_real_, R + 1L)
+		out$conf.high <- rep(NA_real_, R + 1L)
+	}
+	out
 }
 
 #-------------------------------------------------------------------------------

@@ -1,5 +1,16 @@
 # NEWS
 
+## Version 1.9.22 (2026-05-19)
+
+- `tidy.FETWFE_tes()` now accepts `conf.int` and `conf.level` arguments
+  for broom-convention parity with the sibling `tidy.fetwfe()`,
+  `tidy.etwfe()`, `tidy.betwfe()`, and `tidy.fetwfe_event_study()`
+  methods. Defaults are `conf.int = TRUE` (preserves pre-fix output —
+  NA-valued `conf.low` / `conf.high` columns included) and
+  `conf.level = 0.95`. When `conf.int = FALSE`, the CI columns are
+  omitted entirely. `conf.level` is validated but unused (there is no
+  sampling distribution for a population truth). GitHub #84 item 14.
+
 ## Version 1.9.21 (2026-05-19)
 
 - Added compact `print` methods for `FETWFE_simulated` (output of
