@@ -74,7 +74,7 @@ test_that("fetwfe errors when pdata is not a data.frame", {
 			covs = c("cov1", "cov2"),
 			response = "y"
 		),
-		"is.data.frame"
+		"pdata must be a data frame"
 	)
 })
 
@@ -94,7 +94,7 @@ test_that("fetwfe errors when time_var is not integer", {
 			covs = c("cov1", "cov2"),
 			response = "y"
 		),
-		"is.integer"
+		"time_var column 'time' must be integer"
 	)
 })
 
@@ -114,7 +114,7 @@ test_that("fetwfe errors when unit_var is not character", {
 			covs = c("cov1", "cov2"),
 			response = "y"
 		),
-		"is.character"
+		"unit_var column 'unit' must be character"
 	)
 })
 
@@ -134,7 +134,7 @@ test_that("fetwfe errors when treatment is not integer", {
 			covs = c("cov1", "cov2"),
 			response = "y"
 		),
-		"is.integer"
+		"treatment column 'treatment' must be integer"
 	)
 })
 
@@ -155,7 +155,7 @@ test_that("fetwfe errors when treatment has values other than 0/1", {
 			covs = c("cov1", "cov2"),
 			response = "y"
 		),
-		"all\\(pdata\\[, treatment\\] %in% c\\(0, 1\\)\\)"
+		"treatment column 'treatment' must contain only 0/1"
 	)
 })
 
@@ -176,7 +176,7 @@ test_that("fetwfe errors when a covariate column is missing", {
 			covs = c("cov1", "cov2"),
 			response = "y"
 		),
-		"all\\(covs %in% colnames\\(pdata\\)\\)"
+		"covs contains name\\(s\\) not in pdata"
 	)
 })
 
@@ -196,7 +196,7 @@ test_that("fetwfe errors when response is not numeric", {
 			covs = c("cov1", "cov2"),
 			response = "y"
 		),
-		"is.numeric"
+		"response column 'y' must be numeric or integer"
 	)
 })
 
@@ -295,7 +295,7 @@ test_that("fetwfe errors when data has fewer than 4 rows", {
 			covs = c("cov1", "cov2"),
 			response = "y"
 		),
-		"nrow\\(pdata\\) >= 4"
+		"pdata must have at least 4 rows"
 	)
 })
 

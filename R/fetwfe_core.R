@@ -203,9 +203,13 @@ getTeResults2 <- function(
 
 # checkFetwfeInputs
 #' @title Check Inputs for the main `fetwfe` function
-#' @description Validates the inputs provided to the main `fetwfe` function,
-#'   ensuring they meet type, dimension, and content requirements. Stops
-#'   execution with an error message if any check fails.
+#' @description Validates the inputs provided to the main `fetwfe` function
+#'   (and, via the shared validator wiring in `.run_estimator_input_prep()`,
+#'   `betwfe()`). Stops execution with a multi-line error message listing
+#'   every malformed input on a single call. Delegates the etwfe-shared
+#'   per-arg checks to `.collect_etwfe_input_violations()` and appends
+#'   the fetwfe/betwfe-specific bridge-penalty (`lambda.max`,
+#'   `lambda.min`, `q`) checks before stopping.
 #' @param pdata Dataframe; the panel data set.
 #' @param time_var Character; name of the time variable column.
 #' @param unit_var Character; name of the unit variable column.
@@ -223,23 +227,19 @@ getTeResults2 <- function(
 #' @param verbose Logical; if TRUE, print progress. Default `FALSE`.
 #' @param alpha Numeric; significance level for confidence intervals. Default `0.05`.
 #' @param add_ridge Logical; if TRUE, add small ridge penalty. Default `FALSE`.
-#' @return Logical `indep_count_data_available`, which is `TRUE` if valid
-#'   `indep_counts` were provided, `FALSE` otherwise.
-#' @details This function performs a series of `stopifnot` checks on each
-#'   parameter. For example:
-#'   - `pdata` must be a dataframe with at least 4 rows.
-#'   - `time_var`, `unit_var`, `treatment`, `response` must be single characters,
-#'     present in `pdata`, and the corresponding columns must have the correct
-#'     type (e.g., integer for time, character for unit, 0/1 integer for treatment).
-#'   - `covs` if provided, must be characters, present in `pdata`, and columns
-#'     must be numeric, integer, or factor.
-#'   - `indep_counts` if provided, must be positive integers.
-#'   - `sig_eps_sq`, `sig_eps_c_sq` if provided, must be non-negative numerics.
-#'   - `lambda.max`, `lambda.min` if provided, must be valid numerics
-#'     (`lambda.max > lambda.min >= 0`).
-#'   - `q` must be in `(0, 2]`.
-#'   - `alpha` must be in `(0, 1)`.
-#'   Issues a warning if `alpha > 0.5`.
+#' @return A list with two elements:
+#'   - `pdata`: the (possibly tibble-coerced) panel data frame.
+#'   - `indep_count_data_available`: logical; `TRUE` if a valid
+#'     `indep_counts` argument was provided.
+#' @details The error-message UX (header `"Invalid inputs:"` followed by
+#'   one bullet per malformed arg) is shared with `checkEtwfeInputs()`
+#'   so that, when the only failing arg is etwfe-shared, the four entry
+#'   points (`fetwfe`, `etwfe`, `betwfe`, `twfeCovs`) produce
+#'   byte-identical messages (a property the PR #103 snapshot tests
+#'   assert). The fetwfe-specific bridge-penalty violations append
+#'   AFTER the etwfe-shared ones, so when only `q`/`lambda.*` are
+#'   malformed, `fetwfe()` and `betwfe()` agree with each other
+#'   verbatim.
 #' @keywords internal
 #' @noRd
 checkFetwfeInputs <- function(
@@ -259,7 +259,7 @@ checkFetwfeInputs <- function(
 	alpha = 0.05,
 	add_ridge = FALSE
 ) {
-	res <- checkEtwfeInputs(
+	res <- .collect_etwfe_input_violations(
 		pdata = pdata,
 		time_var = time_var,
 		unit_var = unit_var,
@@ -273,36 +273,112 @@ checkFetwfeInputs <- function(
 		alpha = alpha,
 		add_ridge = add_ridge
 	)
-
-	indep_count_data_available <- res$indep_count_data_available
+	violations <- res$violations
 	pdata <- res$pdata
+	indep_count_data_available <- res$indep_count_data_available
 
-	rm(res)
-
+	# --- lambda.max ------------------------------------------------------
 	if (any(!is.na(lambda.max))) {
-		stopifnot(is.numeric(lambda.max) | is.integer(lambda.max))
-		stopifnot(length(lambda.max) == 1)
-		stopifnot(lambda.max > 0)
-	}
-
-	if (any(!is.na(lambda.min))) {
-		stopifnot(is.numeric(lambda.min) | is.integer(lambda.min))
-		stopifnot(length(lambda.min) == 1)
-		stopifnot(lambda.min >= 0)
-		if (any(!is.na(lambda.max))) {
-			stopifnot(lambda.max > lambda.min)
+		if (!(is.numeric(lambda.max) || is.integer(lambda.max))) {
+			violations <- c(
+				violations,
+				sprintf(
+					"lambda.max must be numeric or integer; got %s",
+					paste(class(lambda.max), collapse = "/")
+				)
+			)
+		} else if (length(lambda.max) != 1) {
+			violations <- c(
+				violations,
+				sprintf(
+					"lambda.max must be a single value; got length %d",
+					length(lambda.max)
+				)
+			)
+		} else if (!(lambda.max > 0)) {
+			violations <- c(
+				violations,
+				sprintf(
+					"lambda.max must be > 0; got %s",
+					format(lambda.max)
+				)
+			)
 		}
 	}
 
-	stopifnot(is.numeric(q) | is.integer(q))
-	stopifnot(length(q) == 1)
-	stopifnot(q > 0)
-	stopifnot(q <= 2)
+	# --- lambda.min ------------------------------------------------------
+	if (any(!is.na(lambda.min))) {
+		if (!(is.numeric(lambda.min) || is.integer(lambda.min))) {
+			violations <- c(
+				violations,
+				sprintf(
+					"lambda.min must be numeric or integer; got %s",
+					paste(class(lambda.min), collapse = "/")
+				)
+			)
+		} else if (length(lambda.min) != 1) {
+			violations <- c(
+				violations,
+				sprintf(
+					"lambda.min must be a single value; got length %d",
+					length(lambda.min)
+				)
+			)
+		} else if (lambda.min < 0) {
+			violations <- c(
+				violations,
+				sprintf(
+					"lambda.min must be >= 0; got %s",
+					format(lambda.min)
+				)
+			)
+		} else if (
+			# Both well-formed; check ordering only when lambda.max also
+			# survived its own checks (i.e., is a valid positive scalar).
+			any(!is.na(lambda.max)) &&
+				is.numeric(lambda.max) &&
+				length(lambda.max) == 1 &&
+				lambda.max > 0 &&
+				!(lambda.max > lambda.min)
+		) {
+			violations <- c(
+				violations,
+				sprintf(
+					"lambda.max must be > lambda.min; got lambda.max = %s, lambda.min = %s",
+					format(lambda.max),
+					format(lambda.min)
+				)
+			)
+		}
+	}
 
-	return(list(
+	# --- q ---------------------------------------------------------------
+	if (!(is.numeric(q) || is.integer(q)) || length(q) != 1) {
+		violations <- c(
+			violations,
+			sprintf(
+				"q must be a single numeric; got %s (length %d)",
+				paste(class(q), collapse = "/"),
+				length(q)
+			)
+		)
+	} else if (!(q > 0 && q <= 2)) {
+		violations <- c(
+			violations,
+			sprintf(
+				"q must be in (0, 2]; got %s",
+				format(q)
+			)
+		)
+	}
+
+	if (length(violations) > 0) {
+		stop(.format_input_violations(violations), call. = FALSE)
+	}
+	list(
 		pdata = pdata,
 		indep_count_data_available = indep_count_data_available
-	))
+	)
 }
 
 # getPsiRFused

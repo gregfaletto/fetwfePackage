@@ -214,3 +214,39 @@ test_that("entry-point error: fetwfe + betwfe q out of range (#79 PR A)", {
 
 	expect_snapshot(cat(msgs$fetwfe))
 })
+
+# ------------------------------------------------------------------------------
+# Test 7 (#84): NULL-input handling. Plan-review explicitly called out
+# `class(NULL)[1] = "NULL"`, `length(NULL) = 0` so the per-arg sprintf
+# interpolation should produce a clean, non-crashing message. We
+# exercise two NULL args at once (`time_var`, `verbose`) and assert
+# that BOTH violations appear (collect-across-args) in a single error
+# message — this is the load-bearing behavior change for #84.
+# ------------------------------------------------------------------------------
+test_that("entry-point error: NULL inputs produce clean multi-arg message (#84)", {
+	pdata <- .build_valid_panel()
+	args <- list(
+		pdata = pdata,
+		time_var = NULL,
+		unit_var = "unit",
+		treatment = "treat",
+		response = "y",
+		verbose = NULL
+	)
+	msgs <- .capture_entry_point_errors(args)
+
+	# 4-way byte-equality still holds across the entry points.
+	expect_identical(msgs$fetwfe, msgs$etwfe)
+	expect_identical(msgs$etwfe, msgs$betwfe)
+	expect_identical(msgs$betwfe, msgs$twfeCovs)
+
+	# Both NULL args contribute their own bullet (collect-across-args).
+	expect_match(msgs$fetwfe, "time_var must be a single character")
+	expect_match(msgs$fetwfe, "verbose must be a single logical")
+	# Sanity: message header is the new "Invalid inputs:" header.
+	expect_match(msgs$fetwfe, "^Invalid inputs:")
+	# Sanity: the message references NULL (the class of a NULL arg)
+	# and length 0 — confirms sprintf interpolation didn't crash.
+	expect_match(msgs$fetwfe, "NULL")
+	expect_match(msgs$fetwfe, "length 0")
+})
