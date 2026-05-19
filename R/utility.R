@@ -721,3 +721,225 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 	diag(S) <- probs * (1 - probs)
 	S
 }
+
+#' @title Run the shared input-prep pipeline for the four estimator entry points
+#' @description
+#' Internal helper that consolidates the verbatim Steps 3-5 (input
+#' validation + auto-truncation + design-matrix prep) shared across
+#' `fetwfe()`, `etwfe()`, `betwfe()`, and `twfeCovs()`. Branches on
+#' `estimator_type` to pick the correct validator
+#' (`checkFetwfeInputs()` for fetwfe/betwfe, `checkEtwfeInputs()` for
+#' etwfe/twfeCovs), then calls `.truncate_if_no_never_treated()` and
+#' `prep_for_etwfe_core()`. The four caller-side rewrites consume the
+#' returned list with verbose per-field unpacking. Consolidated by
+#' GitHub #79.
+#' @param pdata,time_var,unit_var,treatment,response,covs,indep_counts,sig_eps_sq,sig_eps_c_sq,verbose,alpha,add_ridge
+#'   The shared arguments validated by both `checkEtwfeInputs()` and
+#'   `checkFetwfeInputs()`. See either validator's source for the
+#'   per-argument contracts.
+#' @param lambda.max,lambda.min,q The fetwfe/betwfe-specific bridge
+#'   penalty arguments. Forwarded to `checkFetwfeInputs()` when
+#'   `estimator_type == "fetwfe"`. When `estimator_type == "etwfe"`,
+#'   these must remain `NA` (their defaults); a `stopifnot()` guards
+#'   caller-side misuse.
+#' @param allow_no_never_treated Logical; forwarded to
+#'   `.truncate_if_no_never_treated()`. Defaults to `TRUE`.
+#' @param estimator_type Character scalar; one of `"fetwfe"` or
+#'   `"etwfe"`. Selects which validator to call. `"fetwfe"` covers
+#'   both `fetwfe()` and `betwfe()` (they share `checkFetwfeInputs()`);
+#'   `"etwfe"` covers both `etwfe()` and `twfeCovs()` (they share
+#'   `checkEtwfeInputs()`).
+#' @return A list with exactly 14 elements:
+#'   `pdata`, `covs`, `X_ints`, `y`, `y_mean`, `N`, `T`, `d`, `p`,
+#'   `in_sample_counts`, `num_treats`, `first_inds`, `R`,
+#'   `indep_count_data_available`. Each caller unpacks these into local
+#'   variables before invoking its `_core()` function.
+#' @keywords internal
+#' @noRd
+.run_estimator_input_prep <- function(
+	pdata,
+	time_var,
+	unit_var,
+	treatment,
+	response,
+	covs = c(),
+	indep_counts = NA,
+	sig_eps_sq = NA,
+	sig_eps_c_sq = NA,
+	lambda.max = NA,
+	lambda.min = NA,
+	q = NA,
+	verbose = FALSE,
+	alpha = 0.05,
+	add_ridge = FALSE,
+	allow_no_never_treated = TRUE,
+	estimator_type
+) {
+	stopifnot(
+		is.character(estimator_type),
+		length(estimator_type) == 1,
+		estimator_type %in% c("fetwfe", "etwfe")
+	)
+
+	# Defensive caller-error guard: etwfe/twfeCovs callers must not
+	# forward bridge-penalty arguments.
+	if (estimator_type == "etwfe") {
+		stopifnot(is.na(q) && is.na(lambda.max) && is.na(lambda.min))
+	}
+
+	# Step 3: input validation.
+	if (estimator_type == "fetwfe") {
+		ret <- checkFetwfeInputs(
+			pdata = pdata,
+			time_var = time_var,
+			unit_var = unit_var,
+			treatment = treatment,
+			response = response,
+			covs = covs,
+			indep_counts = indep_counts,
+			sig_eps_sq = sig_eps_sq,
+			sig_eps_c_sq = sig_eps_c_sq,
+			lambda.max = lambda.max,
+			lambda.min = lambda.min,
+			q = q,
+			verbose = verbose,
+			alpha = alpha,
+			add_ridge = add_ridge
+		)
+	} else {
+		ret <- checkEtwfeInputs(
+			pdata = pdata,
+			time_var = time_var,
+			unit_var = unit_var,
+			treatment = treatment,
+			response = response,
+			covs = covs,
+			indep_counts = indep_counts,
+			sig_eps_sq = sig_eps_sq,
+			sig_eps_c_sq = sig_eps_c_sq,
+			verbose = verbose,
+			alpha = alpha,
+			add_ridge = add_ridge
+		)
+	}
+
+	pdata <- ret$pdata
+	indep_count_data_available <- ret$indep_count_data_available
+
+	# Step 4: auto-truncation when no never-treated units.
+	pdata <- .truncate_if_no_never_treated(
+		pdata,
+		time_var = time_var,
+		unit_var = unit_var,
+		treat_var = treatment,
+		allow_no_never_treated = allow_no_never_treated
+	)
+
+	# Step 5: design-matrix prep.
+	res1 <- prep_for_etwfe_core(
+		pdata = pdata,
+		response = response,
+		time_var = time_var,
+		unit_var = unit_var,
+		treatment = treatment,
+		covs = covs,
+		verbose = verbose,
+		indep_count_data_available = indep_count_data_available,
+		indep_counts = indep_counts
+	)
+
+	list(
+		pdata = res1$pdata,
+		covs = res1$covs,
+		X_ints = res1$X_ints,
+		y = res1$y,
+		y_mean = res1$y_mean,
+		N = res1$N,
+		T = res1$T,
+		d = res1$d,
+		p = res1$p,
+		in_sample_counts = res1$in_sample_counts,
+		num_treats = res1$num_treats,
+		first_inds = res1$first_inds,
+		R = res1$R,
+		indep_count_data_available = indep_count_data_available
+	)
+}
+
+#' @title Select the ATT/SE/cohort-probs branch from a `_core()` result
+#' @description
+#' Internal helper that consolidates the verbatim Step 8 ("pick from
+#' in-sample vs indep") shared across the four estimator entry points.
+#' Reads `res$indep_*` vs `res$in_sample_*` based on
+#' `indep_count_data_available`. The SE-non-NA `stopifnot()` guards
+#' that the four pre-consolidation entry points carried differ in
+#' shape between the bridge and OLS estimators, so the helper takes a
+#' `q` argument to discriminate. For fetwfe/betwfe callers (non-NA
+#' `q`), the SE-non-NA guard runs only when `q < 1 && res$calc_ses` in
+#' both branches. For etwfe/twfeCovs callers (`q == NA`), the SE-non-NA
+#' guard on `res$indep_att_se` runs unconditionally in the indep
+#' branch (matching pre-#79 etwfe/twfeCovs behavior: rank-deficient
+#' fits with `indep_counts` still trip this guard); the in-sample
+#' branch carries no SE-non-NA guard for these callers. Consolidated
+#' by GitHub #79.
+#' @param res A list returned by `fetwfe_core()`, `etwfe_core()`,
+#'   `betwfe_core()`, or `twfeCovs_core()`. Required fields are
+#'   `att_hat`, `att_se`, `cohort_probs`, `cohort_probs_overall`,
+#'   `indep_att_hat`, `indep_att_se`, `indep_cohort_probs`,
+#'   `indep_cohort_probs_overall`, `in_sample_att_hat`,
+#'   `in_sample_att_se`, and `calc_ses`.
+#' @param indep_count_data_available Logical scalar; if `TRUE`, the
+#'   indep_* branch is selected.
+#' @param q Numeric scalar; the bridge penalty exponent. `NA` (default)
+#'   for etwfe/twfeCovs callers; non-NA for fetwfe/betwfe callers.
+#'   Selects which SE-non-NA guards run (see Description).
+#' @return A list with four elements: `att_hat`, `att_se`,
+#'   `cohort_probs`, `cohort_probs_overall`.
+#' @keywords internal
+#' @noRd
+.select_att_branch <- function(
+	res,
+	indep_count_data_available,
+	q = NA
+) {
+	uses_bridge <- !is.na(q)
+
+	if (indep_count_data_available) {
+		stopifnot(!is.na(res$indep_att_hat))
+
+		if (uses_bridge) {
+			if (q < 1 && res$calc_ses) {
+				stopifnot(!is.na(res$indep_att_se))
+			}
+		} else {
+			# Pre-#79 etwfe/twfeCovs unconditional guard.
+			stopifnot(!is.na(res$indep_att_se))
+		}
+
+		stopifnot(all(!is.na(res$indep_cohort_probs)))
+		att_hat <- res$indep_att_hat
+		att_se <- res$indep_att_se
+		cohort_probs <- res$indep_cohort_probs
+		cohort_probs_overall <- res$indep_cohort_probs_overall
+	} else {
+		if (uses_bridge) {
+			stopifnot(!is.na(res$in_sample_att_hat))
+
+			if (q < 1 && res$calc_ses) {
+				stopifnot(!is.na(res$in_sample_att_se))
+			}
+		}
+
+		att_hat <- res$in_sample_att_hat
+		att_se <- res$in_sample_att_se
+		cohort_probs <- res$cohort_probs
+		cohort_probs_overall <- res$cohort_probs_overall
+	}
+
+	list(
+		att_hat = att_hat,
+		att_se = att_se,
+		cohort_probs = cohort_probs,
+		cohort_probs_overall = cohort_probs_overall
+	)
+}

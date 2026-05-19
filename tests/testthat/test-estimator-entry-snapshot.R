@@ -32,10 +32,18 @@ testthat::local_edition(3)
 		unit = rep(c("U1", "U2", "U3", "U4"), each = 3),
 		time = rep(1L:3L, 4),
 		treat = c(
-			0L, 0L, 0L, # U1: never
-			0L, 1L, 1L, # U2: cohort 2
-			0L, 1L, 1L, # U3: cohort 2
-			0L, 0L, 1L  # U4: cohort 3
+			0L,
+			0L,
+			0L, # U1: never
+			0L,
+			1L,
+			1L, # U2: cohort 2
+			0L,
+			1L,
+			1L, # U3: cohort 2
+			0L,
+			0L,
+			1L # U4: cohort 3
 		),
 		y = as.numeric(1:12),
 		stringsAsFactors = FALSE
@@ -44,12 +52,15 @@ testthat::local_edition(3)
 
 # Capture conditionMessage() from each entry point under a given
 # malformed call. Returns a list with one entry per estimator name.
-.capture_entry_point_errors <- function(args, estimators = c(
-	"fetwfe",
-	"etwfe",
-	"betwfe",
-	"twfeCovs"
-)) {
+.capture_entry_point_errors <- function(
+	args,
+	estimators = c(
+		"fetwfe",
+		"etwfe",
+		"betwfe",
+		"twfeCovs"
+	)
+) {
 	fns <- list(
 		fetwfe = fetwfe,
 		etwfe = etwfe,
@@ -194,7 +205,10 @@ test_that("entry-point error: fetwfe + betwfe q out of range (#79 PR A)", {
 		response = "y",
 		q = -1
 	)
-	msgs <- .capture_entry_point_errors(args, estimators = c("fetwfe", "betwfe"))
+	msgs <- .capture_entry_point_errors(
+		args,
+		estimators = c("fetwfe", "betwfe")
+	)
 
 	expect_identical(msgs$fetwfe, msgs$betwfe)
 

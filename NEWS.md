@@ -1,5 +1,24 @@
 # NEWS
 
+## Version 1.9.19 (2026-05-19)
+
+- Internal consolidation of the input/output pipeline shared by the
+  four public estimator entry points `fetwfe()`, `etwfe()`,
+  `betwfe()`, and `twfeCovs()` (GitHub #79). Two new internal helpers
+  in `R/utility.R` --- `.run_estimator_input_prep()` and
+  `.select_att_branch()` --- absorb the verbatim Steps 3-5 (input
+  validation + auto-truncation + design-matrix prep) and Step 8
+  ("pick from in-sample vs indep ATT/SE/cohort-probs") that were
+  previously copy-pasted across the four entry points. The four
+  caller-side rewrites trim ~250 LOC of duplication while leaving
+  the eleven other steps (match.arg, original-covs capture, core
+  call, rank-deficiency warning loop, p-value, output-list build,
+  validator, class assignment) inline. No public API change; the
+  snapshot guardrail from v1.9.18 (PR A, #103) confirms all four
+  validators' error messages remain byte-identical. The new helpers
+  carry `@noRd` / `@keywords internal` and do not appear in the
+  exported docs surface.
+
 ## Version 1.9.18 (2026-05-19)
 
 - Internal refactor of `R/core_funcs.R::prep_for_etwfe_regression()`
