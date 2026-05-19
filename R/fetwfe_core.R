@@ -148,8 +148,21 @@ getTeResults2 <- function(
 			psi_att_full <- numeric(length(treat_block_mask))
 			psi_att_full[treat_block_mask] <- psi_att
 
-			att_var_1 <- as.numeric(
-				t(psi_att_full) %*% sandwich_full %*% psi_att_full
+			# Issue #84 item 9: floor the cluster-sandwich quadratic form
+			# at zero. The Liang-Zeger sandwich is PSD in exact arithmetic,
+			# so `t(psi) %*% sandwich %*% psi >= 0` always — but the
+			# now-vectorized `rowsum` assembly (see item 18) and the
+			# subsequent matrix triple-product accumulate enough
+			# floating-point rounding that a near-zero quadratic form
+			# could come out negative by a few ulps, NaN-ing downstream
+			# sqrt() into a baffling "NA SE" surface. Floor at zero so
+			# any rounding-induced negative collapses to the
+			# mathematically correct value.
+			att_var_1 <- max(
+				as.numeric(
+					t(psi_att_full) %*% sandwich_full %*% psi_att_full
+				),
+				0
 			)
 		} else {
 			att_var_1 <- sig_eps_sq *
@@ -2445,10 +2458,17 @@ getCohortATTsFinal <- function(
 			if (identical(se_type, "cluster")) {
 				psi_r_full <- numeric(length(sel_feat_inds))
 				psi_r_full[treat_block_mask] <- psi_r
-				cohort_te_ses[r] <- sqrt(as.numeric(
-					t(psi_r_full) %*%
-						sandwich_full %*%
-						psi_r_full
+				# Issue #84 item 9: floor the cluster-sandwich quadratic
+				# form at zero before sqrt(), defending against a
+				# rounding-induced negative; see the matching guard in
+				# `getTeResults2` / `R/fetwfe_core.R` for rationale.
+				cohort_te_ses[r] <- sqrt(max(
+					as.numeric(
+						t(psi_r_full) %*%
+							sandwich_full %*%
+							psi_r_full
+					),
+					0
 				))
 			} else {
 				## Variance of the treatment effect for cohort r is

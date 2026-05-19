@@ -1566,14 +1566,63 @@ processCovs <- function(
 	T,
 	verbose = FALSE
 ) {
-	# Always check that every unit has exactly T observations covering all
-	# time periods. Defense-in-depth: `idCohorts()` (called upstream by every
-	# entry point that reaches here) already enforces this contract since
-	# #75. If a future code path reaches `processCovs()` without going
-	# through `idCohorts()` first, this check still catches the bug class.
-	for (s in units) {
-		df_s <- df[df[, unit_var] == s, ]
-		if (nrow(df_s) != T || !setequal(df_s[, time_var], times)) {
+	# Issue #84 item 15: vectorized rewrite. Pre-rewrite the function nested
+	# `for (s in units) df[df[, unit_var] == s, ...]` lookups four separate
+	# times, producing an O(N^2 * T * d) profile that dominated etwfe/fetwfe
+	# wallclock on large panels. The rewrite sorts df by (unit, time) once,
+	# isolates a single `df_first` slice for all first-period operations,
+	# and uses column-wise vectorized comparisons in place of the inner
+	# unit/time loops. Output is bit-identical to the pre-rewrite version
+	# (covered by the numerical-equivalence test in test-etwfe.R /
+	# test-fetwfe.R via fetwfeWithSimulatedData).
+
+	# Sort df by (unit, time) once. After this, the first-period rows for
+	# every unit live at deterministic positions (1, T+1, 2T+1, ...) under
+	# the T-rows-per-unit invariant — so the per-unit lookups below collapse
+	# to row-index arithmetic rather than O(N*T) Boolean filters.
+	df <- df[
+		order(df[, unit_var], df[, time_var], decreasing = FALSE),
+		,
+		drop = FALSE
+	]
+
+	# Defense-in-depth integrity check (idCohorts() enforces this upstream
+	# since #75 for every supported entry point). Use tabulate-style summary
+	# rather than per-unit subsets so it stays O(N*T) and not O(N^2 * T).
+	unit_id_vec <- df[, unit_var]
+	row_counts <- table(unit_id_vec)
+	expected_units <- as.character(units)
+	row_counts_named <- row_counts[expected_units]
+	bad_unit_idx <- which(is.na(row_counts_named) | row_counts_named != T)
+	if (length(bad_unit_idx) > 0) {
+		s <- expected_units[bad_unit_idx[1]]
+		df_s <- df[df[, unit_var] == s, , drop = FALSE]
+		stop(paste0(
+			"Unit ",
+			s,
+			" does not have exactly T = ",
+			T,
+			" observations covering all time periods (got ",
+			nrow(df_s),
+			" observations, ",
+			length(unique(df_s[, time_var])),
+			" distinct time periods)."
+		))
+	}
+	# Also verify each unit's time set matches the expected `times` set.
+	# Per-unit time vectors are contiguous after the sort; comparing the
+	# multiset to the canonical sorted `times` rules out duplicates +
+	# missing periods at once.
+	times_sorted <- sort(times)
+	unit_first_rows <- seq.int(1L, by = T, length.out = length(expected_units))
+	for (k in seq_along(expected_units)) {
+		start_k <- unit_first_rows[k]
+		times_k <- df[start_k:(start_k + T - 1L), time_var]
+		# Cheap O(T) comparison (sorted-vs-sorted) instead of setequal()'s
+		# unordered O(T log T) match path.
+		if (!identical(sort(times_k), times_sorted)) {
+			s <- expected_units[k]
+			df_s <- df[df[, unit_var] == s, , drop = FALSE]
 			stop(paste0(
 				"Unit ",
 				s,
@@ -1593,52 +1642,53 @@ processCovs <- function(
 		if (verbose) {
 			message("No covariates provided; skipping covariate processing.")
 		}
-		# # TODO: change to consider
-		# # Ensure df contains only necessary columns if covs is empty.
-		# # This selection should ideally happen once, consistently.
-		# # prepXints selects columns from the original pdata:
-		# # pdata <- pdata[, c(response, time_var, unit_var, treatment, covs)]
-		# # Then idCohorts gets this. Then processCovs.
-		# # If covs is empty, df will contain response, time_var, unit_var.
-		# df_ordered <- df[order(df[, unit_var], df[, time_var], decreasing=FALSE), ]
-		# return(list(df = df_ordered, covs = covs))
-
 		df <- df[, c(resp_var, time_var, unit_var)]
-		df <- df[order(df[, unit_var], df[, time_var], decreasing = FALSE), ]
 		return(list(df = df, covs = covs))
 	}
 	d_orig <- length(covs) # Original number of covariates passed
 
-	# For each unit, ensure that the first period has non-missing covariate values.
-	# Remove any covariates with missing values in the first period for *any* unit.
-	covs_to_keep <- character()
+	# Build a single first-period slice. Every per-unit first-period
+	# operation below maps to a column lookup on `df_first` rather than a
+	# fresh O(N*T) filter on `df`. After the (unit, time) sort above,
+	# `df_first` rows appear in the same unit order as the (sorted) `df` —
+	# so `rep(df_first[, cov], each = T)` aligns row-for-row with `df` in
+	# the finalize step below. This is the load-bearing invariant for
+	# this rewrite; do not re-sort df_first to match `units` (the caller's
+	# iteration order), or the finalize broadcast misaligns and every cov
+	# column ends up with the wrong unit's first-period value (which would
+	# silently zero out estimated treatment effects in downstream OLS).
 	first_time_val <- times[1]
+	df_first <- df[df[, time_var] == first_time_val, , drop = FALSE]
+	stopifnot(nrow(df_first) == length(expected_units))
 
-	for (cov_name in covs) {
-		is_valid_cov <- TRUE
-		for (s in units) {
-			val_first_period <- df[
-				(df[, unit_var] == s) & (df[, time_var] == first_time_val),
-				cov_name
-			]
-			if (length(val_first_period) != 1 || is.na(val_first_period)) {
-				if (verbose) {
-					message(
-						"Covariate '",
-						cov_name,
-						"' has NA or missing first period value for unit '",
-						s,
-						"'. Removing covariate."
-					)
-				}
-				is_valid_cov <- FALSE
-				break
-			}
-		}
-		if (is_valid_cov) {
-			covs_to_keep <- c(covs_to_keep, cov_name)
+	# Vectorized first-period NA check across all covariates at once:
+	# columnwise `anyNA()` collapses the (N x d) first-period block into a
+	# length-d vector.
+	first_period_mat <- df_first[, covs, drop = FALSE]
+	has_na <- vapply(
+		covs,
+		function(cov_name) anyNA(first_period_mat[, cov_name]),
+		logical(1)
+	)
+	if (verbose) {
+		# `df_first[, unit_var]` is in the SORTED unit order (matching the
+		# row order of `first_period_mat`), so the bad-unit lookup here
+		# uses df_first's own unit column rather than `expected_units`.
+		df_first_unit_vec <- df_first[, unit_var]
+		for (cov_name in covs[has_na]) {
+			bad_unit <- df_first_unit_vec[
+				is.na(first_period_mat[, cov_name])
+			][1]
+			message(
+				"Covariate '",
+				cov_name,
+				"' has NA or missing first period value for unit '",
+				bad_unit,
+				"'. Removing covariate."
+			)
 		}
 	}
+	covs_to_keep <- covs[!has_na]
 
 	if (length(covs_to_keep) < d_orig && length(covs_to_keep) > 0) {
 		removed_covs_na <- setdiff(covs, covs_to_keep)
@@ -1655,56 +1705,32 @@ processCovs <- function(
 	covs <- covs_to_keep
 	d <- length(covs)
 
-	# Remove covariates that are constant across units (after making them time-invariant based on first period).
+	# Remove covariates that are constant across units (based on first-period
+	# values). Pre-rewrite this also recomputed time-invariance, which the
+	# downstream "finalize" loop redoes; consolidating both into a single
+	# pass on `df_first` saves an entire N*T*d scan.
 	if (d > 0) {
-		covs_to_remove_const <- character()
-		# First, make all covariates time-invariant based on first period value
-		df_temp_const_check <- df # Operate on a temporary copy
-		for (s in units) {
-			first_period_rows_s_idx <- which(
-				(df_temp_const_check[, unit_var] == s) &
-					(df_temp_const_check[, time_var] == first_time_val)
-			)
-			stopifnot(length(first_period_rows_s_idx) == 1) # Should be one row for first period
-			cov_values_s_first_period <- df_temp_const_check[
-				first_period_rows_s_idx,
-				covs,
-				drop = FALSE
-			]
-
-			for (t_idx in seq_along(times)) {
-				current_rows_s_t_idx <- which(
-					(df_temp_const_check[, unit_var] == s) &
-						(df_temp_const_check[, time_var] == times[t_idx])
-				)
-				stopifnot(length(current_rows_s_t_idx) == 1)
-				df_temp_const_check[
-					current_rows_s_t_idx,
-					covs
-				] <- cov_values_s_first_period
-			}
-		}
-
-		for (cov_name in covs) {
-			# Check uniqueness on the first-period values for each unit
-			first_period_vals_for_cov <- sapply(units, function(u) {
-				df_temp_const_check[
-					(df_temp_const_check[, unit_var] == u) &
-						(df_temp_const_check[, time_var] == first_time_val),
+		first_period_mat <- df_first[, covs, drop = FALSE]
+		# A covariate is "constant" iff all units share the same first-period
+		# value. Use `length(unique(.))` rather than identical-to-first because
+		# NA was already filtered out above, so plain equality is well-defined.
+		is_constant <- vapply(
+			covs,
+			function(cov_name) {
+				length(unique(first_period_mat[, cov_name])) == 1L
+			},
+			logical(1)
+		)
+		covs_to_remove_const <- covs[is_constant]
+		if (verbose) {
+			for (cov_name in covs_to_remove_const) {
+				message(
+					"Removing covariate because all units have the same first-period value: ",
 					cov_name
-				]
-			})
-			if (length(unique(first_period_vals_for_cov)) == 1) {
-				if (verbose) {
-					message(
-						"Removing covariate because all units have the same first-period value: ",
-						cov_name
-					)
-				}
-				covs_to_remove_const <- c(covs_to_remove_const, cov_name)
+				)
 			}
 		}
-		covs <- covs[!(covs %in% covs_to_remove_const)]
+		covs <- covs[!is_constant]
 
 		if (length(covs_to_remove_const) > 0 && length(covs) == 0) {
 			warning(
@@ -1721,38 +1747,28 @@ processCovs <- function(
 	}
 
 	# Keep only the needed columns.
-	df <- df[, c(resp_var, time_var, unit_var, covs), drop = FALSE] # Ensure covs can be empty
+	df <- df[, c(resp_var, time_var, unit_var, covs), drop = FALSE]
 
-	# For any time-varying covariates, replace all values with the first-period value.
-	# This was partially done for the constant check, ensure it's finalized.
+	# Finalize: replace each time-varying covariate value with the unit's
+	# first-period value. After the (unit, time) sort up top, rows 1..T
+	# belong to unit 1, rows (T+1)..(2T) to unit 2, etc., so the
+	# first-period value for unit i sits at row (i - 1) * T + 1. Use
+	# rep(..., each = T) to broadcast each unit's first-period vector
+	# across all T of its rows at once, dropping the O(N*T) inner loop.
 	if (d > 0) {
-		# Only if there are covariates left
 		if (verbose) {
 			message(
 				"Finalizing: Replacing time-varying covariate values with first-period values..."
 			)
 		}
-		for (s in units) {
-			first_period_rows_s_idx <- which(
-				(df[, unit_var] == s) & (df[, time_var] == first_time_val)
-			)
-			# This assumes first_time_val is the relevant one (times[1])
-			covs_s_first_period_vals <- df[
-				first_period_rows_s_idx,
-				covs,
-				drop = FALSE
-			]
-
-			for (t_val in times) {
-				ind_s_t <- (df[, unit_var] == s) & (df[, time_var] == t_val)
-				stopifnot(sum(ind_s_t) == 1)
-				df[ind_s_t, covs] <- covs_s_first_period_vals
-			}
+		first_period_mat <- df_first[, covs, drop = FALSE]
+		for (cov_name in covs) {
+			df[, cov_name] <- rep(first_period_mat[, cov_name], each = T)
 		}
 	}
 
-	# Sort rows: first T rows should be the observations for the first unit, and
-	# so on
+	# Already sorted above; preserve the explicit sort to make the
+	# row-ordering invariant obvious to readers.
 	df <- df[order(df[, unit_var], df[, time_var], decreasing = FALSE), ]
 
 	return(list(df = df, covs = covs))

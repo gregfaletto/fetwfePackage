@@ -613,3 +613,52 @@ test_that("tidy.FETWFE_tes accepts conf.int and conf.level (#84 item 14)", {
 	expect_error(broom::tidy(tes, conf.level = 1.5))
 	expect_error(broom::tidy(tes, conf.level = 0))
 })
+
+# ------------------------------------------------------------------------------
+# Item 5 (issue #84): augment.<class> dispatches successfully with a
+# se_type = "cluster" fit. augment() only uses `beta_hat` (SE-independent),
+# but the dispatch path with a cluster-SE fit hadn't been exercised before
+# this test — the per-class augment.* methods route through the same
+# `.augment_estimator_output` helper regardless of the SE route, so the
+# correctness invariants (row alignment, `.fitted + .resid == y`) carry over.
+# This test locks the dispatch path against future regressions that might
+# accidentally couple augment() to the SE route.
+# ------------------------------------------------------------------------------
+test_that("augment.fetwfe dispatches with se_type = 'cluster' fit", {
+	setup <- .simulated_setup()
+	res <- fetwfeWithSimulatedData(setup$sim, se_type = "cluster")
+	aug <- broom::augment(res, data = setup$sim$pdata)
+	expect_s3_class(aug, "data.frame")
+	expect_equal(nrow(aug), nrow(setup$sim$pdata))
+	expect_true(all(c(".fitted", ".resid") %in% names(aug)))
+	expect_true(is.numeric(aug$.fitted))
+	expect_true(is.numeric(aug$.resid))
+	expect_true(all(is.finite(aug$.fitted)))
+})
+
+# ------------------------------------------------------------------------------
+# Item 6 (issue #84): augment.<class> dispatches successfully when the fit
+# was constructed with `indep_counts` supplied. `fetwfeWithSimulatedData()`
+# always passes the simulator's `indep_counts` through (the sim object
+# carries one), so this fixture automatically exercises the indep-counts
+# code path; the test pins augment() against any future regression that
+# might cause indep-counts-bearing fits to lack the augment metadata slots.
+# ------------------------------------------------------------------------------
+test_that("augment.fetwfe dispatches when indep_counts was supplied", {
+	setup <- .simulated_setup()
+	# Sanity: the simulator's indep_counts is a valid integer vector that
+	# fetwfeWithSimulatedData() will pass through.
+	expect_true(is.numeric(setup$sim$indep_counts))
+	expect_true(all(setup$sim$indep_counts >= 0))
+
+	res <- fetwfeWithSimulatedData(setup$sim)
+	# The fit carries the indep-counts-used flag set to TRUE.
+	expect_true(isTRUE(res$indep_counts_used))
+
+	aug <- broom::augment(res, data = setup$sim$pdata)
+	expect_s3_class(aug, "data.frame")
+	expect_equal(nrow(aug), nrow(setup$sim$pdata))
+	expect_true(all(c(".fitted", ".resid") %in% names(aug)))
+	expect_true(is.numeric(aug$.fitted))
+	expect_true(all(is.finite(aug$.fitted)))
+})

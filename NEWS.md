@@ -1,5 +1,59 @@
 # NEWS
 
+## Version 1.9.23 (2026-05-19)
+
+- Closes out the remaining items of GitHub #84 (the 2026-05-17 periodic
+  code review) in one bundled PR: 11 items across three categories (test
+  coverage, defensive guards, and performance). Internal changes only;
+  no public-API drift.
+
+  - **Test coverage** (items 1, 3, 5, 6, 7): closes 5 untested-path gaps.
+    `event_study()` now has direct coverage on auto-truncated panels;
+    the q >= 1 ridge-regime `att_se = NA` contract has tightened
+    assertions covering `att_p_value`, `catt_ses`, and the CI columns of
+    `catt_df`; `augment.<class>()` is now exercised with both
+    `se_type = "cluster"` and `indep_counts`-bearing fits; and the
+    end-to-end REML + cluster-SE pipeline is verified non-conflicting on
+    a single fit.
+
+  - **Defensive guards** (items 8, 9, 10): defense-in-depth additions to
+    catch future refactor regressions. (1) `.select_att_branch()`'s
+    etwfe/twfeCovs unconditional SE-non-NA guard is now gated on
+    `calc_ses` (today only `q >= 1` produces `calc_ses = FALSE`, but the
+    gate hardens against a future code path that routes a `calc_ses =
+    FALSE` non-bridge fit through the indep-counts branch). (2) The 6
+    cluster-sandwich quadratic-form computation sites now floor at zero
+    (`max(quad_form, 0)`); the Liang-Zeger sandwich is PSD in exact
+    arithmetic, but the `rowsum`-based meat aggregation could in
+    principle round a near-zero form to a tiny negative, which would
+    NaN downstream `sqrt()`s. (3) `.compute_cluster_robust_sandwich()`
+    now `tryCatch`-es the `solve(crossprod(X_S_centered))` call to
+    surface the same "Gram matrix corresponding to selected features is
+    not invertible" message as `getGramInv()` rather than a raw Lapack
+    "system is exactly singular" trace.
+
+  - **Performance** (items 15, 16, 18): (1) `processCovs()` (the
+    covariate-cleanup helper called by every estimator entry point) is
+    vectorized. The old per-unit nested-loop pattern was O(N^2 * T * d);
+    the rewrite uses a single first-period slice + `rep(..., each = T)`
+    broadcast, dropping the cost to O(N * T * d). Output is bit-identical
+    on the standard test fixtures. (2) `.estimate_variance_and_gls()`
+    now computes `Omega^(-1/2)` via a closed-form spectral decomposition
+    (`Omega = sig_eps_sq * I_T + sig_eps_c_sq * J_T` has eigenvalue
+    `sig_eps_sq + T * sig_eps_c_sq` on `span(1_T)` and `sig_eps_sq` on
+    its orthogonal complement) instead of `expm::sqrtm(solve(Omega))`.
+    The closed form is exact up to floating-point and eliminates the
+    runtime `expm` dependency; `expm` moves from `Imports:` to
+    `Suggests:` (it's still used for the numerical-equivalence test).
+    (3) `.compute_cluster_robust_sandwich()`'s N-loop is replaced with a
+    vectorized `rowsum()` + `crossprod()` assembly, equivalent to the
+    pre-rewrite loop bit-for-bit modulo floating-point summation order.
+
+  Items 2 (test coverage already provided), 12 (deferred as GitHub
+  #109), and 17 (deferred as GitHub #110, pending benchmark) were
+  scoped out of this PR. Items 4, 11, 13, 14 shipped previously (PRs
+  #108, #105, #106, #107).
+
 ## Version 1.9.22 (2026-05-19)
 
 - `tidy.FETWFE_tes()` now accepts `conf.int` and `conf.level` arguments

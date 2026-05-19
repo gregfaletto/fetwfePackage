@@ -149,10 +149,17 @@ getCohortATTsFinalOLS <- function(
 			if (identical(se_type, "cluster")) {
 				psi_r_full <- numeric(length(treat_block_mask))
 				psi_r_full[treat_block_mask] <- psi_r
-				cohort_te_ses[r] <- sqrt(as.numeric(
-					t(psi_r_full) %*%
-						sandwich_full %*%
-						psi_r_full
+				# Issue #84 item 9: floor the cluster-sandwich quadratic
+				# form at zero before sqrt(), defending against a
+				# rounding-induced negative; see the matching guard in
+				# `getTeResultsOLS` / `R/ols_calcs.R` for rationale.
+				cohort_te_ses[r] <- sqrt(max(
+					as.numeric(
+						t(psi_r_full) %*%
+							sandwich_full %*%
+							psi_r_full
+					),
+					0
 				))
 			} else {
 				cohort_te_ses[r] <- sqrt(
@@ -322,8 +329,14 @@ getTeResultsOLS <- function(
 			psi_att_full <- numeric(length(treat_block_mask))
 			psi_att_full[treat_block_mask] <- psi_att
 
-			att_var_1 <- as.numeric(
-				t(psi_att_full) %*% sandwich_full %*% psi_att_full
+			# Issue #84 item 9: floor the cluster-sandwich quadratic form
+			# at zero. See the matching guard in `getTeResults2` /
+			# `R/fetwfe_core.R` for rationale.
+			att_var_1 <- max(
+				as.numeric(
+					t(psi_att_full) %*% sandwich_full %*% psi_att_full
+				),
+				0
 			)
 		} else {
 			att_var_1 <- sig_eps_sq *
@@ -585,15 +598,34 @@ getPsiRUnfused <- function(
 	stopifnot(length(residuals) == N * T)
 	X_S_centered <- scale(X_S, center = TRUE, scale = FALSE)
 	p_S <- ncol(X_S_centered)
-	gram_inv_full <- solve(crossprod(X_S_centered))
-	meat <- matrix(0, nrow = p_S, ncol = p_S)
-	for (i in seq_len(N)) {
-		rows_i <- ((i - 1) * T + 1):(i * T)
-		Xi <- X_S_centered[rows_i, , drop = FALSE]
-		eps_i <- residuals[rows_i]
-		XiEps <- crossprod(Xi, eps_i)
-		meat <- meat + tcrossprod(XiEps)
-	}
+	# Issue #84 item 10: convert the LAPACK rank-deficiency error from
+	# `solve(crossprod(X_S_centered))` into the same user-facing message
+	# that `getGramInv()` emits, so a cluster-SE fit on a rank-deficient
+	# selected support produces a single coherent surface across both
+	# variance routes rather than an obscure "Lapack routine dgesv: system
+	# is exactly singular" trace.
+	gram_inv_full <- tryCatch(
+		solve(crossprod(X_S_centered)),
+		error = function(e) {
+			stop(
+				"Gram matrix corresponding to selected features is not invertible. Assumptions needed for inference are not satisfied. Standard errors will not be calculated."
+			)
+		}
+	)
+	# Vectorized assembly of the cluster meat. The original N-loop built up
+	#   meat = sum_i (X_i' eps_i) (X_i' eps_i)'
+	# one unit at a time. Stacking the column vectors `X_i' eps_i` as the
+	# rows of an N-by-p_S matrix `XEps` lets us write the same sum as
+	#   meat = t(XEps) %*% XEps == crossprod(XEps).
+	# Each row of `XEps` is itself a sum over the unit's T rows of the
+	# response-weighted design (`X_S_centered[rows_i, ] * eps_i`); a single
+	# `rowsum()` over a unit-id grouping vector does that aggregation across
+	# all units at once (issue #84 item 18). Equivalent to the pre-vectorize
+	# loop bit-for-bit modulo floating-point summation order.
+	weighted <- X_S_centered * residuals
+	unit_id <- rep(seq_len(N), each = T)
+	XEps <- rowsum(weighted, group = unit_id, reorder = FALSE)
+	meat <- crossprod(XEps)
 	cadjust <- N / (N - 1)
 	cadjust * gram_inv_full %*% meat %*% gram_inv_full
 }

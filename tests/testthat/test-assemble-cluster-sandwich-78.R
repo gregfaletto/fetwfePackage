@@ -228,3 +228,86 @@ test_that(".assemble_cluster_robust_sandwich: NULL default produces the same out
 		res_explicit_null$treat_block_mask
 	)
 })
+
+# ------------------------------------------------------------------------------
+# Item 10: rank-deficient selected support in `.compute_cluster_robust_sandwich`
+# surfaces the same "Gram matrix corresponding to selected features is not
+# invertible" message as `getGramInv()`, rather than the raw Lapack
+# "system is exactly singular" trace. The pre-#84 implementation called
+# `solve(crossprod(X_S_centered))` without a tryCatch, so a future caller
+# routing a rank-deficient selected support into the cluster path would
+# get a baffling Lapack stack trace instead of the helpful message.
+# This test exercises the new tryCatch branch by constructing an X_S with
+# duplicated columns (guaranteed rank-deficient).
+# ------------------------------------------------------------------------------
+test_that(".compute_cluster_robust_sandwich emits helpful error on rank-deficient X_S", {
+	set.seed(20260519)
+	N <- 20L
+	T <- 5L
+	p_S <- 4L
+	X_S_full_rank <- matrix(
+		rnorm(N * T * p_S),
+		nrow = N * T,
+		ncol = p_S
+	)
+	# Force rank deficiency: column 4 = column 2. crossprod() is then
+	# exactly singular and solve() would throw a Lapack error in the
+	# pre-tryCatch implementation.
+	X_S_full_rank[, 4] <- X_S_full_rank[, 2]
+	residuals <- rnorm(N * T)
+
+	expect_error(
+		fetwfe:::.compute_cluster_robust_sandwich(
+			X_S = X_S_full_rank,
+			residuals = residuals,
+			N = N,
+			T = T
+		),
+		"Gram matrix corresponding to selected features is not invertible"
+	)
+})
+
+# ------------------------------------------------------------------------------
+# Item 18: vectorized .compute_cluster_robust_sandwich() matches the
+# pre-vectorize N-loop reference bit-for-bit (modulo floating-point summation
+# order, hence the 1e-12 tolerance). Closes the issue #84 item 18 regression
+# guard: any future regression that breaks the rowsum() aggregation path or
+# the crossprod() / tcrossprod() identity would fire here.
+# ------------------------------------------------------------------------------
+test_that(".compute_cluster_robust_sandwich matches reference N-loop", {
+	# Frozen-seed deterministic fixture sized to exercise both the
+	# pre-vectorize N-loop and the post-vectorize rowsum() path with a
+	# non-trivial p_S (so the bug class "rowsum-broadcast-axis-confusion"
+	# would surface as a numeric mismatch, not as dimensions).
+	set.seed(20260519)
+	N <- 30L
+	T <- 7L
+	p_S <- 8L
+	X_S <- matrix(rnorm(N * T * p_S), nrow = N * T, ncol = p_S)
+	residuals <- rnorm(N * T)
+
+	# Reference: explicit N-loop (the pre-vectorize implementation, captured
+	# verbatim from the git history at R/ols_calcs.R::.compute_cluster_robust_sandwich
+	# before issue #84 item 18). This is the asymptotically-equivalent O(N*T*p_S^2)
+	# baseline we're vectorizing against.
+	reference_loop <- function(X_S, residuals, N, T) {
+		X_S_centered <- scale(X_S, center = TRUE, scale = FALSE)
+		p_S <- ncol(X_S_centered)
+		gram_inv_full <- solve(crossprod(X_S_centered))
+		meat <- matrix(0, nrow = p_S, ncol = p_S)
+		for (i in seq_len(N)) {
+			rows_i <- ((i - 1) * T + 1):(i * T)
+			Xi <- X_S_centered[rows_i, , drop = FALSE]
+			eps_i <- residuals[rows_i]
+			XiEps <- crossprod(Xi, eps_i)
+			meat <- meat + tcrossprod(XiEps)
+		}
+		cadjust <- N / (N - 1)
+		cadjust * gram_inv_full %*% meat %*% gram_inv_full
+	}
+
+	live <- fetwfe:::.compute_cluster_robust_sandwich(X_S, residuals, N, T)
+	ref <- reference_loop(X_S, residuals, N, T)
+	expect_equal(live, ref, tolerance = 1e-12)
+	expect_equal(dim(live), c(p_S, p_S))
+})
