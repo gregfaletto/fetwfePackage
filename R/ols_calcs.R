@@ -103,20 +103,16 @@ getCohortATTsFinalOLS <- function(
 	if (identical(se_type, "cluster") && calc_ses) {
 		stopifnot(!is.null(y_final))
 		stopifnot(length(y_final) >= N * T)
-
-		X_S <- X_final
-		y_ <- y_final[seq_len(N * T)]
-		ols_fit <- stats::lm.fit(cbind(1, X_S), y_)
-
-		sandwich_full <- .compute_cluster_robust_sandwich(
-			X_S = X_S,
-			residuals = ols_fit$residuals,
+		res <- .assemble_cluster_robust_sandwich(
+			X_final = X_final,
+			y_final = y_final,
 			N = N,
-			T = T
+			T = T,
+			treat_inds = treat_inds,
+			sel_feat_inds = NULL
 		)
-
-		treat_block_mask <- logical(ncol(X_S))
-		treat_block_mask[treat_inds] <- TRUE
+		sandwich_full <- res$sandwich_full
+		treat_block_mask <- res$treat_block_mask
 	}
 
 	# First, each cohort
@@ -614,4 +610,71 @@ getPsiRUnfused <- function(
 	}
 	cadjust <- N / (N - 1)
 	cadjust * gram_inv_full %*% meat %*% gram_inv_full
+}
+
+#' @title Assemble the cluster-robust sandwich for the OLS-selected support
+#' @description
+#' Wraps the 4-step assembly ritual used by `getCohortATTsFinalOLS()`,
+#' `getCohortATTsFinal()`, and the two `event_study` dispatchers
+#' (`.event_study_etwfe_betwfe`, `.event_study_fetwfe`): extract `X_S`
+#' from `X_final` (optionally filtered by `sel_feat_inds`), run
+#' `stats::lm.fit(cbind(1, X_S), y_final[seq_len(N * T)])`, compute the
+#' cluster-robust sandwich via `.compute_cluster_robust_sandwich()`, and
+#' build the corresponding `treat_block_mask`. Returns both as a list so
+#' the caller can use them downstream.
+#'
+#' Resolves GitHub #78. The drift class this addresses is the v1.9.5
+#' `10e-6` threshold typo: same logic written across 4 siblings, one
+#' site could get a fix while the others quietly didn't.
+#' @param X_final Numeric matrix. The post-GLS, post-augmentation design.
+#' @param y_final Numeric vector. The post-GLS response (length >=
+#'   `N * T`; only the first `N * T` entries are used).
+#' @param N Integer. Number of units.
+#' @param T Integer. Number of time periods.
+#' @param treat_inds Integer vector. The (1-based) indices of treatment
+#'   features in the full `X_final` columns. Used in both branches'
+#'   `treat_block_mask` construction.
+#' @param sel_feat_inds Integer vector or `NULL`. If `NULL` (the default),
+#'   the full `X_final` is used as `X_S` and `treat_block_mask` is built
+#'   via `logical(ncol(X_S)); [treat_inds] <- TRUE`. If a vector, `X_S`
+#'   is `X_final[, sel_feat_inds, drop = FALSE]` and `treat_block_mask`
+#'   is `sel_feat_inds %in% treat_inds`.
+#' @return A list with two elements:
+#'   \describe{
+#'     \item{`sandwich_full`}{Numeric matrix; the Liang-Zeger
+#'       cluster-robust sandwich from `.compute_cluster_robust_sandwich()`.}
+#'     \item{`treat_block_mask`}{Logical vector of length `ncol(X_S)`;
+#'       TRUE at positions corresponding to treatment features.}
+#'   }
+#' @keywords internal
+#' @noRd
+.assemble_cluster_robust_sandwich <- function(
+	X_final,
+	y_final,
+	N,
+	T,
+	treat_inds,
+	sel_feat_inds = NULL
+) {
+	X_S <- if (is.null(sel_feat_inds)) {
+		X_final
+	} else {
+		X_final[, sel_feat_inds, drop = FALSE]
+	}
+	y_ <- y_final[seq_len(N * T)]
+	ols_fit <- stats::lm.fit(cbind(1, X_S), y_)
+	sandwich_full <- .compute_cluster_robust_sandwich(
+		X_S = X_S,
+		residuals = ols_fit$residuals,
+		N = N,
+		T = T
+	)
+	treat_block_mask <- if (is.null(sel_feat_inds)) {
+		mask <- logical(ncol(X_S))
+		mask[treat_inds] <- TRUE
+		mask
+	} else {
+		sel_feat_inds %in% treat_inds
+	}
+	list(sandwich_full = sandwich_full, treat_block_mask = treat_block_mask)
 }

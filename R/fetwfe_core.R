@@ -2332,19 +2332,16 @@ getCohortATTsFinal <- function(
 	if (identical(se_type, "cluster") && calc_ses) {
 		stopifnot(!is.null(y_final))
 		stopifnot(length(y_final) >= N * T)
-
-		X_S <- X_final[, sel_feat_inds, drop = FALSE]
-		y_ <- y_final[seq_len(N * T)]
-		ols_fit <- stats::lm.fit(cbind(1, X_S), y_)
-
-		sandwich_full <- .compute_cluster_robust_sandwich(
-			X_S = X_S,
-			residuals = ols_fit$residuals,
+		res <- .assemble_cluster_robust_sandwich(
+			X_final = X_final,
+			y_final = y_final,
 			N = N,
-			T = T
+			T = T,
+			treat_inds = treat_inds,
+			sel_feat_inds = sel_feat_inds
 		)
-
-		treat_block_mask <- sel_feat_inds %in% treat_inds
+		sandwich_full <- res$sandwich_full
+		treat_block_mask <- res$treat_block_mask
 		stopifnot(length(treat_block_mask) == length(sel_feat_inds))
 		stopifnot(sum(treat_block_mask) == length(sel_treat_inds_shifted))
 	}
