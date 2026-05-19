@@ -352,3 +352,44 @@ test_that("simulateData errors when N < R", {
 		regexp = "N >= R" # Expect an error message indicating N must be at least R
 	)
 })
+
+# ------------------------------------------------------------------------------
+# print.FETWFE_simulated: compact dimensions summary instead of list dump.
+# #84 item 13 — pre-fix, print(simulateData(...)) fell through to print.list
+# and dumped the full N*T x p design matrix (potentially hundreds of MB).
+# ------------------------------------------------------------------------------
+test_that("print.FETWFE_simulated summarizes instead of dumping (#84 item 13)", {
+	coefs <- genCoefs(
+		R = 2,
+		T = 5,
+		d = 2,
+		density = 0.5,
+		eff_size = 4,
+		seed = 42
+	)
+	sim <- simulateData(coefs, N = 20, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+	expect_s3_class(sim, "FETWFE_simulated")
+
+	out <- capture.output(print(sim))
+
+	# Brief: 4 cat() calls => 4 lines.
+	expect_lt(length(out), 6)
+
+	# Names the dimensions.
+	expect_true(any(grepl("N = 20", out)))
+	expect_true(any(grepl("T = 5", out)))
+	expect_true(any(grepl("R = 2", out)))
+	expect_true(any(grepl("d = 2", out)))
+
+	# Names cohort sizes.
+	expect_true(any(grepl("never-treated", out)))
+	expect_true(any(grepl("cohort 1", out)))
+	expect_true(any(grepl("cohort 2", out)))
+
+	# Negative assertions: contract is "do NOT dump the design matrix".
+	# The pre-fix print would have dumped pdata + X. Confirm absence
+	# of those structures' tokens.
+	expect_false(any(grepl("\\$pdata", out)))
+	expect_false(any(grepl("\\$X", out)))
+	expect_false(any(grepl("Levels:", out)))
+})

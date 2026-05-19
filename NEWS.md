@@ -1,5 +1,17 @@
 # NEWS
 
+## Version 1.9.21 (2026-05-19)
+
+- Added compact `print` methods for `FETWFE_simulated` (output of
+  `simulateData()`) and `FETWFE_coefs` (output of `genCoefs()`).
+  Pre-fix, `print(simulateData(...))` fell through to `print.list`
+  and dumped the full `N*T x p` design matrix — potentially hundreds
+  of MB for medium-sized panels. The new methods print a compact
+  dimensions summary (N, T, R, d, p, cohort sizes, noise variances
+  for `FETWFE_simulated`; R, T, d, beta length, theta sparsity, seed
+  for `FETWFE_coefs`). Live behavior is unchanged for everything
+  except the printed output. GitHub #84 item 13.
+
 ## Version 1.9.20 (2026-05-19)
 
 - User-facing input-validation error messages for the four estimator

@@ -220,3 +220,49 @@ test_that("genCoefs errors when eff_size is not numeric", {
 		regexp = "eff_size must be a numeric value"
 	)
 })
+
+# ------------------------------------------------------------------------------
+# print.FETWFE_coefs: compact summary instead of dumping the full beta and
+# theta vectors. #84 item 13.
+# ------------------------------------------------------------------------------
+test_that("print.FETWFE_coefs summarizes instead of dumping (#84 item 13)", {
+	coefs <- genCoefs(
+		R = 2,
+		T = 5,
+		d = 2,
+		density = 0.5,
+		eff_size = 4,
+		seed = 42
+	)
+	expect_s3_class(coefs, "FETWFE_coefs")
+
+	out <- capture.output(print(coefs))
+
+	# Brief: 3 cat() calls => 3 lines.
+	expect_lt(length(out), 5)
+
+	# Names the dimensions.
+	expect_true(any(grepl("R = 2", out)))
+	expect_true(any(grepl("T = 5", out)))
+	expect_true(any(grepl("d = 2", out)))
+
+	# Names the sparsity diagnostic.
+	expect_true(any(grepl("beta length", out)))
+	expect_true(any(grepl("theta nonzeros", out)))
+
+	# Names the seed (non-NULL path).
+	expect_true(any(grepl("seed: 42", out)))
+
+	# Negative assertions: don't dump the vectors themselves.
+	expect_false(any(grepl("\\[1\\]", out))) # vector-print signature
+})
+
+test_that("print.FETWFE_coefs handles seed = NULL cleanly (#84 item 13)", {
+	# genCoefs has seed = NULL as the default.
+	coefs <- genCoefs(R = 2, T = 5, d = 2, density = 0.5, eff_size = 4)
+	expect_s3_class(coefs, "FETWFE_coefs")
+	expect_null(coefs$seed)
+
+	out <- capture.output(print(coefs))
+	expect_true(any(grepl("seed: <none>", out, fixed = TRUE)))
+})
