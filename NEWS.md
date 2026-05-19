@@ -1,5 +1,16 @@
 # NEWS
 
+## Version 1.9.14 (2026-05-18)
+
+- Refactored the four "no features selected" early-exit blocks
+  in `fetwfe()` and `betwfe()` (intercept-only and no-treatment
+  cases for each estimator) to share a single internal helper
+  `.build_selected_out_result()` in `R/core_funcs.R`. No
+  user-visible behavior change: the return-list shape, field
+  ordering, and values are byte-identical to v1.9.13. The
+  consolidation eliminates a 4-way drift surface that produced
+  9 stale `q < 1` references in v1.9.5 (#56). Resolves #80.
+
 ## Version 1.9.13 (2026-05-18)
 
 - Tightened `idCohorts()`'s panel-balance check to catch units

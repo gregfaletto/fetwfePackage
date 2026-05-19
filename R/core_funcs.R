@@ -832,3 +832,203 @@ genFullInvFusionTransformMat <- function(first_inds, T, R, d, num_treats) {
 
 	return(full_D_inv)
 }
+
+#' @title Build the "no features selected" early-exit return list shared by
+#'   `fetwfe_core()` and `betwfe_core()`
+#'
+#' @description
+#' Internal helper that consolidates four near-duplicate early-exit blocks
+#' that previously lived inline in `R/betwfe_core.R` and `R/fetwfe_core.R`
+#' (BETWFE intercept-only, BETWFE no-treatment-selected, FETWFE
+#' intercept-only, FETWFE no-treatment-selected). All four blocks construct
+#' the same 33-/34-field return list with all-zero CATTs / ATTs and the same
+#' `data.frame` of CATT placeholders; they differ only in the `beta_hat`
+#' value, whether `theta_hat` is in the return, and the verbose-message
+#' text. Caller computes the final `beta_hat` (including any
+#' `add_ridge` adjustment and, for FETWFE, the
+#' `untransformCoefImproved()` transformation back from `theta`) and
+#' passes it in; helper builds the return list with the contractually-fixed
+#' field ordering. Resolves drift surface that produced 9 stale `q < 1`
+#' references in v1.9.5 (#56).
+#'
+#' @param message_text Character scalar; emitted via `message()` when
+#'   `verbose` is `TRUE`. Per-block string (see callers).
+#' @param verbose Logical; whether to emit `message_text`.
+#' @param R,N,T,d,p Integers; problem dimensions.
+#' @param c_names Character vector of length `R`; cohort labels for the
+#'   `catt_df_to_ret` rows.
+#' @param q Numeric; bridge regression exponent. Drives the
+#'   `ret_se <- if (q < 1) 0 else NA` SE-shape gate.
+#' @param beta_hat Numeric vector of length `p`; the final slope estimates
+#'   (caller-computed). For BETWFE intercept-only this is
+#'   `beta_hat[2:(p+1)]` (all zero); for BETWFE no-treatment this is
+#'   `beta_hat_slopes` after caller-applied `add_ridge` adjustment; for
+#'   FETWFE intercept-only this is `rep(0, p)`; for FETWFE no-treatment
+#'   this is `untransformCoefImproved(theta_hat_slopes)` after
+#'   caller-applied `add_ridge` adjustment.
+#' @param treat_inds,treat_int_inds Integer vectors; treatment-effect column
+#'   indices.
+#' @param cohort_probs,indep_cohort_probs Numeric vectors; cohort-probability
+#'   weights computed by `prep_for_etwfe_regression()`.
+#' @param cohort_probs_overall,indep_cohort_probs_overall Numeric scalars;
+#'   overall cohort-probability weights.
+#' @param sig_eps_sq,sig_eps_c_sq Numeric scalars; variance components.
+#' @param lambda.max,lambda.min,lambda_star Numeric scalars; bridge penalty
+#'   path endpoints and the BIC-selected lambda.
+#' @param lambda.max_model_size,lambda.min_model_size,lambda_star_model_size
+#'   Integer scalars; model sizes at each lambda.
+#' @param X_ints Numeric matrix; original-basis design.
+#' @param y Numeric vector; centered response.
+#' @param X_final,y_final Numeric matrix/vector; GLS-whitened design and
+#'   response actually fed to the bridge regression.
+#' @param theta_hat Optional numeric vector of length `p + 1` (includes
+#'   intercept). For FETWFE blocks only; BETWFE blocks omit (default
+#'   `NULL`).
+#' @param include_theta Logical; if `TRUE`, inserts `theta_hat` into the
+#'   return list between `catt_df` and `beta_hat` (FETWFE field order).
+#'   Default `FALSE` (BETWFE field order: no `theta_hat`).
+#'
+#' @return A 33-field (BETWFE) or 34-field (FETWFE) list with the same
+#'   field ordering as the pre-refactor inline blocks. The ordering is
+#'   load-bearing: downstream code in `betwfe()` / `fetwfe()` and the S3
+#'   class machinery in `R/*_class.R` indexes the result by name, but the
+#'   snapshot tests in `tests/testthat/_snaps/print-method-snapshot.md` and
+#'   the constructors in `R/class_helpers.R` are sensitive to the *names()*
+#'   ordering.
+#'
+#' @keywords internal
+#' @noRd
+.build_selected_out_result <- function(
+	message_text,
+	verbose,
+	R,
+	c_names,
+	q,
+	beta_hat,
+	treat_inds,
+	treat_int_inds,
+	cohort_probs,
+	indep_cohort_probs,
+	cohort_probs_overall,
+	indep_cohort_probs_overall,
+	sig_eps_sq,
+	sig_eps_c_sq,
+	lambda.max,
+	lambda.max_model_size,
+	lambda.min,
+	lambda.min_model_size,
+	lambda_star,
+	lambda_star_model_size,
+	X_ints,
+	y,
+	X_final,
+	y_final,
+	N,
+	T,
+	d,
+	p,
+	theta_hat = NULL,
+	include_theta = FALSE
+) {
+	if (verbose) {
+		message(message_text)
+	}
+
+	if (q < 1) {
+		ret_se <- 0
+	} else {
+		ret_se <- NA
+	}
+
+	catt_df_to_ret <- data.frame(
+		Cohort = c_names,
+		`Estimated TE` = rep(0, R),
+		SE = rep(ret_se, R),
+		ConfIntLow = rep(ret_se, R),
+		ConfIntHigh = rep(ret_se, R),
+		P_value = rep(NA_real_, R),
+		selected = rep(FALSE, R),
+		check.names = FALSE
+	)
+
+	# Build the FULL union list with every possible field, then drop
+	# the fields that don't belong to this block via name-vector
+	# selection (per PR #92's `.summary_estimator_output()` pattern).
+	# The `keep` vector encodes the contractual field ordering:
+	# `theta_hat` slots between `catt_df` and `beta_hat` for FETWFE
+	# blocks (3 + 4); BETWFE blocks (1 + 2) omit it.
+	out <- list(
+		in_sample_att_hat = 0,
+		in_sample_att_se = ret_se,
+		in_sample_att_se_no_prob = ret_se,
+		indep_att_hat = 0,
+		indep_att_se = ret_se,
+		catt_hats = setNames(rep(0, R), c_names),
+		catt_ses = setNames(rep(ret_se, R), c_names),
+		catt_df = catt_df_to_ret,
+		theta_hat = theta_hat,
+		beta_hat = beta_hat,
+		treat_inds = treat_inds,
+		treat_int_inds = treat_int_inds,
+		cohort_probs = cohort_probs,
+		indep_cohort_probs = indep_cohort_probs,
+		cohort_probs_overall = cohort_probs_overall,
+		indep_cohort_probs_overall = indep_cohort_probs_overall,
+		sig_eps_sq = sig_eps_sq,
+		sig_eps_c_sq = sig_eps_c_sq,
+		lambda.max = lambda.max,
+		lambda.max_model_size = lambda.max_model_size,
+		lambda.min = lambda.min,
+		lambda.min_model_size = lambda.min_model_size,
+		lambda_star = lambda_star,
+		lambda_star_model_size = lambda_star_model_size,
+		X_ints = X_ints,
+		y = y,
+		X_final = X_final,
+		y_final = y_final,
+		N = N,
+		T = T,
+		R = R,
+		d = d,
+		p = p,
+		calc_ses = q < 1
+	)
+
+	keep <- c(
+		"in_sample_att_hat",
+		"in_sample_att_se",
+		"in_sample_att_se_no_prob",
+		"indep_att_hat",
+		"indep_att_se",
+		"catt_hats",
+		"catt_ses",
+		"catt_df",
+		if (include_theta) "theta_hat",
+		"beta_hat",
+		"treat_inds",
+		"treat_int_inds",
+		"cohort_probs",
+		"indep_cohort_probs",
+		"cohort_probs_overall",
+		"indep_cohort_probs_overall",
+		"sig_eps_sq",
+		"sig_eps_c_sq",
+		"lambda.max",
+		"lambda.max_model_size",
+		"lambda.min",
+		"lambda.min_model_size",
+		"lambda_star",
+		"lambda_star_model_size",
+		"X_ints",
+		"y",
+		"X_final",
+		"y_final",
+		"N",
+		"T",
+		"R",
+		"d",
+		"p",
+		"calc_ses"
+	)
+	out[keep]
+}

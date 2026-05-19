@@ -900,40 +900,18 @@ fetwfe_core <- function(
 
 	# Handle edge case where no features are selected (model_size includes intercept)
 	if (lambda_star_model_size <= 1 && all(theta_hat[2:(p + 1)] == 0)) {
-		# only intercept might be non-zero
-		if (verbose) {
-			message(
-				"No features selected (or only intercept); all treatment effects estimated to be 0."
-			)
-		}
-
-		if (q < 1) {
-			ret_se <- 0
-		} else {
-			ret_se <- NA
-		}
-
-		catt_df_to_ret <- data.frame(
-			Cohort = c_names,
-			`Estimated TE` = rep(0, R),
-			SE = rep(ret_se, R),
-			ConfIntLow = rep(ret_se, R),
-			ConfIntHigh = rep(ret_se, R),
-			P_value = rep(NA_real_, R),
-			selected = rep(FALSE, R),
-			check.names = FALSE
-		)
-
-		return(list(
-			in_sample_att_hat = 0,
-			in_sample_att_se = ret_se,
-			in_sample_att_se_no_prob = ret_se,
-			indep_att_hat = 0,
-			indep_att_se = ret_se,
-			catt_hats = setNames(rep(0, R), c_names),
-			catt_ses = setNames(rep(ret_se, R), c_names),
-			catt_df = catt_df_to_ret,
-			theta_hat = theta_hat, # Includes intercept
+		# Only the intercept might be non-zero. Delegate to the shared
+		# helper (`.build_selected_out_result()` in `R/core_funcs.R`) that
+		# also serves the no-treatment branch below and the two BETWFE
+		# early-exits. FETWFE blocks pass `theta_hat` (with intercept)
+		# and set `include_theta = TRUE` to insert it between `catt_df`
+		# and `beta_hat`.
+		return(.build_selected_out_result(
+			message_text = "No features selected (or only intercept); all treatment effects estimated to be 0.",
+			verbose = verbose,
+			R = R,
+			c_names = c_names,
+			q = q,
 			beta_hat = rep(0, p), # Slopes are all zero
 			treat_inds = treat_inds,
 			treat_int_inds = treat_int_inds,
@@ -955,10 +933,10 @@ fetwfe_core <- function(
 			y_final = y_final,
 			N = N,
 			T = T,
-			R = R,
 			d = d,
 			p = p,
-			calc_ses = q < 1
+			theta_hat = theta_hat, # Includes intercept
+			include_theta = TRUE
 		))
 	}
 
@@ -989,30 +967,10 @@ fetwfe_core <- function(
 
 	# Handle edge case where no treatment features selected
 	if (length(sel_treat_inds_shifted) == 0) {
-		if (verbose) {
-			message(
-				"No treatment features selected; all treatment effects estimated to be 0."
-			)
-		}
-
-		if (q < 1) {
-			ret_se <- 0
-		} else {
-			ret_se <- NA
-		}
-
-		catt_df_to_ret <- data.frame(
-			Cohort = c_names,
-			`Estimated TE` = rep(0, R),
-			SE = rep(ret_se, R),
-			ConfIntLow = rep(ret_se, R),
-			ConfIntHigh = rep(ret_se, R),
-			P_value = rep(NA_real_, R),
-			selected = rep(FALSE, R),
-			check.names = FALSE
-		)
-
-		# Need to untransform theta_hat_slopes to get beta_hat for consistency
+		# Untransform `theta_hat_slopes` back to original (beta) basis for
+		# the helper's contract — `untransformCoefImproved()` is the
+		# FETWFE-specific reparameterization (theta -> beta) and stays at
+		# the caller (the helper is parameterization-agnostic).
 		beta_hat_early_exit <- untransformCoefImproved(
 			beta_hat_mod = theta_hat_slopes, # Pass slopes only
 			first_inds = first_inds,
@@ -1022,21 +980,21 @@ fetwfe_core <- function(
 			d = d,
 			num_treats = num_treats
 		)
+		# Apply ridge adjustment locally before early-exit return; doesn't
+		# affect later code paths (they re-compute `beta_hat` separately
+		# and run the non-early-exit `add_ridge` scaling at line ~1083).
+		# Plan D3.
 		if (add_ridge) {
 			lambda_ridge <- ifelse(is.na(lambda_ridge), 0, lambda_ridge)
 			beta_hat_early_exit <- beta_hat_early_exit * (1 + lambda_ridge)
 		}
 
-		return(list(
-			in_sample_att_hat = 0,
-			in_sample_att_se = ret_se,
-			in_sample_att_se_no_prob = ret_se,
-			indep_att_hat = 0,
-			indep_att_se = ret_se,
-			catt_hats = setNames(rep(0, R), c_names),
-			catt_ses = setNames(rep(ret_se, R), c_names),
-			catt_df = catt_df_to_ret,
-			theta_hat = theta_hat, # Full theta_hat with intercept
+		return(.build_selected_out_result(
+			message_text = "No treatment features selected; all treatment effects estimated to be 0.",
+			verbose = verbose,
+			R = R,
+			c_names = c_names,
+			q = q,
 			beta_hat = beta_hat_early_exit, # Untransformed slopes
 			treat_inds = treat_inds,
 			treat_int_inds = treat_int_inds,
@@ -1058,10 +1016,10 @@ fetwfe_core <- function(
 			y_final = y_final,
 			N = N,
 			T = T,
-			R = R,
 			d = d,
 			p = p,
-			calc_ses = q < 1
+			theta_hat = theta_hat, # Full theta_hat with intercept
+			include_theta = TRUE
 		))
 	}
 
