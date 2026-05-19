@@ -978,39 +978,16 @@ betwfe_core <- function(
 
 	# Handle edge case where no features are selected (model_size includes intercept)
 	if (lambda_star_model_size <= 1 && all(beta_hat[2:(p + 1)] == 0)) {
-		# only intercept might be non-zero
-		if (verbose) {
-			message(
-				"No features selected (or only intercept); all treatment effects estimated to be 0."
-			)
-		}
-
-		if (q < 1) {
-			ret_se <- 0
-		} else {
-			ret_se <- NA
-		}
-
-		catt_df_to_ret <- data.frame(
-			Cohort = c_names,
-			`Estimated TE` = rep(0, R),
-			SE = rep(ret_se, R),
-			ConfIntLow = rep(ret_se, R),
-			ConfIntHigh = rep(ret_se, R),
-			P_value = rep(NA_real_, R),
-			selected = rep(FALSE, R),
-			check.names = FALSE
-		)
-
-		return(list(
-			in_sample_att_hat = 0,
-			in_sample_att_se = ret_se,
-			in_sample_att_se_no_prob = ret_se,
-			indep_att_hat = 0,
-			indep_att_se = ret_se,
-			catt_hats = setNames(rep(0, R), c_names),
-			catt_ses = setNames(rep(ret_se, R), c_names),
-			catt_df = catt_df_to_ret,
+		# Only the intercept might be non-zero. Delegate to the shared
+		# helper (`.build_selected_out_result()` in `R/core_funcs.R`) that
+		# also serves the no-treatment branch below and the two FETWFE
+		# early-exits. BETWFE blocks omit `theta_hat` from the return.
+		return(.build_selected_out_result(
+			message_text = "No features selected (or only intercept); all treatment effects estimated to be 0.",
+			verbose = verbose,
+			R = R,
+			c_names = c_names,
+			q = q,
 			beta_hat = beta_hat[2:(p + 1)], # Slopes are all zero
 			treat_inds = treat_inds,
 			treat_int_inds = treat_int_inds,
@@ -1032,10 +1009,8 @@ betwfe_core <- function(
 			y_final = y_final,
 			N = N,
 			T = T,
-			R = R,
 			d = d,
-			p = p,
-			calc_ses = q < 1
+			p = p
 		))
 	}
 
@@ -1066,43 +1041,21 @@ betwfe_core <- function(
 
 	# Handle edge case where no treatment features selected
 	if (length(sel_treat_inds_shifted) == 0) {
-		if (verbose) {
-			message(
-				"No treatment features selected; all treatment effects estimated to be 0."
-			)
-		}
-
-		if (q < 1) {
-			ret_se <- 0
-		} else {
-			ret_se <- NA
-		}
-
-		catt_df_to_ret <- data.frame(
-			Cohort = c_names,
-			`Estimated TE` = rep(0, R),
-			SE = rep(ret_se, R),
-			ConfIntLow = rep(ret_se, R),
-			ConfIntHigh = rep(ret_se, R),
-			P_value = rep(NA_real_, R),
-			selected = rep(FALSE, R),
-			check.names = FALSE
-		)
-
+		# Apply ridge adjustment locally before early-exit return; doesn't
+		# affect later code paths (they re-compute `beta_hat` from
+		# `beta_hat_slopes` separately and run the non-early-exit
+		# `add_ridge` scaling at line ~1108). Plan D3.
 		if (add_ridge) {
 			lambda_ridge <- ifelse(is.na(lambda_ridge), 0, lambda_ridge)
 			beta_hat_slopes <- beta_hat_slopes * (1 + lambda_ridge)
 		}
 
-		return(list(
-			in_sample_att_hat = 0,
-			in_sample_att_se = ret_se,
-			in_sample_att_se_no_prob = ret_se,
-			indep_att_hat = 0,
-			indep_att_se = ret_se,
-			catt_hats = setNames(rep(0, R), c_names),
-			catt_ses = setNames(rep(ret_se, R), c_names),
-			catt_df = catt_df_to_ret,
+		return(.build_selected_out_result(
+			message_text = "No treatment features selected; all treatment effects estimated to be 0.",
+			verbose = verbose,
+			R = R,
+			c_names = c_names,
+			q = q,
 			beta_hat = beta_hat_slopes, # Untransformed slopes
 			treat_inds = treat_inds,
 			treat_int_inds = treat_int_inds,
@@ -1124,10 +1077,8 @@ betwfe_core <- function(
 			y_final = y_final,
 			N = N,
 			T = T,
-			R = R,
 			d = d,
-			p = p,
-			calc_ses = q < 1
+			p = p
 		))
 	}
 
