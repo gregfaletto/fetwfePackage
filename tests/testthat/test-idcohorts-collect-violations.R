@@ -160,6 +160,44 @@ test_that("idCohorts: balance + absorbing violations both surfaced in one messag
 # Truncation: 25 balance violations → first 20 + "... and 5 more".
 # ------------------------------------------------------------------------------
 
+test_that("idCohorts: duplicate-time-period unit flagged alongside missing-period unit (issue #75)", {
+	# Build T = 3 panel with three unit shapes:
+	#   - "good01": rows at times {1, 2, 3} → balanced, passes.
+	#   - "dup01":  rows at times {1, 2, 2} → nrow == T but only 2 distinct
+	#               periods (the canonical duplicate-time bug fix target).
+	#   - "miss01": rows at times {1, 2}    → nrow != T (missing period 3).
+	df <- data.frame(
+		unit = c(
+			rep("good01", 3),
+			"dup01",
+			"dup01",
+			"dup01",
+			"miss01",
+			"miss01"
+		),
+		time = c(1L, 2L, 3L, 1L, 2L, 2L, 1L, 2L),
+		treat = 0L,
+		stringsAsFactors = FALSE
+	)
+	err <- .catch_idcohorts(df)
+	expect_match(err, "Panel does not appear to be balanced")
+	# The duplicate-time unit must be named — without the fix, this
+	# assertion fails because the bug lets dup01 pass silently.
+	expect_match(
+		err,
+		"dup01 has 3 observations (2 distinct time periods)",
+		fixed = TRUE
+	)
+	# The missing-period unit is also named with the same format.
+	expect_match(
+		err,
+		"miss01 has 2 observations (2 distinct time periods)",
+		fixed = TRUE
+	)
+	# good01 stays absent.
+	expect_false(grepl("good01", err, fixed = TRUE))
+})
+
 test_that("idCohorts: more than 20 balance violations are truncated to 20 + summary", {
 	# Build 26 units, all balanced (3 rows each), then drop the third row
 	# from 25 of them so they fail balance.

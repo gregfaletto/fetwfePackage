@@ -81,11 +81,21 @@ idCohorts <- function(df, time_var, unit_var, treat_var) {
 
 		# Balance check (gates the absorbing-state check on the same unit;
 		# we can't trust the per-period treatment vector when observations
-		# are missing).
-		if (nrow(df_s) != T) {
+		# are missing or when a time period is duplicated). The
+		# setequal() clause catches the (1, 2, 2)-style duplicate-time
+		# case that nrow == T silently passed pre-#75.
+		if (nrow(df_s) != T || !setequal(df_s[, time_var], times)) {
 			balance_violations <- c(
 				balance_violations,
-				paste0("unit ", s, " has ", nrow(df_s), " observations")
+				paste0(
+					"unit ",
+					s,
+					" has ",
+					nrow(df_s),
+					" observations (",
+					length(unique(df_s[, time_var])),
+					" distinct time periods)"
+				)
 			)
 			next
 		}

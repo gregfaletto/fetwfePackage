@@ -1,5 +1,16 @@
 # NEWS
 
+## Version 1.9.13 (2026-05-18)
+
+- Tightened `idCohorts()`'s panel-balance check to catch units
+  with the right row count but duplicate or missing time periods
+  (GitHub #75). A unit with rows at times `(1, 2, 2)` and `T = 3`
+  previously passed silently, causing a confusing downstream
+  failure in `processCovs()`. The new check requires both
+  `nrow == T` and exact time coverage; the violation message
+  includes both counts. The parallel balance check in
+  `processCovs()` (defense-in-depth) is tightened to match.
+
 ## Version 1.9.12 (2026-05-18)
 
 - Fixed a silent bug in `betwfe(..., add_ridge = TRUE)`
