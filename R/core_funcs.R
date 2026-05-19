@@ -38,7 +38,11 @@
 #'   \code{indep_count_data_available = TRUE}.  Default \code{NA}.
 #' @param is_fetwfe Logical.  If \code{TRUE}, a fusion transformation matrix
 #'   has been applied upstream (this matters for how the optional ridge rows
-#'   are constructed).  Default \code{TRUE}.
+#'   are constructed).  Required (no default): the prior default of
+#'   \code{TRUE} produced GitHub #74 (BETWFE silently inherited the FETWFE
+#'   augmentation basis).  All four caller sites
+#'   (\code{fetwfe_core}, \code{etwfe_core}, \code{betwfe_core},
+#'   \code{twfeCovs_core}) must pass this argument explicitly.
 #' @param is_twfe_covs Logical.  If \code{TRUE}, columns will be removed and
 #'   consolidated as required for `twfeCovs()`.  Default \code{FALSE}.
 #'
@@ -103,7 +107,7 @@ prep_for_etwfe_regression <- function(
 	in_sample_counts,
 	indep_count_data_available,
 	indep_counts = NA,
-	is_fetwfe = TRUE,
+	is_fetwfe,
 	is_twfe_covs = FALSE
 ) {
 	if (verbose) {

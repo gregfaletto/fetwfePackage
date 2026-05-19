@@ -1,5 +1,16 @@
 # NEWS
 
+## Version 1.9.12 (2026-05-18)
+
+- Fixed a silent bug in `betwfe(..., add_ridge = TRUE)`
+  (GitHub #74): the L2 ridge augmentation rows were applied
+  in the FETWFE fusion-transform basis (`D_inverse`) instead
+  of the identity basis BETWFE requires. Default-off, but
+  affected users who set `add_ridge = TRUE` to escape
+  rank-deficient designs. Also made `is_fetwfe` a required
+  argument in the internal `prep_for_etwfe_regression()`
+  helper so the same bug class cannot recur silently.
+
 ## Version 1.9.11 (2026-05-18)
 
 - Refactored the three `print.<class>` / `summary.<class>` /

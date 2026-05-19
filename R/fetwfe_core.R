@@ -779,7 +779,8 @@ fetwfe_core <- function(
 		first_inds = first_inds,
 		in_sample_counts = in_sample_counts,
 		indep_count_data_available = indep_count_data_available,
-		indep_counts = indep_counts
+		indep_counts = indep_counts,
+		is_fetwfe = TRUE
 	)
 
 	X_final_scaled <- res$X_final_scaled

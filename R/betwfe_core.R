@@ -718,7 +718,10 @@ betwfeWithSimulatedData <- function(
 #'     }
 #'   \item **Optional Ridge Penalty:** If `add_ridge` is `TRUE`, `X_final_scaled`
 #'     (scaled version of `X_final`) and `y_final` are augmented to add an L2
-#'     penalty.
+#'     penalty. The augmentation uses the identity basis (via
+#'     `prep_for_etwfe_regression(..., is_fetwfe = FALSE)`) because BETWFE's
+#'     design is untransformed — same as ETWFE and `twfeCovs`, and unlike FETWFE
+#'     which uses the inverse fusion-transform basis.
 #'   \item **Cohort Probabilities:** Calculates cohort membership probabilities
 #'     conditional on being treated, using `in_sample_counts` and `indep_counts`
 #'     if available.
@@ -854,7 +857,8 @@ betwfe_core <- function(
 		first_inds = first_inds,
 		in_sample_counts = in_sample_counts,
 		indep_count_data_available = indep_count_data_available,
-		indep_counts = indep_counts
+		indep_counts = indep_counts,
+		is_fetwfe = FALSE
 	)
 
 	X_final_scaled <- res$X_final_scaled
