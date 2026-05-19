@@ -1204,11 +1204,25 @@ processCovs <- function(
 	T,
 	verbose = FALSE
 ) {
-	# Always check that every unit has exactly T observations.
+	# Always check that every unit has exactly T observations covering all
+	# time periods. Defense-in-depth: `idCohorts()` (called upstream by every
+	# entry point that reaches here) already enforces this contract since
+	# #75. If a future code path reaches `processCovs()` without going
+	# through `idCohorts()` first, this check still catches the bug class.
 	for (s in units) {
 		df_s <- df[df[, unit_var] == s, ]
-		if (nrow(df_s) != T) {
-			stop(paste("Unit", s, "does not have exactly", T, "observations."))
+		if (nrow(df_s) != T || !setequal(df_s[, time_var], times)) {
+			stop(paste0(
+				"Unit ",
+				s,
+				" does not have exactly T = ",
+				T,
+				" observations covering all time periods (got ",
+				nrow(df_s),
+				" observations, ",
+				length(unique(df_s[, time_var])),
+				" distinct time periods)."
+			))
 		}
 	}
 
