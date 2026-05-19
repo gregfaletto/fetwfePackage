@@ -22,45 +22,8 @@ library(fetwfe)
 #      augmentation rows ARE identity-basis. The pre-fix buggy version of
 #      betwfe would have failed this assertion.
 
-generate_panel_data <- function(N = 30, T = 10, R = 9, seed = 123) {
-	set.seed(seed)
-	stopifnot(R <= T - 1)
-	unit_ids <- sprintf("unit%02d", 1:N)
-	time_vals <- 1:T
-
-	first_treat <- sapply(unit_ids, function(u) {
-		if (runif(1) < 0.5) {
-			Inf
-		} else {
-			if (R > 1) {
-				sample(2:(R + 1), 1)
-			} else {
-				2
-			}
-		}
-	})
-
-	df <- do.call(
-		rbind,
-		lapply(seq_along(unit_ids), function(i) {
-			unit <- unit_ids[i]
-			ft <- first_treat[i]
-			data.frame(
-				time = as.integer(time_vals),
-				unit = as.character(unit),
-				treatment = as.integer(ifelse(time_vals >= ft, 1, 0)),
-				cov1 = rnorm(T),
-				cov2 = runif(T),
-				y = rnorm(T)
-			)
-		})
-	)
-
-	df <- df[!(df$time == 1 & df$treatment == 1), ]
-	df <- df[order(df$unit, df$time), ]
-	rownames(df) <- NULL
-	return(df)
-}
+# generate_panel_data() is defined in tests/testthat/helper-panel-fixture.R
+# (sourced by testthat before this file runs; issue #91).
 
 # Shared setup: a fixture + a baseline (add_ridge = FALSE) fit to extract
 # upstream inputs without re-running the REML variance-component

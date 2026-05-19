@@ -159,8 +159,11 @@ generated files will fail `R CMD check`.
 
 `tests/testthat/` has one `test-<function>.R` per exported function. The
 larger files (`test-fetwfe.R`, `test-etwfe.R`, `test-betwfe.R`,
-`test-twfeCovs.R`) build small synthetic panels with `generate_panel_data()`
-helpers defined inline. When you add or change a public function, add or
+`test-twfeCovs.R`) build small synthetic panels via the shared helpers
+`generate_panel_data()`, `generate_bad_panel_data()`, and
+`generate_minimal_panel_data()` defined in
+`tests/testthat/helper-panel-fixture.R` (sourced by testthat before any
+`test-*.R` runs). When you add or change a public function, add or
 update its `test-*.R` file in the same PR.
 
 ## When in doubt
