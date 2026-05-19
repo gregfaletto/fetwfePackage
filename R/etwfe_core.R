@@ -153,12 +153,436 @@ etwfeWithSimulatedData <- function(
 }
 
 
+# .collect_etwfe_input_violations
+#' @title Collect input-validation violations for the etwfe-family entry points
+#' @description Internal helper that runs the per-argument checks of
+#'   `checkEtwfeInputs()` without `stop()`-ing on the first failure. Each
+#'   malformed argument contributes one human-readable line to a
+#'   character vector that the caller (`checkEtwfeInputs()` or
+#'   `checkFetwfeInputs()`) consolidates into a single multi-line
+#'   `stop()` message. This collect-all-violations pattern means a user
+#'   with K malformed args sees K violations on the first call instead
+#'   of one error round-trip per arg.
+#' @return A list with three elements:
+#'   - `violations`: character vector of human-readable per-arg violation
+#'     lines (empty when all inputs are valid).
+#'   - `pdata`: the (possibly tibble-coerced) `pdata`. Coercion runs
+#'     regardless of downstream violations so the caller does not have
+#'     to redo it.
+#'   - `indep_count_data_available`: logical scalar; `TRUE` if a valid
+#'     `indep_counts` argument was provided, `FALSE` otherwise.
+#' @details Within a single argument's check chain (e.g., `time_var`
+#'   must be character, length 1, present in `pdata`, integer column),
+#'   the first failure short-circuits — downstream checks for that arg
+#'   are unsafe to run (e.g., `time_var %in% colnames(pdata)` cannot
+#'   sensibly be evaluated if `time_var` is not a length-1 character).
+#'   Across DIFFERENT arguments, violations collect independently — if
+#'   both `time_var` and `unit_var` are malformed, BOTH violations
+#'   appear in the final list. This is "cascade within arg, collect
+#'   across args".
+#' @keywords internal
+#' @noRd
+.collect_etwfe_input_violations <- function(
+	pdata,
+	time_var,
+	unit_var,
+	treatment,
+	response,
+	covs = c(),
+	indep_counts = NA,
+	sig_eps_sq = NA,
+	sig_eps_c_sq = NA,
+	verbose = FALSE,
+	alpha = 0.05,
+	add_ridge = FALSE
+) {
+	violations <- character(0)
+
+	# `pdata` itself must be a data frame before we can probe its
+	# columns. If it is not, every downstream column-existence /
+	# column-type check is meaningless; record the violation and skip
+	# all pdata-dependent checks.
+	pdata_ok <- is.data.frame(pdata)
+	if (!pdata_ok) {
+		violations <- c(
+			violations,
+			sprintf(
+				"pdata must be a data frame; got %s",
+				paste(class(pdata), collapse = "/")
+			)
+		)
+	} else {
+		# Tibble -> data frame coercion; harmless when pdata is already
+		# a plain data.frame.
+		if ("tbl_df" %in% class(pdata)) {
+			pdata <- as.data.frame(pdata)
+		}
+		if (nrow(pdata) < 4) {
+			violations <- c(
+				violations,
+				sprintf(
+					"pdata must have at least 4 rows (2 units at 2 times); got %d",
+					nrow(pdata)
+				)
+			)
+		}
+	}
+
+	# --- time_var --------------------------------------------------------
+	if (!is.character(time_var) || length(time_var) != 1) {
+		violations <- c(
+			violations,
+			sprintf(
+				"time_var must be a single character string; got %s (length %d)",
+				paste(class(time_var), collapse = "/"),
+				length(time_var)
+			)
+		)
+	} else if (pdata_ok && !(time_var %in% colnames(pdata))) {
+		violations <- c(
+			violations,
+			sprintf(
+				"time_var = '%s' is not a column in pdata; columns are: %s",
+				time_var,
+				paste(colnames(pdata), collapse = ", ")
+			)
+		)
+	} else if (pdata_ok && !is.integer(pdata[[time_var]])) {
+		violations <- c(
+			violations,
+			sprintf(
+				"the time_var column '%s' must be integer; got %s",
+				time_var,
+				paste(class(pdata[[time_var]]), collapse = "/")
+			)
+		)
+	}
+
+	# --- unit_var --------------------------------------------------------
+	if (!is.character(unit_var) || length(unit_var) != 1) {
+		violations <- c(
+			violations,
+			sprintf(
+				"unit_var must be a single character string; got %s (length %d)",
+				paste(class(unit_var), collapse = "/"),
+				length(unit_var)
+			)
+		)
+	} else if (pdata_ok && !(unit_var %in% colnames(pdata))) {
+		violations <- c(
+			violations,
+			sprintf(
+				"unit_var = '%s' is not a column in pdata; columns are: %s",
+				unit_var,
+				paste(colnames(pdata), collapse = ", ")
+			)
+		)
+	} else if (pdata_ok && !is.character(pdata[[unit_var]])) {
+		violations <- c(
+			violations,
+			sprintf(
+				"the unit_var column '%s' must be character; got %s",
+				unit_var,
+				paste(class(pdata[[unit_var]]), collapse = "/")
+			)
+		)
+	}
+
+	# --- treatment -------------------------------------------------------
+	if (!is.character(treatment) || length(treatment) != 1) {
+		violations <- c(
+			violations,
+			sprintf(
+				"treatment must be a single character string; got %s (length %d)",
+				paste(class(treatment), collapse = "/"),
+				length(treatment)
+			)
+		)
+	} else if (pdata_ok && !(treatment %in% colnames(pdata))) {
+		violations <- c(
+			violations,
+			sprintf(
+				"treatment = '%s' is not a column in pdata; columns are: %s",
+				treatment,
+				paste(colnames(pdata), collapse = ", ")
+			)
+		)
+	} else if (pdata_ok && !is.integer(pdata[[treatment]])) {
+		violations <- c(
+			violations,
+			sprintf(
+				"the treatment column '%s' must be integer; got %s",
+				treatment,
+				paste(class(pdata[[treatment]]), collapse = "/")
+			)
+		)
+	} else if (pdata_ok && !all(pdata[, treatment] %in% c(0, 1))) {
+		bad_vals <- unique(pdata[, treatment][
+			!(pdata[, treatment] %in% c(0, 1))
+		])
+		violations <- c(
+			violations,
+			sprintf(
+				"the treatment column '%s' must contain only 0/1; saw other value(s): %s",
+				treatment,
+				paste(utils::head(bad_vals, 5), collapse = ", ")
+			)
+		)
+	}
+
+	# --- covs ------------------------------------------------------------
+	if (length(covs) > 0) {
+		if (!is.character(covs)) {
+			violations <- c(
+				violations,
+				sprintf(
+					"covs must be a character vector of column names; got %s",
+					paste(class(covs), collapse = "/")
+				)
+			)
+		} else if (pdata_ok && !all(covs %in% colnames(pdata))) {
+			missing_covs <- covs[!(covs %in% colnames(pdata))]
+			violations <- c(
+				violations,
+				sprintf(
+					"covs contains name(s) not in pdata: %s",
+					paste(missing_covs, collapse = ", ")
+				)
+			)
+		} else if (pdata_ok) {
+			bad_cov_types <- character(0)
+			for (cov in covs) {
+				if (
+					!(is.numeric(pdata[[cov]]) ||
+						is.integer(pdata[[cov]]) ||
+						is.factor(pdata[[cov]]))
+				) {
+					bad_cov_types <- c(
+						bad_cov_types,
+						sprintf(
+							"'%s' (%s)",
+							cov,
+							paste(class(pdata[[cov]]), collapse = "/")
+						)
+					)
+				}
+			}
+			if (length(bad_cov_types) > 0) {
+				violations <- c(
+					violations,
+					sprintf(
+						"each cov column must be numeric, integer, or factor; offending column(s): %s",
+						paste(bad_cov_types, collapse = ", ")
+					)
+				)
+			}
+		}
+	}
+
+	# --- response --------------------------------------------------------
+	if (!is.character(response) || length(response) != 1) {
+		violations <- c(
+			violations,
+			sprintf(
+				"response must be a single character string; got %s (length %d)",
+				paste(class(response), collapse = "/"),
+				length(response)
+			)
+		)
+	} else if (pdata_ok && !(response %in% colnames(pdata))) {
+		violations <- c(
+			violations,
+			sprintf(
+				"response = '%s' is not a column in pdata; columns are: %s",
+				response,
+				paste(colnames(pdata), collapse = ", ")
+			)
+		)
+	} else if (
+		pdata_ok &&
+			!(is.numeric(pdata[[response]]) || is.integer(pdata[[response]]))
+	) {
+		violations <- c(
+			violations,
+			sprintf(
+				"the response column '%s' must be numeric or integer; got %s",
+				response,
+				paste(class(pdata[[response]]), collapse = "/")
+			)
+		)
+	}
+
+	# --- indep_counts ----------------------------------------------------
+	# Mirrors original: only validated when not all-NA. If valid, the
+	# `indep_count_data_available` flag is TRUE.
+	indep_count_data_available <- FALSE
+	if (any(!is.na(indep_counts))) {
+		if (!is.integer(indep_counts)) {
+			violations <- c(
+				violations,
+				sprintf(
+					"indep_counts must be an integer vector; got %s",
+					paste(class(indep_counts), collapse = "/")
+				)
+			)
+		} else if (any(indep_counts <= 0)) {
+			# Original message preserved verbatim (also surfaced in
+			# `etwfeWithSimulatedData()` regression coverage).
+			violations <- c(
+				violations,
+				"At least one cohort in the independent count data has 0 members"
+			)
+		} else {
+			indep_count_data_available <- TRUE
+		}
+	}
+
+	# --- sig_eps_sq ------------------------------------------------------
+	if (any(!is.na(sig_eps_sq))) {
+		if (!(is.numeric(sig_eps_sq) || is.integer(sig_eps_sq))) {
+			violations <- c(
+				violations,
+				sprintf(
+					"sig_eps_sq must be numeric or integer; got %s",
+					paste(class(sig_eps_sq), collapse = "/")
+				)
+			)
+		} else if (length(sig_eps_sq) != 1) {
+			violations <- c(
+				violations,
+				sprintf(
+					"sig_eps_sq must be a single value; got length %d",
+					length(sig_eps_sq)
+				)
+			)
+		} else if (sig_eps_sq < 0) {
+			violations <- c(
+				violations,
+				sprintf(
+					"sig_eps_sq must be non-negative; got %s",
+					format(sig_eps_sq)
+				)
+			)
+		}
+	}
+
+	# --- sig_eps_c_sq ----------------------------------------------------
+	if (any(!is.na(sig_eps_c_sq))) {
+		if (!(is.numeric(sig_eps_c_sq) || is.integer(sig_eps_c_sq))) {
+			violations <- c(
+				violations,
+				sprintf(
+					"sig_eps_c_sq must be numeric or integer; got %s",
+					paste(class(sig_eps_c_sq), collapse = "/")
+				)
+			)
+		} else if (length(sig_eps_c_sq) != 1) {
+			violations <- c(
+				violations,
+				sprintf(
+					"sig_eps_c_sq must be a single value; got length %d",
+					length(sig_eps_c_sq)
+				)
+			)
+		} else if (sig_eps_c_sq < 0) {
+			violations <- c(
+				violations,
+				sprintf(
+					"sig_eps_c_sq must be non-negative; got %s",
+					format(sig_eps_c_sq)
+				)
+			)
+		}
+	}
+
+	# --- verbose ---------------------------------------------------------
+	if (!is.logical(verbose) || length(verbose) != 1) {
+		violations <- c(
+			violations,
+			sprintf(
+				"verbose must be a single logical (TRUE or FALSE); got %s (length %d)",
+				paste(class(verbose), collapse = "/"),
+				length(verbose)
+			)
+		)
+	}
+
+	# --- alpha -----------------------------------------------------------
+	# Match original: only emit the alpha > 0.5 warning when alpha is
+	# otherwise fully valid (numeric, length 1, in (0, 1)). The warning
+	# is a UX nudge and was unreachable when any alpha check failed.
+	alpha_valid <- FALSE
+	if (!is.numeric(alpha) || length(alpha) != 1) {
+		violations <- c(
+			violations,
+			sprintf(
+				"alpha must be a single numeric; got %s (length %d)",
+				paste(class(alpha), collapse = "/"),
+				length(alpha)
+			)
+		)
+	} else if (!(alpha > 0 && alpha < 1)) {
+		violations <- c(
+			violations,
+			sprintf(
+				"alpha must be in (0, 1); got %s",
+				format(alpha)
+			)
+		)
+	} else {
+		alpha_valid <- TRUE
+	}
+	if (alpha_valid && alpha > 0.5) {
+		warning(
+			"Provided alpha > 0.5; are you sure you didn't mean to enter a smaller alpha? The confidence level will be 1 - alpha."
+		)
+	}
+
+	# --- add_ridge -------------------------------------------------------
+	if (!is.logical(add_ridge) || length(add_ridge) != 1) {
+		violations <- c(
+			violations,
+			sprintf(
+				"add_ridge must be a single logical (TRUE or FALSE); got %s (length %d)",
+				paste(class(add_ridge), collapse = "/"),
+				length(add_ridge)
+			)
+		)
+	}
+
+	list(
+		violations = violations,
+		pdata = pdata,
+		indep_count_data_available = indep_count_data_available
+	)
+}
+
+# .format_input_violations
+#' @title Assemble a multi-line input-violations error message
+#' @description Internal helper used by `checkEtwfeInputs()` and
+#'   `checkFetwfeInputs()` to render a vector of per-arg violation
+#'   lines as a multi-line `stop()` body. Centralising the header /
+#'   prefix here means both validators speak with one voice, and the
+#'   four entry points (`fetwfe`, `etwfe`, `betwfe`, `twfeCovs`)
+#'   continue to produce byte-identical messages — a property the
+#'   PR #103 snapshot guardrail asserts.
+#' @keywords internal
+#' @noRd
+.format_input_violations <- function(violations) {
+	paste0(
+		"Invalid inputs:\n  - ",
+		paste(violations, collapse = "\n  - ")
+	)
+}
+
 # checkEtwfeInputs
 #' @title Check Inputs for the main `etwfe` / `betwfe` / `twfeCovs` functions
 #' @description Validates the inputs provided to the OLS-style entry points
 #'   (`etwfe`, `betwfe`, `twfeCovs`), ensuring they meet type, dimension,
-#'   and content requirements. Stops
-#'   execution with an error message if any check fails.
+#'   and content requirements. Stops execution with a multi-line error
+#'   message listing every malformed input on a single call (instead of
+#'   one round-trip per arg). Delegates the per-arg checks to
+#'   `.collect_etwfe_input_violations()`.
 #' @param pdata Dataframe; the panel data set.
 #' @param time_var Character; name of the time variable column.
 #' @param unit_var Character; name of the unit variable column.
@@ -173,20 +597,20 @@ etwfeWithSimulatedData <- function(
 #' @param verbose Logical; if TRUE, print progress. Default `FALSE`.
 #' @param alpha Numeric; significance level for confidence intervals. Default `0.05`.
 #' @param add_ridge Logical; if TRUE, add small ridge penalty. Default `FALSE`.
-#' @return Logical `indep_count_data_available`, which is `TRUE` if valid
-#'   `indep_counts` were provided, `FALSE` otherwise.
-#' @details This function performs a series of `stopifnot` checks on each
-#'   parameter. For example:
-#'   - `pdata` must be a dataframe with at least 4 rows.
-#'   - `time_var`, `unit_var`, `treatment`, `response` must be single characters,
-#'     present in `pdata`, and the corresponding columns must have the correct
-#'     type (e.g., integer for time, character for unit, 0/1 integer for treatment).
-#'   - `covs` if provided, must be characters, present in `pdata`, and columns
-#'     must be numeric, integer, or factor.
-#'   - `indep_counts` if provided, must be positive integers.
-#'   - `sig_eps_sq`, `sig_eps_c_sq` if provided, must be non-negative numerics.
-#'   - `alpha` must be in `(0, 1)`.
-#'   Issues a warning if `alpha > 0.5`.
+#' @return A list with two elements:
+#'   - `pdata`: the (possibly tibble-coerced) panel data frame.
+#'   - `indep_count_data_available`: logical; `TRUE` if a valid
+#'     `indep_counts` argument was provided.
+#' @details All per-argument checks live in
+#'   `.collect_etwfe_input_violations()`; this thin wrapper renders the
+#'   collected violations into a multi-line `stop()` message. The
+#'   user-facing wording was upgraded from the legacy
+#'   `is.character(time_var) is not TRUE` style to named, actionable
+#'   lines naming the arg, the expected shape, and (when feasible) the
+#'   received shape (GitHub #84). The message header is
+#'   `"Invalid inputs:"` — deliberately caller-agnostic so error text
+#'   stays byte-identical across the four entry points (locked by the
+#'   PR #103 snapshot tests).
 #' @keywords internal
 #' @noRd
 checkEtwfeInputs <- function(
@@ -203,90 +627,27 @@ checkEtwfeInputs <- function(
 	alpha = 0.05,
 	add_ridge = FALSE
 ) {
-	# Check inputs
-	stopifnot(is.data.frame(pdata))
-	# Check if pdata is a tibble; if so, convert to a dataframe
-	if ("tbl_df" %in% class(pdata)) {
-		pdata <- as.data.frame(pdata)
-	}
-	stopifnot(nrow(pdata) >= 4) # bare minimum, 2 units at 2 times
-
-	stopifnot(is.character(time_var))
-	stopifnot(length(time_var) == 1)
-	stopifnot(time_var %in% colnames(pdata))
-	stopifnot(is.integer(pdata[[time_var]]))
-
-	stopifnot(is.character(unit_var))
-	stopifnot(length(unit_var) == 1)
-	stopifnot(unit_var %in% colnames(pdata))
-	stopifnot(is.character(pdata[[unit_var]]))
-
-	stopifnot(is.character(treatment))
-	stopifnot(length(treatment) == 1)
-	stopifnot(treatment %in% colnames(pdata))
-	stopifnot(is.integer(pdata[[treatment]]))
-	stopifnot(all(pdata[, treatment] %in% c(0, 1)))
-
-	if (length(covs) > 0) {
-		stopifnot(is.character(covs))
-		stopifnot(all(covs %in% colnames(pdata)))
-		for (cov in covs) {
-			stopifnot(
-				is.numeric(pdata[[cov]]) |
-					is.integer(pdata[[cov]]) |
-					is.factor(pdata[[cov]])
-			)
-		}
-	}
-
-	stopifnot(is.character(response))
-	stopifnot(length(response) == 1)
-	stopifnot(response %in% colnames(pdata))
-	stopifnot(is.numeric(pdata[[response]]) | is.integer(pdata[[response]]))
-
-	indep_count_data_available <- FALSE
-	if (any(!is.na(indep_counts))) {
-		stopifnot(is.integer(indep_counts))
-		if (any(indep_counts <= 0)) {
-			stop(
-				"At least one cohort in the independent count data has 0 members"
-			)
-		}
-		indep_count_data_available <- TRUE
-	}
-
-	if (any(!is.na(sig_eps_sq))) {
-		stopifnot(is.numeric(sig_eps_sq) | is.integer(sig_eps_sq))
-		stopifnot(length(sig_eps_sq) == 1)
-		stopifnot(sig_eps_sq >= 0)
-	}
-
-	if (any(!is.na(sig_eps_c_sq))) {
-		stopifnot(is.numeric(sig_eps_c_sq) | is.integer(sig_eps_c_sq))
-		stopifnot(length(sig_eps_c_sq) == 1)
-		stopifnot(sig_eps_c_sq >= 0)
-	}
-
-	stopifnot(is.logical(verbose))
-	stopifnot(length(verbose) == 1)
-
-	stopifnot(is.numeric(alpha))
-	stopifnot(length(alpha) == 1)
-	stopifnot(alpha > 0)
-	stopifnot(alpha < 1)
-	if (alpha > 0.5) {
-		warning(
-			"Provided alpha > 0.5; are you sure you didn't mean to enter a smaller alpha? The confidence level will be 1 - alpha."
-		)
-	}
-
-	stopifnot(is.logical(add_ridge))
-	stopifnot(length(add_ridge) == 1)
-
-	return(list(
+	res <- .collect_etwfe_input_violations(
 		pdata = pdata,
-		indep_count_data_available = indep_count_data_available
-	))
+		time_var = time_var,
+		unit_var = unit_var,
+		treatment = treatment,
+		response = response,
+		covs = covs,
+		indep_counts = indep_counts,
+		sig_eps_sq = sig_eps_sq,
+		sig_eps_c_sq = sig_eps_c_sq,
+		verbose = verbose,
+		alpha = alpha,
+		add_ridge = add_ridge
+	)
+	if (length(res$violations) > 0) {
+		stop(.format_input_violations(res$violations), call. = FALSE)
+	}
+	list(
+		pdata = res$pdata,
+		indep_count_data_available = res$indep_count_data_available
+	)
 }
 
 #' Core Estimation Logic for Extended Two-Way Fixed Effects

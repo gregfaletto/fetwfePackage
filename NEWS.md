@@ -1,5 +1,36 @@
 # NEWS
 
+## Version 1.9.20 (2026-05-19)
+
+- User-facing input-validation error messages for the four estimator
+  entry points (`fetwfe()`, `etwfe()`, `betwfe()`, `twfeCovs()`) are
+  now actionable instead of cryptic (GitHub #84, item 11). The legacy
+  `Error: is.character(time_var) is not TRUE` family produced by
+  `stopifnot()` is replaced with a named, multi-line `stop()` message
+  of the form
+  `Invalid inputs:\n  - <arg>: <expected>; got <received>`, where
+  ALL malformed args are collected on a single call so the user sees
+  every violation at once instead of one error round-trip per arg.
+  Two new internal helpers in `R/etwfe_core.R` ---
+  `.collect_etwfe_input_violations()` and `.format_input_violations()`
+  --- absorb the collect-and-render plumbing; `checkEtwfeInputs()` and
+  `checkFetwfeInputs()` (the latter at `R/fetwfe_core.R`) became thin
+  wrappers around them. Per-arg failures cascade within an arg (the
+  first failure in an arg's check chain short-circuits — e.g.,
+  `time_var %in% colnames(pdata)` isn't run if `time_var` isn't a
+  length-1 character) but collect independently across args. NULL
+  inputs are handled cleanly (`class(NULL) = "NULL"`, `length(NULL) = 0`
+  interpolate fine). The PR #103 snapshot guardrail (which locked the
+  legacy `is.foo() is not TRUE` strings) was deliberately re-blessed
+  with the new helpful messages; the snapshot mechanism continues to
+  lock the new contract against accidental drift. Internal validators
+  (`check_etwfe_core_inputs()`, `prepXints()`) were intentionally left
+  as terse `stopifnot()`s — they check post-prep invariants, not user
+  input. Item 12 of #84 (strict-vs-lenient reconciliations:
+  `lambda.max >= 0` vs `> 0`; `sig_eps_c_sq = 0`; `R >= 1` vs `R >= 2`)
+  is deferred to a follow-up since it involves API-behavior decisions
+  rather than UX wording.
+
 ## Version 1.9.19 (2026-05-19)
 
 - Internal consolidation of the input/output pipeline shared by the
