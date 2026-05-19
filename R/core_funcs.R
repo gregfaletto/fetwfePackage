@@ -183,15 +183,8 @@ prep_for_etwfe_regression <- function(
 		treat_inds_mat <- matrix(as.numeric(NA), nrow = N * T, ncol = R)
 
 		for (r in 1:R) {
-			first_ind_r <- first_inds[r]
-			if (r == R) {
-				last_ind_r <- num_treats
-			} else {
-				last_ind_r <- first_inds[r + 1] - 1
-			}
-
-			cols_r <- R + T - 1 + d + first_ind_r:last_ind_r
-
+			inds_r <- .cohort_block_inds(r, R, first_inds, num_treats)
+			cols_r <- R + T - 1 + d + inds_r
 			treat_inds_mat[, r] <- rowSums(X_final[, cols_r, drop = FALSE])
 		}
 
@@ -283,12 +276,12 @@ prep_for_etwfe_regression <- function(
 	stopifnot(all(cohort_probs >= 0))
 	stopifnot(all(cohort_probs <= 1))
 	stopifnot(length(cohort_probs) == R)
-	stopifnot(abs(sum(cohort_probs) - 1) < 10^(-6))
+	stopifnot(abs(sum(cohort_probs) - 1) < 1e-6)
 
 	cohort_probs_overall <- in_sample_counts[2:(R + 1)] / N
 
 	stopifnot(
-		abs(1 - sum(cohort_probs_overall) - in_sample_counts[1] / N) < 10^(-6)
+		abs(1 - sum(cohort_probs_overall) - in_sample_counts[1] / N) < 1e-6
 	)
 
 	if (indep_count_data_available) {
@@ -299,7 +292,7 @@ prep_for_etwfe_regression <- function(
 		stopifnot(all(indep_cohort_probs >= 0))
 		stopifnot(all(indep_cohort_probs <= 1))
 		stopifnot(length(indep_cohort_probs) == R)
-		stopifnot(abs(sum(indep_cohort_probs) - 1) < 10^(-6))
+		stopifnot(abs(sum(indep_cohort_probs) - 1) < 1e-6)
 
 		indep_cohort_probs_overall <- indep_counts[2:(R + 1)] / N
 
@@ -311,7 +304,7 @@ prep_for_etwfe_regression <- function(
 					) -
 					indep_counts[1] / N
 			) <
-				10^(-6)
+				1e-6
 		)
 	} else {
 		indep_cohort_probs <- NA

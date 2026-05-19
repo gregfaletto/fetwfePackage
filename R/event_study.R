@@ -461,9 +461,8 @@ event_study <- function(x, alpha = NULL) {
 		return(0)
 	}
 
-	# Multinomial Sigma_pi_hat on the masked cohort probabilities
-	Sigma_pi_hat <- -outer(masked, masked)
-	diag(Sigma_pi_hat) <- masked * (1 - masked)
+	# Multinomial Sigma_pi_hat on the masked cohort probabilities.
+	Sigma_pi_hat <- .multinomial_cov(masked)
 
 	# Per-event-time Jacobian: R rows, length(sel_treat_inds_shifted) cols.
 	# Rows for r not in V_e are zero (and are zero-killed by Sigma_pi_hat).

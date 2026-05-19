@@ -122,13 +122,12 @@ getCohortATTsFinalOLS <- function(
 	psi_mat <- matrix(0, num_treats, R)
 
 	for (r in 1:R) {
-		# Get indices corresponding to rth treatment
-		first_ind_r <- first_inds[r]
-		if (r < R) {
-			last_ind_r <- first_inds[r + 1] - 1
-		} else {
-			last_ind_r <- num_treats
-		}
+		# Get indices corresponding to rth treatment.
+		# Endpoint-preservation form: downstream `getPsiRUnfused()` takes
+		# `first_ind_r, last_ind_r` as separate positional args.
+		inds_r <- .cohort_block_inds(r, R, first_inds, num_treats)
+		first_ind_r <- inds_r[1]
+		last_ind_r <- inds_r[length(inds_r)]
 
 		stopifnot(last_ind_r >= first_ind_r)
 		stopifnot(all(first_ind_r:last_ind_r %in% 1:num_treats))
@@ -414,13 +413,8 @@ getSecondVarTermOLS <- function(
 ) {
 	stopifnot(length(tes) == nrow(psi_mat))
 	# Get Sigma_pi_hat, the (sample-estimated) covariance matrix for the
-	# sample proportions (derived from the multinomial distribution)
-	Sigma_pi_hat <- -outer(
-		cohort_probs_overall[1:(R)],
-		cohort_probs_overall[1:(R)]
-	)
-	diag(Sigma_pi_hat) <- cohort_probs_overall[1:R] *
-		(1 - cohort_probs_overall[1:R])
+	# sample proportions (derived from the multinomial distribution).
+	Sigma_pi_hat <- .multinomial_cov(cohort_probs_overall[1:R])
 
 	stopifnot(nrow(Sigma_pi_hat) == R)
 	stopifnot(ncol(Sigma_pi_hat) == R)
@@ -430,15 +424,7 @@ getSecondVarTermOLS <- function(
 	sel_inds <- list()
 
 	for (r in 1:R) {
-		first_ind_r <- first_inds[r]
-
-		if (r < R) {
-			last_ind_r <- first_inds[r + 1] - 1
-		} else {
-			last_ind_r <- num_treats
-		}
-		stopifnot(last_ind_r >= first_ind_r)
-		sel_inds[[r]] <- first_ind_r:last_ind_r
+		sel_inds[[r]] <- .cohort_block_inds(r, R, first_inds, num_treats)
 		if (r > 1) {
 			stopifnot(min(sel_inds[[r]]) > max(sel_inds[[r - 1]]))
 			stopifnot(length(sel_inds[[r]]) <= length(sel_inds[[r - 1]]))

@@ -1392,14 +1392,8 @@ getActualCohortTes <- function(R, first_inds, treat_inds, coefs, num_treats) {
 	actual_cohort_tes <- rep(as.numeric(NA), R)
 
 	for (r in 1:R) {
-		first_ind_r <- first_inds[r]
-		if (r < R) {
-			last_ind_r <- first_inds[r + 1] - 1
-		} else {
-			last_ind_r <- num_treats
-		}
-
-		actual_cohort_tes[r] <- mean(coefs[treat_inds][first_ind_r:last_ind_r])
+		inds_r <- .cohort_block_inds(r, R, first_inds, num_treats)
+		actual_cohort_tes[r] <- mean(coefs[treat_inds][inds_r])
 	}
 
 	return(actual_cohort_tes)
