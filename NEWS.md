@@ -1,5 +1,17 @@
 # NEWS
 
+## Version 1.9.15 (2026-05-18)
+
+- Consolidated the cluster-robust sandwich assembly across 4 call
+  sites (`getCohortATTsFinalOLS`, `getCohortATTsFinal`,
+  `.event_study_etwfe_betwfe`, `.event_study_fetwfe`) into a single
+  internal helper `.assemble_cluster_robust_sandwich()` in
+  `R/ols_calcs.R`. No user-visible behavior change; the sandwich
+  matrix and `treat_block_mask` outputs are bit-identical to v1.9.14.
+  The consolidation reduces the drift surface that produced the
+  v1.9.5 `10e-6` threshold typo (#56) from 4 sites to 1.
+  Resolves #78.
+
 ## Version 1.9.14 (2026-05-18)
 
 - Refactored the four "no features selected" early-exit blocks

@@ -138,22 +138,17 @@ event_study <- function(x, alpha = NULL) {
 	sandwich_full <- NULL
 	treat_block_mask <- NULL
 	if (identical(se_type, "cluster") && calc_ses) {
-		if (any(!is.na(sel_feat_inds))) {
-			X_S <- X_final[, sel_feat_inds, drop = FALSE]
-			treat_block_mask <- sel_feat_inds %in% treat_inds
-		} else {
-			X_S <- X_final
-			treat_block_mask <- logical(ncol(X_S))
-			treat_block_mask[treat_inds] <- TRUE
-		}
-		y_ <- y_final[seq_len(N * T)]
-		ols_fit <- stats::lm.fit(cbind(1, X_S), y_)
-		sandwich_full <- .compute_cluster_robust_sandwich(
-			X_S = X_S,
-			residuals = ols_fit$residuals,
+		sel_arg <- if (any(!is.na(sel_feat_inds))) sel_feat_inds else NULL
+		res <- .assemble_cluster_robust_sandwich(
+			X_final = X_final,
+			y_final = y_final,
 			N = N,
-			T = T
+			T = T,
+			treat_inds = treat_inds,
+			sel_feat_inds = sel_arg
 		)
+		sandwich_full <- res$sandwich_full
+		treat_block_mask <- res$treat_block_mask
 	}
 
 	max_event <- T - 2L
@@ -329,16 +324,16 @@ event_study <- function(x, alpha = NULL) {
 	sandwich_full <- NULL
 	treat_block_mask <- NULL
 	if (identical(se_type, "cluster") && calc_ses) {
-		X_S <- X_final[, sel_feat_inds, drop = FALSE]
-		treat_block_mask <- sel_feat_inds %in% treat_inds
-		y_ <- y_final[seq_len(N * T)]
-		ols_fit <- stats::lm.fit(cbind(1, X_S), y_)
-		sandwich_full <- .compute_cluster_robust_sandwich(
-			X_S = X_S,
-			residuals = ols_fit$residuals,
+		res <- .assemble_cluster_robust_sandwich(
+			X_final = X_final,
+			y_final = y_final,
 			N = N,
-			T = T
+			T = T,
+			treat_inds = treat_inds,
+			sel_feat_inds = sel_feat_inds
 		)
+		sandwich_full <- res$sandwich_full
+		treat_block_mask <- res$treat_block_mask
 	}
 
 	max_event <- T - 2L
