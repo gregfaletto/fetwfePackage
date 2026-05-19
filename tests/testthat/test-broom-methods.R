@@ -573,3 +573,43 @@ test_that("broom S3 methods are registered AND dispatch correctly for fetwfe / e
 		is.null(getS3method("tidy", "FETWFE_tes", optional = TRUE))
 	)
 })
+
+# ------------------------------------------------------------------------------
+# tidy.FETWFE_tes broom-convention args (#84 item 14)
+# ------------------------------------------------------------------------------
+test_that("tidy.FETWFE_tes accepts conf.int and conf.level (#84 item 14)", {
+	coefs <- genCoefs(
+		R = 3,
+		T = 6,
+		d = 2,
+		density = 0.5,
+		eff_size = 2,
+		seed = 42
+	)
+	tes <- getTes(coefs)
+	expect_s3_class(tes, "FETWFE_tes")
+
+	# Default behavior: backward-compatible. CI columns included with NA values.
+	td <- broom::tidy(tes)
+	expect_true("conf.low" %in% names(td))
+	expect_true("conf.high" %in% names(td))
+	expect_true(all(is.na(td$conf.low)))
+	expect_true(all(is.na(td$conf.high)))
+
+	# conf.int = FALSE: CI columns dropped entirely.
+	td_no_ci <- broom::tidy(tes, conf.int = FALSE)
+	expect_false("conf.low" %in% names(td_no_ci))
+	expect_false("conf.high" %in% names(td_no_ci))
+
+	# conf.level accepted (validated but unused; output unchanged regardless).
+	td_90 <- broom::tidy(tes, conf.int = TRUE, conf.level = 0.9)
+	expect_identical(td, td_90)
+
+	# conf.level is also ignored under conf.int = FALSE.
+	td_no_ci_99 <- broom::tidy(tes, conf.int = FALSE, conf.level = 0.99)
+	expect_identical(td_no_ci, td_no_ci_99)
+
+	# Invalid conf.level errors via stopifnot.
+	expect_error(broom::tidy(tes, conf.level = 1.5))
+	expect_error(broom::tidy(tes, conf.level = 0))
+})
