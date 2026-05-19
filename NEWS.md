@@ -1,5 +1,18 @@
 # NEWS
 
+## Version 1.9.18 (2026-05-19)
+
+- Internal refactor of `R/core_funcs.R::prep_for_etwfe_regression()`
+  (GitHub #81). The 237-line god function is split into four named
+  helpers — `.estimate_variance_and_gls()`, `.collapse_design_for_twfe_covs()`,
+  `.append_ridge_rows()`, `.compute_cohort_probs()` — with the
+  orchestrator reduced to an ~100-line sequence of helper calls. No
+  public API change; all four caller sites (`fetwfe_core()`,
+  `etwfe_core()`, `betwfe_core()`, `twfeCovs_core()`) continue to
+  unpack the same 12-field result list. Four direct return-shape
+  tests added in `tests/testthat/test-prep-helpers-81.R` to lock the
+  helpers' contracts against future drift.
+
 ## Version 1.9.17 (2026-05-19)
 
 - Small consistency-and-cleanup bundle (GitHub #76). Eight items:
