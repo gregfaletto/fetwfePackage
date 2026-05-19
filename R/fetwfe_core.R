@@ -161,10 +161,7 @@ getTeResults2 <- function(
 
 		# Second variance term: convergence of cohort membership probabilities
 		att_var_2 <- getSecondVarTermDataApp(
-			# cohort_probs = cohort_probs,
-			psi_mat = psi_mat,
 			sel_treat_inds_shifted = sel_treat_inds_shifted,
-			tes = tes,
 			d_inv_treat_sel = d_inv_treat_sel,
 			cohort_probs_overall = cohort_probs_overall,
 			first_inds = first_inds,
@@ -172,8 +169,7 @@ getTeResults2 <- function(
 			num_treats = num_treats,
 			N = N,
 			T = T,
-			R = R,
-			fused = TRUE
+			R = R
 		)
 
 		stopifnot(!is.na(att_var_2))
@@ -1089,7 +1085,6 @@ fetwfe_core <- function(
 		T = T,
 		fused = TRUE,
 		calc_ses = q < 1,
-		p = p, # Total number of original parameters (columns in X_ints)
 		alpha = alpha,
 		se_type = se_type,
 		y_final = y_final
@@ -1793,45 +1788,6 @@ genBackwardsInvFusionTransformMat <- function(n_vars) {
 	return(D_inv)
 }
 
-# genInvFusionTransformMat (TODO: unused for now)
-#' @title Generate Inverse of Forward Fusion Transformation Matrix
-#' @description Creates the inverse of a "forward" fusion transformation matrix.
-#'   A forward fusion matrix `D_forward` (not explicitly generated here) would
-#'   transform `beta` to `theta` such that `theta_1 = beta_1` and
-#'   `theta_i = beta_i - beta_{i-1}` for `i > 1`. This function returns
-#'   `D_forward_inv`. If `theta = D_forward %*% beta`, then
-#'   `beta = D_forward_inv %*% theta`. This is used when the first coefficient
-#'   in a sequence is penalized directly, and subsequent coefficients are
-#'   penalized towards the *previous* coefficient.
-#' @param n_vars Integer; the number of variables (coefficients), determining
-#'   the dimension of the output matrix.
-#' @return A numeric matrix `D_forward_inv` of dimension `n_vars` x `n_vars`.
-#' @details The resulting matrix is a lower triangular matrix with all elements
-#'   on and below the main diagonal equal to 1, and all elements above the main
-#'   diagonal equal to 0.
-#' @examples
-#'   genInvFusionTransformMat(3)
-#'   # Output:
-#'   #      [,1] [,2] [,3]
-#'   # [1,]    1    0    0
-#'   # [2,]    1    1    0
-#'   # [3,]    1    1    1
-#' @keywords internal
-#' @noRd
-genInvFusionTransformMat <- function(n_vars) {
-	# Generates inverse of D matrix in relation theta = D beta, where D beta is
-	# what we want to penalize (for a single set of coefficients where we want
-	# to penalize first coefficient directly and penalize remaining coefficints
-	# towards the previous coefficient)
-	D_inv <- matrix(0, n_vars, n_vars)
-
-	diag(D_inv) <- 1
-
-	D_inv[lower.tri(D_inv)] <- 1
-
-	return(D_inv)
-}
-
 # getSecondVarTermDataApp
 #' @title Calculate Second Variance Term for ATT Standard Error (Data Application)
 #' @description Computes the second component of the variance for the Average
@@ -1861,13 +1817,8 @@ genInvFusionTransformMat <- function(n_vars) {
 #'         cohort \(s\) produces the part of \(J\) that multiplies
 #'         \(\theta_{\text{sel}}\).
 #' }
-#' @param psi_mat Numeric matrix; a matrix where each column `r` is the `psi_r`
-#'   vector used in calculating the ATT for cohort `r`. Dimensions:
-#'   `length(sel_treat_inds_shifted)` x `R`.
 #' @param sel_treat_inds_shifted Integer vector; indices of the selected
 #'   treatment effects within the `num_treats` block, shifted to start from 1.
-#' @param tes Numeric vector; the estimated treatment effects for all
-#'   `num_treats` possible cohort-time combinations.
 #' @param cohort_probs_overall Numeric vector; estimated marginal probabilities
 #'   of belonging to each treated cohort (P(W=r)). Length `R`.
 #' @param first_inds Integer vector; indices of the first treatment effect for
@@ -1879,13 +1830,10 @@ genInvFusionTransformMat <- function(n_vars) {
 #' @param N Integer; total number of units.
 #' @param T Integer; total number of time periods.
 #' @param R Integer; total number of treated cohorts.
-#' @param fused Logical; if `TRUE`, assumes fusion penalization was used,
-#'   affecting how standard errors and related matrices are computed.
 #' @param d_inv_treat_sel Numeric matrix; the relevant block of the inverse
 #'   two-way fusion transformation matrix corresponding to selected treatment
 #'   effects. Dimensions: `num_treats` (or fewer if selection occurs) x
-#'   `length(sel_treat_inds_shifted)`. Does not need to be provided if fused
-#'   is FALSE.
+#'   `length(sel_treat_inds_shifted)`.
 #' @return A numeric scalar representing the second variance component for the
 #'   ATT.
 #' @details This function calculates `Sigma_pi_hat`, the covariance matrix of
@@ -1895,19 +1843,15 @@ genInvFusionTransformMat <- function(n_vars) {
 #'   theta_hat_treat_sel / (N * T)`. The construction of the Jacobian involves averaging parts of
 #'   `d_inv_treat_sel` corresponding to different cohorts.
 #'
-#' The function is currentky written for the fused workflow only
-#' (`fused = TRUE` guard).  It first reconstructs \(J\) from
-#' `d_inv_treat_sel` and the cohort probabilities, then plugs everything into
-#' the quadratic form above and finally rescales by \(T/(N T)=1/N\).
+#' It first reconstructs \(J\) from `d_inv_treat_sel` and the cohort
+#' probabilities, then plugs everything into the quadratic form above and
+#' finally rescales by \(T/(N T)=1/N\).
 #' @inheritParams getSecondVarTermDataApp
 #' @seealso \code{getTeResults2()}
 #' @keywords internal
 #' @noRd
 getSecondVarTermDataApp <- function(
-	# cohort_probs,
-	psi_mat,
 	sel_treat_inds_shifted,
-	tes,
 	cohort_probs_overall,
 	first_inds,
 	theta_hat_treat_sel,
@@ -1915,13 +1859,10 @@ getSecondVarTermDataApp <- function(
 	N,
 	T,
 	R,
-	fused = TRUE,
-	d_inv_treat_sel = NA
+	d_inv_treat_sel
 ) {
-	if (fused) {
-		stopifnot(all(!is.na(d_inv_treat_sel)))
-		stopifnot(ncol(d_inv_treat_sel) == length(sel_treat_inds_shifted))
-	}
+	stopifnot(all(!is.na(d_inv_treat_sel)))
+	stopifnot(ncol(d_inv_treat_sel) == length(sel_treat_inds_shifted))
 	stopifnot(length(theta_hat_treat_sel) == length(sel_treat_inds_shifted))
 
 	# Get Sigma_pi_hat, the (sample-estimated) covariance matrix for the
@@ -1953,71 +1894,63 @@ getSecondVarTermDataApp <- function(
 		ncol = length(sel_treat_inds_shifted)
 	)
 
-	if (fused) {
-		# Gather a list of the indices corresponding to the treatment coefficients
-		# for each cohort
-		sel_inds <- list()
+	# Gather a list of the indices corresponding to the treatment coefficients
+	# for each cohort
+	sel_inds <- list()
 
-		for (r in 1:R) {
-			sel_inds[[r]] <- .cohort_block_inds(r, R, first_inds, num_treats)
-			if (r > 1) {
-				stopifnot(min(sel_inds[[r]]) > max(sel_inds[[r - 1]]))
-				stopifnot(length(sel_inds[[r]]) <= length(sel_inds[[r - 1]]))
-			}
+	for (r in 1:R) {
+		sel_inds[[r]] <- .cohort_block_inds(r, R, first_inds, num_treats)
+		if (r > 1) {
+			stopifnot(min(sel_inds[[r]]) > max(sel_inds[[r - 1]]))
+			stopifnot(length(sel_inds[[r]]) <= length(sel_inds[[r - 1]]))
 		}
-		stopifnot(all.equal(unlist(sel_inds), 1:num_treats))
+	}
+	stopifnot(all.equal(unlist(sel_inds), 1:num_treats))
 
-		stopifnot(length(cohort_probs_overall) == R)
-		stopifnot(sum(cohort_probs_overall) < 1 - 1e-6)
+	stopifnot(length(cohort_probs_overall) == R)
+	stopifnot(sum(cohort_probs_overall) < 1 - 1e-6)
 
-		for (r in 1:R) {
-			## diagonal contribution
-			cons_r <- (sum(cohort_probs_overall) -
-				cohort_probs_overall[r]) /
+	for (r in 1:R) {
+		## diagonal contribution
+		cons_r <- (sum(cohort_probs_overall) -
+			cohort_probs_overall[r]) /
+			sum(cohort_probs_overall)^2
+
+		if (length(sel_treat_inds_shifted) > 1) {
+			jacobian_mat[r, ] <- cons_r *
+				colMeans(d_inv_treat_sel[sel_inds[[r]], , drop = FALSE])
+		} else {
+			jacobian_mat[r, ] <- cons_r *
+				mean(d_inv_treat_sel[sel_inds[[r]], , drop = FALSE])
+		}
+
+		## off-diagonal: subtract sum_{s!=r} pi_s / S^2  x  block-mean of cohort s
+		for (r_double_prime in setdiff(1:R, r)) {
+			cons_r_double_prime <- cohort_probs_overall[r_double_prime] /
 				sum(cohort_probs_overall)^2
 
-			if (length(sel_treat_inds_shifted) > 1) {
-				jacobian_mat[r, ] <- cons_r *
-					colMeans(d_inv_treat_sel[sel_inds[[r]], , drop = FALSE])
-			} else {
-				jacobian_mat[r, ] <- cons_r *
-					mean(d_inv_treat_sel[sel_inds[[r]], , drop = FALSE])
-			}
-
-			## off-diagonal: subtract sum_{s!=r} pi_s / S^2  x  block-mean of cohort s
-			for (r_double_prime in setdiff(1:R, r)) {
-				cons_r_double_prime <- cohort_probs_overall[r_double_prime] /
-					sum(cohort_probs_overall)^2
-
-				jacobian_mat[r, ] <- jacobian_mat[r, ] -
-					cons_r_double_prime *
-						colMeans(d_inv_treat_sel[
-							sel_inds[[r_double_prime]],
-							,
-							drop = FALSE
-						])
-			}
+			jacobian_mat[r, ] <- jacobian_mat[r, ] -
+				cons_r_double_prime *
+					colMeans(d_inv_treat_sel[
+						sel_inds[[r_double_prime]],
+						,
+						drop = FALSE
+					])
 		}
 	}
 
 	stopifnot(all(!is.na(jacobian_mat)))
 
 	## variance term: theta_sel' J' sum_pi J theta_sel / N
-	if (fused) {
-		att_var_2 <- T *
-			as.numeric(
-				t(theta_hat_treat_sel) %*%
-					t(jacobian_mat) %*%
-					Sigma_pi_hat %*%
-					jacobian_mat %*%
-					theta_hat_treat_sel
-			) /
-			(N * T)
-	}
-
-	if (!fused) {
-		stop("this function is not implemented as of now.")
-	}
+	att_var_2 <- T *
+		as.numeric(
+			t(theta_hat_treat_sel) %*%
+				t(jacobian_mat) %*%
+				Sigma_pi_hat %*%
+				jacobian_mat %*%
+				theta_hat_treat_sel
+		) /
+		(N * T)
 
 	return(att_var_2)
 }
@@ -2204,7 +2137,6 @@ genInvTwoWayFusionTransformMat <- function(n_vars, first_inds, R) {
 #'   affecting how standard errors and related matrices are computed.
 #' @param calc_ses Logical; if `TRUE`, attempts to calculate standard errors.
 #'   This is typically `TRUE` if `q < 1`.
-#' @param p Integer; total number of parameters in the model.
 #' @param alpha Numeric scalar; significance level for confidence intervals
 #'   (e.g., 0.05 for 95% CIs).
 #' @param se_type Character; one of `"default"` (Assumption-F1 model-based SE)
@@ -2277,7 +2209,6 @@ getCohortATTsFinal <- function(
 	T,
 	fused,
 	calc_ses,
-	p,
 	alpha = 0.05,
 	se_type = "default",
 	y_final = NULL

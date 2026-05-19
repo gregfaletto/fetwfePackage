@@ -589,16 +589,19 @@ glance.betwfe <- function(x, ...) {
 #' before solving), so fitted values come back on the original-response
 #' scale without the caller having to remember either.
 #'
-#' `data` must have the same row count as the fitted design and must
-#' contain the response column under its original name. First-period-
-#' treated units (whose treatment effect cannot be identified) are dropped
-#' during fitting, so they must also be absent from `data`.
+#' `data` is auto-handled to match the fitted design: rows are auto-sorted
+#' by `(unit, time)`, and any first-period-treated units (whose treatment
+#' effect cannot be identified by the estimator) are auto-trimmed via
+#' `idCohorts()`. So you can pass the same raw `pdata` you handed to
+#' `fetwfe()` — the method takes care of alignment. The only hard
+#' requirement is that `data` contains the response column under its
+#' original name.
 #'
 #' @param x An object of class `"fetwfe"`.
-#' @param data A balanced panel `data.frame` with one row per
-#'   unit-period, with first-period-treated units already removed, and
-#'   with the response column under the same name used at fit time
-#'   (see `x$response_col_name`).
+#' @param data A panel `data.frame` with one row per unit-period (any
+#'   sort order — augment auto-sorts), containing the response column
+#'   under the same name used at fit time (see `x$response_col_name`).
+#'   First-period-treated units, if present, are auto-trimmed.
 #' @param ... Unused.
 #' @return A copy of `data` with two extra numeric columns: `.fitted`
 #'   and `.resid`.
@@ -617,12 +620,14 @@ augment.fetwfe <- function(x, data, ...) {
 
 #' Augment user-supplied data with fitted values and residuals from an etwfe fit
 #'
-#' Same shape as [augment.fetwfe()], dispatched on class `"etwfe"`.
+#' Same shape as [augment.fetwfe()], dispatched on class `"etwfe"`. `data`
+#' is auto-sorted by `(unit, time)` and any first-period-treated units
+#' are auto-trimmed; pass the same raw `pdata` you handed to `etwfe()`.
 #'
 #' @param x An object of class `"etwfe"`.
-#' @param data A balanced panel `data.frame` (first-period-treated
-#'   units removed) with the response column under
-#'   `x$response_col_name`.
+#' @param data A panel `data.frame` with the response column under
+#'   `x$response_col_name`. Any sort order; first-period-treated units
+#'   are auto-trimmed.
 #' @param ... Unused.
 #' @return `data` with `.fitted` and `.resid` columns appended.
 #' @examples
@@ -640,12 +645,14 @@ augment.etwfe <- function(x, data, ...) {
 
 #' Augment user-supplied data with fitted values and residuals from a betwfe fit
 #'
-#' Same shape as [augment.fetwfe()], dispatched on class `"betwfe"`.
+#' Same shape as [augment.fetwfe()], dispatched on class `"betwfe"`. `data`
+#' is auto-sorted by `(unit, time)` and any first-period-treated units
+#' are auto-trimmed; pass the same raw `pdata` you handed to `betwfe()`.
 #'
 #' @param x An object of class `"betwfe"`.
-#' @param data A balanced panel `data.frame` (first-period-treated
-#'   units removed) with the response column under
-#'   `x$response_col_name`.
+#' @param data A panel `data.frame` with the response column under
+#'   `x$response_col_name`. Any sort order; first-period-treated units
+#'   are auto-trimmed.
 #' @param ... Unused.
 #' @return `data` with `.fitted` and `.resid` columns appended.
 #' @examples

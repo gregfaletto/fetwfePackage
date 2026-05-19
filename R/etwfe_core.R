@@ -154,9 +154,10 @@ etwfeWithSimulatedData <- function(
 
 
 # checkEtwfeInputs
-#' @title Check Inputs for the main `fetwfe` function
-#' @description Validates the inputs provided to the main `fetwfe` function,
-#'   ensuring they meet type, dimension, and content requirements. Stops
+#' @title Check Inputs for the main `etwfe` / `betwfe` / `twfeCovs` functions
+#' @description Validates the inputs provided to the OLS-style entry points
+#'   (`etwfe`, `betwfe`, `twfeCovs`), ensuring they meet type, dimension,
+#'   and content requirements. Stops
 #'   execution with an error message if any check fails.
 #' @param pdata Dataframe; the panel data set.
 #' @param time_var Character; name of the time variable column.

@@ -121,17 +121,17 @@ test_that("preconditions reject non-estimator objects with a clear message", {
 	not_estimator <- list(att_hat = 0.5, foo = "bar")
 	expect_error(
 		fetwfe:::.assert_estimator_object(not_estimator),
-		"Expected a `fetwfe`, `etwfe`, or `betwfe` object",
+		"Expected a `fetwfe`, `etwfe`, `betwfe`, or `twfeCovs` object",
 		fixed = TRUE
 	)
 	expect_error(
 		fetwfe:::.check_for_event_study(not_estimator),
-		"Expected a `fetwfe`, `etwfe`, or `betwfe` object",
+		"Expected a `fetwfe`, `etwfe`, `betwfe`, or `twfeCovs` object",
 		fixed = TRUE
 	)
 	expect_error(
 		fetwfe:::.check_for_augment(not_estimator),
-		"Expected a `fetwfe`, `etwfe`, or `betwfe` object",
+		"Expected a `fetwfe`, `etwfe`, `betwfe`, or `twfeCovs` object",
 		fixed = TRUE
 	)
 })

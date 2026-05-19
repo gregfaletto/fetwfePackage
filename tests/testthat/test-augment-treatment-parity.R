@@ -95,11 +95,13 @@ test_that("augment auto-trim and no-trim paths return identical column sets", {
 	# .fitted / .resid behaves correctly.
 	expect_equal(nrow(aug_auto), fx$res$N * fx$res$T)
 	expect_false(fx$dropped %in% aug_auto$unit)
-	expect_equal(
-		aug_auto$.fitted + aug_auto$.resid,
-		aug_auto$y,
-		tolerance = 1e-8
-	)
+	# Round-trip identity (.fitted + .resid == aug_auto$y) was removed per
+	# #76 Item 7b -- it's tautological (holds by construction of the .resid
+	# subtraction regardless of the auto-trim's row-alignment correctness).
+	# The load-bearing row-order check lives in the
+	# "augment column parity holds ..." test_that block below
+	# (state_name / panel_id column alignment after sort). See
+	# feedback_tautological_roundtrip_tests.md for the broader pattern.
 })
 
 test_that("augment column parity holds for etwfe and betwfe on auto-trim path", {

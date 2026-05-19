@@ -9,10 +9,10 @@
 \arguments{
 \item{x}{An object of class \code{"fetwfe"}.}
 
-\item{data}{A balanced panel \code{data.frame} with one row per
-unit-period, with first-period-treated units already removed, and
-with the response column under the same name used at fit time
-(see \code{x$response_col_name}).}
+\item{data}{A panel \code{data.frame} with one row per unit-period (any
+sort order — augment auto-sorts), containing the response column
+under the same name used at fit time (see \code{x$response_col_name}).
+First-period-treated units, if present, are auto-trimmed.}
 
 \item{...}{Unused.}
 }
@@ -29,10 +29,13 @@ before solving), so fitted values come back on the original-response
 scale without the caller having to remember either.
 }
 \details{
-\code{data} must have the same row count as the fitted design and must
-contain the response column under its original name. First-period-
-treated units (whose treatment effect cannot be identified) are dropped
-during fitting, so they must also be absent from \code{data}.
+\code{data} is auto-handled to match the fitted design: rows are auto-sorted
+by \verb{(unit, time)}, and any first-period-treated units (whose treatment
+effect cannot be identified by the estimator) are auto-trimmed via
+\code{idCohorts()}. So you can pass the same raw \code{pdata} you handed to
+\code{fetwfe()} — the method takes care of alignment. The only hard
+requirement is that \code{data} contains the response column under its
+original name.
 }
 \examples{
 \dontrun{

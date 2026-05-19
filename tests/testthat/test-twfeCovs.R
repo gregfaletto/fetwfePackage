@@ -1033,3 +1033,22 @@ test_that("twfeCovs $se_type slot reflects the argument value", {
 	expect_identical(res_def$se_type, "default")
 	expect_identical(res_cls$se_type, "cluster")
 })
+
+# ------------------------------------------------------------------------------
+# Test (#76 Item 1): twfeCovs() returns a classed object with print + coef methods.
+# Prior to this PR the return was an unclassed named list; `print()` fell
+# through to `print.default` and dumped the full design matrix.
+# ------------------------------------------------------------------------------
+test_that("twfeCovs returns a classed object with working print + coef methods (#76 Item 1)", {
+	set.seed(42)
+	sim <- simulateData(
+		genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2, seed = 42),
+		N = 60,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5
+	)
+	fit <- twfeCovsWithSimulatedData(sim)
+	expect_s3_class(fit, "twfeCovs")
+	expect_no_error(capture.output(print(fit)))
+	expect_equal(coef(fit), fit$beta_hat)
+})

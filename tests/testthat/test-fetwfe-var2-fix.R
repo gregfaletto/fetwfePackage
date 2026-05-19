@@ -124,13 +124,7 @@ test_that("FETWFE att_var_2 helper matches paper Theorem 6.3 Jacobian by hand", 
 	# Call the package's helper through getTeResults2 by re-invoking
 	# getSecondVarTermDataApp directly.
 	var2_helper <- fetwfe:::getSecondVarTermDataApp(
-		psi_mat = matrix(
-			0,
-			nrow = length(fit$sel_treat_inds_shifted),
-			ncol = fit$R
-		),
 		sel_treat_inds_shifted = fit$sel_treat_inds_shifted,
-		tes = fit$res$beta_hat[fit$res$treat_inds],
 		cohort_probs_overall = fit$cohort_probs_overall,
 		first_inds = fit$first_inds,
 		theta_hat_treat_sel = fit$theta_hat_treat_sel,
@@ -138,7 +132,6 @@ test_that("FETWFE att_var_2 helper matches paper Theorem 6.3 Jacobian by hand", 
 		N = fit$N,
 		T = fit$T,
 		R = fit$R,
-		fused = TRUE,
 		d_inv_treat_sel = fit$d_inv_treat_sel
 	)
 
@@ -185,13 +178,7 @@ test_that("FETWFE corrected var_2 matches a multinomial-resampling MC", {
 	# Route var2_corrected through the package helper directly so the MC
 	# assertion validates the production code (not just the in-test formula).
 	var2_corrected <- fetwfe:::getSecondVarTermDataApp(
-		psi_mat = matrix(
-			0,
-			nrow = length(fit$sel_treat_inds_shifted),
-			ncol = fit$R
-		),
 		sel_treat_inds_shifted = fit$sel_treat_inds_shifted,
-		tes = fit$res$beta_hat[fit$res$treat_inds],
 		cohort_probs_overall = fit$cohort_probs_overall,
 		first_inds = fit$first_inds,
 		theta_hat_treat_sel = fit$theta_hat_treat_sel,
@@ -199,7 +186,6 @@ test_that("FETWFE corrected var_2 matches a multinomial-resampling MC", {
 		N = fit$N,
 		T = fit$T,
 		R = fit$R,
-		fused = TRUE,
 		d_inv_treat_sel = fit$d_inv_treat_sel
 	)
 	# Buggy formula is reconstructed in-test (the helper after the fix no
@@ -233,55 +219,11 @@ test_that("FETWFE att_var_2 helper differs from the buggy formula (anti-regressi
 })
 
 # ------------------------------------------------------------------------------
-# Test 4: event-study var_2(e) helper matches its own hand-computed reference.
-# Per-event-time analog: single-row Jacobian rather than cohort-block-mean.
+# Test 4 from earlier revisions (".event_study_var2_fetwfe matches its
+# hand-computed Jacobian") was removed per #76 Item 7a: the
+# "hand-computed" reference reproduced the helper's own loop structure
+# step-for-step, so passing only confirmed the helper was consistent
+# with itself rather than against an independent reference. Tests 2
+# (MC validation) and 3 (anti-regression) above are the load-bearing
+# var2 coverage.
 # ------------------------------------------------------------------------------
-test_that(".event_study_var2_fetwfe matches its hand-computed Jacobian", {
-	fit <- .make_var2_fit()
-
-	# Pick event time e = 0 (both cohorts valid).
-	e <- 0L
-	V_e <- which(seq_len(fit$R) <= fit$T - 1L - e)
-	masked <- numeric(fit$R)
-	masked[V_e] <- fit$cohort_probs_overall[V_e]
-	S_V <- sum(masked)
-
-	Sigma_pi_hat <- -outer(masked, masked)
-	diag(Sigma_pi_hat) <- masked * (1 - masked)
-
-	J <- matrix(0, nrow = fit$R, ncol = ncol(fit$d_inv_treat_sel))
-	for (r in V_e) {
-		cons_r <- (S_V - masked[r]) / S_V^2
-		J[r, ] <- cons_r * fit$d_inv_treat_sel[fit$first_inds[r] + e, ]
-		for (r_prime in setdiff(V_e, r)) {
-			cons_off <- masked[r_prime] / S_V^2
-			J[r, ] <- J[r, ] -
-				cons_off * fit$d_inv_treat_sel[fit$first_inds[r_prime] + e, ]
-		}
-	}
-
-	var2_hand <- fit$T *
-		as.numeric(
-			t(fit$theta_hat_treat_sel) %*%
-				t(J) %*%
-				Sigma_pi_hat %*%
-				J %*%
-				fit$theta_hat_treat_sel
-		) /
-		(fit$N * fit$T)
-
-	var2_helper <- fetwfe:::.event_study_var2_fetwfe(
-		e = e,
-		V_e = V_e,
-		theta_hat_treat_sel = fit$theta_hat_treat_sel,
-		d_inv_treat_sel = fit$d_inv_treat_sel,
-		cohort_probs_overall = fit$cohort_probs_overall,
-		first_inds = fit$first_inds,
-		num_treats = fit$num_treats,
-		N = fit$N,
-		T = fit$T,
-		R = fit$R
-	)
-
-	expect_equal(var2_helper, var2_hand, tolerance = 1e-10)
-})

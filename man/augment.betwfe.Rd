@@ -9,9 +9,9 @@
 \arguments{
 \item{x}{An object of class \code{"betwfe"}.}
 
-\item{data}{A balanced panel \code{data.frame} (first-period-treated
-units removed) with the response column under
-\code{x$response_col_name}.}
+\item{data}{A panel \code{data.frame} with the response column under
+\code{x$response_col_name}. Any sort order; first-period-treated units
+are auto-trimmed.}
 
 \item{...}{Unused.}
 }
@@ -19,7 +19,9 @@ units removed) with the response column under
 \code{data} with \code{.fitted} and \code{.resid} columns appended.
 }
 \description{
-Same shape as \code{\link[=augment.fetwfe]{augment.fetwfe()}}, dispatched on class \code{"betwfe"}.
+Same shape as \code{\link[=augment.fetwfe]{augment.fetwfe()}}, dispatched on class \code{"betwfe"}. \code{data}
+is auto-sorted by \verb{(unit, time)} and any first-period-treated units
+are auto-trimmed; pass the same raw \code{pdata} you handed to \code{betwfe()}.
 }
 \examples{
 \dontrun{
