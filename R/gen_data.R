@@ -71,7 +71,7 @@
 #'
 #' When \eqn{d = 0} (i.e. no covariates), the function omits any covariate-related columns
 #' and their interactions.
-#"
+#'
 #' @references
 #' Faletto, G (2025). Fused Extended Two-Way Fixed Effects for
 #' Difference-in-Differences with Staggered Adoptions.
@@ -264,7 +264,7 @@ simulateData <- function(
 #'
 #' When \eqn{d = 0} (i.e. no covariates), the function omits any covariate-related columns
 #' and their interactions.
-#"
+#'
 #' @references
 #' Faletto, G (2025). Fused Extended Two-Way Fixed Effects for
 #' Difference-in-Differences with Staggered Adoptions.
