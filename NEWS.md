@@ -1,5 +1,16 @@
 # NEWS
 
+## Version 1.9.26 (2026-05-19)
+
+- Fixed four roxygen-comment typos surfaced by the 2026-05-19 periodic
+  code review (GitHub #115): `#"` instead of `#'` on the
+  `simulateData()` and `simulateDataCore()` docstrings in
+  `R/gen_data.R`, and an unmatched backtick before `fetwfe()` in the
+  `attgtToFetwfeDf()` and `etwfeToFetwfeDf()` descriptions in
+  `R/convert_dfs.R`. The latter fix restores correct inline-code
+  rendering in `man/attgtToFetwfeDf.Rd` and `man/etwfeToFetwfeDf.Rd`;
+  the former is a latent typo that roxygen2 happened to parse around.
+
 ## Version 1.9.25 (2026-05-19)
 
 - Reorganized the `R/` source tree so each file's contents match its

@@ -63,7 +63,7 @@ covariates requested in \code{covars}, ready to be fed to
 \description{
 \code{attgtToFetwfeDf()} reshapes and renames a panel dataset that is already
 formatted for \code{did::att_gt()} (Callaway and Sant'Anna 2021) so that it can be
-passed directly to fetwfe()\code{or}etwfe()\verb{from the}fetwfe` package. In
+passed directly to \code{fetwfe()} or \code{etwfe()} from the \code{fetwfe} package. In
 particular, it
 \itemize{
 \item creates an \emph{absorbing‑state} treatment dummy that equals 1 from the

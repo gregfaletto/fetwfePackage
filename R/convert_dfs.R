@@ -2,7 +2,7 @@
 #'
 #' `attgtToFetwfeDf()` reshapes and renames a panel dataset that is already
 #' formatted for `did::att_gt()` (Callaway and Sant'Anna 2021) so that it can be
-#' passed directly to fetwfe()` or `etwfe()` from the `fetwfe` package. In
+#' passed directly to `fetwfe()` or `etwfe()` from the `fetwfe` package. In
 #' particular, it
 #'   * creates an *absorbing‑state* treatment dummy that equals 1 from the
 #'     first treated period onward* and 0 otherwise,
@@ -109,7 +109,7 @@ attgtToFetwfeDf <- function(
 #'
 #' `etwfeToFetwfeDf()` reshapes and renames a panel dataset that is already
 #' formatted for `etwfe::etwfe()` (McDermott 2024) so that it can be
-#' passed directly to fetwfe()` or `etwfe()` from the `fetwfe` package. In
+#' passed directly to `fetwfe()` or `etwfe()` from the `fetwfe` package. In
 #' particular, it
 #'   * creates an *absorbing‑state* treatment dummy that equals 1 from the
 #'     first treated period onward* and 0 otherwise,
