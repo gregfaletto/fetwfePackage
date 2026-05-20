@@ -903,3 +903,158 @@ etwfe <- function(
 
 	return(out)
 }
+
+
+#' Run ETWFE on Simulated Data
+#'
+#' @description
+#' This function runs the extended two-way fixed effects estimator (\code{etwfe()}) on
+#' simulated data. It is simply a wrapper for \code{etwfe()}: it accepts an object of class
+#' \code{"FETWFE_simulated"} (produced by \code{simulateData()}) and unpacks the necessary
+#' components to pass to \code{etwfe()}. So the outputs match \code{etwfe()}, and the needed inputs
+#' match their counterparts in \code{etwfe()}.
+#'
+#' @param simulated_obj An object of class \code{"FETWFE_simulated"} containing the simulated panel
+#' data and design matrix.
+#' @param verbose Logical; if TRUE, more details on the progress of the function will
+#' be printed as the function executes. Default is FALSE.
+#' @param alpha Numeric; function will calculate (1 - `alpha`) confidence intervals
+#' for the cohort average treatment effects that will be returned in `catt_df`.
+#' @param add_ridge (Optional.) Logical; if TRUE, adds a small amount of ridge
+#' regularization to the (untransformed) coefficients to stabilize estimation.
+#' Default is FALSE.
+#' @param allow_no_never_treated (Optional.) Logical; if `TRUE` (default) and
+#' the input panel contains no never-treated units, the panel is auto-truncated
+#' by dropping time periods at and after the latest cohort's start time --- the
+#' units in that latest cohort then serve as the never-treated comparison group
+#' in the retained sub-panel --- with a warning naming the dropped periods. If
+#' `FALSE`, the estimator stops with an error in this case (the package's
+#' behavior prior to version 1.5.6). The argument has no effect when the input
+#' already contains never-treated units. Default is `TRUE`.
+#' @param se_type Character; one of `"default"` (the package's
+#' Assumption-F1-based standard error from the paper) or `"cluster"`
+#' (an *experimental* unit-clustered Liang-Zeger sandwich SE on the
+#' OLS-selected support; see the companion vignette `inference_vignette`
+#' for the formula, the assumptions, and the theory-pending caveat).
+#' Default is `"default"`.
+#' @return An object of class \code{etwfe} containing the following elements:
+#' \item{att_hat}{The
+#' estimated overall average treatment effect for a randomly selected treated
+#' unit.} \item{att_se}{A standard error for the ATT. If the Gram matrix is not
+#' invertible, this will be NA.}
+#' \item{att_p_value}{A two-sided p-value for the overall ATT against the
+#' null `H_0: tau = 0`, computed as `2 * pnorm(-|att_hat / att_se|)`. `NA` if
+#' `att_se` is zero or `NA`. Standard post-OLS interpretation; ETWFE does not
+#' perform selection.}
+#' \item{catt_hats}{A named vector containing the
+#' estimated average treatment effects for each cohort.} \item{catt_ses}{A named
+#' vector containing the (asymptotically exact) standard errors for
+#' the estimated average treatment effects within each cohort.}
+#' \item{cohort_probs}{A vector of the estimated probabilities of being in each
+#' cohort conditional on being treated, which was used in calculating `att_hat`.
+#' If `indep_counts` was provided, `cohort_probs` was calculated from that;
+#' otherwise, it was calculated from the counts of units in each treated
+#' cohort in `pdata`.} \item{catt_df}{A dataframe displaying the cohort names,
+#' average treatment effects, standard errors, `1 - alpha` confidence
+#' interval bounds, and per-cohort p-values (`P_value`). No `selected`
+#' column; ETWFE does not perform selection.}
+#' \item{beta_hat}{The full vector of estimated coefficients.}
+#' \item{treat_inds}{The indices of `beta_hat` corresponding to
+#' the treatment effects for each cohort at each time.}
+#' \item{treat_int_inds}{The indices of `beta_hat` corresponding to the
+#' interactions between the treatment effects for each cohort at each time and
+#' the covariates.} \item{sig_eps_sq}{Either the provided `sig_eps_sq` or
+#' the estimated one, if a value wasn't provided.} \item{sig_eps_c_sq}{Either
+#' the provided `sig_eps_c_sq` or the estimated one, if a value wasn't
+#' provided.} \item{X_ints}{The design matrix created containing all
+#' interactions, time and cohort dummies, etc.} \item{y}{The vector of
+#' responses, containing `nrow(X_ints)` entries.} \item{X_final}{The design
+#' matrix after applying the change in coordinates to fit the model and also
+#' multiplying on the left by the square root inverse of the estimated
+#' covariance matrix for each unit.} \item{y_final}{The final response after
+#' multiplying on the left by the square root inverse of the estimated
+#' covariance matrix for each unit.} \item{N}{The final number of units that
+#' were in the  data set used for estimation (after any units may have been
+#' removed because they were treated in the first time period).} \item{T}{The
+#' number of time periods in the final data set.} \item{R}{The final number of
+#' treated cohorts that appear in the final data set.} \item{d}{The final number
+#' of covariates that appear in the final data set (after any covariates may
+#' have been removed because they contained missing values or all contained the
+#' same value for every unit).} \item{p}{The final number of columns in the full
+#' set of covariates used to estimate the model.}
+#' \item{alpha}{The alpha level used for confidence intervals.}
+#' \item{calc_ses}{Logical indicating whether standard errors were calculated.}
+#' \item{cohort_probs_overall}{A vector of the estimated cohort probabilities
+#' on the overall sample (treated and untreated), used in computing the
+#' variance of the overall ATT.}
+#' \item{indep_counts_used}{Logical scalar; `TRUE` if a valid `indep_counts`
+#' argument was provided and used for asymptotically-exact ATT inference,
+#' `FALSE` otherwise.}
+#' \item{se_type}{Character scalar; the `se_type` argument the user passed
+#' (`"default"` or `"cluster"`).}
+#' \item{y_mean}{Numeric scalar; the mean of the original (pre-centering)
+#'   response. Stored so downstream methods (`augment()`, `predict()`) can
+#'   return fitted values on the original-response scale.}
+#' \item{response_col_name}{Character scalar; the name of the response
+#'   column in the original `pdata`. Consumed by `augment.<class>()`.}
+#' \item{time_var, unit_var, treatment}{Character scalars; the
+#'   `time_var` / `unit_var` / `treatment` arguments the user passed.}
+#' \item{covs}{Character vector; the original `covs` argument the user
+#'   passed (before any factor expansion the estimator performed
+#'   internally).}
+#'
+#' @examples
+#' \dontrun{
+#'   # Generate coefficients
+#'   coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
+#'
+#'   # Simulate data using the coefficients
+#'   sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5)
+#'
+#'   result <- etwfeWithSimulatedData(sim_data)
+#' }
+#'
+#' @export
+etwfeWithSimulatedData <- function(
+	simulated_obj,
+	verbose = FALSE,
+	alpha = 0.05,
+	add_ridge = FALSE,
+	allow_no_never_treated = TRUE,
+	se_type = "default"
+) {
+	se_type <- match.arg(se_type, c("default", "cluster"))
+
+	if (!inherits(simulated_obj, "FETWFE_simulated")) {
+		stop("simulated_obj must be an object of class 'FETWFE_simulated'")
+	}
+
+	pdata <- simulated_obj$pdata
+	time_var <- simulated_obj$time_var
+	unit_var <- simulated_obj$unit_var
+	treatment <- simulated_obj$treatment
+	response <- simulated_obj$response
+	covs <- simulated_obj$covs
+	sig_eps_sq <- simulated_obj$sig_eps_sq
+	sig_eps_c_sq <- simulated_obj$sig_eps_c_sq
+	indep_counts <- simulated_obj$indep_counts
+
+	res <- etwfe(
+		pdata = pdata,
+		time_var = time_var,
+		unit_var = unit_var,
+		treatment = treatment,
+		response = response,
+		covs = covs,
+		indep_counts = indep_counts,
+		sig_eps_sq = sig_eps_sq,
+		sig_eps_c_sq = sig_eps_c_sq,
+		verbose = verbose,
+		alpha = alpha,
+		add_ridge = add_ridge,
+		allow_no_never_treated = allow_no_never_treated,
+		se_type = se_type
+	)
+
+	return(res)
+}

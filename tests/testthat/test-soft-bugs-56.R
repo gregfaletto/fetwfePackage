@@ -5,20 +5,21 @@
 #      mask with a call to the canonical .compute_p_values() (the canonical
 #      mask also handles negative SE — unreachable from package code paths
 #      but a defensive guard against future refactors).
-#   3. R/ols_calcs.R + R/fetwfe_core.R threshold: change `10e-6` (= 1e-5)
+#   3. R/variance_machinery.R threshold: change `10e-6` (= 1e-5)
 #      to `1e-6` to match the typed-intent literal. The change *loosens*
 #      the rejection band from width 1e-5 to width 1e-6 — both are well
 #      above floating-point roundoff and the guard is unreachable in
 #      normal operation either way. Also adds the symmetric guard to
-#      R/fetwfe_core.R::getSecondVarTermDataApp() (which previously had
-#      no such guard).
+#      R/variance_machinery.R::getSecondVarTermDataApp() (which previously
+#      had no such guard).
 #   4. R/utility.R::idCohorts() panel-balance error message paren balance.
 #
-# Item 2 (R/fetwfe_core.R:2022, `<` -> `<=`) is not tested here. The
-# assertion is structural; under `first_inds = getFirstInds(R, T)` block
-# sizes are strictly decreasing so both forms pass. test-fetwfe-var2-fix.R
-# already exercises the surrounding function on a standard fixture, so
-# any regression in the relaxation would surface there.
+# Item 2 (`getSecondVarTermDataApp()` in R/variance_machinery.R, `<` ->
+# `<=`) is not tested here. The assertion is structural; under
+# `first_inds = getFirstInds(R, T)` block sizes are strictly decreasing
+# so both forms pass. test-fetwfe-var2-fix.R already exercises the
+# surrounding function on a standard fixture, so any regression in the
+# relaxation would surface there.
 
 # ------------------------------------------------------------------------------
 # Item 1: .assemble_event_study_df() canonical NA mask for zero / negative SE.

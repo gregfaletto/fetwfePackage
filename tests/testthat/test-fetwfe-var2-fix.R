@@ -8,7 +8,7 @@ library(fetwfe)
 # overall-ATT SE component `att_var_2`) used the outer-loop variable for the
 # off-diagonal Jacobian coefficient, deviating from paper Theorem 6.3 by an
 # off-by-one index. The fix uses the column index, matching the paper and the
-# parallel `getSecondVarTermOLS()` in `R/ols_calcs.R`. The same fix flows
+# parallel `getSecondVarTermOLS()` in `R/variance_machinery.R`. The same fix flows
 # through `.event_study_var2_fetwfe()`.
 #
 # These tests are regression coverage for the corrected formula. They also

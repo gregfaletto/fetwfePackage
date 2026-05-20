@@ -1,8 +1,8 @@
 # Tests for `.build_selected_out_result()` in R/core_funcs.R (issue #80).
 #
 # The helper consolidates the four pre-1.9.14 inline "no features selected"
-# early-exit blocks that lived in `R/betwfe_core.R` (lines 979-1040,
-# 1067-1132) and `R/fetwfe_core.R` (lines 901-963, 990-1066). Per the plan
+# early-exit blocks that lived in `R/betwfe_core.R` (betwfe_core(), two
+# blocks) and `R/fetwfe_core.R` (fetwfe_core(), two blocks). Per the plan
 # (`.plans/refactor-selected-out-helper-80/PLAN.md`), the 4 blocks share
 # the same 33-/34-field return list and only differ in (a) the `beta_hat`
 # value, (b) whether `theta_hat` is included, and (c) the verbose-message

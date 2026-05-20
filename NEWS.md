@@ -1,5 +1,47 @@
 # NEWS
 
+## Version 1.9.25 (2026-05-19)
+
+- Reorganized the `R/` source tree so each file's contents match its
+  name (GitHub #82). Pure file-move refactor: zero behavior change,
+  NAMESPACE unchanged, all 1909 tests pass. Specifically:
+  - Renamed `R/ols_calcs.R` to `R/variance_machinery.R` (via `git
+    mv`) and consolidated the FETWFE-side variance helpers
+    (`getTeResults2`, `getPsiRFused`, `getSecondVarTermDataApp`,
+    `getCohortATTsFinal`) that previously lived in
+    `R/fetwfe_core.R` so all OLS- and FETWFE-side variance
+    machinery now shares one home.
+  - Created `R/design_matrix.R` for design-matrix construction
+    (`prepXints`, `processCovs`, `processFactors`, `addDummies`,
+    `generateFEInts`, `genTreatInts`, `genXintsData`,
+    `genTreatVarsRealData`) - moved from `R/etwfe_core.R`.
+  - Created `R/fusion_transforms.R` for the five fusion-transform
+    matrix generators (`transformXintImproved`,
+    `untransformCoefImproved`, `genBackwardsFusionTransformMat`,
+    `genBackwardsInvFusionTransformMat`,
+    `genInvTwoWayFusionTransformMat`, and
+    `genFullInvFusionTransformMat`) - moved from `R/fetwfe_core.R`
+    and `R/core_funcs.R`.
+  - Split `R/gen_funcs.R` into three smaller files:
+    `R/gen_coefs.R` (coefficient generators + truth extraction:
+    `genCoefs`, `genCoefsCore`, `getTes`, `getActualCohortTes`),
+    `R/gen_data.R` (data simulation pipeline: `simulateData`,
+    `simulateDataCore`), and `R/sim_helpers.R` (internal sim
+    helpers).
+  - Moved `etwfeWithSimulatedData()` from `R/etwfe_core.R` to
+    `R/fetwfe.R`, alongside `etwfe()` itself (matching the pattern
+    of `betwfeWithSimulatedData` co-located with `betwfe_core`, etc.).
+  - Moved `prep_for_etwfe_core()` from `R/etwfe_core.R` to
+    `R/core_funcs.R` (alongside its sibling
+    `prep_for_etwfe_regression()`).
+  - Moved the shared input-validator helpers
+    `.collect_etwfe_input_violations()` and
+    `.format_input_violations()` from `R/etwfe_core.R` to
+    `R/utility.R` (co-located with `.truncate_violations()`).
+  - `R/etwfe_core.R` and `R/fetwfe_core.R` now contain only their
+    namesake `_core` estimator plus the corresponding input
+    validator (and, for fetwfe, `getBetaBIC`).
+
 ## Version 1.9.24 (2026-05-19)
 
 - Reconciled three strict-vs-lenient validator inconsistencies (GitHub

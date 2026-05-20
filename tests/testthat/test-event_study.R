@@ -177,11 +177,12 @@ test_that("event_study FETWFE: all-zero-theta-block produces all-zero estimates"
 	# Construct the all-zero case deterministically by post-patching BOTH
 	# theta_hat (the bridge-space coefficient) AND beta_hat (the
 	# back-transformed coefficient that event_study.fetwfe() actually
-	# reads at R/event_study.R:274). The fit-time all-zero early-exit at
-	# R/fetwfe_core.R:904-939 zeroes both representations together; the
-	# test mirrors that. Previously this block conditionally skipped if
-	# the bridge happened not to zero the treatment block on the test
-	# seed — fragile under a seed bump or genCoefs change. See issue #57.
+	# reads inside R/event_study.R). The fit-time all-zero early-exit
+	# inside `fetwfe_core()` (R/fetwfe_core.R) zeroes both representations
+	# together; the test mirrors that. Previously this block conditionally
+	# skipped if the bridge happened not to zero the treatment block on
+	# the test seed — fragile under a seed bump or genCoefs change. See
+	# issue #57.
 	res$internal$theta_hat[2:(res$p + 1)][res$treat_inds] <- 0
 	res$beta_hat[res$treat_inds] <- 0
 	stopifnot(
@@ -220,8 +221,9 @@ test_that(".compute_cluster_robust_sandwich matches hand-rolled Liang-Zeger on a
 	# verifies the actual numerical formula. A 50% miscalibration in
 	# .compute_cluster_robust_sandwich would pass the integration check
 	# but fail here. Mutation test: change `cadjust <- N / (N - 1)` in
-	# R/ols_calcs.R:623 to `cadjust <- 1` and re-run; this test fails
-	# (diff ~6e-4 vs 1e-10 tolerance). See issue #57.
+	# R/variance_machinery.R inside `.compute_cluster_robust_sandwich()`
+	# to `cadjust <- 1` and re-run; this test fails (diff ~6e-4 vs 1e-10
+	# tolerance). See issue #57.
 	set.seed(31)
 	N <- 25L
 	T <- 4L

@@ -3,15 +3,15 @@ library(fetwfe)
 
 # Tests for the cluster-robust sandwich assembly helper (issue #78, v1.9.15).
 #
-# `R/ols_calcs.R::.assemble_cluster_robust_sandwich()` wraps the 4-step
-# assembly ritual (extract X_S from X_final, slice y_, lm.fit, call
+# `R/variance_machinery.R::.assemble_cluster_robust_sandwich()` wraps the
+# 4-step assembly ritual (extract X_S from X_final, slice y_, lm.fit, call
 # .compute_cluster_robust_sandwich, build treat_block_mask) that was
 # previously duplicated across 4 call sites:
 #
-#   * R/ols_calcs.R::getCohortATTsFinalOLS         (unfiltered path)
-#   * R/fetwfe_core.R::getCohortATTsFinal           (filtered path)
-#   * R/event_study.R::.event_study_etwfe_betwfe   (runtime if/else)
-#   * R/event_study.R::.event_study_fetwfe          (filtered path)
+#   * R/variance_machinery.R::getCohortATTsFinalOLS  (unfiltered path)
+#   * R/variance_machinery.R::getCohortATTsFinal     (filtered path)
+#   * R/event_study.R::.event_study_etwfe_betwfe    (runtime if/else)
+#   * R/event_study.R::.event_study_fetwfe           (filtered path)
 #
 # The helper dispatches between two patterns via `sel_feat_inds`:
 #   * NULL (default): X_S = X_final; treat_block_mask via boolean fill.
@@ -44,7 +44,7 @@ test_that(".assemble_cluster_robust_sandwich(sel_feat_inds = NULL) matches manua
 	fx <- .build_fixture()
 
 	# Reference (manual): replicate the pre-refactor inline pattern
-	# from R/ols_calcs.R::getCohortATTsFinalOLS.
+	# from R/variance_machinery.R::getCohortATTsFinalOLS.
 	X_S_ref <- fx$X_final
 	y_ref <- fx$y_final[seq_len(fx$N * fx$T)]
 	ols_ref <- stats::lm.fit(cbind(1, X_S_ref), y_ref)
@@ -82,7 +82,7 @@ test_that(".assemble_cluster_robust_sandwich(sel_feat_inds = <vector>) matches m
 	sel_feat_inds <- c(2L, 3L, 5L, 8L)
 
 	# Reference (manual): replicate the pre-refactor inline pattern
-	# from R/fetwfe_core.R::getCohortATTsFinal.
+	# from R/variance_machinery.R::getCohortATTsFinal.
 	X_S_ref <- fx$X_final[, sel_feat_inds, drop = FALSE]
 	y_ref <- fx$y_final[seq_len(fx$N * fx$T)]
 	ols_ref <- stats::lm.fit(cbind(1, X_S_ref), y_ref)
@@ -287,8 +287,9 @@ test_that(".compute_cluster_robust_sandwich matches reference N-loop", {
 	residuals <- rnorm(N * T)
 
 	# Reference: explicit N-loop (the pre-vectorize implementation, captured
-	# verbatim from the git history at R/ols_calcs.R::.compute_cluster_robust_sandwich
-	# before issue #84 item 18). This is the asymptotically-equivalent O(N*T*p_S^2)
+	# verbatim from the git history at
+	# R/variance_machinery.R::.compute_cluster_robust_sandwich before issue
+	# #84 item 18). This is the asymptotically-equivalent O(N*T*p_S^2)
 	# baseline we're vectorizing against.
 	reference_loop <- function(X_S, residuals, N, T) {
 		X_S_centered <- scale(X_S, center = TRUE, scale = FALSE)
