@@ -21,7 +21,9 @@ and simulation parameters.}
 
 \item{sig_eps_sq}{Numeric. Variance of the idiosyncratic (observation-level) noise.}
 
-\item{sig_eps_c_sq}{Numeric. Variance of the unit-level random effects.}
+\item{sig_eps_c_sq}{Numeric. Variance of the unit-level random effects.
+Must be non-negative; \code{0} is allowed (yields a panel with no unit-level
+random effects).}
 
 \item{distribution}{Character. Distribution to generate covariates.
 Defaults to \code{"gaussian"}. If set to \code{"uniform"}, covariates are drawn uniformly

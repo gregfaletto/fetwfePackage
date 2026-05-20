@@ -29,7 +29,9 @@ simulateDataCore(
 
 \item{sig_eps_sq}{Numeric. Variance of the idiosyncratic (observation-level) noise.}
 
-\item{sig_eps_c_sq}{Numeric. Variance of the unit-level random effects.}
+\item{sig_eps_c_sq}{Numeric. Variance of the unit-level random effects.
+Must be non-negative; \code{0} is allowed (yields a panel with no unit-level
+random effects).}
 
 \item{beta}{Numeric vector. Coefficient vector for data generation. Its required length depends
 on the value of \code{gen_ints}:

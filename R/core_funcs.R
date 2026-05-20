@@ -826,7 +826,7 @@ check_etwfe_core_inputs <- function(
 		)
 	}
 
-	stopifnot(R >= 1)
+	stopifnot(R >= 2)
 	stopifnot(R <= T - 1)
 
 	indep_count_data_available <- FALSE
@@ -924,7 +924,7 @@ check_etwfe_core_inputs <- function(
 #' @noRd
 genFullInvFusionTransformMat <- function(first_inds, T, R, d, num_treats) {
 	##———— Safety checks ————————————————————————————————————————————
-	stopifnot(is.numeric(R), length(R) == 1L, R >= 1L)
+	stopifnot(is.numeric(R), length(R) == 1L, R >= 2L)
 	stopifnot(is.numeric(T), length(T) == 1L, T >= 3L, R <= T - 1)
 	stopifnot(is.numeric(d), length(d) == 1L, d >= 0L)
 	stopifnot(length(first_inds) == R)

@@ -18,6 +18,8 @@
 #' @param N Integer. Number of units in the panel.
 #' @param sig_eps_sq Numeric. Variance of the idiosyncratic (observation-level) noise.
 #' @param sig_eps_c_sq Numeric. Variance of the unit-level random effects.
+#'   Must be non-negative; `0` is allowed (yields a panel with no unit-level
+#'   random effects).
 #' @param distribution Character. Distribution to generate covariates.
 #'   Defaults to \code{"gaussian"}. If set to \code{"uniform"}, covariates are drawn uniformly
 #'   from \eqn{[-\sqrt{3}, \sqrt{3}]}.
@@ -103,9 +105,9 @@ simulateData <- function(
 	if (
 		!is.numeric(sig_eps_c_sq) ||
 			length(sig_eps_c_sq) != 1 ||
-			sig_eps_c_sq <= 0
+			sig_eps_c_sq < 0
 	) {
-		stop("sig_eps_c_sq must be a positive numeric value")
+		stop("sig_eps_c_sq must be a non-negative numeric value")
 	}
 
 	# Extract parameters from the coefs object
@@ -430,6 +432,8 @@ getTes <- function(coefs_obj) {
 #' @param d Integer. Number of time-invariant covariates.
 #' @param sig_eps_sq Numeric. Variance of the idiosyncratic (observation-level) noise.
 #' @param sig_eps_c_sq Numeric. Variance of the unit-level random effects.
+#'   Must be non-negative; `0` is allowed (yields a panel with no unit-level
+#'   random effects).
 #' @param beta Numeric vector. Coefficient vector for data generation. Its required length depends
 #' on the value of \code{gen_ints}:
 #'   \itemize{
@@ -1453,7 +1457,7 @@ testGenRandomDataInputs <- function(
 	stopifnot(R >= 2)
 	stopifnot(N >= R + 1)
 	stopifnot(sig_eps_sq > 0)
-	stopifnot(sig_eps_c_sq > 0)
+	stopifnot(sig_eps_c_sq >= 0)
 
 	# Compute the number of treatment effects (common to both cases)
 	num_treats <- getNumTreats(R = R, T = T)
