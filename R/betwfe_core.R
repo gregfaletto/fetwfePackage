@@ -786,7 +786,7 @@ betwfe_core <- function(
 	if (any(!is.na(lambda.max))) {
 		stopifnot(is.numeric(lambda.max) | is.integer(lambda.max))
 		stopifnot(length(lambda.max) == 1)
-		stopifnot(lambda.max >= 0)
+		stopifnot(lambda.max > 0)
 	}
 
 	if (any(!is.na(lambda.min))) {

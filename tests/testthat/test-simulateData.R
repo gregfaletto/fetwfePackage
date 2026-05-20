@@ -393,3 +393,42 @@ test_that("print.FETWFE_simulated summarizes instead of dumping (#84 item 13)", 
 	expect_false(any(grepl("\\$X", out)))
 	expect_false(any(grepl("Levels:", out)))
 })
+
+# ------------------------------------------------------------------------------
+# Case 2 from #109: simulateData() accepts sig_eps_c_sq = 0 (no unit-level
+# random effects). Pre-fix, simulateData() rejected sig_eps_c_sq <= 0 while
+# the validators downstream of fetwfe() accepted sig_eps_c_sq >= 0.
+# Loosened simulateData (and testGenRandomDataInputs) to match.
+# ------------------------------------------------------------------------------
+test_that("simulateData accepts sig_eps_c_sq = 0 (#109 Case 2)", {
+	coefs <- genCoefs(
+		R = 2,
+		T = 5,
+		d = 2,
+		density = 0.5,
+		eff_size = 2,
+		seed = 109
+	)
+	# Pre-fix: this call errored with "sig_eps_c_sq must be a positive numeric value".
+	sim <- simulateData(coefs, N = 40, sig_eps_sq = 1, sig_eps_c_sq = 0)
+	expect_s3_class(sim, "FETWFE_simulated")
+	expect_equal(sim$sig_eps_c_sq, 0)
+	# rnorm(N, sd = 0) returns rep(0, N) — unit residuals are exactly zero.
+	# Response is still finite (idiosyncratic noise has sig_eps_sq = 1).
+	expect_true(all(is.finite(sim$y)))
+})
+
+test_that("simulateData still rejects negative sig_eps_c_sq (#109 Case 2)", {
+	coefs <- genCoefs(
+		R = 2,
+		T = 5,
+		d = 2,
+		density = 0.5,
+		eff_size = 2,
+		seed = 109
+	)
+	expect_error(
+		simulateData(coefs, N = 40, sig_eps_sq = 1, sig_eps_c_sq = -0.1),
+		"non-negative"
+	)
+})

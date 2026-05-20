@@ -1,5 +1,32 @@
 # NEWS
 
+## Version 1.9.24 (2026-05-19)
+
+- Reconciled three strict-vs-lenient validator inconsistencies (GitHub
+  #109, follow-up to #84 item 12):
+  - **`lambda.max` (Case 1)**: Tightened the inner `fetwfe_core` check
+    from `lambda.max >= 0` to `lambda.max > 0` to match the outer
+    `checkFetwfeInputs` invariant. No user-visible behavior change —
+    the inner check is downstream of the outer and was effectively
+    dead code (any caller already validated `> 0` via the entry
+    point).
+  - **`sig_eps_c_sq = 0` (Case 2)**: Loosened `simulateData()` (and
+    its inner helper `testGenRandomDataInputs()`) to accept
+    `sig_eps_c_sq = 0`, matching the validator surface used by
+    `fetwfe()` / `etwfe()` / `betwfe()` / `twfeCovs()`.
+    Methodologically, `sig_eps_c_sq = 0` yields a panel with no
+    unit-level random effects (`rnorm(N, sd = 0) = rep(0, N)`).
+    Backward-compatible additive change — previously-rejected inputs
+    are now accepted.
+  - **`R >= 2` (Case 3)**: Tightened the upstream `R >= 1` checks at
+    `R/core_funcs.R::check_etwfe_core_inputs` and
+    `genFullInvFusionTransformMat` to `R >= 2`, matching the
+    user-facing helpful-error check at `R/etwfe_core.R:1127`
+    ("Only one treated cohort detected..."). No user-visible behavior
+    change — `R = 1` was already rejected with a clearer message
+    downstream. Single-treated-cohort support (R = 1) is filed
+    separately as #112.
+
 ## Version 1.9.23 (2026-05-19)
 
 - Closes out the remaining items of GitHub #84 (the 2026-05-17 periodic
