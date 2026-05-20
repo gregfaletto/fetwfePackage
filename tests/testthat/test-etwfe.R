@@ -1212,6 +1212,38 @@ test_that("etwfe auto-truncates a panel with no never-treated units (default)", 
 })
 
 # ------------------------------------------------------------------------------
+# Issue #116 Gap 2: se_type = "cluster" and the auto-truncation of an
+# all-treated panel (allow_no_never_treated) are each tested in isolation, but
+# never together. This exercises the interaction end-to-end: a cluster SE
+# computed on an auto-truncated panel must still be finite and strictly
+# positive. The > 0 assertion is load-bearing -- on an all-treated panel the
+# bridge estimators select every coefficient out and return att_se = 0
+# exactly, which a finiteness-only check would pass vacuously.
+# ------------------------------------------------------------------------------
+test_that("etwfe cluster SE is finite and positive on an auto-truncated panel", {
+	df_bad <- generate_bad_panel_data(N = 200, T = 10, seed = 123)
+
+	expect_warning(
+		res <- etwfe(
+			pdata = df_bad,
+			time_var = "time",
+			unit_var = "unit",
+			treatment = "treatment",
+			covs = c("cov1", "cov2"),
+			response = "y",
+			se_type = "cluster",
+			allow_no_never_treated = TRUE,
+			verbose = FALSE
+		),
+		"auto-truncated"
+	)
+	expect_s3_class(res, "etwfe")
+	expect_true(is.finite(res$att_se))
+	expect_false(is.na(res$att_se))
+	expect_gt(res$att_se, 0)
+})
+
+# ------------------------------------------------------------------------------
 # Test: etwfe errors cleanly when truncation would yield < 2 retained cohorts
 # ------------------------------------------------------------------------------
 test_that("etwfe errors cleanly when no-never-treated truncation would yield < 2 cohorts", {
