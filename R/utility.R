@@ -1478,3 +1478,50 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 		lambda.min_model_size = sum(fit$beta[, 1] != 0)
 	)
 }
+
+#' @title Compute treatment-effect and treatment-interaction indices
+#' @description Returns the integer index vectors `treat_inds` (base
+#'   treatment-effect columns) and `treat_int_inds` (covariate x
+#'   treatment interaction columns) for the ETWFE / FETWFE / BETWFE
+#'   design matrix.
+#'
+#'   The math is `treat_inds = getTreatInds(R, T, d, num_treats)` plus
+#'   the contract `max(treat_inds) == R + T - 1 + d + R*d + (T-1)*d +
+#'   num_treats` when `d > 0` (and `max(treat_inds) == R + T - 1 +
+#'   num_treats` when `d == 0`). The treatment-interaction block lives
+#'   immediately above `treat_inds` and runs `(max(treat_inds) + 1):p`
+#'   when `d > 0`; empty otherwise.
+#'
+#'   Extracted from a byte-identical 17-line block previously duplicated
+#'   across `R/etwfe_core.R`, `R/fetwfe_core.R`, and `R/betwfe_core.R`
+#'   (issue #119).
+#' @param R Integer; number of treated cohorts.
+#' @param T Integer; number of time periods.
+#' @param d Integer; number of (time-invariant) covariates.
+#' @param num_treats Integer; total number of base treatment-effect
+#'   parameters in the design.
+#' @param p Integer; total number of columns in the design matrix.
+#' @return A list with:
+#'   \item{treat_inds}{Integer vector of base treatment-effect column
+#'     indices, of length `num_treats`.}
+#'   \item{treat_int_inds}{Integer vector of treatment x covariate
+#'     interaction column indices, of length `num_treats * d` when
+#'     `d > 0` and empty when `d == 0`.}
+#' @keywords internal
+#' @noRd
+.compute_treat_inds <- function(R, T, d, num_treats, p) {
+	treat_inds <- getTreatInds(R = R, T = T, d = d, num_treats = num_treats)
+	if (d > 0) {
+		stopifnot(max(treat_inds) + 1 <= p)
+		stopifnot(
+			max(treat_inds) == R + T - 1 + d + R * d + (T - 1) * d + num_treats
+		)
+		treat_int_inds <- (max(treat_inds) + 1):p
+		stopifnot(length(treat_int_inds) == num_treats * d)
+	} else {
+		stopifnot(max(treat_inds) <= p)
+		stopifnot(max(treat_inds) == R + T - 1 + num_treats)
+		treat_int_inds <- c()
+	}
+	list(treat_inds = treat_inds, treat_int_inds = treat_int_inds)
+}
