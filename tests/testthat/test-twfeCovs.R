@@ -833,7 +833,7 @@ test_that("twfeCovs throws error when a cohort contains fewer than d + 1 units",
 			response = "y",
 			verbose = FALSE
 		),
-		"At least one cohort contains fewer than d \\+ 1 units\\. The design matrix may be rank-deficient\\. Calculating standard errors may not be possible, and estimating treatment effects may only be possible using add_ridge = TRUE\\."
+		"At least one cohort contains fewer than d \\+ 1 units\\. The design matrix is rank-deficient\\. Calculating standard errors will not be possible, and estimating treatment effects is only possible using add_ridge = TRUE\\."
 	)
 
 	expect_warning(
@@ -847,7 +847,7 @@ test_that("twfeCovs throws error when a cohort contains fewer than d + 1 units",
 			verbose = FALSE,
 			add_ridge = TRUE
 		),
-		"At least one cohort contains fewer than d \\+ 1 units\\. The design matrix may be rank-deficient\\. Calculating standard errors may not be possible, and estimating treatment effects may only be possible using add_ridge = TRUE\\."
+		"At least one cohort contains fewer than d \\+ 1 units\\. The design matrix is rank-deficient\\. Calculating standard errors will not be possible, and estimating treatment effects is only possible using add_ridge = TRUE\\."
 	)
 
 	res <- suppressWarnings(twfeCovs(

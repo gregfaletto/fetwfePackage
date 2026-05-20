@@ -1525,3 +1525,49 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 	}
 	list(treat_inds = treat_inds, treat_int_inds = treat_int_inds)
 }
+
+#' @title Check cohort-count rank condition for OLS estimators
+#' @description Iterates over `in_sample_counts` (length `R + 1`, indexed
+#'   from the never-treated cohort through the `R` treated cohorts) and
+#'   `stop()`s -- or `warning()`s when `add_ridge = TRUE` -- if any cohort
+#'   contains fewer than `d + 1` units. The condition forces rank
+#'   deficiency in the OLS-style estimators (etwfe / twfeCovs) because
+#'   each cohort's within-cohort regression needs at least `d + 1` units
+#'   to identify `d` covariates plus an intercept.
+#'
+#'   Extracted from `R/fetwfe.R` (the `etwfe()` wrapper) and
+#'   `R/twfeCovs.R` (the `twfeCovs()` wrapper). Pre-#119, these two sites
+#'   carried drifted wording ("is rank-deficient" vs "may be rank-
+#'   deficient"); this helper converges on the stronger etwfe wording --
+#'   the mathematically-accurate one.
+#' @param in_sample_counts Integer vector of length `R + 1`; the per-cohort
+#'   unit counts including the never-treated reference cohort.
+#' @param R Integer; number of treated cohorts.
+#' @param d Integer; number of (time-invariant) covariates.
+#' @param add_ridge Logical; if `TRUE`, the function `warning()`s rather
+#'   than `stop()`s when the condition fires, on the grounds that the
+#'   ridge fallback may still yield usable point estimates. If `FALSE`,
+#'   the function `stop()`s.
+#' @return `invisible(NULL)`. Called for side effects (warning / stop).
+#' @keywords internal
+#' @noRd
+.check_cohort_rank_for_ols <- function(in_sample_counts, R, d, add_ridge) {
+	warning_flag <- FALSE
+	for (r in 1:(R + 1)) {
+		if (in_sample_counts[r] < d + 1) {
+			if (add_ridge) {
+				warning_flag <- TRUE
+			} else {
+				stop(
+					"At least one cohort contains fewer than d + 1 units. The design matrix is rank-deficient. Calculating standard errors will not be possible, and estimating treatment effects is only possible using add_ridge = TRUE."
+				)
+			}
+		}
+	}
+	if (warning_flag) {
+		warning(
+			"At least one cohort contains fewer than d + 1 units. The design matrix is rank-deficient. Calculating standard errors will not be possible, and estimating treatment effects is only possible using add_ridge = TRUE."
+		)
+	}
+	invisible(NULL)
+}
