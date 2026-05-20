@@ -78,7 +78,7 @@ paper_arxiv.tex     Source for the methodology paper (R-build-ignored).
   additionally get `@keywords internal` and `@noRd` (so they're documented
   for code readers but don't produce a user-facing man page). See
   `R/core_funcs.R::idCohorts`, `R/gen_funcs.R::getActualCohortTes`, and
-  `R/ols_calcs.R::getCohortATTsFinalOLS` for the internal-helper pattern
+  `R/variance_machinery.R::getCohortATTsFinal` for the internal-helper pattern
   in practice.
   **Exception: S3 methods registered for a generic in another package**
   (e.g., `print.fetwfe`, `summary.etwfe`, `coef.fetwfe`) carry only

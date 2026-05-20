@@ -838,6 +838,7 @@ fetwfe_core <- function(
 		T = T,
 		fused = TRUE,
 		calc_ses = q < 1,
+		include_selected = TRUE,
 		alpha = alpha,
 		se_type = se_type,
 		y_final = y_final

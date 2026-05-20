@@ -1,0 +1,397 @@
+library(testthat)
+library(fetwfe)
+
+# Unit tests for the PR #118 unification of getCohortATTsFinal() and the
+# (now deleted) getCohortATTsFinalOLS(). The four call paths through the
+# unified function correspond to the four `fused × include_selected`
+# quadrants:
+#
+#   fused = FALSE, include_selected = FALSE  →  ETWFE / twfeCovs
+#   fused = TRUE,  include_selected = TRUE   →  FETWFE
+#   fused = FALSE, include_selected = TRUE   →  BETWFE
+#   fused = TRUE,  include_selected = FALSE  →  no real caller; API lockdown
+#
+# Test 1 freezes the legacy OLS implementation as an inline closure so the
+# refactored function can be asserted byte-identical against it. The closure
+# is the pre-#118 source of getCohortATTsFinalOLS() copied here verbatim
+# (with comments preserved). Future maintainers can re-execute the closure
+# against the unified function to confirm the byte-identity claim still
+# holds even after later refactors.
+
+# ---- Fixture --------------------------------------------------------------
+
+.build_unif_fixture <- function(seed = 118L) {
+	set.seed(seed)
+	N <- 8L
+	T <- 4L
+	R <- 2L
+	d <- 2L
+	num_treats <- 3L + 2L
+	p <- (R + T - 1L + d) + num_treats + 4L
+	X_final <- matrix(rnorm(N * T * p), nrow = N * T, ncol = p)
+	y_final <- rnorm(N * T)
+	treat_inds <- seq.int(R + T - 1L + d + 1L, R + T - 1L + d + num_treats)
+	first_inds <- c(1L, 4L)
+	c_names <- c("Cohort1", "Cohort2")
+	tes <- rnorm(num_treats)
+	list(
+		X_final = X_final,
+		y_final = y_final,
+		N = N,
+		T = T,
+		R = R,
+		p = p,
+		num_treats = num_treats,
+		treat_inds = treat_inds,
+		first_inds = first_inds,
+		c_names = c_names,
+		tes = tes,
+		sig_eps_sq = 0.7
+	)
+}
+
+# ---- Test 1: frozen-snapshot equivalence against legacy OLS ---------------
+
+# Inline copy of the pre-#118 getCohortATTsFinalOLS() body. Kept here so the
+# byte-equivalence assertion is reproducible without git archaeology.
+.legacy_getCohortATTsFinalOLS <- function(
+	X_final,
+	treat_inds,
+	num_treats,
+	first_inds,
+	c_names,
+	tes,
+	sig_eps_sq,
+	R,
+	N,
+	T,
+	p,
+	alpha = 0.05,
+	se_type = "default",
+	y_final = NULL
+) {
+	se_type <- match.arg(se_type, c("default", "cluster"))
+
+	stopifnot(length(tes) <= num_treats)
+	stopifnot(all(!is.na(tes)))
+	stopifnot(nrow(X_final) == N * T)
+	stopifnot(ncol(X_final) == p)
+	X_to_pass <- X_final
+
+	res <- fetwfe:::getGramInv(
+		N = N,
+		T = T,
+		X_final = X_to_pass,
+		treat_inds = treat_inds,
+		num_treats = num_treats,
+		calc_ses = TRUE
+	)
+	gram_inv <- res$gram_inv
+	calc_ses <- res$calc_ses
+
+	sandwich_full <- NULL
+	treat_block_mask <- NULL
+
+	if (identical(se_type, "cluster") && calc_ses) {
+		stopifnot(!is.null(y_final))
+		stopifnot(length(y_final) >= N * T)
+		res <- fetwfe:::.assemble_cluster_robust_sandwich(
+			X_final = X_final,
+			y_final = y_final,
+			N = N,
+			T = T,
+			treat_inds = treat_inds,
+			sel_feat_inds = NULL
+		)
+		sandwich_full <- res$sandwich_full
+		treat_block_mask <- res$treat_block_mask
+	}
+
+	cohort_tes <- rep(as.numeric(NA), R)
+	cohort_te_ses <- rep(as.numeric(NA), R)
+	psi_mat <- matrix(0, num_treats, R)
+
+	for (r in 1:R) {
+		inds_r <- fetwfe:::.cohort_block_inds(r, R, first_inds, num_treats)
+		first_ind_r <- inds_r[1]
+		last_ind_r <- inds_r[length(inds_r)]
+
+		stopifnot(last_ind_r >= first_ind_r)
+		stopifnot(all(first_ind_r:last_ind_r %in% 1:num_treats))
+
+		cohort_tes[r] <- mean(tes[first_ind_r:last_ind_r])
+
+		psi_r <- fetwfe:::getPsiRUnfused(
+			first_ind_r,
+			last_ind_r,
+			sel_treat_inds_shifted = 1:num_treats
+		)
+		stopifnot(length(psi_r) == num_treats)
+		psi_mat[, r] <- psi_r
+
+		if (calc_ses) {
+			if (identical(se_type, "cluster")) {
+				psi_r_full <- numeric(length(treat_block_mask))
+				psi_r_full[treat_block_mask] <- psi_r
+				cohort_te_ses[r] <- sqrt(max(
+					as.numeric(
+						t(psi_r_full) %*%
+							sandwich_full %*%
+							psi_r_full
+					),
+					0
+				))
+			} else {
+				cohort_te_ses[r] <- sqrt(
+					sig_eps_sq *
+						as.numeric(t(psi_r) %*% gram_inv %*% psi_r) /
+						(N * T)
+				)
+			}
+		}
+	}
+
+	stopifnot(length(c_names) == R)
+	stopifnot(length(cohort_tes) == R)
+
+	if (all(!is.na(gram_inv))) {
+		stopifnot(length(cohort_te_ses) == R)
+		cohort_te_df <- data.frame(
+			c_names,
+			cohort_tes,
+			cohort_te_ses,
+			cohort_tes - stats::qnorm(1 - alpha / 2) * cohort_te_ses,
+			cohort_tes + stats::qnorm(1 - alpha / 2) * cohort_te_ses,
+			fetwfe:::.compute_p_values(cohort_tes, cohort_te_ses)
+		)
+		names(cohort_te_ses) <- c_names
+		names(cohort_tes) <- c_names
+	} else {
+		cohort_te_df <- data.frame(
+			c_names,
+			cohort_tes,
+			rep(NA, R),
+			rep(NA, R),
+			rep(NA, R),
+			rep(NA_real_, R)
+		)
+	}
+
+	colnames(cohort_te_df) <- c(
+		"Cohort",
+		"Estimated TE",
+		"SE",
+		"ConfIntLow",
+		"ConfIntHigh",
+		"P_value"
+	)
+
+	stopifnot(length(tes) == nrow(psi_mat))
+
+	list(
+		cohort_te_df = cohort_te_df,
+		cohort_tes = cohort_tes,
+		cohort_te_ses = cohort_te_ses,
+		psi_mat = psi_mat,
+		gram_inv = gram_inv,
+		calc_ses = calc_ses,
+		sandwich_full = sandwich_full,
+		treat_block_mask = treat_block_mask
+	)
+}
+
+test_that("unified getCohortATTsFinal(fused=FALSE, include_selected=FALSE) matches the pre-#118 OLS implementation byte-for-byte", {
+	fx <- .build_unif_fixture()
+
+	# Reference: legacy OLS closure baked into this file.
+	expected <- .legacy_getCohortATTsFinalOLS(
+		X_final = fx$X_final,
+		treat_inds = fx$treat_inds,
+		num_treats = fx$num_treats,
+		first_inds = fx$first_inds,
+		c_names = fx$c_names,
+		tes = fx$tes,
+		sig_eps_sq = fx$sig_eps_sq,
+		R = fx$R,
+		N = fx$N,
+		T = fx$T,
+		p = fx$p
+	)
+
+	# Unified function on the same inputs.
+	actual <- fetwfe:::getCohortATTsFinal(
+		X_final = fx$X_final,
+		sel_feat_inds = NULL,
+		treat_inds = fx$treat_inds,
+		num_treats = fx$num_treats,
+		first_inds = fx$first_inds,
+		sel_treat_inds_shifted = seq_len(fx$num_treats),
+		c_names = fx$c_names,
+		tes = fx$tes,
+		sig_eps_sq = fx$sig_eps_sq,
+		R = fx$R,
+		N = fx$N,
+		T = fx$T,
+		fused = FALSE,
+		calc_ses = TRUE,
+		include_selected = FALSE
+	)
+
+	# Byte-identity on every observable slot. d_inv_treat_sel is absent in
+	# both (legacy OLS never produces it; unified function omits it under
+	# fused = FALSE).
+	expect_equal(actual$cohort_te_df, expected$cohort_te_df, tolerance = 0)
+	expect_equal(actual$cohort_tes, expected$cohort_tes, tolerance = 0)
+	expect_equal(actual$cohort_te_ses, expected$cohort_te_ses, tolerance = 0)
+	expect_equal(actual$psi_mat, expected$psi_mat, tolerance = 0)
+	expect_equal(actual$gram_inv, expected$gram_inv, tolerance = 0)
+	expect_equal(actual$calc_ses, expected$calc_ses)
+	expect_null(actual$sandwich_full)
+	expect_null(expected$sandwich_full)
+	expect_null(actual$treat_block_mask)
+	expect_null(expected$treat_block_mask)
+	expect_null(actual$d_inv_treat_sel)
+})
+
+test_that("unified getCohortATTsFinal(fused=FALSE, include_selected=FALSE) matches the pre-#118 OLS implementation under se_type='cluster'", {
+	fx <- .build_unif_fixture()
+
+	expected <- .legacy_getCohortATTsFinalOLS(
+		X_final = fx$X_final,
+		treat_inds = fx$treat_inds,
+		num_treats = fx$num_treats,
+		first_inds = fx$first_inds,
+		c_names = fx$c_names,
+		tes = fx$tes,
+		sig_eps_sq = fx$sig_eps_sq,
+		R = fx$R,
+		N = fx$N,
+		T = fx$T,
+		p = fx$p,
+		se_type = "cluster",
+		y_final = fx$y_final
+	)
+
+	actual <- fetwfe:::getCohortATTsFinal(
+		X_final = fx$X_final,
+		sel_feat_inds = NULL,
+		treat_inds = fx$treat_inds,
+		num_treats = fx$num_treats,
+		first_inds = fx$first_inds,
+		sel_treat_inds_shifted = seq_len(fx$num_treats),
+		c_names = fx$c_names,
+		tes = fx$tes,
+		sig_eps_sq = fx$sig_eps_sq,
+		R = fx$R,
+		N = fx$N,
+		T = fx$T,
+		fused = FALSE,
+		calc_ses = TRUE,
+		include_selected = FALSE,
+		se_type = "cluster",
+		y_final = fx$y_final
+	)
+
+	expect_equal(actual$cohort_te_df, expected$cohort_te_df, tolerance = 0)
+	expect_equal(actual$cohort_te_ses, expected$cohort_te_ses, tolerance = 0)
+	expect_equal(actual$sandwich_full, expected$sandwich_full, tolerance = 0)
+	expect_equal(actual$treat_block_mask, expected$treat_block_mask)
+})
+
+# ---- Test 2: include_selected = TRUE appends a `selected` column ----------
+
+test_that("getCohortATTsFinal(fused=TRUE, include_selected=TRUE) attaches a `selected` column matching cohort_tes != 0 (FETWFE)", {
+	fx <- .build_unif_fixture()
+	# Mimic FETWFE's call shape: sel_feat_inds spans all features (no
+	# bridge zeroing on this fixture), sel_treat_inds_shifted spans
+	# all treatment effects.
+	out <- fetwfe:::getCohortATTsFinal(
+		X_final = fx$X_final,
+		sel_feat_inds = seq_len(fx$p),
+		treat_inds = fx$treat_inds,
+		num_treats = fx$num_treats,
+		first_inds = fx$first_inds,
+		sel_treat_inds_shifted = seq_len(fx$num_treats),
+		c_names = fx$c_names,
+		tes = fx$tes,
+		sig_eps_sq = fx$sig_eps_sq,
+		R = fx$R,
+		N = fx$N,
+		T = fx$T,
+		fused = TRUE,
+		calc_ses = TRUE,
+		include_selected = TRUE
+	)
+
+	expect_true("selected" %in% colnames(out$cohort_te_df))
+	# cohort_tes is named (the function attaches c_names); the data.frame
+	# column carries the same logicals without names. Strip names before
+	# comparing.
+	expect_identical(out$cohort_te_df$selected, unname(out$cohort_tes != 0))
+	expect_true(!is.null(out$d_inv_treat_sel))
+	expect_true(is.matrix(out$d_inv_treat_sel))
+	# psi_mat dimensions track sel_treat_inds_shifted, not num_treats.
+	expect_equal(nrow(out$psi_mat), fx$num_treats)
+	expect_equal(ncol(out$psi_mat), fx$R)
+})
+
+test_that("getCohortATTsFinal(fused=FALSE, include_selected=TRUE) attaches a `selected` column (BETWFE) but no d_inv_treat_sel", {
+	fx <- .build_unif_fixture()
+	out <- fetwfe:::getCohortATTsFinal(
+		X_final = fx$X_final,
+		sel_feat_inds = seq_len(fx$p),
+		treat_inds = fx$treat_inds,
+		num_treats = fx$num_treats,
+		first_inds = fx$first_inds,
+		sel_treat_inds_shifted = seq_len(fx$num_treats),
+		c_names = fx$c_names,
+		tes = fx$tes,
+		sig_eps_sq = fx$sig_eps_sq,
+		R = fx$R,
+		N = fx$N,
+		T = fx$T,
+		fused = FALSE,
+		calc_ses = TRUE,
+		include_selected = TRUE
+	)
+
+	expect_true("selected" %in% colnames(out$cohort_te_df))
+	# cohort_tes is named (the function attaches c_names); the data.frame
+	# column carries the same logicals without names. Strip names before
+	# comparing.
+	expect_identical(out$cohort_te_df$selected, unname(out$cohort_tes != 0))
+	expect_null(out$d_inv_treat_sel)
+})
+
+# ---- Test 3: include_selected = FALSE quadrants ---------------------------
+
+test_that("getCohortATTsFinal(fused=TRUE, include_selected=FALSE) omits the `selected` column but still produces d_inv_treat_sel (API-lockdown)", {
+	# This quadrant has no real-life caller — FETWFE always wants the
+	# selection indicator. The test exists to lock in that the flags
+	# are orthogonal: a future maintainer adding a fused-but-no-
+	# selection-indicator caller shouldn't have to rewrite the unified
+	# function. Without this test, the FALSE branch could be deleted as
+	# "dead" during a future refactor.
+	fx <- .build_unif_fixture()
+	out <- fetwfe:::getCohortATTsFinal(
+		X_final = fx$X_final,
+		sel_feat_inds = seq_len(fx$p),
+		treat_inds = fx$treat_inds,
+		num_treats = fx$num_treats,
+		first_inds = fx$first_inds,
+		sel_treat_inds_shifted = seq_len(fx$num_treats),
+		c_names = fx$c_names,
+		tes = fx$tes,
+		sig_eps_sq = fx$sig_eps_sq,
+		R = fx$R,
+		N = fx$N,
+		T = fx$T,
+		fused = TRUE,
+		calc_ses = TRUE,
+		include_selected = FALSE
+	)
+
+	expect_false("selected" %in% colnames(out$cohort_te_df))
+	expect_equal(ncol(out$cohort_te_df), 6L)
+	expect_true(!is.null(out$d_inv_treat_sel))
+})

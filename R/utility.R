@@ -1105,9 +1105,9 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #' `first_ind_r = first_inds[r]` and
 #' `last_ind_r = if (r < R) first_inds[r + 1] - 1 else num_treats`.
 #' Used inside `for (r in 1:R)` cohort loops in `getCohortATTsFinal`,
-#' `getCohortATTsFinalOLS`, `getSecondVarTermDataApp`,
-#' `getSecondVarTermOLS`, `prep_for_etwfe_regression`, and
-#' `getActualCohortTes`. Consolidated by GitHub #83.
+#' `getSecondVarTermDataApp`, `getSecondVarTermOLS`,
+#' `prep_for_etwfe_regression`, and `getActualCohortTes`. Consolidated by
+#' GitHub #83.
 #' @param r Integer; the cohort index, `1 <= r <= R`.
 #' @param R Integer; total number of treated cohorts.
 #' @param first_inds Integer vector; the per-cohort starting indices
