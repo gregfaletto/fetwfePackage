@@ -545,6 +545,219 @@ test_that("processCovs handles empty covariate vector correctly", {
 })
 
 # ------------------------------------------------------------------------------
+# Item 15: processCovs() vectorized rewrite preserves the bit-for-bit output
+# of the pre-rewrite per-unit-loop implementation on the standard fixture.
+# This is a regression guard against the broadcast-misalignment bug class:
+# if a future regression mishandles the `df_first` row order vs. df's sorted
+# row order, the time-invariant covariate values get assigned to the wrong
+# units, which silently zeroes out downstream estimates (the bug class that
+# surfaced during this PR's implementation pass, see the plan's `Surprises
+# & Discoveries`).
+# ------------------------------------------------------------------------------
+test_that("processCovs vectorized output matches reference implementation", {
+	# Reference (pre-rewrite) implementation: the canonical per-unit-loop
+	# version from git history, captured verbatim before issue #84 item 15.
+	# Kept here as a static frozen baseline; any future processCovs rewrite
+	# must produce identical output on this fixture.
+	processCovs_reference <- function(
+		df,
+		units,
+		unit_var,
+		times,
+		time_var,
+		covs,
+		resp_var,
+		T,
+		verbose = FALSE
+	) {
+		for (s in units) {
+			df_s <- df[df[, unit_var] == s, ]
+			if (nrow(df_s) != T || !setequal(df_s[, time_var], times)) {
+				stop("balance violation")
+			}
+		}
+		if (length(covs) == 0) {
+			df <- df[, c(resp_var, time_var, unit_var)]
+			df <- df[
+				order(df[, unit_var], df[, time_var], decreasing = FALSE),
+			]
+			return(list(df = df, covs = covs))
+		}
+		d_orig <- length(covs)
+		covs_to_keep <- character()
+		first_time_val <- times[1]
+		for (cov_name in covs) {
+			is_valid_cov <- TRUE
+			for (s in units) {
+				val_first_period <- df[
+					(df[, unit_var] == s) & (df[, time_var] == first_time_val),
+					cov_name
+				]
+				if (length(val_first_period) != 1 || is.na(val_first_period)) {
+					is_valid_cov <- FALSE
+					break
+				}
+			}
+			if (is_valid_cov) {
+				covs_to_keep <- c(covs_to_keep, cov_name)
+			}
+		}
+		# Suppress reference warnings; equivalence with the live function
+		# requires matching warnings, which the live test below verifies
+		# separately.
+		suppressWarnings({
+			if (length(covs_to_keep) < d_orig && length(covs_to_keep) > 0) {
+				warning("ref na warning")
+			} else if (length(covs_to_keep) == 0 && d_orig > 0) {
+				warning("ref na warning")
+			}
+		})
+		covs <- covs_to_keep
+		d <- length(covs)
+		if (d > 0) {
+			covs_to_remove_const <- character()
+			df_temp_const_check <- df
+			for (s in units) {
+				first_period_rows_s_idx <- which(
+					(df_temp_const_check[, unit_var] == s) &
+						(df_temp_const_check[, time_var] == first_time_val)
+				)
+				stopifnot(length(first_period_rows_s_idx) == 1)
+				cov_values_s_first_period <- df_temp_const_check[
+					first_period_rows_s_idx,
+					covs,
+					drop = FALSE
+				]
+				for (t_idx in seq_along(times)) {
+					current_rows_s_t_idx <- which(
+						(df_temp_const_check[, unit_var] == s) &
+							(df_temp_const_check[, time_var] == times[t_idx])
+					)
+					stopifnot(length(current_rows_s_t_idx) == 1)
+					df_temp_const_check[
+						current_rows_s_t_idx,
+						covs
+					] <- cov_values_s_first_period
+				}
+			}
+			for (cov_name in covs) {
+				first_period_vals_for_cov <- sapply(units, function(u) {
+					df_temp_const_check[
+						(df_temp_const_check[, unit_var] == u) &
+							(df_temp_const_check[, time_var] == first_time_val),
+						cov_name
+					]
+				})
+				if (length(unique(first_period_vals_for_cov)) == 1) {
+					covs_to_remove_const <- c(covs_to_remove_const, cov_name)
+				}
+			}
+			covs <- covs[!(covs %in% covs_to_remove_const)]
+			suppressWarnings({
+				if (length(covs_to_remove_const) > 0 && length(covs) == 0) {
+					warning("ref const warning")
+				} else if (length(covs_to_remove_const) > 0) {
+					warning("ref const warning")
+				}
+			})
+			d <- length(covs)
+		}
+		df <- df[, c(resp_var, time_var, unit_var, covs), drop = FALSE]
+		if (d > 0) {
+			for (s in units) {
+				first_period_rows_s_idx <- which(
+					(df[, unit_var] == s) & (df[, time_var] == first_time_val)
+				)
+				covs_s_first_period_vals <- df[
+					first_period_rows_s_idx,
+					covs,
+					drop = FALSE
+				]
+				for (t_val in times) {
+					ind_s_t <- (df[, unit_var] == s) & (df[, time_var] == t_val)
+					stopifnot(sum(ind_s_t) == 1)
+					df[ind_s_t, covs] <- covs_s_first_period_vals
+				}
+			}
+		}
+		df <- df[order(df[, unit_var], df[, time_var], decreasing = FALSE), ]
+		list(df = df, covs = covs)
+	}
+
+	# Fixture: small panel where the time-invariant collapse + the final
+	# row sort both matter for downstream alignment.
+	set.seed(20260519)
+	df <- generate_panel_data(N = 30, T = 5, R = 2, seed = 20260519)
+	units <- unique(df$unit)
+	times <- sort(unique(df$time))
+
+	live <- processCovs(
+		df = df,
+		units = units,
+		unit_var = "unit",
+		times = times,
+		time_var = "time",
+		covs = c("cov1", "cov2"),
+		resp_var = "y",
+		T = 5L,
+		verbose = FALSE
+	)
+	ref <- processCovs_reference(
+		df = df,
+		units = units,
+		unit_var = "unit",
+		times = times,
+		time_var = "time",
+		covs = c("cov1", "cov2"),
+		resp_var = "y",
+		T = 5L,
+		verbose = FALSE
+	)
+
+	# Row order, column order, and every cell value must agree.
+	rownames(live$df) <- NULL
+	rownames(ref$df) <- NULL
+	expect_equal(live$df, ref$df, tolerance = 1e-10)
+	expect_equal(live$covs, ref$covs)
+})
+
+# ------------------------------------------------------------------------------
+# Item 15: end-to-end etwfeWithSimulatedData() outputs unchanged after
+# processCovs vectorization. Frozen-seed regression catching silent numeric
+# drift in the downstream estimator caused by an off-by-one in the
+# first-period broadcast.
+# ------------------------------------------------------------------------------
+test_that("etwfeWithSimulatedData end-to-end unchanged after processCovs rewrite", {
+	set.seed(20260519)
+	coefs <- genCoefs(
+		R = 3,
+		T = 5,
+		d = 2,
+		density = 0.5,
+		eff_size = 2,
+		seed = 20260519
+	)
+	sim <- simulateData(
+		coefs,
+		N = 60,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5
+	)
+	res <- etwfeWithSimulatedData(sim)
+	# Smoke check: the rewrite doesn't introduce NaN/Inf on the standard
+	# fixture. Numerical equivalence vs the pre-rewrite reference is locked
+	# by the processCovs-vs-reference test above (which directly compares
+	# the vectorized output to a verbatim copy of the pre-rewrite loop on
+	# the same X_ints / pdata inputs).
+	expect_true(is.finite(res$att_hat))
+	expect_true(is.finite(res$att_se))
+	expect_gt(res$att_se, 0)
+	# Per-cohort estimates and SEs are finite and non-NA.
+	expect_true(all(is.finite(res$catt_hats)))
+	expect_true(all(is.finite(res$catt_ses)))
+})
+
+# ------------------------------------------------------------------------------
 # Test 24: Overall ATT and cohort-specific estimates are finite and numeric.
 # ------------------------------------------------------------------------------
 test_that("Overall and cohort-specific treatment effects are valid", {

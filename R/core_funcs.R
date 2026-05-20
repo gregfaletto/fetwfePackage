@@ -244,8 +244,25 @@ prep_for_etwfe_regression <- function(
 
 	stopifnot(!is.na(sig_eps_sq) & !is.na(sig_eps_c_sq))
 
-	Omega <- diag(rep(sig_eps_sq, T)) + matrix(sig_eps_c_sq, T, T)
-	Omega_sqrt_inv <- expm::sqrtm(solve(Omega))
+	# Closed-form Omega^(-1/2) for the equicorrelated-noise covariance
+	# Omega = sig_eps_sq * I_T + sig_eps_c_sq * J_T (where J_T is the all-ones
+	# matrix). Omega has eigenvalue (sig_eps_sq + T * sig_eps_c_sq) on the
+	# 1-dimensional subspace span(1_T) and eigenvalue sig_eps_sq (multiplicity
+	# T - 1) on its orthogonal complement. Hence
+	#   Omega^(-1/2) =
+	#     (1 / sqrt(sig_eps_sq + T * sig_eps_c_sq)) * (1_T 1_T^T / T)
+	#     + (1 / sqrt(sig_eps_sq)) * (I_T - 1_T 1_T^T / T).
+	# The closed form is exact (up to floating point), reduces the per-fit
+	# cost from an `expm::sqrtm()` Schur-decomposition + solve() to a few
+	# scalar sqrt()s plus a constant-matrix subtract, and drops the runtime
+	# dependency on `expm` (now Suggests-only for the equivalence test).
+	# Edge case `sig_eps_c_sq = 0`: the second eigenvalue collapses to
+	# sig_eps_sq, the two scaled projectors recombine into
+	# (1 / sqrt(sig_eps_sq)) * I_T, and the formula evaluates correctly.
+	J_over_T <- matrix(1 / T, nrow = T, ncol = T)
+	Omega_sqrt_inv <- (1 / sqrt(sig_eps_sq)) *
+		(diag(T) - J_over_T) +
+		(1 / sqrt(sig_eps_sq + T * sig_eps_c_sq)) * J_over_T
 
 	if (verbose) {
 		message("Time to get sqrt inverse matrix:")

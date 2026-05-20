@@ -1,6 +1,5 @@
 #' @import glmnet
 #' @importFrom Matrix bdiag
-#' @importFrom expm sqrtm
 #' @importFrom stats qnorm pnorm predict coef model.matrix setNames lm
 
 #-------------------------------------------------------------------------------
@@ -912,8 +911,20 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 				stopifnot(!is.na(res$indep_att_se))
 			}
 		} else {
-			# Pre-#79 etwfe/twfeCovs unconditional guard.
-			stopifnot(!is.na(res$indep_att_se))
+			# Issue #84 item 8: gate the etwfe/twfeCovs unconditional
+			# guard on `calc_ses`. The pre-#79 behavior stopped()-d on
+			# `is.na(res$indep_att_se)` even when SEs had been
+			# intentionally not computed (e.g., a future code path
+			# where calc_ses = FALSE flows through this branch with
+			# valid indep counts). Currently `calc_ses = FALSE` is
+			# only reachable via the `q >= 1` bridge regime, so no
+			# live code path can trip the un-gated guard today — but
+			# the explicit gate hardens against a future refactor that
+			# routes a calc_ses = FALSE etwfe/twfeCovs fit through
+			# this branch.
+			if (res$calc_ses) {
+				stopifnot(!is.na(res$indep_att_se))
+			}
 		}
 
 		stopifnot(all(!is.na(res$indep_cohort_probs)))

@@ -356,6 +356,16 @@ test_that("fetwfe returns att_se for q < 1 and att_se is NA for q >= 1", {
 	)
 	expect_false(result2$internal$calc_ses)
 	expect_true(is.na(result2$att_se))
+	# Issue #84 item 3: q >= 1 ridge contract surface — `att_se` is NA AND
+	# every dependent SE / p-value / CI is NA. Tightening the contract here
+	# locks the surface against a future regression that surfaces a stale
+	# bridge-regime SE through any of these slots.
+	expect_true(is.na(result2$att_p_value))
+	expect_true(all(is.na(result2$catt_ses)))
+	expect_true(all(is.na(result2$catt_df$SE)))
+	expect_true(all(is.na(result2$catt_df$ConfIntLow)))
+	expect_true(all(is.na(result2$catt_df$ConfIntHigh)))
+	expect_true(all(is.na(result2$catt_df$P_value)))
 })
 
 # ------------------------------------------------------------------------------
@@ -534,6 +544,14 @@ test_that("Overall ATT standard error is NA for q >= 1", {
 	)
 
 	expect_true(is.na(result$att_se))
+	# Issue #84 item 3: q >= 1 ridge contract surface — same tightening as
+	# the bridge-regime test in test 14 above.
+	expect_true(is.na(result$att_p_value))
+	expect_true(all(is.na(result$catt_ses)))
+	expect_true(all(is.na(result$catt_df$SE)))
+	expect_true(all(is.na(result$catt_df$ConfIntLow)))
+	expect_true(all(is.na(result$catt_df$ConfIntHigh)))
+	expect_true(all(is.na(result$catt_df$P_value)))
 })
 
 # ------------------------------------------------------------------------------
@@ -1156,6 +1174,59 @@ test_that("fetwfe cluster-robust SE exceeds default SE under AR(1) shocks", {
 	expect_true(is.finite(res_cls$att_se))
 	expect_gt(res_def$att_se, 0)
 	expect_gt(res_cls$att_se, res_def$att_se)
+})
+
+# ------------------------------------------------------------------------------
+# Item 7 (issue #84): end-to-end REML × cluster-SE interaction. Most existing
+# tests use `*WithSimulatedData()` which passes the simulator's true sigmas
+# through, bypassing REML in `estOmegaSqrtInv()`. This test crosses the two
+# orthogonal estimation paths — REML variance estimation (triggered by
+# `sig_eps_sq = NA, sig_eps_c_sq = NA`) AND cluster-robust SE — to lock in
+# the lack of conflict between them. If a future regression in either route
+# changes the surface, this assertion fires.
+# ------------------------------------------------------------------------------
+test_that("fetwfe runs end-to-end with REML estimation + cluster SE", {
+	testthat::skip_if_not_installed("lme4")
+
+	set.seed(20260519)
+	sim_coefs <- genCoefs(
+		R = 3,
+		T = 6,
+		d = 2,
+		density = 0.5,
+		eff_size = 2,
+		seed = 20260519
+	)
+	sim <- simulateData(
+		sim_coefs,
+		N = 150,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5
+	)
+
+	# Crucially: leave sig_eps_sq / sig_eps_c_sq at NA so REML runs.
+	res <- fetwfe(
+		pdata = sim$pdata,
+		time_var = sim$time_var,
+		unit_var = sim$unit_var,
+		treatment = sim$treatment,
+		covs = sim$covs,
+		response = sim$response,
+		sig_eps_sq = NA,
+		sig_eps_c_sq = NA,
+		se_type = "cluster",
+		verbose = FALSE
+	)
+
+	expect_s3_class(res, "fetwfe")
+	expect_true(is.finite(res$att_hat))
+	expect_true(is.finite(res$att_se))
+	expect_gt(res$att_se, 0)
+	# REML estimated something non-trivial for both variance components.
+	expect_gt(res$sig_eps_sq, 0)
+	expect_gt(res$sig_eps_c_sq, 0)
+	# The cluster route was actually selected (the surface label persists).
+	expect_identical(res$se_type, "cluster")
 })
 
 # ------------------------------------------------------------------------------

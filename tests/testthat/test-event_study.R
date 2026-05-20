@@ -283,3 +283,61 @@ test_that("event_study errors on objects of unsupported class", {
 	expect_error(event_study(list(foo = 1)), "fetwfe.*etwfe.*betwfe")
 	expect_error(event_study("not a fit"), "fetwfe.*etwfe.*betwfe")
 })
+
+# ------------------------------------------------------------------------------
+# Item 1: event_study() works on an auto-truncated panel (closes a gap in
+# coverage where the public event_study() dispatcher had never been exercised
+# on a fit that had been auto-truncated via the no-never-treated default
+# behavior). Builds a panel with no never-treated units (via the existing
+# `generate_bad_panel_data` helper) so the estimator emits the documented
+# "auto-truncated" warning, then runs event_study() against the resulting fit
+# and verifies the output schema + event-time range against the truncated panel
+# dimensions.
+# ------------------------------------------------------------------------------
+test_that("event_study works on a fit from an auto-truncated panel", {
+	df_bad <- generate_bad_panel_data(N = 200, T = 10, seed = 123)
+
+	# Auto-truncation surface: the documented "auto-truncated" warning fires
+	# upstream during the prep pass. Suppress it here; the warning itself is
+	# already covered by the test in test-fetwfe.R.
+	res <- suppressWarnings(fetwfe(
+		pdata = df_bad,
+		time_var = "time",
+		unit_var = "unit",
+		treatment = "treatment",
+		covs = c("cov1", "cov2"),
+		response = "y",
+		verbose = FALSE
+	))
+
+	# Auto-truncation actually fired (sanity check; would also fail with a
+	# stop() in the estimator if no truncation was possible).
+	expect_s3_class(res, "fetwfe")
+	expect_true(res$T < 10L)
+
+	es <- event_study(res)
+	expect_s3_class(es, "fetwfe_event_study")
+	expect_s3_class(es, "data.frame")
+	expect_equal(
+		colnames(es),
+		c(
+			"event_time",
+			"n_cohorts",
+			"estimate",
+			"se",
+			"ci_low",
+			"ci_high",
+			"p_value"
+		)
+	)
+
+	# Event times span 0..(T_post - 2). With T_post >= 3, event_times has
+	# >= 2 entries. The documented schema is `e = 0..(T_post - 2)`.
+	T_post <- res$T
+	expect_equal(es$event_time, seq.int(0L, T_post - 2L))
+	# At least 2 retained cohorts (the truncation produces >= 2 cohorts here
+	# under this seed/fixture; if the seed ever changes and that no longer
+	# holds, the assertion fires and the seed must be updated).
+	expect_true(res$R >= 2L)
+	expect_true(all(es$n_cohorts >= 1L))
+})

@@ -196,8 +196,19 @@ event_study <- function(x, alpha = NULL) {
 			psi_full <- numeric(ncol(sandwich_full))
 			psi_e_sel <- psi_e_tes[sel_treat_inds_shifted]
 			psi_full[treat_block_mask] <- psi_e_sel
-			var_1_e <- as.numeric(
-				t(psi_full) %*% sandwich_full %*% psi_full
+			# Issue #84 item 9: floor the cluster-sandwich quadratic form
+			# at zero. The Liang-Zeger sandwich is PSD in exact arithmetic,
+			# so `t(psi) %*% sandwich %*% psi >= 0` always — but the N-loop
+			# (now a `rowsum` aggregation, see item 18) involves enough
+			# floating-point summation that a near-zero quadratic form
+			# could come out negative by a few ulps. That would NaN the
+			# downstream sqrt() and surface as a baffling "NA SE" report.
+			# Floor at zero so any near-zero quadratic form rounds to
+			# exactly zero (the mathematically correct answer for a
+			# psi orthogonal to the sandwich's image).
+			var_1_e <- max(
+				as.numeric(t(psi_full) %*% sandwich_full %*% psi_full),
+				0
 			)
 		} else {
 			psi_e_sel <- psi_e_tes[sel_treat_inds_shifted]
@@ -387,8 +398,12 @@ event_study <- function(x, alpha = NULL) {
 		if (identical(se_type, "cluster")) {
 			psi_full <- numeric(ncol(sandwich_full))
 			psi_full[treat_block_mask] <- psi_e_theta
-			var_1_e <- as.numeric(
-				t(psi_full) %*% sandwich_full %*% psi_full
+			# Issue #84 item 9: floor the cluster-sandwich quadratic form
+			# at zero. See the matching guard in `.event_study_etwfe_betwfe`
+			# (just above) for rationale.
+			var_1_e <- max(
+				as.numeric(t(psi_full) %*% sandwich_full %*% psi_full),
+				0
 			)
 		} else {
 			var_1_e <- sig_eps_sq *
