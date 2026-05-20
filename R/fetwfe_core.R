@@ -553,58 +553,23 @@ fetwfe_core <- function(
 	#
 	#
 
-	# Estimate bridge regression
-	if (verbose) {
-		message("Estimating bridge regression...")
-		t0 <- Sys.time()
-	}
-
-	if (!is.na(lambda.max) & !is.na(lambda.min)) {
-		fit <- grpreg::gBridge(
-			X = X_final_scaled,
-			y = y_final,
-			gamma = q,
-			lambda.max = lambda.max,
-			lambda.min = lambda.min,
-			nlambda = nlambda
-		)
-	} else if (!is.na(lambda.max)) {
-		fit <- grpreg::gBridge(
-			X = X_final_scaled,
-			y = y_final,
-			gamma = q,
-			lambda.max = lambda.max,
-			nlambda = nlambda
-		)
-	} else if (!is.na(lambda.min)) {
-		fit <- grpreg::gBridge(
-			X = X_final_scaled,
-			y = y_final,
-			gamma = q,
-			lambda.min = lambda.min,
-			nlambda = nlambda
-		)
-	} else {
-		fit <- grpreg::gBridge(
-			X = X_final_scaled,
-			y = y_final,
-			gamma = q,
-			nlambda = nlambda
-		)
-	}
-
-	if (verbose) {
-		message("Done! Time for estimation:")
-		message(Sys.time() - t0)
-	}
-
-	# For diagnostics later, store largest and smallest lambda, as well as
-	# corresponding smallest and largest model sizes, to return.
-	lambda.max <- max(fit$lambda)
-	lambda.max_model_size <- sum(fit$beta[, ncol(fit$beta)] != 0)
-
-	lambda.min <- min(fit$lambda)
-	lambda.min_model_size <- sum(fit$beta[, 1] != 0)
+	# Estimate bridge regression. The 4-way gBridge dispatch + lambda-path
+	# diagnostics are shared with betwfe_core() via .fit_bridge_with_lambda_path()
+	# in R/utility.R (issue #119).
+	bridge_fit <- .fit_bridge_with_lambda_path(
+		X_final_scaled = X_final_scaled,
+		y_final = y_final,
+		q = q,
+		lambda.max = lambda.max,
+		lambda.min = lambda.min,
+		nlambda = nlambda,
+		verbose = verbose
+	)
+	fit <- bridge_fit$fit
+	lambda.max <- bridge_fit$lambda.max
+	lambda.min <- bridge_fit$lambda.min
+	lambda.max_model_size <- bridge_fit$lambda.max_model_size
+	lambda.min_model_size <- bridge_fit$lambda.min_model_size
 
 	# Select a single set of fitted coefficients by using BIC to choose among
 	# the penalties that were fitted

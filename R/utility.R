@@ -1381,3 +1381,100 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 		cohort_probs_overall = cohort_probs_overall
 	)
 }
+
+#' @title 4-way grpreg::gBridge dispatch with lambda-path diagnostics
+#' @description Dispatches `grpreg::gBridge()` based on which of `lambda.max`
+#'   and `lambda.min` were user-supplied (NA -> leave as default; non-NA ->
+#'   pass through). Returns the `fit` object plus the four lambda-path
+#'   diagnostic locals (`lambda.max`, `lambda.min`, `lambda.max_model_size`,
+#'   `lambda.min_model_size`) used by `fetwfe_core()` and `betwfe_core()`
+#'   downstream.
+#'
+#'   Extracted from a byte-identical 46-line block previously duplicated
+#'   across `R/fetwfe_core.R` and `R/betwfe_core.R`. The duplication was
+#'   a documented drift risk (issue #119); future fixes to the lambda
+#'   path now have a single landing site.
+#' @param X_final_scaled Numeric matrix; the design matrix (typically
+#'   GLS-then-fusion transformed and scaled).
+#' @param y_final Numeric vector; the GLS-transformed response.
+#' @param q Numeric scalar; the bridge-penalty exponent passed as `gamma` to
+#'   `gBridge()`.
+#' @param lambda.max Numeric scalar or `NA`; if non-NA, pass through to
+#'   `gBridge()` as the maximum lambda. If NA, `gBridge()` picks one.
+#' @param lambda.min Numeric scalar or `NA`; if non-NA, pass through to
+#'   `gBridge()`. If NA, `gBridge()` picks one.
+#' @param nlambda Integer; the lambda-grid length passed to `gBridge()`.
+#' @param verbose Logical; if `TRUE`, emit progress messages around the
+#'   `gBridge()` fit.
+#' @return A list containing:
+#'   \item{fit}{The `gBridge` fit object.}
+#'   \item{lambda.max}{`max(fit$lambda)` -- the realised maximum of the
+#'     lambda grid.}
+#'   \item{lambda.min}{`min(fit$lambda)` -- the realised minimum.}
+#'   \item{lambda.max_model_size}{Number of nonzero `fit$beta` columns at
+#'     `lambda.max` (largest lambda, smallest model).}
+#'   \item{lambda.min_model_size}{Number of nonzero `fit$beta` columns at
+#'     `lambda.min` (smallest lambda, largest model).}
+#' @keywords internal
+#' @noRd
+.fit_bridge_with_lambda_path <- function(
+	X_final_scaled,
+	y_final,
+	q,
+	lambda.max,
+	lambda.min,
+	nlambda,
+	verbose
+) {
+	if (verbose) {
+		message("Estimating bridge regression...")
+		t0 <- Sys.time()
+	}
+
+	if (!is.na(lambda.max) & !is.na(lambda.min)) {
+		fit <- grpreg::gBridge(
+			X = X_final_scaled,
+			y = y_final,
+			gamma = q,
+			lambda.max = lambda.max,
+			lambda.min = lambda.min,
+			nlambda = nlambda
+		)
+	} else if (!is.na(lambda.max)) {
+		fit <- grpreg::gBridge(
+			X = X_final_scaled,
+			y = y_final,
+			gamma = q,
+			lambda.max = lambda.max,
+			nlambda = nlambda
+		)
+	} else if (!is.na(lambda.min)) {
+		fit <- grpreg::gBridge(
+			X = X_final_scaled,
+			y = y_final,
+			gamma = q,
+			lambda.min = lambda.min,
+			nlambda = nlambda
+		)
+	} else {
+		fit <- grpreg::gBridge(
+			X = X_final_scaled,
+			y = y_final,
+			gamma = q,
+			nlambda = nlambda
+		)
+	}
+
+	if (verbose) {
+		message("Done! Time for estimation:")
+		message(Sys.time() - t0)
+	}
+
+	list(
+		fit = fit,
+		lambda.max = max(fit$lambda),
+		lambda.min = min(fit$lambda),
+		lambda.max_model_size = sum(fit$beta[, ncol(fit$beta)] != 0),
+		lambda.min_model_size = sum(fit$beta[, 1] != 0)
+	)
+}
