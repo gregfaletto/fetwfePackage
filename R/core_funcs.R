@@ -188,6 +188,180 @@ prep_for_etwfe_regression <- function(
 	)
 }
 
+
+#' Prepare Data & Design Matrix for ETWFE/TWFE Workflows
+#'
+#' @description
+#' A helper that converts raw **panel data** into the core objects required by
+#' `etwfe_core()`, `twfeCovs_core()`, and related fitting routines.  The function
+#' (i) keeps only the relevant variables, (ii) one-hot-encodes or otherwise
+#' expands any *factor* covariates, (iii) builds the stacked design matrix
+#' `X_ints` and centred response `y` via \code{prepXints()}, and (iv) performs a
+#' battery of **sanity checks** on cohort counts before estimation proceeds.
+#'
+#' @param pdata A **data.frame** in long (unit x time) format containing at
+#'   least the columns named in `response`, `time_var`, `unit_var`,
+#'   `treatment`, and `covs`.
+#' @param response Character; name of the response variable column.
+#' @param time_var Character; name of the time variable column.
+#' @param unit_var Character; name of the unit variable column.
+#' @param treatment Character; name of the treatment indicator column.
+#' @param covs Character vector of additional covariate column names.  Factor
+#'   covariates are expanded to dummies by `processFactors()`.  May be empty.
+#' @param verbose Logical; print progress/timing information?
+#' @param indep_count_data_available Logical; `TRUE` when *independent* cohort
+#'   counts are supplied in `indep_counts` and should be validated.
+#' @param indep_counts Optional integer vector with length
+#'   `1 + R` (never-treated plus `R` treated cohorts) giving cohort sizes in an
+#'   independent sample.  Only used when
+#'   `indep_count_data_available = TRUE`.
+#'
+#' @return A named **list** ready to be passed into the "_core" estimators:
+#' \describe{
+#'   \item{pdata}{The (possibly modified) data frame after factor processing.}
+#'   \item{covs}{Updated character vector of covariate names after dummy-expansion.}
+#'   \item{X_ints}{Design matrix with unit FE, time FE, covariates,
+#'     treatment dummies and their interactions (dimensions \(N T \times p\)).}
+#'   \item{y}{Centred response vector of length \(N T\).}
+#'   \item{y_mean}{Mean of the original (pre-centering) response. Preserved so
+#'     downstream methods (`augment()`, `predict()`) can return fitted values
+#'     on the original response scale.}
+#'   \item{N, T}{Integers - number of unique units and time periods.}
+#'   \item{d}{Integer - number of *raw* covariates after processing.}
+#'   \item{p}{Integer - total number of columns in `X_ints`.}
+#'   \item{in_sample_counts}{Named integer vector of length `1 + R` with cohort
+#'     sizes in the estimation sample (first entry = never-treated).}
+#'   \item{num_treats}{Integer - total number of base treatment-effect
+#'     parameters in `X_ints`.}
+#'   \item{first_inds}{Integer vector (length `R`) giving the first column
+#'     index of each cohort's treatment-effect block inside `X_ints`.}
+#'   \item{R}{Integer - number of treated cohorts detected.}
+#' }
+#'
+#' @details
+#' The routine executes the following steps:
+#' \enumerate{
+#'   \item **Column subset** - drops all variables not explicitly required.
+#'   \item **Factor processing** - calls `processFactors()` so that every
+#'     categorical covariate becomes a set of \(0/1\) dummies.
+#'   \item **Design-matrix construction** - hands the cleaned data to
+#'     `prepXints()`, which adds unit and time dummies, interactions, etc.
+#'   \item **Cohort diagnostics** - verifies that
+#'     \eqn{R \ge 2}, at least one never-treated unit exists, cohort names are
+#'     unique, and (if provided) `indep_counts` are dimensionally consistent.
+#' }
+#'
+#' Any violation of the checks triggers an informative `stop()` message so that
+#' higher-level functions fail fast.
+#'
+#' @keywords internal
+#' @noRd
+prep_for_etwfe_core <- function(
+	pdata,
+	response,
+	time_var,
+	unit_var,
+	treatment,
+	covs,
+	verbose,
+	indep_count_data_available,
+	indep_counts
+) {
+	# Subset pdata to include only the key columns
+	pdata <- pdata[, c(response, time_var, unit_var, treatment, covs)]
+
+	# Process any factor covariates:
+	if (length(covs) > 0) {
+		pf_res <- processFactors(pdata, covs)
+		pdata <- pf_res$pdata
+		covs <- pf_res$covs
+	}
+
+	# Proceed to generate design matrix and other objects
+	res <- prepXints(
+		data = pdata,
+		time_var = time_var,
+		unit_var = unit_var,
+		treatment = treatment,
+		covs = covs,
+		response = response,
+		verbose = verbose
+	)
+
+	X_ints <- res$X_ints
+	y <- res$y
+	y_mean <- res$y_mean
+	N <- res$N
+	T <- res$T
+	d <- res$d
+	p <- res$p
+	in_sample_counts <- res$in_sample_counts
+	num_treats <- res$num_treats
+	first_inds <- res$first_inds
+
+	rm(res)
+
+	R <- length(in_sample_counts) - 1
+	stopifnot(R >= 1)
+	stopifnot(R <= T - 1)
+	if (R < 2) {
+		stop(
+			"Only one treated cohort detected in data. Currently fetwfe and etwfe only support data sets with at least two treated cohorts."
+		)
+	}
+	stopifnot(N >= R + 1)
+	stopifnot(sum(in_sample_counts) == N)
+	stopifnot(all(in_sample_counts >= 0))
+	stopifnot(is.integer(in_sample_counts))
+	if (in_sample_counts[1] == 0) {
+		stop(
+			"No never-treated units detected in data to fit model; estimating treatment effects is not possible"
+		)
+	}
+	if (length(names(in_sample_counts)) != length(in_sample_counts)) {
+		stop(
+			"in_sample_counts must have all unique named entries (with names corresponding to the names of each cohort)"
+		)
+	}
+	if (
+		length(names(in_sample_counts)) !=
+			length(unique(names(in_sample_counts)))
+	) {
+		stop(
+			"in_sample_counts must have all unique named entries (with names corresponding to the names of each cohort)"
+		)
+	}
+	if (indep_count_data_available) {
+		if (sum(indep_counts) != N) {
+			stop(
+				"Number of units in independent cohort count data does not equal number of units in data to be used to fit model."
+			)
+		}
+		if (length(indep_counts) != length(in_sample_counts)) {
+			stop(
+				"Number of counts in independent counts does not match number of cohorts in data to be used to fit model."
+			)
+		}
+	}
+
+	return(list(
+		pdata = pdata,
+		covs = covs,
+		X_ints = X_ints,
+		y = y,
+		y_mean = y_mean,
+		N = N,
+		T = T,
+		d = d,
+		p = p,
+		in_sample_counts = in_sample_counts,
+		num_treats = num_treats,
+		first_inds = first_inds,
+		R = R
+	))
+}
+
+
 #' @title Estimate variance components and apply GLS whitening
 #' @description If `sig_eps_sq` or `sig_eps_c_sq` is NA, estimate both via
 #'   `estOmegaSqrtInv()` (REML on `y ~ X + (1 | unit)`). Then build
@@ -867,128 +1041,6 @@ check_etwfe_core_inputs <- function(
 	))
 }
 
-#' Build the **entire** inverse-fusion matrix \(D_N^{-1}\)
-#'
-#' Constructs the \eqn{p\times p} block–diagonal matrix that sends the sparse
-#' coefficient vector \(\theta\) used in the bridge loss back to the original
-#' coefficient scale \(\beta\), and is also used to multiply \(Z\) on the right
-#' to transform the features into a transformed feature space:
-#' \deqn{\beta \;=\;D_N^{-1}\,\theta.}
-#' The block layout follows the factorisation proved in the
-#' paper – repeated here using the helper generators already available in the
-#' package.
-#'
-#' \preformatted{
-#'       D_N^{-1} = diag(
-#'         (D^{(1)}(R))^{-1},                          # 1. cohort FEs
-#'         (D^{(1)}(T-1))^{-1},                        # 2. time  FEs
-#'         I_d,                                        # 3. X main effects
-#'         I_d ⊗ (D^{(1)}(R))^{-1},                   # 4. cohort × X
-#'         I_d ⊗ (D^{(1)}(T-1))^{-1},                 # 5. time   × X
-#'         (D^{(2)}(𝓡))^{-1},                         # 6. base τ_{r,t}
-#'         I_d ⊗ (D^{(2)}(𝓡))^{-1} )                  # 7. τ_{r,t} × X
-#' }
-#'
-#' @section Block dimensions:
-#' \itemize{
-#'   \item Cohort FEs: \(R\times R\)
-#'   \item Time-period FEs: \((T-1)\times(T-1)\)
-#'   \item Identitites: \(d\), \(dR\), \(d(T-1)\)
-#'   \item Treatment blocks: \( \mathfrak W \times \mathfrak W\) with
-#'         \(\mathfrak W = \texttt{num_treats}\)
-#' }
-#' All non–identity blocks contain only 0/1 entries, so the determinant of
-#' the whole matrix is 1 (volume–preserving transform).
-#'
-#' @param first_inds Integer vector (length \code{R}).
-#'   `first_inds[r]` is the 1-based column index of the first base
-#'   treatment-effect parameter \(\tau_{r,0}\) for cohort \code{r}.
-#' @param T Integer. Total number of time periods \(\ge 3\).
-#' @param R Integer. Number of treated cohorts (\(\ge 1\)).
-#'   The function stops if you accidentally pass \code{R = 0}.
-#' @param d Integer. Number of time-invariant covariates (can be 0).
-#' @param num_treats Integer.  Total number of base treatment-effect
-#'   coefficients \(\mathfrak W = T R - R(R+1)/2\).
-#'
-#' @return A dense base-R matrix of size
-#'   \eqn{p \times p} with
-#'   \eqn{p = R + (T-1) + d + dR + d(T-1) + \mathfrak W + d\mathfrak W}.
-#'
-#' @examples
-#' R  <- 3; T <- 6; d <- 2
-#' nt <- getNumTreats(R, T)
-#' Dinv <- genFullInvFusionTransformMat(getFirstInds(R,T), T, R, d, nt)
-#' dim(Dinv)   # should be p × p
-#'
-#' @keywords internal
-#' @noRd
-genFullInvFusionTransformMat <- function(first_inds, T, R, d, num_treats) {
-	##———— Safety checks ————————————————————————————————————————————
-	stopifnot(is.numeric(R), length(R) == 1L, R >= 2L)
-	stopifnot(is.numeric(T), length(T) == 1L, T >= 3L, R <= T - 1)
-	stopifnot(is.numeric(d), length(d) == 1L, d >= 0L)
-	stopifnot(length(first_inds) == R)
-
-	##———— 1. Cohort fixed-effects block:  (D^{(1)}(R))^{-1} ————————
-	block1 <- genBackwardsInvFusionTransformMat(R)
-
-	##———— 2. Time fixed-effects block:    (D^{(1)}(T-1))^{-1} ———————
-	block2 <- genBackwardsInvFusionTransformMat(T - 1)
-
-	##———— 3. Covariate main effects:      I_d ————————————————
-	block3 <- if (d > 0) diag(d) else NULL
-
-	##———— 4. Cohort × X interactions:     I_d ⊗ (D^{(1)}(R))^{-1} ——
-	block4 <- if (d > 0) {
-		kronecker(diag(d), genBackwardsInvFusionTransformMat(R))
-	} else {
-		NULL
-	}
-
-	##———— 5. Time × X interactions:       I_d ⊗ (D^{(1)}(T-1))^{-1} —
-	block5 <- if (d > 0) {
-		kronecker(diag(d), genBackwardsInvFusionTransformMat(T - 1))
-	} else {
-		NULL
-	}
-
-	##———— 6. Base treatment effects:      (D^{(2)}(𝓡))^{-1} ————————
-	block6 <- genInvTwoWayFusionTransformMat(
-		n_vars = num_treats,
-		first_inds = first_inds,
-		R = R
-	)
-
-	##———— 7. Treatment × X interactions:  I_d ⊗ (D^{(2)}(𝓡))^{-1} ——
-	block7 <- if (d > 0) {
-		kronecker(
-			diag(d),
-			genInvTwoWayFusionTransformMat(
-				n_vars = num_treats,
-				first_inds = first_inds,
-				R = R
-			)
-		)
-	} else {
-		NULL
-	}
-
-	## Gather present blocks in the same order as the theoretical expression
-	blocks <- list(block1, block2, block3, block4, block5, block6, block7)
-	blocks <- Filter(Negate(is.null), blocks) # drop NULLs for d = 0
-
-	##———— Assemble block-diagonal matrix ————————————————
-	## Matrix::bdiag() returns a sparse dgCMatrix.  We convert to base-R matrix
-	## here because downstream (ridge-row augmentation) works with dense objects
-	## via rbind().
-	full_D_inv <- as.matrix(Matrix::bdiag(blocks))
-
-	##———— Dimension cross-check ————————————————————————————
-	p <- getP(R = R, T = T, d = d, num_treats = num_treats)
-	stopifnot(nrow(full_D_inv) == p, ncol(full_D_inv) == p)
-
-	return(full_D_inv)
-}
 
 #' @title Build the "no features selected" early-exit return list shared by
 #'   `fetwfe_core()` and `betwfe_core()`

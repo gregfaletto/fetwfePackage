@@ -269,7 +269,8 @@
 		"C5 cohort_probs_overall in [0, 1]",
 		cls
 	)
-	# Strict < 1 - 1e-6 matches the existing guard at R/fetwfe_core.R:2025.
+	# Strict < 1 - 1e-6 matches the existing guard inside
+	# `getSecondVarTermDataApp()` (R/variance_machinery.R).
 	.assert_contract(
 		sum(x$cohort_probs_overall) < 1 - 1e-6,
 		"C5 sum(cohort_probs_overall) < 1 - 1e-6",

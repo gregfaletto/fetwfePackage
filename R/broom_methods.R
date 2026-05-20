@@ -265,8 +265,8 @@ NULL
 	}
 
 	# Sort data into the same (unit_var, time_var) ascending order that
-	# prepXints used when building X_ints (see `R/etwfe_core.R:1254` and
-	# `R/etwfe_core.R:1403`). Without this, .fitted[i] would correspond to a
+	# prepXints used when building X_ints (see `prepXints()` and `addDummies()`
+	# in R/design_matrix.R). Without this, .fitted[i] would correspond to a
 	# different (unit, time) than data[i, ] when the user's panel comes in a
 	# different order from what the estimator saw internally.
 	data <- data[

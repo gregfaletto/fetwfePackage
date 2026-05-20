@@ -4,11 +4,11 @@ library(fetwfe)
 # Tests for the two micro-helpers added by issue #83 to R/utility.R:
 #   - .cohort_block_inds(r, R, first_inds, num_treats) replaces 6 inline
 #     `first_ind_r <- first_inds[r]; last_ind_r <- if (r < R) ... else
-#     num_treats` patterns across core_funcs / fetwfe_core / gen_funcs /
-#     ols_calcs.
+#     num_treats` patterns across core_funcs / fetwfe_core / sim_helpers
+#     / variance_machinery.
 #   - .multinomial_cov(probs) replaces 3 inline `Sigma_pi_hat <-
 #     -outer(probs, probs); diag(...) <- probs * (1 - probs)` blocks
-#     across fetwfe_core / ols_calcs / event_study.
+#     across fetwfe_core / variance_machinery / event_study.
 
 # ------------------------------------------------------------------------------
 # .cohort_block_inds()

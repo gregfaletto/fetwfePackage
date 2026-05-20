@@ -446,7 +446,7 @@ event_study <- function(x, alpha = NULL) {
 #' `var_2(e) = 0`.
 #'
 #' Design choice: this helper is structurally parallel to
-#' `getSecondVarTermDataApp` in `R/fetwfe_core.R` (the cohort-block time-
+#' `getSecondVarTermDataApp` in `R/variance_machinery.R` (the cohort-block time-
 #' averaging is replaced by a single-row selection at `idx(r, e)`, and
 #' `cohort_probs_overall` is masked to zero outside `V_e`). Both helpers
 #' implement paper Theorem 6.3's Jacobian formula (`paper_arxiv.tex:2577-
