@@ -553,58 +553,23 @@ fetwfe_core <- function(
 	#
 	#
 
-	# Estimate bridge regression
-	if (verbose) {
-		message("Estimating bridge regression...")
-		t0 <- Sys.time()
-	}
-
-	if (!is.na(lambda.max) & !is.na(lambda.min)) {
-		fit <- grpreg::gBridge(
-			X = X_final_scaled,
-			y = y_final,
-			gamma = q,
-			lambda.max = lambda.max,
-			lambda.min = lambda.min,
-			nlambda = nlambda
-		)
-	} else if (!is.na(lambda.max)) {
-		fit <- grpreg::gBridge(
-			X = X_final_scaled,
-			y = y_final,
-			gamma = q,
-			lambda.max = lambda.max,
-			nlambda = nlambda
-		)
-	} else if (!is.na(lambda.min)) {
-		fit <- grpreg::gBridge(
-			X = X_final_scaled,
-			y = y_final,
-			gamma = q,
-			lambda.min = lambda.min,
-			nlambda = nlambda
-		)
-	} else {
-		fit <- grpreg::gBridge(
-			X = X_final_scaled,
-			y = y_final,
-			gamma = q,
-			nlambda = nlambda
-		)
-	}
-
-	if (verbose) {
-		message("Done! Time for estimation:")
-		message(Sys.time() - t0)
-	}
-
-	# For diagnostics later, store largest and smallest lambda, as well as
-	# corresponding smallest and largest model sizes, to return.
-	lambda.max <- max(fit$lambda)
-	lambda.max_model_size <- sum(fit$beta[, ncol(fit$beta)] != 0)
-
-	lambda.min <- min(fit$lambda)
-	lambda.min_model_size <- sum(fit$beta[, 1] != 0)
+	# Estimate bridge regression. The 4-way gBridge dispatch + lambda-path
+	# diagnostics are shared with betwfe_core() via .fit_bridge_with_lambda_path()
+	# in R/utility.R (issue #119).
+	bridge_fit <- .fit_bridge_with_lambda_path(
+		X_final_scaled = X_final_scaled,
+		y_final = y_final,
+		q = q,
+		lambda.max = lambda.max,
+		lambda.min = lambda.min,
+		nlambda = nlambda,
+		verbose = verbose
+	)
+	fit <- bridge_fit$fit
+	lambda.max <- bridge_fit$lambda.max
+	lambda.min <- bridge_fit$lambda.min
+	lambda.max_model_size <- bridge_fit$lambda.max_model_size
+	lambda.min_model_size <- bridge_fit$lambda.min_model_size
 
 	# Select a single set of fitted coefficients by using BIC to choose among
 	# the penalties that were fitted
@@ -629,23 +594,15 @@ fetwfe_core <- function(
 	stopifnot(length(c_names) == R)
 
 	# Indices corresponding to base treatment effects
-	treat_inds <- getTreatInds(R = R, T = T, d = d, num_treats = num_treats)
-
-	if (d > 0) {
-		stopifnot(max(treat_inds) + 1 <= p)
-		stopifnot(
-			max(treat_inds) == R + T - 1 + d + R * d + (T - 1) * d + num_treats
-		)
-
-		treat_int_inds <- (max(treat_inds) + 1):p
-
-		stopifnot(length(treat_int_inds) == num_treats * d)
-	} else {
-		stopifnot(max(treat_inds) <= p)
-		stopifnot(max(treat_inds) == R + T - 1 + num_treats)
-
-		treat_int_inds <- c()
-	}
+	ti <- .compute_treat_inds(
+		R = R,
+		T = T,
+		d = d,
+		num_treats = num_treats,
+		p = p
+	)
+	treat_inds <- ti$treat_inds
+	treat_int_inds <- ti$treat_int_inds
 
 	# Handle edge case where no features are selected (model_size includes intercept)
 	if (lambda_star_model_size <= 1 && all(theta_hat[2:(p + 1)] == 0)) {

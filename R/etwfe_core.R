@@ -263,23 +263,15 @@ etwfe_core <- function(
 	stopifnot(all(!is.na(beta_hat_slopes)))
 
 	# Indices corresponding to base treatment effects
-	treat_inds <- getTreatInds(R = R, T = T, d = d, num_treats = num_treats)
-
-	if (d > 0) {
-		stopifnot(max(treat_inds) + 1 <= p)
-		stopifnot(
-			max(treat_inds) == R + T - 1 + d + R * d + (T - 1) * d + num_treats
-		)
-
-		treat_int_inds <- (max(treat_inds) + 1):p
-
-		stopifnot(length(treat_int_inds) == num_treats * d)
-	} else {
-		stopifnot(max(treat_inds) <= p)
-		stopifnot(max(treat_inds) == R + T - 1 + num_treats)
-
-		treat_int_inds <- c()
-	}
+	ti <- .compute_treat_inds(
+		R = R,
+		T = T,
+		d = d,
+		num_treats = num_treats,
+		p = p
+	)
+	treat_inds <- ti$treat_inds
+	treat_int_inds <- ti$treat_int_inds
 
 	stopifnot(length(treat_inds) == num_treats)
 

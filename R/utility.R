@@ -1381,3 +1381,193 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 		cohort_probs_overall = cohort_probs_overall
 	)
 }
+
+#' @title 4-way grpreg::gBridge dispatch with lambda-path diagnostics
+#' @description Dispatches `grpreg::gBridge()` based on which of `lambda.max`
+#'   and `lambda.min` were user-supplied (NA -> leave as default; non-NA ->
+#'   pass through). Returns the `fit` object plus the four lambda-path
+#'   diagnostic locals (`lambda.max`, `lambda.min`, `lambda.max_model_size`,
+#'   `lambda.min_model_size`) used by `fetwfe_core()` and `betwfe_core()`
+#'   downstream.
+#'
+#'   Extracted from a byte-identical 46-line block previously duplicated
+#'   across `R/fetwfe_core.R` and `R/betwfe_core.R`. The duplication was
+#'   a documented drift risk (issue #119); future fixes to the lambda
+#'   path now have a single landing site.
+#' @param X_final_scaled Numeric matrix; the design matrix (typically
+#'   GLS-then-fusion transformed and scaled).
+#' @param y_final Numeric vector; the GLS-transformed response.
+#' @param q Numeric scalar; the bridge-penalty exponent passed as `gamma` to
+#'   `gBridge()`.
+#' @param lambda.max Numeric scalar or `NA`; if non-NA, pass through to
+#'   `gBridge()` as the maximum lambda. If NA, `gBridge()` picks one.
+#' @param lambda.min Numeric scalar or `NA`; if non-NA, pass through to
+#'   `gBridge()`. If NA, `gBridge()` picks one.
+#' @param nlambda Integer; the lambda-grid length passed to `gBridge()`.
+#' @param verbose Logical; if `TRUE`, emit progress messages around the
+#'   `gBridge()` fit.
+#' @return A list containing:
+#'   \item{fit}{The `gBridge` fit object.}
+#'   \item{lambda.max}{`max(fit$lambda)` -- the realised maximum of the
+#'     lambda grid.}
+#'   \item{lambda.min}{`min(fit$lambda)` -- the realised minimum.}
+#'   \item{lambda.max_model_size}{Number of nonzero `fit$beta` columns at
+#'     `lambda.max` (largest lambda, smallest model).}
+#'   \item{lambda.min_model_size}{Number of nonzero `fit$beta` columns at
+#'     `lambda.min` (smallest lambda, largest model).}
+#' @keywords internal
+#' @noRd
+.fit_bridge_with_lambda_path <- function(
+	X_final_scaled,
+	y_final,
+	q,
+	lambda.max,
+	lambda.min,
+	nlambda,
+	verbose
+) {
+	if (verbose) {
+		message("Estimating bridge regression...")
+		t0 <- Sys.time()
+	}
+
+	if (!is.na(lambda.max) & !is.na(lambda.min)) {
+		fit <- grpreg::gBridge(
+			X = X_final_scaled,
+			y = y_final,
+			gamma = q,
+			lambda.max = lambda.max,
+			lambda.min = lambda.min,
+			nlambda = nlambda
+		)
+	} else if (!is.na(lambda.max)) {
+		fit <- grpreg::gBridge(
+			X = X_final_scaled,
+			y = y_final,
+			gamma = q,
+			lambda.max = lambda.max,
+			nlambda = nlambda
+		)
+	} else if (!is.na(lambda.min)) {
+		fit <- grpreg::gBridge(
+			X = X_final_scaled,
+			y = y_final,
+			gamma = q,
+			lambda.min = lambda.min,
+			nlambda = nlambda
+		)
+	} else {
+		fit <- grpreg::gBridge(
+			X = X_final_scaled,
+			y = y_final,
+			gamma = q,
+			nlambda = nlambda
+		)
+	}
+
+	if (verbose) {
+		message("Done! Time for estimation:")
+		message(Sys.time() - t0)
+	}
+
+	list(
+		fit = fit,
+		lambda.max = max(fit$lambda),
+		lambda.min = min(fit$lambda),
+		lambda.max_model_size = sum(fit$beta[, ncol(fit$beta)] != 0),
+		lambda.min_model_size = sum(fit$beta[, 1] != 0)
+	)
+}
+
+#' @title Compute treatment-effect and treatment-interaction indices
+#' @description Returns the integer index vectors `treat_inds` (base
+#'   treatment-effect columns) and `treat_int_inds` (covariate x
+#'   treatment interaction columns) for the ETWFE / FETWFE / BETWFE
+#'   design matrix.
+#'
+#'   The math is `treat_inds = getTreatInds(R, T, d, num_treats)` plus
+#'   the contract `max(treat_inds) == R + T - 1 + d + R*d + (T-1)*d +
+#'   num_treats` when `d > 0` (and `max(treat_inds) == R + T - 1 +
+#'   num_treats` when `d == 0`). The treatment-interaction block lives
+#'   immediately above `treat_inds` and runs `(max(treat_inds) + 1):p`
+#'   when `d > 0`; empty otherwise.
+#'
+#'   Extracted from a byte-identical 17-line block previously duplicated
+#'   across `R/etwfe_core.R`, `R/fetwfe_core.R`, and `R/betwfe_core.R`
+#'   (issue #119).
+#' @param R Integer; number of treated cohorts.
+#' @param T Integer; number of time periods.
+#' @param d Integer; number of (time-invariant) covariates.
+#' @param num_treats Integer; total number of base treatment-effect
+#'   parameters in the design.
+#' @param p Integer; total number of columns in the design matrix.
+#' @return A list with:
+#'   \item{treat_inds}{Integer vector of base treatment-effect column
+#'     indices, of length `num_treats`.}
+#'   \item{treat_int_inds}{Integer vector of treatment x covariate
+#'     interaction column indices, of length `num_treats * d` when
+#'     `d > 0` and empty when `d == 0`.}
+#' @keywords internal
+#' @noRd
+.compute_treat_inds <- function(R, T, d, num_treats, p) {
+	treat_inds <- getTreatInds(R = R, T = T, d = d, num_treats = num_treats)
+	if (d > 0) {
+		stopifnot(max(treat_inds) + 1 <= p)
+		stopifnot(
+			max(treat_inds) == R + T - 1 + d + R * d + (T - 1) * d + num_treats
+		)
+		treat_int_inds <- (max(treat_inds) + 1):p
+		stopifnot(length(treat_int_inds) == num_treats * d)
+	} else {
+		stopifnot(max(treat_inds) <= p)
+		stopifnot(max(treat_inds) == R + T - 1 + num_treats)
+		treat_int_inds <- c()
+	}
+	list(treat_inds = treat_inds, treat_int_inds = treat_int_inds)
+}
+
+#' @title Check cohort-count rank condition for OLS estimators
+#' @description Iterates over `in_sample_counts` (length `R + 1`, indexed
+#'   from the never-treated cohort through the `R` treated cohorts) and
+#'   `stop()`s -- or `warning()`s when `add_ridge = TRUE` -- if any cohort
+#'   contains fewer than `d + 1` units. The condition forces rank
+#'   deficiency in the OLS-style estimators (etwfe / twfeCovs) because
+#'   each cohort's within-cohort regression needs at least `d + 1` units
+#'   to identify `d` covariates plus an intercept.
+#'
+#'   Extracted from `R/fetwfe.R` (the `etwfe()` wrapper) and
+#'   `R/twfeCovs.R` (the `twfeCovs()` wrapper). Pre-#119, these two sites
+#'   carried drifted wording ("is rank-deficient" vs "may be rank-
+#'   deficient"); this helper converges on the stronger etwfe wording --
+#'   the mathematically-accurate one.
+#' @param in_sample_counts Integer vector of length `R + 1`; the per-cohort
+#'   unit counts including the never-treated reference cohort.
+#' @param R Integer; number of treated cohorts.
+#' @param d Integer; number of (time-invariant) covariates.
+#' @param add_ridge Logical; if `TRUE`, the function `warning()`s rather
+#'   than `stop()`s when the condition fires, on the grounds that the
+#'   ridge fallback may still yield usable point estimates. If `FALSE`,
+#'   the function `stop()`s.
+#' @return `invisible(NULL)`. Called for side effects (warning / stop).
+#' @keywords internal
+#' @noRd
+.check_cohort_rank_for_ols <- function(in_sample_counts, R, d, add_ridge) {
+	warning_flag <- FALSE
+	for (r in 1:(R + 1)) {
+		if (in_sample_counts[r] < d + 1) {
+			if (add_ridge) {
+				warning_flag <- TRUE
+			} else {
+				stop(
+					"At least one cohort contains fewer than d + 1 units. The design matrix is rank-deficient. Calculating standard errors will not be possible, and estimating treatment effects is only possible using add_ridge = TRUE."
+				)
+			}
+		}
+	}
+	if (warning_flag) {
+		warning(
+			"At least one cohort contains fewer than d + 1 units. The design matrix is rank-deficient. Calculating standard errors will not be possible, and estimating treatment effects is only possible using add_ridge = TRUE."
+		)
+	}
+	invisible(NULL)
+}

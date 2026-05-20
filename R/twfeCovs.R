@@ -246,25 +246,12 @@ twfeCovs <- function(
 
 	rm(prep)
 
-	warning_flag <- FALSE
-
-	for (r in 1:(R + 1)) {
-		if (in_sample_counts[r] < d + 1) {
-			if (add_ridge) {
-				warning_flag <- TRUE
-			} else {
-				stop(
-					"At least one cohort contains fewer than d + 1 units. The design matrix may be rank-deficient. Calculating standard errors may not be possible, and estimating treatment effects may only be possible using add_ridge = TRUE."
-				)
-			}
-		}
-	}
-
-	if (warning_flag) {
-		warning(
-			"At least one cohort contains fewer than d + 1 units. The design matrix may be rank-deficient. Calculating standard errors may not be possible, and estimating treatment effects may only be possible using add_ridge = TRUE."
-		)
-	}
+	.check_cohort_rank_for_ols(
+		in_sample_counts = in_sample_counts,
+		R = R,
+		d = d,
+		add_ridge = add_ridge
+	)
 
 	res <- twfeCovs_core(
 		X_ints = X_ints,

@@ -1,5 +1,19 @@
 # NEWS
 
+## Version 1.9.28 (2026-05-19)
+
+- Consolidated three small shared helpers across the estimator cores into
+  `R/utility.R` (GitHub #119, follow-up to #118): the 4-way
+  `grpreg::gBridge` dispatch + lambda-path diagnostic block (formerly
+  duplicated across `R/fetwfe_core.R` and `R/betwfe_core.R`), the
+  treat-index / treat-interaction-index computation block (formerly
+  across all three `*_core.R` files), and the cohort-count rank-condition
+  check (formerly across `R/fetwfe.R` and `R/twfeCovs.R`). Pure internal
+  refactor with one minor user-visible change: `twfeCovs()`'s warning /
+  stop message under the cohort-count rank condition now uses the
+  stronger "the design matrix is rank-deficient" wording that `etwfe()`
+  always used, converging on the mathematically accurate form.
+
 ## Version 1.9.27 (2026-05-19)
 
 - Unified the internal `getCohortATTsFinal()` and previously-separate
