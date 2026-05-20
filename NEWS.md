@@ -1,5 +1,16 @@
 # NEWS
 
+## Version 1.9.29 (2026-05-20)
+
+- Added regression-test coverage for four code paths flagged by the
+  2026-05-19 internal review: `processCovs` first-period covariate
+  broadcasting when unit IDs are not already in sorted order,
+  cluster-robust standard errors on auto-truncated (all-treated) panels
+  for `etwfe()` and `twfeCovs()`, `augment()` row-order invariance after
+  first-period-treated units are auto-dropped, and the
+  `getCohortATTsFinal()` `psi_mat` row-count contract across the OLS and
+  bridge calling conventions. Test-only; no user-facing behavior change.
+
 ## Version 1.9.28 (2026-05-19)
 
 - Consolidated three small shared helpers across the estimator cores into
