@@ -395,6 +395,78 @@ test_that("augment auto-trims first-period-treated units when present in data", 
 	expect_equal(aug$.fitted + aug$.resid, aug$y, tolerance = 1e-8)
 })
 
+# ------------------------------------------------------------------------------
+# Issue #116 Gap 3: the auto-trim test above asserts only the round-trip
+# identity .fitted + .resid == y, which holds by construction (.resid is
+# defined as y - .fitted) regardless of whether the rows are correctly
+# aligned. The row-order-invariance test at line ~286 is the genuine
+# alignment lock, but it runs on an UNTRIMMED panel. This test is the
+# intersection: it runs the permutation-invariance check on an auto-trimmed
+# fit, so a regression in augment's (unit, time) re-sort along the trim path
+# is caught. It deliberately does NOT assert the .fitted + .resid == y
+# tautology.
+# ------------------------------------------------------------------------------
+test_that("augment row order is invariant after auto-trim of first-period-treated units", {
+	setup <- .simulated_setup()
+	pdata <- setup$sim$pdata
+	# Mark one never-treated unit as treated at time 1, so the estimator and
+	# augment both auto-drop it (same pattern as the auto-trim test above).
+	never_treated_units <- unique(
+		pdata$unit[
+			vapply(
+				unique(pdata$unit),
+				function(u) {
+					all(pdata$treatment[pdata$unit == u] == 0)
+				},
+				logical(1)
+			)
+		]
+	)
+	skip_if(
+		length(never_treated_units) == 0,
+		"no never-treated units in fixture"
+	)
+	u <- never_treated_units[1]
+	# Treatment is absorbing: set it to 1 for all of this unit's periods so
+	# the estimator detects first-period treatment and drops the unit.
+	pdata$treatment[pdata$unit == u] <- 1L
+
+	# Fit on the modified panel; the trim warns, so suppress.
+	res <- suppressWarnings(fetwfe(
+		pdata = pdata,
+		time_var = "time",
+		unit_var = "unit",
+		treatment = "treatment",
+		response = "y",
+		covs = c("cov1", "cov2"),
+		q = 0.5,
+		verbose = FALSE
+	))
+
+	# augment the original panel and a row-shuffled copy of the SAME panel;
+	# augment re-warns via its internal idCohorts(), so suppress both.
+	aug_orig <- suppressWarnings(broom::augment(res, data = pdata))
+	set.seed(116)
+	shuf_idx <- sample(nrow(pdata))
+	aug_shuf <- suppressWarnings(
+		broom::augment(res, data = pdata[shuf_idx, ])
+	)
+
+	# Match the shuffled output back to the original by (unit, time) and
+	# require .fitted values to be identical -- the genuine row-order lock.
+	key_o <- paste(aug_orig$unit, aug_orig$time, sep = "_")
+	key_s <- paste(aug_shuf$unit, aug_shuf$time, sep = "_")
+	m <- match(key_o, key_s)
+	expect_false(anyNA(m))
+	expect_equal(aug_orig$.fitted, aug_shuf$.fitted[m])
+	# The auto-dropped unit must be absent from both outputs, and the row
+	# count must equal the trimmed-fit dimensions.
+	expect_false(u %in% aug_orig$unit)
+	expect_false(u %in% aug_shuf$unit)
+	expect_equal(nrow(aug_orig), res$N * res$T)
+	expect_equal(nrow(aug_shuf), res$N * res$T)
+})
+
 test_that("augment.etwfe and augment.betwfe work with flat X_ints slot", {
 	setup <- .simulated_setup()
 	res_etwfe <- etwfeWithSimulatedData(setup$sim)
