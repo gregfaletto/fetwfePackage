@@ -8,8 +8,9 @@ library(fetwfe)
 # .compute_cluster_robust_sandwich, build treat_block_mask) that was
 # previously duplicated across 4 call sites:
 #
-#   * R/variance_machinery.R::getCohortATTsFinalOLS  (unfiltered path)
-#   * R/variance_machinery.R::getCohortATTsFinal     (filtered path)
+#   * R/variance_machinery.R::getCohortATTsFinal     (both paths; the
+#     unfiltered branch arrived from `getCohortATTsFinalOLS()` after
+#     PR #118 unified the two functions)
 #   * R/event_study.R::.event_study_etwfe_betwfe    (runtime if/else)
 #   * R/event_study.R::.event_study_fetwfe           (filtered path)
 #
@@ -44,7 +45,8 @@ test_that(".assemble_cluster_robust_sandwich(sel_feat_inds = NULL) matches manua
 	fx <- .build_fixture()
 
 	# Reference (manual): replicate the pre-refactor inline pattern
-	# from R/variance_machinery.R::getCohortATTsFinalOLS.
+	# from R/variance_machinery.R::getCohortATTsFinal (unfiltered
+	# branch, formerly `getCohortATTsFinalOLS()` pre-#118).
 	X_S_ref <- fx$X_final
 	y_ref <- fx$y_final[seq_len(fx$N * fx$T)]
 	ols_ref <- stats::lm.fit(cbind(1, X_S_ref), y_ref)

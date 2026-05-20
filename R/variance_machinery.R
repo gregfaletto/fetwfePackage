@@ -1,228 +1,3 @@
-# getCohortATTsFinalOLS
-#' @title Calculate Cohort-Specific ATTs and Standard Errors for ETWFE
-#' @description Computes the Average Treatment Effect on the Treated (ATT) for
-#'   each cohort, along with their standard errors and confidence intervals if
-#'   requested and feasible.
-#' @param X_final Numeric matrix; the final design matrix, potentially
-#'   transformed by `Omega_sqrt_inv` and the fusion transformation.
-#' @param treat_inds Integer vector; indices in the original (untransformed)
-#'   coefficient vector that correspond to the base treatment effects.
-#' @param num_treats Integer; total number of base treatment effect parameters.
-#' @param first_inds Integer vector; indices of the first treatment effect for
-#'   each cohort within the block of `num_treats` treatment effect parameters.
-#' @param c_names Character vector; names of the `R` treated cohorts.
-#' @param tes Numeric vector; estimated treatment effects in the original
-#'   parameterization for all `num_treats` possible cohort-time combinations.
-#' @param sig_eps_sq Numeric scalar; variance of the idiosyncratic error term.
-#' @param R Integer; total number of treated cohorts.
-#' @param N Integer; total number of units.
-#' @param T Integer; total number of time periods.
-#' @param p Integer; total number of parameters in the model.
-#' @param alpha Numeric scalar; significance level for confidence intervals
-#'   (e.g., 0.05 for 95% CIs).
-#' @param se_type Character; one of `"default"` (Assumption-F1 model-based SE)
-#'   or `"cluster"` (experimental unit-clustered Liang-Zeger sandwich SE on the
-#'   OLS-on-selected-support residuals). Default `"default"`.
-#' @param y_final Numeric vector; GLS-transformed response of length `N*T`
-#'   (or `N*T + p` if a ridge augmentation was applied upstream). Required
-#'   when `se_type = "cluster"`; ignored otherwise.
-#' @return A list containing:
-#'   \item{cohort_te_df}{Dataframe with cohort names, estimated ATTs, SEs,
-#'     confidence interval bounds, and a `P_value` column (two-sided
-#'     `2 * pnorm(-|estimate / se|)`, `NA` when `SE` is zero or `NA`).}
-#'   \item{cohort_tes}{Named numeric vector of estimated ATTs for each cohort.}
-#'   \item{cohort_te_ses}{Named numeric vector of standard errors for cohort ATTs.}
-#'   \item{psi_mat}{Matrix used in SE calculation for overall ATT.}
-#'   \item{gram_inv}{(Potentially NA) Inverse of the Gram matrix for selected
-#'     features, used in SE calculation.}
-#'   \item{d_inv_treat_sel}{(If `fused=TRUE`) Relevant block of the inverse
-#'     fusion matrix for selected treatment effects.}
-#'   \item{sandwich_full}{(`se_type = "cluster"` only.) The full cluster-robust
-#'     sandwich variance on the selected support, reusable downstream by
-#'     `getTeResultsOLS()` so the same matrix backs both cohort and overall
-#'     ATT SEs.}
-#'   \item{treat_block_mask}{(`se_type = "cluster"` only.) Logical vector of
-#'     length `ncol(X_final)` marking which selected columns correspond to
-#'     treatment-effect features; used to zero-pad `psi_r` / `psi_att` against
-#'     `sandwich_full`.}
-#' @details The function first computes the Gram matrix inverse (`gram_inv`).
-#'   Then, for each cohort `r`, it calculates the average
-#'   of the relevant `tes`. It uses `getPsiRFused` or
-#'   `getPsiRUnfused` to get a `psi_r` vector, which is then used with
-#'   `gram_inv` to find the standard error for that cohort's ATT.
-#'   Under `se_type = "cluster"`, the function additionally re-solves OLS on
-#'   the selected support (here the full `X_final`, since ETWFE/twfeCovs do
-#'   not penalise) and forms a unit-clustered Liang-Zeger sandwich via
-#'   `.compute_cluster_robust_sandwich()`; the cohort SE is then the
-#'   quadratic form of the zero-padded `psi_r` against this sandwich.
-#' @keywords internal
-#' @noRd
-getCohortATTsFinalOLS <- function(
-	X_final,
-	treat_inds,
-	num_treats,
-	first_inds,
-	c_names,
-	tes,
-	sig_eps_sq,
-	R,
-	N,
-	T,
-	p,
-	alpha = 0.05,
-	se_type = "default",
-	y_final = NULL
-) {
-	se_type <- match.arg(se_type, c("default", "cluster"))
-
-	stopifnot(length(tes) <= num_treats)
-	stopifnot(all(!is.na(tes)))
-
-	stopifnot(nrow(X_final) == N * T)
-	stopifnot(ncol(X_final) == p)
-	X_to_pass <- X_final
-
-	# Start by getting Gram matrix needed for standard errors
-	res <- getGramInv(
-		N = N,
-		T = T,
-		X_final = X_to_pass,
-		treat_inds = treat_inds,
-		num_treats = num_treats,
-		calc_ses = TRUE
-	)
-
-	gram_inv <- res$gram_inv
-	calc_ses <- res$calc_ses
-
-	# Cluster-robust sandwich (computed once outside the cohort loop and
-	# reused for the overall ATT in getTeResultsOLS).
-	sandwich_full <- NULL
-	treat_block_mask <- NULL
-
-	if (identical(se_type, "cluster") && calc_ses) {
-		stopifnot(!is.null(y_final))
-		stopifnot(length(y_final) >= N * T)
-		res <- .assemble_cluster_robust_sandwich(
-			X_final = X_final,
-			y_final = y_final,
-			N = N,
-			T = T,
-			treat_inds = treat_inds,
-			sel_feat_inds = NULL
-		)
-		sandwich_full <- res$sandwich_full
-		treat_block_mask <- res$treat_block_mask
-	}
-
-	# First, each cohort
-	cohort_tes <- rep(as.numeric(NA), R)
-	cohort_te_ses <- rep(as.numeric(NA), R)
-
-	psi_mat <- matrix(0, num_treats, R)
-
-	for (r in 1:R) {
-		# Get indices corresponding to rth treatment.
-		# Endpoint-preservation form: downstream `getPsiRUnfused()` takes
-		# `first_ind_r, last_ind_r` as separate positional args.
-		inds_r <- .cohort_block_inds(r, R, first_inds, num_treats)
-		first_ind_r <- inds_r[1]
-		last_ind_r <- inds_r[length(inds_r)]
-
-		stopifnot(last_ind_r >= first_ind_r)
-		stopifnot(all(first_ind_r:last_ind_r %in% 1:num_treats))
-
-		cohort_tes[r] <- mean(tes[first_ind_r:last_ind_r])
-
-		psi_r <- getPsiRUnfused(
-			first_ind_r,
-			last_ind_r,
-			sel_treat_inds_shifted = 1:num_treats
-		)
-
-		stopifnot(length(psi_r) == num_treats)
-
-		psi_mat[, r] <- psi_r
-		# Get standard errors
-
-		if (calc_ses) {
-			if (identical(se_type, "cluster")) {
-				psi_r_full <- numeric(length(treat_block_mask))
-				psi_r_full[treat_block_mask] <- psi_r
-				# Issue #84 item 9: floor the cluster-sandwich quadratic
-				# form at zero before sqrt(), defending against a
-				# rounding-induced negative; see the matching guard in
-				# `getTeResultsOLS` / `R/variance_machinery.R` for rationale.
-				cohort_te_ses[r] <- sqrt(max(
-					as.numeric(
-						t(psi_r_full) %*%
-							sandwich_full %*%
-							psi_r_full
-					),
-					0
-				))
-			} else {
-				cohort_te_ses[r] <- sqrt(
-					sig_eps_sq *
-						as.numeric(t(psi_r) %*% gram_inv %*% psi_r) /
-						(N * T)
-				)
-			}
-		}
-	}
-
-	stopifnot(length(c_names) == R)
-	stopifnot(length(cohort_tes) == R)
-
-	if (all(!is.na(gram_inv))) {
-		stopifnot(length(cohort_te_ses) == R)
-
-		cohort_te_df <- data.frame(
-			c_names,
-			cohort_tes,
-			cohort_te_ses,
-			cohort_tes - stats::qnorm(1 - alpha / 2) * cohort_te_ses,
-			cohort_tes + stats::qnorm(1 - alpha / 2) * cohort_te_ses,
-			.compute_p_values(cohort_tes, cohort_te_ses)
-		)
-
-		names(cohort_te_ses) <- c_names
-		names(cohort_tes) <- c_names
-	} else {
-		cohort_te_df <- data.frame(
-			c_names,
-			cohort_tes,
-			rep(NA, R),
-			rep(NA, R),
-			rep(NA, R),
-			rep(NA_real_, R)
-		)
-	}
-
-	colnames(cohort_te_df) <- c(
-		"Cohort",
-		"Estimated TE",
-		"SE",
-		"ConfIntLow",
-		"ConfIntHigh",
-		"P_value"
-	)
-
-	stopifnot(length(tes) == nrow(psi_mat))
-
-	ret <- list(
-		cohort_te_df = cohort_te_df,
-		cohort_tes = cohort_tes,
-		cohort_te_ses = cohort_te_ses,
-		psi_mat = psi_mat,
-		gram_inv = gram_inv,
-		calc_ses = calc_ses,
-		sandwich_full = sandwich_full,
-		treat_block_mask = treat_block_mask
-	)
-	return(ret)
-}
-
 # getTeResultsOLS
 #' @title Calculate Overall ATT and its Standard Error for ETWFE
 #' @description Computes the overall Average Treatment Effect on the Treated
@@ -260,7 +35,7 @@ getCohortATTsFinalOLS <- function(
 #'   `"default"`.
 #' @param sandwich_full Numeric matrix (or `NULL`); the full cluster-robust
 #'   sandwich variance on the selected support, as returned by
-#'   `getCohortATTsFinalOLS()`. Required when `se_type = "cluster"` and
+#'   `getCohortATTsFinal()`. Required when `se_type = "cluster"` and
 #'   `calc_ses = TRUE`.
 #' @param treat_block_mask Logical vector (or `NULL`) of length
 #'   `nrow(sandwich_full)`, marking which columns correspond to treatment-effect
@@ -632,8 +407,8 @@ getPsiRUnfused <- function(
 
 #' @title Assemble the cluster-robust sandwich for the OLS-selected support
 #' @description
-#' Wraps the 4-step assembly ritual used by `getCohortATTsFinalOLS()`,
-#' `getCohortATTsFinal()`, and the two `event_study` dispatchers
+#' Wraps the 4-step assembly ritual used by `getCohortATTsFinal()` and the
+#' two `event_study` dispatchers
 #' (`.event_study_etwfe_betwfe`, `.event_study_fetwfe`): extract `X_S`
 #' from `X_final` (optionally filtered by `sel_feat_inds`), run
 #' `stats::lm.fit(cbind(1, X_S), y_final[seq_len(N * T)])`, compute the
@@ -1225,18 +1000,22 @@ getSecondVarTermDataApp <- function(
 #'   \(\widehat{\tau}_{\text{ATT},r}\pm z_{1-\alpha/2}\,
 #'     \widehat{\operatorname{SE}}(\widehat{\tau}_{\text{ATT},r})\).
 #'
-#' @inheritParams getCohortATTsFinal
 #' @param X_final Numeric matrix; the final design matrix, potentially
 #'   transformed by `Omega_sqrt_inv` and the fusion transformation.
-#' @param sel_feat_inds Integer vector; indices of all features selected by the
-#'   penalized regression in the transformed space.
+#' @param sel_feat_inds Integer vector OR `NULL`. Indices of all features
+#'   selected by the penalized regression in the transformed space. Pass
+#'   `NULL` for OLS callers (`etwfe()` / `twfeCovs()`) where no penalized
+#'   selection occurred — the unified function treats `NULL` as a sentinel
+#'   for "use all features" and dispatches the OLS code path inside
+#'   `getGramInv()` and `.assemble_cluster_robust_sandwich()`.
 #' @param treat_inds Integer vector; indices in the original (untransformed)
 #'   coefficient vector that correspond to the base treatment effects.
 #' @param num_treats Integer; total number of base treatment effect parameters.
 #' @param first_inds Integer vector; indices of the first treatment effect for
 #'   each cohort within the block of `num_treats` treatment effect parameters.
 #' @param sel_treat_inds_shifted Integer vector; indices of selected treatment
-#'   effects within the `num_treats` block (shifted to start from 1).
+#'   effects within the `num_treats` block (shifted to start from 1). For OLS
+#'   callers pass `seq_len(num_treats)`.
 #' @param c_names Character vector; names of the `R` treated cohorts.
 #' @param tes Numeric vector; estimated treatment effects in the original
 #'   parameterization for all `num_treats` possible cohort-time combinations.
@@ -1244,10 +1023,19 @@ getSecondVarTermDataApp <- function(
 #' @param R Integer; total number of treated cohorts.
 #' @param N Integer; total number of units.
 #' @param T Integer; total number of time periods.
-#' @param fused Logical; if `TRUE`, assumes fusion penalization was used,
-#'   affecting how standard errors and related matrices are computed.
+#' @param fused Logical; if `TRUE`, assumes fusion penalization was used and
+#'   accumulates the `d_inv_treat_sel` block from the inverse fusion matrix
+#'   for downstream variance-from-cohort-probabilities propagation. If
+#'   `FALSE`, the unfused (OLS / BETWFE) path is taken: `psi_r` is computed by
+#'   `getPsiRUnfused()` and no `d_inv_treat_sel` is returned.
 #' @param calc_ses Logical; if `TRUE`, attempts to calculate standard errors.
-#'   This is typically `TRUE` if `q < 1`.
+#'   For OLS callers pass `TRUE` (the gram-matrix inverse is needed
+#'   unconditionally for SEs); for bridge callers pass `q < 1`.
+#' @param include_selected Logical; if `TRUE`, appends a trailing `selected =
+#'   cohort_tes != 0` column to `cohort_te_df`. The column is meaningful only
+#'   when a bridge penalty produced the `tes` (FETWFE / BETWFE), so OLS
+#'   callers (`etwfe()` / `twfeCovs()`) pass `FALSE` to suppress the column.
+#'   New in 1.9.27.
 #' @param alpha Numeric scalar; significance level for confidence intervals
 #'   (e.g., 0.05 for 95% CIs).
 #' @param se_type Character; one of `"default"` (Assumption-F1 model-based SE)
@@ -1259,10 +1047,11 @@ getSecondVarTermDataApp <- function(
 #'   otherwise.
 #' @return A list containing:
 #'   \item{cohort_te_df}{Dataframe with cohort names, estimated ATTs, SEs,
-#'     confidence interval bounds, a `P_value` column (two-sided
-#'     `2 * pnorm(-|estimate / se|)`, `NA` when `SE` is zero or `NA`), and a
-#'     `selected` logical column (`TRUE` when the bridge penalty left the
-#'     cohort's `Estimated TE` nonzero).}
+#'     confidence interval bounds, and a `P_value` column (two-sided
+#'     `2 * pnorm(-|estimate / se|)`, `NA` when `SE` is zero or `NA`). When
+#'     `include_selected = TRUE`, an additional trailing `selected` logical
+#'     column is appended (`TRUE` when the bridge penalty left the cohort's
+#'     `Estimated TE` nonzero).}
 #'   \item{cohort_tes}{Named numeric vector of estimated ATTs for each cohort.}
 #'   \item{cohort_te_ses}{Named numeric vector of standard errors for cohort ATTs.}
 #'   \item{psi_mat}{Matrix used in SE calculation for overall ATT.}
@@ -1276,8 +1065,9 @@ getSecondVarTermDataApp <- function(
 #'     `getTeResults2()` / `getTeResultsOLS()` so the same matrix backs both
 #'     cohort and overall ATT SEs.}
 #'   \item{treat_block_mask}{(`se_type = "cluster"` only.) Logical vector of
-#'     length `length(sel_feat_inds)` marking which selected columns correspond
-#'     to treatment-effect features; used to zero-pad `psi_r` / `psi_att`
+#'     length `length(sel_feat_inds)` (or `ncol(X_final)` when
+#'     `sel_feat_inds = NULL`) marking which selected columns correspond to
+#'     treatment-effect features; used to zero-pad `psi_r` / `psi_att`
 #'     against `sandwich_full`.}
 #' @details The function first computes the Gram matrix inverse (`gram_inv`) if
 #'   `calc_ses` is `TRUE`. Then, for each cohort `r`, it calculates the average
@@ -1320,6 +1110,7 @@ getCohortATTsFinal <- function(
 	T,
 	fused,
 	calc_ses,
+	include_selected,
 	alpha = 0.05,
 	se_type = "default",
 	y_final = NULL
@@ -1334,16 +1125,24 @@ getCohortATTsFinal <- function(
 	stopifnot(nrow(X_final) == N * T)
 	X_to_pass <- X_final
 
+	# Translate the OLS-caller `sel_feat_inds = NULL` sentinel to the value
+	# each downstream helper expects: `getGramInv()` uses NA as its "all
+	# features" sentinel, while `.assemble_cluster_robust_sandwich()` uses
+	# NULL. See #118 round-1 plan review for the empirical equivalence
+	# verification.
+	gram_sel_feat <- if (is.null(sel_feat_inds)) NA else sel_feat_inds
+	gram_sel_treat <- if (is.null(sel_feat_inds)) NA else sel_treat_inds_shifted
+
 	# Start by getting Gram matrix needed for standard errors
 	if (calc_ses) {
 		res <- getGramInv(
 			N = N,
 			T = T,
 			X_final = X_to_pass,
-			sel_feat_inds = sel_feat_inds,
+			sel_feat_inds = gram_sel_feat,
 			treat_inds = treat_inds,
 			num_treats = num_treats,
-			sel_treat_inds_shifted = sel_treat_inds_shifted,
+			sel_treat_inds_shifted = gram_sel_treat,
 			calc_ses = calc_ses
 		)
 
@@ -1371,7 +1170,14 @@ getCohortATTsFinal <- function(
 		)
 		sandwich_full <- res$sandwich_full
 		treat_block_mask <- res$treat_block_mask
-		stopifnot(length(treat_block_mask) == length(sel_feat_inds))
+		# Branch-aware mask-length check: in the OLS-caller path the mask
+		# spans ncol(X_final); in the bridge path it spans length(sel_feat_inds).
+		expected_mask_len <- if (is.null(sel_feat_inds)) {
+			ncol(X_final)
+		} else {
+			length(sel_feat_inds)
+		}
+		stopifnot(length(treat_block_mask) == expected_mask_len)
 		stopifnot(sum(treat_block_mask) == length(sel_treat_inds_shifted))
 	}
 
@@ -1478,7 +1284,15 @@ getCohortATTsFinal <- function(
 			# Get standard errors
 
 			if (identical(se_type, "cluster")) {
-				psi_r_full <- numeric(length(sel_feat_inds))
+				# Use length(treat_block_mask), not length(sel_feat_inds):
+				# the OLS-caller path passes sel_feat_inds = NULL, and
+				# `length(NULL) == 0` would silently yield a zero-length
+				# psi_r_full and a broken cluster SE. `treat_block_mask`
+				# always has the right length for this zero-padding —
+				# `ncol(X_final)` in the OLS path, `length(sel_feat_inds)`
+				# in the bridge path. Matches the legacy OLS form (see
+				# git history for `getCohortATTsFinalOLS()` pre-#118).
+				psi_r_full <- numeric(length(treat_block_mask))
 				psi_r_full[treat_block_mask] <- psi_r
 				# Issue #84 item 9: floor the cluster-sandwich quadratic
 				# form at zero before sqrt(), defending against a
@@ -1538,8 +1352,7 @@ getCohortATTsFinal <- function(
 			cohort_te_ses,
 			cohort_tes - stats::qnorm(1 - alpha / 2) * cohort_te_ses,
 			cohort_tes + stats::qnorm(1 - alpha / 2) * cohort_te_ses,
-			.compute_p_values(cohort_tes, cohort_te_ses),
-			cohort_tes != 0
+			.compute_p_values(cohort_tes, cohort_te_ses)
 		)
 
 		names(cohort_te_ses) <- c_names
@@ -1551,8 +1364,7 @@ getCohortATTsFinal <- function(
 			rep(NA, R),
 			rep(NA, R),
 			rep(NA, R),
-			rep(NA_real_, R),
-			cohort_tes != 0
+			rep(NA_real_, R)
 		)
 	}
 
@@ -1562,9 +1374,17 @@ getCohortATTsFinal <- function(
 		"SE",
 		"ConfIntLow",
 		"ConfIntHigh",
-		"P_value",
-		"selected"
+		"P_value"
 	)
+
+	# The trailing `selected` column is meaningful only for bridge callers
+	# (FETWFE / BETWFE) where some cohorts may be zeroed out by the penalty.
+	# OLS callers (etwfe / twfeCovs) suppress it via include_selected = FALSE.
+	# `$<-` appends both the column and its name implicitly, so the
+	# colnames() block above lists only the 6 unconditional names.
+	if (include_selected) {
+		cohort_te_df$selected <- cohort_tes != 0
+	}
 
 	if (fused) {
 		stopifnot(is.matrix(d_inv_treat_sel))

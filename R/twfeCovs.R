@@ -553,9 +553,9 @@ twfeCovsWithSimulatedData <- function(
 #'     The coefficient vector is in the original (untransformed) parameter
 #'     space and is returned as `beta_hat`.
 #'   \item **Cohort-specific treatment effects:** Calls
-#'     `getCohortATTsFinalOLS()` to compute per-cohort point estimates,
-#'     standard errors (when the Gram matrix is invertible), and confidence
-#'     intervals.
+#'     `getCohortATTsFinal()` (with `fused = FALSE`, `include_selected =
+#'     FALSE`) to compute per-cohort point estimates, standard errors (when
+#'     the Gram matrix is invertible), and confidence intervals.
 #'   \item **Overall ATT:** Calls `getTeResultsOLS()` for the overall ATT
 #'     point estimate and SE, using both in-sample probabilities and
 #'     independent probabilities when `indep_counts` is provided.
@@ -722,18 +722,22 @@ twfeCovs_core <- function(
 	#
 	#
 
-	res <- getCohortATTsFinalOLS(
+	res <- getCohortATTsFinal(
 		X_final = X_final, # This is X_mod * GLS_transform_matrix
+		sel_feat_inds = NULL, # OLS path: no penalty selection occurred
 		treat_inds = treat_inds_short, # Global indices for treatment effects
 		num_treats = R,
 		first_inds = first_inds,
+		sel_treat_inds_shifted = seq_len(R),
 		c_names = c_names,
 		tes = tes, # Treatment effect estimates (beta_hat_slopes[treat_inds])
 		sig_eps_sq = sig_eps_sq,
 		R = R,
 		N = N,
 		T = T,
-		p = p_short, # Total number of original parameters (columns in X_ints)
+		fused = FALSE,
+		calc_ses = TRUE,
+		include_selected = FALSE, # twfeCovs has no bridge selection
 		alpha = alpha,
 		se_type = se_type,
 		y_final = y_final

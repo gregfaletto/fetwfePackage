@@ -1,5 +1,17 @@
 # NEWS
 
+## Version 1.9.27 (2026-05-19)
+
+- Unified the internal `getCohortATTsFinal()` and previously-separate
+  `getCohortATTsFinalOLS()` helpers in `R/variance_machinery.R` into a
+  single function controlled by the existing `fused` flag plus a new
+  required `include_selected` argument (GitHub #118). Pure internal
+  refactor: cohort-ATT point estimates, SEs, p-values, and confidence
+  intervals are byte-identical for `fetwfe()`, `etwfe()`, `betwfe()`,
+  and `twfeCovs()` on every existing test fixture. Reduces ~140 LOC of
+  duplication and consolidates the surface area for future
+  variance-estimator fixes.
+
 ## Version 1.9.26 (2026-05-19)
 
 - Fixed four roxygen-comment typos surfaced by the 2026-05-19 periodic
