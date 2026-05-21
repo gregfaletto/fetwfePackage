@@ -1,5 +1,16 @@
 # NEWS
 
+## Version 1.9.32 (2026-05-20)
+
+- Replaced the main vignette's flagship empirical example: the
+  `bacondecomp::divorce` analysis (on which FETWFE selects a null under
+  the corrected variance estimator, on a rank-deficient panel) is
+  replaced by a `bacondecomp::castle` analysis of castle-doctrine laws
+  and homicide, which yields a non-null, literature-consistent result.
+  The vignette's simulated example now also generates and uses
+  time-invariant covariates. Vignette content only; no change to package
+  behavior.
+
 ## Version 1.9.31 (2026-05-20)
 
 - Corrected the documented output column names for `attgtToFetwfeDf()`
