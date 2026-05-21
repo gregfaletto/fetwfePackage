@@ -1,5 +1,12 @@
 # NEWS
 
+## Version 1.9.33 (2026-05-20)
+
+- Replaced the remaining `bacondecomp::divorce` examples (the four
+  estimators' help-page examples and the package's quick-start example)
+  with `bacondecomp::castle` examples, matching the main vignette; fixed
+  a stale citation year in the package documentation.
+
 ## Version 1.9.32 (2026-05-20)
 
 - Replaced the main vignette's flagship empirical example: the
