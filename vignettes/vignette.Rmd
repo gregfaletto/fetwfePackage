@@ -10,7 +10,7 @@ vignette: >
   %\VignetteIndexEntry{fetwfe: A Package for Fused Extended Two-Way Fixed Effects}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
-  %\VignetteDepends{dplyr}
+  %\VignetteDepends{dplyr, bacondecomp}
 ---
 
 ```{r setup, include=FALSE}
@@ -74,7 +74,7 @@ In the next sections, we'll walk through examples of how `fetwfe()` is used.
 
 ## Simulated Data Example
 
-I'll start illustrating how to use `fetwfe()` by using a simulated data set. The example below simulates a balanced panel with 60 time periods, 30 individuals, and 5 waves of treatment. 
+I'll start illustrating how to use `fetwfe()` by using a simulated data set. The example below simulates a balanced panel with 20 time periods and 30 individuals. Each individual is assigned at random to one of five cohort levels; with the randomly drawn treatment timing, three of those levels resolve to cohorts that are actually treated within the panel window and the rest are never treated.
 
 In the simulation, each individual is assigned a random cohort (which determines the timing of treatment) and three time-invariant covariates are generated. The response variable is constructed so that, after treatment, its evolution depends on a treatment effect (which varies by cohort) and a linear trend, plus the covariates and some random noise.
 
@@ -86,38 +86,44 @@ Below is the complete code for simulating the data, converting it into the requi
 # Set seed for reproducibility
 set.seed(123456L)
 
-# 20 time periods, 30 individuals, and 5 waves of treatment
+# 20 time periods, 30 individuals, and 5 cohort levels
 tmax = 20; imax = 30; nlvls = 5
 
-dat = 
+dat =
   expand.grid(time = 1:tmax, id = 1:imax) |>
   within({
-    
     cohort      = NA
     effect      = NA
     first_treat = NA
-    
+    cov1        = NA
+    cov2        = NA
+    cov3        = NA
     for (chrt in 1:imax) {
       cohort = ifelse(id==chrt, sample.int(nlvls, 1), cohort)
     }
-    
     for (lvls in 1:nlvls) {
       effect      = ifelse(cohort==lvls, sample(2:10, 1), effect)
       first_treat = ifelse(cohort==lvls, sample(1:(tmax+6), 1), first_treat)
     }
-    
+    # three time-invariant covariates: one value per individual,
+    # drawn AFTER the timing loop so first_treat is unchanged
+    for (chrt in 1:imax) {
+      cov1 = ifelse(id==chrt, rnorm(1), cov1)
+      cov2 = ifelse(id==chrt, rnorm(1), cov2)
+      cov3 = ifelse(id==chrt, rnorm(1), cov3)
+    }
     first_treat = ifelse(first_treat>tmax, Inf, first_treat)
     treat       = time >= first_treat
     rel_time    = time - first_treat
-    y           = id + time + ifelse(treat, effect*rel_time, 0) + rnorm(imax*tmax)
-    
+    y           = id + time + ifelse(treat, effect*rel_time, 0) +
+                  0.5*cov1 - 0.7*cov2 + 1.2*cov3 + rnorm(imax*tmax)
     rm(chrt, lvls, cohort, effect)
   })
 
 head(dat)
 ```
 
-The simulated data (`dat`) now has columns for time, id, a treatment indicator (`treat`), and a response variable (`y`). Next, we convert this data into the panel data format required by `fetwfe()`.
+The simulated data (`dat`) now has columns for time, id, a treatment indicator (`treat`), three time-invariant covariates (`cov1`, `cov2`, `cov3`), and a response variable (`y`). Next, we convert this data into the panel data format required by `fetwfe()`.
 
 ```{r}
 library(dplyr)
@@ -139,8 +145,9 @@ pdata <- dat |>
     {{ response }} := y
   ) |>
   select(
-    {{ time_var }}, {{ unit_var }}, {{ treatment }}, {{ response }}
-  ) 
+    {{ time_var }}, {{ unit_var }}, {{ treatment }}, {{ response }},
+    cov1, cov2, cov3
+  )
 
 # Preview the resulting pdata dataframe
 head(pdata)
@@ -154,11 +161,12 @@ library(fetwfe)
 
 # Run the FETWFE estimator on the simulated data
 result <- fetwfe(
-  pdata = pdata,              # The panel dataset
-  time_var = "time",          # The time variable
-  unit_var = "unit",          # The unit identifier
-  treatment = "treated",      # The treatment dummy indicator
-  response = "response"      # The response variable
+  pdata = pdata,                        # The panel dataset
+  time_var = "time",                    # The time variable
+  unit_var = "unit",                    # The unit identifier
+  treatment = "treated",                # The treatment dummy indicator
+  response = "response",                # The response variable
+  covs = c("cov1", "cov2", "cov3")      # The time-invariant covariates
 )
 
 # Display the average treatment effect estimates
@@ -190,45 +198,34 @@ See the other vignette for an example of how you can use functions in the FETWFE
 
 ## A "Real Data" Example
 
-Next I illustrate FETWFE in an empirical context. I'll use data from Stevenson and Wolfers (2006), via the `divorce` data set from the `bacondecomp` package, on the impact of no-fault divorce laws on women's suicide rates. (See also Goodman-Bacon (2021) for an alternative analysis.) The below is identical to the data application from [my paper](https://arxiv.org/abs/2312.05985).
-
-In this application, the panel data consist of state-level observations over 33 years. After removing states that received treatment in the first period, we are left with 42 states, of which 5 are never treated and 12 cohorts adopt treatment at various times.
-
-Unlike the above example, this example also includes covariates (such as the state homicide rate, logged personal income, and welfare participation) as controls. Because the covariates are time-varying, the code selects the pre-treatment values. In this example, FETWFE estimates the marginal average treatment effect of no-fault divorce laws.
+Next I illustrate FETWFE in an empirical context. I'll use the `castle` data set from the `bacondecomp` package, which comes from the study by Cheng and Hoekstra (2013) of castle-doctrine ("stand-your-ground") laws and homicide. It is a balanced state-year panel covering all 50 states over 2000-2010, with the laws adopted in a staggered fashion across states from 2005 to 2009.
 
 ```{r}
 library(bacondecomp)  # for the example data
 
 # Load the example data
-data(divorce)
+data(castle)
 
-set.seed(23451)
+# Response: the log homicide rate, so the ATT reads roughly as a
+# percentage change in the homicide rate.
+castle$l_homicide <- log(castle$homicide)
 
-# Suppose we wish to estimate the effect of a policy (here represented by the variable "changed")
-# on the response "suiciderate_elast_jag" using covariates "murderrate", "lnpersinc", and "afdcrolls".
-# Here
-# - 'year' is the time period variable (as an integer),
-# - 'st' is the unit identifier,
-# - 'changed' is the treatment indicator (with 0 = untreated, 1 = treated),
-# 
-# The `fetwfe()` function will automatically take care of removing units that were treated in the
-# first time period.
-#
-# If your panel has no never-treated units at all (every unit is eventually
-# treated), `fetwfe()` will auto-truncate the panel by dropping the latest
-# time periods so that the latest-cohort units serve as the never-treated
-# comparison group, and issue a warning naming the dropped periods. Pass
-# `allow_no_never_treated = FALSE` if you would rather have the estimator
-# error out in that situation.
+# Treatment indicator. `cdl` records the share of the year the
+# castle-doctrine law was in effect; a state is treated from the year its
+# law took effect, so we binarize with `cdl > 0`. `fetwfe()` requires the
+# treatment column to be an integer 0/1 absorbing indicator.
+castle$treated <- as.integer(castle$cdl > 0)
 
-# Call the estimator
+# Call the estimator. Here
+# - 'year' is the time period variable (an integer),
+# - 'state' is the unit identifier,
+# - 'treated' is the absorbing treatment indicator.
 res <- fetwfe(
-    pdata=divorce[divorce$sex == 2, ],
-    time_var="year",
-    unit_var="st",
-    treatment="changed",
-    covs=c("murderrate", "lnpersinc", "afdcrolls"),
-    response="suiciderate_elast_jag"
+    pdata = castle,
+    time_var = "year",
+    unit_var = "state",
+    treatment = "treated",
+    response = "l_homicide"
     )
 
 summary(res)
@@ -256,19 +253,9 @@ catt_df_pct[["ConfIntHigh"]] <- 100 * catt_df_pct[["ConfIntHigh"]]
 catt_df_pct
 ```
 
-For the data application, FETWFE returns an overall ATT of approximately 0% with every cohort selected out (`selected = FALSE`) under the corrected REML-based variance-component estimator introduced in version 1.9.1. Under the package's restriction-selection-consistency interpretation (Theorem 6.2; see "Testing the zero-effect null" below), this is an asymptotic statement that the treatment had no detectable effect on the female suicide rate in this panel.
+FETWFE estimates that adopting a castle-doctrine law is associated with roughly a +5.5% change in the homicide rate. The 95% confidence interval is wide and only barely excludes zero, so this should be read as suggestive rather than as a sharply estimated effect — the panel has only 50 units and five small adoption cohorts. The sign and rough magnitude are nonetheless consistent with Cheng and Hoekstra (2013), who found that these laws increased homicide. FETWFE fused all five adoption cohorts (those adopting in 2005 through 2009) to a single common effect, so each row of `res$catt_df` reports the same estimate.
 
-This contrasts with various DiD estimates reported in the literature, including the package's own prior versions which reported `~−1.84%` here. Two things explain that gap.
-
-First, the divorce panel has a noisy small-sample structure: 9 of 51 states are dropped (treated in period 1), 4 cohorts contain a single state each (those adopting in 1976, 1980, 1984, 1985), only 4 states remain never-treated, and 214 of 909 design-matrix columns are aliased. The conditions FETWFE's theory requires for sharp inference (full-rank design, cohorts with at least `d + 1` units) are not fully satisfied here.
-
-Second, the previous `−1.84%` estimate was an artifact of a bug (fixed in 1.9.1) in the variance-component estimator that made `sig_eps_c_sq_hat ≈ 0`, degenerating the GLS step. Under the corrected estimator the panel has σ_c²/σ_ε² ≈ 4 (substantial within-state correlation, cross-confirmed via `lme4::lmer` and `plm::plm`'s Swamy-Arora), and the BIC-selected bridge solution prefers the zero-treatment model by a wide margin (ΔBIC ≈ 43). On a panel with this much between-unit noise and so few units per cohort, FETWFE's BIC penalty correctly judges any heterogeneous treatment-effect pattern not worth the parameter cost — exactly the documented finite-sample behavior described in the next section.
-
-Other DiD estimators show similar imprecision on this panel: Callaway-Sant'Anna returns roughly `−9.7% (SE 11.7%, not significant)`, plain TWFE OLS returns `+0.57% (not significant)`. Without strong unit-level variance correction the bug retained the −1.8%-ish signal because the GLS step was effectively identity; under correct GLS, the signal is absorbed into the random intercept.
-
-The output table (stored in `res$catt_df`) displays cohort-specific estimates and the `selected` flag.
-
-The divorce-data analysis above uses three covariates. The package also supports the no-covariate case — pass `covs = c()` to any estimator, or generate data with `genCoefs(d = 0, ...)`. For a worked side-by-side comparison of `etwfe()` and `fetwfe()` with no covariates, see the "No-covariate setting" section of the companion vignette `etwfe_betwfe_vignette`.
+This example is covariate-free; `castle`'s smallest cohorts contain a single state, so the design cannot support additional covariates. Covariate handling is illustrated in the simulated example above — the `covs` argument is optional.
 
 ## Testing the zero-effect null
 
@@ -294,9 +281,8 @@ This should be enough to get you started using `fetwfe()` on your own data. Plea
 
 # References
 
+- Cheng, C., & Hoekstra, M. (2013). Does Strengthening Self-Defense Law Deter Crime or Escalate Violence? Evidence from Expansions to Castle Doctrine. *Journal of Human Resources*, 48(3), 821-854.
 - Faletto, G. (2025). Fused Extended Two-Way Fixed Effects for Difference-in-Differences with Staggered Adoptions. [arXiv preprint arXiv:2312.05985](https://arxiv.org/abs/2312.05985).
-- Goodman-Bacon, A. (2021). Difference-in-Differences with variation in treatment timing. *Journal of Econometrics*.
-- Kock, A. B. (2013). Oracle inequalities for high-dimensional nonparametric models. *Econometric Theory*.
 - Flack, E., & Jee, E. (2020). bacondecomp: Goodman-Bacon Decomposition. R package version 0.1.1. [https://CRAN.R-project.org/package=bacondecomp](https://CRAN.R-project.org/package=bacondecomp).
-- Stevenson, B., & Wolfers, J. (2006). Bargaining in the shadow of the law: Divorce laws and family distress. *The Quarterly Journal of Economics*, 121(1), 267-288.
+- Kock, A. B. (2013). Oracle inequalities for high-dimensional nonparametric models. *Econometric Theory*.
 
