@@ -158,6 +158,10 @@ genCoefs <- function(R, T, d, density, eff_size, seed = NULL) {
 #'   \item{actual_cohort_tes}{A numeric vector of length \code{R} containing the
 #'         true cohort-specific treatment effects, calculated by averaging the
 #'         coefficients corresponding to the treatment dummies for each cohort.}
+#'   \item{cohort_times}{An integer vector of length \code{R} giving the calendar
+#'         time period at which each treated cohort first adopts treatment. In
+#'         the simulator's convention cohort \code{r} adopts at calendar time
+#'         \code{r + 1} (cohort 0 is never-treated).}
 #'   \item{R, T, d, seed}{The generating parameters carried over from
 #'         \code{coefs_obj} so that \code{print()} and \code{summary()} on the
 #'         returned object are self-describing.}

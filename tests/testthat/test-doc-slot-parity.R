@@ -110,7 +110,10 @@ test_that("public estimator @return blocks match live names()", {
 		list(
 			"twfeCovsWithSimulatedData",
 			function() twfeCovsWithSimulatedData(sim)
-		)
+		),
+		list("genCoefs", function() coefs),
+		list("getTes", function() getTes(coefs)),
+		list("simulateData", function() sim)
 	)
 
 	db <- .get_rd_db()
