@@ -21,7 +21,7 @@ You can also install the latest development version by using
 remotes::install_github("gregfaletto/fetwfePackage")
 ```
 
-The primary function in the `{fetwfe}` is `fetwfe()`, which implements fused extended two-way fixed effects. Here's some example code applying `fetwfe()` to the `castle` data set from the `bacondecomp` package (the same example used in the package vignette):
+The primary function in the `{fetwfe}` is `fetwfe()`, which implements fused extended two-way fixed effects. Here's some example code applying `fetwfe()` to the `castle` data set from the `bacondecomp` package:
 
 ```R
 library(fetwfe)
