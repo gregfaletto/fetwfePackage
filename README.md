@@ -21,25 +21,30 @@ You can also install the latest development version by using
 remotes::install_github("gregfaletto/fetwfePackage")
 ```
 
-The primary function in the `{fetwfe}` is `fetwfe()`, which implements fused extended two-way fixed effects. Here's some example code that implements the data application from the paper:
+The primary function in the `{fetwfe}` is `fetwfe()`, which implements fused extended two-way fixed effects. Here's a worked example, using data on castle-doctrine laws and homicide from the `bacondecomp` package:
 
 ```R
 library(fetwfe)
 library(bacondecomp)
 
-set.seed(23451)
+# Castle-doctrine ("stand-your-ground") laws and homicide
+# (Cheng and Hoekstra 2013): a balanced state-year panel.
+data(castle)
 
-data(divorce)
+# Response: the log homicide rate. `cdl` records the share of the year
+# the law was in effect, so a state is treated from the year its law
+# took effect; fetwfe() needs an integer 0/1 treatment indicator.
+castle$l_homicide <- log(castle$homicide)
+castle$treated <- as.integer(castle$cdl > 0)
 
 res <- fetwfe(
-    pdata=divorce[divorce$sex == 2, ],
-    time_var="year",
-    unit_var="st",
-    treatment="changed",
-    covs=c("murderrate", "lnpersinc", "afdcrolls"),
-    response="suiciderate_elast_jag",
-    q=0.5,
-    verbose=TRUE)
+    pdata = castle,
+    time_var = "year",
+    unit_var = "state",
+    treatment = "treated",
+    response = "l_homicide",
+    verbose = TRUE
+)
 
 summary(res)
 ```
