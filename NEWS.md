@@ -1,5 +1,13 @@
 # NEWS
 
+## Version 1.9.31 (2026-05-20)
+
+- Corrected the documented output column names for `attgtToFetwfeDf()`
+  and `etwfeToFetwfeDf()`: their `@return` and `@param` blocks listed
+  `time` / `unit` / `y`, but the converters produce `time_var` /
+  `unit_var` / `response` (the `out_names` defaults). Documentation fix
+  only; no change to either function's behavior.
+
 ## Version 1.9.30 (2026-05-20)
 
 - Documentation and cleanup sweep from the 2026-05-19 internal review:

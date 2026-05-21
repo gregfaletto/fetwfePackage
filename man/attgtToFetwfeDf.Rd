@@ -26,7 +26,7 @@ never‑treated group).}
 \item{yname}{Character scalar. Name of the outcome column.}
 
 \item{tname}{Character scalar. Name of the time variable (numeric or
-integer). This becomes \code{time} in the returned dataframe.}
+integer). This becomes \code{time_var} in the returned dataframe.}
 
 \item{idname}{Character scalar. Name of the unit identifier. Converted to
 character and returned as \code{unit_var}.}
@@ -45,8 +45,9 @@ creating the treatment dummy. \code{fetwfe()} would do this internally, but
 dropping them here keeps the returned dataframe cleaner.}
 
 \item{out_names}{A named list giving the column names to use in the
-resulting dataframe. Defaults are \code{list(time = "time", unit = "unit", treatment = "treatment", response = "y")}. Override if you prefer
-different names (for instance, to keep the original \code{yname}). The vector
+resulting dataframe. Defaults are \code{list(time = "time_var", unit = "unit_var", treatment = "treatment", response = "response")}. Override
+if you prefer different names (for instance, to keep the original
+\code{yname}). The vector
 \emph{must} contain exactly these four names.}
 
 \item{verbose}{Logical. If \code{TRUE}, a \code{message()} reports the count of
@@ -54,11 +55,11 @@ first-period-treated unit-period rows dropped when
 \code{drop_first_period_treated = TRUE}. Default \code{FALSE} (silent).}
 }
 \value{
-A \code{data.frame} with columns \code{time}, \code{unit}, \code{treatment}, \code{y}, and any
-covariates requested in \code{covars}, ready to be fed to
+A \code{data.frame} with columns \code{time_var}, \code{unit_var}, \code{treatment},
+\code{response}, and any covariates requested in \code{covars}, ready to be fed to
 \code{fetwfe()}/\code{etwfe()}. All required columns are of the correct type:
-\code{time} is integer, \code{unit} is character, \code{treatment} is integer 0/1, and
-\code{y} is numeric.
+\code{time_var} is integer, \code{unit_var} is character, \code{treatment} is integer
+0/1, and \code{response} is numeric.
 }
 \description{
 \code{attgtToFetwfeDf()} reshapes and renames a panel dataset that is already
