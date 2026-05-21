@@ -1,5 +1,17 @@
 # NEWS
 
+## Version 1.9.30 (2026-05-20)
+
+- Documentation and cleanup sweep from the 2026-05-19 internal review:
+  documented the `cohort_times` slot in the `getTes()` return value;
+  documented the `se_type` argument in the four internal `*_core`
+  functions; extended the documentation-slot-parity test to cover
+  `getTes()`, `genCoefs()`, and `simulateData()`; corrected a misleading
+  factor-encoding comment in `processFactors()`; removed a redundant
+  cohort-count assertion in `prep_for_etwfe_core()`; and fixed two stale function
+  names in `cran-comments.md`. Documentation and cleanup only; no
+  user-facing behavior change.
+
 ## Version 1.9.29 (2026-05-20)
 
 - Added regression-test coverage for four code paths flagged by the
