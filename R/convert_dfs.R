@@ -17,7 +17,7 @@
 #'   never‑treated group).
 #' @param yname  Character scalar. Name of the outcome column.
 #' @param tname  Character scalar. Name of the time variable (numeric or
-#'   integer). This becomes `time` in the returned dataframe.
+#'   integer). This becomes `time_var` in the returned dataframe.
 #' @param idname Character scalar. Name of the unit identifier. Converted to
 #'   character and returned as `unit_var`.
 #' @param gname  Character scalar. Name of the *group* variable holding the
@@ -31,19 +31,20 @@
 #'   creating the treatment dummy. `fetwfe()` would do this internally, but
 #'   dropping them here keeps the returned dataframe cleaner.
 #' @param out_names  A named list giving the column names to use in the
-#'   resulting dataframe. Defaults are `list(time = "time", unit = "unit",
-#'   treatment = "treatment", response = "y")`. Override if you prefer
-#'   different names (for instance, to keep the original `yname`). The vector
+#'   resulting dataframe. Defaults are `list(time = "time_var", unit =
+#'   "unit_var", treatment = "treatment", response = "response")`. Override
+#'   if you prefer different names (for instance, to keep the original
+#'   `yname`). The vector
 #'   *must* contain exactly these four names.
 #' @param verbose Logical. If `TRUE`, a `message()` reports the count of
 #'   first-period-treated unit-period rows dropped when
 #'   `drop_first_period_treated = TRUE`. Default `FALSE` (silent).
 #'
-#' @return A `data.frame` with columns `time`, `unit`, `treatment`, `y`, and any
-#'   covariates requested in `covars`, ready to be fed to
+#' @return A `data.frame` with columns `time_var`, `unit_var`, `treatment`,
+#'   `response`, and any covariates requested in `covars`, ready to be fed to
 #'   `fetwfe()`/`etwfe()`. All required columns are of the correct type:
-#'   `time` is integer, `unit` is character, `treatment` is integer 0/1, and
-#'   `y` is numeric.
+#'   `time_var` is integer, `unit_var` is character, `treatment` is integer
+#'   0/1, and `response` is numeric.
 #' @references Callaway, Brantly and Pedro H.C. Sant'Anna. "Difference-in-
 #' Differences with Multiple Time Periods." Journal of Econometrics, Vol. 225,
 #' No. 2, pp. 200-230, 2021.
@@ -130,15 +131,15 @@ attgtToFetwfeDf <- function(
 #'   sample period be removed?  (`fetwfe()` will drop them internally anyway, but doing it
 #'   here keeps the returned dataframe clean.)  Default `TRUE`.
 #' @param out_names Named list giving the column names that the returned dataframe should have.
-#'   The default (`time`, `unit`, `treatment`, `y`) matches the arguments usually supplied to
+#'   The default (`time_var`, `unit_var`, `treatment`, `response`) matches the arguments usually supplied to
 #'   `fetwfe()`. **Do not change the *names* of this list** – only the *values* – and keep all four.
 #' @param verbose Logical. If `TRUE`, a `message()` reports the count of
 #'   first-period-treated unit-period rows dropped when
 #'   `drop_first_period_treated = TRUE`. Default `FALSE` (silent).
 #'
 #' @return A tidy `data.frame` with (in this order)
-#'   * `time`       integer,
-#'   * `unit`       character,
+#'   * `time_var`   integer,
+#'   * `unit_var`   character,
 #'   * `treatment`  integer 0/1 absorbing-state dummy,
 #'   * `response`   numeric outcome,
 #'   * any covariates requested in `covars`.
