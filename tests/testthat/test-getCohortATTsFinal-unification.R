@@ -395,3 +395,75 @@ test_that("getCohortATTsFinal(fused=TRUE, include_selected=FALSE) omits the `sel
 	expect_equal(ncol(out$cohort_te_df), 6L)
 	expect_true(!is.null(out$d_inv_treat_sel))
 })
+
+# ---- Test 4: psi_mat row-count contract across calling conventions --------
+
+# Issue #116 Gap 4: getCohortATTsFinal() builds psi_mat with one row per
+# entry of sel_treat_inds_shifted. Under the OLS (ETWFE / twfeCovs)
+# convention the caller passes seq_len(num_treats), so nrow(psi_mat) ==
+# num_treats; under the bridge (FETWFE / BETWFE) convention with PARTIAL
+# selection it passes a strict subset, so nrow(psi_mat) < num_treats. The
+# internal stopifnot()s only bound nrow(psi_mat) <= num_treats -- the
+# partial-selection row count is otherwise unguarded, so a silent swap of
+# the two conventions would go uncaught. This test pins both shapes.
+test_that("getCohortATTsFinal psi_mat row count tracks the calling convention (OLS vs bridge)", {
+	fx <- .build_unif_fixture()
+
+	# --- OLS convention: full sel_treat_inds_shifted, sel_feat_inds = NULL.
+	# nrow(psi_mat) must equal num_treats. (Cheap insurance: the fused = TRUE
+	# block above already covers the full-set case; the bridge-convention
+	# assertion below is the genuinely new coverage.)
+	out_ols <- fetwfe:::getCohortATTsFinal(
+		X_final = fx$X_final,
+		sel_feat_inds = NULL,
+		treat_inds = fx$treat_inds,
+		num_treats = fx$num_treats,
+		first_inds = fx$first_inds,
+		sel_treat_inds_shifted = seq_len(fx$num_treats),
+		c_names = fx$c_names,
+		tes = fx$tes,
+		sig_eps_sq = fx$sig_eps_sq,
+		R = fx$R,
+		N = fx$N,
+		T = fx$T,
+		fused = FALSE,
+		calc_ses = TRUE,
+		include_selected = FALSE
+	)
+	expect_equal(nrow(out_ols$psi_mat), fx$num_treats)
+	expect_equal(ncol(out_ols$psi_mat), fx$R)
+
+	# --- Bridge convention: strict-subset sel_treat_inds_shifted.
+	# getGramInv() enforces sum(sel_feat_inds %in% treat_inds) ==
+	# length(sel_treat_inds_shifted), so sel_feat_inds and
+	# sel_treat_inds_shifted must be co-derived from the SAME selection (as
+	# the real FETWFE caller in R/fetwfe_core.R is). Build sel_feat by
+	# keeping every non-treatment feature plus only the treatment columns
+	# named by the subset.
+	sel_subset <- c(1L, 3L, 5L) # strict subset, length 3 < num_treats (5)
+	non_treat_inds <- setdiff(seq_len(fx$p), fx$treat_inds)
+	sel_feat <- sort(c(non_treat_inds, fx$treat_inds[sel_subset]))
+
+	out_bridge <- fetwfe:::getCohortATTsFinal(
+		X_final = fx$X_final,
+		sel_feat_inds = sel_feat,
+		treat_inds = fx$treat_inds,
+		num_treats = fx$num_treats,
+		first_inds = fx$first_inds,
+		sel_treat_inds_shifted = sel_subset,
+		c_names = fx$c_names,
+		tes = fx$tes,
+		sig_eps_sq = fx$sig_eps_sq,
+		R = fx$R,
+		N = fx$N,
+		T = fx$T,
+		fused = TRUE,
+		calc_ses = TRUE,
+		include_selected = TRUE
+	)
+	# Under partial bridge selection nrow(psi_mat) tracks the subset length,
+	# strictly below num_treats -- the contract a convention swap would break.
+	expect_equal(nrow(out_bridge$psi_mat), length(sel_subset))
+	expect_lt(nrow(out_bridge$psi_mat), fx$num_treats)
+	expect_equal(ncol(out_bridge$psi_mat), fx$R)
+})

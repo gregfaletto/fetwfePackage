@@ -6,6 +6,138 @@ library(fetwfe)
 # and sourced by testthat before this file runs (issue #91).
 
 # ------------------------------------------------------------------------------
+# Reference (pre-rewrite) processCovs implementation: the canonical
+# per-unit-loop version from git history, captured verbatim before issue #84
+# item 15. Kept here as a static frozen baseline shared by every processCovs
+# equivalence test in this file (#116); any future processCovs rewrite must
+# produce identical output on the fixtures those tests build.
+# ------------------------------------------------------------------------------
+processCovs_reference <- function(
+	df,
+	units,
+	unit_var,
+	times,
+	time_var,
+	covs,
+	resp_var,
+	T,
+	verbose = FALSE
+) {
+	for (s in units) {
+		df_s <- df[df[, unit_var] == s, ]
+		if (nrow(df_s) != T || !setequal(df_s[, time_var], times)) {
+			stop("balance violation")
+		}
+	}
+	if (length(covs) == 0) {
+		df <- df[, c(resp_var, time_var, unit_var)]
+		df <- df[
+			order(df[, unit_var], df[, time_var], decreasing = FALSE),
+		]
+		return(list(df = df, covs = covs))
+	}
+	d_orig <- length(covs)
+	covs_to_keep <- character()
+	first_time_val <- times[1]
+	for (cov_name in covs) {
+		is_valid_cov <- TRUE
+		for (s in units) {
+			val_first_period <- df[
+				(df[, unit_var] == s) & (df[, time_var] == first_time_val),
+				cov_name
+			]
+			if (length(val_first_period) != 1 || is.na(val_first_period)) {
+				is_valid_cov <- FALSE
+				break
+			}
+		}
+		if (is_valid_cov) {
+			covs_to_keep <- c(covs_to_keep, cov_name)
+		}
+	}
+	# Suppress reference warnings; equivalence with the live function
+	# requires matching warnings, which the live test below verifies
+	# separately.
+	suppressWarnings({
+		if (length(covs_to_keep) < d_orig && length(covs_to_keep) > 0) {
+			warning("ref na warning")
+		} else if (length(covs_to_keep) == 0 && d_orig > 0) {
+			warning("ref na warning")
+		}
+	})
+	covs <- covs_to_keep
+	d <- length(covs)
+	if (d > 0) {
+		covs_to_remove_const <- character()
+		df_temp_const_check <- df
+		for (s in units) {
+			first_period_rows_s_idx <- which(
+				(df_temp_const_check[, unit_var] == s) &
+					(df_temp_const_check[, time_var] == first_time_val)
+			)
+			stopifnot(length(first_period_rows_s_idx) == 1)
+			cov_values_s_first_period <- df_temp_const_check[
+				first_period_rows_s_idx,
+				covs,
+				drop = FALSE
+			]
+			for (t_idx in seq_along(times)) {
+				current_rows_s_t_idx <- which(
+					(df_temp_const_check[, unit_var] == s) &
+						(df_temp_const_check[, time_var] == times[t_idx])
+				)
+				stopifnot(length(current_rows_s_t_idx) == 1)
+				df_temp_const_check[
+					current_rows_s_t_idx,
+					covs
+				] <- cov_values_s_first_period
+			}
+		}
+		for (cov_name in covs) {
+			first_period_vals_for_cov <- sapply(units, function(u) {
+				df_temp_const_check[
+					(df_temp_const_check[, unit_var] == u) &
+						(df_temp_const_check[, time_var] == first_time_val),
+					cov_name
+				]
+			})
+			if (length(unique(first_period_vals_for_cov)) == 1) {
+				covs_to_remove_const <- c(covs_to_remove_const, cov_name)
+			}
+		}
+		covs <- covs[!(covs %in% covs_to_remove_const)]
+		suppressWarnings({
+			if (length(covs_to_remove_const) > 0 && length(covs) == 0) {
+				warning("ref const warning")
+			} else if (length(covs_to_remove_const) > 0) {
+				warning("ref const warning")
+			}
+		})
+		d <- length(covs)
+	}
+	df <- df[, c(resp_var, time_var, unit_var, covs), drop = FALSE]
+	if (d > 0) {
+		for (s in units) {
+			first_period_rows_s_idx <- which(
+				(df[, unit_var] == s) & (df[, time_var] == first_time_val)
+			)
+			covs_s_first_period_vals <- df[
+				first_period_rows_s_idx,
+				covs,
+				drop = FALSE
+			]
+			for (t_val in times) {
+				ind_s_t <- (df[, unit_var] == s) & (df[, time_var] == t_val)
+				stopifnot(sum(ind_s_t) == 1)
+				df[ind_s_t, covs] <- covs_s_first_period_vals
+			}
+		}
+	}
+	df <- df[order(df[, unit_var], df[, time_var], decreasing = FALSE), ]
+	list(df = df, covs = covs)
+}
+
+# ------------------------------------------------------------------------------
 # Test 1: Check that valid input produces a list with the expected output elements.
 # ------------------------------------------------------------------------------
 test_that("etwfe returns expected output structure with valid input", {
@@ -555,134 +687,9 @@ test_that("processCovs handles empty covariate vector correctly", {
 # & Discoveries`).
 # ------------------------------------------------------------------------------
 test_that("processCovs vectorized output matches reference implementation", {
-	# Reference (pre-rewrite) implementation: the canonical per-unit-loop
-	# version from git history, captured verbatim before issue #84 item 15.
-	# Kept here as a static frozen baseline; any future processCovs rewrite
-	# must produce identical output on this fixture.
-	processCovs_reference <- function(
-		df,
-		units,
-		unit_var,
-		times,
-		time_var,
-		covs,
-		resp_var,
-		T,
-		verbose = FALSE
-	) {
-		for (s in units) {
-			df_s <- df[df[, unit_var] == s, ]
-			if (nrow(df_s) != T || !setequal(df_s[, time_var], times)) {
-				stop("balance violation")
-			}
-		}
-		if (length(covs) == 0) {
-			df <- df[, c(resp_var, time_var, unit_var)]
-			df <- df[
-				order(df[, unit_var], df[, time_var], decreasing = FALSE),
-			]
-			return(list(df = df, covs = covs))
-		}
-		d_orig <- length(covs)
-		covs_to_keep <- character()
-		first_time_val <- times[1]
-		for (cov_name in covs) {
-			is_valid_cov <- TRUE
-			for (s in units) {
-				val_first_period <- df[
-					(df[, unit_var] == s) & (df[, time_var] == first_time_val),
-					cov_name
-				]
-				if (length(val_first_period) != 1 || is.na(val_first_period)) {
-					is_valid_cov <- FALSE
-					break
-				}
-			}
-			if (is_valid_cov) {
-				covs_to_keep <- c(covs_to_keep, cov_name)
-			}
-		}
-		# Suppress reference warnings; equivalence with the live function
-		# requires matching warnings, which the live test below verifies
-		# separately.
-		suppressWarnings({
-			if (length(covs_to_keep) < d_orig && length(covs_to_keep) > 0) {
-				warning("ref na warning")
-			} else if (length(covs_to_keep) == 0 && d_orig > 0) {
-				warning("ref na warning")
-			}
-		})
-		covs <- covs_to_keep
-		d <- length(covs)
-		if (d > 0) {
-			covs_to_remove_const <- character()
-			df_temp_const_check <- df
-			for (s in units) {
-				first_period_rows_s_idx <- which(
-					(df_temp_const_check[, unit_var] == s) &
-						(df_temp_const_check[, time_var] == first_time_val)
-				)
-				stopifnot(length(first_period_rows_s_idx) == 1)
-				cov_values_s_first_period <- df_temp_const_check[
-					first_period_rows_s_idx,
-					covs,
-					drop = FALSE
-				]
-				for (t_idx in seq_along(times)) {
-					current_rows_s_t_idx <- which(
-						(df_temp_const_check[, unit_var] == s) &
-							(df_temp_const_check[, time_var] == times[t_idx])
-					)
-					stopifnot(length(current_rows_s_t_idx) == 1)
-					df_temp_const_check[
-						current_rows_s_t_idx,
-						covs
-					] <- cov_values_s_first_period
-				}
-			}
-			for (cov_name in covs) {
-				first_period_vals_for_cov <- sapply(units, function(u) {
-					df_temp_const_check[
-						(df_temp_const_check[, unit_var] == u) &
-							(df_temp_const_check[, time_var] == first_time_val),
-						cov_name
-					]
-				})
-				if (length(unique(first_period_vals_for_cov)) == 1) {
-					covs_to_remove_const <- c(covs_to_remove_const, cov_name)
-				}
-			}
-			covs <- covs[!(covs %in% covs_to_remove_const)]
-			suppressWarnings({
-				if (length(covs_to_remove_const) > 0 && length(covs) == 0) {
-					warning("ref const warning")
-				} else if (length(covs_to_remove_const) > 0) {
-					warning("ref const warning")
-				}
-			})
-			d <- length(covs)
-		}
-		df <- df[, c(resp_var, time_var, unit_var, covs), drop = FALSE]
-		if (d > 0) {
-			for (s in units) {
-				first_period_rows_s_idx <- which(
-					(df[, unit_var] == s) & (df[, time_var] == first_time_val)
-				)
-				covs_s_first_period_vals <- df[
-					first_period_rows_s_idx,
-					covs,
-					drop = FALSE
-				]
-				for (t_val in times) {
-					ind_s_t <- (df[, unit_var] == s) & (df[, time_var] == t_val)
-					stopifnot(sum(ind_s_t) == 1)
-					df[ind_s_t, covs] <- covs_s_first_period_vals
-				}
-			}
-		}
-		df <- df[order(df[, unit_var], df[, time_var], decreasing = FALSE), ]
-		list(df = df, covs = covs)
-	}
+	# Reference implementation processCovs_reference is defined at file scope
+	# (top of this file) and shared with the non-lex-sortable-ID equivalence
+	# test below (#116).
 
 	# Fixture: small panel where the time-invariant collapse + the final
 	# row sort both matter for downstream alignment.
@@ -719,6 +726,80 @@ test_that("processCovs vectorized output matches reference implementation", {
 	rownames(ref$df) <- NULL
 	expect_equal(live$df, ref$df, tolerance = 1e-10)
 	expect_equal(live$covs, ref$covs)
+})
+
+# ------------------------------------------------------------------------------
+# Issue #116 Gap 1: the equivalence test above uses generate_panel_data(),
+# whose unit IDs are sprintf("unit%02d", ...) -- strictly lexically sortable,
+# so caller insertion order coincides with (unit, time) sort order. A
+# regression that re-sorted processCovs()'s internal first-period frame back
+# to the caller's insertion order would corrupt the first-period covariate
+# broadcast, yet stay invisible on a lex-sortable fixture. This test rebuilds
+# the equivalence check on a hand-crafted panel whose unit IDs are NOT in
+# sorted order on insertion, so a re-sort regression changes cell values.
+# ------------------------------------------------------------------------------
+test_that("processCovs vectorized output matches reference with non-lex-sortable unit IDs", {
+	# Insertion order: Alpha, delta, Bravo, charlie.
+	# Lexical order:   Alpha, Bravo, charlie, delta  (differs -> a re-sort
+	# regression is observable). processCovs() takes no treatment argument and
+	# never references cohorts, so a balanced unit/time/covariate/y panel is
+	# sufficient.
+	unit_order <- c("Alpha", "delta", "Bravo", "charlie")
+	T_n <- 4L
+	times_vals <- seq_len(T_n)
+	# cov1: first-period value differs across units (10/20/30/40) so a
+	# misaligned broadcast changes cell values; the within-unit value also
+	# varies over time so processCovs()'s first-period collapse is exercised.
+	# The per-unit-distinct first-period values also keep cov1 from being
+	# dropped by the constant-across-units column check.
+	first_vals <- c(Alpha = 10, delta = 20, Bravo = 30, charlie = 40)
+	df_nonlex <- do.call(
+		rbind,
+		lapply(unit_order, function(u) {
+			data.frame(
+				time = as.integer(times_vals),
+				unit = as.character(u),
+				cov1 = first_vals[[u]] + times_vals,
+				y = as.numeric(first_vals[[u]] * 100 + times_vals),
+				stringsAsFactors = FALSE
+			)
+		})
+	)
+	# Caller order: the units vector reflects insertion order, not sort order.
+	units <- unit_order
+	times <- sort(unique(df_nonlex$time))
+
+	live <- processCovs(
+		df = df_nonlex,
+		units = units,
+		unit_var = "unit",
+		times = times,
+		time_var = "time",
+		covs = "cov1",
+		resp_var = "y",
+		T = T_n,
+		verbose = FALSE
+	)
+	ref <- processCovs_reference(
+		df = df_nonlex,
+		units = units,
+		unit_var = "unit",
+		times = times,
+		time_var = "time",
+		covs = "cov1",
+		resp_var = "y",
+		T = T_n,
+		verbose = FALSE
+	)
+
+	# Row order, column order, and every cell value must agree.
+	rownames(live$df) <- NULL
+	rownames(ref$df) <- NULL
+	expect_equal(live$df, ref$df, tolerance = 1e-10)
+	expect_equal(live$covs, ref$covs)
+	# cov1 must survive the constant-across-units drop (first-period values
+	# 10/20/30/40 are distinct), otherwise the broadcast path is not exercised.
+	expect_equal(live$covs, "cov1")
 })
 
 # ------------------------------------------------------------------------------
@@ -1128,6 +1209,38 @@ test_that("etwfe auto-truncates a panel with no never-treated units (default)", 
 	expect_s3_class(res, "etwfe")
 	expect_true(is.finite(res$att_hat))
 	expect_s3_class(res$catt_df, "data.frame")
+})
+
+# ------------------------------------------------------------------------------
+# Issue #116 Gap 2: se_type = "cluster" and the auto-truncation of an
+# all-treated panel (allow_no_never_treated) are each tested in isolation, but
+# never together. This exercises the interaction end-to-end: a cluster SE
+# computed on an auto-truncated panel must still be finite and strictly
+# positive. The > 0 assertion is load-bearing -- on an all-treated panel the
+# bridge estimators select every coefficient out and return att_se = 0
+# exactly, which a finiteness-only check would pass vacuously.
+# ------------------------------------------------------------------------------
+test_that("etwfe cluster SE is finite and positive on an auto-truncated panel", {
+	df_bad <- generate_bad_panel_data(N = 200, T = 10, seed = 123)
+
+	expect_warning(
+		res <- etwfe(
+			pdata = df_bad,
+			time_var = "time",
+			unit_var = "unit",
+			treatment = "treatment",
+			covs = c("cov1", "cov2"),
+			response = "y",
+			se_type = "cluster",
+			allow_no_never_treated = TRUE,
+			verbose = FALSE
+		),
+		"auto-truncated"
+	)
+	expect_s3_class(res, "etwfe")
+	expect_true(is.finite(res$att_se))
+	expect_false(is.na(res$att_se))
+	expect_gt(res$att_se, 0)
 })
 
 # ------------------------------------------------------------------------------
