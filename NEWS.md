@@ -1,5 +1,24 @@
 # NEWS
 
+## Version 1.10.0 (2026-05-21)
+
+- CRAN release. Version 1.10.0 is the first CRAN release since 1.5.0; it
+  consolidates the 1.5.1-1.9.33 development series documented in the
+  entries below and introduces no new code beyond 1.9.33. The changes
+  most likely to matter when upgrading from the 1.5.0 CRAN release:
+  - **Behavior change.** Version 1.9.1 corrected the internal
+    variance-component estimator, which had collapsed the unit-level
+    variance component to nearly zero and degenerated the GLS weighting
+    step. Both standard errors and point estimates shift after upgrading;
+    see the 1.9.1 entry for details.
+  - New functionality: `event_study()` with `plot()` methods (1.7.0);
+    broom `tidy()` / `glance()` / `augment()` methods (1.9.0); an
+    experimental cluster-robust `se_type = "cluster"` option (1.6.0); the
+    `allow_no_never_treated` argument (1.5.6); per-cohort `P_value` and
+    `selected` columns (1.5.5).
+  - Additional standard-error and correctness fixes (1.8.0, 1.9.2-1.9.13),
+    extensive internal hardening, and documentation and vignette updates.
+
 ## Version 1.9.33 (2026-05-20)
 
 - Replaced the remaining `bacondecomp::divorce` examples (the four
