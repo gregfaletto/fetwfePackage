@@ -14,8 +14,8 @@
   - `etwfe()` for extended two-way fixed effects estimation  
   - `etwfeWithSimulatedData()`, a convenience wrapper for running `etwfe()` on simulated data
 - **Bridge-penalized TWFE**  
-  - `btwfe()` implementing a bridge-penalized extended two-way fixed effects estimator  
-  - `btwfeWithSimulatedData()`, a wrapper for `btwfe()`
+  - `betwfe()` implementing a bridge-penalized extended two-way fixed effects estimator  
+  - `betwfeWithSimulatedData()`, a wrapper for `betwfe()`
 - **Two-way FE with covariates**  
   - `twfeCovs()` for standard two-way FE models including covariates  
   - `twfeCovsWithSimulatedData()`, a wrapper for `twfeCovs()`
@@ -29,7 +29,7 @@
 
 ### Data-format conversion helpers
 - `attgtToFetwfeDf()` converts `did::att_gt()` outputs into a format suitable for `fetwfe()`
-- `ewtfeToFetwfeDf()` converts `etwfe::etwfe()` outputs into a `fetwfe()`‐compatible data frame
+- `etwfeToFetwfeDf()` converts `etwfe::etwfe()` outputs into a `fetwfe()`‐compatible data frame
 
 ### Regularization & numerical stability
 - Added `add_ridge` argument to `fetwfe()` to include a small ridge penalty on coefficients
