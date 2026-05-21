@@ -514,6 +514,11 @@ twfeCovsWithSimulatedData <- function(
 #' @param add_ridge (Optional.) Logical; if TRUE, adds a small amount of ridge
 #'   regularization to the (untransformed) coefficients to stabilize estimation.
 #'   Default is FALSE.
+#' @param se_type Character; the standard-error type, one of "default" (the
+#'   package's Assumption-F1-based standard error from the paper) or "cluster"
+#'   (an experimental unit-clustered Liang-Zeger sandwich SE on the
+#'   OLS-selected support). See the exported wrapper twfeCovs() for details.
+#'   Default is "default".
 #'
 #' @details
 #' The function executes the following main steps:

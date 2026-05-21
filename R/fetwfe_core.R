@@ -340,6 +340,11 @@ getBetaBIC <- function(fit, N, T, p, X_mod, y, scale_center, scale_scale) {
 #'   95% CIs). Default is 0.05.
 #' @param add_ridge (Optional) Logical; if `TRUE`, adds a small L2 penalty to
 #'   the untransformed coefficients to stabilize estimation. Default is `FALSE`.
+#' @param se_type Character; the standard-error type, one of `"default"` (the
+#'   package's Assumption-F1-based standard error from the paper) or `"cluster"`
+#'   (an experimental unit-clustered Liang-Zeger sandwich SE on the
+#'   bridge-selected support). See the exported wrapper `fetwfe()` for details.
+#'   Default is `"default"`.
 #'
 #' @details
 #' The function executes the following main steps:

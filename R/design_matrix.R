@@ -46,7 +46,9 @@ processFactors <- function(pdata, covs) {
 	for (v in covs) {
 		if (is.factor(pdata[[v]])) {
 			# Create dummy variables from the factor.
-			# The model.matrix() call produces an intercept and dummies; we drop the intercept
+			# The `~ x - 1` formula suppresses the intercept, so model.matrix()
+			# produces one dummy column per factor level and no intercept; we
+			# drop the first dummy below to serve as the baseline category.
 			dummies <- stats::model.matrix(~ pdata[[v]] - 1)
 			# If there is more than one level, drop the first column to use it as baseline.
 			if (ncol(dummies) > 1) {
