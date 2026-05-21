@@ -248,23 +248,26 @@ penalty. Estimates overall ATT as well as CATT (cohort average treatment
 effects on the treated units).
 }
 \examples{
-set.seed(23451)
-
 library(bacondecomp)
 
-data(divorce)
+data(castle)
 
-# sig_eps_sq and sig_eps_c_sq, calculated in a separate run of `fetwfe(),
-# are provided to speed up the computation of the example
+# Response: the log homicide rate. Treatment: `cdl` records the share of
+# the year the castle-doctrine law was in effect, so `cdl > 0` gives the
+# absorbing 0/1 treatment indicator. No `covs`: castle's smallest
+# adoption cohorts contain a single state, so the design is
+# rank-deficient once any covariate is added.
+castle$l_homicide <- log(castle$homicide)
+castle$treated <- as.integer(castle$cdl > 0)
+
+# On this panel betwfe's bridge penalty selects every cohort out, so the
+# estimated ATT and cohort effects below are all zero.
 res <- betwfe(
-    pdata = divorce[divorce$sex == 2, ],
+    pdata = castle,
     time_var = "year",
-    unit_var = "st",
-    treatment = "changed",
-    covs = c("murderrate", "lnpersinc", "afdcrolls"),
-    response = "suiciderate_elast_jag",
-    sig_eps_sq = 0.0344,
-    sig_eps_c_sq = 0.1507,
+    unit_var = "state",
+    treatment = "treated",
+    response = "l_homicide",
     verbose = TRUE)
 
 # Average treatment effect on the treated units (in percentage point
