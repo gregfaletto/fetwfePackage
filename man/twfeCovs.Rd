@@ -190,23 +190,25 @@ identical within cohorts across all times since treatment.
 }
 \examples{
 \dontrun{
-set.seed(23451)
-
 library(bacondecomp)
 
-data(divorce)
+data(castle)
 
-# No `covs` here: twfeCovs is pure OLS (no bridge penalty), so it cannot
-# handle the rank-deficient design that the bacondecomp::divorce panel
-# produces when small cohorts and three covariates are combined.
+# Response: the log homicide rate. Treatment: `cdl` records the share of
+# the year the castle-doctrine law was in effect, so `cdl > 0` gives the
+# absorbing 0/1 treatment indicator.
+castle$l_homicide <- log(castle$homicide)
+castle$treated <- as.integer(castle$cdl > 0)
+
+# No `covs` here: twfeCovs is pure OLS (no bridge penalty), and castle's
+# smallest adoption cohorts contain a single state, so the design is
+# rank-deficient once any covariate is added.
 res <- twfeCovs(
-    pdata = divorce[divorce$sex == 2, ],
+    pdata = castle,
     time_var = "year",
-    unit_var = "st",
-    treatment = "changed",
-    response = "suiciderate_elast_jag",
-    sig_eps_sq = 0.0344,
-    sig_eps_c_sq = 0.1507,
+    unit_var = "state",
+    treatment = "treated",
+    response = "l_homicide",
     verbose = TRUE)
 
 # Print results

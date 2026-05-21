@@ -21,25 +21,27 @@ You can also install the latest development version by using
 remotes::install_github("gregfaletto/fetwfePackage")
 ```
 
-The primary function in the `{fetwfe}` is `fetwfe()`, which implements fused extended two-way fixed effects. Here's some example code that implements the data application from the paper:
+The primary function in the `{fetwfe}` is `fetwfe()`, which implements fused extended two-way fixed effects. Here's some example code applying `fetwfe()` to the `castle` data set from the `bacondecomp` package (the same example used in the package vignette):
 
 ```R
 library(fetwfe)
 library(bacondecomp)
 
-set.seed(23451)
+data(castle)
 
-data(divorce)
+# Response: the log homicide rate. Treatment: `cdl` records the share of
+# the year the castle-doctrine law was in effect, so `cdl > 0` gives the
+# absorbing 0/1 treatment indicator `fetwfe()` requires.
+castle$l_homicide <- log(castle$homicide)
+castle$treated <- as.integer(castle$cdl > 0)
 
 res <- fetwfe(
-    pdata=divorce[divorce$sex == 2, ],
-    time_var="year",
-    unit_var="st",
-    treatment="changed",
-    covs=c("murderrate", "lnpersinc", "afdcrolls"),
-    response="suiciderate_elast_jag",
-    q=0.5,
-    verbose=TRUE)
+    pdata = castle,
+    time_var = "year",
+    unit_var = "state",
+    treatment = "treated",
+    response = "l_homicide",
+    verbose = TRUE)
 
 summary(res)
 ```
@@ -47,5 +49,5 @@ summary(res)
 For vignettes and full documentation, check out the [page for the `{fetwfe}` package on CRAN](https://CRAN.R-project.org/package=fetwfe).
 
 ## References
-- Faletto, G (2024). *Fused Extended Two-Way Fixed Effects for Difference-in-Differences with Staggered Adoptions*. [arXiv preprint arXiv:2312.05985](https://arxiv.org/abs/2312.05985).
+- Faletto, G (2025). *Fused Extended Two-Way Fixed Effects for Difference-in-Differences with Staggered Adoptions*. [arXiv preprint arXiv:2312.05985](https://arxiv.org/abs/2312.05985).
 
