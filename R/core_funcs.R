@@ -302,7 +302,6 @@ prep_for_etwfe_core <- function(
 	rm(res)
 
 	R <- length(in_sample_counts) - 1
-	stopifnot(R >= 1)
 	stopifnot(R <= T - 1)
 	if (R < 2) {
 		stop(
