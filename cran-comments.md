@@ -10,10 +10,10 @@ This is a feature-and-bugfix update. The previous CRAN release is 1.5.0; the
 ## What's new since 1.5.0
 
 ### New functionality
-- `event_study()`, with `plot()` methods for the estimator classes, for
+- `eventStudy()`, with `plot()` methods for the estimator classes, for
   pooled event-time treatment-effect estimates and plots.
 - broom `tidy()`, `glance()`, and `augment()` methods for the estimator
-  outputs (and for `event_study()` and `getTes()`).
+  outputs (and for `eventStudy()` and `getTes()`).
 - An experimental cluster-robust standard-error option (`se_type =
   "cluster"`) on all four estimators; default behavior is unchanged.
 - An `allow_no_never_treated` argument that auto-truncates panels with no

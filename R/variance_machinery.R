@@ -408,7 +408,7 @@ getPsiRUnfused <- function(
 #' @title Assemble the cluster-robust sandwich for the OLS-selected support
 #' @description
 #' Wraps the 4-step assembly ritual used by `getCohortATTsFinal()` and the
-#' two `event_study` dispatchers
+#' two `.event_study_*` dispatchers
 #' (`.event_study_etwfe_betwfe`, `.event_study_fetwfe`): extract `X_S`
 #' from `X_final` (optionally filtered by `sel_feat_inds`), run
 #' `stats::lm.fit(cbind(1, X_S), y_final[seq_len(N * T)])`, compute the

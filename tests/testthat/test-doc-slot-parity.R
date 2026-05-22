@@ -307,16 +307,16 @@ test_that("cross-class slot inventory matches the documented divergence table", 
 })
 
 # ------------------------------------------------------------------------------
-# Test 4 (#84 item 4): event_study() output schema lock-in.
+# Test 4 (#84 item 4): eventStudy() output schema lock-in.
 #
 # Parallel to Test 1 but for the event-study aggregation surface. The
-# event_study() @return uses \describe{\item{KEY}{...}} structure so we
+# eventStudy() @return uses \describe{\item{KEY}{...}} structure so we
 # reuse the existing .extract_value_items() parser. Covers all three
-# estimator classes that event_study() accepts (fetwfe, etwfe, betwfe;
+# estimator classes that eventStudy() accepts (fetwfe, etwfe, betwfe;
 # twfeCovs is rejected with a stop() per R/event_study.R:67-69).
 # ------------------------------------------------------------------------------
 
-test_that("event_study() @return matches live names() across estimator classes (#84 item 4)", {
+test_that("eventStudy() @return matches live names() across estimator classes (#84 item 4)", {
 	coefs <- genCoefs(
 		R = 3,
 		T = 5,
@@ -340,13 +340,13 @@ test_that("event_study() @return matches live names() across estimator classes (
 
 	db <- .get_rd_db()
 	expect_true(
-		"event_study.Rd" %in% names(db),
-		info = "event_study.Rd missing from Rd db"
+		"eventStudy.Rd" %in% names(db),
+		info = "eventStudy.Rd missing from Rd db"
 	)
-	doc_cols <- .extract_value_items(db[["event_study.Rd"]])
+	doc_cols <- .extract_value_items(db[["eventStudy.Rd"]])
 
 	for (cls in names(fits)) {
-		es <- suppressWarnings(event_study(fits[[cls]]))
+		es <- suppressWarnings(eventStudy(fits[[cls]]))
 		live <- names(es)
 		missing <- setdiff(live, doc_cols)
 		extra <- setdiff(doc_cols, live)
@@ -354,7 +354,7 @@ test_that("event_study() @return matches live names() across estimator classes (
 			length(missing) == 0,
 			info = paste0(
 				cls,
-				": live names() not in event_study.Rd @return: ",
+				": live names() not in eventStudy.Rd @return: ",
 				paste(missing, collapse = ", ")
 			)
 		)
@@ -362,7 +362,7 @@ test_that("event_study() @return matches live names() across estimator classes (
 			length(extra) == 0,
 			info = paste0(
 				cls,
-				": event_study.Rd @return slots not in live names(): ",
+				": eventStudy.Rd @return slots not in live names(): ",
 				paste(extra, collapse = ", ")
 			)
 		)
@@ -370,7 +370,7 @@ test_that("event_study() @return matches live names() across estimator classes (
 })
 
 # ------------------------------------------------------------------------------
-# Test 5 (#84 item 4): tidy.fetwfe_event_study() output schema lock-in.
+# Test 5 (#84 item 4): tidy.eventStudy() output schema lock-in.
 #
 # The tidy method's @return is prose (not \describe{}-structured) and the
 # schema is conditional on conf.int. Hard-coded expected column sets;
@@ -378,7 +378,7 @@ test_that("event_study() @return matches live names() across estimator classes (
 # tidy implementation.
 # ------------------------------------------------------------------------------
 
-test_that("tidy.fetwfe_event_study() schema is locked across conf.int branches (#84 item 4)", {
+test_that("tidy.eventStudy() schema is locked across conf.int branches (#84 item 4)", {
 	skip_if_not_installed("broom")
 	coefs <- genCoefs(
 		R = 3,
@@ -418,7 +418,7 @@ test_that("tidy.fetwfe_event_study() schema is locked across conf.int branches (
 	expected_no_ci <- setdiff(expected_with_ci, c("conf.low", "conf.high"))
 
 	for (cls in names(fits)) {
-		es <- suppressWarnings(event_study(fits[[cls]]))
+		es <- suppressWarnings(eventStudy(fits[[cls]]))
 
 		td_ci <- broom::tidy(es)
 		expect_identical(
@@ -426,7 +426,7 @@ test_that("tidy.fetwfe_event_study() schema is locked across conf.int branches (
 			expected_with_ci,
 			info = paste0(
 				cls,
-				": tidy(event_study()) default columns drift"
+				": tidy(eventStudy()) default columns drift"
 			)
 		)
 
@@ -436,7 +436,7 @@ test_that("tidy.fetwfe_event_study() schema is locked across conf.int branches (
 			expected_no_ci,
 			info = paste0(
 				cls,
-				": tidy(event_study(), conf.int = FALSE) columns drift"
+				": tidy(eventStudy(), conf.int = FALSE) columns drift"
 			)
 		)
 	}

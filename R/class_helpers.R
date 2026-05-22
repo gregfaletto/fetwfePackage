@@ -139,7 +139,7 @@
 #' @description
 #' When `calc_ses` is FALSE, the estimator cannot produce valid standard
 #' errors, so all SE-bearing slots must be NA. This is the contract whose
-#' violation produced issue #73 (`event_study()` reporting finite SEs for
+#' violation produced issue #73 (`eventStudy()` reporting finite SEs for
 #' q >= 1). `calc_ses_path` is the string path to read `calc_ses` from
 #' (e.g., `"calc_ses"` for top-level, `"internal$calc_ses"` for fetwfe).
 #' @keywords internal
@@ -435,7 +435,7 @@
 #
 # This is what fixes #73: .check_for_event_study(x) returns
 # `has_valid_ses` derived from `x$internal$calc_ses` (fetwfe) or
-# `x$calc_ses` (etwfe/betwfe), and the event_study dispatchers
+# `x$calc_ses` (etwfe/betwfe), and the .event_study_* dispatchers
 # AND-gate their SE-computation branch on it.
 #-------------------------------------------------------------------------------
 
@@ -464,7 +464,7 @@
 	invisible(x)
 }
 
-#' @title Method precondition: event_study
+#' @title Method precondition: eventStudy
 #' @description Validates the input + derives `has_valid_ses` (the
 #' contract gate that fixes #73). `calc_ses` lives in different paths
 #' across classes: nested under `$internal` for fetwfe; top-level for

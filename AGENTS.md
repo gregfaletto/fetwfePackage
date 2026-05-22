@@ -190,7 +190,7 @@ classes, **call the appropriate `.validate_<class>(out)` helper immediately
 before `class(out) <- "<class>"`**. The validator catches malformed output at
 construction time rather than at downstream-method-confusion time.
 
-When adding a new method that READS from a class object (`event_study`,
+When adding a new method that READS from a class object (`eventStudy`,
 `augment`, `tidy`, `glance`, `plot`, `coef`, future `predict`, etc.), call the
 matching `.check_for_<method>(x)` helper at the top of the method
 (infrastructure added by issue #86 — see `R/class_helpers.R`). The helper
@@ -199,7 +199,7 @@ the right `.validate_<class>` internally based on `inherits()`. For methods
 that need a derived contract (e.g., `.check_for_event_study(x)` returns
 `list(has_valid_ses = ...)` to gate SE computation), the helper returns a
 small named list; otherwise it returns `invisible(x)`. The pattern is what
-fixed #73 (`event_study()` reporting finite SEs when the fit's `calc_ses`
+fixed #73 (`eventStudy()` reporting finite SEs when the fit's `calc_ses`
 was FALSE).
 
 When adding a new slot to a class's `@return`:
