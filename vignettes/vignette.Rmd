@@ -5,6 +5,7 @@ date: "`r Sys.Date()`"
 output:
   rmarkdown::html_vignette:
     toc: true
+    math_method: "mathml"
     output_file: "FETWFE_vignette.html"
 vignette: >
   %\VignetteIndexEntry{fetwfe: A Package for Fused Extended Two-Way Fixed Effects}

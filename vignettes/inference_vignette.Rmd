@@ -5,6 +5,7 @@ date: "`r Sys.Date()`"
 output:
   rmarkdown::html_vignette:
     toc: true
+    math_method: "mathml"
     output_file: "FETWFE_Inference_Vignette.html"
 vignette: >
   %\VignetteIndexEntry{Standard errors in fetwfe: Assumption F1 and the experimental cluster-robust option}
@@ -87,7 +88,7 @@ V_{\text{CR}}
 \;=\;
 \frac{N}{N-1}\;
 (X_{\widehat{\mathcal S}}^\top X_{\widehat{\mathcal S}})^{-1}\;
-\Bigl(\sum_{i=1}^N X_{i\cdot\widehat{\mathcal S}}^\top \widehat\varepsilon_{i\cdot} \widehat\varepsilon_{i\cdot}^\top X_{i\cdot\widehat{\mathcal S}}\Bigr)\;
+\left(\sum_{i=1}^N X_{i\cdot\widehat{\mathcal S}}^\top \widehat\varepsilon_{i\cdot} \widehat\varepsilon_{i\cdot}^\top X_{i\cdot\widehat{\mathcal S}}\right)\;
 (X_{\widehat{\mathcal S}}^\top X_{\widehat{\mathcal S}})^{-1},
 $$
 
