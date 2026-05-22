@@ -3,6 +3,7 @@ inst/doc
 /doc/
 /Meta/
 /..Rcheck
+/.claude/
 /fetwfe.Rcheck
 /revdep
 /.workflow
