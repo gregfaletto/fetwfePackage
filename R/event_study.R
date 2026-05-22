@@ -32,7 +32,7 @@ utils::globalVariables(c("event_time", "estimate", "ci_low", "ci_high"))
 #' @param x A fitted object of class `"fetwfe"`, `"etwfe"`, or `"betwfe"`.
 #' @param alpha (Optional) Significance level for confidence intervals.
 #'   Defaults to `x$alpha` (the alpha used at fit time).
-#' @return A data frame with class `c("fetwfe_event_study", "data.frame")` and
+#' @return A data frame with class `c("eventStudy", "data.frame")` and
 #'   columns:
 #'   \describe{
 #'     \item{event_time}{Integer; event time `e = t - r`, ranging from 0
@@ -54,10 +54,10 @@ utils::globalVariables(c("event_time", "estimate", "ci_low", "ci_high"))
 #'   coefs <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
 #'   dat <- simulateData(coefs, N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
 #'   res <- fetwfeWithSimulatedData(dat)
-#'   event_study(res)
+#'   eventStudy(res)
 #' }
 #' @export
-event_study <- function(x, alpha = NULL) {
+eventStudy <- function(x, alpha = NULL) {
 	if (inherits(x, "fetwfe")) {
 		return(.event_study_fetwfe(x, alpha))
 	}
@@ -65,7 +65,7 @@ event_study <- function(x, alpha = NULL) {
 		return(.event_study_etwfe_betwfe(x, alpha))
 	}
 	stop(
-		"event_study() requires an object of class 'fetwfe', 'etwfe', or 'betwfe'."
+		"eventStudy() requires an object of class 'fetwfe', 'etwfe', or 'betwfe'."
 	)
 }
 
@@ -75,7 +75,7 @@ event_study <- function(x, alpha = NULL) {
 .event_study_etwfe_betwfe <- function(x, alpha = NULL) {
 	# Method-entry precondition (#86). Validates the fitted object and
 	# derives `has_valid_ses` — the contract gate that fixes #73
-	# (event_study reporting finite SEs when the fit's att_se is NA
+	# (eventStudy reporting finite SEs when the fit's att_se is NA
 	# for q >= 1).
 	contract <- .check_for_event_study(x)
 
@@ -86,7 +86,7 @@ event_study <- function(x, alpha = NULL) {
 
 	if (is.null(x$cohort_probs_overall)) {
 		stop(
-			"event_study(): cohort_probs_overall missing from object. Re-fit with etwfe() / betwfe() at version 1.7.0 or later."
+			"eventStudy(): cohort_probs_overall missing from object. Re-fit with etwfe() / betwfe() at version 1.7.0 or later."
 		)
 	}
 
@@ -258,7 +258,7 @@ event_study <- function(x, alpha = NULL) {
 .event_study_fetwfe <- function(x, alpha = NULL) {
 	# Method-entry precondition (#86). Validates the fitted object and
 	# derives `has_valid_ses` — the contract gate that fixes #73
-	# (event_study reporting finite SEs when the fit's att_se is NA
+	# (eventStudy reporting finite SEs when the fit's att_se is NA
 	# for q >= 1).
 	contract <- .check_for_event_study(x)
 
@@ -269,7 +269,7 @@ event_study <- function(x, alpha = NULL) {
 
 	if (is.null(x$internal) || is.null(x$internal$theta_hat)) {
 		stop(
-			"event_study(): theta_hat missing from x$internal. Re-fit with fetwfe() at version 1.7.0 or later."
+			"eventStudy(): theta_hat missing from x$internal. Re-fit with fetwfe() at version 1.7.0 or later."
 		)
 	}
 
@@ -529,7 +529,7 @@ event_study <- function(x, alpha = NULL) {
 		ci_high = ci_high,
 		p_value = p_value
 	)
-	class(out) <- c("fetwfe_event_study", "data.frame")
+	class(out) <- c("eventStudy", "data.frame")
 	out
 }
 
@@ -558,7 +558,7 @@ plot.betwfe <- function(x, ...) {
 			"Install ggplot2 to use plot.fetwfe() / plot.etwfe() / plot.betwfe(): install.packages('ggplot2')"
 		)
 	}
-	es_df <- event_study(x, alpha = alpha)
+	es_df <- eventStudy(x, alpha = alpha)
 	ggplot2::ggplot(
 		es_df,
 		ggplot2::aes(x = event_time, y = estimate)

@@ -11,7 +11,7 @@
     variance component to nearly zero and degenerated the GLS weighting
     step. Both standard errors and point estimates shift after upgrading;
     see the 1.9.1 entry for details.
-  - New functionality: `event_study()` with `plot()` methods (1.7.0);
+  - New functionality: `eventStudy()` with `plot()` methods (1.7.0);
     broom `tidy()` / `glance()` / `augment()` methods (1.9.0); an
     experimental cluster-robust `se_type = "cluster"` option (1.6.0); the
     `allow_no_never_treated` argument (1.5.6); per-cohort `P_value` and
@@ -182,7 +182,7 @@
   no public-API drift.
 
   - **Test coverage** (items 1, 3, 5, 6, 7): closes 5 untested-path gaps.
-    `event_study()` now has direct coverage on auto-truncated panels;
+    `eventStudy()` now has direct coverage on auto-truncated panels;
     the q >= 1 ridge-regime `att_se = NA` contract has tightened
     assertions covering `att_p_value`, `catt_ses`, and the CI columns of
     `catt_df`; `augment.<class>()` is now exercised with both
@@ -232,7 +232,7 @@
 
 - `tidy.FETWFE_tes()` now accepts `conf.int` and `conf.level` arguments
   for broom-convention parity with the sibling `tidy.fetwfe()`,
-  `tidy.etwfe()`, `tidy.betwfe()`, and `tidy.fetwfe_event_study()`
+  `tidy.etwfe()`, `tidy.betwfe()`, and `tidy.eventStudy()`
   methods. Defaults are `conf.int = TRUE` (preserves pre-fix output —
   NA-valued `conf.low` / `conf.high` columns included) and
   `conf.level = 0.95`. When `conf.int = FALSE`, the CI columns are
@@ -425,18 +425,18 @@
 
 ## Version 1.9.10 (2026-05-17)
 
-- Fixed a cross-method consistency bug in `event_study()` (GitHub #73):
+- Fixed a cross-method consistency bug in `eventStudy()` (GitHub #73):
   the function previously reported finite SEs and p-values for `q >= 1`
   fits even though the corresponding `fetwfe()` / `betwfe()` objects
   correctly return `att_se = NA` in that regime (the bridge oracle
   property is required for the model-based SEs). After this fix,
-  `event_study()` propagates the fit's `calc_ses` status: when the fit
-  has no valid SEs, `event_study()` returns NA SEs and NA p-values,
+  `eventStudy()` propagates the fit's `calc_ses` status: when the fit
+  has no valid SEs, `eventStudy()` returns NA SEs and NA p-values,
   matching the parent object's contract. The point estimates remain
   valid (and finite) in both regimes. Same fix applies under
   `se_type = "cluster"`.
 - Added internal method-entry preconditions for cross-class consumers
-  (`event_study`, `augment`, `tidy`, `glance`, `plot`, `coef`). Each
+  (`eventStudy`, `augment`, `tidy`, `glance`, `plot`, `coef`). Each
   such method now re-validates the input fitted object before computing
   on it, catching hand-modified or programmatically-malformed inputs
   early with a clear error message. Foundation PR beta of three (with
@@ -709,7 +709,7 @@
 
 - Added broom-package S3 methods `tidy()` / `glance()` / `augment()` for
   `fetwfe()` / `etwfe()` / `betwfe()` outputs, plus `tidy()` for the
-  outputs of `event_study()` and `getTes()`, so users can pipe estimator
+  outputs of `eventStudy()` and `getTes()`, so users can pipe estimator
   output directly into `ggplot2` / `modelsummary` / `gt` workflows
   without reading the package class documentation. `tidy()` returns a
   long data frame with broom-standard columns (`term`, `estimate`,
@@ -721,7 +721,7 @@
   `.resid` to the user-supplied panel and auto-trims first-period-
   treated units (the same drop the estimator applies internally during
   fitting), so the call works with either the original `pdata` passed
-  to the estimator or a pre-trimmed panel. `tidy.fetwfe_event_study()`
+  to the estimator or a pre-trimmed panel. `tidy.eventStudy()`
   accepts `conf.int` / `conf.level` for CI control. The estimator
   outputs gain six additive metadata slots — `y_mean`,
   `response_col_name`, `time_var`, `unit_var`, `treatment`, `covs` —
@@ -752,7 +752,7 @@
   vignette (which has `R = 12` cohorts with very unequal sizes); a
   few percent on near-uniform panels. The shift also propagates
   through `att_p_value` (computed from `att_se`) and through the
-  event-study output (`event_study()` and `plot.fetwfe()` columns
+  event-study output (`eventStudy()` and `plot.fetwfe()` columns
   `se`, `ci_low`, `ci_high`, `p_value`). Empirical Monte Carlo
   validation against multinomial resampling of cohort probabilities
   confirms the corrected formula matches the true asymptotic variance
@@ -768,7 +768,7 @@
 
 ## Version 1.7.0 (2026-05-13)
 
-- Added an exported `event_study(x, alpha)` function and S3 methods
+- Added an exported `eventStudy(x, alpha)` function and S3 methods
   `plot.fetwfe()`, `plot.etwfe()`, `plot.betwfe()` that compute and
   visualize pooled event-time treatment-effect estimates with
   confidence intervals. Pooling weights are sample-cohort-size weights
@@ -790,7 +790,7 @@
   same four outputs. The `fetwfe()` S3 output additionally gains
   `theta_hat` in `$internal` (the full fused-coordinate coefficient
   vector with intercept). These slots are required by the new
-  `event_study()` machinery and are useful for downstream tooling.
+  `eventStudy()` machinery and are useful for downstream tooling.
 
 ## Version 1.6.1 (2026-05-12)
 

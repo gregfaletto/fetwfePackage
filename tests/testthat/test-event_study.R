@@ -2,7 +2,7 @@ library(testthat)
 library(fetwfe)
 
 # ------------------------------------------------------------------------------
-# Helpers for event_study tests.
+# Helpers for eventStudy tests.
 # ------------------------------------------------------------------------------
 make_es_panel <- function(
 	seed = 7,
@@ -27,12 +27,12 @@ make_es_panel <- function(
 # ------------------------------------------------------------------------------
 # Test 1: structure of the returned data frame.
 # ------------------------------------------------------------------------------
-test_that("event_study returns expected structure", {
+test_that("eventStudy returns expected structure", {
 	sim <- make_es_panel(R = 3, T = 6, d = 0, N = 200)
 	res <- etwfeWithSimulatedData(sim)
-	es <- event_study(res)
+	es <- eventStudy(res)
 
-	expect_s3_class(es, "fetwfe_event_study")
+	expect_s3_class(es, "eventStudy")
 	expect_s3_class(es, "data.frame")
 	expect_equal(
 		colnames(es),
@@ -63,10 +63,10 @@ test_that("event_study returns expected structure", {
 #                   (n_2 / (n_1 + n_2)) * tes[idx(2, 0)]
 # where idx(r_idx, e) = first_inds[r_idx] + e.
 # ------------------------------------------------------------------------------
-test_that("event_study ETWFE point estimates match hand-computed weights x tes", {
+test_that("eventStudy ETWFE point estimates match hand-computed weights x tes", {
 	sim <- make_es_panel(R = 2, T = 4, d = 0, N = 500)
 	res <- etwfeWithSimulatedData(sim)
-	es <- event_study(res)
+	es <- eventStudy(res)
 
 	tes <- unname(res$beta_hat[res$treat_inds])
 	first_inds <- c(1L, 4L) # T*R - R(R+1)/2 = 8 - 3 = 5 cells; cohort 1: 1:3, cohort 2: 4:5
@@ -94,10 +94,10 @@ test_that("event_study ETWFE point estimates match hand-computed weights x tes",
 # At e = T - 2, only cohort 1 is valid. The cohort-probability variance term
 # must vanish; the combined SE equals sqrt(var_1) alone.
 # ------------------------------------------------------------------------------
-test_that("event_study var_2 vanishes at the last event time (single-cohort)", {
+test_that("eventStudy var_2 vanishes at the last event time (single-cohort)", {
 	sim <- make_es_panel(R = 2, T = 4, d = 0, N = 500)
 	res <- etwfeWithSimulatedData(sim)
-	es <- event_study(res)
+	es <- eventStudy(res)
 	# At e = 2 (last event time), only cohort 1 contributes.
 	# var_1(2) = sig_eps_sq * gram_inv[idx(1,2), idx(1,2)] / (N*T)
 	# We don't recompute it independently here; instead, check that the SE
@@ -132,7 +132,7 @@ test_that("event_study var_2 vanishes at the last event time (single-cohort)", {
 # NA when the bridge dropped everything), so we focus on the estimate, which
 # is the well-defined invariant.
 # ------------------------------------------------------------------------------
-test_that("event_study BETWFE: estimate is 0 when all cells at e are selected out", {
+test_that("eventStudy BETWFE: estimate is 0 when all cells at e are selected out", {
 	sim <- make_es_panel(
 		R = 3,
 		T = 6,
@@ -141,7 +141,7 @@ test_that("event_study BETWFE: estimate is 0 when all cells at e are selected ou
 		eff_size = 0.05
 	)
 	res <- betwfeWithSimulatedData(sim, q = 0.5)
-	es <- event_study(res)
+	es <- eventStudy(res)
 
 	tes <- res$beta_hat[res$treat_inds]
 	first_inds <- getFirstInds(R = res$R, T = res$T)
@@ -164,7 +164,7 @@ test_that("event_study BETWFE: estimate is 0 when all cells at e are selected ou
 # When the bridge zeros out the entire theta-treatment block, att_hat = 0 and
 # all event-time estimates should be 0.
 # ------------------------------------------------------------------------------
-test_that("event_study FETWFE: all-zero-theta-block produces all-zero estimates", {
+test_that("eventStudy FETWFE: all-zero-theta-block produces all-zero estimates", {
 	# Use very small eff_size to push the bridge toward all-zero
 	sim <- make_es_panel(
 		R = 2,
@@ -176,7 +176,7 @@ test_that("event_study FETWFE: all-zero-theta-block produces all-zero estimates"
 	res <- fetwfeWithSimulatedData(sim, q = 0.5)
 	# Construct the all-zero case deterministically by post-patching BOTH
 	# theta_hat (the bridge-space coefficient) AND beta_hat (the
-	# back-transformed coefficient that event_study.fetwfe() actually
+	# back-transformed coefficient that .event_study_fetwfe() actually
 	# reads inside R/event_study.R). The fit-time all-zero early-exit
 	# inside `fetwfe_core()` (R/fetwfe_core.R) zeroes both representations
 	# together; the test mirrors that. Previously this block conditionally
@@ -189,7 +189,7 @@ test_that("event_study FETWFE: all-zero-theta-block produces all-zero estimates"
 		all(res$internal$theta_hat[2:(res$p + 1)][res$treat_inds] == 0),
 		all(res$beta_hat[res$treat_inds] == 0)
 	)
-	es <- event_study(res)
+	es <- eventStudy(res)
 	expect_true(all(es$estimate == 0))
 	expect_true(all(es$se == 0 | is.na(es$se)))
 })
@@ -200,12 +200,12 @@ test_that("event_study FETWFE: all-zero-theta-block produces all-zero estimates"
 # (typically larger under AR(1)-style noise, but on F1-conforming sim the two
 # can be close). We just check finiteness and that the cluster path runs.
 # ------------------------------------------------------------------------------
-test_that("event_study se_type = 'cluster' returns finite SEs", {
+test_that("eventStudy se_type = 'cluster' returns finite SEs", {
 	sim <- make_es_panel(R = 3, T = 6, d = 0, N = 200)
 	res_def <- fetwfeWithSimulatedData(sim, q = 0.5, se_type = "default")
 	res_cls <- fetwfeWithSimulatedData(sim, q = 0.5, se_type = "cluster")
-	es_def <- event_study(res_def)
-	es_cls <- event_study(res_cls)
+	es_def <- eventStudy(res_def)
+	es_cls <- eventStudy(res_cls)
 	# Both produce finite SEs at event times where at least one cell is selected
 	finite_def <- is.finite(es_def$se) & es_def$se > 0
 	finite_cls <- is.finite(es_cls$se) & es_cls$se > 0
@@ -281,22 +281,22 @@ test_that("plot.fetwfe / plot.etwfe / plot.betwfe return ggplot objects", {
 # ------------------------------------------------------------------------------
 # Test 8: dispatch errors on unsupported classes.
 # ------------------------------------------------------------------------------
-test_that("event_study errors on objects of unsupported class", {
-	expect_error(event_study(list(foo = 1)), "fetwfe.*etwfe.*betwfe")
-	expect_error(event_study("not a fit"), "fetwfe.*etwfe.*betwfe")
+test_that("eventStudy errors on objects of unsupported class", {
+	expect_error(eventStudy(list(foo = 1)), "fetwfe.*etwfe.*betwfe")
+	expect_error(eventStudy("not a fit"), "fetwfe.*etwfe.*betwfe")
 })
 
 # ------------------------------------------------------------------------------
-# Item 1: event_study() works on an auto-truncated panel (closes a gap in
-# coverage where the public event_study() dispatcher had never been exercised
+# Item 1: eventStudy() works on an auto-truncated panel (closes a gap in
+# coverage where the public eventStudy() dispatcher had never been exercised
 # on a fit that had been auto-truncated via the no-never-treated default
 # behavior). Builds a panel with no never-treated units (via the existing
 # `generate_bad_panel_data` helper) so the estimator emits the documented
-# "auto-truncated" warning, then runs event_study() against the resulting fit
+# "auto-truncated" warning, then runs eventStudy() against the resulting fit
 # and verifies the output schema + event-time range against the truncated panel
 # dimensions.
 # ------------------------------------------------------------------------------
-test_that("event_study works on a fit from an auto-truncated panel", {
+test_that("eventStudy works on a fit from an auto-truncated panel", {
 	df_bad <- generate_bad_panel_data(N = 200, T = 10, seed = 123)
 
 	# Auto-truncation surface: the documented "auto-truncated" warning fires
@@ -317,8 +317,8 @@ test_that("event_study works on a fit from an auto-truncated panel", {
 	expect_s3_class(res, "fetwfe")
 	expect_true(res$T < 10L)
 
-	es <- event_study(res)
-	expect_s3_class(es, "fetwfe_event_study")
+	es <- eventStudy(res)
+	expect_s3_class(es, "eventStudy")
 	expect_s3_class(es, "data.frame")
 	expect_equal(
 		colnames(es),

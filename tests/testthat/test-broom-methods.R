@@ -487,12 +487,12 @@ test_that("augment.etwfe and augment.betwfe work with flat X_ints slot", {
 })
 
 # ------------------------------------------------------------------------------
-# tidy.fetwfe_event_study and tidy.FETWFE_tes
+# tidy.eventStudy and tidy.FETWFE_tes
 # ------------------------------------------------------------------------------
 
-test_that("tidy.fetwfe_event_study returns broom-schema columns", {
+test_that("tidy.eventStudy returns broom-schema columns", {
 	res <- .fetwfe_fixture()
-	es <- event_study(res)
+	es <- eventStudy(res)
 	td <- broom::tidy(es)
 	expect_s3_class(td, "data.frame")
 	expect_named(
@@ -513,17 +513,17 @@ test_that("tidy.fetwfe_event_study returns broom-schema columns", {
 	expect_match(td$term, "^e\\d+$")
 })
 
-test_that("tidy.fetwfe_event_study respects conf.int = FALSE", {
+test_that("tidy.eventStudy respects conf.int = FALSE", {
 	res <- .fetwfe_fixture()
-	es <- event_study(res)
+	es <- eventStudy(res)
 	td <- broom::tidy(es, conf.int = FALSE)
 	expect_false("conf.low" %in% names(td))
 	expect_false("conf.high" %in% names(td))
 })
 
-test_that("tidy.fetwfe_event_study recomputes CIs at a custom conf.level", {
+test_that("tidy.eventStudy recomputes CIs at a custom conf.level", {
 	res <- .fetwfe_fixture()
-	es <- event_study(res)
+	es <- eventStudy(res)
 	td_95 <- broom::tidy(es, conf.level = 0.95)
 	td_99 <- broom::tidy(es, conf.level = 0.99)
 	# 99% widths should be wider than 95% widths everywhere (allowing
@@ -636,10 +636,10 @@ test_that("broom S3 methods are registered AND dispatch correctly for fetwfe / e
 		}
 	}
 	# event-study + cohort-level tidy methods.
-	es <- event_study(fits$fetwfe)
+	es <- eventStudy(fits$fetwfe)
 	expect_s3_class(broom::tidy(es), "data.frame")
 	expect_false(
-		is.null(getS3method("tidy", "fetwfe_event_study", optional = TRUE))
+		is.null(getS3method("tidy", "eventStudy", optional = TRUE))
 	)
 	expect_false(
 		is.null(getS3method("tidy", "FETWFE_tes", optional = TRUE))

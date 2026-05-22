@@ -1,7 +1,7 @@
 # Tests for the method-entry preconditions introduced in #86.
 #
 # Two main goals:
-#   (1) #73 regression: event_study() returns all-NA SEs when the
+#   (1) #73 regression: eventStudy() returns all-NA SEs when the
 #       fitted object's calc_ses is FALSE (q in {1, 2} for fetwfe/betwfe).
 #   (2) Cross-class method-entry checks: each .check_for_<method>()
 #       helper accepts well-formed input, returns the expected shape,
@@ -27,60 +27,60 @@
 }
 
 # ------------------------------------------------------------------------------
-# #73 regression: event_study() respects the fit's calc_ses contract
+# #73 regression: eventStudy() respects the fit's calc_ses contract
 # ------------------------------------------------------------------------------
 
-test_that("event_study(fetwfe(q=1)) returns all-NA SEs and p-values (fixes #73)", {
+test_that("eventStudy(fetwfe(q=1)) returns all-NA SEs and p-values (fixes #73)", {
 	fx <- .precond_fixture(q = 1)
 	# Sanity: the fit's own contract says no SEs.
 	expect_true(is.na(fx$fetwfe$att_se))
 	expect_false(isTRUE(fx$fetwfe$internal$calc_ses))
-	# event_study must respect that.
-	es <- event_study(fx$fetwfe)
+	# eventStudy must respect that.
+	es <- eventStudy(fx$fetwfe)
 	expect_true(all(is.na(es$se)))
 	expect_true(all(is.na(es$p_value)))
 	# Point estimates ARE valid even without SEs.
 	expect_true(any(is.finite(es$estimate)))
 })
 
-test_that("event_study(fetwfe(q=2)) returns all-NA SEs (ridge, fixes #73)", {
+test_that("eventStudy(fetwfe(q=2)) returns all-NA SEs (ridge, fixes #73)", {
 	fx <- .precond_fixture(q = 2)
 	expect_true(is.na(fx$fetwfe$att_se))
 	expect_false(isTRUE(fx$fetwfe$internal$calc_ses))
-	es <- event_study(fx$fetwfe)
+	es <- eventStudy(fx$fetwfe)
 	expect_true(all(is.na(es$se)))
 	expect_true(all(is.na(es$p_value)))
 })
 
-test_that("event_study(betwfe(q=1)) returns all-NA SEs (fixes #73 for BETWFE)", {
+test_that("eventStudy(betwfe(q=1)) returns all-NA SEs (fixes #73 for BETWFE)", {
 	fx <- .precond_fixture(q = 1)
 	expect_true(is.na(fx$betwfe$att_se))
 	expect_false(isTRUE(fx$betwfe$calc_ses))
-	es <- event_study(fx$betwfe)
+	es <- eventStudy(fx$betwfe)
 	expect_true(all(is.na(es$se)))
 	expect_true(all(is.na(es$p_value)))
 })
 
-test_that("event_study(betwfe(q=2)) returns all-NA SEs (ridge, fixes #73)", {
+test_that("eventStudy(betwfe(q=2)) returns all-NA SEs (ridge, fixes #73)", {
 	fx <- .precond_fixture(q = 2)
 	expect_true(is.na(fx$betwfe$att_se))
-	es <- event_study(fx$betwfe)
+	es <- eventStudy(fx$betwfe)
 	expect_true(all(is.na(es$se)))
 })
 
-test_that("event_study still produces finite SEs on the valid paths (regression check)", {
+test_that("eventStudy still produces finite SEs on the valid paths (regression check)", {
 	fx <- .precond_fixture(q = 0.5)
 	# fetwfe q=0.5 has valid SEs.
 	expect_true(isTRUE(fx$fetwfe$internal$calc_ses))
-	es_f <- event_study(fx$fetwfe)
+	es_f <- eventStudy(fx$fetwfe)
 	expect_true(any(is.finite(es_f$se)))
 	# etwfe always has valid SEs (pure OLS).
 	expect_true(isTRUE(fx$etwfe$calc_ses))
-	es_e <- event_study(fx$etwfe)
+	es_e <- eventStudy(fx$etwfe)
 	expect_true(any(is.finite(es_e$se)))
 	# betwfe q=0.5 has valid SEs.
 	expect_true(isTRUE(fx$betwfe$calc_ses))
-	es_b <- event_study(fx$betwfe)
+	es_b <- eventStudy(fx$betwfe)
 	expect_true(any(is.finite(es_b$se)))
 })
 
@@ -159,7 +159,7 @@ test_that("precondition catches hand-modified objects that violate C1 (att_se NA
 # Cluster-SE × q=1: contract gate cascades through the cluster path too
 # ------------------------------------------------------------------------------
 
-test_that("event_study respects calc_ses under se_type='cluster' × q=1", {
+test_that("eventStudy respects calc_ses under se_type='cluster' × q=1", {
 	# Use a panel large enough for the cluster path to be well-conditioned.
 	sim <- simulateData(
 		genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2, seed = 1),
@@ -173,6 +173,6 @@ test_that("event_study respects calc_ses under se_type='cluster' × q=1", {
 	# Sanity: q=1 still means calc_ses=FALSE regardless of se_type.
 	expect_true(is.na(res$att_se))
 	expect_false(isTRUE(res$internal$calc_ses))
-	es <- event_study(res)
+	es <- eventStudy(res)
 	expect_true(all(is.na(es$se)))
 })

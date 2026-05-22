@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-# broom-package S3 methods for fetwfe / etwfe / betwfe / event_study / getTes.
+# broom-package S3 methods for fetwfe / etwfe / betwfe / eventStudy / getTes.
 #
 # These methods plug fetwfe-family outputs into the broom ecosystem so users can
 # pipe results into ggplot2 / modelsummary / gt without knowing the package's
@@ -396,27 +396,27 @@ tidy.betwfe <- function(
 	.tidy_estimator_output(x, conf.int, conf.level, include_selected = TRUE)
 }
 
-#' Tidy a `fetwfe_event_study` object
+#' Tidy an `eventStudy` object
 #'
 #' Returns a `broom`-style tidy data frame for the output of
-#' [event_study()]. Renames existing columns to broom conventions
+#' [eventStudy()]. Renames existing columns to broom conventions
 #' (`se` → `std.error`, `p_value` → `p.value`) and adds a `term`
 #' column (`"e<event_time>"`) plus a `statistic` column
 #' (`estimate / std.error`) so the schema matches `tidy.<estimator>()`
 #' for downstream `bind_rows()` consumers.
 #'
-#' The `event_study()` output stores Wald CIs at the alpha passed at
+#' The `eventStudy()` output stores Wald CIs at the alpha passed at
 #' computation time. When `conf.int = TRUE` (the default), `conf.low` /
 #' `conf.high` are recomputed from `estimate` and `std.error` at the
 #' supplied `conf.level`, which can therefore differ from the
 #' computation-time alpha. When `conf.int = FALSE`, the CI columns are
 #' omitted.
 #'
-#' @param x An object of class `"fetwfe_event_study"` returned by
-#'   [event_study()].
+#' @param x An object of class `"eventStudy"` returned by
+#'   [eventStudy()].
 #' @param conf.int Logical; include `conf.low` / `conf.high` columns.
 #' @param conf.level Numeric in (0, 1). Confidence level for the CI
-#'   columns; defaults to `0.95` (`event_study()` does not store the
+#'   columns; defaults to `0.95` (`eventStudy()` does not store the
 #'   alpha it was called with, so there is no fitted-object value to
 #'   default to).
 #' @param ... Unused.
@@ -429,10 +429,10 @@ tidy.betwfe <- function(
 #'     simulateData(genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
 #'                  N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
 #'   )
-#'   broom::tidy(event_study(res))
+#'   broom::tidy(eventStudy(res))
 #' }
 #' @export
-tidy.fetwfe_event_study <- function(
+tidy.eventStudy <- function(
 	x,
 	conf.int = TRUE,
 	conf.level = 0.95,
