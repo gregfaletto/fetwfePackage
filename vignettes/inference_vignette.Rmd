@@ -81,15 +81,15 @@ Setting `se_type = "cluster"` swaps the model-based regression-coefficient varia
 
 ## 3.1 The formula
 
-Let $\widehat{\mathcal S}$ be the support selected by the bridge regression, $X_{\widehat{\mathcal S}}$ the corresponding design matrix in the coordinate system the regression was solved in (GLS-transformed for ETWFE/twfeCovs, fusion-then-GLS-transformed for FETWFE/BETWFE), and $\widehat\varepsilon$ the residuals from OLS on that selected support. The cluster-robust variance is
+Let $\widehat{S}$ be the support selected by the bridge regression, $X_{\widehat{S}}$ the corresponding design matrix in the coordinate system the regression was solved in (GLS-transformed for ETWFE/twfeCovs, fusion-then-GLS-transformed for FETWFE/BETWFE), and $\widehat\varepsilon$ the residuals from OLS on that selected support. The cluster-robust variance is
 
 $$
 V_{\text{CR}}
 \;=\;
 \frac{N}{N-1}\;
-(X_{\widehat{\mathcal S}}^\top X_{\widehat{\mathcal S}})^{-1}\;
-\left(\sum_{i=1}^N X_{i\cdot\widehat{\mathcal S}}^\top \widehat\varepsilon_{i\cdot} \widehat\varepsilon_{i\cdot}^\top X_{i\cdot\widehat{\mathcal S}}\right)\;
-(X_{\widehat{\mathcal S}}^\top X_{\widehat{\mathcal S}})^{-1},
+(X_{\widehat{S}}^\top X_{\widehat{S}})^{-1}\;
+\left(\sum_{i=1}^N X_{i\cdot\widehat{S}}^\top \widehat\varepsilon_{i\cdot} \widehat\varepsilon_{i\cdot}^\top X_{i\cdot\widehat{S}}\right)\;
+(X_{\widehat{S}}^\top X_{\widehat{S}})^{-1},
 $$
 
 with units $i = 1, \dots, N$ as clusters and an $N/(N-1)$ small-sample adjustment (matching `sandwich::vcovCL(cadjust = TRUE, type = "HC0")`). The CATT SE for cohort $r$ is $\sqrt{\psi_r^\top V_{\text{CR}} \psi_r}$ (using a zero-padded $\psi_r$ on the full selected support); the ATT regression-coefficient variance is $\psi_{\text{att}}^\top V_{\text{CR}} \psi_{\text{att}}$, replacing $\mathrm{Var}_1$ above. The second variance term $\mathrm{Var}_2$ (from estimating cohort probabilities) is unchanged because it depends on empirical cohort proportions, not regression residuals; the conservative-vs-asymptotically-exact combination logic also carries through unchanged.
