@@ -5,6 +5,7 @@ date: "`r Sys.Date()`"
 output:
   rmarkdown::html_vignette:
     toc: true
+    math_method: "mathml"
     output_file: "FETWFE_vignette.html"
 vignette: >
   %\VignetteIndexEntry{fetwfe: A Package for Fused Extended Two-Way Fixed Effects}
@@ -175,27 +176,6 @@ summary(result)
 
 When you run this code, the function internally performs all the necessary data preparation, applies the fusion penalty via a bridge regression (using the `grpreg` package), and returns a list with overall and cohort-specific treatment effect estimates, standard errors (if available), and additional diagnostics.
 
-## Tidy outputs
-
-The fitted object also plays nicely with the [broom](https://broom.tidymodels.org/) package: `broom::tidy()` reshapes the overall ATT and per-cohort CATTs into a long data frame with standard `term` / `estimate` / `std.error` / `statistic` / `p.value` / `conf.low` / `conf.high` columns; `broom::glance()` returns a one-row model-level summary; and `broom::augment(res, data = pdata)` appends `.fitted` and `.resid` columns. This makes it easy to pipe estimates into `ggplot2` or `modelsummary` without reading the package's class documentation.
-
-```{r tidy-demo, eval = requireNamespace("broom", quietly = TRUE) && requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("dplyr", quietly = TRUE)}
-library(broom)
-
-tidy_res <- tidy(result)
-tidy_res
-
-library(ggplot2)
-ggplot(tidy_res |> dplyr::filter(term != "ATT"),
-       aes(x = term, y = estimate)) +
-  geom_pointrange(aes(ymin = conf.low, ymax = conf.high)) +
-  geom_hline(yintercept = 0, linetype = "dashed") +
-  coord_flip() +
-  labs(x = NULL, y = "Cohort treatment effect", title = "Cohort ATTs")
-```
-
-See the other vignette for an example of how you can use functions in the FETWFE package to simulate panel data.
-
 ## A "Real Data" Example
 
 Next I illustrate FETWFE in an empirical context. I'll use the `castle` data set from the `bacondecomp` package, which comes from the study by Cheng and Hoekstra (2013) of castle-doctrine ("stand-your-ground") laws and homicide. It is a balanced state-year panel covering all 50 states over 2000-2010, with the laws adopted in a staggered fashion across states from 2005 to 2009.
@@ -253,7 +233,7 @@ catt_df_pct[["ConfIntHigh"]] <- 100 * catt_df_pct[["ConfIntHigh"]]
 catt_df_pct
 ```
 
-FETWFE estimates that adopting a castle-doctrine law is associated with roughly a +5.5% change in the homicide rate. The 95% confidence interval is wide and only barely excludes zero, so this should be read as suggestive rather than as a sharply estimated effect — the panel has only 50 units and five small adoption cohorts. The sign and rough magnitude are nonetheless consistent with Cheng and Hoekstra (2013), who found that these laws increased homicide. FETWFE fused all five adoption cohorts (those adopting in 2005 through 2009) to a single common effect, so each row of `res$catt_df` reports the same estimate.
+FETWFE estimates that adopting a castle-doctrine law is associated with roughly a +5.5% change in the homicide rate. The sign and rough magnitude are consistent with Cheng and Hoekstra (2013), who found that these laws increased homicide. FETWFE fused all five adoption cohorts (those adopting in 2005 through 2009) to a single common effect, so each row of `res$catt_df` reports the same estimate.
 
 This example is covariate-free; `castle`'s smallest cohorts contain a single state, so the design cannot support additional covariates. Covariate handling is illustrated in the simulated example above — the `covs` argument is optional.
 
@@ -261,7 +241,7 @@ This example is covariate-free; `castle`'s smallest cohorts contain a single sta
 
 Empirical users of difference-in-differences routinely want to ask "is this treatment effect statistically distinguishable from zero?". The confidence intervals in `catt_df` answer that implicitly --- a CI that excludes 0 corresponds to rejecting `H_0: tau = 0` at level `alpha`. The package also surfaces a `P_value` column (two-sided `2 * pnorm(-|estimate / se|)`) and, for `fetwfe()` and `betwfe()`, a `selected` logical flag, both at the overall ATT level and per-cohort.
 
-For `fetwfe()`, the `selected` flag carries something stronger than the usual CI test. Under the restriction selection consistency theorem (Theorem 6.2 in the paper), when the true `tau_ATT(r, t) = 0`, the estimator returns *exactly* 0 with probability tending to 1. The package's interpretation: when `selected = FALSE` for a cohort, the asymptotic conclusion is that the truth is zero --- a strictly stronger statement than what a standard CI provides. The package surfaces this as an *asymptotic 100% confidence interval of `{0}`* for selected-out cohorts. (To be clear: the phrase "100% CI" is the package's rephrasing of the paper's "estimator equals 0 with probability tending to 1", not a phrase the paper itself uses.) For selected-out cohorts, `P_value` is reported as `NA` --- the inferential content lives in `selected`.
+For `fetwfe()`, the `selected` flag carries something stronger than the usual CI test. Under the restriction selection consistency theorem (Theorem 6.2 in the paper), when the true `tau_ATT(r, t) = 0`, the estimator returns *exactly* 0 with probability tending to 1. The package's interpretation: when `selected = FALSE` for a cohort, the asymptotic conclusion is that the truth is zero --- a strictly stronger statement than what a standard CI provides. The package surfaces this as an *asymptotic 100% confidence interval of `{0}`* for selected-out cohorts. For selected-out cohorts, `P_value` is reported as `NA` --- the inferential content lives in `selected`.
 
 ```{r zero-effect-demo, message = FALSE}
 set.seed(2026)
@@ -271,9 +251,48 @@ res_demo <- fetwfeWithSimulatedData(dat, verbose = FALSE)
 res_demo$catt_df
 ```
 
-`betwfe()` uses bridge regression directly on the coefficients (rather than on the fused restrictions used by `fetwfe()`). Under a different sparsity assumption (Kock 2013's bridge oracle property applied to the original coefficient vector), an analogous selection-consistency result holds, and `selected` carries similar (though weaker) information than for `fetwfe()`. For `etwfe()` and `twfeCovs()`, neither has a selection step, so the `selected` column is omitted; the `P_value` column is a standard post-OLS t-test.
+`betwfe()` uses bridge regression directly on the coefficients (rather than on the fused restrictions used by `fetwfe()`). Under the bridge oracle property of Kock (2013), `selected = FALSE` for `betwfe()` is an analogous asymptotic statement that the truth is zero, under a sparsity assumption different from the one Theorem 6.2 establishes for `fetwfe()`. For `etwfe()` and `twfeCovs()`, neither has a selection step, so the `selected` column is omitted; the `P_value` column is a standard post-OLS t-test.
 
-Two finite-sample caveats are worth keeping in mind. First, even when `selected = TRUE`, the standard CI may cover zero --- the selection step says "the truth is nonzero" but the magnitude CI says "could be zero". These can disagree at finite `N`; report both and use judgment. Second, the asymptotic 100% CI of `{0}` interpretation is an `N -> infinity` statement. At finite `N` --- when an effect is small relative to noise and the BIC-selected `lambda` is large --- the estimator can zero out a *true* nonzero effect. In small samples, read `selected` and `P_value` together rather than relying on either alone.
+It is worth keeping in mind that the asymptotic 100% CI of `{0}` interpretation is an `N -> infinity` statement. In small samples, it may be wise to read `selected` and `P_value` together rather than relying on either alone. In particular, even when `selected = TRUE`, the standard CI may cover zero --- the selection step says "the truth is nonzero" but the magnitude CI says "could be zero".
+
+## Tidy outputs with broom
+
+If you use the tidyverse, the fitted object also plays nicely with the [broom](https://broom.tidymodels.org/) package. `tidy()` reshapes the overall ATT and per-cohort CATTs into a long data frame with the standard `term` / `estimate` / `std.error` / `statistic` / `p.value` / `conf.low` / `conf.high` columns, plus a `selected` flag (see "Testing the zero-effect null" below):
+
+```{r tidy-demo, eval = requireNamespace("broom", quietly = TRUE)}
+library(broom)
+
+tidy_res <- tidy(result)
+tidy_res
+```
+
+`glance()` returns a one-row model-level summary — panel-shape counts, the bridge-regression tuning, the variance components, and the inference settings:
+
+```{r glance-demo, eval = requireNamespace("broom", quietly = TRUE)}
+glance(result)
+```
+
+`augment()` appends `.fitted` and `.resid` columns to your panel (auto-aligned to the design the estimator actually fit on, so the same raw `pdata` you handed to `fetwfe()` works):
+
+```{r augment-demo, eval = requireNamespace("broom", quietly = TRUE)}
+head(augment(result, data = pdata))
+```
+
+From there, the tidied output goes straight into `ggplot2` or `modelsummary` without needing to read the package's class documentation:
+
+```{r tidy-plot, eval = requireNamespace("broom", quietly = TRUE) && requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("dplyr", quietly = TRUE)}
+library(ggplot2)
+tidy_res |> 
+  dplyr::filter(term != "ATT") |>
+  # Remove non-digits to extract the number, then reorder the factor levels
+  dplyr::mutate(term = reorder(term, as.numeric(gsub("\\D", "", term)))) |>
+  ggplot(aes(x = term, y = estimate)) +
+  geom_pointrange(aes(ymin = conf.low, ymax = conf.high)) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(x = NULL, y = "Cohort treatment effect", title = "Cohort ATTs")
+```
+
+See the simulation vignette for an example of how you can use functions in the FETWFE package to simulate panel data.
 
 # Conclusion
 

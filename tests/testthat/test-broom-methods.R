@@ -375,18 +375,24 @@ test_that("augment auto-trims first-period-treated units when present in data", 
 
 	# Fit on the modified panel — fetwfe internally drops the period-1-treated
 	# unit, so X_ints has (N - 1) * T rows.
-	res <- fetwfe(
-		pdata = pdata,
-		time_var = "time",
-		unit_var = "unit",
-		treatment = "treatment",
-		response = "y",
-		covs = c("cov1", "cov2"),
-		q = 0.5,
-		verbose = FALSE
+	expect_warning(
+		res <- fetwfe(
+			pdata = pdata,
+			time_var = "time",
+			unit_var = "unit",
+			treatment = "treatment",
+			response = "y",
+			covs = c("cov1", "cov2"),
+			q = 0.5,
+			verbose = FALSE
+		),
+		"treated in the first time period"
 	)
 	# Passing the original (un-trimmed) panel — augment should auto-trim.
-	aug <- broom::augment(res, data = pdata)
+	expect_warning(
+		aug <- broom::augment(res, data = pdata),
+		"treated in the first time period"
+	)
 	expect_equal(nrow(aug), res$N * res$T)
 	expect_true(all(c(".fitted", ".resid") %in% names(aug)))
 	# Dropped unit should not appear in the augmented output.
