@@ -100,7 +100,6 @@ For FETWFE and BETWFE, `se_type = "cluster"` is only meaningful when `q < 1` (th
 
 The CR1 sandwich is a textbook estimator and the package's implementation matches `sandwich::vcovCL()` to numerical precision on a clean panel without selection. What is *not* yet covered by the paper's theory is:
 
-* The asymptotic rate change. Under cluster-robust inference, the relevant rate is $\sqrt{N}$ rather than $\sqrt{NT}$; statements like Theorems 6.3 and 6.4 in the paper would need to be re-derived at the new rate.
 * Verification that the bridge oracle property of Theorem 6.2 still holds under the relaxed covariance structure that motivates cluster-robust SEs in the first place.
 * Sandwich consistency *after model selection*, i.e., that the CR1 sandwich evaluated at the bridge-selected support is a consistent estimator of the true asymptotic variance.
 
@@ -138,11 +137,6 @@ print(res_cluster)
 ```
 
 The CATT SEs and confidence intervals in `catt_df` are recomputed from the same cluster-robust sandwich; the CATT p-values follow accordingly.
-
-# 4. Summary
-
-* The default `se_type = "default"` returns the package's Assumption-F1-based standard error from Faletto (2025).
-* The experimental `se_type = "cluster"` returns a unit-clustered Liang-Zeger sandwich SE on the bridge-selected support. Use it as a sensitivity check when within-unit serial correlation, heteroskedasticity, or higher-level clustering looks plausible in your data. The theory backing this option formally is still in progress.
 
 # References
 
