@@ -176,16 +176,32 @@ summary(result)
 
 When you run this code, the function internally performs all the necessary data preparation, applies the fusion penalty via a bridge regression (using the `grpreg` package), and returns a list with overall and cohort-specific treatment effect estimates, standard errors (if available), and additional diagnostics.
 
-## Tidy outputs
+## Tidy outputs with broom
 
-The fitted object also plays nicely with the [broom](https://broom.tidymodels.org/) package: `broom::tidy()` reshapes the overall ATT and per-cohort CATTs into a long data frame with standard `term` / `estimate` / `std.error` / `statistic` / `p.value` / `conf.low` / `conf.high` columns; `broom::glance()` returns a one-row model-level summary; and `broom::augment(res, data = pdata)` appends `.fitted` and `.resid` columns. This makes it easy to pipe estimates into `ggplot2` or `modelsummary` without reading the package's class documentation.
+If you use the tidyverse, the fitted object also plays nicely with the [broom](https://broom.tidymodels.org/) package. `tidy()` reshapes the overall ATT and per-cohort CATTs into a long data frame with the standard `term` / `estimate` / `std.error` / `statistic` / `p.value` / `conf.low` / `conf.high` columns, plus a `selected` flag (see "Testing the zero-effect null" below):
 
-```{r tidy-demo, eval = requireNamespace("broom", quietly = TRUE) && requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("dplyr", quietly = TRUE)}
+```{r tidy-demo, eval = requireNamespace("broom", quietly = TRUE)}
 library(broom)
 
 tidy_res <- tidy(result)
 tidy_res
+```
 
+`glance()` returns a one-row model-level summary — panel-shape counts, the bridge-regression tuning, the variance components, and the inference settings:
+
+```{r glance-demo, eval = requireNamespace("broom", quietly = TRUE)}
+glance(result)
+```
+
+`augment()` appends `.fitted` and `.resid` columns to your panel (auto-aligned to the design the estimator actually fit on, so the same raw `pdata` you handed to `fetwfe()` works):
+
+```{r augment-demo, eval = requireNamespace("broom", quietly = TRUE)}
+head(augment(result, data = pdata))
+```
+
+From there, the tidied output goes straight into `ggplot2` or `modelsummary` without needing to read the package's class documentation:
+
+```{r tidy-plot, eval = requireNamespace("broom", quietly = TRUE) && requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("dplyr", quietly = TRUE)}
 library(ggplot2)
 ggplot(tidy_res |> dplyr::filter(term != "ATT"),
        aes(x = term, y = estimate)) +
