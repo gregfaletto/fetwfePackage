@@ -1,5 +1,24 @@
 # NEWS
 
+## Version 1.11.7 (2026-05-26)
+
+### New features
+
+- The `covs` argument on `fetwfe()`, `etwfe()`, `betwfe()`, and
+  `twfeCovs()` now accepts a one-sided formula in addition to the
+  long-standing character vector. Both forms produce identical fits:
+
+  ```r
+  fetwfe(..., covs = c("x1", "x2"))   # existing
+  fetwfe(..., covs = ~ x1 + x2)       # new
+  ```
+
+  Mirrors the convention used by `did::att_gt(xformla = ...)`. Only
+  additive bare variable names are supported in the formula form
+  (e.g., `~ x1 + x2 + x3`); interactions (`x1:x2`, `x1 * x2`) and
+  `I()` transformations are rejected with a clear pointer to compute
+  derived variables in the data frame first. Issue #28.
+
 ## Version 1.11.6 (2026-05-26)
 
 ### New features

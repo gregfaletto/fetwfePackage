@@ -30,12 +30,18 @@
 #' @param response Character; the name of a single column containing the
 #' response for each unit at each time. The response must be an integer or
 #' numeric value.
-#' @param covs (Optional.) Character; a vector containing the names of the
-#' columns for covariates. All of these columns are expected to contain integer,
-#' numeric, or factor values, and any categorical values will be automatically
-#' encoded as binary indicators. If no covariates are provided, the treatment
-#' effect estimation will proceed, but it will only be valid under unconditional
-#' versions of the parallel trends and no anticipation assumptions. Default is c().
+#' @param covs (Optional.) Either a character vector containing the names of
+#' the columns for covariates (e.g., `covs = c("x1", "x2")`), or a one-sided
+#' formula (e.g., `covs = ~ x1 + x2`) -- the formula form mirrors the
+#' convention used by `did::att_gt(xformla = ...)`. Only additive bare
+#' variable names are supported in the formula form; for derived variables,
+#' compute them in the data frame first and pass via the character-vector
+#' form. All of these columns are expected to contain integer, numeric, or
+#' factor values, and any categorical values will be automatically encoded
+#' as binary indicators. If no covariates are provided, the treatment effect
+#' estimation will proceed, but it will only be valid under unconditional
+#' versions of the parallel trends and no anticipation assumptions. Default
+#' is c().
 #' @param indep_counts (Optional.) Integer; a vector. If you have a sufficiently
 #' large number of units, you can optionally randomly split your data set in
 #' half (with `N` units in each data set). The data for half of the units should
@@ -233,6 +239,10 @@ twfeCovs <- function(
 	se_type = "default"
 ) {
 	se_type <- match.arg(se_type, c("default", "cluster"))
+
+	# Normalize `covs` to a character vector if a one-sided formula was
+	# supplied (#28).
+	covs <- .process_covs_input(covs)
 
 	covs_orig <- covs
 

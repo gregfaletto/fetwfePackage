@@ -51,12 +51,18 @@ untreated at the final time period ("never-treated units").}
 response for each unit at each time. The response must be an integer or
 numeric value.}
 
-\item{covs}{(Optional.) Character; a vector containing the names of the
-columns for covariates. All of these columns are expected to contain integer,
-numeric, or factor values, and any categorical values will be automatically
-encoded as binary indicators. If no covariates are provided, the treatment
-effect estimation will proceed, but it will only be valid under unconditional
-versions of the parallel trends and no anticipation assumptions. Default is c().}
+\item{covs}{(Optional.) Either a character vector containing the names of
+the columns for covariates (e.g., \code{covs = c("x1", "x2")}), or a one-sided
+formula (e.g., \code{covs = ~ x1 + x2}) -- the formula form mirrors the
+convention used by \code{did::att_gt(xformla = ...)}. Only additive bare
+variable names are supported in the formula form; for derived variables,
+compute them in the data frame first and pass via the character-vector
+form. All of these columns are expected to contain integer, numeric, or
+factor values, and any categorical values will be automatically encoded
+as binary indicators. If no covariates are provided, the treatment effect
+estimation will proceed, but it will only be valid under unconditional
+versions of the parallel trends and no anticipation assumptions. Default
+is c().}
 
 \item{indep_counts}{(Optional.) Integer; a vector. If you have a sufficiently
 large number of units, you can optionally randomly split your data set in
