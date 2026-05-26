@@ -1,5 +1,18 @@
 # NEWS
 
+## Version 1.11.4 (2026-05-26)
+
+### New features
+
+- `etwfe()`, `betwfe()`, and `twfeCovs()` results now expose an
+  `$internal` list containing the design-machinery slots (`X_ints`,
+  `y`, `X_final`, `y_final`, `calc_ses`), matching the structure
+  `fetwfe()` already provided. Downstream consumers can now use a
+  single canonical access path (`result$internal$<slot>`) across all
+  four estimator classes. The same slots remain available at top level
+  (e.g., `result$X_ints`) for backward compat with existing user
+  scripts; no scripts are broken by this change. Issue #144.
+
 ## Version 1.11.3 (2026-05-26)
 
 ### Defensive improvements

@@ -717,6 +717,23 @@ fetwfeWithSimulatedData <- function(
 #' \item{covs}{Character vector; the original `covs` argument the user
 #'   passed (before any factor expansion the estimator performed
 #'   internally). Consumed by `augment.<class>()`.}
+#' \item{internal}{A list containing internal outputs that are typically
+#'   not needed for interpretation, packaged here for parity with
+#'   `fetwfe()` so downstream consumers can use a single canonical
+#'   access path across all four estimator classes (#144). The five
+#'   sub-slots are also duplicated at top level for backward compat:
+#'   \describe{
+#'     \item{X_ints}{The design matrix containing all interactions,
+#'       time and cohort dummies, etc. Same value as top-level `X_ints`.}
+#'     \item{y}{The vector of responses. Same as top-level `y`.}
+#'     \item{X_final}{The design matrix after the change-of-coordinates
+#'       step. Same as top-level `X_final`.}
+#'     \item{y_final}{The transformed response vector. Same as top-level
+#'       `y_final`.}
+#'     \item{calc_ses}{Logical indicating whether standard errors were
+#'       calculated. Same as top-level `calc_ses`.}
+#'   }
+#' }
 #' @author Gregory Faletto
 #' @references
 #' Wooldridge, J. M. (2021). Two-way fixed effects, the two-way mundlak
@@ -889,6 +906,17 @@ etwfe <- function(
 		covs = covs_orig
 	)
 
+	# Add internal outputs in a separate list for parity with `fetwfe()` (#144).
+	# The five slots are also duplicated at top level for backward compat;
+	# `$internal` is the canonical access path going forward.
+	out$internal <- list(
+		X_ints = res$X_ints,
+		y = res$y,
+		X_final = res$X_final,
+		y_final = res$y_final,
+		calc_ses = res$calc_ses
+	)
+
 	# Validate constructed object's contracts (#85).
 	.validate_etwfe(out)
 
@@ -1000,6 +1028,23 @@ etwfe <- function(
 #' \item{covs}{Character vector; the original `covs` argument the user
 #'   passed (before any factor expansion the estimator performed
 #'   internally).}
+#' \item{internal}{A list containing internal outputs that are typically
+#'   not needed for interpretation, packaged here for parity with
+#'   `fetwfe()` so downstream consumers can use a single canonical
+#'   access path across all four estimator classes (#144). The five
+#'   sub-slots are also duplicated at top level for backward compat:
+#'   \describe{
+#'     \item{X_ints}{The design matrix containing all interactions,
+#'       time and cohort dummies, etc. Same value as top-level `X_ints`.}
+#'     \item{y}{The vector of responses. Same as top-level `y`.}
+#'     \item{X_final}{The design matrix after the change-of-coordinates
+#'       step. Same as top-level `X_final`.}
+#'     \item{y_final}{The transformed response vector. Same as top-level
+#'       `y_final`.}
+#'     \item{calc_ses}{Logical indicating whether standard errors were
+#'       calculated. Same as top-level `calc_ses`.}
+#'   }
+#' }
 #'
 #' @examples
 #' \dontrun{

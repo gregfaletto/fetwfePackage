@@ -113,6 +113,23 @@ column in the original \code{pdata}. Consumed by \verb{augment.<class>()}.}
 \item{covs}{Character vector; the original \code{covs} argument the user
 passed (before any factor expansion the estimator performed
 internally).}
+\item{internal}{A list containing internal outputs that are typically
+not needed for interpretation, packaged here for parity with
+\code{fetwfe()} so downstream consumers can use a single canonical
+access path across all four estimator classes (#144). The five
+sub-slots are also duplicated at top level for backward compat:
+\describe{
+\item{X_ints}{The design matrix containing all interactions,
+time and cohort dummies, etc. Same value as top-level \code{X_ints}.}
+\item{y}{The vector of responses. Same as top-level \code{y}.}
+\item{X_final}{The design matrix after the change-of-coordinates
+step. Same as top-level \code{X_final}.}
+\item{y_final}{The transformed response vector. Same as top-level
+\code{y_final}.}
+\item{calc_ses}{Logical indicating whether standard errors were
+calculated. Same as top-level \code{calc_ses}.}
+}
+}
 }
 \description{
 This function runs the extended two-way fixed effects estimator (\code{etwfe()}) on
