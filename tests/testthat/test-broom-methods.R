@@ -136,8 +136,8 @@ test_that("broom::tidy() respects custom conf.level", {
 test_that("broom::tidy() propagates NA std.error to statistic and p.value", {
 	res <- .fetwfe_fixture()
 	# Force a row to have NA SE and verify propagation.
-	res$catt_df$SE[1] <- NA_real_
-	res$catt_df$P_value[1] <- NA_real_
+	res$catt_df$se[1] <- NA_real_
+	res$catt_df$p_value[1] <- NA_real_
 	td <- broom::tidy(res)
 	expect_true(is.na(td$std.error[2]))
 	expect_true(is.na(td$statistic[2]))
@@ -550,7 +550,7 @@ test_that("FETWFE_tes carries cohort_times slot (simulator convention)", {
 
 test_that("FETWFE_tes cohort_times agree with simulateData()'s actual cohort assignment (assertion guarding the convention)", {
 	# Cross-class invariant: `getTes(coefs)$cohort_times` is supposed to label
-	# cohorts the same way `fetwfe(simulateData(coefs))$catt_df$Cohort` does,
+	# cohorts the same way `fetwfe(simulateData(coefs))$catt_df$cohort` does,
 	# so `tidy.FETWFE_tes` rows align with `tidy.<estimator>` rows on the
 	# same simulated panel. If `simulateData()` ever changes its cohort-
 	# assignment scheme (e.g., adopts at non-sequential times), this test
@@ -559,9 +559,9 @@ test_that("FETWFE_tes cohort_times agree with simulateData()'s actual cohort ass
 	setup <- .simulated_setup()
 	res <- fetwfeWithSimulatedData(setup$sim)
 	tes <- getTes(setup$coefs)
-	# `catt_df$Cohort` is character ("2", "3", ...); coerce to integer for
+	# `catt_df$cohort` is character ("2", "3", ...); coerce to integer for
 	# comparison.
-	cohort_labels_from_fit <- as.integer(res$catt_df$Cohort)
+	cohort_labels_from_fit <- as.integer(res$catt_df$cohort)
 	expect_equal(cohort_labels_from_fit, tes$cohort_times)
 })
 

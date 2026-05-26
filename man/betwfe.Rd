@@ -176,11 +176,16 @@ the estimated average treatment effects within each cohort.}
 cohort conditional on being treated, which was used in calculating \code{att_hat}.
 If \code{indep_counts} was provided, \code{cohort_probs} was calculated from that;
 otherwise, it was calculated from the counts of units in each treated
-cohort in \code{pdata}.} \item{catt_df}{A dataframe displaying the cohort names,
-average treatment effects, standard errors, \code{1 - alpha} confidence
-interval bounds, per-cohort p-values (\code{P_value}), and a \code{selected} logical
-flag (\code{TRUE} when the bridge penalty left the cohort's CATT nonzero). For
-selected-out cohorts (\code{selected = FALSE}), \code{P_value} is \code{NA}.}
+cohort in \code{pdata}.} \item{catt_df}{A data frame (with S3 class \code{c("catt_df", "data.frame")}) displaying the cohort names
+(\code{cohort}), average treatment effects (\code{estimate}), standard errors (\code{se}),
+\code{1 - alpha} confidence interval bounds (\code{ci_low}, \code{ci_high}), per-cohort
+p-values (\code{p_value}), and a \code{selected} logical flag (\code{TRUE} when the
+bridge penalty left the cohort's CATT nonzero). For selected-out cohorts
+(\code{selected = FALSE}), \code{p_value} is \code{NA}. The \code{catt_df} S3 class makes
+\code{[[} / \code{$} / \code{[} access on the pre-1.11.0 Title-Case column names
+(\code{Cohort}, \verb{Estimated TE}, \code{SE}, \code{ConfIntLow}, \code{ConfIntHigh}, \code{P_value})
+\code{stop()} with a migration message pointing to the new name. See
+\code{NEWS.md} for the rename table.}
 \item{beta_hat}{The full vector of estimated coefficients.}
 \item{treat_inds}{The indices of \code{beta_hat} corresponding to
 the treatment effects for each cohort at each time.}
@@ -285,10 +290,10 @@ c(low_att, high_att)
 # point units)
 
 catt_df_pct <- res$catt_df
-catt_df_pct[["Estimated TE"]] <- 100 * catt_df_pct[["Estimated TE"]]
-catt_df_pct[["SE"]] <- 100 * catt_df_pct[["SE"]]
-catt_df_pct[["ConfIntLow"]] <- 100 * catt_df_pct[["ConfIntLow"]]
-catt_df_pct[["ConfIntHigh"]] <- 100 * catt_df_pct[["ConfIntHigh"]]
+catt_df_pct[["estimate"]] <- 100 * catt_df_pct[["estimate"]]
+catt_df_pct[["se"]] <- 100 * catt_df_pct[["se"]]
+catt_df_pct[["ci_low"]] <- 100 * catt_df_pct[["ci_low"]]
+catt_df_pct[["ci_high"]] <- 100 * catt_df_pct[["ci_high"]]
 
 catt_df_pct
 }

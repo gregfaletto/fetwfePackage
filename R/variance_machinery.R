@@ -1064,12 +1064,15 @@ getSecondVarTermDataApp <- function(
 #'   Required when `se_type = "cluster"` and `calc_ses = TRUE`; ignored
 #'   otherwise.
 #' @return A list containing:
-#'   \item{cohort_te_df}{Dataframe with cohort names, estimated ATTs, SEs,
-#'     confidence interval bounds, and a `P_value` column (two-sided
-#'     `2 * pnorm(-|estimate / se|)`, `NA` when `SE` is zero or `NA`). When
-#'     `include_selected = TRUE`, an additional trailing `selected` logical
-#'     column is appended (`TRUE` when the bridge penalty left the cohort's
-#'     `Estimated TE` nonzero).}
+#'   \item{cohort_te_df}{Data frame (with S3 class `c("catt_df", "data.frame")`)
+#'     with columns `cohort`, `estimate`, `se`, `ci_low`, `ci_high`, and a
+#'     `p_value` column (two-sided `2 * pnorm(-|estimate / se|)`, `NA` when
+#'     `se` is zero or `NA`). When `include_selected = TRUE`, an additional
+#'     trailing `selected` logical column is appended (`TRUE` when the
+#'     bridge penalty left the cohort's `estimate` nonzero). The
+#'     `catt_df` S3 class makes `[[` / `$` / `[` access on the
+#'     pre-1.11.0 Title-Case column names `stop()` with a migration message
+#'     pointing to the new name.}
 #'   \item{cohort_tes}{Named numeric vector of estimated ATTs for each cohort.}
 #'   \item{cohort_te_ses}{Named numeric vector of standard errors for cohort ATTs.}
 #'   \item{psi_mat}{Matrix used in SE calculation for overall ATT.}
@@ -1387,12 +1390,12 @@ getCohortATTsFinal <- function(
 	}
 
 	colnames(cohort_te_df) <- c(
-		"Cohort",
-		"Estimated TE",
-		"SE",
-		"ConfIntLow",
-		"ConfIntHigh",
-		"P_value"
+		"cohort",
+		"estimate",
+		"se",
+		"ci_low",
+		"ci_high",
+		"p_value"
 	)
 
 	# The trailing `selected` column is meaningful only for bridge callers
@@ -1403,6 +1406,11 @@ getCohortATTsFinal <- function(
 	if (include_selected) {
 		cohort_te_df$selected <- cohort_tes != 0
 	}
+
+	# Attach the `catt_df` S3 class so [[ / $ / [ accessors fire the
+	# helpful-error layer (R/catt_df_class.R) when users hit the old
+	# Title-Case column names from versions <= 1.10.0.
+	class(cohort_te_df) <- c("catt_df", "data.frame")
 
 	if (fused) {
 		stopifnot(is.matrix(d_inv_treat_sel))

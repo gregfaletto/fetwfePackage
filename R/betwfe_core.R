@@ -135,11 +135,16 @@
 #' cohort conditional on being treated, which was used in calculating `att_hat`.
 #' If `indep_counts` was provided, `cohort_probs` was calculated from that;
 #' otherwise, it was calculated from the counts of units in each treated
-#' cohort in `pdata`.} \item{catt_df}{A dataframe displaying the cohort names,
-#' average treatment effects, standard errors, `1 - alpha` confidence
-#' interval bounds, per-cohort p-values (`P_value`), and a `selected` logical
-#' flag (`TRUE` when the bridge penalty left the cohort's CATT nonzero). For
-#' selected-out cohorts (`selected = FALSE`), `P_value` is `NA`.}
+#' cohort in `pdata`.} \item{catt_df}{A data frame (with S3 class `c("catt_df", "data.frame")`) displaying the cohort names
+#' (`cohort`), average treatment effects (`estimate`), standard errors (`se`),
+#' `1 - alpha` confidence interval bounds (`ci_low`, `ci_high`), per-cohort
+#' p-values (`p_value`), and a `selected` logical flag (`TRUE` when the
+#' bridge penalty left the cohort's CATT nonzero). For selected-out cohorts
+#' (`selected = FALSE`), `p_value` is `NA`. The `catt_df` S3 class makes
+#' `[[` / `$` / `[` access on the pre-1.11.0 Title-Case column names
+#' (`Cohort`, `Estimated TE`, `SE`, `ConfIntLow`, `ConfIntHigh`, `P_value`)
+#' `stop()` with a migration message pointing to the new name. See
+#' `NEWS.md` for the rename table.}
 #' \item{beta_hat}{The full vector of estimated coefficients.}
 #' \item{treat_inds}{The indices of `beta_hat` corresponding to
 #' the treatment effects for each cohort at each time.}
@@ -255,10 +260,10 @@
 #' # point units)
 #'
 #' catt_df_pct <- res$catt_df
-#' catt_df_pct[["Estimated TE"]] <- 100 * catt_df_pct[["Estimated TE"]]
-#' catt_df_pct[["SE"]] <- 100 * catt_df_pct[["SE"]]
-#' catt_df_pct[["ConfIntLow"]] <- 100 * catt_df_pct[["ConfIntLow"]]
-#' catt_df_pct[["ConfIntHigh"]] <- 100 * catt_df_pct[["ConfIntHigh"]]
+#' catt_df_pct[["estimate"]] <- 100 * catt_df_pct[["estimate"]]
+#' catt_df_pct[["se"]] <- 100 * catt_df_pct[["se"]]
+#' catt_df_pct[["ci_low"]] <- 100 * catt_df_pct[["ci_low"]]
+#' catt_df_pct[["ci_high"]] <- 100 * catt_df_pct[["ci_high"]]
 #'
 #' catt_df_pct
 #' @export
@@ -493,11 +498,16 @@ betwfe <- function(
 #' cohort conditional on being treated, which was used in calculating `att_hat`.
 #' If `indep_counts` was provided, `cohort_probs` was calculated from that;
 #' otherwise, it was calculated from the counts of units in each treated
-#' cohort in `pdata`.} \item{catt_df}{A dataframe displaying the cohort names,
-#' average treatment effects, standard errors, `1 - alpha` confidence
-#' interval bounds, per-cohort p-values (`P_value`), and a `selected` logical
-#' flag (`TRUE` when the bridge penalty left the cohort's CATT nonzero). For
-#' selected-out cohorts (`selected = FALSE`), `P_value` is `NA`.}
+#' cohort in `pdata`.} \item{catt_df}{A data frame (with S3 class `c("catt_df", "data.frame")`) displaying the cohort names
+#' (`cohort`), average treatment effects (`estimate`), standard errors (`se`),
+#' `1 - alpha` confidence interval bounds (`ci_low`, `ci_high`), per-cohort
+#' p-values (`p_value`), and a `selected` logical flag (`TRUE` when the
+#' bridge penalty left the cohort's CATT nonzero). For selected-out cohorts
+#' (`selected = FALSE`), `p_value` is `NA`. The `catt_df` S3 class makes
+#' `[[` / `$` / `[` access on the pre-1.11.0 Title-Case column names
+#' (`Cohort`, `Estimated TE`, `SE`, `ConfIntLow`, `ConfIntHigh`, `P_value`)
+#' `stop()` with a migration message pointing to the new name. See
+#' `NEWS.md` for the rename table.}
 #' \item{beta_hat}{The full vector of estimated coefficients.}
 #' \item{treat_inds}{The indices of `beta_hat` corresponding to
 #' the treatment effects for each cohort at each time.}
@@ -729,7 +739,7 @@ betwfeWithSimulatedData <- function(
 #'   \item{indep_att_se}{Standard error for `indep_att_hat` (NA if not applicable).}
 #'   \item{catt_hats}{A named vector of estimated CATTs for each cohort.}
 #'   \item{catt_ses}{A named vector of SEs for `catt_hats` (NA if `q >= 1`).}
-#'   \item{catt_df}{A data.frame summarizing CATTs, SEs, confidence intervals, per-cohort p-values (`P_value`), and a `selected` logical flag (`TRUE` when the bridge penalty left the cohort's CATT nonzero).}
+#'   \item{catt_df}{A data frame (with S3 class `c("catt_df", "data.frame")`) summarizing CATTs (`cohort`, `estimate`, `se`, `ci_low`, `ci_high`, `p_value`) and a `selected` logical flag (`TRUE` when the bridge penalty left the cohort's CATT nonzero). The `catt_df` S3 class makes `[[` / `$` / `[` access on the pre-1.11.0 Title-Case column names `stop()` with a migration message pointing to the new name.}
 #'   \item{beta_hat}{The vector of estimated coefficients.}
 #'   \item{treat_inds}{Indices in `beta_hat` corresponding to base treatment effects.}
 #'   \item{treat_int_inds}{Indices in `beta_hat` corresponding to treatment-covariate interactions.}

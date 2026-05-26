@@ -12,17 +12,18 @@
 # Build a 11-row catt_df with mixed-digit-count cohort labels to exercise
 # the bug. Without the fix, both order() outputs would be lex-sorted.
 .make_catt_df_11 <- function() {
-	data.frame(
-		Cohort = as.character(2:12),
-		`Estimated TE` = seq(0.01, 0.11, length.out = 11),
-		SE = rep(0.005, 11),
-		ConfIntLow = seq(0.0, 0.10, length.out = 11),
-		ConfIntHigh = seq(0.02, 0.12, length.out = 11),
-		P_value = rep(0.05, 11),
+	out <- data.frame(
+		cohort = as.character(2:12),
+		estimate = seq(0.01, 0.11, length.out = 11),
+		se = rep(0.005, 11),
+		ci_low = seq(0.0, 0.10, length.out = 11),
+		ci_high = seq(0.02, 0.12, length.out = 11),
+		p_value = rep(0.05, 11),
 		selected = rep(TRUE, 11),
-		check.names = FALSE,
 		stringsAsFactors = FALSE
 	)
+	class(out) <- c("catt_df", "data.frame")
+	out
 }
 
 test_that(".truncate_catt sorts cohorts numerically and drops the right cohort on truncation", {
@@ -37,14 +38,14 @@ test_that(".truncate_catt sorts cohorts numerically and drops the right cohort o
 		max_cohorts = 10,
 		order_by = "cohort"
 	)
-	expect_equal(res$Cohort, as.character(2:11))
+	expect_equal(res$cohort, as.character(2:11))
 	expect_true(isTRUE(attr(res, "truncated")))
 	expect_equal(attr(res, "n_discarded"), 1L)
 
 	# Confirm the dropped cohort is "12" (the largest), not "9" (which
 	# would be the pre-fix result).
-	expect_false("12" %in% res$Cohort)
-	expect_true("9" %in% res$Cohort)
+	expect_false("12" %in% res$cohort)
+	expect_true("9" %in% res$cohort)
 })
 
 test_that(".truncate_catt full-output sort order is numeric (no truncation)", {
@@ -54,7 +55,7 @@ test_that(".truncate_catt full-output sort order is numeric (no truncation)", {
 		max_cohorts = 20,
 		order_by = "cohort"
 	)
-	expect_equal(res$Cohort, as.character(2:12))
+	expect_equal(res$cohort, as.character(2:12))
 	expect_false(isTRUE(attr(res, "truncated")))
 })
 

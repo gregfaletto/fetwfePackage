@@ -85,8 +85,8 @@ test_that("BETWFE SE/SD ratio is ~1 under partial selection (MC)", {
 			sig_eps_c_sq = 1
 		)
 		res <- betwfeWithSimulatedData(sim)
-		catt_hat_1[i] <- res$catt_df[["Estimated TE"]][1]
-		catt_se_1[i] <- res$catt_df$SE[1]
+		catt_hat_1[i] <- res$catt_df[["estimate"]][1]
+		catt_se_1[i] <- res$catt_df$se[1]
 		att_hat[i] <- res$att_hat
 		att_se[i] <- res$att_se
 	}

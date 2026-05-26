@@ -56,7 +56,7 @@ test_that("fetwfe returns expected output structure with valid input", {
 	# Also check that catt_df is a data frame with the expected column names.
 	expect_s3_class(result$catt_df, "data.frame")
 	expect_true(all(
-		c("Cohort", "Estimated TE", "SE", "ConfIntLow", "ConfIntHigh") %in%
+		c("cohort", "estimate", "se", "ci_low", "ci_high") %in%
 			colnames(result$catt_df)
 	))
 })
@@ -362,10 +362,10 @@ test_that("fetwfe returns att_se for q < 1 and att_se is NA for q >= 1", {
 	# bridge-regime SE through any of these slots.
 	expect_true(is.na(result2$att_p_value))
 	expect_true(all(is.na(result2$catt_ses)))
-	expect_true(all(is.na(result2$catt_df$SE)))
-	expect_true(all(is.na(result2$catt_df$ConfIntLow)))
-	expect_true(all(is.na(result2$catt_df$ConfIntHigh)))
-	expect_true(all(is.na(result2$catt_df$P_value)))
+	expect_true(all(is.na(result2$catt_df$se)))
+	expect_true(all(is.na(result2$catt_df$ci_low)))
+	expect_true(all(is.na(result2$catt_df$ci_high)))
+	expect_true(all(is.na(result2$catt_df$p_value)))
 })
 
 # ------------------------------------------------------------------------------
@@ -548,10 +548,10 @@ test_that("Overall ATT standard error is NA for q >= 1", {
 	# the bridge-regime test in test 14 above.
 	expect_true(is.na(result$att_p_value))
 	expect_true(all(is.na(result$catt_ses)))
-	expect_true(all(is.na(result$catt_df$SE)))
-	expect_true(all(is.na(result$catt_df$ConfIntLow)))
-	expect_true(all(is.na(result$catt_df$ConfIntHigh)))
-	expect_true(all(is.na(result$catt_df$P_value)))
+	expect_true(all(is.na(result$catt_df$se)))
+	expect_true(all(is.na(result$catt_df$ci_low)))
+	expect_true(all(is.na(result$catt_df$ci_high)))
+	expect_true(all(is.na(result$catt_df$p_value)))
 })
 
 # ------------------------------------------------------------------------------
@@ -905,15 +905,15 @@ test_that("tibbles work as input to fewtfe", {
 	# Also check that catt_df is a data frame with the expected column names.
 	expect_s3_class(result$catt_df, "data.frame")
 	expect_true(all(
-		c("Cohort", "Estimated TE", "SE", "ConfIntLow", "ConfIntHigh") %in%
+		c("cohort", "estimate", "se", "ci_low", "ci_high") %in%
 			colnames(result$catt_df)
 	))
 })
 
 # ------------------------------------------------------------------------------
-# Test: fetwfe surfaces P_value and selected in catt_df
+# Test: fetwfe surfaces p_value and selected in catt_df
 # ------------------------------------------------------------------------------
-test_that("fetwfe surfaces P_value and selected in catt_df", {
+test_that("fetwfe surfaces p_value and selected in catt_df", {
 	set.seed(2026)
 	sim <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
 	dat <- simulateData(
@@ -924,9 +924,9 @@ test_that("fetwfe surfaces P_value and selected in catt_df", {
 	)
 	res <- fetwfeWithSimulatedData(dat, verbose = FALSE)
 
-	expect_true("P_value" %in% colnames(res$catt_df))
+	expect_true("p_value" %in% colnames(res$catt_df))
 	expect_true("selected" %in% colnames(res$catt_df))
-	expect_type(res$catt_df$P_value, "double")
+	expect_type(res$catt_df$p_value, "double")
 	expect_type(res$catt_df$selected, "logical")
 
 	expect_true("att_p_value" %in% names(res))
@@ -935,16 +935,16 @@ test_that("fetwfe surfaces P_value and selected in catt_df", {
 	expect_length(res$att_p_value, 1)
 	expect_length(res$att_selected, 1)
 
-	# P_value semantics: in [0, 1] when not NA; NA exactly when the cohort
-	# is selected out (Estimated TE == 0).
-	non_na <- !is.na(res$catt_df$P_value)
-	expect_true(all(res$catt_df$P_value[non_na] >= 0))
-	expect_true(all(res$catt_df$P_value[non_na] <= 1))
+	# p_value semantics: in [0, 1] when not NA; NA exactly when the cohort
+	# is selected out (estimate == 0).
+	non_na <- !is.na(res$catt_df$p_value)
+	expect_true(all(res$catt_df$p_value[non_na] >= 0))
+	expect_true(all(res$catt_df$p_value[non_na] <= 1))
 	expect_identical(
 		res$catt_df$selected,
-		res$catt_df[["Estimated TE"]] != 0
+		res$catt_df[["estimate"]] != 0
 	)
-	expect_true(all(is.na(res$catt_df$P_value[!res$catt_df$selected])))
+	expect_true(all(is.na(res$catt_df$p_value[!res$catt_df$selected])))
 })
 
 # ------------------------------------------------------------------------------
@@ -964,15 +964,15 @@ test_that("fetwfe produces at least one selected-out cohort in a sparse simulati
 	)
 	res <- fetwfeWithSimulatedData(dat, verbose = FALSE)
 
-	expect_gt(sum(res$catt_df[["Estimated TE"]] == 0), 0)
+	expect_gt(sum(res$catt_df[["estimate"]] == 0), 0)
 })
 
 # ------------------------------------------------------------------------------
-# Test: order_by = "pvalue" sorts by ascending P_value with NAs last
+# Test: order_by = "pvalue" sorts by ascending p_value with NAs last
 # ------------------------------------------------------------------------------
-test_that("order_by = 'pvalue' sorts CATT by ascending P_value with NAs last", {
-	# Use a simulation that yields a mix of selected (non-NA P_value) and
-	# selected-out (NA P_value) cohorts so we can verify both the
+test_that("order_by = 'pvalue' sorts CATT by ascending p_value with NAs last", {
+	# Use a simulation that yields a mix of selected (non-NA p_value) and
+	# selected-out (NA p_value) cohorts so we can verify both the
 	# ascending sort AND the NA-last placement, not just one or the other.
 	set.seed(2026)
 	sim <- genCoefs(R = 4, T = 6, d = 2, density = 0.3, eff_size = 2)
@@ -984,10 +984,10 @@ test_that("order_by = 'pvalue' sorts CATT by ascending P_value with NAs last", {
 	)
 	res <- fetwfeWithSimulatedData(dat, verbose = FALSE)
 
-	# Guard: the test is only meaningful when both non-NA and NA P_values
+	# Guard: the test is only meaningful when both non-NA and NA p_values
 	# are present.
-	expect_gte(sum(!is.na(res$catt_df$P_value)), 2)
-	expect_gte(sum(is.na(res$catt_df$P_value)), 1)
+	expect_gte(sum(!is.na(res$catt_df$p_value)), 2)
+	expect_gte(sum(is.na(res$catt_df$p_value)), 1)
 
 	output_lines <- capture.output(print(res, order_by = "pvalue"))
 
@@ -1009,11 +1009,11 @@ test_that("order_by = 'pvalue' sorts CATT by ascending P_value with NAs last", {
 	)
 
 	expected_order <- order(
-		res$catt_df$P_value,
+		res$catt_df$p_value,
 		na.last = TRUE
 	)
 	expected_cohorts <- as.character(
-		res$catt_df$Cohort[expected_order]
+		res$catt_df$cohort[expected_order]
 	)
 	expect_equal(first_tokens, expected_cohorts)
 
@@ -1021,20 +1021,20 @@ test_that("order_by = 'pvalue' sorts CATT by ascending P_value with NAs last", {
 	# printed non-NA rows, not just that the overall order matches one
 	# specific permutation. This catches a future regression where the
 	# sort logic accidentally became descending or unstable.
-	non_na_idx <- which(!is.na(res$catt_df$P_value))
+	non_na_idx <- which(!is.na(res$catt_df$p_value))
 	first_non_na_cohort <- as.character(
-		res$catt_df$Cohort[non_na_idx][which.min(
-			res$catt_df$P_value[non_na_idx]
+		res$catt_df$cohort[non_na_idx][which.min(
+			res$catt_df$p_value[non_na_idx]
 		)]
 	)
 	expect_equal(first_tokens[1], first_non_na_cohort)
-	# Printed non-NA P_values appear in non-decreasing order.
+	# Printed non-NA p_values appear in non-decreasing order.
 	printed_non_na_cohorts <- first_tokens[
-		first_tokens %in% as.character(res$catt_df$Cohort[non_na_idx])
+		first_tokens %in% as.character(res$catt_df$cohort[non_na_idx])
 	]
-	printed_p_values <- res$catt_df$P_value[match(
+	printed_p_values <- res$catt_df$p_value[match(
 		printed_non_na_cohorts,
-		as.character(res$catt_df$Cohort)
+		as.character(res$catt_df$cohort)
 	)]
 	expect_equal(printed_p_values, sort(printed_p_values))
 })
@@ -1287,12 +1287,12 @@ test_that("fetwfe runs and gives sensible output with zero covariates", {
 	expect_s3_class(res$catt_df, "data.frame")
 	expect_true(all(
 		c(
-			"Cohort",
-			"Estimated TE",
-			"SE",
-			"ConfIntLow",
-			"ConfIntHigh",
-			"P_value",
+			"cohort",
+			"estimate",
+			"se",
+			"ci_low",
+			"ci_high",
+			"p_value",
 			"selected"
 		) %in%
 			colnames(res$catt_df)

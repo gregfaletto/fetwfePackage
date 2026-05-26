@@ -14,9 +14,9 @@
         95% CI:    [0.0000, 0.0000]
       
       Cohort Average Treatment Effects (CATT):
-       Cohort Estimated TE SE ConfIntLow ConfIntHigh P_value selected
-            2            0  0          0           0      NA    FALSE
-            3            0  0          0           0      NA    FALSE
+       cohort estimate se ci_low ci_high p_value selected
+            2        0  0      0       0      NA    FALSE
+            3        0  0      0       0      NA    FALSE
       
       Model Details:
         Units (N)           : 30
@@ -39,9 +39,9 @@
       Selected: FALSE
       
       CATT (preview):
-       Cohort Estimated TE SE ConfIntLow ConfIntHigh P_value selected
-            2            0  0          0           0      NA    FALSE
-            3            0  0          0           0      NA    FALSE
+       cohort estimate se ci_low ci_high p_value selected
+            2        0  0      0       0      NA    FALSE
+            3        0  0      0       0      NA    FALSE
       
       Model Details:
         Units (N)           : 30
@@ -67,9 +67,9 @@
         95% CI:    [-0.8319, 0.7406]
       
       Cohort Average Treatment Effects (CATT):
-       Cohort Estimated TE        SE ConfIntLow ConfIntHigh   P_value
-            2  0.009060593 0.4879617 -0.9473267   0.9654479 0.9851855
-            3 -0.127673929 0.4655589 -1.0401525   0.7848047 0.7839017
+       cohort     estimate        se     ci_low   ci_high   p_value
+            2  0.009060593 0.4879617 -0.9473267 0.9654479 0.9851855
+            3 -0.127673929 0.4655589 -1.0401525 0.7848047 0.7839017
       
       Model Details:
         Units (N)           : 30
@@ -89,9 +89,9 @@
       Overall ATT: -0.0456  (SE = 0.4012, p = 0.9094, 95% CI = [-0.8319, 0.7406])
       
       CATT (preview):
-       Cohort Estimated TE        SE ConfIntLow ConfIntHigh   P_value
-            2  0.009060593 0.4879617 -0.9473267   0.9654479 0.9851855
-            3 -0.127673929 0.4655589 -1.0401525   0.7848047 0.7839017
+       cohort     estimate        se     ci_low   ci_high   p_value
+            2  0.009060593 0.4879617 -0.9473267 0.9654479 0.9851855
+            3 -0.127673929 0.4655589 -1.0401525 0.7848047 0.7839017
       
       Model Details:
         Units (N)           : 30
@@ -116,9 +116,9 @@
         95% CI:    [0.0000, 0.0000]
       
       Cohort Average Treatment Effects (CATT):
-       Cohort Estimated TE SE ConfIntLow ConfIntHigh P_value selected
-            2            0  0          0           0      NA    FALSE
-            3            0  0          0           0      NA    FALSE
+       cohort estimate se ci_low ci_high p_value selected
+            2        0  0      0       0      NA    FALSE
+            3        0  0      0       0      NA    FALSE
       
       Model Details:
         Units (N)           : 30
@@ -141,9 +141,9 @@
       Selected: FALSE
       
       CATT (preview):
-       Cohort Estimated TE SE ConfIntLow ConfIntHigh P_value selected
-            2            0  0          0           0      NA    FALSE
-            3            0  0          0           0      NA    FALSE
+       cohort estimate se ci_low ci_high p_value selected
+            2        0  0      0       0      NA    FALSE
+            3        0  0      0       0      NA    FALSE
       
       Model Details:
         Units (N)           : 30

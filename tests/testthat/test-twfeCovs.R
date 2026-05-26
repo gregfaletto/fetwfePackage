@@ -52,7 +52,7 @@ test_that("twfeCovs returns expected output structure with valid input", {
 	# Also check that catt_df is a data frame with the expected column names.
 	expect_s3_class(result$catt_df, "data.frame")
 	expect_true(all(
-		c("Cohort", "Estimated TE", "SE", "ConfIntLow", "ConfIntHigh") %in%
+		c("cohort", "estimate", "se", "ci_low", "ci_high") %in%
 			colnames(result$catt_df)
 	))
 })
@@ -812,7 +812,7 @@ test_that("tibbles work as input to twfeCovs", {
 	# Also check that catt_df is a data frame with the expected column names.
 	expect_s3_class(result$catt_df, "data.frame")
 	expect_true(all(
-		c("Cohort", "Estimated TE", "SE", "ConfIntLow", "ConfIntHigh") %in%
+		c("cohort", "estimate", "se", "ci_low", "ci_high") %in%
 			colnames(result$catt_df)
 	))
 })
@@ -866,9 +866,9 @@ test_that("twfeCovs throws error when a cohort contains fewer than d + 1 units",
 })
 
 # ------------------------------------------------------------------------------
-# Test: twfeCovs surfaces P_value but not selected in catt_df
+# Test: twfeCovs surfaces p_value but not selected in catt_df
 # ------------------------------------------------------------------------------
-test_that("twfeCovs surfaces P_value but not selected in catt_df", {
+test_that("twfeCovs surfaces p_value but not selected in catt_df", {
 	set.seed(2026)
 	sim <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
 	dat <- simulateData(
@@ -879,16 +879,16 @@ test_that("twfeCovs surfaces P_value but not selected in catt_df", {
 	)
 	res <- twfeCovsWithSimulatedData(dat, verbose = FALSE)
 
-	expect_true("P_value" %in% colnames(res$catt_df))
+	expect_true("p_value" %in% colnames(res$catt_df))
 	expect_false("selected" %in% colnames(res$catt_df))
 
 	expect_true("att_p_value" %in% names(res))
 	expect_false("att_selected" %in% names(res))
 	expect_length(res$att_p_value, 1)
 
-	non_na <- !is.na(res$catt_df$P_value)
-	expect_true(all(res$catt_df$P_value[non_na] >= 0))
-	expect_true(all(res$catt_df$P_value[non_na] <= 1))
+	non_na <- !is.na(res$catt_df$p_value)
+	expect_true(all(res$catt_df$p_value[non_na] >= 0))
+	expect_true(all(res$catt_df$p_value[non_na] <= 1))
 })
 
 # ------------------------------------------------------------------------------
