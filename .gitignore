@@ -8,3 +8,9 @@ inst/doc
 /revdep
 /.workflow
 /.plans
+paper_arxiv.tex
+PROJECT-*
+INSIGHTS_*
+insights_*
+TODO_*
+mybib2fin.bib
