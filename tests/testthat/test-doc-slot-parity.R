@@ -254,18 +254,31 @@ test_that("cross-class slot inventory matches the documented divergence table", 
 		)
 	)
 
-	# Effective slot set per class: fetwfe's $internal sublist is flattened
-	# so its child slots count as top-level for cross-class comparison.
-	# (User-access paths are different — fit$X_ints vs fit$internal$X_ints —
-	# but the value, semantic, and presence are equivalent across classes.)
+	# Effective slot set per class: the `$internal` sublist is flattened
+	# for ALL four classes so its child slots count as top-level for
+	# cross-class comparison. (User-access paths are different —
+	# `fit$X_ints` vs `fit$internal$X_ints` — but the value, semantic,
+	# and presence are equivalent across classes.) Post-#144 the
+	# OLS-family also carries `$internal` (in addition to duplicating
+	# the same slots at top level for backward compat); flattening
+	# all four classes here keeps the comparison symmetric.
 	effective_slots <- list(
 		fetwfe = c(
 			setdiff(fetwfe:::.EXPECTED_SLOTS_FETWFE, "internal"),
 			fetwfe:::.EXPECTED_INTERNAL_SLOTS_FETWFE
 		),
-		etwfe = fetwfe:::.EXPECTED_SLOTS_ETWFE,
-		betwfe = fetwfe:::.EXPECTED_SLOTS_BETWFE,
-		twfeCovs = fetwfe:::.EXPECTED_SLOTS_TWFECOVS
+		etwfe = c(
+			setdiff(fetwfe:::.EXPECTED_SLOTS_ETWFE, "internal"),
+			fetwfe:::.EXPECTED_INTERNAL_SLOTS_ETWFE
+		),
+		betwfe = c(
+			setdiff(fetwfe:::.EXPECTED_SLOTS_BETWFE, "internal"),
+			fetwfe:::.EXPECTED_INTERNAL_SLOTS_BETWFE
+		),
+		twfeCovs = c(
+			setdiff(fetwfe:::.EXPECTED_SLOTS_TWFECOVS, "internal"),
+			fetwfe:::.EXPECTED_INTERNAL_SLOTS_TWFECOVS
+		)
 	)
 	all_classes <- names(effective_slots)
 	universe <- unique(unlist(effective_slots))

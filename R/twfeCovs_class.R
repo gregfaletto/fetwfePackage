@@ -66,7 +66,22 @@ print.twfeCovs <- function(x, ...) {
 	"time_var",
 	"unit_var",
 	"treatment",
-	"covs"
+	"covs",
+	"internal"
+)
+
+# Inner slots under `$internal` (#144). Parallel to
+# `.EXPECTED_INTERNAL_SLOTS_FETWFE` in `R/fetwfe_class.R`. The OLS-family
+# `$internal` omits `theta_hat` (bridge-selection-only, no analog here).
+# Same values are also duplicated at top level for backward compat per
+# the pure-additive strategy adopted in PR #154; the canonical path is
+# `$internal` going forward.
+.EXPECTED_INTERNAL_SLOTS_TWFECOVS <- c(
+	"X_ints",
+	"y",
+	"X_final",
+	"y_final",
+	"calc_ses"
 )
 
 #' @title Validate a `twfeCovs`-shaped object's contracts
@@ -75,6 +90,12 @@ print.twfeCovs <- function(x, ...) {
 .validate_twfeCovs <- function(x) {
 	cls <- "twfeCovs"
 	.stop_if_missing_slots(x, .EXPECTED_SLOTS_TWFECOVS, cls)
+	.stop_if_missing_slots(
+		x$internal,
+		.EXPECTED_INTERNAL_SLOTS_TWFECOVS,
+		cls,
+		where = "internal"
+	)
 	.check_type_sanity(x, cls, has_alpha = FALSE, has_att_selected = FALSE)
 	.check_se_consistency(x, calc_ses_path = "calc_ses", cls)
 	.check_p_value_na(x, cls)
