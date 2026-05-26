@@ -1,5 +1,21 @@
 # NEWS
 
+## Version 1.11.2 (2026-05-26)
+
+### Defensive improvements
+
+- The five cluster-sandwich quadratic-form floor sites in the variance
+  machinery (PR #111, item 9; the count was six before PR #118
+  consolidated `getCohortATTsFinalOLS()` into `getCohortATTsFinal()`)
+  now layer a two-tier diagnostic on top of the existing `max(., 0)`
+  floor: a `warning()` fires when the quadratic form is more negative
+  than `-1e-10` (clearly outside floating-point noise) and a `stop()`
+  fires when it is more negative than `-1` (catastrophic; outside any
+  plausible SE-squared magnitude in difference-in-differences
+  applications). On well-conditioned data the behavior is unchanged.
+  The diagnostic surfaces latent bugs that would previously have
+  silently produced `SE = 0`. Issue #139.
+
 ## Version 1.11.1 (2026-05-25)
 
 ### New features
