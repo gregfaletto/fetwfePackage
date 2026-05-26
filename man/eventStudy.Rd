@@ -59,3 +59,6 @@ fit (asymptotically exact), else the conservative Cauchy-Schwarz bound
   eventStudy(res)
 }
 }
+\seealso{
+\code{\link[=cohortStudy]{cohortStudy()}} for the parallel per-cohort accessor.
+}

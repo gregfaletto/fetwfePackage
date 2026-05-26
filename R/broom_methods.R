@@ -462,6 +462,67 @@ tidy.eventStudy <- function(
 	out
 }
 
+#' Tidy a `cohortStudy` object
+#'
+#' Returns a `broom`-style tidy data frame for the output of
+#' [cohortStudy()]. Renames the snake_case columns of `catt_df` to broom
+#' conventions (`se` -> `std.error`, `p_value` -> `p.value`,
+#' `ci_low` / `ci_high` -> `conf.low` / `conf.high`) and adds a `term`
+#' column (`"cohort_<cohort label>"`) plus a `statistic` column
+#' (`estimate / std.error`) so the schema matches `tidy.eventStudy()`
+#' for downstream `bind_rows()` consumers. When the input carries a
+#' `selected` column (`fetwfe` / `betwfe`), it is passed through as the
+#' final column.
+#'
+#' Confidence intervals come from the cohort fit's stored bounds (which
+#' encode the alpha passed at fit time); unlike [tidy.eventStudy()], this
+#' method does not recompute the CIs at a custom `conf.level` because the
+#' standard errors in `catt_df` are already paired with the fit-time
+#' bounds (`ci_low` / `ci_high`), so re-emitting those is the
+#' minimum-surprise behavior.
+#'
+#' @param x A `cohortStudy` object returned by [cohortStudy()].
+#' @param ... Unused; present for S3 compatibility.
+#' @return A data frame with one row per treated cohort and columns
+#'   `term`, `estimate`, `std.error`, `statistic`, `p.value`, `conf.low`,
+#'   `conf.high`, and (if present in the input) `selected`.
+#' @examples
+#' \dontrun{
+#'   res <- fetwfeWithSimulatedData(
+#'     simulateData(genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
+#'                  N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+#'   )
+#'   broom::tidy(cohortStudy(res))
+#' }
+#' @export
+tidy.cohortStudy <- function(x, ...) {
+	# Read the source columns via `.subset2()` to bypass the `catt_df`
+	# helpful-error S3 layer on `$` / `[[` (which is keyed on old-name
+	# access; new-name access falls through harmlessly, but `.subset2()`
+	# is the most direct route and documents intent).
+	estimate <- .subset2(x, "estimate")
+	se <- .subset2(x, "se")
+	statistic <- ifelse(
+		!is.na(se) & se > 0,
+		estimate / se,
+		NA_real_
+	)
+	out <- data.frame(
+		term = paste0("cohort_", .subset2(x, "cohort")),
+		estimate = estimate,
+		std.error = se,
+		statistic = statistic,
+		p.value = .subset2(x, "p_value"),
+		conf.low = .subset2(x, "ci_low"),
+		conf.high = .subset2(x, "ci_high"),
+		stringsAsFactors = FALSE
+	)
+	if ("selected" %in% names(x)) {
+		out$selected <- .subset2(x, "selected")
+	}
+	out
+}
+
 #' Tidy a `FETWFE_tes` simulation truth object
 #'
 #' Returns a `broom`-style tidy data frame for the population-truth

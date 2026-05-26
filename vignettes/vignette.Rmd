@@ -255,6 +255,21 @@ res_demo$catt_df
 
 It is worth keeping in mind that the asymptotic 100% CI of `{0}` interpretation is an `N -> infinity` statement. In small samples, it may be wise to read `selected` and `p_value` together rather than relying on either alone. In particular, even when `selected = TRUE`, the standard CI may cover zero --- the selection step says "the truth is nonzero" but the magnitude CI says "could be zero".
 
+## Per-cohort and per-event-time accessors
+
+The per-cohort estimates in `res$catt_df` are also reachable through `cohortStudy()`, a function-style accessor parallel to `eventStudy()` for event-time effects. The two are documented and discoverable in the same way (`?cohortStudy`, `?eventStudy`), and both return a data frame that plays nicely with `broom::tidy()`:
+
+```{r cohort-study-demo, message = FALSE}
+cs <- cohortStudy(res_demo)
+cs
+```
+
+```{r cohort-study-tidy, eval = requireNamespace("broom", quietly = TRUE)}
+broom::tidy(cs)
+```
+
+`cohortStudy()` is a pass-through on `res$catt_df` --- same rows, same columns --- with one extra S3 class on top (`"cohortStudy"`) that dispatches `tidy()` to a broom-shape translator. The `catt_df` class underneath is preserved, so the helpful-error layer on the old Title-Case column names still fires.
+
 ## Tidy outputs with broom
 
 If you use the tidyverse, the fitted object also plays nicely with the [broom](https://broom.tidymodels.org/) package. `tidy()` reshapes the overall ATT and per-cohort CATTs into a long data frame with the standard `term` / `estimate` / `std.error` / `statistic` / `p.value` / `conf.low` / `conf.high` columns, plus a `selected` flag (see "Testing the zero-effect null" below):

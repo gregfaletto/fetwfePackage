@@ -186,6 +186,14 @@ plot(res_betwfe)
 
 `eventStudy()` returns the underlying data; `plot()` returns a ggplot2 object you can further customize. `ggplot2` is in `Suggests:`, so it must be installed to use the `plot()` methods; the estimators themselves work without it.
 
+A parallel `cohortStudy()` accessor returns per-cohort ATT estimates as a tidy data frame (the same information available in `res$catt_df`, surfaced through a discoverable function with its own help page):
+
+```{r}
+cohortStudy(res_etwfe)
+```
+
+Both `eventStudy()` and `cohortStudy()` support `broom::tidy()` via dedicated S3 methods; see the main `fetwfe()` vignette for the broom workflow.
+
 # When to use which
 
 `fetwfe()` is the recommended estimator for production use; `etwfe()` and `betwfe()` are useful as comparisons or as building blocks for understanding what `fetwfe()` is doing.
