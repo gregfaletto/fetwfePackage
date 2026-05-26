@@ -2,7 +2,7 @@
 % Please edit documentation in R/gen_data.R
 \name{simulateDataCore}
 \alias{simulateDataCore}
-\title{Generate Random Panel Data for FETWFE Simulations}
+\title{Generate Random Panel Data for FETWFE Simulations (core)}
 \usage{
 simulateDataCore(
   N,

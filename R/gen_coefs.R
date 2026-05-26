@@ -245,7 +245,7 @@ getTes <- function(coefs_obj) {
 }
 
 
-#' Generate Coefficient Vector for Data Generation
+#' Generate Coefficient Vector for Data Generation (core)
 #'
 #' This function generates a coefficient vector \code{beta} along with a sparse auxiliary vector
 #' \code{theta} for simulation studies of the fused extended two-way fixed effects estimator. The

@@ -172,7 +172,7 @@ simulateData <- function(
 }
 
 
-#' Generate Random Panel Data for FETWFE Simulations
+#' Generate Random Panel Data for FETWFE Simulations (core)
 #'
 #' @description
 #' Generates a random panel data set for simulation studies of the fused extended two-way fixed
