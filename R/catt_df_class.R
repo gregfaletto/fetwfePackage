@@ -15,22 +15,23 @@
 #
 # To make migration of pre-1.11.0 user scripts loud and actionable rather
 # than silently returning NULL, every `catt_df` carries class
-# c("catt_df", "data.frame"). The three S3 methods below intercept access
-# by the old column names via `[[`, `$`, and `[` and stop() with a message
-# pointing to the new name. Any other column access falls through to the
-# data.frame method via NextMethod().
+# c("catt_df", "data.frame"). The six S3 methods below intercept access
+# and assignment by the old column names via `[[`, `$`, `[`, `[[<-`,
+# `$<-`, `[<-` and stop() with a message pointing to the new name. Any
+# other column access falls through to the data.frame method via
+# NextMethod().
 #
 # NSE access (dplyr, ggplot, subset) strips the catt_df class as usual
 # and surfaces the standard "object not found" error -- the NEWS rename
 # table compensates for that case. The interceptors only catch the
-# `[[` / `$` / `[` triplet on the raw frame, which is where the bulk of
-# migration friction lives.
+# `[[` / `$` / `[` triplet (plus their `<-` counterparts) on the raw
+# frame, which is where the bulk of migration friction lives.
 #-------------------------------------------------------------------------------
 
 #' @title Old -> new column-name mapping for `catt_df` (internal)
 #' @description
 #' Single source of truth for the 1.10.0 -> 1.11.0 rename. Consulted by
-#' the three S3 helpful-error methods below and asserted on by a
+#' the six S3 helpful-error methods below and asserted on by a
 #' regression-guard test in `tests/testthat/test-catt_df-helpful-errors.R`.
 #' @keywords internal
 #' @noRd
@@ -42,6 +43,26 @@
 	"ConfIntHigh" = "ci_high",
 	"P_value" = "p_value"
 )
+
+#' @title Test whether a name argument should fire the migration error
+#' @description
+#' Shared guard used by both the read-side (`[[`, `$`, `[`) and write-side
+#' (`[[<-`, `$<-`, `[<-`) S3 methods. Returns `TRUE` iff `name` is a
+#' character scalar that matches one of the pre-1.11.0 column names in
+#' `.catt_df_rename_map`. Anything else (numeric indices, logical masks,
+#' multi-element character vectors, new names) falls through.
+#'
+#' Note: factor selectors fall through silently (`is.character()`
+#' returns `FALSE` for factors). That edge case is exotic enough that
+#' we accept the gap rather than complicate the gate; see SPEC's
+#' `Surprises & Discoveries`.
+#' @keywords internal
+#' @noRd
+.fires_for <- function(name) {
+	is.character(name) &&
+		length(name) == 1L &&
+		name %in% names(.catt_df_rename_map)
+}
 
 #' @title Build the standard migration-message stop() for an old name
 #' @keywords internal
@@ -76,9 +97,7 @@
 #' @method [[ catt_df
 #' @export
 `[[.catt_df` <- function(x, i, ...) {
-	if (
-		is.character(i) && length(i) == 1L && i %in% names(.catt_df_rename_map)
-	) {
+	if (.fires_for(i)) {
 		.catt_df_renamed_error(i)
 	}
 	NextMethod()
@@ -96,11 +115,7 @@
 #' @method $ catt_df
 #' @export
 `$.catt_df` <- function(x, name) {
-	if (
-		is.character(name) &&
-			length(name) == 1L &&
-			name %in% names(.catt_df_rename_map)
-	) {
+	if (.fires_for(name)) {
 		.catt_df_renamed_error(name)
 	}
 	NextMethod()
@@ -137,6 +152,102 @@
 		}
 	} else {
 		# x[i, j] or x[, j] form: j is the column selector.
+		if (!missing(j)) {
+			col_arg <- j
+		}
+	}
+	if (
+		!is.null(col_arg) &&
+			is.character(col_arg) &&
+			any(col_arg %in% names(.catt_df_rename_map))
+	) {
+		hit <- intersect(col_arg, names(.catt_df_rename_map))[1L]
+		.catt_df_renamed_error(hit)
+	}
+	NextMethod()
+}
+
+#' Double-bracket assignment on a `catt_df` object
+#'
+#' Intercepts assignment by the pre-1.11.0 Title-Case column names
+#' (e.g., `df[["Estimated TE"]] <- v`) and stops with a migration
+#' message pointing to the new snake_case name. This closes the gap
+#' where a partial migration (RHS updated to new name, LHS still old)
+#' would silently append a new column rather than overwriting the
+#' renamed one. All other assignment falls through to the
+#' `data.frame` method via `NextMethod()`.
+#'
+#' @param x A `catt_df` object.
+#' @param i Index; passed through to `[[<-.data.frame`. Character
+#'   indices matching an old column name are intercepted.
+#' @param ... Further arguments passed through.
+#' @param value The value to assign.
+#' @return The modified `catt_df` object, as for `[[<-.data.frame`.
+#' @method [[<- catt_df
+#' @export
+`[[<-.catt_df` <- function(x, i, ..., value) {
+	if (.fires_for(i)) {
+		.catt_df_renamed_error(i)
+	}
+	NextMethod()
+}
+
+#' Dollar-sign assignment on a `catt_df` object
+#'
+#' Intercepts assignment by the pre-1.11.0 Title-Case column names
+#' (e.g., `df$Cohort <- v`) and stops with a migration message. All
+#' other assignment falls through to the `data.frame` method via
+#' `NextMethod()`.
+#'
+#' @param x A `catt_df` object.
+#' @param name Character; the column name being assigned via `$`.
+#' @param value The value to assign.
+#' @return The modified `catt_df` object, as for `$<-.data.frame`.
+#' @method $<- catt_df
+#' @export
+`$<-.catt_df` <- function(x, name, value) {
+	if (.fires_for(name)) {
+		.catt_df_renamed_error(name)
+	}
+	NextMethod()
+}
+
+#' Single-bracket assignment on a `catt_df` object
+#'
+#' Intercepts column assignment by the pre-1.11.0 Title-Case names
+#' and stops with a migration message. The check fires when an old
+#' name appears in the column-selector position. Row-only assignment
+#' (`df[i, ] <- v`) and assignment by new column names fall through
+#' to the `data.frame` method via `NextMethod()`.
+#'
+#' The `nargs()` distinction here mirrors the read-side `[.catt_df`,
+#' but the threshold shifts by one because `[<-` carries an extra
+#' positional `value` argument: `df[i] <- v` has `nargs() == 3` and
+#' i is the column selector; `df[i, j] <- v` and `df[i, ] <- v` have
+#' `nargs() == 4` and j (if non-missing) is the column selector.
+#'
+#' @param x A `catt_df` object.
+#' @param i,j Row / column selectors; see `[<-.data.frame`.
+#' @param ... Further arguments passed through.
+#' @param value The value to assign.
+#' @return The modified `catt_df` object, as for `[<-.data.frame`.
+#' @method [<- catt_df
+#' @export
+`[<-.catt_df` <- function(x, i, j, ..., value) {
+	# Mirror `[.catt_df`'s nargs() trick, shifted by one: `[<-` has an
+	# extra positional `value` argument, so the column-selection
+	# one-index form `df[i] <- v` has nargs() == 3, and the two-index
+	# forms `df[i, j] <- v` / `df[i, ] <- v` / `df[, j] <- v` have
+	# nargs() == 4.
+	col_arg <- NULL
+	if (nargs() <= 3L) {
+		# x[i] <- v form: i is the column selector (possibly missing
+		# for x[] <- v).
+		if (!missing(i)) {
+			col_arg <- i
+		}
+	} else {
+		# x[i, j] <- v or x[, j] <- v form: j is the column selector.
 		if (!missing(j)) {
 			col_arg <- j
 		}

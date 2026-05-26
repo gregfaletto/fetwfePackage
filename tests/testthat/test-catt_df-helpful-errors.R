@@ -93,12 +93,7 @@ test_that("$<old name> fires helpful error on every renamed column", {
 	for (i in seq_along(.old_names)) {
 		old <- .old_names[[i]]
 		new <- .new_names[[i]]
-		expect_error(
-			df[[old]],
-			sprintf("`%s` was renamed to `%s` in fetwfe 1.11.0", old, new),
-			fixed = TRUE
-		)
-		# Direct $ access too (needs eval(call) since some old names contain
+		# Direct $ access (needs eval(call) since some old names contain
 		# spaces; `df$"Estimated TE"` is valid syntax).
 		call <- substitute(df$X, list(X = as.name(old)))
 		expect_error(
@@ -137,6 +132,112 @@ test_that("[, <old name>] (two-index column selection) fires helpful error", {
 			fixed = TRUE
 		)
 	}
+})
+
+# ------------------------------------------------------------------------
+# 5b) Write-side: [[<-, $<-, [<- on each old name fire the helpful error.
+#
+# Closes the gap where a partial migration (RHS updated to new name,
+# LHS still old) would silently append a new column rather than
+# overwriting the renamed one.
+# ------------------------------------------------------------------------
+test_that("[[<old name>]] <- v fires helpful error on every renamed column", {
+	df <- .make_catt_df()
+	for (i in seq_along(.old_names)) {
+		old <- .old_names[[i]]
+		new <- .new_names[[i]]
+		expect_error(
+			df[[old]] <- 1:3,
+			sprintf("`%s` was renamed to `%s` in fetwfe 1.11.0", old, new),
+			fixed = TRUE
+		)
+	}
+})
+
+test_that("$<old name> <- v fires helpful error on every renamed column", {
+	df <- .make_catt_df()
+	for (i in seq_along(.old_names)) {
+		old <- .old_names[[i]]
+		new <- .new_names[[i]]
+		# Use eval(call) on a substitute()'d assignment so spaces in
+		# names (e.g., "Estimated TE") are handled syntactically.
+		call <- substitute(df$X <- 1:3, list(X = as.name(old)))
+		expect_error(
+			eval(call),
+			sprintf("`%s` was renamed to `%s` in fetwfe 1.11.0", old, new),
+			fixed = TRUE
+		)
+	}
+})
+
+test_that("[<old name>] <- v (one-index col assign) fires helpful error", {
+	df <- .make_catt_df()
+	for (i in seq_along(.old_names)) {
+		old <- .old_names[[i]]
+		new <- .new_names[[i]]
+		expect_error(
+			df[old] <- 1:3,
+			sprintf("`%s` was renamed to `%s` in fetwfe 1.11.0", old, new),
+			fixed = TRUE
+		)
+	}
+})
+
+test_that("[, <old name>] <- v (two-index col assign) fires helpful error", {
+	df <- .make_catt_df()
+	for (i in seq_along(.old_names)) {
+		old <- .old_names[[i]]
+		new <- .new_names[[i]]
+		expect_error(
+			df[, old] <- 1:3,
+			sprintf("`%s` was renamed to `%s` in fetwfe 1.11.0", old, new),
+			fixed = TRUE
+		)
+	}
+})
+
+# Write-side fall-through cases: assignment to new names and row-only
+# assignment must NOT fire.
+test_that("[[<new name>]] <- v assigns the column without firing", {
+	df <- .make_catt_df()
+	df[["estimate"]] <- c(7.7, 8.8, 9.9)
+	expect_equal(df[["estimate"]], c(7.7, 8.8, 9.9))
+	# A new (non-mapped) column name also falls through.
+	df[["new_col"]] <- 1:3
+	expect_equal(df[["new_col"]], 1:3)
+})
+
+test_that("$<new name> <- v assigns the column without firing", {
+	df <- .make_catt_df()
+	df$estimate <- c(7.7, 8.8, 9.9)
+	expect_equal(df$estimate, c(7.7, 8.8, 9.9))
+	df$new_col <- 1:3
+	expect_equal(df$new_col, 1:3)
+})
+
+test_that("[<new name>] <- v and [, <new name>] <- v assign without firing", {
+	df <- .make_catt_df()
+	df["estimate"] <- c(7.7, 8.8, 9.9)
+	expect_equal(df[["estimate"]], c(7.7, 8.8, 9.9))
+	df[, "estimate"] <- c(1.1, 2.2, 3.3)
+	expect_equal(df[["estimate"]], c(1.1, 2.2, 3.3))
+})
+
+test_that("row-only assignment df[i, ] <- v does NOT fire the helpful error", {
+	df <- .make_catt_df()
+	# This is a row-only assignment; nargs() is 4 with j missing. The
+	# helpful-error layer must fall through.
+	df[1, ] <- list("99", 99, 9, 9, 9, 9, FALSE)
+	expect_equal(df$cohort[1], "99")
+	expect_equal(df$estimate[1], 99)
+})
+
+test_that("numeric column assignment df[, k] <- v does NOT fire", {
+	df <- .make_catt_df()
+	df[, 2] <- c(11.1, 22.2, 33.3)
+	expect_equal(df$estimate, c(11.1, 22.2, 33.3))
+	df[[2]] <- c(44.4, 55.5, 66.6)
+	expect_equal(df$estimate, c(44.4, 55.5, 66.6))
 })
 
 # ------------------------------------------------------------------------
