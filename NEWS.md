@@ -1,5 +1,19 @@
 # NEWS
 
+## Version 1.11.3 (2026-05-26)
+
+### Defensive improvements
+
+- `tidy.eventStudy()` (`R/broom_methods.R`) now reports the missing
+  column name when its input is missing a required column, parallel to
+  the guard added to `tidy.cohortStudy()` in 1.11.1. Previously a
+  user-mutated `eventStudy` frame produced a cryptic "arguments imply
+  differing number of rows" error from `data.frame()`; now the failure
+  localizes to "tidy.eventStudy(): input is missing required columns:
+  ...". Required columns: `event_time`, `n_cohorts`, `estimate`, `se`,
+  `p_value`. CI columns (`ci_low`, `ci_high`) are NOT required — this
+  method computes its own CIs from `estimate +/- z * se`. Issue #151.
+
 ## Version 1.11.2 (2026-05-26)
 
 ### Defensive improvements

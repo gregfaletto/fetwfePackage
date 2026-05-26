@@ -540,6 +540,36 @@ test_that("tidy.eventStudy recomputes CIs at a custom conf.level", {
 	))
 })
 
+test_that("tidy.eventStudy localizes error when required columns are missing", {
+	# Parallels the guard PR #150 added to tidy.cohortStudy(). If a user
+	# mutated the `eventStudy` frame to drop a required column, the call
+	# should report which column is missing rather than producing a
+	# cryptic "differing number of rows" error from `data.frame()`.
+	res <- .fetwfe_fixture()
+	es <- eventStudy(res)
+	# Drop a single required column.
+	es_broken <- es
+	es_broken$se <- NULL
+	expect_error(
+		broom::tidy(es_broken),
+		"missing required columns: se"
+	)
+	# Drop two required columns; both are listed in the error message.
+	es_broken2 <- es
+	es_broken2$se <- NULL
+	es_broken2$p_value <- NULL
+	expect_error(
+		broom::tidy(es_broken2),
+		"missing required columns: se, p_value"
+	)
+	# CI columns are NOT required (this method computes its own CIs from
+	# estimate +/- z * se). Dropping them should NOT fire the guard.
+	es_no_ci <- es
+	es_no_ci$ci_low <- NULL
+	es_no_ci$ci_high <- NULL
+	expect_silent(broom::tidy(es_no_ci))
+})
+
 test_that("FETWFE_tes carries cohort_times slot (simulator convention)", {
 	setup <- .simulated_setup()
 	tes <- getTes(setup$coefs)
