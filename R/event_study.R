@@ -206,10 +206,13 @@ eventStudy <- function(x, alpha = NULL) {
 			# downstream sqrt() and surface as a baffling "NA SE" report.
 			# Floor at zero so any near-zero quadratic form rounds to
 			# exactly zero (the mathematically correct answer for a
-			# psi orthogonal to the sandwich's image).
-			var_1_e <- max(
+			# psi orthogonal to the sandwich's image). Issue #139 layers
+			# a two-tier (warning / error) diagnostic on top of the floor
+			# via `.floor_cluster_quad()`; on well-conditioned data the
+			# behavior is unchanged.
+			var_1_e <- .floor_cluster_quad(
 				as.numeric(t(psi_full) %*% sandwich_full %*% psi_full),
-				0
+				"event_study_etwfe_betwfe/var_1_e"
 			)
 		} else {
 			psi_e_sel <- psi_e_tes[sel_treat_inds_shifted]
@@ -401,10 +404,13 @@ eventStudy <- function(x, alpha = NULL) {
 			psi_full[treat_block_mask] <- psi_e_theta
 			# Issue #84 item 9: floor the cluster-sandwich quadratic form
 			# at zero. See the matching guard in `.event_study_etwfe_betwfe`
-			# (just above) for rationale.
-			var_1_e <- max(
+			# (just above) for rationale. Issue #139 layers a two-tier
+			# (warning / error) diagnostic on top of the floor via
+			# `.floor_cluster_quad()`; on well-conditioned data the
+			# behavior is unchanged.
+			var_1_e <- .floor_cluster_quad(
 				as.numeric(t(psi_full) %*% sandwich_full %*% psi_full),
-				0
+				"event_study_fetwfe/var_1_e"
 			)
 		} else {
 			var_1_e <- sig_eps_sq *

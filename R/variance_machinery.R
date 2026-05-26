@@ -106,12 +106,15 @@ getTeResultsOLS <- function(
 
 			# Issue #84 item 9: floor the cluster-sandwich quadratic form
 			# at zero. See the matching guard in `getTeResults2`
-			# (same file, R/variance_machinery.R) for rationale.
-			att_var_1 <- max(
+			# (same file, R/variance_machinery.R) for rationale. Issue
+			# #139 layers a two-tier (warning / error) diagnostic on top
+			# of the floor via `.floor_cluster_quad()`; on well-conditioned
+			# data the behavior is unchanged.
+			att_var_1 <- .floor_cluster_quad(
 				as.numeric(
 					t(psi_att_full) %*% sandwich_full %*% psi_att_full
 				),
-				0
+				"getTeResultsOLS/att_var_1"
 			)
 		} else {
 			att_var_1 <- sig_eps_sq *
@@ -641,12 +644,15 @@ getTeResults2 <- function(
 			# could come out negative by a few ulps, NaN-ing downstream
 			# sqrt() into a baffling "NA SE" surface. Floor at zero so
 			# any rounding-induced negative collapses to the
-			# mathematically correct value.
-			att_var_1 <- max(
+			# mathematically correct value. Issue #139 layers a two-tier
+			# (warning / error) diagnostic on top of the floor via
+			# `.floor_cluster_quad()`; on well-conditioned data the
+			# behavior is unchanged.
+			att_var_1 <- .floor_cluster_quad(
 				as.numeric(
 					t(psi_att_full) %*% sandwich_full %*% psi_att_full
 				),
-				0
+				"getTeResults2/att_var_1"
 			)
 		} else {
 			att_var_1 <- sig_eps_sq *
@@ -1318,14 +1324,17 @@ getCohortATTsFinal <- function(
 				# Issue #84 item 9: floor the cluster-sandwich quadratic
 				# form at zero before sqrt(), defending against a
 				# rounding-induced negative; see the matching guard in
-				# `getTeResults2` (same file) for rationale.
-				cohort_te_ses[r] <- sqrt(max(
+				# `getTeResults2` (same file) for rationale. Issue #139
+				# layers a two-tier (warning / error) diagnostic on top of
+				# the floor via `.floor_cluster_quad()`; on well-conditioned
+				# data the behavior is unchanged.
+				cohort_te_ses[r] <- sqrt(.floor_cluster_quad(
 					as.numeric(
 						t(psi_r_full) %*%
 							sandwich_full %*%
 							psi_r_full
 					),
-					0
+					"getCohortATTsFinal/cohort_te_se"
 				))
 			} else {
 				## Variance of the treatment effect for cohort r is
