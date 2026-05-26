@@ -354,3 +354,50 @@ test_that("standard data.frame operations work on cohortStudy output", {
 	expect_s3_class(sub, "data.frame")
 	expect_true(nrow(sub) <= nrow(cs))
 })
+
+# ------------------------------------------------------------------------
+# 11) Robustness guards: cohortStudy() rejects a non-data.frame catt_df
+#     slot, and tidy.cohortStudy() localizes the error when required
+#     columns are missing. Both paths require manual user mutation of
+#     the fitted object's slot; no realistic estimator path produces
+#     them, but the guards localize an otherwise cryptic failure.
+# ------------------------------------------------------------------------
+test_that("cohortStudy() rejects a non-data.frame catt_df slot", {
+	setup <- .cs_setup()
+	res <- fetwfeWithSimulatedData(setup$sim)
+	# Mutate the slot to a list; verify the helpful stop fires.
+	res$catt_df <- list(estimate = 1, se = 0.1)
+	expect_error(
+		cohortStudy(res),
+		"`catt_df` slot is not a data.frame"
+	)
+	# Mutate to an atomic vector; same guard fires.
+	res$catt_df <- c(1, 2, 3)
+	expect_error(
+		cohortStudy(res),
+		"`catt_df` slot is not a data.frame"
+	)
+})
+
+test_that("tidy.cohortStudy() localizes error when required columns are missing", {
+	setup <- .cs_setup()
+	res <- fetwfeWithSimulatedData(setup$sim)
+	cs <- cohortStudy(res)
+	# Drop a required column; the tidy translation should report which
+	# column is missing rather than producing a cryptic "differing number
+	# of rows" error from `data.frame()`.
+	cs_broken <- cs
+	cs_broken$ci_low <- NULL
+	expect_error(
+		broom::tidy(cs_broken),
+		"missing required columns: ci_low"
+	)
+	# Drop two required columns; both are listed in the error message.
+	cs_broken2 <- cs
+	cs_broken2$ci_low <- NULL
+	cs_broken2$ci_high <- NULL
+	expect_error(
+		broom::tidy(cs_broken2),
+		"missing required columns: ci_low, ci_high"
+	)
+})

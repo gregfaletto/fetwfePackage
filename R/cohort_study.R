@@ -81,6 +81,16 @@ cohortStudy <- function(result) {
 			call. = FALSE
 		)
 	}
+	if (!is.data.frame(result$catt_df)) {
+		stop(
+			"cohortStudy(): the fitted object's `catt_df` slot is not a ",
+			"data.frame (got class: ",
+			paste(class(result$catt_df), collapse = ", "),
+			"). If you have mutated this slot manually, restore the original ",
+			"data frame; otherwise please file an issue.",
+			call. = FALSE
+		)
+	}
 	out <- result$catt_df
 	class(out) <- c("cohortStudy", "catt_df", "data.frame")
 	out

@@ -496,6 +496,21 @@ tidy.eventStudy <- function(
 #' }
 #' @export
 tidy.cohortStudy <- function(x, ...) {
+	# Guard against a user-mutated `catt_df` slot that's missing required
+	# columns: localizes the error to a clear message rather than the
+	# cryptic "arguments imply differing number of rows" from `data.frame()`
+	# when `.subset2()` returns NULL on an absent column.
+	required <- c("cohort", "estimate", "se", "ci_low", "ci_high", "p_value")
+	missing_cols <- setdiff(required, names(x))
+	if (length(missing_cols) > 0L) {
+		stop(
+			"tidy.cohortStudy(): input is missing required columns: ",
+			paste(missing_cols, collapse = ", "),
+			". If you have mutated the `catt_df` slot, restore the original ",
+			"data frame; otherwise please file an issue.",
+			call. = FALSE
+		)
+	}
 	# Read the source columns via `.subset2()` to bypass the `catt_df`
 	# helpful-error S3 layer on `$` / `[[` (which is keyed on old-name
 	# access; new-name access falls through harmlessly, but `.subset2()`
