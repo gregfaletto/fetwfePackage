@@ -1,5 +1,20 @@
 # NEWS
 
+## Version 1.11.1 (2026-05-25)
+
+### New features
+
+- `cohortStudy(result)` is a new function-style accessor for per-cohort
+  average treatment effects, parallel to `eventStudy()`. It returns the
+  same information available via `result$catt_df` in a discoverable
+  function with its own help page (`?cohortStudy`). Use
+  `tidy(cohortStudy(result))` (with `broom` loaded) for broom-shape
+  output suitable for `modelsummary` and similar consumers. The returned
+  object carries class `c("cohortStudy", "catt_df", "data.frame")`: the
+  `cohortStudy` class dispatches `tidy()`; the `catt_df` class preserves
+  the helpful-error layer for pre-1.11.0 column-name access; the
+  `data.frame` base preserves the standard data-frame methods.
+
 ## Version 1.11.0 (2026-05-25)
 
 ### Breaking changes
