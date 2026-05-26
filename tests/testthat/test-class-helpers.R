@@ -8,20 +8,21 @@
 # own `max_cohorts =` argument, and the three should not collide.
 
 # Helper: build a 5-row catt_df with the columns print.<class> reads. The
-# Cohort values are descending so `order_by = "cohort"` (the default for
+# cohort values are descending so `order_by = "cohort"` (the default for
 # print methods) reorders them ascending; that lets the truncation behavior
 # be observed deterministically.
 .make_catt_df_5 <- function() {
-	data.frame(
-		Cohort = paste0("c", 5:1),
-		`Estimated TE` = seq(0.1, 0.5, length.out = 5),
-		SE = rep(0.05, 5),
-		ConfIntLow = seq(0.0, 0.4, length.out = 5),
-		ConfIntHigh = seq(0.2, 0.6, length.out = 5),
-		P_value = rep(0.01, 5),
-		check.names = FALSE,
+	out <- data.frame(
+		cohort = paste0("c", 5:1),
+		estimate = seq(0.1, 0.5, length.out = 5),
+		se = rep(0.05, 5),
+		ci_low = seq(0.0, 0.4, length.out = 5),
+		ci_high = seq(0.2, 0.6, length.out = 5),
+		p_value = rep(0.01, 5),
 		stringsAsFactors = FALSE
 	)
+	class(out) <- c("catt_df", "data.frame")
+	out
 }
 
 # Helper: build a minimal classed object carrying only the fields each

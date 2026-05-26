@@ -59,21 +59,21 @@ NULL
 	# See R/class_helpers.R::.truncate_catt for the rationale.
 	catt <- catt[
 		order(
-			suppressWarnings(as.numeric(catt$Cohort)),
-			catt$Cohort
+			suppressWarnings(as.numeric(catt$cohort)),
+			catt$cohort
 		),
 		,
 		drop = FALSE
 	]
-	cohort_terms <- paste0("Cohort ", catt$Cohort)
-	cohort_estimates <- catt[["Estimated TE"]]
-	cohort_ses <- catt$SE
+	cohort_terms <- paste0("Cohort ", catt$cohort)
+	cohort_estimates <- catt[["estimate"]]
+	cohort_ses <- catt$se
 	cohort_statistics <- ifelse(
 		!is.na(cohort_ses) & cohort_ses > 0,
 		cohort_estimates / cohort_ses,
 		NA_real_
 	)
-	cohort_pvalues <- catt$P_value
+	cohort_pvalues <- catt$p_value
 
 	out <- data.frame(
 		term = c(att_term, cohort_terms),

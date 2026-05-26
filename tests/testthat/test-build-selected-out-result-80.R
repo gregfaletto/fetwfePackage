@@ -161,22 +161,23 @@ test_that("BETWFE intercept-only block (Block 1) shape: 33 fields, expected orde
 	expect_identical(unname(res$catt_ses), c(0, 0))
 
 	expect_s3_class(res$catt_df, "data.frame")
+	expect_s3_class(res$catt_df, "catt_df")
 	expect_named(
 		res$catt_df,
 		c(
-			"Cohort",
-			"Estimated TE",
-			"SE",
-			"ConfIntLow",
-			"ConfIntHigh",
-			"P_value",
+			"cohort",
+			"estimate",
+			"se",
+			"ci_low",
+			"ci_high",
+			"p_value",
 			"selected"
 		)
 	)
 	expect_equal(nrow(res$catt_df), args$R)
-	expect_identical(res$catt_df$Cohort, args$c_names)
+	expect_identical(res$catt_df$cohort, args$c_names)
 	expect_identical(res$catt_df$selected, rep(FALSE, args$R))
-	expect_identical(res$catt_df$P_value, rep(NA_real_, args$R))
+	expect_identical(res$catt_df$p_value, rep(NA_real_, args$R))
 
 	expect_identical(res$beta_hat, rep(0, args$p))
 	expect_identical(res$N, args$N)
@@ -255,7 +256,7 @@ test_that("q gating: q >= 1 -> ret_se = NA, calc_ses = FALSE; q < 1 -> ret_se = 
 	expect_identical(res_low$in_sample_att_se, 0)
 	expect_identical(res_low$indep_att_se, 0)
 	expect_identical(unname(res_low$catt_ses), c(0, 0))
-	expect_identical(res_low$catt_df$SE, c(0, 0))
+	expect_identical(res_low$catt_df$se, c(0, 0))
 	expect_true(res_low$calc_ses)
 
 	args_high <- .make_helper_args()
@@ -265,7 +266,7 @@ test_that("q gating: q >= 1 -> ret_se = NA, calc_ses = FALSE; q < 1 -> ret_se = 
 	expect_identical(res_high$in_sample_att_se, NA)
 	expect_identical(res_high$indep_att_se, NA)
 	expect_true(all(is.na(res_high$catt_ses)))
-	expect_true(all(is.na(res_high$catt_df$SE)))
+	expect_true(all(is.na(res_high$catt_df$se)))
 	expect_false(res_high$calc_ses)
 })
 

@@ -1149,15 +1149,19 @@ check_etwfe_core_inputs <- function(
 	}
 
 	catt_df_to_ret <- data.frame(
-		Cohort = c_names,
-		`Estimated TE` = rep(0, R),
-		SE = rep(ret_se, R),
-		ConfIntLow = rep(ret_se, R),
-		ConfIntHigh = rep(ret_se, R),
-		P_value = rep(NA_real_, R),
+		cohort = c_names,
+		estimate = rep(0, R),
+		se = rep(ret_se, R),
+		ci_low = rep(ret_se, R),
+		ci_high = rep(ret_se, R),
+		p_value = rep(NA_real_, R),
 		selected = rep(FALSE, R),
-		check.names = FALSE
+		stringsAsFactors = FALSE
 	)
+	# Attach the `catt_df` S3 class so [[ / $ / [ accessors fire the
+	# helpful-error layer (R/catt_df_class.R) when users hit the old
+	# Title-Case column names from versions <= 1.10.0.
+	class(catt_df_to_ret) <- c("catt_df", "data.frame")
 
 	# Build the FULL union list with every possible field, then drop
 	# the fields that don't belong to this block via name-vector

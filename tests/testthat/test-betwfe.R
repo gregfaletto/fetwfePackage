@@ -59,7 +59,7 @@ test_that("betwfe returns expected output structure with valid input", {
 	# Also check that catt_df is a data frame with the expected column names.
 	expect_s3_class(result$catt_df, "data.frame")
 	expect_true(all(
-		c("Cohort", "Estimated TE", "SE", "ConfIntLow", "ConfIntHigh") %in%
+		c("cohort", "estimate", "se", "ci_low", "ci_high") %in%
 			colnames(result$catt_df)
 	))
 })
@@ -893,7 +893,7 @@ test_that("tibbles work as input to fewtfe", {
 	# Also check that catt_df is a data frame with the expected column names.
 	expect_s3_class(result$catt_df, "data.frame")
 	expect_true(all(
-		c("Cohort", "Estimated TE", "SE", "ConfIntLow", "ConfIntHigh") %in%
+		c("cohort", "estimate", "se", "ci_low", "ci_high") %in%
 			colnames(result$catt_df)
 	))
 })
@@ -989,9 +989,9 @@ test_that("print.betwfe show_internal = TRUE reads top-level fields", {
 })
 
 # ------------------------------------------------------------------------------
-# Test: betwfe surfaces P_value and selected in catt_df
+# Test: betwfe surfaces p_value and selected in catt_df
 # ------------------------------------------------------------------------------
-test_that("betwfe surfaces P_value and selected in catt_df", {
+test_that("betwfe surfaces p_value and selected in catt_df", {
 	set.seed(2026)
 	sim <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
 	dat <- simulateData(
@@ -1002,9 +1002,9 @@ test_that("betwfe surfaces P_value and selected in catt_df", {
 	)
 	res <- betwfeWithSimulatedData(dat, verbose = FALSE)
 
-	expect_true("P_value" %in% colnames(res$catt_df))
+	expect_true("p_value" %in% colnames(res$catt_df))
 	expect_true("selected" %in% colnames(res$catt_df))
-	expect_type(res$catt_df$P_value, "double")
+	expect_type(res$catt_df$p_value, "double")
 	expect_type(res$catt_df$selected, "logical")
 
 	expect_true("att_p_value" %in% names(res))
@@ -1013,16 +1013,16 @@ test_that("betwfe surfaces P_value and selected in catt_df", {
 	expect_length(res$att_p_value, 1)
 	expect_length(res$att_selected, 1)
 
-	# P_value semantics: in [0, 1] when not NA; NA exactly when the cohort
-	# is selected out (Estimated TE == 0).
-	non_na <- !is.na(res$catt_df$P_value)
-	expect_true(all(res$catt_df$P_value[non_na] >= 0))
-	expect_true(all(res$catt_df$P_value[non_na] <= 1))
+	# p_value semantics: in [0, 1] when not NA; NA exactly when the cohort
+	# is selected out (estimate == 0).
+	non_na <- !is.na(res$catt_df$p_value)
+	expect_true(all(res$catt_df$p_value[non_na] >= 0))
+	expect_true(all(res$catt_df$p_value[non_na] <= 1))
 	expect_identical(
 		res$catt_df$selected,
-		res$catt_df[["Estimated TE"]] != 0
+		res$catt_df[["estimate"]] != 0
 	)
-	expect_true(all(is.na(res$catt_df$P_value[!res$catt_df$selected])))
+	expect_true(all(is.na(res$catt_df$p_value[!res$catt_df$selected])))
 })
 
 # ------------------------------------------------------------------------------
@@ -1039,13 +1039,13 @@ test_that("betwfe produces at least one selected-out cohort in a sparse simulati
 	)
 	res <- betwfeWithSimulatedData(dat, verbose = FALSE)
 
-	expect_gt(sum(res$catt_df[["Estimated TE"]] == 0), 0)
+	expect_gt(sum(res$catt_df[["estimate"]] == 0), 0)
 })
 
 # ------------------------------------------------------------------------------
-# Test: order_by = "pvalue" sorts by ascending P_value with NAs last
+# Test: order_by = "pvalue" sorts by ascending p_value with NAs last
 # ------------------------------------------------------------------------------
-test_that("order_by = 'pvalue' sorts CATT by ascending P_value with NAs last", {
+test_that("order_by = 'pvalue' sorts CATT by ascending p_value with NAs last", {
 	set.seed(2026)
 	sim <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
 	dat <- simulateData(
@@ -1069,11 +1069,11 @@ test_that("order_by = 'pvalue' sorts CATT by ascending P_value with NAs last", {
 	cohort_rows <- output_lines[(header_idx + 2):(end_idx - 1)]
 
 	expected_order <- order(
-		res$catt_df$P_value,
+		res$catt_df$p_value,
 		na.last = TRUE
 	)
 	expected_cohorts <- as.character(
-		res$catt_df$Cohort[expected_order]
+		res$catt_df$cohort[expected_order]
 	)
 
 	first_tokens <- vapply(

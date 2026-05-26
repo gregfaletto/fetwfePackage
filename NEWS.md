@@ -1,5 +1,42 @@
 # NEWS
 
+## Version 1.11.0 (2026-05-25)
+
+### Breaking changes
+
+- The columns of `result$catt_df` have been renamed to a snake_case
+  convention that matches the columns of `eventStudy(result)`:
+
+  | Old name       | New name   |
+  |----------------|------------|
+  | `Cohort`       | `cohort`   |
+  | `Estimated TE` | `estimate` |
+  | `SE`           | `se`       |
+  | `ConfIntLow`   | `ci_low`   |
+  | `ConfIntHigh`  | `ci_high`  |
+  | `P_value`      | `p_value`  |
+
+  The `selected` column (`fetwfe` / `betwfe` only) is unchanged. Broom
+  output via `tidy(result)` is also unchanged (still broom-style:
+  `estimate`, `std.error`, `statistic`, `p.value`, `conf.low`,
+  `conf.high`).
+
+  Update existing code that references `result$catt_df[["Estimated TE"]]`
+  etc. The `catt_df` now carries S3 class `c("catt_df", "data.frame")`
+  and provides helpful-error methods on `[[`, `$`, `[` that intercept
+  the old column names and point to the new name --- so most migration
+  friction surfaces as an actionable `stop()` rather than a silent
+  `NULL`. Standard data-frame operations (`print()`, `head()`,
+  `summary()`, `dim()`, row indexing) all dispatch through to
+  `data.frame` methods unchanged. NSE access (dplyr / ggplot / subset)
+  strips the `catt_df` class as usual and surfaces the standard
+  "object not found" error.
+
+  The cosmetic side of the rename: column headers in the `print()` /
+  `summary()` CATT preview blocks now appear in snake_case. The
+  snapshot tests in `tests/testthat/_snaps/print-method-snapshot.md`
+  have been re-recorded.
+
 ## Version 1.10.0 (2026-05-21)
 
 - CRAN release. Version 1.10.0 is the first CRAN release since 1.5.0; it

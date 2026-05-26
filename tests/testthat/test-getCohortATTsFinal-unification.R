@@ -178,13 +178,14 @@ library(fetwfe)
 	}
 
 	colnames(cohort_te_df) <- c(
-		"Cohort",
-		"Estimated TE",
-		"SE",
-		"ConfIntLow",
-		"ConfIntHigh",
-		"P_value"
+		"cohort",
+		"estimate",
+		"se",
+		"ci_low",
+		"ci_high",
+		"p_value"
 	)
+	class(cohort_te_df) <- c("catt_df", "data.frame")
 
 	stopifnot(length(tes) == nrow(psi_mat))
 

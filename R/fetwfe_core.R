@@ -409,7 +409,7 @@ getBetaBIC <- function(fit, N, T, p, X_mod, y, scale_center, scale_scale) {
 #'   \item{indep_att_se}{Standard error for `indep_att_hat` (NA if not applicable).}
 #'   \item{catt_hats}{A named vector of estimated CATTs for each cohort.}
 #'   \item{catt_ses}{A named vector of SEs for `catt_hats` (NA if `q >= 1`).}
-#'   \item{catt_df}{A data.frame summarizing CATTs, SEs, confidence intervals, per-cohort p-values (`P_value`), and a `selected` logical flag (`TRUE` when the bridge penalty left the cohort's CATT nonzero).}
+#'   \item{catt_df}{A data frame (with S3 class `c("catt_df", "data.frame")`) summarizing CATTs (`cohort`, `estimate`, `se`, `ci_low`, `ci_high`, `p_value`) and a `selected` logical flag (`TRUE` when the bridge penalty left the cohort's CATT nonzero). The `catt_df` S3 class makes `[[` / `$` / `[` access on the pre-1.11.0 Title-Case column names `stop()` with a migration message pointing to the new name.}
 #'   \item{theta_hat}{The vector of estimated coefficients in the *transformed* (fused) space, including the intercept as the first element.}
 #'   \item{beta_hat}{The vector of estimated coefficients in the *original* space (after untransforming `theta_hat`, excluding intercept).}
 #'   \item{treat_inds}{Indices in `beta_hat` corresponding to base treatment effects.}

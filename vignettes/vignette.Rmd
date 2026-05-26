@@ -225,10 +225,10 @@ c(low_att, high_att)
 # point units)
 
 catt_df_pct <- res$catt_df
-catt_df_pct[["Estimated TE"]] <- 100 * catt_df_pct[["Estimated TE"]]
-catt_df_pct[["SE"]] <- 100 * catt_df_pct[["SE"]]
-catt_df_pct[["ConfIntLow"]] <- 100 * catt_df_pct[["ConfIntLow"]]
-catt_df_pct[["ConfIntHigh"]] <- 100 * catt_df_pct[["ConfIntHigh"]]
+catt_df_pct[["estimate"]] <- 100 * catt_df_pct[["estimate"]]
+catt_df_pct[["se"]] <- 100 * catt_df_pct[["se"]]
+catt_df_pct[["ci_low"]] <- 100 * catt_df_pct[["ci_low"]]
+catt_df_pct[["ci_high"]] <- 100 * catt_df_pct[["ci_high"]]
 
 catt_df_pct
 ```
@@ -239,9 +239,9 @@ This example is covariate-free; `castle`'s smallest cohorts contain a single sta
 
 ## Testing the zero-effect null
 
-Empirical users of difference-in-differences routinely want to ask "is this treatment effect statistically distinguishable from zero?". The confidence intervals in `catt_df` answer that implicitly --- a CI that excludes 0 corresponds to rejecting `H_0: tau = 0` at level `alpha`. The package also surfaces a `P_value` column (two-sided `2 * pnorm(-|estimate / se|)`) and, for `fetwfe()` and `betwfe()`, a `selected` logical flag, both at the overall ATT level and per-cohort.
+Empirical users of difference-in-differences routinely want to ask "is this treatment effect statistically distinguishable from zero?". The confidence intervals in `catt_df` answer that implicitly --- a CI that excludes 0 corresponds to rejecting `H_0: tau = 0` at level `alpha`. The package also surfaces a `p_value` column (two-sided `2 * pnorm(-|estimate / se|)`) and, for `fetwfe()` and `betwfe()`, a `selected` logical flag, both at the overall ATT level and per-cohort.
 
-For `fetwfe()`, the `selected` flag carries something stronger than the usual CI test. Under the restriction selection consistency theorem (Theorem 6.2 in the paper), when the true `tau_ATT(r, t) = 0`, the estimator returns *exactly* 0 with probability tending to 1. The package's interpretation: when `selected = FALSE` for a cohort, the asymptotic conclusion is that the truth is zero --- a strictly stronger statement than what a standard CI provides. The package surfaces this as an *asymptotic 100% confidence interval of `{0}`* for selected-out cohorts. For selected-out cohorts, `P_value` is reported as `NA` --- the inferential content lives in `selected`.
+For `fetwfe()`, the `selected` flag carries something stronger than the usual CI test. Under the restriction selection consistency theorem (Theorem 6.2 in the paper), when the true `tau_ATT(r, t) = 0`, the estimator returns *exactly* 0 with probability tending to 1. The package's interpretation: when `selected = FALSE` for a cohort, the asymptotic conclusion is that the truth is zero --- a strictly stronger statement than what a standard CI provides. The package surfaces this as an *asymptotic 100% confidence interval of `{0}`* for selected-out cohorts. For selected-out cohorts, `p_value` is reported as `NA` --- the inferential content lives in `selected`.
 
 ```{r zero-effect-demo, message = FALSE}
 set.seed(2026)
@@ -251,9 +251,9 @@ res_demo <- fetwfeWithSimulatedData(dat, verbose = FALSE)
 res_demo$catt_df
 ```
 
-`betwfe()` uses bridge regression directly on the coefficients (rather than on the fused restrictions used by `fetwfe()`). Under the bridge oracle property of Kock (2013), `selected = FALSE` for `betwfe()` is an analogous asymptotic statement that the truth is zero, under a sparsity assumption different from the one Theorem 6.2 establishes for `fetwfe()`. For `etwfe()` and `twfeCovs()`, neither has a selection step, so the `selected` column is omitted; the `P_value` column is a standard post-OLS t-test.
+`betwfe()` uses bridge regression directly on the coefficients (rather than on the fused restrictions used by `fetwfe()`). Under the bridge oracle property of Kock (2013), `selected = FALSE` for `betwfe()` is an analogous asymptotic statement that the truth is zero, under a sparsity assumption different from the one Theorem 6.2 establishes for `fetwfe()`. For `etwfe()` and `twfeCovs()`, neither has a selection step, so the `selected` column is omitted; the `p_value` column is a standard post-OLS t-test.
 
-It is worth keeping in mind that the asymptotic 100% CI of `{0}` interpretation is an `N -> infinity` statement. In small samples, it may be wise to read `selected` and `P_value` together rather than relying on either alone. In particular, even when `selected = TRUE`, the standard CI may cover zero --- the selection step says "the truth is nonzero" but the magnitude CI says "could be zero".
+It is worth keeping in mind that the asymptotic 100% CI of `{0}` interpretation is an `N -> infinity` statement. In small samples, it may be wise to read `selected` and `p_value` together rather than relying on either alone. In particular, even when `selected = TRUE`, the standard CI may cover zero --- the selection step says "the truth is nonzero" but the magnitude CI says "could be zero".
 
 ## Tidy outputs with broom
 

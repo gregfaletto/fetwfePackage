@@ -18,8 +18,8 @@
 #' resolved on each `print.<class>()` method's own `max_cohorts =`
 #' argument, not here.
 #'
-#' @param catt_df A data frame with at least the columns `Cohort` and
-#'   `Estimated TE`, plus `P_value` if `order_by = "pvalue"` is used.
+#' @param catt_df A data frame with at least the columns `cohort` and
+#'   `estimate`, plus `p_value` if `order_by = "pvalue"` is used.
 #' @param max_cohorts Integer; maximum number of cohort rows to retain after
 #'   sorting. Required positional argument.
 #' @param order_by Character; one of `"cohort"`, `"estimate"`, `"abs_estimate"`,
@@ -39,16 +39,16 @@
 		order_by,
 		# Composite sort key: numeric-cohort-time first, character as
 		# tiebreak. The character fallback only matters if some labels
-		# aren't numerically coercible (hypothetical -- catt_df$Cohort is
+		# aren't numerically coercible (hypothetical -- catt_df$cohort is
 		# always as.character(integer time) given the package's
 		# `is.integer(time_var)` input validation).
 		cohort = order(
-			suppressWarnings(as.numeric(catt_df$Cohort)),
-			catt_df$Cohort
+			suppressWarnings(as.numeric(catt_df$cohort)),
+			catt_df$cohort
 		),
-		estimate = order(catt_df$`Estimated TE`),
-		abs_estimate = order(abs(catt_df$`Estimated TE`), decreasing = TRUE),
-		pvalue = order(catt_df$P_value),
+		estimate = order(catt_df$estimate),
+		abs_estimate = order(abs(catt_df$estimate), decreasing = TRUE),
+		pvalue = order(catt_df$p_value),
 		none = seq_len(nrow(catt_df))
 	)
 	catt_df <- catt_df[idx, , drop = FALSE]
@@ -233,8 +233,13 @@
 		)
 	)
 	.assert_contract(
-		"Cohort" %in% names(x$catt_df) && is.character(x$catt_df$Cohort),
-		"C4 catt_df: Cohort column present and character",
+		"cohort" %in% names(x$catt_df) && is.character(x$catt_df$cohort),
+		"C4 catt_df: cohort column present and character",
+		cls
+	)
+	.assert_contract(
+		inherits(x$catt_df, "catt_df"),
+		"C4 catt_df: object carries the `catt_df` S3 class",
 		cls
 	)
 }

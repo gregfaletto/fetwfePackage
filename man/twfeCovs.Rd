@@ -132,10 +132,14 @@ the estimated average treatment effects within each cohort.}
 cohort conditional on being treated, which was used in calculating \code{att_hat}.
 If \code{indep_counts} was provided, \code{cohort_probs} was calculated from that;
 otherwise, it was calculated from the counts of units in each treated
-cohort in \code{pdata}.} \item{catt_df}{A dataframe displaying the cohort names,
-average treatment effects, standard errors, \code{1 - alpha} confidence
-interval bounds, and per-cohort p-values (\code{P_value}). No \code{selected}
-column; \code{twfeCovs} does not perform selection.}
+cohort in \code{pdata}.} \item{catt_df}{A data frame (with S3 class \code{c("catt_df", "data.frame")}) displaying the cohort names
+(\code{cohort}), average treatment effects (\code{estimate}), standard errors (\code{se}),
+\code{1 - alpha} confidence interval bounds (\code{ci_low}, \code{ci_high}), and
+per-cohort p-values (\code{p_value}). No \code{selected} column; \code{twfeCovs} does
+not perform selection. The \code{catt_df} S3 class makes \code{[[} / \code{$} / \code{[}
+access on the pre-1.11.0 Title-Case column names (\code{Cohort}, \verb{Estimated TE}, \code{SE}, \code{ConfIntLow}, \code{ConfIntHigh}, \code{P_value}) \code{stop()} with a
+migration message pointing to the new name. See \code{NEWS.md} for the
+rename table.}
 \item{beta_hat}{The full vector of estimated coefficients.}
 \item{treat_inds}{The indices of \code{beta_hat} corresponding to
 the treatment effects for each cohort at each time.}
