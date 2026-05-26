@@ -791,26 +791,6 @@ betwfe_core <- function(
 
 	rm(ret)
 
-	if (any(!is.na(lambda.max))) {
-		stopifnot(is.numeric(lambda.max) | is.integer(lambda.max))
-		stopifnot(length(lambda.max) == 1)
-		stopifnot(lambda.max > 0)
-	}
-
-	if (any(!is.na(lambda.min))) {
-		stopifnot(is.numeric(lambda.min) | is.integer(lambda.min))
-		stopifnot(length(lambda.min) == 1)
-		stopifnot(lambda.min >= 0)
-		if (any(!is.na(lambda.max))) {
-			stopifnot(lambda.max >= lambda.min)
-		}
-	}
-
-	stopifnot(is.numeric(q) | is.integer(q))
-	stopifnot(length(q) == 1)
-	stopifnot(q > 0)
-	stopifnot(q <= 2)
-
 	res <- prep_for_etwfe_regression(
 		verbose = verbose,
 		sig_eps_sq = sig_eps_sq,

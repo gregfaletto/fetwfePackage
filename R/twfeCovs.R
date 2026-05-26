@@ -87,7 +87,8 @@
 #' OLS-selected support; see the companion vignette `inference_vignette`
 #' for the formula, the assumptions, and the theory-pending caveat).
 #' Default is `"default"`.
-#' @return A named list with the following elements: \item{att_hat}{The
+#' @return An object of class \code{twfeCovs} containing the following elements:
+#' \item{att_hat}{The
 #' estimated overall average treatment effect for a randomly selected treated
 #' unit.} \item{att_se}{A standard error for the ATT. If the Gram matrix is not
 #' invertible, this will be NA.}
@@ -358,7 +359,8 @@ twfeCovs <- function(
 #' OLS-selected support; see the companion vignette `inference_vignette`
 #' for the formula, the assumptions, and the theory-pending caveat).
 #' Default is `"default"`.
-#' @return A named list with the following elements: \item{att_hat}{The
+#' @return An object of class \code{twfeCovs} containing the following elements:
+#' \item{att_hat}{The
 #' estimated overall average treatment effect for a randomly selected treated
 #' unit.} \item{att_se}{A standard error for the ATT. If `indep_counts` was
 #' provided, this standard error is asymptotically exact; otherwise, it is
@@ -674,8 +676,6 @@ twfeCovs_core <- function(
 	stopifnot(all(!is.na(df)))
 	stopifnot("y" %in% colnames(df))
 	stopifnot(ncol(df) == p_short + 1)
-
-	t0 <- Sys.time()
 
 	# Response already centered; no intercept needed
 	fit <- lm(y ~ . + 0, df)

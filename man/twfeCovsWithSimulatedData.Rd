@@ -44,7 +44,8 @@ for the formula, the assumptions, and the theory-pending caveat).
 Default is \code{"default"}.}
 }
 \value{
-A named list with the following elements: \item{att_hat}{The
+An object of class \code{twfeCovs} containing the following elements:
+\item{att_hat}{The
 estimated overall average treatment effect for a randomly selected treated
 unit.} \item{att_se}{A standard error for the ATT. If \code{indep_counts} was
 provided, this standard error is asymptotically exact; otherwise, it is

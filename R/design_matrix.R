@@ -657,8 +657,6 @@ genTreatVarsRealData <- function(
 
 	# Add treatment period dummies
 	if (n_treated_times > 0) {
-		# build a logical index of length N*T for all cohort-time pairs at once
-		treat_combo <- interaction(unit_vars, time_vars, drop = TRUE)
 		for (j in seq_len(n_treated_times)) {
 			treat_vars[
 				(unit_vars %in% cohort) & (time_vars == treated_times[j]),

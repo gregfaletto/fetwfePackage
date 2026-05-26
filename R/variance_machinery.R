@@ -257,17 +257,26 @@ getSecondVarTermOLS <- function(
 	# Finally, calculate variance term for ATT from Sigma_pi_hat, Jacobian
 	# matrix, psi_mat, and beta_hat. See proof of Theorem D.2 for details.
 
-	att_var_2 <- T *
-		as.numeric(
-			t(tes) %*%
-				psi_mat %*%
-				t(jacobian_mat) %*%
-				Sigma_pi_hat %*%
-				jacobian_mat %*%
-				t(psi_mat) %*%
-				tes
-		) /
-		(N * T)
+	# Issue #127: floor `att_var_2` at zero, mirroring the `att_var_1`
+	# floor PR #111 added at the analogous sibling sites in this file. The
+	# `Sigma_pi_hat` quadratic form is PSD in exact arithmetic, so
+	# `att_var_2 >= 0` always — but floating-point cancellation can leave
+	# a near-zero value marginally negative, NaN-ing the conservative
+	# overall-ATT-SE branch `2 * sqrt(att_var_1 * att_var_2)` downstream.
+	att_var_2 <- max(
+		T *
+			as.numeric(
+				t(tes) %*%
+					psi_mat %*%
+					t(jacobian_mat) %*%
+					Sigma_pi_hat %*%
+					jacobian_mat %*%
+					t(psi_mat) %*%
+					tes
+			) /
+			(N * T),
+		0
+	)
 
 	return(att_var_2)
 }
@@ -964,15 +973,24 @@ getSecondVarTermDataApp <- function(
 	stopifnot(all(!is.na(jacobian_mat)))
 
 	## variance term: theta_sel' J' sum_pi J theta_sel / N
-	att_var_2 <- T *
-		as.numeric(
-			t(theta_hat_treat_sel) %*%
-				t(jacobian_mat) %*%
-				Sigma_pi_hat %*%
-				jacobian_mat %*%
-				theta_hat_treat_sel
-		) /
-		(N * T)
+	# Issue #127: floor `att_var_2` at zero, mirroring the `att_var_1`
+	# floor PR #111 added at the analogous sibling sites in this file. The
+	# `Sigma_pi_hat` quadratic form is PSD in exact arithmetic, so
+	# `att_var_2 >= 0` always — but floating-point cancellation can leave
+	# a near-zero value marginally negative, NaN-ing the conservative
+	# overall-ATT-SE branch `2 * sqrt(att_var_1 * att_var_2)` downstream.
+	att_var_2 <- max(
+		T *
+			as.numeric(
+				t(theta_hat_treat_sel) %*%
+					t(jacobian_mat) %*%
+					Sigma_pi_hat %*%
+					jacobian_mat %*%
+					theta_hat_treat_sel
+			) /
+			(N * T),
+		0
+	)
 
 	return(att_var_2)
 }

@@ -257,8 +257,6 @@ etwfe_core <- function(
 	stopifnot(all(!is.na(df)))
 	stopifnot("y" %in% colnames(df))
 
-	t0 <- Sys.time()
-
 	# Response already centered; no intercept needed
 	fit <- lm(y ~ . + 0, df)
 

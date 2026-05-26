@@ -2,7 +2,7 @@
 % Please edit documentation in R/gen_coefs.R
 \name{genCoefsCore}
 \alias{genCoefsCore}
-\title{Generate Coefficient Vector for Data Generation}
+\title{Generate Coefficient Vector for Data Generation (core)}
 \usage{
 genCoefsCore(R, T, d, density, eff_size, seed = NULL)
 }
