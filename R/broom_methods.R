@@ -439,6 +439,24 @@ tidy.eventStudy <- function(
 	...
 ) {
 	stopifnot(conf.level > 0, conf.level < 1)
+	# Guard against a user-mutated `eventStudy` frame that's missing a
+	# required column: localizes the error message rather than the cryptic
+	# "arguments imply differing number of rows" from `data.frame()` when
+	# `x$<col>` returns NULL on an absent column. Parallels the guard added
+	# to `tidy.cohortStudy()` in PR #150. The CI columns `ci_low` / `ci_high`
+	# are NOT in the required list — this method recomputes CIs from
+	# `estimate +/- z * se` rather than reading them from the input.
+	required <- c("event_time", "n_cohorts", "estimate", "se", "p_value")
+	missing_cols <- setdiff(required, names(x))
+	if (length(missing_cols) > 0L) {
+		stop(
+			"tidy.eventStudy(): input is missing required columns: ",
+			paste(missing_cols, collapse = ", "),
+			". If you have mutated the `eventStudy` object, restore the ",
+			"original data frame; otherwise please file an issue.",
+			call. = FALSE
+		)
+	}
 	statistic <- ifelse(
 		!is.na(x$se) & x$se > 0,
 		x$estimate / x$se,
