@@ -183,7 +183,14 @@ test_that("all 5 cluster-sandwich floor sites use .floor_cluster_quad", {
 	}
 
 	# Negative-direction guard: no bare `max(..., 0)` floor remains around a
-	# `sandwich_full` quadratic form.
+	# `sandwich_full` quadratic form. The historical bare-max idiom from PR
+	# #111 was `<lhs> <- max(... sandwich_full %*% ..., 0)` (single-line);
+	# the wired-up helper at every cluster-sandwich site uses
+	# `.floor_cluster_quad(...)` instead, so any `max(...sandwich_full...,0)`
+	# match indicates a partial revert / regression. We scan a space-joined
+	# concatenation (with comments stripped) so the check is robust to a
+	# future multi-line reformat and to the explanatory comments in
+	# `R/cluster_floor.R` that name the legacy pattern.
 	bare_max_on_sandwich <- 0L
 	for (f in files) {
 		path <- file.path(root, f)
@@ -191,21 +198,19 @@ test_that("all 5 cluster-sandwich floor sites use .floor_cluster_quad", {
 			next
 		}
 		src <- readLines(path, warn = FALSE)
-		# Look for the historical pattern: a `max(` line followed shortly by
-		# `sandwich_full %*%` and a closing `, 0)`. The wired-up helper does
-		# not use `max(`, so this catches a partial revert.
-		for (i in seq_along(src)) {
-			if (grepl("^\\s*max\\(", src[i])) {
-				# Inspect the next 6 lines for the sandwich pattern.
-				window <- src[i:min(length(src), i + 6L)]
-				if (
-					any(grepl("sandwich_full %*%", window, fixed = TRUE)) &&
-						any(grepl(", 0\\)", window))
-				) {
-					bare_max_on_sandwich <- bare_max_on_sandwich + 1L
-				}
-			}
-		}
+		# Strip comments so a comment that names the legacy `max(..., 0)`
+		# idiom does not false-positive.
+		src_no_comment <- sub("#.*$", "", src)
+		combined <- paste(src_no_comment, collapse = " ")
+		# Bounded non-greedy: `max(<up to 300 chars with sandwich_full><up
+		# to 200 chars>, 0)`. The bounded counts avoid catastrophic
+		# regex backtracking on a large concatenated source.
+		re <- "max\\(.{0,300}sandwich_full.{0,200}?,\\s*0\\)"
+		matches <- regmatches(
+			combined,
+			gregexpr(re, combined, perl = TRUE)
+		)[[1]]
+		bare_max_on_sandwich <- bare_max_on_sandwich + length(matches)
 	}
 	expect_equal(bare_max_on_sandwich, 0L)
 })
