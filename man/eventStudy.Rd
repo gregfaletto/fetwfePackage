@@ -60,5 +60,7 @@ fit (asymptotically exact), else the conservative Cauchy-Schwarz bound
 }
 }
 \seealso{
-\code{\link[=cohortStudy]{cohortStudy()}} for the parallel per-cohort accessor.
+\code{\link[=cohortStudy]{cohortStudy()}} for the parallel per-cohort accessor;
+\code{\link[=predict.fetwfe]{predict.fetwfe()}} for closed-form CATT predictions at user-supplied
+covariate values.
 }

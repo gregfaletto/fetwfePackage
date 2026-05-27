@@ -1,5 +1,30 @@
 # NEWS
 
+## Version 1.12.0 (2026-05-26)
+
+### New features
+
+- `predict.fetwfe()`, `predict.etwfe()`, and `predict.betwfe()` are new
+  S3 methods returning the closed-form conditional ATT estimate
+
+  $$
+  \hat\tau_{\mathrm{CATT}}(r, t, \boldsymbol{x}) =
+      \hat\tau_{rt} + (\boldsymbol{x} - \bar{\boldsymbol{X}}_r)^\top
+      \hat\rho_{rt}
+  $$
+
+  at one or more user-supplied covariate vectors. Asymptotic standard
+  errors and Wald confidence intervals follow Theorem
+  `te.asym.norm.thm.gen.cond`(a) (paper Eq. (C.39)) and combine
+  regression-coefficient noise with the cohort-mean sample-mean
+  variance term. Output is a long-form data frame with one row per
+  `(newdata row × cohort × post-treatment time)`. `newdata = NULL`
+  (the default) predicts at each cohort's sample mean $\bar X_r$,
+  reducing the estimate to $\hat\tau_{rt}$. Cross-linked in
+  `eventStudy()` / `cohortStudy()`'s `@seealso`; demoed in
+  `vignettes/vignette.Rmd`. `predict.twfeCovs()` is intentionally
+  deferred (see issue #58). Closes #33.
+
 ## Version 1.11.7 (2026-05-26)
 
 ### New features
