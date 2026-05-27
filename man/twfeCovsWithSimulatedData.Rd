@@ -6,6 +6,7 @@
 \usage{
 twfeCovsWithSimulatedData(
   simulated_obj,
+  three_sample_split = FALSE,
   verbose = FALSE,
   alpha = 0.05,
   add_ridge = FALSE,
@@ -16,6 +17,13 @@ twfeCovsWithSimulatedData(
 \arguments{
 \item{simulated_obj}{An object of class \code{"FETWFE_simulated"} containing the simulated panel
 data and design matrix.}
+
+\item{three_sample_split}{(Optional.) Logical; if \code{TRUE}, randomly
+partitions the units in \code{simulated_obj$pdata} into three subsamples
+and uses each for one of the roles in Theorem
+\code{te.asym.norm.thm.gen.cond}(a) of Faletto (2025). See \code{twfeCovs()}
+for details. Default \code{FALSE}. When \code{TRUE}, the function ignores
+\code{simulated_obj$indep_counts}.}
 
 \item{verbose}{Logical; if TRUE, more details on the progress of the function will
 be printed as the function executes. Default is FALSE.}
@@ -115,6 +123,12 @@ the original \code{pdata}.}
 arguments the user passed.}
 \item{covs}{Character vector; the original \code{covs} argument (pre-factor-
 expansion).}
+\item{cohort_means_external}{Numeric matrix or \code{NULL}. When the user
+set \code{three_sample_split = TRUE}, an \verb{R x d} matrix of per-cohort
+sample-mean covariate values \eqn{\bar X_r} computed from Sample C
+of the three-sample partition. Stored for parity with the other
+estimator classes; not yet consumed by any \code{twfeCovs}-class method.
+\code{NULL} when \code{three_sample_split} was \code{FALSE}.}
 \item{internal}{A list containing internal outputs that are typically
 not needed for interpretation, packaged here for parity with
 \code{fetwfe()} so downstream consumers can use a single canonical

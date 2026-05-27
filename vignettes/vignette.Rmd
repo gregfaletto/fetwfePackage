@@ -316,6 +316,38 @@ predict(res_demo) |> head()
 
 `predict.twfeCovs()` is intentionally not provided in this release --- `twfeCovs` lacks the bridge-penalty selection that grounds the CATT-prediction theorem; see issue [#58](https://github.com/gregfaletto/fetwfePackage/issues/58) for the broader gap.
 
+### Asymptotically-exact CIs via three-sample splitting
+
+The variance formula above is asymptotically exact only when the cohort means $\bar{\boldsymbol{X}}_r$ in `predict()`'s formula are estimated from data independent of the FETWFE regression (and similarly for the cohort-membership probabilities). On a single panel, `predict()` falls back to a *conservative* Cauchy-Schwarz upper bound at $\boldsymbol{x} \neq \bar{\boldsymbol{X}}_r$, which over-covers the truth.
+
+To bring the CATT($\boldsymbol{x}$) intervals back to nominal coverage at $\boldsymbol{x} \neq \bar{\boldsymbol{X}}_r$, pass `three_sample_split = TRUE`. The package randomly partitions the units in `pdata` into three roughly-equal subsamples and uses each for one of the roles in Theorem `te.asym.norm.thm.gen.cond`(a) of Faletto (2025):
+
+* **Sample A** --- the FETWFE / ETWFE / BETWFE regression itself.
+* **Sample B** --- the cohort-membership probabilities (i.e. the `indep_counts` role).
+* **Sample C** --- the cohort conditional covariate means $\bar{\boldsymbol{X}}_r$, stored on the fit as `cohort_means_external`.
+
+```{r predict-three-sample-split, eval = FALSE}
+# For reproducibility, set.seed() before the call; the function uses
+# `sample()` to partition the units.
+set.seed(2026)
+res_demo_split <- fetwfeWithSimulatedData(
+    sim_data,
+    three_sample_split = TRUE
+)
+
+# The fitted object now carries the per-cohort sample-C means as
+# `cohort_means_external` (a matrix indexed by cohort identifier x
+# covariate name):
+res_demo_split$cohort_means_external
+
+# predict() uses these means and applies the exact variance formula:
+predict(res_demo_split, newdata = new_x) |> head()
+```
+
+Three-sample splitting costs effective sample size by a factor of ~3 for each role, so it's most useful on large panels. With small `N`, the conservative one-sample formula may yield narrower-but-honest intervals.
+
+`three_sample_split = TRUE` conflicts with a user-supplied `indep_counts` (the cohort probabilities are derived from Sample B automatically). For etwfe / betwfe / twfeCovs, the toggle is supported on the same entry-point convention; only fetwfe and etwfe / betwfe consume `cohort_means_external` in `predict()` (twfeCovs has no `predict` method).
+
 ## Tidy outputs with broom
 
 If you use the tidyverse, the fitted object also plays nicely with the [broom](https://broom.tidymodels.org/) package. `tidy()` reshapes the overall ATT and per-cohort CATTs into a long data frame with the standard `term` / `estimate` / `std.error` / `statistic` / `p.value` / `conf.low` / `conf.high` columns, plus a `selected` flag (see "Testing the zero-effect null" below):

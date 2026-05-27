@@ -111,6 +111,11 @@ print.summary.fetwfe <- function(x, ...) {
 	"unit_var",
 	"treatment",
 	"covs",
+	# Phase 8 (#33): per-cohort X_bar_r computed from indep_x_pdata when
+	# the user supplied it. NULL otherwise. predict() uses this when non-
+	# NULL to apply Theorem `te.asym.norm.thm.gen.cond`(a)'s asymptotically
+	# exact CATT(x) variance formula under three-sample splitting.
+	"cohort_means_external",
 	"internal"
 )
 

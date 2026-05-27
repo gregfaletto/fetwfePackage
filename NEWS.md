@@ -1,5 +1,44 @@
 # NEWS
 
+## Version 1.12.1 (2026-05-27)
+
+### New features
+
+- New `three_sample_split = FALSE` argument on `fetwfe()`, `etwfe()`,
+  `betwfe()`, and `twfeCovs()` (and their `WithSimulatedData` wrappers).
+  When set to `TRUE`, the function randomly partitions the units in
+  `pdata` into three roughly-equal subsamples (stratified by cohort)
+  and uses each for one of the roles in Theorem
+  `te.asym.norm.thm.gen.cond`(a) of Faletto (2025): Sample A for the
+  regression (estimates $\hat\tau_{rt}$, $\hat\rho_{rt}$), Sample B for
+  the cohort-membership probabilities (the `indep_counts` role), and
+  Sample C for the cohort conditional covariate means $\bar X_r$. Under
+  three-sample splitting, `predict()`'s CATT($\boldsymbol{x}$)
+  confidence intervals are asymptotically exact at
+  $\boldsymbol{x} \ne \bar X_r$ (instead of the Cauchy-Schwarz
+  conservative upper bound the one-sample regime applies). The
+  fitted object exposes the per-cohort sample-C means as a new slot,
+  `cohort_means_external` (a numeric matrix indexed by adoption-time
+  cohort identifier x expanded covariate name, with per-cohort
+  within-cohort covariance and sizes attached as attributes for the
+  variance machinery). `cohort_means_external` is `NULL` when
+  `three_sample_split = FALSE` (the default). Conflicts with a
+  user-supplied `indep_counts`. Vignette section
+  "Asymptotically-exact CIs via three-sample splitting" walks through
+  the workflow. Closes #33 (Phase 8).
+
+### Bug fixes
+
+- `predict.fetwfe()` / `.etwfe()` / `.betwfe()`'s variance machinery
+  now accounts for both the regression-sample and cohort-mean-sample
+  contributions to the cohort-mean variance term when
+  `three_sample_split = TRUE`. The pre-fix path used only one of the
+  two; in three-sample mode this is a real undercoverage fix (~0.85 ->
+  ~0.93 nominal coverage at $\boldsymbol{x} \neq \bar X_r$ on a
+  500-unit ETWFE simulation; bridge selection bias keeps FETWFE at
+  ~0.83, an inherent finite-sample limitation of bridge regression
+  separate from the variance formula).
+
 ## Version 1.12.0 (2026-05-26)
 
 ### New features

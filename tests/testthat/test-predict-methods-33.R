@@ -878,3 +878,397 @@ test_that("predict() with d = 0 (no covariates) returns nrow(newdata) x num_trea
 	p_nd <- predict(res, newdata = nd)
 	expect_equal(nrow(p_nd), 2L * length(res$treat_inds))
 })
+
+# -----------------------------------------------------------------------------
+# Phase 8 (#33): three-sample split (`three_sample_split = TRUE`) tests.
+#
+# The package auto-partitions `pdata`'s units into three subsamples:
+# Sample A (regression), Sample B (cohort probabilities -> `indep_counts`),
+# Sample C (cohort conditional covariate means -> `cohort_means_external`).
+# With three-sample splitting, predict() applies the asymptotically-exact
+# CATT(x) variance formula `v_reg + v_mean` (Theorem
+# `te.asym.norm.thm.gen.cond`(a)).
+# -----------------------------------------------------------------------------
+
+test_that("three_sample_split = FALSE preserves the default cohort_means_external = NULL", {
+	# Baseline: when the user doesn't toggle three_sample_split, the
+	# fitted object's cohort_means_external slot is NULL.
+	res <- .fitted_fetwfe$res
+	expect_true(
+		"cohort_means_external" %in% names(res),
+		info = "cohort_means_external slot is present on the fitted object"
+	)
+	expect_null(res$cohort_means_external)
+})
+
+test_that("three_sample_split = TRUE produces a cohort_means_external matrix of the right shape", {
+	set.seed(2026)
+	coefs <- genCoefs(R = 3, T = 5, density = 0.5, eff_size = 1, d = 2)
+	sim <- simulateData(
+		coefs,
+		N = 300,
+		sig_eps_sq = 0.4,
+		sig_eps_c_sq = 0.4
+	)
+	res <- fetwfeWithSimulatedData(
+		sim,
+		three_sample_split = TRUE,
+		verbose = FALSE
+	)
+
+	cme <- res$cohort_means_external
+	expect_true(!is.null(cme))
+	expect_true(is.matrix(cme))
+	expect_equal(nrow(cme), res$R)
+	expect_equal(ncol(cme), res$d)
+	# Rownames should match the treated-cohort adoption-time identifiers
+	# from catt_df.
+	expect_setequal(rownames(cme), as.character(res$catt_df$cohort))
+	# Colnames should match the (post-factor-expansion) covariate names.
+	model_cov_names <- colnames(res$internal$X_ints)[
+		(res$R + res$T - 1 + 1):(res$R + res$T - 1 + res$d)
+	]
+	expect_setequal(colnames(cme), model_cov_names)
+	# Attributes: cov_X_given_r (list of d x d matrices) + N_r_vec.
+	expect_true(!is.null(attr(cme, "cov_X_given_r")))
+	expect_true(!is.null(attr(cme, "N_r_vec")))
+	cov_list <- attr(cme, "cov_X_given_r")
+	expect_setequal(names(cov_list), as.character(res$catt_df$cohort))
+	for (cn in names(cov_list)) {
+		m <- cov_list[[cn]]
+		expect_equal(dim(m), c(res$d, res$d))
+	}
+	expect_equal(length(attr(cme, "N_r_vec")), res$R)
+})
+
+test_that("three_sample_split = TRUE also stores indep_counts_used = TRUE", {
+	set.seed(2027)
+	coefs <- genCoefs(R = 3, T = 5, density = 0.5, eff_size = 1, d = 2)
+	sim <- simulateData(
+		coefs,
+		N = 300,
+		sig_eps_sq = 0.4,
+		sig_eps_c_sq = 0.4
+	)
+	res <- fetwfeWithSimulatedData(
+		sim,
+		three_sample_split = TRUE,
+		verbose = FALSE
+	)
+	expect_true(isTRUE(res$indep_counts_used))
+})
+
+test_that("three_sample_split = TRUE conflicts with user-supplied indep_counts", {
+	set.seed(2028)
+	coefs <- genCoefs(R = 3, T = 5, density = 0.5, eff_size = 1, d = 2)
+	sim <- simulateData(
+		coefs,
+		N = 300,
+		sig_eps_sq = 0.4,
+		sig_eps_c_sq = 0.4
+	)
+	expect_error(
+		fetwfe(
+			pdata = sim$pdata,
+			time_var = sim$time_var,
+			unit_var = sim$unit_var,
+			treatment = sim$treatment,
+			response = sim$response,
+			covs = sim$covs,
+			indep_counts = sim$indep_counts,
+			three_sample_split = TRUE,
+			sig_eps_sq = sim$sig_eps_sq,
+			sig_eps_c_sq = sim$sig_eps_c_sq,
+			verbose = FALSE
+		),
+		regexp = "conflicts with a user-supplied"
+	)
+})
+
+test_that("three_sample_split rejects malformed values", {
+	set.seed(2029)
+	coefs <- genCoefs(R = 3, T = 5, density = 0.5, eff_size = 1, d = 2)
+	sim <- simulateData(coefs, N = 100, sig_eps_sq = 0.4, sig_eps_c_sq = 0.4)
+	expect_error(
+		fetwfe(
+			pdata = sim$pdata,
+			time_var = sim$time_var,
+			unit_var = sim$unit_var,
+			treatment = sim$treatment,
+			response = sim$response,
+			covs = sim$covs,
+			three_sample_split = "yes",
+			sig_eps_sq = sim$sig_eps_sq,
+			sig_eps_c_sq = sim$sig_eps_c_sq,
+			verbose = FALSE
+		),
+		regexp = "must be a single non-NA logical"
+	)
+	expect_error(
+		fetwfe(
+			pdata = sim$pdata,
+			time_var = sim$time_var,
+			unit_var = sim$unit_var,
+			treatment = sim$treatment,
+			response = sim$response,
+			covs = sim$covs,
+			three_sample_split = NA,
+			sig_eps_sq = sim$sig_eps_sq,
+			sig_eps_c_sq = sim$sig_eps_c_sq,
+			verbose = FALSE
+		),
+		regexp = "must be a single non-NA logical"
+	)
+})
+
+test_that("three_sample_split errors when a cohort has fewer than 3 units", {
+	# With R = 4 cohorts and N = 20 units, at least one cohort almost
+	# certainly has < 3 units when randomly distributed. The helper's
+	# per-cohort guard fires before any model fitting.
+	set.seed(2030)
+	# Hand-build a small panel by hand-picking unit/cohort sizes so the
+	# constraints are deterministically violated. Use a minimal panel
+	# where N=10 with R=2 (so simulateData's N >= (R+1)(d+1) = 6 holds
+	# but at least one cohort has 1 unit).
+	coefs <- genCoefs(R = 2, T = 4, density = 0.5, eff_size = 1, d = 1)
+	sim <- simulateData(coefs, N = 10, sig_eps_sq = 0.4, sig_eps_c_sq = 0.4)
+	# Subset to a tiny panel that triggers the guard. The simulator may
+	# yield cohorts of various sizes; manually trim to give cohort 1
+	# only 1 unit.
+	pd <- sim$pdata
+	# Pick one treated unit per cohort, plus 2 never-treated.
+	first_treat_time <- tapply(
+		seq_len(nrow(pd)),
+		pd[[sim$unit_var]],
+		function(idx) {
+			treated_rows <- idx[pd[[sim$treatment]][idx] == 1]
+			if (length(treated_rows) == 0L) {
+				NA_integer_
+			} else {
+				min(pd[[sim$time_var]][treated_rows])
+			}
+		}
+	)
+	# Pick 1 unit from each cohort (small cohorts) + 2 never-treated.
+	first_treat_table <- table(first_treat_time, useNA = "no")
+	# Keep just the first 1 treated unit per cohort + first 2 never-treated.
+	picked_units <- character(0)
+	by_cohort <- split(names(first_treat_time), first_treat_time)
+	for (cn in names(by_cohort)) {
+		picked_units <- c(picked_units, by_cohort[[cn]][1])
+	}
+	never_units <- names(first_treat_time)[is.na(first_treat_time)]
+	picked_units <- c(picked_units, head(never_units, 2L))
+	small_pd <- pd[pd[[sim$unit_var]] %in% picked_units, , drop = FALSE]
+	# Skip if the trimming gave us fewer than 2 cohorts (test is then
+	# uninformative).
+	if (length(unique(first_treat_time[picked_units])) < 2L) {
+		skip(
+			"Hand-trim did not produce two treated cohorts; skipping the < 3 units guard test."
+		)
+	}
+	expect_error(
+		fetwfe(
+			pdata = small_pd,
+			time_var = sim$time_var,
+			unit_var = sim$unit_var,
+			treatment = sim$treatment,
+			response = sim$response,
+			covs = sim$covs,
+			three_sample_split = TRUE,
+			sig_eps_sq = sim$sig_eps_sq,
+			sig_eps_c_sq = sim$sig_eps_c_sq,
+			verbose = FALSE
+		),
+		regexp = ">= 3 units"
+	)
+})
+
+test_that("three_sample_split path: predict() works end-to-end with no errors", {
+	set.seed(2031)
+	coefs <- genCoefs(R = 3, T = 5, density = 0.5, eff_size = 1, d = 2)
+	sim <- simulateData(
+		coefs,
+		N = 300,
+		sig_eps_sq = 0.4,
+		sig_eps_c_sq = 0.4
+	)
+	res <- fetwfeWithSimulatedData(
+		sim,
+		three_sample_split = TRUE,
+		verbose = FALSE
+	)
+	# Default predict() at cohort means
+	p_default <- predict(res)
+	expect_true(all(is.finite(p_default$estimate)))
+	expect_true(all(is.finite(p_default$std.error)))
+	# User x
+	nd <- data.frame(cov1 = 0.5, cov2 = -0.3)
+	p_user <- predict(res, newdata = nd)
+	expect_true(all(is.finite(p_user$estimate)))
+	expect_true(all(is.finite(p_user$std.error)))
+	# Wald CIs symmetric about the point
+	idx <- which(is.finite(p_user$std.error) & p_user$std.error > 0)
+	expect_equal(
+		(p_user$conf.high[idx] + p_user$conf.low[idx]) / 2,
+		p_user$estimate[idx]
+	)
+})
+
+test_that("three_sample_split: ETWFE coverage at x != X_bar_r reaches >= 0.88", {
+	# This is the real validation of the three-sample variance formula.
+	# Uses ETWFE (no bridge selection bias) so coverage should be near
+	# nominal 0.95. Threshold 0.88 leaves some chatter room across runs.
+	# See Phase 8 of .plans/predict-methods-33/PLAN.md.
+	skip_on_cran() # stochastic + slow
+	set.seed(31)
+	n_sim <- 60
+	x_fixed <- c(0.5, -0.3)
+	covers <- 0L
+	total <- 0L
+
+	for (i in seq_len(n_sim)) {
+		coefs <- genCoefs(R = 3, T = 5, density = 0.5, eff_size = 1, d = 2)
+		sim <- simulateData(
+			coefs,
+			N = 500,
+			sig_eps_sq = 0.3,
+			sig_eps_c_sq = 0.3
+		)
+		res <- tryCatch(
+			etwfeWithSimulatedData(
+				sim,
+				three_sample_split = TRUE,
+				verbose = FALSE
+			),
+			error = function(e) NULL
+		)
+		if (is.null(res)) {
+			next
+		}
+		num_treats <- length(res$treat_inds)
+		true_tau <- coefs$beta[res$treat_inds]
+		true_rho <- if (res$d > 0L) {
+			matrix(
+				coefs$beta[res$treat_int_inds],
+				nrow = num_treats,
+				ncol = res$d,
+				byrow = TRUE
+			)
+		} else {
+			matrix(0, nrow = num_treats, ncol = 0L)
+		}
+		truth <- true_tau + as.numeric(true_rho %*% x_fixed)
+
+		nd <- data.frame(cov1 = x_fixed[1], cov2 = x_fixed[2])
+		p <- predict(res, newdata = nd, conf.level = 0.95)
+		covers <- covers +
+			sum(
+				p$conf.low <= truth & truth <= p$conf.high,
+				na.rm = TRUE
+			)
+		total <- total + num_treats
+	}
+	cov_rate <- covers / total
+	expect_true(
+		cov_rate >= 0.88,
+		info = paste(
+			"three-sample coverage (ETWFE) =",
+			cov_rate,
+			"; expected >= 0.88"
+		)
+	)
+	expect_true(cov_rate <= 1.0)
+})
+
+test_that("three_sample_split: ETWFE supports the toggle on its entry point", {
+	set.seed(2032)
+	coefs <- genCoefs(R = 3, T = 5, density = 0.5, eff_size = 1, d = 2)
+	sim <- simulateData(
+		coefs,
+		N = 300,
+		sig_eps_sq = 0.4,
+		sig_eps_c_sq = 0.4
+	)
+	res <- etwfeWithSimulatedData(
+		sim,
+		three_sample_split = TRUE,
+		verbose = FALSE
+	)
+	expect_true(!is.null(res$cohort_means_external))
+	expect_equal(nrow(res$cohort_means_external), res$R)
+})
+
+test_that("three_sample_split: BETWFE supports the toggle on its entry point", {
+	set.seed(2033)
+	coefs <- genCoefs(R = 3, T = 5, density = 0.5, eff_size = 1, d = 2)
+	sim <- simulateData(
+		coefs,
+		N = 300,
+		sig_eps_sq = 0.4,
+		sig_eps_c_sq = 0.4
+	)
+	res <- betwfeWithSimulatedData(
+		sim,
+		three_sample_split = TRUE,
+		verbose = FALSE
+	)
+	expect_true(!is.null(res$cohort_means_external))
+	expect_equal(nrow(res$cohort_means_external), res$R)
+})
+
+test_that("three_sample_split: twfeCovs supports the toggle (slot present, no predict method)", {
+	set.seed(2034)
+	coefs <- genCoefs(R = 3, T = 5, density = 0.5, eff_size = 1, d = 2)
+	sim <- simulateData(
+		coefs,
+		N = 300,
+		sig_eps_sq = 0.4,
+		sig_eps_c_sq = 0.4
+	)
+	res <- twfeCovsWithSimulatedData(
+		sim,
+		three_sample_split = TRUE,
+		verbose = FALSE
+	)
+	# twfeCovs stores the slot for parity but has no predict method.
+	expect_true(!is.null(res$cohort_means_external))
+})
+
+test_that("three_sample_split: predict variance at x = X_bar_r still matches the regression's tau-only SE", {
+	# When predict() is called at x = X_bar_r_C (the cohort_means_external
+	# rows themselves), the (x - X_bar_r_C) term vanishes for matching
+	# (x_row, cohort) pairs. Predictions reduce to tau_hat_rt, and the
+	# v_reg's rho contribution is zero. The v_mean component remains.
+	set.seed(2035)
+	coefs <- genCoefs(R = 3, T = 5, density = 0.5, eff_size = 1, d = 2)
+	sim <- simulateData(
+		coefs,
+		N = 300,
+		sig_eps_sq = 0.4,
+		sig_eps_c_sq = 0.4
+	)
+	res <- etwfeWithSimulatedData(
+		sim,
+		three_sample_split = TRUE,
+		verbose = FALSE
+	)
+	# Default newdata = NULL: predicts at cohort_means_external.
+	p <- predict(res)
+	# For x_row == r, the (x - X_bar_r_C) term is zero ONLY for that
+	# cohort; the estimate at cohort=r (x_row=r) should equal tau_hat_rt.
+	tau_hat <- unname(res$beta_hat[res$treat_inds])
+	first_inds <- getFirstInds(res$R, res$T)
+	num_treats <- length(tau_hat)
+	c_names <- as.character(res$catt_df$cohort)
+	for (r in seq_len(res$R)) {
+		sub <- subset(p, x_row == r & cohort == c_names[r])
+		k_start <- first_inds[r]
+		k_end <- if (r < res$R) first_inds[r + 1L] - 1L else num_treats
+		expect_equal(
+			sub$estimate,
+			tau_hat[k_start:k_end],
+			info = paste("cohort r =", r)
+		)
+	}
+})

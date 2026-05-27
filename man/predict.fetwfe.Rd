@@ -109,21 +109,26 @@ cohort-mean variance term remains, reflecting the fact that even at
 Note on the variance formula. The paper's Theorem
 \code{te.asym.norm.thm.gen.cond}(a) (Eq. \code{v.n.r.t.catt.const}) gives the
 asymptotically exact variance \eqn{v_{\mathrm{reg}} + v_{\mathrm{mean}}}
-under the sample-split assumption: one panel for the cohort means
-\eqn{\bar X_r}, an independent panel for \eqn{\hat\tau_{rt}} and
+under three-sample splitting: one panel for the cohort means
+\eqn{\bar X_r}, a second for the cohort-membership probabilities, and
+a third (independent) panel for \eqn{\hat\tau_{rt}} and
 \eqn{\hat\rho_{rt}}. In practice this is the setting where the user
-supplies \code{indep_counts} at fit time. When \code{indep_counts} is not
-supplied, both variance components are estimated from the same panel
-and the formula does not capture the covariance between
-\eqn{(\bar X_r - \mu_r)} and \eqn{(\hat\rho_{rt} - \rho_{rt})};
-\code{predict()} then falls back to the Cauchy-Schwarz conservative upper
+set \code{three_sample_split = TRUE} at fit time -- the package then
+partitions \code{pdata} into three subsamples internally and stores the
+externally-estimated \eqn{\bar X_r} on the fit as
+\code{cohort_means_external}. \code{predict()} detects that slot and applies
+the exact \eqn{v_{\mathrm{reg}} + v_{\mathrm{mean}}} formula.
+
+When \code{three_sample_split = FALSE} (the default), \code{predict()} reads
+\eqn{\bar X_r} from the fitting panel itself. If the user supplied
+\code{indep_counts} for the two-sample regime, the exact formula is also
+applied (mirroring the overall-ATT SE convention at
+\code{R/variance_machinery.R:142-153}). If neither was supplied,
+\code{predict()} falls back to the Cauchy-Schwarz conservative upper
 bound \eqn{(\sqrt{v_{\mathrm{reg}}} + \sqrt{v_{\mathrm{mean}}})^2}.
-This mirrors the overall-ATT SE convention the package already uses
-for \code{att_se} -- asymptotically exact when \code{indep_counts} is supplied,
-conservative otherwise. At \eqn{x = \bar X_r} (the default
-\code{newdata = NULL}), the cross-term issue does not arise
-(\eqn{x - \bar X_r = 0}) and the conservative formula coincides
-numerically with the exact one.
+At \eqn{x = \bar X_r} (the default \code{newdata = NULL}), the cross-term
+issue does not arise (\eqn{x - \bar X_r = 0}) and the conservative
+formula coincides numerically with the exact one.
 }
 \section{Out of scope}{
 
