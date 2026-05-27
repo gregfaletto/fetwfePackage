@@ -63,6 +63,41 @@
 	catt_df
 }
 
+#' @title Truncate an eventStudy frame to a max number of event times
+#'
+#' @description
+#' Internal helper used by `.print_estimator_output()` and
+#' `.summary_estimator_output()` to render a preview of event-study
+#' effects matching the existing CATT-preview style. Mirrors
+#' `.truncate_catt()` in shape (preserves class via `head()`-style
+#' subsetting, sets `truncated` / `n_discarded` attributes), but
+#' simpler -- `eventStudy()` already returns rows in `event_time`
+#' order so no sort step is needed.
+#'
+#' @param es An `eventStudy`-classed data frame.
+#' @param max_event_times Integer; the maximum number of rows to
+#'   preserve. If `nrow(es) > max_event_times`, the head is kept and
+#'   the rest discarded; otherwise `es` is returned unchanged.
+#' @return A data frame, possibly truncated, with attributes
+#'   `truncated` (logical) and (if truncated) `n_discarded` (integer).
+#' @keywords internal
+#' @noRd
+.truncate_event_study <- function(es, max_event_times) {
+	if (nrow(es) > max_event_times) {
+		attr_truncated <- TRUE
+		n_discarded <- nrow(es) - max_event_times
+		es <- es[seq_len(max_event_times), , drop = FALSE]
+	} else {
+		attr_truncated <- FALSE
+		n_discarded <- 0L
+	}
+	attr(es, "truncated") <- attr_truncated
+	if (attr_truncated) {
+		attr(es, "n_discarded") <- n_discarded
+	}
+	es
+}
+
 #' @title Print a CATT data frame with the package's standard formatting
 #'
 #' @description
@@ -594,6 +629,7 @@
 	max_cohorts,
 	order_by,
 	show_internal,
+	max_event_times,
 	...
 ) {
 	cat(header)
@@ -640,6 +676,26 @@
 		))
 	}
 	cat("\n")
+
+	## Event-study effects (#138). Computed on demand via `eventStudy(x)`;
+	## wrapped in `tryCatch` so a fit with a configuration `eventStudy()`
+	## doesn't support (e.g., `twfeCovs` if this helper is ever reused for
+	## that class) silently skips the block rather than crashing print.
+	## twfeCovs currently does not use this helper, so the tryCatch is a
+	## defense-in-depth measure for future extensions.
+	es <- tryCatch(eventStudy(x), error = function(e) NULL)
+	if (!is.null(es) && nrow(es) > 0L) {
+		es_preview <- .truncate_event_study(es, max_event_times)
+		cat("Event-Study Average Treatment Effects (per event time):\n")
+		.print_catt_tbl(es_preview)
+		if (isTRUE(attr(es_preview, "truncated"))) {
+			cat(sprintf(
+				"  ... and %d more event times.\n",
+				attr(es_preview, "n_discarded")
+			))
+		}
+		cat("\n")
+	}
 
 	## Model info
 	cat("Model Details:\n")
@@ -710,7 +766,8 @@
 	output_class,
 	include_att_selected,
 	include_lambda,
-	full_catt
+	full_catt,
+	max_event_times = 20L
 ) {
 	# Build the FULL union list with every possible field, then drop
 	# the fields that don't belong to this class via name-vector
@@ -722,6 +779,16 @@
 	# the print-side default is 10. Summary keeps a larger preview
 	# because it is a one-shot interactive inspection rather than a
 	# screen-formatted layout.
+	# Compute event-study on demand (#138). `tryCatch` so a fit
+	# configuration that `eventStudy()` doesn't support silently skips
+	# the field rather than crashing `summary()`.
+	es <- tryCatch(eventStudy(object), error = function(e) NULL)
+	event_study <- if (is.null(es) || nrow(es) == 0L) {
+		NULL
+	} else {
+		.truncate_event_study(es, max_event_times = max_event_times)
+	}
+
 	out <- list(
 		att = c(
 			estimate = object$att_hat,
@@ -734,6 +801,7 @@
 		} else {
 			.truncate_catt(object$catt_df, max_cohorts = 20)
 		},
+		event_study = event_study,
 		model_info = list(
 			N = object$N,
 			T = object$T,
@@ -753,6 +821,10 @@
 		"att",
 		if (include_att_selected) "att_selected",
 		"catt",
+		# `event_study` field is always present in the list slot when
+		# `eventStudy()` succeeded (NULL otherwise). Placed between
+		# `catt` and `model_info` to mirror the print-order convention.
+		"event_study",
 		"model_info",
 		"alpha",
 		"se_type"
@@ -844,6 +916,22 @@
 		cat(sprintf("  ... + %d more cohorts.\n", attr(x$catt, "n_discarded")))
 	}
 	cat("\n")
+
+	## Event-study preview (#138). Reads from the cached field set by
+	## `.summary_estimator_output()`; no recompute. NULL means the
+	## eventStudy computation failed at summary-build time -- silently
+	## omit the block.
+	if (!is.null(x$event_study)) {
+		cat("Event Study (preview):\n")
+		.print_catt_tbl(x$event_study)
+		if (isTRUE(attr(x$event_study, "truncated"))) {
+			cat(sprintf(
+				"  ... + %d more event times.\n",
+				attr(x$event_study, "n_discarded")
+			))
+		}
+		cat("\n")
+	}
 
 	## Model info
 	cat("Model Details:\n")

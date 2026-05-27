@@ -1,5 +1,26 @@
 # NEWS
 
+## Version 1.11.5 (2026-05-26)
+
+### New features
+
+- `print()` and `summary()` for `fetwfe()`, `etwfe()`, and `betwfe()`
+  fits now include an event-study preview block alongside the existing
+  ATT and CATT blocks, surfacing per-event-time treatment-effect
+  estimates in the routine display. The block uses the same snake_case
+  column convention as `eventStudy(result)` (`event_time`,
+  `n_cohorts`, `estimate`, `se`, `ci_low`, `ci_high`, `p_value`).
+  Truncation is controlled by a new `max_event_times` argument
+  (defaulting to `getOption("<class>.max_event_times", 10)` for
+  `print()` and 20 for `summary()`), parallel to the existing
+  `max_cohorts` knob. `summary()` results also carry a new
+  `event_study` field between `catt` and `model_info`. The
+  event-study is computed on demand (no fit-time cache); if
+  `eventStudy()` would error on the fitted object (no realistic
+  configuration currently triggers this), the block is silently
+  omitted rather than crashing the display. `twfeCovs` is
+  unaffected -- `eventStudy()` does not support it. Issue #138.
+
 ## Version 1.11.4 (2026-05-26)
 
 ### New features

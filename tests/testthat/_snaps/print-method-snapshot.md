@@ -18,6 +18,13 @@
             2        0  0      0       0      NA    FALSE
             3        0  0      0       0      NA    FALSE
       
+      Event-Study Average Treatment Effects (per event time):
+       event_time n_cohorts estimate se ci_low ci_high p_value
+                0         2        0 NA     NA      NA      NA
+                1         2        0 NA     NA      NA      NA
+                2         2        0 NA     NA      NA      NA
+                3         1        0 NA     NA      NA      NA
+      
       Model Details:
         Units (N)           : 30
         Time periods (T)    : 5
@@ -42,6 +49,13 @@
        cohort estimate se ci_low ci_high p_value selected
             2        0  0      0       0      NA    FALSE
             3        0  0      0       0      NA    FALSE
+      
+      Event Study (preview):
+       event_time n_cohorts estimate se ci_low ci_high p_value
+                0         2        0 NA     NA      NA      NA
+                1         2        0 NA     NA      NA      NA
+                2         2        0 NA     NA      NA      NA
+                3         1        0 NA     NA      NA      NA
       
       Model Details:
         Units (N)           : 30
@@ -71,6 +85,13 @@
             2  0.009060593 0.4879617 -0.9473267 0.9654479 0.9851855
             3 -0.127673929 0.4655589 -1.0401525 0.7848047 0.7839017
       
+      Event-Study Average Treatment Effects (per event time):
+       event_time n_cohorts    estimate        se     ci_low   ci_high   p_value
+                0         2 -0.50429204 0.4579311 -1.4018205 0.3932365 0.2707922
+                1         2 -0.05370444 0.4916011 -1.0172249 0.9098161 0.9130090
+                2         2  0.15743661 0.4942014 -0.8111803 1.1260536 0.7500543
+                3         1  0.44849429 0.6429757 -0.8117150 1.7087036 0.4854717
+      
       Model Details:
         Units (N)           : 30
         Time periods (T)    : 5
@@ -92,6 +113,13 @@
        cohort     estimate        se     ci_low   ci_high   p_value
             2  0.009060593 0.4879617 -0.9473267 0.9654479 0.9851855
             3 -0.127673929 0.4655589 -1.0401525 0.7848047 0.7839017
+      
+      Event Study (preview):
+       event_time n_cohorts    estimate        se     ci_low   ci_high   p_value
+                0         2 -0.50429204 0.4579311 -1.4018205 0.3932365 0.2707922
+                1         2 -0.05370444 0.4916011 -1.0172249 0.9098161 0.9130090
+                2         2  0.15743661 0.4942014 -0.8111803 1.1260536 0.7500543
+                3         1  0.44849429 0.6429757 -0.8117150 1.7087036 0.4854717
       
       Model Details:
         Units (N)           : 30
@@ -120,6 +148,13 @@
             2        0  0      0       0      NA    FALSE
             3        0  0      0       0      NA    FALSE
       
+      Event-Study Average Treatment Effects (per event time):
+       event_time n_cohorts estimate se ci_low ci_high p_value
+                0         2        0 NA     NA      NA      NA
+                1         2        0 NA     NA      NA      NA
+                2         2        0 NA     NA      NA      NA
+                3         1        0 NA     NA      NA      NA
+      
       Model Details:
         Units (N)           : 30
         Time periods (T)    : 5
@@ -144,6 +179,13 @@
        cohort estimate se ci_low ci_high p_value selected
             2        0  0      0       0      NA    FALSE
             3        0  0      0       0      NA    FALSE
+      
+      Event Study (preview):
+       event_time n_cohorts estimate se ci_low ci_high p_value
+                0         2        0 NA     NA      NA      NA
+                1         2        0 NA     NA      NA      NA
+                2         2        0 NA     NA      NA      NA
+                3         1        0 NA     NA      NA      NA
       
       Model Details:
         Units (N)           : 30

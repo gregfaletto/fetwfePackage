@@ -30,6 +30,7 @@ print.betwfe <- function(
 	max_cohorts = getOption("betwfe.max_cohorts", 10),
 	order_by = c("cohort", "estimate", "abs_estimate", "pvalue", "none"),
 	show_internal = FALSE,
+	max_event_times = getOption("betwfe.max_event_times", 10),
 	...
 ) {
 	.print_estimator_output(
@@ -43,6 +44,7 @@ print.betwfe <- function(
 		max_cohorts = max_cohorts,
 		order_by = match.arg(order_by),
 		show_internal = show_internal,
+		max_event_times = max_event_times,
 		...
 	)
 }
