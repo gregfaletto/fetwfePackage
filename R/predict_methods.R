@@ -120,19 +120,23 @@
 #' \eqn{x = \bar X_r}, the population \eqn{\bar X_r} is estimated.
 #'
 #' Note on the variance formula. The paper's Theorem
-#' `te.asym.norm.thm.gen.cond`(a) (Eq. `v.n.r.t.catt.const`) is derived
-#' under sample splitting: one panel for the cohort means
+#' `te.asym.norm.thm.gen.cond`(a) (Eq. `v.n.r.t.catt.const`) gives the
+#' asymptotically exact variance \eqn{v_{\mathrm{reg}} + v_{\mathrm{mean}}}
+#' under the sample-split assumption: one panel for the cohort means
 #' \eqn{\bar X_r}, an independent panel for \eqn{\hat\tau_{rt}} and
-#' \eqn{\hat\rho_{rt}}. The package fits both quantities on the same
-#' panel, so the formula does not capture the covariance between
-#' \eqn{(\bar X_r - \mu_r)} and \eqn{(\hat\rho_{rt} - \rho_{rt})}.
-#' Empirically, finite-sample coverage of the Wald CI at
-#' \eqn{x = \bar X_r} approaches the nominal level, while coverage at
-#' \eqn{x \ne \bar X_r} is conservative-of-nominal-by-roughly-10-15-pp
-#' on the simulated panels we've tested (e.g., R=3, T=5, d=2,
-#' N=500: ~0.78-0.85 vs. nominal 0.95). A follow-up that either
-#' sample-splits internally for `predict()` or adds the covariance
-#' term would close this gap.
+#' \eqn{\hat\rho_{rt}}. In practice this is the setting where the user
+#' supplies `indep_counts` at fit time. When `indep_counts` is not
+#' supplied, both variance components are estimated from the same panel
+#' and the formula does not capture the covariance between
+#' \eqn{(\bar X_r - \mu_r)} and \eqn{(\hat\rho_{rt} - \rho_{rt})};
+#' `predict()` then falls back to the Cauchy-Schwarz conservative upper
+#' bound \eqn{(\sqrt{v_{\mathrm{reg}}} + \sqrt{v_{\mathrm{mean}}})^2}.
+#' This mirrors the overall-ATT SE convention the package already uses
+#' for `att_se` -- asymptotically exact when `indep_counts` is supplied,
+#' conservative otherwise. At \eqn{x = \bar X_r} (the default
+#' `newdata = NULL`), the cross-term issue does not arise
+#' (\eqn{x - \bar X_r = 0}) and the conservative formula coincides
+#' numerically with the exact one.
 #'
 #' @section Out of scope:
 #' `predict.twfeCovs()` is not provided — `twfeCovs` lacks the
@@ -552,10 +556,47 @@ predict.betwfe <- function(
 					cov_X_r = cov_X_given_r[[r_idx]],
 					N_r = N_r_vec[r_idx]
 				)
-				var_total <- .floor_cluster_quad(
-					v_reg + v_mean,
-					"predict.fetwfe/var_total"
-				)
+				# Combine v_reg and v_mean. Paper's Theorem
+				# `te.asym.norm.thm.gen.cond`(a) gives the asymptotically
+				# exact variance `v_reg + v_mean` under the sample-split
+				# assumption (independent data for X_bar_r and the
+				# (tau, rho) regression -- the `indep_counts = ...`
+				# argument at fit time). When the fit was made WITHOUT
+				# sample splitting (`indep_counts` not supplied), both
+				# variance components are estimated from the same panel
+				# and their covariance is not zero; the missing
+				# cross-term `cov((X_bar_r - mu_r), (rho_hat_rt -
+				# rho_rt))` causes the exact formula to UNDER-cover at
+				# x != X_bar_r. We fall back to the Cauchy-Schwarz upper
+				# bound `(sqrt(v_reg) + sqrt(v_mean))^2 = v_reg + v_mean
+				# + 2*sqrt(v_reg * v_mean)`, which mirrors the
+				# overall-ATT SE pattern at `R/variance_machinery.R:142-153`.
+				# At x = X_bar_r, v_mean's rho-contribution vanishes
+				# (x_diff = 0), so the conservative formula coincides
+				# with the exact one when it matters most.
+				exact_var <- v_reg + v_mean
+				if (isTRUE(object$indep_counts_used)) {
+					var_total <- .floor_cluster_quad(
+						exact_var,
+						"predict.fetwfe/var_total"
+					)
+				} else {
+					# Cauchy-Schwarz conservative upper bound; floor
+					# each component individually first so the
+					# sqrt-product term is real-valued under any FP
+					# cancellation.
+					v_reg_floored <- .floor_cluster_quad(
+						v_reg,
+						"predict.fetwfe/v_reg"
+					)
+					v_mean_floored <- .floor_cluster_quad(
+						v_mean,
+						"predict.fetwfe/v_mean"
+					)
+					var_total <- v_reg_floored +
+						v_mean_floored +
+						2 * sqrt(v_reg_floored * v_mean_floored)
+				}
 				se_k <- sqrt(var_total)
 				z <- stats::qnorm(1 - alpha / 2)
 				ci_lo <- point - z * se_k

@@ -548,24 +548,19 @@ test_that("predict() coverage rate is approximately nominal (sanity check)", {
 			sum(p$conf.low <= truth & truth <= p$conf.high, na.rm = TRUE)
 		total <- total + num_treats
 	}
-	# Post-execution review #33: tightened from [0.6, 1.0] to
-	# [0.70, 1.0] after fixing three variance-formula blockers.
-	# Empirically, with the correct formula and N=500 over 60 reps,
-	# coverage at x != X_bar_r stabilizes around 0.74-0.85 (mean
-	# ~0.80) across seeds, not 0.95. The shortfall vs. nominal 0.95
-	# tracks back to the paper's variance formula (Eq.
-	# `v.n.r.t.catt.const`) being derived under sample splitting (two
-	# independent panels: one for X_bar_r, one for tau/rho); the
-	# package fits both on the same panel, which introduces a
-	# correlation between (X_bar_r - mu_r) and (rho_hat_rt - rho_rt)
-	# that the formula ignores. Per-cell coverage at x = X_bar_r
-	# (where the rho regression-variance term vanishes) achieves
-	# 0.90-0.98 across the same panel.
-	#
-	# A follow-up that either (a) sample-splits internally for
-	# predict() or (b) adds a covariance correction term to the
-	# variance formula would close this gap. Until then, the
-	# threshold reflects the achievable rate, not the nominal one.
+	# Coverage threshold reflects the current state pending paper-side
+	# resolution of the variance formula at x != X_bar_r. Empirically:
+	#   - Exact formula (indep_counts_used = TRUE): ~0.78 at N=500
+	#   - Conservative Cauchy-Schwarz (indep_counts_used = FALSE): ~0.84
+	# Neither converges cleanly to nominal 0.95. The paper's Theorem
+	# `te.asym.norm.thm.gen.cond`(a) requires THREE independent samples
+	# (one for the FETWFE regression, one for cohort probabilities, one
+	# for the cohort conditional covariate means X_bar_r); the package
+	# currently supports the first two via `indep_counts` but has no
+	# API for injecting an independent X_bar_r. Paper-side work needed
+	# to either derive a tighter conservative formula or add a third-
+	# sample API. See follow-up issue for the methodology investigation;
+	# this PR is deferred (not landed) until paper-side resolution.
 	cov_rate <- covers / total
 	expect_true(cov_rate >= 0.70, info = paste("coverage =", cov_rate))
 	expect_true(cov_rate <= 1.0)
