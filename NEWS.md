@@ -1,5 +1,55 @@
 # NEWS
 
+## Version 1.12.0 (2026-05-27)
+
+### Breaking changes
+
+- The default `att_se` value now uses the tight Gaussian variance
+  `sqrt(att_var_1 + att_var_2)` from paper Theorem
+  `te.asym.norm.thm`(c$'$) under Assumption (Psi-IF). (Psi-IF) is
+  satisfied by the package's default cohort sample-proportions
+  estimator `hat_pi_r = N_r / N`, by multinomial-logit MLE, by any GLM
+  on `W | X`, and by kernel/series regression of `1{W = r}` on `X`, so
+  the new default SE is asymptotically exact for the package's default
+  estimator out of the box. Previous versions returned the conservative
+  Cauchy-Schwarz upper bound
+  `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` as
+  the same-data default. The new default SE is strictly narrower; the
+  corresponding CIs are strictly tighter. To recover the prior
+  conservative behavior, pass `se_type = "conservative"` (intended for
+  non-(Psi-IF) propensity-score estimators like
+  Robins-Rotnitzky-augmented doubly-robust, which the package does not
+  currently implement).
+
+### New features
+
+- New named slots on the fitted-object's `internal$variance_components`
+  block expose the paper's variance decomposition by name. `V_1` is
+  the Kock-2013 regression-coefficient variance contribution
+  (`sigma^2 alpha' Sigma^{-1} alpha`); `V_2` is the propensity-score
+  variance contribution (`v_psi(beta_0, S)`); both correspond to the
+  per-unit paper-notation rescaling `V_1 = N * att_var_1`,
+  `V_2 = N * att_var_2`.
+
+- Unit-scaled variance estimators `tilde_v_N := hat_v_N / T` from paper
+  line 2006 exposed alongside `V_1` / `V_2` on the variance-components
+  block. `tilde_v_N` is the headline value backing `att_se`; the four
+  catalogued unit-scaled variance estimators
+  (`tilde_v_N_C`, `tilde_v_N_C_pi_hat`, `tilde_v_N_C_pi_hat_cons`,
+  `tilde_v_N_cons`) correspond to the paper's equations
+  `v.n.r.t.att.const`, `v.n.r.t.att.rand`, `v.n.r.t.att.rand.cons`,
+  and `var.est.kock.wooldridge.subgauss.cons` respectively. The Wald
+  CI is `[hat_T_N +- qnorm(1 - alpha/2) * sqrt(tilde_v_N / N)]` (paper
+  Eq. `conf.int.form`). Issue #146.
+
+- `inference_vignette.Rmd` reframed: same-data inference is now Gaussian
+  under (Psi-IF) by default; the conservative subgaussian path is
+  documented as the fallback for non-(Psi-IF) propensity-score
+  estimators. The vignette also walks through the new
+  paper-notation slots (`V_1`, `V_2`, `tilde_v_N`).
+
+Issues #141 and #146.
+
 ## Version 1.11.7 (2026-05-26)
 
 ### New features

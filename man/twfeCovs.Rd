@@ -113,12 +113,19 @@ in the retained sub-panel --- with a warning naming the dropped periods. If
 behavior prior to version 1.5.6). The argument has no effect when the input
 already contains never-treated units. Default is \code{TRUE}.}
 
-\item{se_type}{Character; one of \code{"default"} (the package's
-Assumption-F1-based standard error from the paper) or \code{"cluster"}
-(an \emph{experimental} unit-clustered Liang-Zeger sandwich SE on the
-OLS-selected support; see the companion vignette \code{inference_vignette}
+\item{se_type}{Character; one of \code{"default"}, \code{"conservative"}, or
+\code{"cluster"}. \code{"default"} returns the tight Gaussian variance
+\code{sqrt(att_var_1 + att_var_2)} from Theorem (c$'$) under Assumption
+(Psi-IF) (asymptotically exact for the package's default cohort
+sample-proportions estimator); \code{"conservative"} returns the
+Cauchy-Schwarz upper bound from Theorem (c) (use only when the
+propensity-score estimator violates (Psi-IF)); \code{"cluster"} is an
+\emph{experimental} unit-clustered Liang-Zeger sandwich SE on the
+OLS-selected support (see the companion vignette \code{inference_vignette}
 for the formula, the assumptions, and the theory-pending caveat).
-Default is \code{"default"}.}
+Default is \code{"default"}. v1.12.0 introduced the tight Gaussian default;
+versions <= 1.11.7 used the conservative Cauchy-Schwarz formula as
+the default.}
 }
 \value{
 An object of class \code{twfeCovs} containing the following elements:
@@ -203,6 +210,13 @@ step. Same as top-level \code{X_final}.}
 \code{y_final}.}
 \item{calc_ses}{Logical indicating whether standard errors were
 calculated. Same as top-level \code{calc_ses}.}
+\item{variance_components}{A list exposing the two variance pieces
+(\code{att_var_1}, \code{att_var_2}) plus paper-notation counterparts
+(\code{V_1}, \code{V_2}) and unit-scaled variance estimators
+(\code{tilde_v_N}, \code{hat_v_N}, \code{tilde_v_N_C}, \code{tilde_v_N_C_pi_hat},
+\code{tilde_v_N_C_pi_hat_cons}, \code{tilde_v_N_cons}). The Wald CI is
+\verb{[hat_T_N +- qnorm(1-alpha/2) * sqrt(tilde_v_N / N)]} (paper Eq.
+\code{conf.int.form}). New in v1.12.0 (issue #141 + #146).}
 }
 }
 }

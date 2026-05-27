@@ -115,7 +115,21 @@ test_that("tidy.<class> sorts cohorts numerically when labels include >= 10", {
 			X_final = matrix(0, 100L * T_test, p_test),
 			y_final = rep(0, 100L * T_test),
 			theta_hat = rep(0, p_test + 1L),
-			calc_ses = TRUE
+			calc_ses = TRUE,
+			variance_components = list(
+				att_var_1 = NA_real_,
+				att_var_2 = NA_real_,
+				V_1 = NA_real_,
+				V_2 = NA_real_,
+				tilde_v_N = NA_real_,
+				hat_v_N = NA_real_,
+				tilde_v_N_C = NA_real_,
+				tilde_v_N_C_pi_hat = NA_real_,
+				tilde_v_N_C_pi_hat_cons = NA_real_,
+				tilde_v_N_cons = NA_real_,
+				se_type = "default",
+				indep_counts_used = FALSE
+			)
 		)
 	)
 	class(obj) <- "fetwfe"

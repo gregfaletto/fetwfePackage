@@ -416,8 +416,8 @@
 		cls
 	)
 	.assert_contract(
-		x$se_type %in% c("default", "cluster"),
-		"C8 se_type in c('default', 'cluster')",
+		x$se_type %in% c("default", "conservative", "cluster"),
+		"C8 se_type in c('default', 'conservative', 'cluster')",
 		cls,
 		detail = paste0("se_type = ", format(x$se_type))
 	)
@@ -891,6 +891,8 @@
 	p_str <- if (is.na(p_val)) "NA" else sprintf("%.4g", p_val)
 	se_label <- if (identical(x$se_type, "cluster")) {
 		"SE (cluster-robust)"
+	} else if (identical(x$se_type, "conservative")) {
+		"SE (conservative)"
 	} else {
 		"SE"
 	}

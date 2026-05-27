@@ -110,17 +110,31 @@
 #' `FALSE`, the estimator stops with an error in this case (the package's
 #' behavior prior to version 1.5.6). The argument has no effect when the input
 #' already contains never-treated units. Default is `TRUE`.
-#' @param se_type Character; one of `"default"` (the package's
-#' Assumption-F1-based standard error from the paper) or `"cluster"`
-#' (an *experimental* unit-clustered Liang-Zeger sandwich SE on the
-#' bridge-selected support; see the companion vignette `inference_vignette`
-#' for the formula, the assumptions, and the theory-pending caveat).
-#' `"cluster"` is only meaningful when `q < 1` (the bridge oracle property
-#' is required); for `q >= 1` the SE will be `NA` regardless of `se_type`.
-#' Default is `"default"`.
+#' @param se_type Character; one of `"default"`, `"conservative"`, or
+#' `"cluster"`. `"default"` returns the tight Gaussian variance
+#' `sqrt(att_var_1 + att_var_2)` from Theorem (c$'$) under Assumption
+#' (Psi-IF); this is asymptotically exact for the package's default
+#' cohort sample-proportions estimator and for every standard
+#' propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
+#' any GLM on `W | X`, kernel/series regression of `1{W = r}` on `X`).
+#' `"conservative"` returns the Cauchy-Schwarz upper bound
+#' `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from
+#' Theorem (c); use only if the propensity-score estimator violates
+#' (Psi-IF) (e.g., a Robins-Rotnitzky-augmented doubly-robust estimator,
+#' which the package does not currently implement). `"cluster"` is an
+#' *experimental* unit-clustered Liang-Zeger sandwich SE on the
+#' bridge-selected support (see the companion vignette
+#' `inference_vignette` for the formula, the assumptions, and the
+#' theory-pending caveat); only meaningful when `q < 1` (the bridge
+#' oracle property is required), and for `q >= 1` the SE will be `NA`
+#' regardless of `se_type`. The default value of `"default"` corresponds
+#' to the new tight Gaussian default introduced in version 1.12.0;
+#' previous versions used the conservative Cauchy-Schwarz formula as the
+#' default. To recover the prior conservative default behavior, pass
+#' `se_type = "conservative"`.
 #' @return An object of class \code{fetwfe} containing the following elements:
 #' \item{att_hat}{The estimated overall average treatment effect for a randomly selected treated unit.}
-#' \item{att_se}{If `q < 1`, a standard error for the ATT. If `indep_counts` was provided, this standard error is asymptotically exact; if not, it is asymptotically conservative. If `q >= 1`, this will be NA.}
+#' \item{att_se}{If `q < 1`, a standard error for the ATT. Under the default `se_type = "default"`, the SE is the tight Gaussian variance `sqrt(att_var_1 + att_var_2)` (Theorem (c$'$) under Assumption (Psi-IF); paper line 1233 onwards). Assumption (Psi-IF) is satisfied by the package's default cohort sample-proportions estimator `hat_pi_r = N_r / N` (and by multinomial logit, any GLM on `W | X`, and kernel/series regression of `1{W = r}` on `X`), so the default SE is asymptotically exact for the package's default estimator. Under `se_type = "conservative"` (or in version <= 1.11.7 by default), the SE is the Cauchy-Schwarz upper bound `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from Theorem (c). When `indep_counts` is provided, the two-sample exact formula `sqrt(att_var_1 + att_var_2)` is used regardless of `se_type`. If `q >= 1`, this will be NA.}
 #' \item{att_p_value}{A two-sided p-value for the overall ATT against the null `H_0: tau = 0`, computed as `2 * pnorm(-|att_hat / att_se|)`. `NA` if `att_se` is zero or `NA` (e.g., under the bridge solver's selected-out fallback). See the package vignette section "Testing the zero-effect null" for interpretation guidance under selection consistency.}
 #' \item{att_selected}{Logical scalar; `TRUE` if `att_hat` is not exactly zero (i.e., at least one cohort's bridge-penalized coefficient survived selection), `FALSE` otherwise. Under FETWFE Theorem 6.2 (restriction selection consistency), `att_selected = FALSE` is the asymptotic statement that the truth is zero. For ridge (`q = 2`) the bridge solver does not zero coefficients, so this will typically be `TRUE`.}
 #' \item{catt_hats}{A named vector containing the estimated average treatment effects for each cohort.}
@@ -174,6 +188,7 @@
 #'     \item{y_final}{The final response after multiplying on the left by the square root inverse of the estimated covariance matrix for each unit.}
 #'     \item{theta_hat}{The vector of estimated coefficients in the transformed (fused) space, including the intercept as the first element.}
 #'     \item{calc_ses}{Logical indicating whether standard errors were calculated.}
+#'     \item{variance_components}{A list exposing the two variance pieces (`att_var_1`, `att_var_2`) plus their paper-notation counterparts (`V_1`, `V_2`) and the unit-scaled variance estimators (`tilde_v_N`, `hat_v_N`, `tilde_v_N_C`, `tilde_v_N_C_pi_hat`, `tilde_v_N_C_pi_hat_cons`, `tilde_v_N_cons`) catalogued at paper line 2006. The Wald CI is `[hat_T_N +- qnorm(1-alpha/2) * sqrt(tilde_v_N / N)]` (paper Eq. `conf.int.form`). New in v1.12.0 (issue #141 + #146).}
 #'   }
 #' }
 #'
@@ -241,7 +256,10 @@ fetwfe <- function(
 	allow_no_never_treated = TRUE,
 	se_type = "default"
 ) {
-	se_type <- match.arg(se_type, c("default", "cluster"))
+	se_type <- match.arg(
+		se_type,
+		c("default", "conservative", "cluster")
+	)
 
 	# Normalize `covs` to a character vector if a one-sided formula was
 	# supplied (#28). All downstream code assumes the character-vector
@@ -328,6 +346,15 @@ fetwfe <- function(
 	att_p_value <- .compute_p_values(att_hat, att_se)
 	att_selected <- att_hat != 0
 
+	variance_components <- .build_variance_components(
+		att_var_1 = att_branch$att_var_1,
+		att_var_2 = att_branch$att_var_2,
+		N = res$N,
+		T = res$T,
+		se_type = se_type,
+		indep_counts_used = indep_count_data_available
+	)
+
 	# Create the main output list with essential results
 	out <- list(
 		att_hat = att_hat,
@@ -373,7 +400,8 @@ fetwfe <- function(
 		X_final = res$X_final,
 		y_final = res$y_final,
 		theta_hat = res$theta_hat,
-		calc_ses = res$calc_ses
+		calc_ses = res$calc_ses,
+		variance_components = variance_components
 	)
 
 	# Validate constructed object's contracts (#85). Catches malformed
@@ -440,17 +468,31 @@ fetwfe <- function(
 #' `FALSE`, the estimator stops with an error in this case (the package's
 #' behavior prior to version 1.5.6). The argument has no effect when the input
 #' already contains never-treated units. Default is `TRUE`.
-#' @param se_type Character; one of `"default"` (the package's
-#' Assumption-F1-based standard error from the paper) or `"cluster"`
-#' (an *experimental* unit-clustered Liang-Zeger sandwich SE on the
-#' bridge-selected support; see the companion vignette `inference_vignette`
-#' for the formula, the assumptions, and the theory-pending caveat).
-#' `"cluster"` is only meaningful when `q < 1` (the bridge oracle property
-#' is required); for `q >= 1` the SE will be `NA` regardless of `se_type`.
-#' Default is `"default"`.
+#' @param se_type Character; one of `"default"`, `"conservative"`, or
+#' `"cluster"`. `"default"` returns the tight Gaussian variance
+#' `sqrt(att_var_1 + att_var_2)` from Theorem (c$'$) under Assumption
+#' (Psi-IF); this is asymptotically exact for the package's default
+#' cohort sample-proportions estimator and for every standard
+#' propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
+#' any GLM on `W | X`, kernel/series regression of `1{W = r}` on `X`).
+#' `"conservative"` returns the Cauchy-Schwarz upper bound
+#' `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from
+#' Theorem (c); use only if the propensity-score estimator violates
+#' (Psi-IF) (e.g., a Robins-Rotnitzky-augmented doubly-robust estimator,
+#' which the package does not currently implement). `"cluster"` is an
+#' *experimental* unit-clustered Liang-Zeger sandwich SE on the
+#' bridge-selected support (see the companion vignette
+#' `inference_vignette` for the formula, the assumptions, and the
+#' theory-pending caveat); only meaningful when `q < 1` (the bridge
+#' oracle property is required), and for `q >= 1` the SE will be `NA`
+#' regardless of `se_type`. The default value of `"default"` corresponds
+#' to the new tight Gaussian default introduced in version 1.12.0;
+#' previous versions used the conservative Cauchy-Schwarz formula as the
+#' default. To recover the prior conservative default behavior, pass
+#' `se_type = "conservative"`.
 #' @return An object of class \code{fetwfe} containing the following elements:
 #' \item{att_hat}{The estimated overall average treatment effect for a randomly selected treated unit.}
-#' \item{att_se}{If `q < 1`, a standard error for the ATT. If `indep_counts` was provided, this standard error is asymptotically exact; if not, it is asymptotically conservative. If `q >= 1`, this will be NA.}
+#' \item{att_se}{If `q < 1`, a standard error for the ATT. Under the default `se_type = "default"`, the SE is the tight Gaussian variance `sqrt(att_var_1 + att_var_2)` (Theorem (c$'$) under Assumption (Psi-IF); paper line 1233 onwards). Assumption (Psi-IF) is satisfied by the package's default cohort sample-proportions estimator `hat_pi_r = N_r / N` (and by multinomial logit, any GLM on `W | X`, and kernel/series regression of `1{W = r}` on `X`), so the default SE is asymptotically exact for the package's default estimator. Under `se_type = "conservative"` (or in version <= 1.11.7 by default), the SE is the Cauchy-Schwarz upper bound `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from Theorem (c). When `indep_counts` is provided, the two-sample exact formula `sqrt(att_var_1 + att_var_2)` is used regardless of `se_type`. If `q >= 1`, this will be NA.}
 #' \item{att_p_value}{A two-sided p-value for the overall ATT against the null `H_0: tau = 0`, computed as `2 * pnorm(-|att_hat / att_se|)`. `NA` if `att_se` is zero or `NA` (e.g., under the bridge solver's selected-out fallback). See the package vignette section "Testing the zero-effect null" for interpretation guidance under selection consistency.}
 #' \item{att_selected}{Logical scalar; `TRUE` if `att_hat` is not exactly zero (i.e., at least one cohort's bridge-penalized coefficient survived selection), `FALSE` otherwise. Under FETWFE Theorem 6.2 (restriction selection consistency), `att_selected = FALSE` is the asymptotic statement that the truth is zero. For ridge (`q = 2`) the bridge solver does not zero coefficients, so this will typically be `TRUE`.}
 #' \item{catt_hats}{A named vector containing the estimated average treatment effects for each cohort.}
@@ -504,6 +546,7 @@ fetwfe <- function(
 #'     \item{y_final}{The final response after multiplying on the left by the square root inverse of the estimated covariance matrix for each unit.}
 #'     \item{theta_hat}{The vector of estimated coefficients in the transformed (fused) space, including the intercept as the first element.}
 #'     \item{calc_ses}{Logical indicating whether standard errors were calculated.}
+#'     \item{variance_components}{A list exposing the two variance pieces (`att_var_1`, `att_var_2`) plus their paper-notation counterparts (`V_1`, `V_2`) and the unit-scaled variance estimators (`tilde_v_N`, `hat_v_N`, `tilde_v_N_C`, `tilde_v_N_C_pi_hat`, `tilde_v_N_C_pi_hat_cons`, `tilde_v_N_cons`) catalogued at paper line 2006. The Wald CI is `[hat_T_N +- qnorm(1-alpha/2) * sqrt(tilde_v_N / N)]` (paper Eq. `conf.int.form`). New in v1.12.0 (issue #141 + #146).}
 #'   }
 #' }
 #'
@@ -533,7 +576,10 @@ fetwfeWithSimulatedData <- function(
 	allow_no_never_treated = TRUE,
 	se_type = "default"
 ) {
-	se_type <- match.arg(se_type, c("default", "cluster"))
+	se_type <- match.arg(
+		se_type,
+		c("default", "conservative", "cluster")
+	)
 
 	if (!inherits(simulated_obj, "FETWFE_simulated")) {
 		stop("simulated_obj must be an object of class 'FETWFE_simulated'")
@@ -657,12 +703,26 @@ fetwfeWithSimulatedData <- function(
 #' `FALSE`, the estimator stops with an error in this case (the package's
 #' behavior prior to version 1.5.6). The argument has no effect when the input
 #' already contains never-treated units. Default is `TRUE`.
-#' @param se_type Character; one of `"default"` (the package's
-#' Assumption-F1-based standard error from the paper) or `"cluster"`
-#' (an *experimental* unit-clustered Liang-Zeger sandwich SE on the
-#' OLS-selected support; see the companion vignette `inference_vignette`
-#' for the formula, the assumptions, and the theory-pending caveat).
-#' Default is `"default"`.
+#' @param se_type Character; one of `"default"`, `"conservative"`, or
+#' `"cluster"`. `"default"` returns the tight Gaussian variance
+#' `sqrt(att_var_1 + att_var_2)` from Theorem (c$'$) under Assumption
+#' (Psi-IF); this is asymptotically exact for the package's default
+#' cohort sample-proportions estimator and for every standard
+#' propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
+#' any GLM on `W | X`, kernel/series regression of `1{W = r}` on `X`).
+#' `"conservative"` returns the Cauchy-Schwarz upper bound
+#' `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from
+#' Theorem (c); use only if the propensity-score estimator violates
+#' (Psi-IF) (e.g., a Robins-Rotnitzky-augmented doubly-robust estimator,
+#' which the package does not currently implement). `"cluster"` is an
+#' *experimental* unit-clustered Liang-Zeger sandwich SE on the
+#' OLS-selected support (see the companion vignette
+#' `inference_vignette` for the formula, the assumptions, and the
+#' theory-pending caveat). The default value of `"default"` corresponds
+#' to the new tight Gaussian default introduced in version 1.12.0;
+#' previous versions used the conservative Cauchy-Schwarz formula as the
+#' default. To recover the prior conservative default behavior, pass
+#' `se_type = "conservative"`.
 #' @return An object of class \code{etwfe} containing the following elements:
 #' \item{att_hat}{The
 #' estimated overall average treatment effect for a randomly selected treated
@@ -749,6 +809,13 @@ fetwfeWithSimulatedData <- function(
 #'       `y_final`.}
 #'     \item{calc_ses}{Logical indicating whether standard errors were
 #'       calculated. Same as top-level `calc_ses`.}
+#'     \item{variance_components}{A list exposing the two variance pieces
+#'       (`att_var_1`, `att_var_2`) plus paper-notation counterparts
+#'       (`V_1`, `V_2`) and unit-scaled variance estimators
+#'       (`tilde_v_N`, `hat_v_N`, `tilde_v_N_C`, `tilde_v_N_C_pi_hat`,
+#'       `tilde_v_N_C_pi_hat_cons`, `tilde_v_N_cons`). The Wald CI is
+#'       `[hat_T_N +- qnorm(1-alpha/2) * sqrt(tilde_v_N / N)]` (paper Eq.
+#'       `conf.int.form`). New in v1.12.0 (issue #141 + #146).}
 #'   }
 #' }
 #' @author Gregory Faletto
@@ -811,7 +878,10 @@ etwfe <- function(
 	allow_no_never_treated = TRUE,
 	se_type = "default"
 ) {
-	se_type <- match.arg(se_type, c("default", "cluster"))
+	se_type <- match.arg(
+		se_type,
+		c("default", "conservative", "cluster")
+	)
 
 	# Normalize `covs` to a character vector if a one-sided formula was
 	# supplied (#28).
@@ -891,6 +961,15 @@ etwfe <- function(
 
 	att_p_value <- .compute_p_values(att_hat, att_se)
 
+	variance_components <- .build_variance_components(
+		att_var_1 = att_branch$att_var_1,
+		att_var_2 = att_branch$att_var_2,
+		N = res$N,
+		T = res$T,
+		se_type = se_type,
+		indep_counts_used = indep_count_data_available
+	)
+
 	# Create the main output list with essential results
 	out <- list(
 		att_hat = att_hat,
@@ -935,7 +1014,8 @@ etwfe <- function(
 		y = res$y,
 		X_final = res$X_final,
 		y_final = res$y_final,
-		calc_ses = res$calc_ses
+		calc_ses = res$calc_ses,
+		variance_components = variance_components
 	)
 
 	# Validate constructed object's contracts (#85).
@@ -974,12 +1054,26 @@ etwfe <- function(
 #' `FALSE`, the estimator stops with an error in this case (the package's
 #' behavior prior to version 1.5.6). The argument has no effect when the input
 #' already contains never-treated units. Default is `TRUE`.
-#' @param se_type Character; one of `"default"` (the package's
-#' Assumption-F1-based standard error from the paper) or `"cluster"`
-#' (an *experimental* unit-clustered Liang-Zeger sandwich SE on the
-#' OLS-selected support; see the companion vignette `inference_vignette`
-#' for the formula, the assumptions, and the theory-pending caveat).
-#' Default is `"default"`.
+#' @param se_type Character; one of `"default"`, `"conservative"`, or
+#' `"cluster"`. `"default"` returns the tight Gaussian variance
+#' `sqrt(att_var_1 + att_var_2)` from Theorem (c$'$) under Assumption
+#' (Psi-IF); this is asymptotically exact for the package's default
+#' cohort sample-proportions estimator and for every standard
+#' propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
+#' any GLM on `W | X`, kernel/series regression of `1{W = r}` on `X`).
+#' `"conservative"` returns the Cauchy-Schwarz upper bound
+#' `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from
+#' Theorem (c); use only if the propensity-score estimator violates
+#' (Psi-IF) (e.g., a Robins-Rotnitzky-augmented doubly-robust estimator,
+#' which the package does not currently implement). `"cluster"` is an
+#' *experimental* unit-clustered Liang-Zeger sandwich SE on the
+#' OLS-selected support (see the companion vignette
+#' `inference_vignette` for the formula, the assumptions, and the
+#' theory-pending caveat). The default value of `"default"` corresponds
+#' to the new tight Gaussian default introduced in version 1.12.0;
+#' previous versions used the conservative Cauchy-Schwarz formula as the
+#' default. To recover the prior conservative default behavior, pass
+#' `se_type = "conservative"`.
 #' @return An object of class \code{etwfe} containing the following elements:
 #' \item{att_hat}{The
 #' estimated overall average treatment effect for a randomly selected treated
@@ -1064,6 +1158,13 @@ etwfe <- function(
 #'       `y_final`.}
 #'     \item{calc_ses}{Logical indicating whether standard errors were
 #'       calculated. Same as top-level `calc_ses`.}
+#'     \item{variance_components}{A list exposing the two variance pieces
+#'       (`att_var_1`, `att_var_2`) plus paper-notation counterparts
+#'       (`V_1`, `V_2`) and unit-scaled variance estimators
+#'       (`tilde_v_N`, `hat_v_N`, `tilde_v_N_C`, `tilde_v_N_C_pi_hat`,
+#'       `tilde_v_N_C_pi_hat_cons`, `tilde_v_N_cons`). The Wald CI is
+#'       `[hat_T_N +- qnorm(1-alpha/2) * sqrt(tilde_v_N / N)]` (paper Eq.
+#'       `conf.int.form`). New in v1.12.0 (issue #141 + #146).}
 #'   }
 #' }
 #'
@@ -1087,7 +1188,10 @@ etwfeWithSimulatedData <- function(
 	allow_no_never_treated = TRUE,
 	se_type = "default"
 ) {
-	se_type <- match.arg(se_type, c("default", "cluster"))
+	se_type <- match.arg(
+		se_type,
+		c("default", "conservative", "cluster")
+	)
 
 	if (!inherits(simulated_obj, "FETWFE_simulated")) {
 		stop("simulated_obj must be an object of class 'FETWFE_simulated'")

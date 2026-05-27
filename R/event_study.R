@@ -245,8 +245,13 @@ eventStudy <- function(x, alpha = NULL) {
 			)
 		}
 
-		# Combine
-		if (is_indep) {
+		# Combine the two variance pieces. Mirrors the overall-ATT logic in
+		# `getTeResultsOLS()` / `getTeResults2()` (R/variance_machinery.R):
+		# the tight Gaussian formula is the default for the same-data path
+		# under (Psi-IF) (Theorem (c$'$), paper line 1233 onwards); the
+		# Cauchy-Schwarz upper bound is opt-in via `se_type = "conservative"`
+		# for the rare non-(Psi-IF) propensity-score-estimator case.
+		if (is_indep || !identical(se_type, "conservative")) {
 			ses[k] <- sqrt(var_1_e + var_2_e)
 		} else {
 			ses[k] <- sqrt(var_1_e + var_2_e + 2 * sqrt(var_1_e * var_2_e))
@@ -434,7 +439,11 @@ eventStudy <- function(x, alpha = NULL) {
 			R = R
 		)
 
-		if (is_indep) {
+		# Combine the two variance pieces (see matching comment in
+		# `.event_study_etwfe_betwfe` above): tight Gaussian by default
+		# under (Psi-IF), conservative bound only via `se_type =
+		# "conservative"`.
+		if (is_indep || !identical(se_type, "conservative")) {
 			ses[k] <- sqrt(var_1_e + var_2_e)
 		} else {
 			ses[k] <- sqrt(var_1_e + var_2_e + 2 * sqrt(var_1_e * var_2_e))

@@ -1169,12 +1169,22 @@ check_etwfe_core_inputs <- function(
 	# The `keep` vector encodes the contractual field ordering:
 	# `theta_hat` slots between `catt_df` and `beta_hat` for FETWFE
 	# blocks (3 + 4); BETWFE blocks (1 + 2) omit it.
+	# Variance-component slots (issue #141/#146): when the bridge zeros
+	# out every coefficient, `att_var_1` / `att_var_2` are zero (mirroring
+	# `att_se = 0` under `q < 1`) or NA (mirroring `att_se = NA` under
+	# `q >= 1`).
+	ret_var <- if (q < 1) 0 else NA
+
 	out <- list(
 		in_sample_att_hat = 0,
 		in_sample_att_se = ret_se,
 		in_sample_att_se_no_prob = ret_se,
+		in_sample_att_var_1 = ret_var,
+		in_sample_att_var_2 = ret_var,
 		indep_att_hat = 0,
 		indep_att_se = ret_se,
+		indep_att_var_1 = ret_var,
+		indep_att_var_2 = ret_var,
 		catt_hats = setNames(rep(0, R), c_names),
 		catt_ses = setNames(rep(ret_se, R), c_names),
 		catt_df = catt_df_to_ret,
@@ -1210,8 +1220,12 @@ check_etwfe_core_inputs <- function(
 		"in_sample_att_hat",
 		"in_sample_att_se",
 		"in_sample_att_se_no_prob",
+		"in_sample_att_var_1",
+		"in_sample_att_var_2",
 		"indep_att_hat",
 		"indep_att_se",
+		"indep_att_var_1",
+		"indep_att_var_2",
 		"catt_hats",
 		"catt_ses",
 		"catt_df",

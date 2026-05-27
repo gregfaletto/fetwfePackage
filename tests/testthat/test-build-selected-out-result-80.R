@@ -58,14 +58,19 @@
 }
 
 # Field ordering the helper must produce for BETWFE-shape returns (Blocks
-# 1 + 2). 33 fields. No `theta_hat`. Matches the pre-refactor inline
-# `return(list(...))` order verified by the plan reviewer.
+# 1 + 2). 37 fields after #141/#146 added 4 variance-component slots
+# (in_sample_att_var_1/2, indep_att_var_1/2) bracketing the existing
+# in_sample_att_se_no_prob / indep_att_se entries. No `theta_hat`.
 .expected_betwfe_field_order <- c(
 	"in_sample_att_hat",
 	"in_sample_att_se",
 	"in_sample_att_se_no_prob",
+	"in_sample_att_var_1",
+	"in_sample_att_var_2",
 	"indep_att_hat",
 	"indep_att_se",
+	"indep_att_var_1",
+	"indep_att_var_2",
 	"catt_hats",
 	"catt_ses",
 	"catt_df",
@@ -97,13 +102,18 @@
 )
 
 # Field ordering the helper must produce for FETWFE-shape returns (Blocks
-# 3 + 4). 34 fields. `theta_hat` slots between `catt_df` and `beta_hat`.
+# 3 + 4). 38 fields after #141/#146 added 4 variance-component slots.
+# `theta_hat` slots between `catt_df` and `beta_hat`.
 .expected_fetwfe_field_order <- c(
 	"in_sample_att_hat",
 	"in_sample_att_se",
 	"in_sample_att_se_no_prob",
+	"in_sample_att_var_1",
+	"in_sample_att_var_2",
 	"indep_att_hat",
 	"indep_att_se",
+	"indep_att_var_1",
+	"indep_att_var_2",
 	"catt_hats",
 	"catt_ses",
 	"catt_df",
@@ -135,7 +145,7 @@
 	"calc_ses"
 )
 
-test_that("BETWFE intercept-only block (Block 1) shape: 33 fields, expected ordering, no theta_hat", {
+test_that("BETWFE intercept-only block (Block 1) shape: 37 fields, expected ordering, no theta_hat", {
 	args <- .make_helper_args()
 	# Block 1 input shape: all-zero beta_hat (slopes), no theta_hat,
 	# q < 1 -> ret_se = 0.
@@ -145,7 +155,7 @@ test_that("BETWFE intercept-only block (Block 1) shape: 33 fields, expected orde
 	res <- do.call(fetwfe:::.build_selected_out_result, args)
 
 	expect_type(res, "list")
-	expect_length(res, 33L)
+	expect_length(res, 37L)
 	expect_identical(names(res), .expected_betwfe_field_order)
 	expect_false("theta_hat" %in% names(res))
 
@@ -199,7 +209,7 @@ test_that("BETWFE no-treatment block (Block 2) shape: caller-applied add_ridge s
 
 	res <- do.call(fetwfe:::.build_selected_out_result, args)
 
-	expect_length(res, 33L)
+	expect_length(res, 37L)
 	expect_identical(names(res), .expected_betwfe_field_order)
 	expect_false("theta_hat" %in% names(res))
 
@@ -208,7 +218,7 @@ test_that("BETWFE no-treatment block (Block 2) shape: caller-applied add_ridge s
 	expect_identical(unname(res$catt_hats), c(0, 0))
 })
 
-test_that("FETWFE intercept-only block (Block 3) shape: 34 fields, theta_hat between catt_df and beta_hat", {
+test_that("FETWFE intercept-only block (Block 3) shape: 38 fields, theta_hat between catt_df and beta_hat", {
 	args <- .make_helper_args()
 	args$message_text <- "No features selected (or only intercept); all treatment effects estimated to be 0."
 	args$beta_hat <- rep(0, args$p)
@@ -217,14 +227,15 @@ test_that("FETWFE intercept-only block (Block 3) shape: 34 fields, theta_hat bet
 
 	res <- do.call(fetwfe:::.build_selected_out_result, args)
 
-	expect_length(res, 34L)
+	expect_length(res, 38L)
 	expect_identical(names(res), .expected_fetwfe_field_order)
 
-	# theta_hat present, immediately between catt_df (pos 8) and beta_hat (pos 10)
+	# theta_hat present, immediately between catt_df (pos 12) and beta_hat (pos 14)
+	# (positions shifted by 4 after the 4 new variance-component slots).
 	expect_true("theta_hat" %in% names(res))
-	expect_identical(which(names(res) == "theta_hat"), 9L)
-	expect_identical(which(names(res) == "beta_hat"), 10L)
-	expect_identical(which(names(res) == "catt_df"), 8L)
+	expect_identical(which(names(res) == "theta_hat"), 13L)
+	expect_identical(which(names(res) == "beta_hat"), 14L)
+	expect_identical(which(names(res) == "catt_df"), 12L)
 
 	expect_identical(res$theta_hat, args$theta_hat)
 	expect_identical(res$beta_hat, rep(0, args$p))
@@ -242,7 +253,7 @@ test_that("FETWFE no-treatment block (Block 4) shape: caller passes untransforme
 
 	res <- do.call(fetwfe:::.build_selected_out_result, args)
 
-	expect_length(res, 34L)
+	expect_length(res, 38L)
 	expect_identical(names(res), .expected_fetwfe_field_order)
 	expect_identical(res$theta_hat, args$theta_hat)
 	expect_identical(res$beta_hat, args$beta_hat)
