@@ -1,0 +1,14 @@
+%% ============================================================================
+%% Coverage simulation write-up for Theorem te.asym.norm.thm(c'), validating
+%% the tight Gaussian variance estimator the package now uses by default.
+%%
+%% Suggested placement: end of Section 7.3 ("Asymptotic Distribution") of
+%% paper_arxiv.tex, as a new paragraph after the discussion of the second
+%% simulation study's coverage results.
+%%
+%% Source: the simulation appears verbatim in the package test file
+%% tests/testthat/test-tight-gaussian-variance-141-146.R (n_reps = 60,
+%% N = 500, seeds 1001--1060), so the numbers are reproducible.
+%% ============================================================================
+
+We also examine empirically the tight Gaussian variance estimator from Theorem~\ref{te.asym.norm.thm}(c$'$), which under Assumption~($\Psi$-IF) replaces the conservative same-data variance $\tilde{v}_N^{\text{C, (cons)}; \hat{\pi}}$ of part~(c) with the tight estimator $\tilde{v}_N^{\text{C}; \hat{\pi}}$ of part~(b). To isolate the variance-formula effect from the finite-sample bias of the bridge-penalty fit (which competes with the standard error for coverage independently of the variance formula, and is part of what drives the under-coverage of part~(a) in the first simulation study), we use the ETWFE estimator and the default cohort-sample-proportions estimator for the marginal cohort probabilities $\boldsymbol{\pi}$, which satisfies ($\Psi$-IF); see Remark~\ref{psi.if.coverage}. The data-generating process uses $R = 3$ cohorts, $T = 6$ time periods, $d_N = 2$ covariates, $N = 500$ units, $\sigma^2 = 1$, $\sigma_c^2 = 0.5$, and a sparse $\boldsymbol{\theta}_N^*$ generated as in the second simulation study with density $0.5$ and signal magnitude $0.5$. Across $60$ simulations the tight estimator yields a nominal asymptotic $95\%$ confidence interval coverage rate of $0.933$ (standard error $0.032$) for the average treatment effect, matching the nominal level within sampling error; the average estimated standard error ($0.082$) is within $10\%$ of the empirical conditional standard deviation of the estimation error ($0.076$), supporting the claim that the tight estimator is calibrated rather than achieving nominal coverage incidentally. The conservative same-data estimator from part~(c) yields a coverage rate of $1.000$ on the same simulated data (no uncovered intervals across all $60$ replications) and a $17\%$ wider average standard error ($0.096$), reflecting the predicted over-coverage of the conservative bound relative to the tight estimator under ($\Psi$-IF).
