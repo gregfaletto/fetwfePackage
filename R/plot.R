@@ -29,25 +29,25 @@ utils::globalVariables(c(
 #' Plot CATT or event-study estimates from a fitted FETWFE / ETWFE / BETWFE
 #'
 #' @description
-#' Returns a ggplot object showing either per-cohort average treatment
-#' effects (default; `type = "catt"`) or event-study coefficients
-#' (`type = "event_study"`) from a fitted estimator. Mirrors the
+#' Returns a ggplot object showing either event-study coefficients
+#' (default; `type = "event_study"`) or per-cohort average treatment
+#' effects (`type = "catt"`) from a fitted estimator. Mirrors the
 #' visualization style of `did::ggdid()` from the Callaway-Sant'Anna
 #' `did` package, providing a single-call route from a fitted object to
 #' a publication-ready visualization.
 #'
-#' For `fetwfe` / `betwfe` (the bridge-penalty estimators), points are
-#' shape- and color-coded by whether the bridge penalty left that
-#' cohort's ATT nonzero (`selected = TRUE`) or zeroed it out
-#' (`selected = FALSE`). For `etwfe` (no selection), all points are
-#' uniformly styled.
+#' For `fetwfe` / `betwfe` (the bridge-penalty estimators) in the CATT
+#' view, points are shape- and color-coded by whether the bridge
+#' penalty left that cohort's ATT nonzero (`selected = TRUE`) or
+#' zeroed it out (`selected = FALSE`). For `etwfe` (no selection),
+#' all points are uniformly styled.
 #'
 #' @param x A fitted object from [fetwfe()], [etwfe()], or [betwfe()].
 #'   (`twfeCovs` is not currently supported -- see GitHub issue #58 for
 #'   the broader treatment of `twfeCovs` class methods.)
-#' @param type Character; either `"catt"` (default; per-cohort ATTs from
-#'   `result$catt_df`) or `"event_study"` (event-time pooled coefficients
-#'   from [eventStudy()]).
+#' @param type Character; either `"event_study"` (default; event-time
+#'   pooled coefficients from [eventStudy()]) or `"catt"` (per-cohort
+#'   ATTs from `result$catt_df`).
 #' @param conf_int Logical; if `TRUE` (default), include confidence
 #'   interval error bars.
 #' @param alpha Numeric; overrides the fit's alpha for CI computation.
@@ -71,8 +71,8 @@ utils::globalVariables(c(
 #'   dat <- simulateData(coefs, N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
 #'   res <- fetwfeWithSimulatedData(dat)
 #'   if (requireNamespace("ggplot2", quietly = TRUE)) {
-#'     plot(res)                          # default: per-cohort ATTs
-#'     plot(res, type = "event_study")    # event-study coefficients
+#'     plot(res)                          # default: event-study coefficients
+#'     plot(res, type = "catt")           # per-cohort ATTs
 #'     plot(res, conf_int = FALSE)        # point estimates only
 #'     plot(res, alpha = 0.1)             # 90% CIs
 #'   }
@@ -81,7 +81,7 @@ utils::globalVariables(c(
 #' @export
 plot.fetwfe <- function(
 	x,
-	type = c("catt", "event_study"),
+	type = c("event_study", "catt"),
 	conf_int = TRUE,
 	alpha = NULL,
 	...
@@ -116,7 +116,7 @@ plot.fetwfe <- function(
 #' @export
 plot.etwfe <- function(
 	x,
-	type = c("catt", "event_study"),
+	type = c("event_study", "catt"),
 	conf_int = TRUE,
 	alpha = NULL,
 	...
@@ -152,7 +152,7 @@ plot.etwfe <- function(
 #' @export
 plot.betwfe <- function(
 	x,
-	type = c("catt", "event_study"),
+	type = c("event_study", "catt"),
 	conf_int = TRUE,
 	alpha = NULL,
 	...

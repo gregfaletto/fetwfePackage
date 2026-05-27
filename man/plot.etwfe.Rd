@@ -4,16 +4,16 @@
 \alias{plot.etwfe}
 \title{Plot CATT or event-study estimates from a fitted ETWFE}
 \usage{
-\method{plot}{etwfe}(x, type = c("catt", "event_study"), conf_int = TRUE, alpha = NULL, ...)
+\method{plot}{etwfe}(x, type = c("event_study", "catt"), conf_int = TRUE, alpha = NULL, ...)
 }
 \arguments{
 \item{x}{A fitted object from \code{\link[=fetwfe]{fetwfe()}}, \code{\link[=etwfe]{etwfe()}}, or \code{\link[=betwfe]{betwfe()}}.
 (\code{twfeCovs} is not currently supported -- see GitHub issue #58 for
 the broader treatment of \code{twfeCovs} class methods.)}
 
-\item{type}{Character; either \code{"catt"} (default; per-cohort ATTs from
-\code{result$catt_df}) or \code{"event_study"} (event-time pooled coefficients
-from \code{\link[=eventStudy]{eventStudy()}}).}
+\item{type}{Character; either \code{"event_study"} (default; event-time
+pooled coefficients from \code{\link[=eventStudy]{eventStudy()}}) or \code{"catt"} (per-cohort
+ATTs from \code{result$catt_df}).}
 
 \item{conf_int}{Logical; if \code{TRUE} (default), include confidence
 interval error bars.}

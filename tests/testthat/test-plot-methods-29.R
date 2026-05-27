@@ -39,20 +39,22 @@ test_that("plot.fetwfe / .etwfe / .betwfe return ggplot objects (both types)", {
 })
 
 # ----------------------------------------------------------------------
-# 2) Default `type` is "catt".
+# 2) Default `type` is "event_study" (preserves pre-PR behavior; the old
+#    plot.fetwfe / .etwfe / .betwfe in R/event_study.R were event-study
+#    only).
 # ----------------------------------------------------------------------
 
-test_that("default type is 'catt'", {
+test_that("default type is 'event_study'", {
 	skip_if_not_installed("ggplot2")
 	sim <- .plot_setup()
 	res <- fetwfeWithSimulatedData(sim)
 	# Compare the build-time data shape to detect which view we got.
-	# "catt" view uses catt_df (one row per cohort = R rows); event_study
-	# uses eventStudy() output (one row per event_time).
+	# "event_study" view uses eventStudy() output (one row per event_time);
+	# "catt" view uses catt_df (one row per cohort = R rows).
 	p_default <- plot(res)
-	p_catt <- plot(res, type = "catt")
-	expect_equal(nrow(p_default$data), nrow(p_catt$data))
-	expect_equal(nrow(p_default$data), nrow(res$catt_df))
+	p_event <- plot(res, type = "event_study")
+	expect_equal(nrow(p_default$data), nrow(p_event$data))
+	expect_equal(nrow(p_default$data), nrow(eventStudy(res)))
 })
 
 # ----------------------------------------------------------------------
@@ -99,11 +101,20 @@ test_that("selection encoding appears only for fetwfe / betwfe", {
 			logical(1L)
 		))
 	}
-	# fetwfe / betwfe: TRUE (manual shape and color scales for `selected`).
-	expect_true(has_selected_scale(plot(fetwfeWithSimulatedData(sim))))
-	expect_true(has_selected_scale(plot(betwfeWithSimulatedData(sim))))
-	# etwfe: FALSE (no selection -> no `Selected` scale).
-	expect_false(has_selected_scale(plot(etwfeWithSimulatedData(sim))))
+	# fetwfe / betwfe in the CATT view: TRUE (manual shape and color
+	# scales for `selected`). The default view is `event_study` (which
+	# doesn't carry a `selected` encoding), so we explicitly pass
+	# `type = "catt"` to exercise the selection path.
+	expect_true(
+		has_selected_scale(plot(fetwfeWithSimulatedData(sim), type = "catt"))
+	)
+	expect_true(
+		has_selected_scale(plot(betwfeWithSimulatedData(sim), type = "catt"))
+	)
+	# etwfe in the CATT view: FALSE (no selection -> no `Selected` scale).
+	expect_false(
+		has_selected_scale(plot(etwfeWithSimulatedData(sim), type = "catt"))
+	)
 })
 
 # ----------------------------------------------------------------------

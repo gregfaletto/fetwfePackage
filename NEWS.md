@@ -5,17 +5,19 @@
 ### New features
 
 - `plot.fetwfe()`, `plot.etwfe()`, `plot.betwfe()` are new S3 methods
-  returning a `ggplot` object for either per-cohort ATTs (default;
-  `type = "catt"`) or event-study coefficients (`type = "event_study"`).
-  Mirrors the visualization style of `did::ggdid()` from the
-  Callaway-Sant'Anna `did` package, giving users a single-call route
-  from fitted object to publication-ready visualization. For the
-  bridge-penalty estimators (`fetwfe` / `betwfe`), points are shape-
-  and color-coded by whether the bridge penalty left the cohort's ATT
-  nonzero (`selected = TRUE`) or zeroed it (`selected = FALSE`); for
-  `etwfe` (no selection), styling is uniform. `ggplot2` is required
-  (Suggests dependency) -- the helper stops with an actionable message
-  if missing. `twfeCovs` is not supported by this PR (see #58 for the
+  returning a `ggplot` object for either event-study coefficients
+  (default; `type = "event_study"`, preserving the pre-PR behavior of
+  the predecessor event-study-only `plot.<class>` methods) or
+  per-cohort ATTs (`type = "catt"`). Mirrors the visualization style
+  of `did::ggdid()` from the Callaway-Sant'Anna `did` package, giving
+  users a single-call route from fitted object to publication-ready
+  visualization. For the bridge-penalty estimators (`fetwfe` /
+  `betwfe`) in the CATT view, points are shape- and color-coded by
+  whether the bridge penalty left the cohort's ATT nonzero
+  (`selected = TRUE`) or zeroed it (`selected = FALSE`); for `etwfe`
+  (no selection), styling is uniform. `ggplot2` is required (Suggests
+  dependency) -- the helper stops with an actionable message if
+  missing. `twfeCovs` is not supported by this PR (see #58 for the
   broader treatment of `twfeCovs` class methods). Closes #29.
 
 ## Version 1.11.5 (2026-05-26)
