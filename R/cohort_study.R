@@ -54,7 +54,8 @@
 #'   `statistic`, `p.value`, `conf.low`, `conf.high`, optionally
 #'   `selected`); see [tidy.cohortStudy()].
 #' @seealso [eventStudy()] for the parallel event-time accessor;
-#'   [tidy.cohortStudy()] for broom-shape translation.
+#'   [predict.fetwfe()] for closed-form CATT predictions at user-supplied
+#'   covariate values; [tidy.cohortStudy()] for broom-shape translation.
 #' @examples
 #' \dontrun{
 #'   coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)

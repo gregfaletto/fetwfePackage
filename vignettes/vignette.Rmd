@@ -270,6 +270,51 @@ broom::tidy(cs)
 
 `cohortStudy()` is a pass-through on `res$catt_df` --- same rows, same columns --- with one extra S3 class on top (`"cohortStudy"`) that dispatches `tidy()` to a broom-shape translator. The `catt_df` class underneath is preserved, so the helpful-error layer on the old Title-Case column names still fires.
 
+## Conditional ATT predictions at user-specified covariate values
+
+`res$catt_df`, `eventStudy()`, and `cohortStudy()` summarize the treatment effect at each cohort's *sample-mean* covariate vector --- the natural baseline implied by the regression. When you want the treatment effect at a hypothetical unit's specific covariate vector $\boldsymbol{x}$, use `predict()`. The closed-form estimator (Eq. 6.6 in the paper) is
+
+$$
+\hat\tau_{\mathrm{CATT}}(r, t, \boldsymbol{x}) = \hat\tau_{rt} + (\boldsymbol{x} - \bar{\boldsymbol{X}}_r)^\top \hat\rho_{rt}
+$$
+
+and asymptotic standard errors and Wald CIs follow Theorem `te.asym.norm.thm.gen.cond`(a) (Eq. (C.39)) in the appendix.
+
+`predict.fetwfe()` / `predict.etwfe()` / `predict.betwfe()` all accept a `newdata` data frame whose columns match the fit's `covs`. The output is long-form: one row per `(newdata row × cohort × post-treatment time)`. With `newdata = NULL` (the default), the predictions are computed at each cohort's mean covariate vector --- so the `(x - X_bar_r)` term vanishes and the `estimate` column reduces to $\hat\tau_{rt}$.
+
+```{r predict-demo, message = FALSE}
+# Predict at two hypothetical units' covariate vectors on the simulated
+# `res_demo` fit (which has two covariates `cov1`, `cov2`):
+new_x <- data.frame(
+    cov1 = c(-0.5,  0.5),
+    cov2 = c( 0.2, -0.2)
+)
+preds <- predict(res_demo, newdata = new_x)
+head(preds)
+```
+
+Each row gives the predicted $\hat\tau_{\mathrm{CATT}}(r, t, \boldsymbol{x})$, its standard error, and a Wald confidence interval at `1 - res_demo$alpha`. To collapse to a single number per `newdata` row, aggregate across cohorts and times --- for example, with `dplyr` taking a simple average across post-treatment effects:
+
+```{r predict-aggregate, eval = requireNamespace("dplyr", quietly = TRUE)}
+library(dplyr)
+
+preds |>
+    dplyr::group_by(x_row) |>
+    dplyr::summarise(
+        estimate = mean(estimate),
+        std.error = sqrt(mean(std.error^2)) / sqrt(dplyr::n()),
+        .groups   = "drop"
+    )
+```
+
+The default `newdata = NULL` is useful for inspecting per-`(r, t)` effects: at each cohort's own mean, the `estimate` is exactly $\hat\tau_{rt}$, and the standard error is the asymptotic SE from Theorem `te.asym.norm.thm.gen.cond`(a) including the cohort-mean variance term that `cohortStudy()` doesn't account for separately.
+
+```{r predict-default}
+predict(res_demo) |> head()
+```
+
+`predict.twfeCovs()` is intentionally not provided in this release --- `twfeCovs` lacks the bridge-penalty selection that grounds the CATT-prediction theorem; see issue [#58](https://github.com/gregfaletto/fetwfePackage/issues/58) for the broader gap.
+
 ## Tidy outputs with broom
 
 If you use the tidyverse, the fitted object also plays nicely with the [broom](https://broom.tidymodels.org/) package. `tidy()` reshapes the overall ATT and per-cohort CATTs into a long data frame with the standard `term` / `estimate` / `std.error` / `statistic` / `p.value` / `conf.low` / `conf.high` columns, plus a `selected` flag (see "Testing the zero-effect null" below):
