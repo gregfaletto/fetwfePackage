@@ -15,7 +15,7 @@
 
   at one or more user-supplied covariate vectors. Asymptotic standard
   errors and Wald confidence intervals follow Theorem
-  `te.asym.norm.thm.gen.cond`(a) (paper Eq. (C.39)) and combine
+  `te.asym.norm.thm.gen.cond`(a) (paper Eq. `v.n.r.t.catt.const`) and combine
   regression-coefficient noise with the cohort-mean sample-mean
   variance term. Output is a long-form data frame with one row per
   `(newdata row × cohort × post-treatment time)`. `newdata = NULL`
