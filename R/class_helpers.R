@@ -647,6 +647,11 @@
 			"  Std. Error (cluster-robust): %.4f\n",
 			x$att_se
 		))
+	} else if (identical(x$se_type, "conservative")) {
+		cat(sprintf(
+			"  Std. Error (conservative): %.4f\n",
+			x$att_se
+		))
 	} else {
 		cat(sprintf("  Std. Error: %.4f\n", x$att_se))
 	}

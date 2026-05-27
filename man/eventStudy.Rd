@@ -47,9 +47,13 @@ SEs, or the cluster-robust sandwich under \code{se_type = "cluster"}), and
 \code{var_2(e)} from cohort-probability noise (analog of the existing
 \code{getSecondVarTermOLS} / \code{getSecondVarTermDataApp} machinery, with the
 multinomial Jacobian restricted to cohorts valid at event time \code{e}).
-Combined as \code{sqrt(var_1 + var_2)} when \code{indep_counts} was supplied to the
-fit (asymptotically exact), else the conservative Cauchy-Schwarz bound
-\verb{sqrt(var_1 + var_2 + 2 sqrt(var_1 * var_2))}.
+Combined as \code{sqrt(var_1 + var_2)} by default (asymptotically exact
+under paper Theorem \code{te.asym.norm.thm}(c′) / Assumption (Ψ-IF), which
+the package's default cohort-sample-proportions estimator satisfies);
+the conservative Cauchy-Schwarz bound \verb{sqrt(var_1 + var_2 + 2 sqrt(var_1 * var_2))} is available via \code{se_type = "conservative"}
+(for users with non-(Ψ-IF) propensity-score estimators). When
+\code{indep_counts} was supplied at fit time, the tight formula applies
+regardless of \code{se_type} (two-sample regime, Theorem (b)).
 }
 \examples{
 \dontrun{

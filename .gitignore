@@ -14,3 +14,7 @@ INSIGHTS_*
 insights_*
 TODO_*
 mybib2fin.bib
+
+# Working / local-only docs (don't push to remote)
+Referee reports/
+*.Rcheck/

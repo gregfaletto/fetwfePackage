@@ -25,9 +25,14 @@ utils::globalVariables(c("event_time", "estimate", "ci_low", "ci_high"))
 #' `var_2(e)` from cohort-probability noise (analog of the existing
 #' `getSecondVarTermOLS` / `getSecondVarTermDataApp` machinery, with the
 #' multinomial Jacobian restricted to cohorts valid at event time `e`).
-#' Combined as `sqrt(var_1 + var_2)` when `indep_counts` was supplied to the
-#' fit (asymptotically exact), else the conservative Cauchy-Schwarz bound
-#' `sqrt(var_1 + var_2 + 2 sqrt(var_1 * var_2))`.
+#' Combined as `sqrt(var_1 + var_2)` by default (asymptotically exact
+#' under paper Theorem `te.asym.norm.thm`(c′) / Assumption (Ψ-IF), which
+#' the package's default cohort-sample-proportions estimator satisfies);
+#' the conservative Cauchy-Schwarz bound `sqrt(var_1 + var_2 +
+#' 2 sqrt(var_1 * var_2))` is available via `se_type = "conservative"`
+#' (for users with non-(Ψ-IF) propensity-score estimators). When
+#' `indep_counts` was supplied at fit time, the tight formula applies
+#' regardless of `se_type` (two-sample regime, Theorem (b)).
 #'
 #' @param x A fitted object of class `"fetwfe"`, `"etwfe"`, or `"betwfe"`.
 #' @param alpha (Optional) Significance level for confidence intervals.

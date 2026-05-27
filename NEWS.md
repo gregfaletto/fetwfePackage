@@ -21,6 +21,15 @@
   Robins-Rotnitzky-augmented doubly-robust, which the package does not
   currently implement).
 
+- `se_type = "cluster"` users will also see a numerical shift in
+  `att_se` between 1.11.7 and 1.12.0. The cluster path's `V_1` (the
+  Liang-Zeger cluster-sandwich quadratic form) and `V_2` (the
+  propensity-score contribution) are now combined via the same tight
+  formula `sqrt(V_1 + V_2)` by default. To recover the prior
+  conservative cluster behavior, pass `se_type = "conservative"` (the
+  cluster sandwich is then no longer applied — the conservative path
+  uses the model-based V_1 and the Cauchy-Schwarz combination).
+
 ### New features
 
 - New named slots on the fitted-object's `internal$variance_components`
