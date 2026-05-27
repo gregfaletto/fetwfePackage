@@ -272,10 +272,14 @@ test_that("plot.fetwfe / plot.etwfe / plot.betwfe return ggplot objects", {
 	expect_s3_class(p_f, "ggplot")
 	expect_s3_class(p_e, "ggplot")
 	expect_s3_class(p_b, "ggplot")
-	# Each plot has the three layers we added (hline, errorbar, point)
-	expect_equal(length(p_f$layers), 3L)
-	expect_equal(length(p_e$layers), 3L)
-	expect_equal(length(p_b$layers), 3L)
+	# Each plot's default view is `event_study` (since #29's plot dispatch
+	# reintroduces the default), with four layers: line, point, errorbar,
+	# hline. The pre-#29 event-study plot had three (no connecting line);
+	# the line is a real visualization improvement for event-study
+	# trajectories.
+	expect_equal(length(p_f$layers), 4L)
+	expect_equal(length(p_e$layers), 4L)
+	expect_equal(length(p_b$layers), 4L)
 })
 
 # ------------------------------------------------------------------------------

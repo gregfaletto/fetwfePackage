@@ -540,49 +540,7 @@ eventStudy <- function(x, alpha = NULL) {
 	out
 }
 
-#' @export
-plot.fetwfe <- function(x, ...) {
-	.plot_event_study(x, ...)
-}
-
-#' @export
-plot.etwfe <- function(x, ...) {
-	.plot_event_study(x, ...)
-}
-
-#' @export
-plot.betwfe <- function(x, ...) {
-	.plot_event_study(x, ...)
-}
-
-#' Render the event-study plot via ggplot2
-#' @keywords internal
-#' @noRd
-.plot_event_study <- function(x, alpha = NULL, ...) {
-	.check_for_plot(x)
-	if (!requireNamespace("ggplot2", quietly = TRUE)) {
-		stop(
-			"Install ggplot2 to use plot.fetwfe() / plot.etwfe() / plot.betwfe(): install.packages('ggplot2')"
-		)
-	}
-	es_df <- eventStudy(x, alpha = alpha)
-	ggplot2::ggplot(
-		es_df,
-		ggplot2::aes(x = event_time, y = estimate)
-	) +
-		ggplot2::geom_hline(
-			yintercept = 0,
-			linetype = "dashed",
-			color = "gray50"
-		) +
-		ggplot2::geom_errorbar(
-			ggplot2::aes(ymin = ci_low, ymax = ci_high),
-			width = 0.2
-		) +
-		ggplot2::geom_point(size = 2) +
-		ggplot2::labs(
-			x = "Event time (t - r)",
-			y = "Pooled ATT",
-			title = "Event-study estimates"
-		)
-}
+# `plot.<class>` methods and the rendering helpers were consolidated
+# into `R/plot.R` (#29 PR). The event-study-only versions that used to
+# live here have been superseded by a richer dispatch that supports
+# both `type = "catt"` and `type = "event_study"`.
