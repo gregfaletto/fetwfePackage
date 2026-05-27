@@ -121,6 +121,8 @@ print.summary.betwfe <- function(x, ...) {
 	"treatment",
 	"covs",
 	"ci_type",
+	# Phase 8 (#33): see fetwfe_class.R for description.
+	"cohort_means_external",
 	"internal"
 )
 

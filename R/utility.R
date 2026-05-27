@@ -1498,14 +1498,17 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #'   both `fetwfe()` and `betwfe()` (they share `checkFetwfeInputs()`);
 #'   `"etwfe"` covers both `etwfe()` and `twfeCovs()` (they share
 #'   `checkEtwfeInputs()`).
-#' @return A list with exactly 15 elements:
+#' @return A list with exactly 16 elements:
 #'   `pdata`, `covs`, `X_ints`, `y`, `y_mean`, `N`, `T`, `d`, `p`,
 #'   `in_sample_counts`, `num_treats`, `first_inds`, `first_year`, `G`,
-#'   `indep_count_data_available`. Each caller unpacks these into local
-#'   variables before invoking its `_core()` function. `first_year` is
-#'   the first (earliest) time-period value in the panel; consumers use it
-#'   to map cohort labels back to 1-based panel offsets (see #174 and
-#'   `R/utility.R::getFirstIndsFromOffsets`).
+#'   `indep_count_data_available`, `cohort_means_external`. Each caller
+#'   unpacks these into local variables before invoking its `_core()`
+#'   function. `first_year` is the first (earliest) time-period value in the
+#'   panel; consumers use it to map cohort labels back to 1-based panel
+#'   offsets (see #174 and `R/utility.R::getFirstIndsFromOffsets`).
+#'   `cohort_means_external` is the per-cohort sample-mean covariate matrix
+#'   computed from `indep_x_pdata`, or `NULL` when `indep_x_pdata` is
+#'   `NA`/`NULL` (Phase 8, #33).
 #' @keywords internal
 #' @noRd
 .run_estimator_input_prep <- function(
@@ -1516,6 +1519,7 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 	response,
 	covs = c(),
 	indep_counts = NA,
+	indep_x_pdata = NA,
 	sig_eps_sq = NA,
 	sig_eps_c_sq = NA,
 	lambda.max = NA,
@@ -1606,6 +1610,25 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 		indep_counts = indep_counts
 	)
 
+	# Phase 8 (#33): compute per-cohort X_bar_r from indep_x_pdata when
+	# supplied. The result is stored on the fitted object and consumed by
+	# `predict()`'s variance machinery to satisfy the three-sample
+	# splitting assumption of Theorem `te.asym.norm.thm.gen.cond`(a).
+	# When `indep_x_pdata` is NA / NULL, `cohort_means_external` is NULL
+	# and predict() falls back to the conservative Cauchy-Schwarz formula
+	# at x != X_bar_r.
+	cohort_means_external <- .compute_indep_x_cohort_means(
+		indep_x_pdata = indep_x_pdata,
+		time_var = time_var,
+		unit_var = unit_var,
+		treatment = treatment,
+		covs_orig = covs,
+		expanded_covs = res1$covs,
+		in_sample_counts = res1$in_sample_counts,
+		allow_no_never_treated = allow_no_never_treated,
+		verbose = verbose
+	)
+
 	list(
 		pdata = res1$pdata,
 		covs = res1$covs,
@@ -1621,8 +1644,682 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 		first_inds = res1$first_inds,
 		first_year = res1$first_year,
 		G = res1$G,
-		indep_count_data_available = indep_count_data_available
+		indep_count_data_available = indep_count_data_available,
+		cohort_means_external = cohort_means_external
 	)
+}
+
+#' @title Randomly split units into three subsamples for the three-sample
+#'   asymptotic-variance regime of Theorem `te.asym.norm.thm.gen.cond`(a)
+#' @description
+#' Internal helper called by the four estimator entry points when
+#' `three_sample_split = TRUE`. Partitions `pdata`'s units into three
+#' roughly-equal disjoint groups (stratified by cohort so that every
+#' subsample retains the full cohort structure) and constructs:
+#' - Sample A: the panel passed downstream as `pdata` (used for the
+#'   FETWFE / ETWFE / BETWFE / twfeCovs regression).
+#' - Sample B: its cohort counts become `indep_counts` (the independent
+#'   cohort-probability sample). Scaled to sum to N_A so the existing
+#'   downstream validator `sum(indep_counts) == N` holds.
+#' - Sample C: the labeled panel used to estimate the per-cohort
+#'   X_bar_r (predict()'s `cohort_means_external`).
+#'
+#' When `three_sample_split = FALSE`, returns the inputs unchanged.
+#'
+#' Stratification logic: for each cohort (named by adoption time after
+#' running `idCohorts()` once on the raw panel), the cohort's units are
+#' shuffled and then sliced into thirds. The result is each cohort gets
+#' approximately equal representation in each of A / B / C, and no
+#' cohort is entirely absent from any subsample (provided each cohort
+#' has >= 3 units in the raw panel; otherwise stratification cannot
+#' guarantee this).
+#'
+#' @param pdata The raw input panel.
+#' @param time_var,unit_var,treatment Character; the column names.
+#' @param indep_counts The user's `indep_counts` argument; must be `NA`
+#'   when `three_sample_split = TRUE` (a conflict otherwise).
+#' @param three_sample_split Logical; the toggle.
+#' @param verbose Logical.
+#' @return A list with:
+#'   - `pdata`: the (possibly subsetted) panel to use for the regression.
+#'   - `indep_counts`: the (possibly auto-derived) cohort counts vector.
+#'   - `indep_x_pdata`: the (possibly subsetted) panel for Sample C, or
+#'     `NA` when `three_sample_split = FALSE`.
+#' @keywords internal
+#' @noRd
+.maybe_three_sample_split <- function(
+	pdata,
+	time_var,
+	unit_var,
+	treatment,
+	indep_counts,
+	three_sample_split,
+	verbose = FALSE
+) {
+	# Type-check the toggle.
+	if (
+		!is.logical(three_sample_split) ||
+			length(three_sample_split) != 1L ||
+			is.na(three_sample_split)
+	) {
+		stop(
+			"`three_sample_split` must be a single non-NA logical value.",
+			call. = FALSE
+		)
+	}
+
+	if (!isTRUE(three_sample_split)) {
+		return(list(
+			pdata = pdata,
+			indep_counts = indep_counts,
+			indep_x_pdata = NA
+		))
+	}
+
+	# Conflict check: if the user is asking for an auto-split, they
+	# can't also be supplying their own `indep_counts`. (`indep_counts`
+	# defaults to NA; a non-NA scalar / vector is the conflict.)
+	user_supplied_indep_counts <- any(!is.na(indep_counts))
+	if (user_supplied_indep_counts) {
+		stop(
+			"`three_sample_split = TRUE` conflicts with a user-supplied ",
+			"`indep_counts`. Choose one: either pass `indep_counts` from ",
+			"an independent panel (the two-sample regime), or set ",
+			"`three_sample_split = TRUE` to have the package partition ",
+			"`pdata` automatically into three subsamples (the three-",
+			"sample regime).",
+			call. = FALSE
+		)
+	}
+
+	if (!is.data.frame(pdata)) {
+		stop(
+			"`pdata` must be a data.frame to use `three_sample_split = TRUE`.",
+			call. = FALSE
+		)
+	}
+
+	# Coerce tibble to plain data.frame (mirrors `pdata` handling
+	# downstream).
+	if ("tbl_df" %in% class(pdata)) {
+		pdata <- as.data.frame(pdata)
+	}
+
+	# Defensive: confirm the columns we need exist before the split.
+	# Downstream `checkFetwfeInputs()` / `checkEtwfeInputs()` will run
+	# again and produce richer errors; we only need a minimal subset to
+	# perform the cohort identification.
+	missing_cols <- setdiff(
+		c(time_var, unit_var, treatment),
+		colnames(pdata)
+	)
+	if (length(missing_cols) > 0L) {
+		stop(
+			"`pdata` is missing column(s): ",
+			paste(missing_cols, collapse = ", "),
+			". Cannot perform `three_sample_split`.",
+			call. = FALSE
+		)
+	}
+
+	# Run `idCohorts()` to get per-cohort unit lists. This also strips
+	# first-period-treated units consistently with the downstream
+	# pipeline; the split therefore happens on the same unit universe
+	# that the regression would have used in the no-split path.
+	id_res <- idCohorts(
+		df = pdata,
+		time_var = time_var,
+		unit_var = unit_var,
+		treat_var = treatment
+	)
+	# `id_res$cohorts` is a list named by adoption time. The treated
+	# units belong to those cohorts; the remaining units are
+	# never-treated.
+	cohort_unit_lists <- id_res$cohorts
+	all_units <- id_res$units
+
+	treated_units <- unlist(cohort_unit_lists)
+	never_units <- setdiff(all_units, treated_units)
+	# Bundle as a list keyed by "cohort group" with an extra "0" key
+	# for the never-treated units, so we stratify across ALL cohorts
+	# including never-treated.
+	cohort_units_all <- c(
+		list("Never_treated" = never_units),
+		cohort_unit_lists
+	)
+
+	# Per-cohort minimum-size guard. We need every cohort to have at
+	# least 3 units so each subsample has >= 1 from each cohort.
+	too_small <- character(0)
+	for (cn in names(cohort_units_all)) {
+		if (length(cohort_units_all[[cn]]) < 3L) {
+			too_small <- c(too_small, cn)
+		}
+	}
+	if (length(too_small) > 0L) {
+		stop(
+			"`three_sample_split = TRUE` requires every cohort to have ",
+			">= 3 units (so each of Samples A / B / C has at least one ",
+			"unit from each cohort). The following cohort(s) are too ",
+			"small in `pdata`: ",
+			paste(too_small, collapse = ", "),
+			". Drop the toggle and accept the conservative variance ",
+			"fallback at x != X_bar_r, or supply more data.",
+			call. = FALSE
+		)
+	}
+
+	# Stratified split: per cohort, shuffle units then slice into thirds.
+	sample_A_units <- character(0)
+	sample_B_units <- character(0)
+	sample_C_units <- character(0)
+	for (cn in names(cohort_units_all)) {
+		u <- cohort_units_all[[cn]]
+		u <- sample(u) # randomize
+		n_u <- length(u)
+		n_A <- ceiling(n_u / 3)
+		n_B <- ceiling((n_u - n_A) / 2)
+		# whatever's left goes to C; given the >= 3 guard above each
+		# subsample is non-empty.
+		idx_A <- seq_len(n_A)
+		idx_B <- (n_A + 1L):(n_A + n_B)
+		idx_C <- (n_A + n_B + 1L):n_u
+		sample_A_units <- c(sample_A_units, u[idx_A])
+		sample_B_units <- c(sample_B_units, u[idx_B])
+		sample_C_units <- c(sample_C_units, u[idx_C])
+	}
+
+	# Carve `pdata` into three sub-panels by unit ID.
+	pdata_A <- pdata[pdata[[unit_var]] %in% sample_A_units, , drop = FALSE]
+	pdata_B <- pdata[pdata[[unit_var]] %in% sample_B_units, , drop = FALSE]
+	pdata_C <- pdata[pdata[[unit_var]] %in% sample_C_units, , drop = FALSE]
+
+	# Compute `indep_counts` from Sample B. Cohort order must follow
+	# `idCohorts()`'s output order so it lines up with what
+	# `prep_for_etwfe_core()` will compute for `in_sample_counts` on
+	# Sample A: c("Never_treated", treated cohort names in adoption-time
+	# order).
+	#
+	# Important: the downstream validator
+	# `sum(indep_counts) == N_A` enforces a sum constraint. Sample B's
+	# raw counts sum to N_B, not N_A; we scale to N_A while preserving
+	# integer counts and avoiding zero entries (the validator also
+	# requires `all(indep_counts > 0)`).
+	N_A <- length(sample_A_units)
+	N_B <- length(sample_B_units)
+
+	# Cohort identifiers in canonical order (already produced by
+	# idCohorts in adoption-time order).
+	canonical_treated <- names(cohort_unit_lists)
+	indep_counts_raw <- integer(length(canonical_treated) + 1L)
+	indep_counts_raw[1L] <- sum(
+		pdata_B[[unit_var]][!duplicated(pdata_B[[unit_var]])] %in%
+			never_units
+	)
+	# Compute treated counts by intersecting sample_B_units with each
+	# cohort's unit list (deduplicated counts).
+	# Note: `cohort_unit_lists` is named by adoption time.
+	for (i in seq_along(canonical_treated)) {
+		cn <- canonical_treated[i]
+		indep_counts_raw[i + 1L] <- sum(
+			cohort_unit_lists[[cn]] %in% sample_B_units
+		)
+	}
+	stopifnot(sum(indep_counts_raw) == N_B)
+
+	# Scale to N_A. Bump any zero up to 1 first (validator requires
+	# strict positivity) and rebalance.
+	if (any(indep_counts_raw == 0L)) {
+		# Shouldn't happen given the >= 3 guard, but defensive.
+		zero_idx <- which(indep_counts_raw == 0L)
+		nz_idx <- which(indep_counts_raw > 0L)
+		# Borrow 1 from the largest non-zero entry to give to each
+		# zero entry.
+		for (j in zero_idx) {
+			top <- nz_idx[which.max(indep_counts_raw[nz_idx])]
+			indep_counts_raw[top] <- indep_counts_raw[top] - 1L
+			indep_counts_raw[j] <- 1L
+		}
+	}
+	# Proportional scaling: indep_counts = round(raw * N_A / N_B).
+	# Use Largest-Remainder method to ensure exact sum = N_A.
+	scaled_real <- indep_counts_raw * (N_A / N_B)
+	scaled_floor <- floor(scaled_real)
+	deficit <- N_A - sum(scaled_floor)
+	if (deficit > 0L) {
+		# Distribute the remainder to entries with the largest
+		# fractional remainders.
+		fracs <- scaled_real - scaled_floor
+		order_idx <- order(fracs, decreasing = TRUE)
+		# Distribute `deficit` units one-by-one
+		add_idx <- order_idx[seq_len(deficit)]
+		scaled_floor[add_idx] <- scaled_floor[add_idx] + 1L
+	} else if (deficit < 0L) {
+		# Pull back from entries with the smallest fractional
+		# remainders.
+		fracs <- scaled_real - scaled_floor
+		order_idx <- order(fracs)
+		sub_idx <- order_idx[seq_len(-deficit)]
+		scaled_floor[sub_idx] <- scaled_floor[sub_idx] - 1L
+	}
+	indep_counts_scaled <- as.integer(scaled_floor)
+	stopifnot(sum(indep_counts_scaled) == N_A)
+	# Re-check positivity post-scaling (defensive).
+	if (any(indep_counts_scaled <= 0L)) {
+		# Borrow from the largest entry.
+		zero_idx <- which(indep_counts_scaled <= 0L)
+		for (j in zero_idx) {
+			needed <- 1L - indep_counts_scaled[j]
+			top <- which.max(indep_counts_scaled)
+			indep_counts_scaled[top] <- indep_counts_scaled[top] - needed
+			indep_counts_scaled[j] <- 1L
+		}
+		stopifnot(sum(indep_counts_scaled) == N_A)
+	}
+
+	if (verbose) {
+		message(
+			"Three-sample split: N_A = ",
+			N_A,
+			" (regression), N_B = ",
+			N_B,
+			" (cohort probs), N_C = ",
+			length(sample_C_units),
+			" (X_bar_r)."
+		)
+	}
+
+	list(
+		pdata = pdata_A,
+		indep_counts = indep_counts_scaled,
+		indep_x_pdata = pdata_C
+	)
+}
+
+#' @title Compute per-cohort X_bar_r from an independent labeled panel
+#' @description
+#' Internal helper called by `.run_estimator_input_prep()` when the user
+#' supplies `indep_x_pdata` to the four estimator entry points. Sample C
+#' in the three-sample-splitting setup of Theorem
+#' `te.asym.norm.thm.gen.cond`(a) (paper Appendix C, line 2280): a
+#' labeled panel independent of the fitting panel, used to estimate
+#' \eqn{\bar X_r} for every treated cohort `r`. When `predict()` uses
+#' these means, the asymptotically-exact variance `v_reg + v_mean`
+#' applies regardless of whether `indep_counts` was supplied.
+#'
+#' The helper enforces the same column-structure contract `pdata`
+#' satisfies (must contain `time_var`, `unit_var`, `treatment`, and the
+#' user-supplied `covs`), runs the same factor expansion via
+#' `processFactors()` so the resulting column names match the fitted
+#' `covs`, identifies each treated cohort by its adoption time (the same
+#' identifier the fitting panel's `in_sample_counts` uses, so cohort
+#' matching is unambiguous), and returns a numeric matrix with one row
+#' per fitted treated cohort (in the order matching `in_sample_counts`'s
+#' treated entries) and one column per expanded covariate.
+#'
+#' @param indep_x_pdata The user-supplied independent labeled panel.
+#'   `NA` (default) or `NULL` triggers the no-third-sample path
+#'   (returns `NULL`). Otherwise a data.frame.
+#' @param time_var,unit_var,treatment Character; the fitted panel's
+#'   column names (same shape requirement).
+#' @param covs_orig Character vector; the user's original `covs`
+#'   argument (pre-factor-expansion). Used to extract / validate the
+#'   needed columns from `indep_x_pdata`.
+#' @param expanded_covs Character vector; the post-factor-expansion
+#'   covariate column names the fit ended up with (from
+#'   `prep_for_etwfe_core()`'s output).
+#' @param in_sample_counts Named integer vector; the fitted panel's
+#'   per-cohort counts (length R + 1, names like `c("Never_treated",
+#'   "2", "3", "4")`). Used to extract the treated-cohort adoption-time
+#'   labels in the canonical order.
+#' @param allow_no_never_treated Logical; forwarded to the same
+#'   auto-truncation logic the fitting panel went through. The same
+#'   truncation must be applied to `indep_x_pdata` so the cohort labels
+#'   match the fitted panel's.
+#' @param verbose Logical.
+#' @return A numeric matrix R x d with rownames matching the treated-
+#'   cohort identifiers in `in_sample_counts` (excluding
+#'   `"Never_treated"`), and colnames matching `expanded_covs`; or
+#'   `NULL` when `indep_x_pdata` is `NA` / `NULL`.
+#' @keywords internal
+#' @noRd
+.compute_indep_x_cohort_means <- function(
+	indep_x_pdata,
+	time_var,
+	unit_var,
+	treatment,
+	covs_orig,
+	expanded_covs,
+	in_sample_counts,
+	allow_no_never_treated,
+	verbose = FALSE
+) {
+	# NA / NULL / length-0 NA path: no Sample C supplied.
+	if (is.null(indep_x_pdata)) {
+		return(NULL)
+	}
+	if (
+		is.atomic(indep_x_pdata) &&
+			length(indep_x_pdata) == 1L &&
+			is.na(indep_x_pdata)
+	) {
+		return(NULL)
+	}
+
+	if (!is.data.frame(indep_x_pdata)) {
+		stop(
+			"`indep_x_pdata` must be a data.frame or `NA`. Got class: ",
+			paste(class(indep_x_pdata), collapse = "/"),
+			".",
+			call. = FALSE
+		)
+	}
+
+	# Tibble coercion (mirrors the main pdata path).
+	if ("tbl_df" %in% class(indep_x_pdata)) {
+		indep_x_pdata <- as.data.frame(indep_x_pdata)
+	}
+
+	# Column-structure contract: every column the fitting panel needs
+	# must be present here, with the same dtype expectations.
+	required_cols <- c(time_var, unit_var, treatment, covs_orig)
+	missing_cols <- setdiff(required_cols, colnames(indep_x_pdata))
+	if (length(missing_cols) > 0) {
+		stop(
+			"`indep_x_pdata` is missing required column(s): ",
+			paste(missing_cols, collapse = ", "),
+			". `indep_x_pdata` must have the same column structure as ",
+			"`pdata`: `time_var`, `unit_var`, `treatment`, and all `covs`.",
+			call. = FALSE
+		)
+	}
+	if (!is.integer(indep_x_pdata[[time_var]])) {
+		stop(
+			"`indep_x_pdata$",
+			time_var,
+			"` must be integer; got ",
+			paste(class(indep_x_pdata[[time_var]]), collapse = "/"),
+			".",
+			call. = FALSE
+		)
+	}
+	if (!is.character(indep_x_pdata[[unit_var]])) {
+		stop(
+			"`indep_x_pdata$",
+			unit_var,
+			"` must be character; got ",
+			paste(class(indep_x_pdata[[unit_var]]), collapse = "/"),
+			".",
+			call. = FALSE
+		)
+	}
+	if (!is.integer(indep_x_pdata[[treatment]])) {
+		stop(
+			"`indep_x_pdata$",
+			treatment,
+			"` must be integer; got ",
+			paste(class(indep_x_pdata[[treatment]]), collapse = "/"),
+			".",
+			call. = FALSE
+		)
+	}
+	if (!all(indep_x_pdata[, treatment] %in% c(0, 1))) {
+		stop(
+			"`indep_x_pdata$",
+			treatment,
+			"` must contain only 0/1 values.",
+			call. = FALSE
+		)
+	}
+
+	# Apply the same auto-truncation the fitting panel underwent. If the
+	# fitting panel was auto-truncated, the cohort labels (named by
+	# adoption time) reflect the truncated time-window; running the same
+	# truncation on `indep_x_pdata` keeps both panels' cohort
+	# identifiers aligned. When the fitting panel had a never-treated
+	# population (no truncation), this is a no-op.
+	indep_x_pdata <- .truncate_if_no_never_treated(
+		indep_x_pdata,
+		time_var = time_var,
+		unit_var = unit_var,
+		treat_var = treatment,
+		allow_no_never_treated = allow_no_never_treated
+	)
+
+	# Identify cohorts (by adoption time) on the independent panel.
+	# `idCohorts()` enforces the absorbing-state assumption and removes
+	# first-period-treated units (same contract as for `pdata`). The
+	# result names each cohort by its adoption time as character —
+	# matching the fitted panel's `in_sample_counts` names.
+	id_res <- idCohorts(
+		df = indep_x_pdata,
+		time_var = time_var,
+		unit_var = unit_var,
+		treat_var = treatment
+	)
+	indep_df <- id_res$df
+	indep_cohorts <- id_res$cohorts
+	indep_units <- id_res$units
+	indep_times <- id_res$times
+
+	# Treated-cohort identifiers the fit used, in canonical order.
+	treated_cohort_names <- setdiff(names(in_sample_counts), "Never_treated")
+	if (length(treated_cohort_names) == 0L) {
+		# Defensive: a fit with zero treated cohorts is impossible
+		# downstream of `prep_for_etwfe_core()` (R >= 2 is enforced
+		# there), but guard anyway.
+		return(NULL)
+	}
+
+	# Cross-check: every fitted treated cohort must appear in the
+	# indep panel with >= 1 unit.
+	missing_in_indep <- setdiff(treated_cohort_names, names(indep_cohorts))
+	zero_count <- character(0)
+	if (length(missing_in_indep) > 0L) {
+		zero_count <- missing_in_indep
+	}
+	# Also flag cohorts that appear with zero units (defensive — should
+	# not happen given idCohorts's behavior, but cheap to check).
+	for (cn in intersect(treated_cohort_names, names(indep_cohorts))) {
+		if (length(indep_cohorts[[cn]]) == 0L) {
+			zero_count <- c(zero_count, cn)
+		}
+	}
+	if (length(zero_count) > 0L) {
+		stop(
+			"`indep_x_pdata` has no units for treated cohort(s) ",
+			"(by adoption-time identifier): ",
+			paste(zero_count, collapse = ", "),
+			". Every treated cohort in the fitting panel must have ",
+			">= 1 unit in `indep_x_pdata`; if your sample C is too ",
+			"small, drop the `indep_x_pdata` argument and accept the ",
+			"conservative Cauchy-Schwarz variance fallback.",
+			call. = FALSE
+		)
+	}
+
+	# Run the same factor expansion the fitted panel went through, so
+	# the column names of the indep covariates match the fit's
+	# `expanded_covs`. Empty-covs short-circuit.
+	if (length(covs_orig) == 0L) {
+		# d = 0 case: the cohort-means matrix has zero columns. Return
+		# a (R x 0) matrix; predict()'s rho-block contraction handles
+		# this trivially.
+		R_treated <- length(treated_cohort_names)
+		out <- matrix(numeric(0), nrow = R_treated, ncol = 0L)
+		rownames(out) <- treated_cohort_names
+		return(out)
+	}
+
+	pf_res <- processFactors(indep_df, covs_orig)
+	indep_df <- pf_res$pdata
+	indep_expanded_covs <- pf_res$covs
+
+	if (!setequal(indep_expanded_covs, expanded_covs)) {
+		# Factor levels in `indep_x_pdata` produced different dummy
+		# columns than the fitting panel. The user must align level
+		# sets (e.g., by `factor(..., levels = ...)`) before passing.
+		extra_in_indep <- setdiff(indep_expanded_covs, expanded_covs)
+		missing_in_indep_post <- setdiff(expanded_covs, indep_expanded_covs)
+		msg_parts <- character(0)
+		if (length(missing_in_indep_post) > 0L) {
+			msg_parts <- c(
+				msg_parts,
+				paste0(
+					"covariate column(s) present in the fit but not in ",
+					"`indep_x_pdata` after factor expansion: ",
+					paste(missing_in_indep_post, collapse = ", ")
+				)
+			)
+		}
+		if (length(extra_in_indep) > 0L) {
+			msg_parts <- c(
+				msg_parts,
+				paste0(
+					"extra covariate column(s) produced from ",
+					"`indep_x_pdata` not in the fit: ",
+					paste(extra_in_indep, collapse = ", ")
+				)
+			)
+		}
+		stop(
+			"Factor expansion of `indep_x_pdata` produces different ",
+			"covariate columns than the fitting panel: ",
+			paste(msg_parts, collapse = "; "),
+			". Ensure factor levels match across the two panels ",
+			"(e.g. `factor(x, levels = same_levels)`).",
+			call. = FALSE
+		)
+	}
+	# Order indep_expanded_covs to exactly match expanded_covs.
+	indep_expanded_covs <- expanded_covs
+
+	# Validate per-cov dtype + no-NA in the first-period rows; only the
+	# first-period values matter for the time-invariant covariate
+	# convention `processCovs()` enforces on the fitting panel.
+	indep_df <- indep_df[
+		order(indep_df[[unit_var]], indep_df[[time_var]]),
+		,
+		drop = FALSE
+	]
+	# Per-unit first-period rows = the first row of each unit block
+	# after sorting.
+	first_period_rows <- indep_df[[time_var]] == indep_times[1]
+	first_rows_df <- indep_df[first_period_rows, , drop = FALSE]
+
+	for (cname in indep_expanded_covs) {
+		col_values <- first_rows_df[[cname]]
+		if (!is.numeric(col_values) && !is.integer(col_values)) {
+			stop(
+				"`indep_x_pdata$",
+				cname,
+				"` must be numeric or integer after factor expansion. ",
+				"Got: ",
+				paste(class(col_values), collapse = "/"),
+				".",
+				call. = FALSE
+			)
+		}
+		if (any(is.na(col_values))) {
+			stop(
+				"`indep_x_pdata$",
+				cname,
+				"` has NA value(s) in the first time period for at ",
+				"least one unit; cannot estimate cohort means with ",
+				"missing data. The fitting panel's `pdata` had the ",
+				"same first-period no-NA requirement.",
+				call. = FALSE
+			)
+		}
+	}
+
+	# Build cohort-by-cov mean matrix. For each treated cohort name,
+	# average the first-period covariate values across the cohort's
+	# units in `indep_x_pdata`. The first-period rows live at
+	# deterministic positions after sorting by (unit, time).
+	# Index lookup: `indep_cohorts[[name]]` is the character vector of
+	# unit IDs belonging to that adoption-time cohort.
+	#
+	# We also compute per-cohort within-cohort covariance and per-
+	# cohort sample sizes from indep_x_pdata. predict()'s v_mean
+	# component uses these (Sample C) instead of Sample A's analogs,
+	# because the sampling variance of X_bar_r is determined by Sample
+	# C (the data used to estimate it).
+	R_treated <- length(treated_cohort_names)
+	d_expanded <- length(indep_expanded_covs)
+	out <- matrix(NA_real_, nrow = R_treated, ncol = d_expanded)
+	rownames(out) <- treated_cohort_names
+	colnames(out) <- indep_expanded_covs
+
+	# Per-cohort within-cohort sample covariance + sizes from Sample C.
+	# Stored on the matrix as attributes so the slot remains a single
+	# matrix on the fitted object (no schema sprawl). predict() reads
+	# these attributes when computing v_mean.
+	cov_X_given_r_list <- vector("list", R_treated)
+	N_r_vec <- integer(R_treated)
+	names(cov_X_given_r_list) <- treated_cohort_names
+	names(N_r_vec) <- treated_cohort_names
+
+	# Build a unit -> first-period row index map for speed.
+	first_rows_unit_ids <- first_rows_df[[unit_var]]
+	for (r in seq_len(R_treated)) {
+		cohort_name <- treated_cohort_names[r]
+		unit_ids_r <- indep_cohorts[[cohort_name]]
+		# Defensive: should not happen given the missing-cohort check
+		# above, but guard.
+		if (length(unit_ids_r) == 0L) {
+			stop(
+				"Internal error: zero units for cohort ",
+				cohort_name,
+				" in `indep_x_pdata` (post-validation). Please file ",
+				"an issue.",
+				call. = FALSE
+			)
+		}
+		match_rows <- which(first_rows_unit_ids %in% unit_ids_r)
+		if (length(match_rows) == 0L) {
+			stop(
+				"Internal error: no first-period rows for cohort ",
+				cohort_name,
+				" in `indep_x_pdata` (post-validation). Please file ",
+				"an issue.",
+				call. = FALSE
+			)
+		}
+		cov_block <- as.matrix(
+			first_rows_df[match_rows, indep_expanded_covs, drop = FALSE]
+		)
+		out[r, ] <- colMeans(cov_block)
+		N_r_vec[r] <- length(match_rows)
+		if (length(match_rows) >= 2L) {
+			cov_X_given_r_list[[r]] <- stats::cov(cov_block)
+		} else {
+			# Single-unit cohort in Sample C: within-cohort cov(X) is
+			# degenerate; predict() will handle this with the same
+			# "set to 0" + warn pattern used for Sample-A fallback.
+			cov_X_given_r_list[[r]] <- matrix(
+				0,
+				nrow = d_expanded,
+				ncol = d_expanded
+			)
+		}
+	}
+
+	# Bundle Sample-C-derived cohort info on the matrix as attributes,
+	# so the fitted object's `cohort_means_external` slot stays a
+	# single matrix with attached metadata. predict() reads these.
+	attr(out, "cov_X_given_r") <- cov_X_given_r_list
+	attr(out, "N_r_vec") <- N_r_vec
+
+	if (verbose) {
+		message(
+			"Computed cohort_means_external from indep_x_pdata for ",
+			R_treated,
+			" treated cohort(s)."
+		)
+	}
+
+	out
 }
 
 #' @title Select the ATT/SE/cohort-probs branch from a `_core()` result

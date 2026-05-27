@@ -6,6 +6,7 @@
 \usage{
 fetwfeWithSimulatedData(
   simulated_obj,
+  three_sample_split = FALSE,
   lambda.max = NA,
   lambda.min = NA,
   nlambda = 100,
@@ -26,6 +27,14 @@ fetwfeWithSimulatedData(
 \arguments{
 \item{simulated_obj}{An object of class \code{"FETWFE_simulated"} containing the simulated panel
 data and design matrix.}
+
+\item{three_sample_split}{(Optional.) Logical; if \code{TRUE}, randomly
+partitions the units in \code{simulated_obj$pdata} into three subsamples
+and uses each for one of the roles in Theorem
+\code{te.asym.norm.thm.gen.cond}(a) of Faletto (2025). See \code{fetwfe()} for
+details. Default \code{FALSE}. When \code{TRUE}, the function ignores
+\code{simulated_obj$indep_counts} (the cohort-probability counts are
+derived from Sample B of the auto-partition instead).}
 
 \item{lambda.max}{(Optional.) Numeric. A penalty parameter \code{lambda} will be
 selected over a grid search by BIC in order to select a single model. The
@@ -234,6 +243,16 @@ the design matrix's internal \verb{(unit, time)} order).}
 \item{covs}{Character vector; the original \code{covs} argument the user
 passed (before any factor expansion the estimator performed
 internally). Consumed by \verb{augment.<class>()}.}
+\item{cohort_means_external}{Numeric matrix or \code{NULL}. When the user
+set \code{three_sample_split = TRUE}, an \verb{R x d} matrix of per-cohort
+sample-mean covariate values \eqn{\bar X_r} computed from Sample C
+of the three-sample partition, with rownames matching the
+treated-cohort adoption-time identifiers in \code{catt_df$cohort} and
+colnames matching the (post-factor-expansion) covariate names.
+Consumed by \code{predict()} to enable the asymptotically-exact
+CATT(x) confidence intervals of Theorem
+\code{te.asym.norm.thm.gen.cond}(a). \code{NULL} when \code{three_sample_split}
+was \code{FALSE}.}
 \item{internal}{A list containing internal outputs that are typically not needed for interpretation:
 \describe{
 \item{X_ints}{The design matrix created containing all interactions, time and cohort dummies, etc.}

@@ -122,21 +122,26 @@
 #' Note on the variance formula. The paper's Theorem
 #' `te.asym.norm.thm.gen.cond`(a) (Eq. `v.n.r.t.catt.const`) gives the
 #' asymptotically exact variance \eqn{v_{\mathrm{reg}} + v_{\mathrm{mean}}}
-#' under the sample-split assumption: one panel for the cohort means
-#' \eqn{\bar X_r}, an independent panel for \eqn{\hat\tau_{rt}} and
+#' under three-sample splitting: one panel for the cohort means
+#' \eqn{\bar X_r}, a second for the cohort-membership probabilities, and
+#' a third (independent) panel for \eqn{\hat\tau_{rt}} and
 #' \eqn{\hat\rho_{rt}}. In practice this is the setting where the user
-#' supplies `indep_counts` at fit time. When `indep_counts` is not
-#' supplied, both variance components are estimated from the same panel
-#' and the formula does not capture the covariance between
-#' \eqn{(\bar X_r - \mu_r)} and \eqn{(\hat\rho_{rt} - \rho_{rt})};
-#' `predict()` then falls back to the Cauchy-Schwarz conservative upper
+#' set `three_sample_split = TRUE` at fit time -- the package then
+#' partitions `pdata` into three subsamples internally and stores the
+#' externally-estimated \eqn{\bar X_r} on the fit as
+#' `cohort_means_external`. `predict()` detects that slot and applies
+#' the exact \eqn{v_{\mathrm{reg}} + v_{\mathrm{mean}}} formula.
+#'
+#' When `three_sample_split = FALSE` (the default), `predict()` reads
+#' \eqn{\bar X_r} from the fitting panel itself. If the user supplied
+#' `indep_counts` for the two-sample regime, the exact formula is also
+#' applied (mirroring the overall-ATT SE convention at
+#' `R/variance_machinery.R:142-153`). If neither was supplied,
+#' `predict()` falls back to the Cauchy-Schwarz conservative upper
 #' bound \eqn{(\sqrt{v_{\mathrm{reg}}} + \sqrt{v_{\mathrm{mean}}})^2}.
-#' This mirrors the overall-ATT SE convention the package already uses
-#' for `att_se` -- asymptotically exact when `indep_counts` is supplied,
-#' conservative otherwise. At \eqn{x = \bar X_r} (the default
-#' `newdata = NULL`), the cross-term issue does not arise
-#' (\eqn{x - \bar X_r = 0}) and the conservative formula coincides
-#' numerically with the exact one.
+#' At \eqn{x = \bar X_r} (the default `newdata = NULL`), the cross-term
+#' issue does not arise (\eqn{x - \bar X_r = 0}) and the conservative
+#' formula coincides numerically with the exact one.
 #'
 #' @section Out of scope:
 #' `predict.twfeCovs()` is not provided — `twfeCovs` lacks the
@@ -307,14 +312,29 @@ predict.betwfe <- function(
 		character(0)
 	}
 
-	cohort_means <- .predict_cohort_means(
-		X_ints = X_ints,
-		R = R,
-		N = N,
-		T = T,
-		d = d,
-		model_cov_names = model_cov_names
-	)
+	# Phase 8 (#33): when `cohort_means_external` is non-NULL, the fit
+	# was made with `three_sample_split = TRUE`. Use those externally-
+	# estimated X_bar_r values instead of the fitting-panel means, and
+	# downstream apply the asymptotically-exact variance formula.
+	uses_external_means <- !is.null(object$cohort_means_external)
+	cohort_means <- if (uses_external_means) {
+		.predict_cohort_means_from_external(
+			cohort_means_external = object$cohort_means_external,
+			c_names = c_names,
+			model_cov_names = model_cov_names,
+			R = R,
+			d = d
+		)
+	} else {
+		.predict_cohort_means(
+			X_ints = X_ints,
+			R = R,
+			N = N,
+			T = T,
+			d = d,
+			model_cov_names = model_cov_names
+		)
+	}
 
 	if (is.null(newdata)) {
 		# Default: predict at each cohort's mean X_bar_r.
@@ -417,6 +437,24 @@ predict.betwfe <- function(
 
 	# Within-cohort sample covariance + cohort sizes (N_r), used for the
 	# cohort-mean variance term. Both are computed once outside the loop.
+	#
+	# Phase 8 (#33): in the three-sample-split regime,
+	# `cohort_means_external` carries Sample C's per-cohort sample
+	# covariance + sizes (attached as attributes by
+	# `.compute_indep_x_cohort_means()`). The full v_mean term has TWO
+	# contributions:
+	#  - From estimating X_bar_r via Sample C: `rho' Cov_C(X|W=r) rho /
+	#    N_C_r`
+	#  - From the regression's own cohort centering (it centers at
+	#    X_bar_r_A, which is random): `rho' Cov_A(X|W=r) rho / N_A_r`
+	# Conceptually: the estimator
+	#   tau_hat_rt + (x - X_bar_r_C)' rho_hat_rt
+	# has conditional bias `(X_bar_r_A - X_bar_r_C)' rho_rt`, whose
+	# variance equals (Cov_A/N_A_r + Cov_C/N_C_r) ρ ρ' summed.
+	#
+	# In the one-sample regime (`cohort_means_external = NULL`), only
+	# Sample A is available and the conservative Cauchy-Schwarz formula
+	# at the end of the loop covers the cross-term.
 	cohort_info <- .predict_cohort_info(
 		X_ints = X_ints,
 		R = R,
@@ -425,8 +463,38 @@ predict.betwfe <- function(
 		d = d,
 		model_cov_names = model_cov_names
 	)
-	cov_X_given_r <- cohort_info$cov_X_given_r # list of length R, each d x d
-	N_r_vec <- cohort_info$N_r_vec # length R
+	cov_X_given_r <- cohort_info$cov_X_given_r # Sample A; list len R, d x d each
+	N_r_vec <- cohort_info$N_r_vec # Sample A; length R
+
+	# Sample C analogs (only when three-sample split is in effect).
+	if (uses_external_means) {
+		ext_cov <- attr(object$cohort_means_external, "cov_X_given_r")
+		ext_N_r <- attr(object$cohort_means_external, "N_r_vec")
+		if (is.null(ext_cov) || is.null(ext_N_r)) {
+			# Defensive: a hand-built object without the attributes.
+			# Without Sample C info we can't compute the second
+			# v_mean term; fall back to the conservative formula by
+			# pretending we're in the one-sample regime.
+			warning(
+				"predict(): `cohort_means_external` is present but is ",
+				"missing the `cov_X_given_r` / `N_r_vec` attributes ",
+				"normally attached at fit time. Falling back to the ",
+				"conservative Cauchy-Schwarz formula at x != X_bar_r.",
+				call. = FALSE
+			)
+			uses_external_means <- FALSE
+			cov_X_given_r_C <- NULL
+			N_r_vec_C <- NULL
+		} else {
+			# Reorder to match c_names. ext_cov keys + ext_N_r names
+			# follow the treated-cohort adoption-time identifiers.
+			cov_X_given_r_C <- ext_cov[c_names]
+			N_r_vec_C <- as.integer(unname(ext_N_r[c_names]))
+		}
+	} else {
+		cov_X_given_r_C <- NULL
+		N_r_vec_C <- NULL
+	}
 
 	# Set up the regression-coefficient-variance machinery (the
 	# Gram-inverse of the selected columns of X_final). Skipped when
@@ -556,26 +624,40 @@ predict.betwfe <- function(
 					cov_X_r = cov_X_given_r[[r_idx]],
 					N_r = N_r_vec[r_idx]
 				)
+				# Phase 8 (#33): in three-sample-split, add the
+				# Sample-C v_mean contribution. See the comment above
+				# the cohort-info block for the decomposition.
+				if (uses_external_means) {
+					v_mean <- v_mean +
+						.predict_v_mean(
+							rho_k = rho_k,
+							cov_X_r = cov_X_given_r_C[[r_idx]],
+							N_r = N_r_vec_C[r_idx]
+						)
+				}
 				# Combine v_reg and v_mean. Paper's Theorem
 				# `te.asym.norm.thm.gen.cond`(a) gives the asymptotically
-				# exact variance `v_reg + v_mean` under the sample-split
-				# assumption (independent data for X_bar_r and the
-				# (tau, rho) regression -- the `indep_counts = ...`
-				# argument at fit time). When the fit was made WITHOUT
-				# sample splitting (`indep_counts` not supplied), both
-				# variance components are estimated from the same panel
-				# and their covariance is not zero; the missing
-				# cross-term `cov((X_bar_r - mu_r), (rho_hat_rt -
-				# rho_rt))` causes the exact formula to UNDER-cover at
-				# x != X_bar_r. We fall back to the Cauchy-Schwarz upper
-				# bound `(sqrt(v_reg) + sqrt(v_mean))^2 = v_reg + v_mean
-				# + 2*sqrt(v_reg * v_mean)`, which mirrors the
-				# overall-ATT SE pattern at `R/variance_machinery.R:142-153`.
-				# At x = X_bar_r, v_mean's rho-contribution vanishes
-				# (x_diff = 0), so the conservative formula coincides
-				# with the exact one when it matters most.
+				# exact variance `v_reg + v_mean` under the three-
+				# sample-splitting assumption (independent data for
+				# X_bar_r, for the cohort probabilities, and for the
+				# (tau, rho) regression). When the user fit with
+				# `three_sample_split = TRUE`,
+				# `object$cohort_means_external` is non-NULL and we
+				# apply the exact formula regardless of
+				# `indep_counts_used`. When `cohort_means_external` is
+				# NULL but `indep_counts` was supplied, the two-sample
+				# regime applies and the exact formula is still valid
+				# (the sample-split assumption between X_bar_r and the
+				# regression is met by virtue of the convention the
+				# package documents at `R/variance_machinery.R:142-153`
+				# for the overall-ATT case). Otherwise we fall back to
+				# the Cauchy-Schwarz upper bound
+				# `(sqrt(v_reg) + sqrt(v_mean))^2`, which mirrors the
+				# same overall-ATT pattern. At x = X_bar_r, v_mean's
+				# rho-contribution vanishes (x_diff = 0), so the
+				# conservative formula coincides with the exact one.
 				exact_var <- v_reg + v_mean
-				if (isTRUE(object$indep_counts_used)) {
+				if (uses_external_means || isTRUE(object$indep_counts_used)) {
 					var_total <- .floor_cluster_quad(
 						exact_var,
 						"predict.fetwfe/var_total"
@@ -666,6 +748,64 @@ predict.betwfe <- function(
 			(is.null(internal$calc_ses) && isTRUE(object$calc_ses)),
 		sig_eps_sq = object$sig_eps_sq
 	)
+}
+
+# .predict_cohort_means_from_external
+#
+# Reshape the fit's `cohort_means_external` slot (a numeric matrix
+# computed at fit time from the independent labeled panel) to the same
+# shape `.predict_cohort_means()` returns. Used by `predict()` when the
+# fit was made with `three_sample_split = TRUE`.
+#
+# The external matrix is stored with rownames matching the treated-
+# cohort adoption-time identifiers (matching `catt_df$cohort`), and
+# colnames matching the (expanded) covariate names. We re-order rows
+# to match `c_names` (the canonical cohort order the rest of predict()
+# uses) and columns to match `model_cov_names`.
+#
+# @keywords internal
+# @noRd
+.predict_cohort_means_from_external <- function(
+	cohort_means_external,
+	c_names,
+	model_cov_names,
+	R,
+	d
+) {
+	if (d == 0L) {
+		# Empty-covs short-circuit. Matrix may still have R rows but
+		# zero columns; pass through unchanged.
+		out <- matrix(numeric(0), nrow = R, ncol = 0L)
+		return(out)
+	}
+	# Row reorder by c_names; column reorder by model_cov_names.
+	# Defensive consistency checks: each c_name must be a row, each
+	# model_cov_name a column.
+	missing_rows <- setdiff(c_names, rownames(cohort_means_external))
+	if (length(missing_rows) > 0L) {
+		stop(
+			"Internal error in predict(): `cohort_means_external` is ",
+			"missing row(s) for cohort(s): ",
+			paste(missing_rows, collapse = ", "),
+			". Please file an issue.",
+			call. = FALSE
+		)
+	}
+	missing_cols <- setdiff(model_cov_names, colnames(cohort_means_external))
+	if (length(missing_cols) > 0L) {
+		stop(
+			"Internal error in predict(): `cohort_means_external` is ",
+			"missing column(s): ",
+			paste(missing_cols, collapse = ", "),
+			". Please file an issue.",
+			call. = FALSE
+		)
+	}
+	out <- cohort_means_external[c_names, model_cov_names, drop = FALSE]
+	# Strip rownames since the rest of predict() indexes by integer r
+	# (and `.predict_cohort_means()` returns an unnamed matrix).
+	rownames(out) <- NULL
+	out
 }
 
 # .predict_cohort_means

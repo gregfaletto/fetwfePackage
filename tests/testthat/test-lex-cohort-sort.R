@@ -129,6 +129,8 @@ test_that("tidy.<class> sorts cohorts numerically when labels include >= 10", {
 		# matrix was supplied). Inside this list() literal so the name
 		# survives a NULL value.
 		fusion_matrix = NULL,
+		# #33: cohort_means_external slot (NULL when not using three_sample_split).
+		cohort_means_external = NULL,
 		internal = list(
 			X_ints = matrix(0, 100L * T_test, p_test),
 			y = rep(0, 100L * T_test),

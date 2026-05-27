@@ -53,7 +53,22 @@
 #' it's best to just leave your full data set in `pdata`). The sum of all the
 #' counts in `indep_counts` must match the total number of units in `pdata`.
 #' Default is NA (in which case conservative standard errors will be calculated
-#' if `q < 1`.)
+#' if `q < 1`.) Conflicts with `three_sample_split = TRUE`.
+#' @param three_sample_split (Optional.) Logical; if `TRUE`, the function
+#' randomly partitions the units in `pdata` into three roughly-equal
+#' subsamples and uses each for one of the roles in Theorem
+#' `te.asym.norm.thm.gen.cond`(a) of Faletto (2025): Sample A for the
+#' FETWFE regression (estimates \eqn{\hat\tau_{rt}} and \eqn{\hat\rho_{rt}}),
+#' Sample B for the cohort-membership probabilities (the `indep_counts`
+#' role), and Sample C for the cohort conditional covariate means
+#' \eqn{\bar X_r} (stored on the fitted object as `cohort_means_external`
+#' and consumed by `predict()`). With three-sample splitting,
+#' `predict()`'s CATT(x) confidence intervals are asymptotically exact
+#' at `x != X_bar_r` (instead of conservative). The cost is a reduction
+#' in effective sample size by a factor of ~3 for the regression and the
+#' cohort-mean estimates, so this option is best when the input panel is
+#' large. Default `FALSE`. Conflicts with a user-supplied `indep_counts`.
+#' For reproducibility, call `set.seed()` before invoking `fetwfe()`.
 #' @param sig_eps_sq (Optional.) Numeric; the variance of the row-level IID
 #' noise assumed to apply to each observation. See Section 2 of Faletto (2025)
 #' for details. It is best to provide this variance if it is known (for example,
@@ -260,6 +275,15 @@
 #' \item{covs}{Character vector; the original `covs` argument the user
 #'   passed (before any factor expansion the estimator performed
 #'   internally). Consumed by `augment.<class>()`.}
+#' \item{cohort_means_external}{Numeric matrix or `NULL`. When the user
+#'   supplied `indep_x_pdata`, an `R x d` matrix of per-cohort sample-mean
+#'   covariate values \eqn{\bar X_r} computed from that independent panel,
+#'   with rownames matching the treated-cohort adoption-time identifiers
+#'   in `catt_df$cohort` and colnames matching the (post-factor-expansion)
+#'   covariate names. Consumed by `predict()` to enable the asymptotically-
+#'   exact CATT(x) confidence intervals of Theorem
+#'   `te.asym.norm.thm.gen.cond`(a) under the three-sample-splitting
+#'   condition. `NULL` when `indep_x_pdata` was not supplied.}
 #' \item{internal}{A list containing internal outputs that are typically not needed for interpretation:
 #'   \describe{
 #'     \item{X_ints}{The design matrix created containing all interactions, time and cohort dummies, etc.}
@@ -337,6 +361,7 @@ fetwfe <- function(
 	response,
 	covs = c(),
 	indep_counts = NA,
+	three_sample_split = FALSE,
 	sig_eps_sq = NA,
 	sig_eps_c_sq = NA,
 	lambda.max = NA,
@@ -381,6 +406,28 @@ fetwfe <- function(
 	# form; we want the original on the output.
 	covs_orig <- covs
 
+	# Phase 8 (#33): when three_sample_split is TRUE, randomly partition
+	# `pdata` units into three roughly-equal subsamples. Sample A becomes
+	# the new `pdata` (the FETWFE regression), Sample B's cohort counts
+	# become `indep_counts` (the cohort-probability estimate), and Sample
+	# C becomes `indep_x_pdata` consumed downstream to compute
+	# `cohort_means_external` (the X_bar_r estimate). This satisfies the
+	# three-sample-splitting condition of Theorem
+	# `te.asym.norm.thm.gen.cond`(a) and gives `predict()` asymptotically-
+	# exact CATT(x) confidence intervals at x != X_bar_r.
+	split_res <- .maybe_three_sample_split(
+		pdata = pdata,
+		time_var = time_var,
+		unit_var = unit_var,
+		treatment = treatment,
+		indep_counts = indep_counts,
+		three_sample_split = three_sample_split,
+		verbose = verbose
+	)
+	pdata <- split_res$pdata
+	indep_counts <- split_res$indep_counts
+	indep_x_pdata <- split_res$indep_x_pdata
+
 	# Steps 3-5: input validation + auto-truncation + design-matrix prep.
 	prep <- .run_estimator_input_prep(
 		pdata = pdata,
@@ -390,6 +437,7 @@ fetwfe <- function(
 		response = response,
 		covs = covs,
 		indep_counts = indep_counts,
+		indep_x_pdata = indep_x_pdata,
 		sig_eps_sq = sig_eps_sq,
 		sig_eps_c_sq = sig_eps_c_sq,
 		lambda.max = lambda.max,
@@ -420,6 +468,7 @@ fetwfe <- function(
 	first_year <- prep$first_year
 	G <- prep$G
 	indep_count_data_available <- prep$indep_count_data_available
+	cohort_means_external <- prep$cohort_means_external
 
 	rm(prep)
 
@@ -545,7 +594,8 @@ fetwfe <- function(
 		unit_var = unit_var,
 		treatment = treatment,
 		covs = covs_orig,
-		ci_type = ci_type
+		ci_type = ci_type,
+		cohort_means_external = cohort_means_external
 	)
 
 	# Add internal outputs in a separate list
@@ -599,6 +649,13 @@ fetwfe <- function(
 #'
 #' @param simulated_obj An object of class \code{"FETWFE_simulated"} containing the simulated panel
 #' data and design matrix.
+#' @param three_sample_split (Optional.) Logical; if `TRUE`, randomly
+#' partitions the units in `simulated_obj$pdata` into three subsamples
+#' and uses each for one of the roles in Theorem
+#' `te.asym.norm.thm.gen.cond`(a) of Faletto (2025). See `fetwfe()` for
+#' details. Default `FALSE`. When `TRUE`, the function ignores
+#' `simulated_obj$indep_counts` (the cohort-probability counts are
+#' derived from Sample B of the auto-partition instead).
 #' @param lambda.max (Optional.) Numeric. A penalty parameter `lambda` will be
 #' selected over a grid search by BIC in order to select a single model. The
 #' largest `lambda` in the grid will be `lambda.max`. If no `lambda.max` is
@@ -790,6 +847,16 @@ fetwfe <- function(
 #' \item{covs}{Character vector; the original `covs` argument the user
 #'   passed (before any factor expansion the estimator performed
 #'   internally). Consumed by `augment.<class>()`.}
+#' \item{cohort_means_external}{Numeric matrix or `NULL`. When the user
+#'   set `three_sample_split = TRUE`, an `R x d` matrix of per-cohort
+#'   sample-mean covariate values \eqn{\bar X_r} computed from Sample C
+#'   of the three-sample partition, with rownames matching the
+#'   treated-cohort adoption-time identifiers in `catt_df$cohort` and
+#'   colnames matching the (post-factor-expansion) covariate names.
+#'   Consumed by `predict()` to enable the asymptotically-exact
+#'   CATT(x) confidence intervals of Theorem
+#'   `te.asym.norm.thm.gen.cond`(a). `NULL` when `three_sample_split`
+#'   was `FALSE`.}
 #' \item{internal}{A list containing internal outputs that are typically not needed for interpretation:
 #'   \describe{
 #'     \item{X_ints}{The design matrix created containing all interactions, time and cohort dummies, etc.}
@@ -820,6 +887,7 @@ fetwfe <- function(
 #' @export
 fetwfeWithSimulatedData <- function(
 	simulated_obj,
+	three_sample_split = FALSE,
 	lambda.max = NA,
 	lambda.min = NA,
 	nlambda = 100,
@@ -859,6 +927,14 @@ fetwfeWithSimulatedData <- function(
 	sig_eps_c_sq <- simulated_obj$sig_eps_c_sq
 	indep_counts <- simulated_obj$indep_counts
 
+	# When three_sample_split is requested, override the simulated obj's
+	# `indep_counts` (Sample B from the same simulator) since we split
+	# from `pdata` itself; passing both would conflict at the entry-
+	# point validator.
+	if (isTRUE(three_sample_split)) {
+		indep_counts <- NA
+	}
+
 	res <- fetwfe(
 		pdata = pdata,
 		time_var = time_var,
@@ -867,6 +943,7 @@ fetwfeWithSimulatedData <- function(
 		response = response,
 		covs = covs,
 		indep_counts = indep_counts,
+		three_sample_split = three_sample_split,
 		sig_eps_sq = sig_eps_sq,
 		sig_eps_c_sq = sig_eps_c_sq,
 		lambda.max = lambda.max,
@@ -942,7 +1019,18 @@ fetwfeWithSimulatedData <- function(
 #' it's best to just leave your full data set in `pdata`). The sum of all the
 #' counts in `indep_counts` must match the total number of units in `pdata`.
 #' Default is NA (in which case conservative standard errors will be calculated
-#' if `q < 1`.)
+#' if `q < 1`.) Conflicts with `three_sample_split = TRUE`.
+#' @param three_sample_split (Optional.) Logical; if `TRUE`, the function
+#' randomly partitions the units in `pdata` into three roughly-equal
+#' subsamples and uses each for one of the roles in Theorem
+#' `te.asym.norm.thm.gen.cond`(a) of Faletto (2025): Sample A for the
+#' ETWFE regression, Sample B for the cohort-membership probabilities
+#' (the `indep_counts` role), and Sample C for the cohort conditional
+#' covariate means \eqn{\bar X_r}. With three-sample splitting,
+#' `predict()`'s CATT(x) confidence intervals are asymptotically exact
+#' at `x != X_bar_r` (instead of conservative). Default `FALSE`.
+#' Conflicts with a user-supplied `indep_counts`. For reproducibility,
+#' call `set.seed()` before invoking `etwfe()`.
 #' @param sig_eps_sq (Optional.) Numeric; the variance of the row-level IID
 #' noise assumed to apply to each observation. See Section 2 of Faletto (2025)
 #' for details. It is best to provide this variance if it is known (for example,
@@ -1087,6 +1175,15 @@ fetwfeWithSimulatedData <- function(
 #' \item{covs}{Character vector; the original `covs` argument the user
 #'   passed (before any factor expansion the estimator performed
 #'   internally). Consumed by `augment.<class>()`.}
+#' \item{cohort_means_external}{Numeric matrix or `NULL`. When the user
+#'   supplied `indep_x_pdata`, an `R x d` matrix of per-cohort sample-mean
+#'   covariate values \eqn{\bar X_r} computed from that independent panel,
+#'   with rownames matching the treated-cohort adoption-time identifiers
+#'   in `catt_df$cohort` and colnames matching the (post-factor-expansion)
+#'   covariate names. Consumed by `predict()` to enable the asymptotically-
+#'   exact CATT(x) confidence intervals of Theorem
+#'   `te.asym.norm.thm.gen.cond`(a) under the three-sample-splitting
+#'   condition. `NULL` when `indep_x_pdata` was not supplied.}
 #' \item{internal}{A list containing internal outputs that are typically
 #'   not needed for interpretation, packaged here for parity with
 #'   `fetwfe()` so downstream consumers can use a single canonical
@@ -1171,6 +1268,7 @@ etwfe <- function(
 	response,
 	covs = c(),
 	indep_counts = NA,
+	three_sample_split = FALSE,
 	sig_eps_sq = NA,
 	sig_eps_c_sq = NA,
 	verbose = FALSE,
@@ -1192,6 +1290,21 @@ etwfe <- function(
 
 	covs_orig <- covs
 
+	# Phase 8 (#33): three-sample split when requested. See fetwfe() for
+	# the methodology rationale.
+	split_res <- .maybe_three_sample_split(
+		pdata = pdata,
+		time_var = time_var,
+		unit_var = unit_var,
+		treatment = treatment,
+		indep_counts = indep_counts,
+		three_sample_split = three_sample_split,
+		verbose = verbose
+	)
+	pdata <- split_res$pdata
+	indep_counts <- split_res$indep_counts
+	indep_x_pdata <- split_res$indep_x_pdata
+
 	# Steps 3-5: input validation + auto-truncation + design-matrix prep.
 	prep <- .run_estimator_input_prep(
 		pdata = pdata,
@@ -1201,6 +1314,7 @@ etwfe <- function(
 		response = response,
 		covs = covs,
 		indep_counts = indep_counts,
+		indep_x_pdata = indep_x_pdata,
 		sig_eps_sq = sig_eps_sq,
 		sig_eps_c_sq = sig_eps_c_sq,
 		verbose = verbose,
@@ -1225,6 +1339,7 @@ etwfe <- function(
 	first_year <- prep$first_year
 	G <- prep$G
 	indep_count_data_available <- prep$indep_count_data_available
+	cohort_means_external <- prep$cohort_means_external
 
 	rm(prep)
 
@@ -1309,7 +1424,8 @@ etwfe <- function(
 		unit_var = unit_var,
 		treatment = treatment,
 		covs = covs_orig,
-		ci_type = ci_type
+		ci_type = ci_type,
+		cohort_means_external = cohort_means_external
 	)
 
 	# Add internal outputs in a separate list for parity with `fetwfe()` (#144).
@@ -1353,6 +1469,13 @@ etwfe <- function(
 #'
 #' @param simulated_obj An object of class \code{"FETWFE_simulated"} containing the simulated panel
 #' data and design matrix.
+#' @param three_sample_split (Optional.) Logical; if `TRUE`, randomly
+#' partitions the units in `simulated_obj$pdata` into three subsamples
+#' and uses each for one of the roles in Theorem
+#' `te.asym.norm.thm.gen.cond`(a) of Faletto (2025). See `etwfe()` for
+#' details. Default `FALSE`. When `TRUE`, the function ignores
+#' `simulated_obj$indep_counts` (the cohort-probability counts are
+#' derived from Sample B of the auto-partition instead).
 #' @param verbose Logical; if TRUE, more details on the progress of the function will
 #' be printed as the function executes. Default is FALSE.
 #' @param alpha Numeric; function will calculate (1 - `alpha`) confidence intervals
@@ -1480,6 +1603,13 @@ etwfe <- function(
 #' \item{covs}{Character vector; the original `covs` argument the user
 #'   passed (before any factor expansion the estimator performed
 #'   internally).}
+#' \item{cohort_means_external}{Numeric matrix or `NULL`. When the user
+#'   set `three_sample_split = TRUE`, an `R x d` matrix of per-cohort
+#'   sample-mean covariate values \eqn{\bar X_r} computed from Sample C
+#'   of the three-sample partition. Consumed by `predict()` to enable
+#'   the asymptotically-exact CATT(x) confidence intervals of Theorem
+#'   `te.asym.norm.thm.gen.cond`(a). `NULL` when `three_sample_split`
+#'   was `FALSE`.}
 #' \item{internal}{A list containing internal outputs that are typically
 #'   not needed for interpretation, packaged here for parity with
 #'   `fetwfe()` so downstream consumers can use a single canonical
@@ -1527,6 +1657,7 @@ etwfe <- function(
 #' @export
 etwfeWithSimulatedData <- function(
 	simulated_obj,
+	three_sample_split = FALSE,
 	verbose = FALSE,
 	alpha = 0.05,
 	add_ridge = FALSE,
@@ -1554,6 +1685,10 @@ etwfeWithSimulatedData <- function(
 	sig_eps_c_sq <- simulated_obj$sig_eps_c_sq
 	indep_counts <- simulated_obj$indep_counts
 
+	if (isTRUE(three_sample_split)) {
+		indep_counts <- NA
+	}
+
 	res <- etwfe(
 		pdata = pdata,
 		time_var = time_var,
@@ -1562,6 +1697,7 @@ etwfeWithSimulatedData <- function(
 		response = response,
 		covs = covs,
 		indep_counts = indep_counts,
+		three_sample_split = three_sample_split,
 		sig_eps_sq = sig_eps_sq,
 		sig_eps_c_sq = sig_eps_c_sq,
 		verbose = verbose,

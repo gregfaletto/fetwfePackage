@@ -12,6 +12,7 @@ betwfe(
   response,
   covs = c(),
   indep_counts = NA,
+  three_sample_split = FALSE,
   sig_eps_sq = NA,
   sig_eps_c_sq = NA,
   lambda.max = NA,
@@ -82,7 +83,19 @@ that this might not work out, maybe your data set is on the small side and
 it's best to just leave your full data set in \code{pdata}). The sum of all the
 counts in \code{indep_counts} must match the total number of units in \code{pdata}.
 Default is NA (in which case conservative standard errors will be calculated
-if \code{q < 1}.)}
+if \code{q < 1}.) Conflicts with \code{three_sample_split = TRUE}.}
+
+\item{three_sample_split}{(Optional.) Logical; if \code{TRUE}, the function
+randomly partitions the units in \code{pdata} into three roughly-equal
+subsamples and uses each for one of the roles in Theorem
+\code{te.asym.norm.thm.gen.cond}(a) of Faletto (2025): Sample A for the
+BETWFE regression, Sample B for the cohort-membership probabilities
+(the \code{indep_counts} role), and Sample C for the cohort conditional
+covariate means \eqn{\bar X_r}. With three-sample splitting,
+\code{predict()}'s CATT(x) confidence intervals are asymptotically exact
+at \code{x != X_bar_r} (instead of conservative). Default \code{FALSE}.
+Conflicts with a user-supplied \code{indep_counts}. For reproducibility,
+call \code{set.seed()} before invoking \code{betwfe()}.}
 
 \item{sig_eps_sq}{(Optional.) Numeric; the variance of the row-level IID
 noise assumed to apply to each observation. See Section 2 of Faletto (2025)
@@ -308,6 +321,15 @@ arguments the user passed. Consumed by \code{augment.betwfe()} when auto-alignin
 a user-supplied panel to the fitted design.}
 \item{covs}{Character vector; the original \code{covs} argument (pre-factor-
 expansion). Consumed by \code{augment.betwfe()}.}
+\item{cohort_means_external}{Numeric matrix or \code{NULL}. When the user
+supplied \code{indep_x_pdata}, an \verb{R x d} matrix of per-cohort sample-mean
+covariate values \eqn{\bar X_r} computed from that independent panel,
+with rownames matching the treated-cohort adoption-time identifiers
+in \code{catt_df$cohort} and colnames matching the (post-factor-expansion)
+covariate names. Consumed by \code{predict()} to enable the asymptotically-
+exact CATT(x) confidence intervals of Theorem
+\code{te.asym.norm.thm.gen.cond}(a) under the three-sample-splitting
+condition. \code{NULL} when \code{indep_x_pdata} was not supplied.}
 \item{alpha}{The alpha level used for confidence intervals.}
 \item{calc_ses}{Logical indicating whether standard errors were calculated.}
 \item{cohort_probs_overall}{A vector of the estimated cohort probabilities

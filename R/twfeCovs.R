@@ -56,7 +56,18 @@
 #' it's best to just leave your full data set in `pdata`). The sum of all the
 #' counts in `indep_counts` must match the total number of units in `pdata`.
 #' Default is NA (in which case the conservative standard error formula will
-#' be used).
+#' be used). Conflicts with `three_sample_split = TRUE`.
+#' @param three_sample_split (Optional.) Logical; if `TRUE`, the function
+#' randomly partitions the units in `pdata` into three roughly-equal
+#' subsamples, mirroring the three-sample-splitting condition of Theorem
+#' `te.asym.norm.thm.gen.cond`(a) of Faletto (2025): one subsample for
+#' the twfeCovs regression, one for the `indep_counts` cohort
+#' probabilities, and one for the cohort conditional covariate means
+#' \eqn{\bar X_r} (stored on the fitted object as `cohort_means_external`
+#' for parity with the other estimator classes; not yet consumed by any
+#' `twfeCovs`-class method). Default `FALSE`. Conflicts with a user-
+#' supplied `indep_counts`. For reproducibility, call `set.seed()`
+#' before invoking `twfeCovs()`.
 #' @param sig_eps_sq (Optional.) Numeric; the variance of the row-level IID
 #' noise assumed to apply to each observation. See Section 2 of Faletto (2025)
 #' for details. It is best to provide this variance if it is known (for example,
@@ -178,6 +189,14 @@
 #' arguments the user passed.}
 #' \item{covs}{Character vector; the original `covs` argument (pre-factor-
 #' expansion).}
+#' \item{cohort_means_external}{Numeric matrix or `NULL`. When the user
+#'   supplied `indep_x_pdata`, an `R x d` matrix of per-cohort sample-mean
+#'   covariate values \eqn{\bar X_r} computed from that independent panel,
+#'   with rownames matching the treated-cohort adoption-time identifiers
+#'   in `catt_df$cohort` and colnames matching the (post-factor-expansion)
+#'   covariate names. Stored for parity with the other estimator classes;
+#'   not yet consumed by any `twfeCovs`-class method. `NULL` when
+#'   `indep_x_pdata` was not supplied.}
 #' \item{calc_ses}{Logical indicating whether standard errors were calculated.}
 #' \item{cohort_probs_overall}{A vector of the estimated cohort probabilities
 #' on the overall sample (treated and untreated), used in computing the
@@ -273,6 +292,7 @@ twfeCovs <- function(
 	response,
 	covs = c(),
 	indep_counts = NA,
+	three_sample_split = FALSE,
 	sig_eps_sq = NA,
 	sig_eps_c_sq = NA,
 	verbose = FALSE,
@@ -294,6 +314,21 @@ twfeCovs <- function(
 
 	covs_orig <- covs
 
+	# Phase 8 (#33): three-sample split when requested. See fetwfe() for
+	# the methodology rationale.
+	split_res <- .maybe_three_sample_split(
+		pdata = pdata,
+		time_var = time_var,
+		unit_var = unit_var,
+		treatment = treatment,
+		indep_counts = indep_counts,
+		three_sample_split = three_sample_split,
+		verbose = verbose
+	)
+	pdata <- split_res$pdata
+	indep_counts <- split_res$indep_counts
+	indep_x_pdata <- split_res$indep_x_pdata
+
 	# Steps 3-5: input validation + auto-truncation + design-matrix prep.
 	prep <- .run_estimator_input_prep(
 		pdata = pdata,
@@ -303,6 +338,7 @@ twfeCovs <- function(
 		response = response,
 		covs = covs,
 		indep_counts = indep_counts,
+		indep_x_pdata = indep_x_pdata,
 		sig_eps_sq = sig_eps_sq,
 		sig_eps_c_sq = sig_eps_c_sq,
 		verbose = verbose,
@@ -327,6 +363,7 @@ twfeCovs <- function(
 	first_year <- prep$first_year
 	G <- prep$G
 	indep_count_data_available <- prep$indep_count_data_available
+	cohort_means_external <- prep$cohort_means_external
 
 	rm(prep)
 
@@ -410,7 +447,8 @@ twfeCovs <- function(
 		unit_var = unit_var,
 		treatment = treatment,
 		covs = covs_orig,
-		ci_type = ci_type
+		ci_type = ci_type,
+		cohort_means_external = cohort_means_external
 	)
 	# Add internal outputs in a separate list for parity with `fetwfe()` (#144).
 	# The first five sub-slots (`X_ints`, `y`, `X_final`, `y_final`,
@@ -452,6 +490,12 @@ twfeCovs <- function(
 #'
 #' @param simulated_obj An object of class \code{"FETWFE_simulated"} containing the simulated panel
 #' data and design matrix.
+#' @param three_sample_split (Optional.) Logical; if `TRUE`, randomly
+#' partitions the units in `simulated_obj$pdata` into three subsamples
+#' and uses each for one of the roles in Theorem
+#' `te.asym.norm.thm.gen.cond`(a) of Faletto (2025). See `twfeCovs()`
+#' for details. Default `FALSE`. When `TRUE`, the function ignores
+#' `simulated_obj$indep_counts`.
 #' @param verbose Logical; if TRUE, more details on the progress of the function will
 #' be printed as the function executes. Default is FALSE.
 #' @param alpha Numeric; function will calculate (1 - `alpha`) confidence intervals
@@ -573,6 +617,12 @@ twfeCovs <- function(
 #' arguments the user passed.}
 #' \item{covs}{Character vector; the original `covs` argument (pre-factor-
 #' expansion).}
+#' \item{cohort_means_external}{Numeric matrix or `NULL`. When the user
+#'   set `three_sample_split = TRUE`, an `R x d` matrix of per-cohort
+#'   sample-mean covariate values \eqn{\bar X_r} computed from Sample C
+#'   of the three-sample partition. Stored for parity with the other
+#'   estimator classes; not yet consumed by any `twfeCovs`-class method.
+#'   `NULL` when `three_sample_split` was `FALSE`.}
 #' \item{internal}{A list containing internal outputs that are typically
 #'   not needed for interpretation, packaged here for parity with
 #'   `fetwfe()` so downstream consumers can use a single canonical
@@ -620,6 +670,7 @@ twfeCovs <- function(
 #' @export
 twfeCovsWithSimulatedData <- function(
 	simulated_obj,
+	three_sample_split = FALSE,
 	verbose = FALSE,
 	alpha = 0.05,
 	add_ridge = FALSE,
@@ -647,6 +698,10 @@ twfeCovsWithSimulatedData <- function(
 	sig_eps_c_sq <- simulated_obj$sig_eps_c_sq
 	indep_counts <- simulated_obj$indep_counts
 
+	if (isTRUE(three_sample_split)) {
+		indep_counts <- NA
+	}
+
 	res <- twfeCovs(
 		pdata = pdata,
 		time_var = time_var,
@@ -655,6 +710,7 @@ twfeCovsWithSimulatedData <- function(
 		response = response,
 		covs = covs,
 		indep_counts = indep_counts,
+		three_sample_split = three_sample_split,
 		sig_eps_sq = sig_eps_sq,
 		sig_eps_c_sq = sig_eps_c_sq,
 		verbose = verbose,

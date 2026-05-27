@@ -13,6 +13,7 @@ twfeCovs(
   response,
   covs = c(),
   indep_counts = NA,
+  three_sample_split = FALSE,
   sig_eps_sq = NA,
   sig_eps_c_sq = NA,
   verbose = FALSE,
@@ -76,7 +77,19 @@ that this might not work out, maybe your data set is on the small side and
 it's best to just leave your full data set in \code{pdata}). The sum of all the
 counts in \code{indep_counts} must match the total number of units in \code{pdata}.
 Default is NA (in which case the conservative standard error formula will
-be used).}
+be used). Conflicts with \code{three_sample_split = TRUE}.}
+
+\item{three_sample_split}{(Optional.) Logical; if \code{TRUE}, the function
+randomly partitions the units in \code{pdata} into three roughly-equal
+subsamples, mirroring the three-sample-splitting condition of Theorem
+\code{te.asym.norm.thm.gen.cond}(a) of Faletto (2025): one subsample for
+the twfeCovs regression, one for the \code{indep_counts} cohort
+probabilities, and one for the cohort conditional covariate means
+\eqn{\bar X_r} (stored on the fitted object as \code{cohort_means_external}
+for parity with the other estimator classes; not yet consumed by any
+\code{twfeCovs}-class method). Default \code{FALSE}. Conflicts with a user-
+supplied \code{indep_counts}. For reproducibility, call \code{set.seed()}
+before invoking \code{twfeCovs()}.}
 
 \item{sig_eps_sq}{(Optional.) Numeric; the variance of the row-level IID
 noise assumed to apply to each observation. See Section 2 of Faletto (2025)
@@ -207,6 +220,14 @@ the original \code{pdata}. Reserved for future \code{augment()} / \code{predict(
 arguments the user passed.}
 \item{covs}{Character vector; the original \code{covs} argument (pre-factor-
 expansion).}
+\item{cohort_means_external}{Numeric matrix or \code{NULL}. When the user
+supplied \code{indep_x_pdata}, an \verb{R x d} matrix of per-cohort sample-mean
+covariate values \eqn{\bar X_r} computed from that independent panel,
+with rownames matching the treated-cohort adoption-time identifiers
+in \code{catt_df$cohort} and colnames matching the (post-factor-expansion)
+covariate names. Stored for parity with the other estimator classes;
+not yet consumed by any \code{twfeCovs}-class method. \code{NULL} when
+\code{indep_x_pdata} was not supplied.}
 \item{calc_ses}{Logical indicating whether standard errors were calculated.}
 \item{cohort_probs_overall}{A vector of the estimated cohort probabilities
 on the overall sample (treated and untreated), used in computing the
