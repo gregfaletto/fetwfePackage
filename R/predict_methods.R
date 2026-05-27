@@ -119,6 +119,21 @@
 #' cohort-mean variance term remains, reflecting the fact that even at
 #' \eqn{x = \bar X_r}, the population \eqn{\bar X_r} is estimated.
 #'
+#' Note on the variance formula. The paper's Theorem
+#' `te.asym.norm.thm.gen.cond`(a) (Eq. `v.n.r.t.catt.const`) is derived
+#' under sample splitting: one panel for the cohort means
+#' \eqn{\bar X_r}, an independent panel for \eqn{\hat\tau_{rt}} and
+#' \eqn{\hat\rho_{rt}}. The package fits both quantities on the same
+#' panel, so the formula does not capture the covariance between
+#' \eqn{(\bar X_r - \mu_r)} and \eqn{(\hat\rho_{rt} - \rho_{rt})}.
+#' Empirically, finite-sample coverage of the Wald CI at
+#' \eqn{x = \bar X_r} approaches the nominal level, while coverage at
+#' \eqn{x \ne \bar X_r} is conservative-of-nominal-by-roughly-10-15-pp
+#' on the simulated panels we've tested (e.g., R=3, T=5, d=2,
+#' N=500: ~0.78-0.85 vs. nominal 0.95). A follow-up that either
+#' sample-splits internally for `predict()` or adds the covariance
+#' term would close this gap.
+#'
 #' @section Out of scope:
 #' `predict.twfeCovs()` is not provided — `twfeCovs` lacks the
 #' bridge-penalty selection that grounds the CATT-prediction theorem.
@@ -414,6 +429,27 @@ predict.betwfe <- function(
 	# calc_ses is FALSE or conf.int is FALSE.
 	want_ses <- isTRUE(conf.int) && isTRUE(calc_ses)
 
+	# R2 (#33 post-execution review): predict() always uses the
+	# homoskedastic model-based variance form (Theorem
+	# `te.asym.norm.thm.gen.cond`(a)). The cluster-robust sandwich is not
+	# yet implemented for predict(); warn (not error) when the fit was
+	# made with `se_type = "cluster"`, so users who accept model-based
+	# SEs can still proceed.
+	if (
+		isTRUE(conf.int) &&
+			isTRUE(calc_ses) &&
+			identical(object$se_type, "cluster")
+	) {
+		warning(
+			"predict() always reports model-based standard errors. The ",
+			"cluster-robust SE path used by event_study() / ",
+			"cohort_study() is not yet wired into predict() (issue #33 ",
+			"follow-up). The reported `std.error` and CIs assume ",
+			"homoskedastic, independent residuals.",
+			call. = FALSE
+		)
+	}
+
 	if (want_ses) {
 		# Resolve selected-feature indices.
 		sel_info <- .predict_selected_indices(object, p = p)
@@ -433,11 +469,25 @@ predict.betwfe <- function(
 			# in well-specified-but-poorly-conditioned cases.
 			want_ses <- FALSE
 		}
+
+		# Precompute the positions within `gram_full_inv` (i.e., within
+		# the sorted `sel_feat_inds` vector) where the tau-block and
+		# rho-block selected features actually live. `gram_full_inv`'s
+		# rows/cols are ordered by `sel_feat_inds`, which is sorted; so
+		# non-treatment features (cohort FE, time FE, X_long, ...) come
+		# *before* the tau-block (which is in `treat_inds`), which comes
+		# before the rho-block (in `treat_int_inds`). The variance helper
+		# uses these positions to place psi entries at the *correct* rows
+		# of `gram_full_inv`. (Post-execution review #33, Bugs A + B.)
+		in_tau_positions <- which(sel_feat_inds %in% treat_inds)
+		in_rho_positions <- which(sel_feat_inds %in% treat_int_inds)
 	} else {
 		gram_full_inv <- NULL
 		sel_feat_inds <- integer(0)
 		sel_treat_block_inds <- integer(0)
 		sel_treat_int_block_inds <- integer(0)
+		in_tau_positions <- integer(0)
+		in_rho_positions <- integer(0)
 	}
 
 	# Build D_N^{-1} restricted to the treatment-effect block. The full
@@ -488,6 +538,8 @@ predict.betwfe <- function(
 					num_treats = num_treats,
 					sel_treat_block_inds = sel_treat_block_inds,
 					sel_treat_int_block_inds = sel_treat_int_block_inds,
+					in_tau_positions = in_tau_positions,
+					in_rho_positions = in_rho_positions,
 					x_diff = x_diff,
 					d_inv_treat_full = d_inv_treat_full,
 					gram_full_inv = gram_full_inv,
@@ -669,7 +721,22 @@ predict.betwfe <- function(
 			# Single-unit cohort: stats::cov() returns NA matrix. The
 			# variance contribution from cohort-mean noise is 0 in this
 			# degenerate case (no within-cohort variance to propagate);
-			# the regression-variance component still fires.
+			# the regression-variance component still fires. Post-
+			# execution review #33 R3: warn the caller so a near-zero
+			# v_mean isn't silently mistaken for "no cohort-mean
+			# uncertainty".
+			warning(
+				"In predict(): cohort ",
+				r,
+				" has only one unit, so the within-cohort covariance ",
+				"Cov(X | W = ",
+				r,
+				") is degenerate. The cohort-mean variance term ",
+				"(rho_rt' Cov(X|W=r) rho_rt / N_r) is set to 0 for ",
+				"that cohort; the reported SE may understate ",
+				"cohort-mean uncertainty.",
+				call. = FALSE
+			)
 			cov_list[[r]] <- matrix(0, nrow = d, ncol = d)
 		}
 	}
@@ -718,13 +785,23 @@ predict.betwfe <- function(
 # .predict_selected_indices
 #
 # Recover the selected-features indices on the **transformed** scale
-# (i.e., among the columns of X_final = Z * D_N^{-1}). For fetwfe, the
-# canonical source is the non-zero entries of `internal$theta_hat`.
-# For etwfe / betwfe (which store `X_final` and the full beta_hat but
-# not theta_hat), we fall back to "all features selected" — etwfe is
-# pure OLS, so every column is in the selected support, and betwfe is
-# handled by checking which entries of beta_hat are non-zero (the
-# bridge penalty applied to the original basis).
+# (i.e., among the columns of X_final = Z * D_N^{-1}).
+#
+# Estimator-by-estimator:
+#   - fetwfe: theta_hat (length p+1, intercept first) lives at
+#     `internal$theta_hat`; slopes are `theta_hat[-1]`. Selection is on
+#     the fusion-transformed basis, so we read non-zero positions of
+#     theta_slopes directly.
+#   - etwfe: pure OLS, all features in the selected support.
+#     `internal$theta_hat` is also populated (since etwfe stores the
+#     identity transform), but every entry will be non-zero — we still
+#     fall back to `seq_len(p)` for safety.
+#   - betwfe: bridge penalty applied to the *original* (non-fusion)
+#     basis, so `internal$theta_hat` is intentionally not stored
+#     (see `R/betwfe_class.R:124`). Selection lives in `beta_hat`:
+#     `which(beta_hat != 0)`. Important: betwfe stores `beta_hat` as
+#     length p (slopes only, no intercept) per its class validator
+#     C6 (`R/betwfe_class.R:156-157`).
 #
 # @return A list with sel_feat_inds (1..p), sel_treat_block_inds
 #   (subset of 1..num_treats — the offsets within the tau block of
@@ -745,10 +822,18 @@ predict.betwfe <- function(
 		theta_slopes <- internal$theta_hat[-1L]
 		stopifnot(length(theta_slopes) == p)
 		sel_feat_inds <- which(theta_slopes != 0)
+	} else if (inherits(object, "betwfe")) {
+		# BETWFE: bridge selection on the original basis. theta_hat is
+		# absent by design; selection lives in beta_hat (length p,
+		# slopes only). Post-execution review #33 R1: this branch
+		# previously fell through to `seq_len(p)` (the ETWFE OLS path),
+		# which silently dropped bridge selection from the variance and
+		# inflated SEs.
+		stopifnot(length(object$beta_hat) == p)
+		sel_feat_inds <- which(object$beta_hat != 0)
 	} else {
 		# Fall back to "all features selected" for OLS-family estimators
-		# (etwfe). On betwfe, theta_hat lives in `internal$theta_hat` per
-		# the slot validators, so this branch shouldn't fire.
+		# (etwfe).
 		sel_feat_inds <- seq_len(p)
 	}
 
@@ -824,16 +909,41 @@ predict.betwfe <- function(
 #     this is the k-th row of d_inv_treat_full restricted to
 #     `sel_treat_block_inds`.
 #   - The rho slots, if (some of) the d rho_rt entries survive. The d
-#     rows of D_N^{-1} corresponding to rho_rt (block-diagonal layout,
-#     I_d kron D^{(2)}(R)^{-1}) get scaled by (x - X_bar_r) and
-#     summed.
+#     rows of D_N^{-1} corresponding to rho_rt (block-diagonal layout
+#     under the package's design-matrix convention) get scaled by
+#     (x - X_bar_r) and summed.
+#
+# Index discipline (post-execution review #33 Bugs A + B + C):
+#   - `gram_full_inv` is indexed by `sel_feat_inds`, which is sorted
+#     and includes non-treatment features (cohort FE, time FE, X_long,
+#     cohort x cov, time x cov) BEFORE the tau-block and the rho-
+#     block. The psi entries must be placed at the *actual* positions
+#     of the selected tau / rho features within sel_feat_inds — given
+#     here as `in_tau_positions` / `in_rho_positions`.
+#   - The package's design matrix lays out the rho block (the d *
+#     num_treats interaction columns) as `(k - 1) * d + m` where k is
+#     the treatment index (1..num_treats) and m is the covariate
+#     index (1..d). Verified in `R/design_matrix.R::genTreatInts`
+#     (lines 1131-1139) and `R/fusion_transforms.R::untransformBetaHat`
+#     (lines 439-457). So a rho-block offset is decoded:
+#         m = ((offset - 1) %% d) + 1
+#         k = ((offset - 1) %/% d) + 1
+#     (NOT the (m - 1) * num_treats + l Kronecker convention that
+#     would naively read from a `I_d kron D^{(2)}(R)^{-1}` block layout.)
 #
 # @param k Integer; the (r, t) index in 1..num_treats.
 # @param d Integer; number of covariates.
 # @param num_treats Integer; total number of treatment effects.
-# @param sel_treat_block_inds Integer vector; selected tau offsets.
+# @param sel_treat_block_inds Integer vector; selected tau offsets
+#   (1..num_treats), in the same order as `in_tau_positions`.
 # @param sel_treat_int_block_inds Integer vector; selected rho offsets
-#   (1..(d * num_treats)).
+#   (1..(d * num_treats)), in the same order as `in_rho_positions`.
+# @param in_tau_positions Integer vector; positions within
+#   `sel_feat_inds` (= rows of `gram_full_inv`) where the selected tau-
+#   block features live. Same length as `sel_treat_block_inds`.
+# @param in_rho_positions Integer vector; positions within
+#   `sel_feat_inds` where the selected rho-block features live. Same
+#   length as `sel_treat_int_block_inds`.
 # @param x_diff Numeric vector of length d; (x - X_bar_r).
 # @param d_inv_treat_full Numeric matrix; num_treats x num_treats; the
 #   inverse two-way fusion-transform matrix on the treatment block.
@@ -850,6 +960,8 @@ predict.betwfe <- function(
 	num_treats,
 	sel_treat_block_inds,
 	sel_treat_int_block_inds,
+	in_tau_positions,
+	in_rho_positions,
 	x_diff,
 	d_inv_treat_full,
 	gram_full_inv,
@@ -861,48 +973,24 @@ predict.betwfe <- function(
 	if (S_total == 0L) {
 		return(0)
 	}
-	# psi_hat is a length-|S| vector. We need to know the layout of |S|:
-	# in `gram_full_inv`, the rows/cols are ordered by `sel_feat_inds`.
-	# Within that, the tau-block selected entries come first (those with
-	# original index in `treat_inds`), then the rho-block selected
-	# entries. Since `sel_feat_inds` from .predict_selected_indices is
-	# sorted, the tau-block entries appear before the rho-block entries.
-	#
-	# psi_hat decomposition:
-	#   - At position j in the tau slot (j in 1..length(sel_treat_block_inds))
-	#     the entry is d_inv_treat_full[k, sel_treat_block_inds[j]].
-	#   - At position j in the rho slot
-	#     (j in 1..length(sel_treat_int_block_inds))
-	#     the entry is the contraction of x_diff against the d rows of
-	#     D_N^{-1} that correspond to rho_rt at index k. Specifically,
-	#     the rho block of D_N^{-1} is I_d kron D^{(2)}(R)^{-1}, so the
-	#     j-th column in the rho block has index (m - 1) * num_treats + l
-	#     where m in 1..d is the covariate slot and l in 1..num_treats is
-	#     the tau slot. Mapping: index = (m - 1) * num_treats + l. The
-	#     contribution to psi_hat for rho_rt at index k is, for each m,
-	#     x_diff[m] * d_inv_treat_full[k, l] applied at the rho-block
-	#     position (m - 1) * num_treats + l (if selected).
 
 	psi <- numeric(S_total)
 
-	# Tau-block contribution.
-	n_tau_sel <- length(sel_treat_block_inds)
-	if (n_tau_sel > 0L) {
-		psi[seq_len(n_tau_sel)] <- d_inv_treat_full[k, sel_treat_block_inds]
+	# Tau-block contribution. Place at the *actual* positions of
+	# tau-block features within `sel_feat_inds`, not at 1..n_tau_sel.
+	if (length(in_tau_positions) > 0L) {
+		psi[in_tau_positions] <- d_inv_treat_full[k, sel_treat_block_inds]
 	}
 
-	# Rho-block contribution.
-	n_rho_sel <- length(sel_treat_int_block_inds)
-	if (n_rho_sel > 0L && d > 0L) {
-		# Decode each selected rho offset into (m, l).
-		# offset = (m - 1) * num_treats + l, with l in 1..num_treats and
-		# m in 1..d.
+	# Rho-block contribution. Decode each selected rho offset into
+	# (treatment k, covariate m) using the package's (k - 1) * d + m
+	# convention (NOT (m - 1) * num_treats + l), then place at the
+	# actual positions of rho-block features within `sel_feat_inds`.
+	if (length(in_rho_positions) > 0L && d > 0L) {
 		offset <- sel_treat_int_block_inds
-		l_vec <- ((offset - 1L) %% num_treats) + 1L
-		m_vec <- ((offset - 1L) %/% num_treats) + 1L
-		# psi entry = x_diff[m] * d_inv_treat_full[k, l]
-		psi[n_tau_sel + seq_along(offset)] <-
-			x_diff[m_vec] * d_inv_treat_full[k, l_vec]
+		m_vec <- ((offset - 1L) %% d) + 1L # covariate index (fast)
+		k_vec <- ((offset - 1L) %/% d) + 1L # treatment index (slow)
+		psi[in_rho_positions] <- x_diff[m_vec] * d_inv_treat_full[k, k_vec]
 	}
 
 	quad <- as.numeric(t(psi) %*% gram_full_inv %*% psi)

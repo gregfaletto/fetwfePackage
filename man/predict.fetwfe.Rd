@@ -105,6 +105,21 @@ collapses to the same expression the package already reports for the
 per-\verb{(r, t)} cohort treatment effect (component (1)). The
 cohort-mean variance term remains, reflecting the fact that even at
 \eqn{x = \bar X_r}, the population \eqn{\bar X_r} is estimated.
+
+Note on the variance formula. The paper's Theorem
+\code{te.asym.norm.thm.gen.cond}(a) (Eq. \code{v.n.r.t.catt.const}) is derived
+under sample splitting: one panel for the cohort means
+\eqn{\bar X_r}, an independent panel for \eqn{\hat\tau_{rt}} and
+\eqn{\hat\rho_{rt}}. The package fits both quantities on the same
+panel, so the formula does not capture the covariance between
+\eqn{(\bar X_r - \mu_r)} and \eqn{(\hat\rho_{rt} - \rho_{rt})}.
+Empirically, finite-sample coverage of the Wald CI at
+\eqn{x = \bar X_r} approaches the nominal level, while coverage at
+\eqn{x \ne \bar X_r} is conservative-of-nominal-by-roughly-10-15-pp
+on the simulated panels we've tested (e.g., R=3, T=5, d=2,
+N=500: ~0.78-0.85 vs. nominal 0.95). A follow-up that either
+sample-splits internally for \code{predict()} or adds the covariance
+term would close this gap.
 }
 \section{Out of scope}{
 

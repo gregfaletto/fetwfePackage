@@ -278,7 +278,7 @@ $$
 \hat\tau_{\mathrm{CATT}}(r, t, \boldsymbol{x}) = \hat\tau_{rt} + (\boldsymbol{x} - \bar{\boldsymbol{X}}_r)^\top \hat\rho_{rt}
 $$
 
-and asymptotic standard errors and Wald CIs follow Theorem `te.asym.norm.thm.gen.cond`(a) (Eq. (C.39)) in the appendix.
+and asymptotic standard errors and Wald CIs follow Theorem `te.asym.norm.thm.gen.cond`(a) (Eq. `v.n.r.t.catt.const`) in the appendix.
 
 `predict.fetwfe()` / `predict.etwfe()` / `predict.betwfe()` all accept a `newdata` data frame whose columns match the fit's `covs`. The output is long-form: one row per `(newdata row × cohort × post-treatment time)`. With `newdata = NULL` (the default), the predictions are computed at each cohort's mean covariate vector --- so the `(x - X_bar_r)` term vanishes and the `estimate` column reduces to $\hat\tau_{rt}$.
 
@@ -293,7 +293,7 @@ preds <- predict(res_demo, newdata = new_x)
 head(preds)
 ```
 
-Each row gives the predicted $\hat\tau_{\mathrm{CATT}}(r, t, \boldsymbol{x})$, its standard error, and a Wald confidence interval at `1 - res_demo$alpha`. To collapse to a single number per `newdata` row, aggregate across cohorts and times --- for example, with `dplyr` taking a simple average across post-treatment effects:
+Each row gives the predicted $\hat\tau_{\mathrm{CATT}}(r, t, \boldsymbol{x})$, its standard error, and a Wald confidence interval at `1 - res_demo$alpha`. To collapse the point estimates to a single number per `newdata` row, average across cohorts and times --- for example, with `dplyr`:
 
 ```{r predict-aggregate, eval = requireNamespace("dplyr", quietly = TRUE)}
 library(dplyr)
@@ -302,10 +302,11 @@ preds |>
     dplyr::group_by(x_row) |>
     dplyr::summarise(
         estimate = mean(estimate),
-        std.error = sqrt(mean(std.error^2)) / sqrt(dplyr::n()),
-        .groups   = "drop"
+        .groups  = "drop"
     )
 ```
+
+Note that aggregating the per-`(r, t)` standard errors into a single SE for the average is *not* supported by Theorem `te.asym.norm.thm.gen.cond`(a) on its own: the cohort-time predictions share the same Gram inverse and are therefore correlated, so a simple `sqrt(mean(SE^2)) / sqrt(n)` (treating them as independent) understates the true uncertainty. If you need a single Wald CI for an aggregated estimand, build the corresponding `psi` weights and apply the variance formula at the aggregated level (this is what `eventStudy()` does for the event-time aggregation).
 
 The default `newdata = NULL` is useful for inspecting per-`(r, t)` effects: at each cohort's own mean, the `estimate` is exactly $\hat\tau_{rt}$, and the standard error is the asymptotic SE from Theorem `te.asym.norm.thm.gen.cond`(a) including the cohort-mean variance term that `cohortStudy()` doesn't account for separately.
 

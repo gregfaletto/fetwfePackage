@@ -512,7 +512,7 @@ test_that("predict() coverage rate is approximately nominal (sanity check)", {
 		coefs <- genCoefs(R = 3, T = 5, density = 0.5, eff_size = 1, d = 2)
 		sim <- simulateData(
 			coefs,
-			N = 200,
+			N = 500,
 			sig_eps_sq = 0.3,
 			sig_eps_c_sq = 0.3
 		)
@@ -548,11 +548,26 @@ test_that("predict() coverage rate is approximately nominal (sanity check)", {
 			sum(p$conf.low <= truth & truth <= p$conf.high, na.rm = TRUE)
 		total <- total + num_treats
 	}
-	# Expect coverage to be somewhere in [0.7, 1.0] on a 60-rep small-N study.
-	# A loose bound matches the paper's empirical findings that finite-sample
-	# coverage may not perfectly match the nominal rate.
+	# Post-execution review #33: tightened from [0.6, 1.0] to
+	# [0.70, 1.0] after fixing three variance-formula blockers.
+	# Empirically, with the correct formula and N=500 over 60 reps,
+	# coverage at x != X_bar_r stabilizes around 0.74-0.85 (mean
+	# ~0.80) across seeds, not 0.95. The shortfall vs. nominal 0.95
+	# tracks back to the paper's variance formula (Eq.
+	# `v.n.r.t.catt.const`) being derived under sample splitting (two
+	# independent panels: one for X_bar_r, one for tau/rho); the
+	# package fits both on the same panel, which introduces a
+	# correlation between (X_bar_r - mu_r) and (rho_hat_rt - rho_rt)
+	# that the formula ignores. Per-cell coverage at x = X_bar_r
+	# (where the rho regression-variance term vanishes) achieves
+	# 0.90-0.98 across the same panel.
+	#
+	# A follow-up that either (a) sample-splits internally for
+	# predict() or (b) adds a covariance correction term to the
+	# variance formula would close this gap. Until then, the
+	# threshold reflects the achievable rate, not the nominal one.
 	cov_rate <- covers / total
-	expect_true(cov_rate >= 0.6, info = paste("coverage =", cov_rate))
+	expect_true(cov_rate >= 0.70, info = paste("coverage =", cov_rate))
 	expect_true(cov_rate <= 1.0)
 })
 
@@ -566,6 +581,284 @@ test_that("predict() output is data-frame-able (dplyr-compatible operations)", {
 	by_row <- aggregate(estimate ~ x_row, data = p, FUN = mean)
 	expect_equal(nrow(by_row), 2L)
 	expect_true("estimate" %in% colnames(by_row))
+})
+
+test_that("predict() warns when fit used se_type = 'cluster' (R2)", {
+	# Post-execution review #33 R2: predict() always reports model-
+	# based SEs. When the fit was made with se_type = 'cluster', that
+	# choice is currently ignored; warn at runtime so users know.
+	set.seed(1)
+	coefs <- genCoefs(R = 3, T = 5, density = 0.5, eff_size = 1, d = 2)
+	sim <- simulateData(
+		coefs,
+		N = 60,
+		sig_eps_sq = 0.5,
+		sig_eps_c_sq = 0.5
+	)
+	res_cluster <- fetwfeWithSimulatedData(
+		sim,
+		verbose = FALSE,
+		se_type = "cluster"
+	)
+	expect_warning(
+		predict(res_cluster),
+		regexp = "cluster-robust"
+	)
+})
+
+test_that("predict() SE at x = X_bar_r matches getGramInv + v_mean (variance regression)", {
+	# Post-execution review #33: catches Bugs A + B (mis-placed psi
+	# entries) at x = X_bar_r where Bug C is masked because x_diff = 0.
+	# The CATT variance at x = X_bar_r should equal the existing per-
+	# (r, t) tau-only variance (computed via getGramInv) plus the
+	# cohort-mean variance term (rho_rt' Cov(X|W=r) rho_rt / N_r).
+	res <- .fitted_fetwfe$res
+	N <- res$N
+	T <- res$T
+	R <- res$R
+	d <- res$d
+	p_dim <- res$p
+	X_final <- res$internal$X_final
+	X_ints <- res$internal$X_ints
+	treat_inds <- res$treat_inds
+	treat_int_inds <- res$treat_int_inds
+	num_treats <- length(treat_inds)
+	sig_eps_sq <- res$sig_eps_sq
+
+	# Reconstruct tau-only v_reg via the existing event_study /
+	# getCohortATTsFinal machinery (getGramInv on the full selected
+	# support, then sub-selected to the tau rows).
+	theta_slopes <- res$internal$theta_hat[-1L]
+	sel_feat_inds <- which(theta_slopes != 0)
+	sel_treat_inds_shifted <- which(theta_slopes[treat_inds] != 0)
+	res_gram <- getGramInv(
+		N = N,
+		T = T,
+		X_final = X_final,
+		sel_feat_inds = sel_feat_inds,
+		treat_inds = treat_inds,
+		num_treats = num_treats,
+		sel_treat_inds_shifted = sel_treat_inds_shifted,
+		calc_ses = TRUE
+	)
+	gram_inv_tau <- res_gram$gram_inv
+
+	first_inds <- getFirstInds(R, T)
+	d_inv_treat <- genInvTwoWayFusionTransformMat(num_treats, first_inds, R)
+	d_inv_treat_sel <- d_inv_treat[, sel_treat_inds_shifted, drop = FALSE]
+
+	# Cohort sizes + within-cohort cov(X)
+	t1_rows <- seq(1L, N * T, by = T)
+	cohort_fe_t1 <- X_ints[t1_rows, 1:R, drop = FALSE]
+	cov_cols <- (R + T - 1 + 1):(R + T - 1 + d)
+	X_t1 <- X_ints[t1_rows, cov_cols, drop = FALSE]
+	unit_cohort <- apply(cohort_fe_t1, 1L, function(row) {
+		if (all(row == 0)) 0L else which(row == 1)[1L]
+	})
+	rho_mat <- matrix(
+		res$beta_hat[treat_int_inds],
+		nrow = num_treats,
+		ncol = d,
+		byrow = TRUE
+	)
+
+	# predict() at X_bar_r (default newdata = NULL): for the row at
+	# x_row = r, cohort = r-th cohort, the SE should match the
+	# reconstructed value.
+	p <- predict(res)
+	c_names <- as.character(res$catt_df$cohort)
+	rt_table <- fetwfe:::.predict_rt_table(
+		R = R,
+		num_treats = num_treats,
+		first_inds = first_inds,
+		cohort_start_times = suppressWarnings(as.integer(c_names))
+	)
+
+	for (k in seq_len(num_treats)) {
+		r_idx <- rt_table$r_idx[k]
+		# Tau-only v_reg via getGramInv path
+		psi_tau <- d_inv_treat_sel[k, ]
+		v_reg_existing <- sig_eps_sq *
+			as.numeric(t(psi_tau) %*% gram_inv_tau %*% psi_tau) /
+			(N * T)
+
+		# v_mean
+		rows_r <- which(unit_cohort == r_idx)
+		N_r <- length(rows_r)
+		if (N_r >= 2L) {
+			cov_X_r <- stats::cov(X_t1[rows_r, , drop = FALSE])
+		} else {
+			cov_X_r <- matrix(0, d, d)
+		}
+		rho_k <- rho_mat[k, ]
+		v_mean <- as.numeric(t(rho_k) %*% cov_X_r %*% rho_k) / N_r
+
+		expected_se <- sqrt(v_reg_existing + v_mean)
+
+		# predict()'s row at x_row = r_idx, cohort = c_names[r_idx],
+		# k-th treatment within the cohort:
+		first_in_r <- first_inds[r_idx]
+		k_within_r <- k - first_in_r + 1L
+		sub <- subset(p, x_row == r_idx & cohort == c_names[r_idx])
+		actual_se <- sub$std.error[k_within_r]
+
+		expect_equal(
+			actual_se,
+			expected_se,
+			tolerance = 1e-6,
+			info = paste0("k=", k, " r=", r_idx)
+		)
+	}
+})
+
+test_that("predict() SE at x != X_bar_r is correct for d != num_treats (Bug C regression)", {
+	# Post-execution review #33: explicitly exercises the
+	# (k, m) decode of the rho block. With R=2, T=4, d=3, we have
+	# num_treats = 5 != d = 3, so the buggy (m - 1) * num_treats + l
+	# decode would land at different positions than the correct
+	# (k - 1) * d + m. At x != X_bar_r, x_diff != 0, so Bug C
+	# manifests.
+	set.seed(73)
+	coefs <- genCoefs(R = 2, T = 4, density = 0.7, eff_size = 1.2, d = 3)
+	sim <- simulateData(
+		coefs,
+		N = 200,
+		sig_eps_sq = 0.4,
+		sig_eps_c_sq = 0.4
+	)
+	res <- fetwfeWithSimulatedData(sim, verbose = FALSE)
+	# Sanity: ensure we actually got d != num_treats.
+	num_treats <- length(res$treat_inds)
+	expect_true(num_treats != res$d)
+	expect_equal(res$d, 3L)
+
+	N <- res$N
+	T <- res$T
+	R <- res$R
+	d <- res$d
+	X_final <- res$internal$X_final
+	X_ints <- res$internal$X_ints
+	treat_inds <- res$treat_inds
+	treat_int_inds <- res$treat_int_inds
+	sig_eps_sq <- res$sig_eps_sq
+
+	# Build the analytical reference via the full-Gram + correctly
+	# placed psi reconstruction.
+	theta_slopes <- res$internal$theta_hat[-1L]
+	sel_feat_inds <- which(theta_slopes != 0)
+	# Need at least some selected rho features for this test to be
+	# meaningful.
+	expect_true(any(sel_feat_inds %in% treat_int_inds))
+
+	X_sel <- X_final[, sel_feat_inds, drop = FALSE]
+	X_sel_c <- scale(X_sel, center = TRUE, scale = FALSE)
+	gram_full_inv <- solve(crossprod(X_sel_c) / (N * T))
+
+	first_inds <- getFirstInds(R, T)
+	d_inv_treat_full <- genInvTwoWayFusionTransformMat(
+		num_treats,
+		first_inds,
+		R
+	)
+
+	sel_treat_block_inds <- sel_feat_inds[sel_feat_inds %in% treat_inds] -
+		(treat_inds[1L] - 1L)
+	sel_treat_int_block_inds <- sel_feat_inds[
+		sel_feat_inds %in% treat_int_inds
+	] -
+		(treat_int_inds[1L] - 1L)
+	in_tau_positions <- which(sel_feat_inds %in% treat_inds)
+	in_rho_positions <- which(sel_feat_inds %in% treat_int_inds)
+
+	# Within-cohort cov + sizes
+	t1_rows <- seq(1L, N * T, by = T)
+	cohort_fe_t1 <- X_ints[t1_rows, 1:R, drop = FALSE]
+	cov_cols <- (R + T - 1 + 1):(R + T - 1 + d)
+	X_t1 <- X_ints[t1_rows, cov_cols, drop = FALSE]
+	unit_cohort <- apply(cohort_fe_t1, 1L, function(row) {
+		if (all(row == 0)) 0L else which(row == 1)[1L]
+	})
+	xbar_r <- matrix(NA_real_, nrow = R, ncol = d)
+	for (r in seq_len(R)) {
+		xbar_r[r, ] <- colMeans(X_t1[unit_cohort == r, , drop = FALSE])
+	}
+	rho_mat <- matrix(
+		res$beta_hat[treat_int_inds],
+		nrow = num_treats,
+		ncol = d,
+		byrow = TRUE
+	)
+
+	# Predict at a user-x that's distinct from each cohort's mean.
+	x_user <- c(0.7, -0.3, 0.4)
+	nd <- data.frame(cov1 = x_user[1], cov2 = x_user[2], cov3 = x_user[3])
+	p_pred <- predict(res, newdata = nd)
+
+	c_names <- as.character(res$catt_df$cohort)
+	rt_table <- fetwfe:::.predict_rt_table(
+		R = R,
+		num_treats = num_treats,
+		first_inds = first_inds,
+		cohort_start_times = suppressWarnings(as.integer(c_names))
+	)
+
+	S_total <- length(sel_feat_inds)
+
+	for (k in seq_len(num_treats)) {
+		r_idx <- rt_table$r_idx[k]
+		x_diff <- x_user - xbar_r[r_idx, ]
+
+		# Correct psi (per the package's (k - 1) * d + m layout)
+		psi <- numeric(S_total)
+		if (length(in_tau_positions) > 0L) {
+			psi[in_tau_positions] <- d_inv_treat_full[
+				k,
+				sel_treat_block_inds
+			]
+		}
+		if (length(in_rho_positions) > 0L) {
+			offset <- sel_treat_int_block_inds
+			m_vec <- ((offset - 1L) %% d) + 1L
+			k_vec <- ((offset - 1L) %/% d) + 1L
+			psi[in_rho_positions] <- x_diff[m_vec] *
+				d_inv_treat_full[k, k_vec]
+		}
+		v_reg_correct <- sig_eps_sq *
+			as.numeric(t(psi) %*% gram_full_inv %*% psi) /
+			(N * T)
+
+		rows_r <- which(unit_cohort == r_idx)
+		N_r <- length(rows_r)
+		cov_X_r <- if (N_r >= 2L) {
+			stats::cov(X_t1[rows_r, , drop = FALSE])
+		} else {
+			matrix(0, d, d)
+		}
+		rho_k <- rho_mat[k, ]
+		v_mean <- as.numeric(t(rho_k) %*% cov_X_r %*% rho_k) / N_r
+
+		expected_se <- sqrt(v_reg_correct + v_mean)
+
+		# Find the predict() row for this k.
+		# p_pred is in (cohort, time) order matching treat_inds k =
+		# 1..num_treats; with a single x_row.
+		actual_se <- p_pred$std.error[k]
+
+		expect_equal(
+			actual_se,
+			expected_se,
+			tolerance = 1e-6,
+			info = paste0(
+				"k=",
+				k,
+				" r=",
+				r_idx,
+				" (d=3, num_treats=",
+				num_treats,
+				")"
+			)
+		)
+	}
 })
 
 test_that("predict() with d = 0 (no covariates) returns nrow(newdata) x num_treats", {
