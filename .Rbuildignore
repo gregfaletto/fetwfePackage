@@ -18,6 +18,7 @@
 ^\.plans$
 ^AGENTS\.md$
 ^paper_arxiv\.tex$
+^paper_coverage_writeup\.tex$
 ^Referee reports$
 ^blog-post
 ^win-results$

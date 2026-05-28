@@ -1357,6 +1357,8 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 		stopifnot(all(!is.na(res$indep_cohort_probs)))
 		att_hat <- res$indep_att_hat
 		att_se <- res$indep_att_se
+		att_var_1 <- res$indep_att_var_1
+		att_var_2 <- res$indep_att_var_2
 		cohort_probs <- res$indep_cohort_probs
 		cohort_probs_overall <- res$indep_cohort_probs_overall
 	} else {
@@ -1370,6 +1372,8 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 
 		att_hat <- res$in_sample_att_hat
 		att_se <- res$in_sample_att_se
+		att_var_1 <- res$in_sample_att_var_1
+		att_var_2 <- res$in_sample_att_var_2
 		cohort_probs <- res$cohort_probs
 		cohort_probs_overall <- res$cohort_probs_overall
 	}
@@ -1377,8 +1381,128 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 	list(
 		att_hat = att_hat,
 		att_se = att_se,
+		att_var_1 = att_var_1,
+		att_var_2 = att_var_2,
 		cohort_probs = cohort_probs,
 		cohort_probs_overall = cohort_probs_overall
+	)
+}
+
+#' @title Assemble the paper-notation variance-components block
+#' @description
+#' Internal helper that maps the package's finite-sample variance pieces
+#' (`att_var_1`, `att_var_2`) onto the paper-notation slots a user would
+#' look up against `paper_arxiv.tex` (issue #141 + #146). The slots:
+#'
+#' * `att_var_1`, `att_var_2`: the same numbers the package has always
+#'   stored internally. `att_var_1 = sigma^2 psi^T G^{-1} psi / (NT)` is
+#'   the regression-coefficient variance contribution; `att_var_2` is the
+#'   propensity-score variance contribution.
+#' * `V_1`, `V_2`: paper-notation per-unit-scaled counterparts. The paper
+#'   uses `V_1 := sigma^2 alpha' Sigma^{-1} alpha` (Kock-2013) and
+#'   `V_2 := v_psi(beta_0, S)` (propensity score). Finite-sample
+#'   correspondence: `Var(hat_T_N) approx V_1 / N`, so the per-unit
+#'   paper-scale `V_1 = N * att_var_1` (likewise `V_2 = N * att_var_2`).
+#'   Note: when `se_type = "cluster"`, `V_1` is the Liang-Zeger
+#'   cluster-sandwich quadratic form rather than the Kock-2013 model-
+#'   based formula; the `V_1 + V_2` combination structure is the same.
+#'   See `vignettes/inference_vignette.Rmd` section 4 for the
+#'   cluster-path V_1 definition.
+#' * `tilde_v_N`, `hat_v_N`: paper-notation unit-scaled (`tilde_v_N`) and
+#'   un-scaled (`hat_v_N`) total variance, where `tilde_v_N := hat_v_N / T`
+#'   (paper line 2004). The Wald CI is
+#'   `[hat_T_N +- qnorm(1-alpha/2) * sqrt(tilde_v_N / N)]`
+#'   (paper Eq. `conf.int.form`, line 1259), so `att_se = sqrt(tilde_v_N / N)`.
+#'   The combination matches the value used to compute `att_se`:
+#'   tight `att_var_1 + att_var_2` under the default `(Psi-IF)`-satisfying
+#'   path, conservative `att_var_1 + att_var_2 + 2 sqrt(att_var_1 * att_var_2)`
+#'   under `se_type = "conservative"`.
+#' * `tilde_v_N_C`, `tilde_v_N_C_pi_hat`, `tilde_v_N_C_pi_hat_cons`,
+#'   `tilde_v_N_cons`: the unit-scaled counterparts of the paper's six
+#'   variance estimators catalogued at line 2006. `tilde_v_N_C` corresponds
+#'   to the fixed-pi exact variance (paper Eq. `v.n.r.t.att.const`), equal
+#'   to `N * att_var_1`. `tilde_v_N_C_pi_hat` is the random-pi exact
+#'   variance (paper Eq. `v.n.r.t.att.rand`), equal to `N * (att_var_1 +
+#'   att_var_2)`. `tilde_v_N_C_pi_hat_cons` is the random-pi conservative
+#'   variance (paper Eq. `v.n.r.t.att.rand.cons`), equal to `N *
+#'   (att_var_1 + att_var_2 + 2 sqrt(att_var_1 * att_var_2))`.
+#'   `tilde_v_N_cons` is the subgaussian conservative variance from paper
+#'   Eq. `var.est.kock.wooldridge.subgauss.cons`; numerically identical to
+#'   `tilde_v_N_C_pi_hat_cons` at the per-cohort-proportions weighting.
+#' @param att_var_1 Numeric scalar (or NA); first variance term.
+#' @param att_var_2 Numeric scalar (or NA); second variance term.
+#' @param N Integer; sample size.
+#' @param T Integer; time periods.
+#' @param se_type Character; one of `"default"`, `"conservative"`,
+#'   `"cluster"`. Drives the `tilde_v_N` / `hat_v_N` combination.
+#' @param indep_counts_used Logical; if `TRUE`, the two-sample exact
+#'   formula (tight Gaussian) is in force regardless of `se_type`.
+#' @return A named list of variance-components slots. When `att_var_1`
+#'   and `att_var_2` are both NA (the no-SE path), every slot is NA.
+#' @keywords internal
+#' @noRd
+.build_variance_components <- function(
+	att_var_1,
+	att_var_2,
+	N,
+	T,
+	se_type,
+	indep_counts_used
+) {
+	if (is.na(att_var_1) || is.na(att_var_2)) {
+		return(list(
+			att_var_1 = NA_real_,
+			att_var_2 = NA_real_,
+			V_1 = NA_real_,
+			V_2 = NA_real_,
+			tilde_v_N = NA_real_,
+			hat_v_N = NA_real_,
+			tilde_v_N_C = NA_real_,
+			tilde_v_N_C_pi_hat = NA_real_,
+			tilde_v_N_C_pi_hat_cons = NA_real_,
+			tilde_v_N_cons = NA_real_,
+			se_type = se_type,
+			indep_counts_used = indep_counts_used
+		))
+	}
+
+	# Tight Gaussian (Theorem (c'), independent two-sample case) and
+	# Cauchy-Schwarz conservative bound (Theorem (c)) -- the two same-data
+	# combinations the package exposes.
+	att_var_tight <- att_var_1 + att_var_2
+	att_var_cons <- att_var_1 +
+		att_var_2 +
+		2 * sqrt(att_var_1 * att_var_2)
+
+	# Which combination is the headline `att_se`? `att_se = sqrt(<this> / N) * N`
+	# below, i.e., `tilde_v_N = N * <this>`. Per paper line 1259, the Wald CI
+	# half-width is `qnorm * sqrt(tilde_v_N / N)`, matching `att_se` exactly.
+	att_var_headline <- if (
+		indep_counts_used || !identical(se_type, "conservative")
+	) {
+		att_var_tight
+	} else {
+		att_var_cons
+	}
+
+	V_1 <- N * att_var_1
+	V_2 <- N * att_var_2
+	tilde_v_N <- N * att_var_headline
+	hat_v_N <- T * tilde_v_N
+
+	list(
+		att_var_1 = att_var_1,
+		att_var_2 = att_var_2,
+		V_1 = V_1,
+		V_2 = V_2,
+		tilde_v_N = tilde_v_N,
+		hat_v_N = hat_v_N,
+		tilde_v_N_C = N * att_var_1,
+		tilde_v_N_C_pi_hat = N * att_var_tight,
+		tilde_v_N_C_pi_hat_cons = N * att_var_cons,
+		tilde_v_N_cons = N * att_var_cons,
+		se_type = se_type,
+		indep_counts_used = indep_counts_used
 	)
 }
 

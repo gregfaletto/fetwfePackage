@@ -25,9 +25,14 @@ utils::globalVariables(c("event_time", "estimate", "ci_low", "ci_high"))
 #' `var_2(e)` from cohort-probability noise (analog of the existing
 #' `getSecondVarTermOLS` / `getSecondVarTermDataApp` machinery, with the
 #' multinomial Jacobian restricted to cohorts valid at event time `e`).
-#' Combined as `sqrt(var_1 + var_2)` when `indep_counts` was supplied to the
-#' fit (asymptotically exact), else the conservative Cauchy-Schwarz bound
-#' `sqrt(var_1 + var_2 + 2 sqrt(var_1 * var_2))`.
+#' Combined as `sqrt(var_1 + var_2)` by default (asymptotically exact
+#' under paper Theorem `te.asym.norm.thm`(c′) / Assumption (Ψ-IF), which
+#' the package's default cohort-sample-proportions estimator satisfies);
+#' the conservative Cauchy-Schwarz bound `sqrt(var_1 + var_2 +
+#' 2 sqrt(var_1 * var_2))` is available via `se_type = "conservative"`
+#' (for users with non-(Ψ-IF) propensity-score estimators). When
+#' `indep_counts` was supplied at fit time, the tight formula applies
+#' regardless of `se_type` (two-sample regime, Theorem (b)).
 #'
 #' @param x A fitted object of class `"fetwfe"`, `"etwfe"`, or `"betwfe"`.
 #' @param alpha (Optional) Significance level for confidence intervals.
@@ -245,8 +250,13 @@ eventStudy <- function(x, alpha = NULL) {
 			)
 		}
 
-		# Combine
-		if (is_indep) {
+		# Combine the two variance pieces. Mirrors the overall-ATT logic in
+		# `getTeResultsOLS()` / `getTeResults2()` (R/variance_machinery.R):
+		# the tight Gaussian formula is the default for the same-data path
+		# under (Psi-IF) (Theorem (c$'$), paper line 1233 onwards); the
+		# Cauchy-Schwarz upper bound is opt-in via `se_type = "conservative"`
+		# for the rare non-(Psi-IF) propensity-score-estimator case.
+		if (is_indep || !identical(se_type, "conservative")) {
 			ses[k] <- sqrt(var_1_e + var_2_e)
 		} else {
 			ses[k] <- sqrt(var_1_e + var_2_e + 2 * sqrt(var_1_e * var_2_e))
@@ -434,7 +444,11 @@ eventStudy <- function(x, alpha = NULL) {
 			R = R
 		)
 
-		if (is_indep) {
+		# Combine the two variance pieces (see matching comment in
+		# `.event_study_etwfe_betwfe` above): tight Gaussian by default
+		# under (Psi-IF), conservative bound only via `se_type =
+		# "conservative"`.
+		if (is_indep || !identical(se_type, "conservative")) {
 			ses[k] <- sqrt(var_1_e + var_2_e)
 		} else {
 			ses[k] <- sqrt(var_1_e + var_2_e + 2 * sqrt(var_1_e * var_2_e))

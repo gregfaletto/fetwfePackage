@@ -340,11 +340,13 @@ getBetaBIC <- function(fit, N, T, p, X_mod, y, scale_center, scale_scale) {
 #'   95% CIs). Default is 0.05.
 #' @param add_ridge (Optional) Logical; if `TRUE`, adds a small L2 penalty to
 #'   the untransformed coefficients to stabilize estimation. Default is `FALSE`.
-#' @param se_type Character; the standard-error type, one of `"default"` (the
-#'   package's Assumption-F1-based standard error from the paper) or `"cluster"`
-#'   (an experimental unit-clustered Liang-Zeger sandwich SE on the
-#'   bridge-selected support). See the exported wrapper `fetwfe()` for details.
-#'   Default is `"default"`.
+#' @param se_type Character; the standard-error type, one of `"default"`
+#'   (tight Gaussian variance under (Psi-IF), Theorem (c$'$)),
+#'   `"conservative"` (Cauchy-Schwarz upper bound from Theorem (c) for
+#'   non-(Psi-IF) propensity estimators), or `"cluster"` (experimental
+#'   unit-clustered Liang-Zeger sandwich SE on the bridge-selected
+#'   support). See the exported wrapper `fetwfe()` for details. Default
+#'   is `"default"`.
 #'
 #' @details
 #' The function executes the following main steps:
@@ -453,7 +455,10 @@ fetwfe_core <- function(
 	add_ridge = FALSE,
 	se_type = "default"
 ) {
-	se_type <- match.arg(se_type, c("default", "cluster"))
+	se_type <- match.arg(
+		se_type,
+		c("default", "conservative", "cluster")
+	)
 	ret <- check_etwfe_core_inputs(
 		in_sample_counts = in_sample_counts,
 		N = N,
@@ -840,6 +845,8 @@ fetwfe_core <- function(
 	in_sample_att_hat <- in_sample_te_results$att_hat
 	in_sample_att_se <- in_sample_te_results$att_te_se
 	in_sample_att_se_no_prob <- in_sample_te_results$att_te_se_no_prob
+	in_sample_att_var_1 <- in_sample_te_results$att_var_1
+	in_sample_att_var_2 <- in_sample_te_results$att_var_2
 
 	if ((q < 1) & calc_ses) {
 		stopifnot(!is.na(in_sample_att_se))
@@ -870,17 +877,25 @@ fetwfe_core <- function(
 		)
 		indep_att_hat <- indep_te_results$att_hat
 		indep_att_se <- indep_te_results$att_te_se
+		indep_att_var_1 <- indep_te_results$att_var_1
+		indep_att_var_2 <- indep_te_results$att_var_2
 	} else {
 		indep_att_hat <- NA
 		indep_att_se <- NA
+		indep_att_var_1 <- NA
+		indep_att_var_2 <- NA
 	}
 
 	return(list(
 		in_sample_att_hat = in_sample_att_hat,
 		in_sample_att_se = in_sample_att_se,
 		in_sample_att_se_no_prob = in_sample_att_se_no_prob,
+		in_sample_att_var_1 = in_sample_att_var_1,
+		in_sample_att_var_2 = in_sample_att_var_2,
 		indep_att_hat = indep_att_hat,
 		indep_att_se = indep_att_se,
+		indep_att_var_1 = indep_att_var_1,
+		indep_att_var_2 = indep_att_var_2,
 		catt_hats = cohort_tes, # Already named if applicable from getCohortATTsFinal
 		catt_ses = cohort_te_ses, # Already named if applicable
 		catt_df = cohort_te_df,

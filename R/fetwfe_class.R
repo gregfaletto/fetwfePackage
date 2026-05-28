@@ -120,7 +120,8 @@ print.summary.fetwfe <- function(x, ...) {
 	"X_final",
 	"y_final",
 	"theta_hat",
-	"calc_ses"
+	"calc_ses",
+	"variance_components"
 )
 
 #' @title Validate a `fetwfe`-classed object's contracts

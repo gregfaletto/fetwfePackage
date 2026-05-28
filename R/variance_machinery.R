@@ -28,11 +28,17 @@
 #' @param calc_ses Logical; if `TRUE`, calculate standard errors.
 #' @param indep_probs Logical; if `TRUE`, assumes `cohort_probs` (and
 #'   `cohort_probs_overall`) were estimated from an independent sample, leading
-#'   to a different SE formula (sum of variances) compared to when they are
-#'   estimated from the same sample (conservative SE including a covariance term).
-#' @param se_type Character; one of `"default"` (model-based SE) or `"cluster"`
-#'   (experimental unit-clustered Liang-Zeger sandwich SE). Default
-#'   `"default"`.
+#'   to the asymptotically-exact two-sample SE formula `sqrt(att_var_1 +
+#'   att_var_2)`. When `FALSE`, the same-data SE combination is governed by
+#'   `se_type`: `"default"` returns the tight Gaussian SE `sqrt(att_var_1 +
+#'   att_var_2)` from Theorem (c$'$) under (Psi-IF); `"conservative"` returns
+#'   the Cauchy-Schwarz upper bound from part (c).
+#' @param se_type Character; one of `"default"` (tight Gaussian variance under
+#'   (Psi-IF), Theorem (c$'$)), `"conservative"` (Cauchy-Schwarz upper bound
+#'   from Theorem (c) for non-(Psi-IF) propensity estimators), or `"cluster"`
+#'   (experimental unit-clustered Liang-Zeger sandwich SE; overrides the
+#'   model-based `V_1` only, still uses the tight `V_1 + V_2` combination).
+#'   Default `"default"`.
 #' @param sandwich_full Numeric matrix (or `NULL`); the full cluster-robust
 #'   sandwich variance on the selected support, as returned by
 #'   `getCohortATTsFinal()`. Required when `se_type = "cluster"` and
@@ -47,6 +53,13 @@
 #'   \item{att_te_se_no_prob}{Numeric scalar; standard error for `att_hat`
 #'     ignoring variability from estimating cohort probabilities (i.e., only
 #'     `att_var_1`). NA if `calc_ses` is `FALSE`.}
+#'   \item{att_var_1}{Numeric scalar; the Kock-2013 regression-coefficient
+#'     variance contribution. Maps to paper's `V_1 := sigma^2 * alpha' * Sigma^{-1} * alpha`
+#'     up to `Var(hat_T_N) approx V_1 / N` (so `V_1 = N * att_var_1` at the
+#'     per-unit scale paper notation uses). NA if `calc_ses` is `FALSE`.}
+#'   \item{att_var_2}{Numeric scalar; the propensity-score variance
+#'     contribution. Maps to paper's `V_2 := v_psi(beta_0, S)` analogously.
+#'     NA if `calc_ses` is `FALSE`.}
 #' @details The overall ATT (`att_hat`) is `cohort_tes %*% cohort_probs`.
 #'   If `calc_ses` is `TRUE`:
 #'   - `att_var_1` (variance from `theta_hat` estimation) is computed using
@@ -54,10 +67,25 @@
 #'     `se_type = "cluster"`, using the zero-padded `psi_att_full` against
 #'     `sandwich_full`).
 #'   - `att_var_2` (variance from cohort probability estimation) is computed by
-#'     calling `getSecondVarTermDataApp`. It is unchanged under
-#'     `se_type = "cluster"`.
-#'   - `att_te_se` is `sqrt(att_var_1 + att_var_2)` if `indep_probs` is `TRUE`,
-#'     otherwise it's a conservative SE: `sqrt(att_var_1 + att_var_2 + 2*sqrt(att_var_1 * att_var_2))`.
+#'     calling `getSecondVarTermOLS`. It is unchanged across `se_type` values.
+#'   - When `indep_probs = TRUE`, the two pieces are independent and
+#'     `att_te_se = sqrt(att_var_1 + att_var_2)` is asymptotically exact.
+#'   - When `indep_probs = FALSE` (the common same-data case), the
+#'     combination depends on `se_type`:
+#'     * `"default"` (or `"cluster"`) uses the tight Gaussian variance
+#'       `sqrt(att_var_1 + att_var_2)`, asymptotically exact under the paper's
+#'       Theorem `te.asym.norm.thm`(c$'$) and Assumption (Psi-IF). Paper line
+#'       1233 onwards. (Psi-IF) is satisfied by the package's default cohort
+#'       sample-proportions estimator `hat_pi_r = N_r / N`, by multinomial
+#'       logit, by any GLM on `W | X`, and by kernel/series regression of
+#'       `1{W = r}` on `X`.
+#'     * `"conservative"` uses the Cauchy-Schwarz upper bound
+#'       `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from
+#'       Theorem (c) of the paper. This is the right tool only when the
+#'       propensity-score estimator violates (Psi-IF) -- e.g.,
+#'       Robins-Rotnitzky-augmented doubly-robust estimators that augment the
+#'       propensity score with outcome residuals -- which the package does not
+#'       currently implement.
 #'   - `att_te_se_no_prob` is `sqrt(att_var_1)`.
 #' @keywords internal
 #' @noRd
@@ -81,7 +109,10 @@ getTeResultsOLS <- function(
 	sandwich_full = NULL,
 	treat_block_mask = NULL
 ) {
-	se_type <- match.arg(se_type, c("default", "cluster"))
+	se_type <- match.arg(
+		se_type,
+		c("default", "conservative", "cluster")
+	)
 
 	att_hat <- as.numeric(cohort_tes %*% cohort_probs)
 
@@ -138,7 +169,15 @@ getTeResultsOLS <- function(
 			R = R
 		)
 
-		if (indep_probs) {
+		# Combine the two variance pieces. The independent-sample case
+		# (`indep_probs = TRUE`) and the same-data (Psi-IF)-satisfying case
+		# (`se_type %in% c("default", "cluster")`) both use the tight
+		# Gaussian formula `att_var_1 + att_var_2`. The conservative
+		# Cauchy-Schwarz fallback is reserved for the same-data
+		# non-(Psi-IF) case via `se_type = "conservative"`. See
+		# Theorem `te.asym.norm.thm`(c$'$) and Assumption (Psi-IF)
+		# (`paper_arxiv.tex` ~ line 1233 and ~ line 2013).
+		if (indep_probs || !identical(se_type, "conservative")) {
 			att_te_se <- sqrt(att_var_1 + att_var_2)
 		} else {
 			att_te_se <- sqrt(
@@ -155,12 +194,16 @@ getTeResultsOLS <- function(
 	} else {
 		att_te_se <- NA
 		att_te_se_no_prob <- NA
+		att_var_1 <- NA
+		att_var_2 <- NA
 	}
 
 	return(list(
 		att_hat = att_hat,
 		att_te_se = att_te_se,
-		att_te_se_no_prob = att_te_se_no_prob
+		att_te_se_no_prob = att_te_se_no_prob,
+		att_var_1 = att_var_1,
+		att_var_2 = att_var_2
 	))
 }
 
@@ -542,9 +585,12 @@ getPsiRUnfused <- function(
 #'   `cohort_probs_overall`) were estimated from an independent sample, leading
 #'   to a different SE formula (sum of variances) compared to when they are
 #'   estimated from the same sample (conservative SE including a covariance term).
-#' @param se_type Character; one of `"default"` (Assumption-F1 model-based SE)
-#'   or `"cluster"` (experimental unit-clustered Liang-Zeger sandwich SE).
-#'   Default `"default"`.
+#' @param se_type Character; one of `"default"` (tight Gaussian variance under
+#'   Assumption (Psi-IF), Theorem (c$'$)), `"conservative"` (Cauchy-Schwarz
+#'   upper bound from Theorem (c) for non-(Psi-IF) propensity estimators), or
+#'   `"cluster"` (experimental unit-clustered Liang-Zeger sandwich SE;
+#'   overrides the model-based `V_1` only, still uses the tight `V_1 + V_2`
+#'   combination). Default `"default"`.
 #' @param sandwich_full Numeric matrix (or `NULL`); the full cluster-robust
 #'   sandwich variance on the selected support, as returned by
 #'   `getCohortATTsFinal()`. Required when `se_type = "cluster"` and
@@ -560,6 +606,12 @@ getPsiRUnfused <- function(
 #'   \item{att_te_se_no_prob}{Numeric scalar; standard error for `att_hat`
 #'     ignoring variability from estimating cohort probabilities (i.e., only
 #'     `att_var_1`). NA if `calc_ses` is `FALSE`.}
+#'   \item{att_var_1}{Numeric scalar; the Kock-2013 regression-coefficient
+#'     variance contribution. Maps to paper's `V_1 := sigma^2 * alpha' * Sigma^{-1} * alpha`
+#'     (per-unit-scale `V_1 = N * att_var_1`). NA if `calc_ses` is `FALSE`.}
+#'   \item{att_var_2}{Numeric scalar; the propensity-score variance
+#'     contribution. Maps to paper's `V_2 := v_psi(beta_0, S)`. NA if
+#'     `calc_ses` is `FALSE`.}
 #' @details The overall ATT (`att_hat`) is `cohort_tes %*% cohort_probs`.
 #'   If `calc_ses` is `TRUE`:
 #'   - `att_var_1` (variance from `theta_hat` estimation) is computed using
@@ -567,16 +619,28 @@ getPsiRUnfused <- function(
 #'     `se_type = "cluster"`, via the zero-padded `psi_att_full` against
 #'     `sandwich_full`).
 #'   - `att_var_2` (variance from cohort probability estimation) is computed by
-#'     calling `getSecondVarTermDataApp`. It is unchanged under
-#'     `se_type = "cluster"`.
-#'   - `att_te_se` is `sqrt(att_var_1 + att_var_2)` if `indep_probs` is `TRUE`,
-#'     otherwise it's a conservative SE: `sqrt(att_var_1 + att_var_2 + 2*sqrt(att_var_1 * att_var_2))`.
+#'     calling `getSecondVarTermDataApp`. It is unchanged across `se_type`
+#'     values.
+#'   - When `indep_probs = TRUE`, the two pieces are independent and
+#'     `att_te_se = sqrt(att_var_1 + att_var_2)` is asymptotically exact.
+#'   - When `indep_probs = FALSE` (the common same-data case), the
+#'     combination depends on `se_type`:
+#'     * `"default"` (or `"cluster"`) uses the tight Gaussian variance
+#'       `sqrt(att_var_1 + att_var_2)`, asymptotically exact under the paper's
+#'       Theorem `te.asym.norm.thm`(c$'$) and Assumption (Psi-IF). Paper line
+#'       1233 onwards.
+#'     * `"conservative"` uses the Cauchy-Schwarz upper bound
+#'       `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from
+#'       Theorem (c). This is the right tool only when the propensity-score
+#'       estimator violates (Psi-IF) -- e.g., Robins-Rotnitzky-augmented
+#'       doubly-robust estimators -- which the package does not currently
+#'       implement.
 #'   - `att_te_se_no_prob` is `sqrt(att_var_1)`.
 #'
-#' `indep_probs = TRUE` implements the independent-sample
-#' variance (`att_var_1 + att_var_2`);
-#' `indep_probs = FALSE` returns the conservative bound
-#' `att_var_1 + att_var_2 + 2sqrt(att_var_1*att_var_2)`.
+#' Prior to v1.12.0, the same-data path returned the conservative
+#' Cauchy-Schwarz upper bound as the default. The headline change in v1.12.0
+#' is that the tight Gaussian formula is now the default; the Cauchy-Schwarz
+#' bound is reachable via `se_type = "conservative"`.
 #'
 #' All matrices required for Term 2 are produced upstream:
 #' * `psi_mat` from \code{getCohortATTsFinal()}
@@ -609,7 +673,10 @@ getTeResults2 <- function(
 	sandwich_full = NULL,
 	treat_block_mask = NULL
 ) {
-	se_type <- match.arg(se_type, c("default", "cluster"))
+	se_type <- match.arg(
+		se_type,
+		c("default", "conservative", "cluster")
+	)
 
 	stopifnot(all(!is.na(cohort_probs)))
 
@@ -677,8 +744,17 @@ getTeResults2 <- function(
 
 		stopifnot(!is.na(att_var_2))
 
-		# Combine the two variance terms
-		if (indep_probs) {
+		# Combine the two variance pieces. The independent-sample case
+		# (`indep_probs = TRUE`) and the same-data (Psi-IF)-satisfying case
+		# (`se_type %in% c("default", "cluster")`) both use the tight
+		# Gaussian formula `att_var_1 + att_var_2`. The conservative
+		# Cauchy-Schwarz fallback is reserved for the same-data
+		# non-(Psi-IF) case via `se_type = "conservative"`. See
+		# Theorem `te.asym.norm.thm`(c$'$) and Assumption (Psi-IF)
+		# (`paper_arxiv.tex` ~ line 1233 and ~ line 2013). Prior to v1.12.0
+		# the same-data path defaulted to the Cauchy-Schwarz bound regardless
+		# of (Psi-IF); v1.12.0 inverted that default.
+		if (indep_probs || !identical(se_type, "conservative")) {
 			att_te_se <- sqrt(att_var_1 + att_var_2)
 		} else {
 			att_te_se <- sqrt(
@@ -695,12 +771,16 @@ getTeResults2 <- function(
 	} else {
 		att_te_se <- NA
 		att_te_se_no_prob <- NA
+		att_var_1 <- NA
+		att_var_2 <- NA
 	}
 
 	return(list(
 		att_hat = att_hat,
 		att_te_se = att_te_se,
-		att_te_se_no_prob = att_te_se_no_prob
+		att_te_se_no_prob = att_te_se_no_prob,
+		att_var_1 = att_var_1,
+		att_var_2 = att_var_2
 	))
 }
 
@@ -1062,9 +1142,15 @@ getSecondVarTermDataApp <- function(
 #'   New in 1.9.27.
 #' @param alpha Numeric scalar; significance level for confidence intervals
 #'   (e.g., 0.05 for 95% CIs).
-#' @param se_type Character; one of `"default"` (Assumption-F1 model-based SE)
-#'   or `"cluster"` (experimental unit-clustered Liang-Zeger sandwich SE on
-#'   the OLS-on-selected-support residuals). Default `"default"`.
+#' @param se_type Character; one of `"default"` (tight Gaussian variance under
+#'   (Psi-IF), Theorem (c$'$)), `"conservative"` (Cauchy-Schwarz upper bound
+#'   from Theorem (c) for non-(Psi-IF) propensity estimators), or `"cluster"`
+#'   (experimental unit-clustered Liang-Zeger sandwich SE on the
+#'   OLS-on-selected-support residuals). Default `"default"`. Note that
+#'   `se_type` affects only the overall-ATT variance combination in
+#'   `getTeResults2()` / `getTeResultsOLS()`; cohort-specific SEs computed
+#'   here are governed by `se_type %in% c("default", "conservative")` (the
+#'   model-based formula) vs `se_type = "cluster"` (the sandwich path).
 #' @param y_final Numeric vector; the (fusion-then-)GLS-transformed response of
 #'   length `N*T` (or `N*T + p` if a ridge augmentation was applied upstream).
 #'   Required when `se_type = "cluster"` and `calc_ses = TRUE`; ignored
@@ -1142,7 +1228,10 @@ getCohortATTsFinal <- function(
 	se_type = "default",
 	y_final = NULL
 ) {
-	se_type <- match.arg(se_type, c("default", "cluster"))
+	se_type <- match.arg(
+		se_type,
+		c("default", "conservative", "cluster")
+	)
 
 	stopifnot(max(sel_treat_inds_shifted) <= num_treats)
 	stopifnot(min(sel_treat_inds_shifted) >= 1)

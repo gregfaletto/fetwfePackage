@@ -1,5 +1,5 @@
 ---
-title: "Standard errors in fetwfe: Assumption F1 and the experimental cluster-robust option"
+title: "Standard errors in fetwfe: tight Gaussian CIs, the conservative fallback, and the experimental cluster option"
 author: "Gregory Faletto"
 date: "`r Sys.Date()`"
 output:
@@ -8,7 +8,7 @@ output:
     math_method: "mathml"
     output_file: "FETWFE_Inference_Vignette.html"
 vignette: >
-  %\VignetteIndexEntry{Standard errors in fetwfe: Assumption F1 and the experimental cluster-robust option}
+  %\VignetteIndexEntry{Standard errors in fetwfe: tight Gaussian CIs, the conservative fallback, and the experimental cluster option}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -24,62 +24,184 @@ knitr::opts_chunk$set(
 library(fetwfe)
 ```
 
-This vignette documents how `fetwfe()`, `betwfe()`, `etwfe()`, and `twfeCovs()` compute their standard errors, what assumptions those standard errors rely on, and how to opt into an *experimental* unit-clustered alternative when the default assumptions look restrictive. The four estimators share the same inferential machinery, so the discussion applies to all of them; we use `fetwfe()` in the running example.
+This vignette documents how `fetwfe()`, `betwfe()`, `etwfe()`, and `twfeCovs()` compute their standard errors, what assumptions those standard errors rely on, and the three values `se_type` can take. The four estimators share the same inferential machinery, so the discussion applies to all of them; we use `fetwfe()` in the running example.
 
-# 1. What `att_se` and `catt_ses` are under Assumption F1
+# 1. The headline: tight Gaussian CIs by default under (Ψ-IF)
 
-By default, the package's standard errors --- the `att_se` slot on the returned object and the entries of `catt_ses` --- are computed under paper Assumption F1 (Faletto 2025, [arXiv:2312.05985](https://arxiv.org/abs/2312.05985)). In words, F1 says:
-
-* **Mean zero idiosyncratic shocks.** Conditional on the unit random effect $c_i$, the cohort assignment $W_i$, and the covariates $X_i$, each observation-level error $u_{it}$ has mean zero.
-* **Compound-symmetric covariance.** $\mathrm{Var}(u_{i\cdot} \mid c_i, W_i, X_i) = \sigma_\varepsilon^2 I_T$. That is, the package allows for a unit-level random effect $c_i$ (estimated as `sig_eps_c_sq`) but assumes **no within-unit serial correlation beyond that random effect**, and the idiosyncratic variance $\sigma_\varepsilon^2$ (estimated as `sig_eps_sq`) is the same across units.
-* **Independent units.** The $N$ units are i.i.d. draws.
-
-Under F1, the regression-coefficient covariance contribution to the ATT standard error is
+By default, the package's standard errors --- the `att_se` slot on the returned object and the entries of `catt_ses` --- are the *tight Gaussian variance* from the paper's Theorem `te.asym.norm.thm`(c$'$), valid under the influence-function condition (Ψ-IF) (Faletto 2025, [arXiv:2312.05985](https://arxiv.org/abs/2312.05985), Assumption (Ψ-IF) at paper Eq. `psi.if.assum`). The combined ATT variance has two pieces,
 
 $$
-\mathrm{Var}_1(\widehat{\tau}_{\text{ATT}})
+V_1 \;=\; \sigma_\varepsilon^2 \, \boldsymbol{\alpha}^\top \boldsymbol{\Sigma}^{-1} \boldsymbol{\alpha},
+\qquad
+V_2 \;=\; v_\psi(\boldsymbol{\beta}_0, \mathcal{S}),
+$$
+
+where $V_1$ is the Kock-2013 regression-coefficient variance contribution and $V_2$ is the propensity-score variance contribution; the names $V_1$ and $V_2$ are the paper's, and the package exposes both of them by name on the fitted object under `result$internal$variance_components`. Theorem (c$'$) shows that under (Ψ-IF) the same-data confidence interval is asymptotically Gaussian with the **tight** variance $V_1 + V_2$, *identical to the independent-data variance* in part (b) of the theorem. Concretely, the package returns
+
+$$
+\widehat{\text{SE}}(\hat{\tau}_{\text{ATT}})
+\;=\;
+\sqrt{\widehat{\text{Var}}_1 + \widehat{\text{Var}}_2}
+\;=\;
+\sqrt{\tilde{v}_N \,/\, N},
+$$
+
+where $\tilde{v}_N := \hat{v}_N / T$ is the unit-scaled paper-notation variance estimator (paper line 2004), and the Wald confidence interval is
+
+$$
+\text{CI}_N(\tilde{v}_N;\,\alpha)
+\;=\;
+\left[\,
+\hat{T}_N \;\pm\; z_{1 - \alpha/2}\,\sqrt{\tilde{v}_N \,/\, N}
+\,\right]
+$$
+
+per paper Eq. `conf.int.form` (line 1259). The same combined variance backs the per-cohort entries of `catt_ses` and the `catt_df` confidence-interval columns.
+
+## 1.1 Which propensity-score estimators satisfy (Ψ-IF)?
+
+Assumption (Ψ-IF) requires the cohort-weight estimator $\widehat{\boldsymbol{\psi}}_N$ to admit an i.i.d.-across-$i$ unit-level influence-function representation. It is satisfied by
+
+* **Cohort sample proportions** $\widehat{\pi}_r = N_r / N$ --- the package's *default* propensity-score estimator. So out of the box the tight Gaussian CI is asymptotically exact.
+* **Multinomial-logit MLE** for $P(W = r \mid \boldsymbol{X})$.
+* **Any GLM** fit by maximum likelihood on $W \mid \boldsymbol{X}$.
+* **Kernel or series regression** of $\mathbf{1}\{W = r\}$ on $\boldsymbol{X}$.
+
+(See the discussion at paper line 1268: "When (Ψ-IF) holds --- which is the case for every standard parametric or semi-parametric propensity-score estimator listed in Remark `psi.if.coverage` (cohort sample proportions, multinomial logit, any GLM, kernel/series regression) --- Theorem `te.asym.norm.thm`(c$'$) gives asymptotic Gaussianity with the tight variance $V_1 + V_2$.")
+
+The (Ψ-IF) condition fails for **Robins-Rotnitzky-style augmented doubly-robust estimators** that augment the propensity score with outcome residuals. The package does not currently implement these; when it does, users will be able to opt out of the tight CI via `se_type = "conservative"` (see Section 3).
+
+## 1.2 What changed in v1.12.0
+
+Versions $\le$ 1.11.7 of the package returned the *conservative* Cauchy-Schwarz upper bound
+
+$$
+\widehat{\text{SE}}(\hat{\tau}_{\text{ATT}})
+\;=\;
+\sqrt{\widehat{\text{Var}}_1 + \widehat{\text{Var}}_2 + 2\sqrt{\widehat{\text{Var}}_1\,\widehat{\text{Var}}_2}}
+$$
+
+as the same-data default (from paper Theorem (c)). Theorem (c$'$) was added in the paper's same-data Gaussianity upgrade, and v1.12.0 switches the package default to match: the tight Gaussian variance is now the headline number. The conservative formula remains available as an opt-in fallback (Section 3) for any users whose propensity-score estimator violates (Ψ-IF).
+
+# 2. The two variance pieces and how the package exposes them
+
+The combined ATT variance decomposes as $V_1 + V_2$, with both pieces estimated by the package and exposed as named slots.
+
+## 2.1 $V_1$: regression-coefficient variance
+
+The regression-coefficient piece is
+
+$$
+\widehat{\text{Var}}_1
 \;=\;
 \frac{\sigma_\varepsilon^2}{NT}\;\psi_{\text{att}}^\top \widehat G^{-1} \psi_{\text{att}},
 $$
 
-where $\widehat G^{-1}$ is the Gram inverse on the bridge-selected support and $\psi_{\text{att}}$ encodes the cohort-weighted ATT contrast. The cohort-specific SEs (`catt_ses`) have the same form with a cohort selector $\psi_r$ in place of $\psi_{\text{att}}$.
+where $\widehat G^{-1}$ is the Gram inverse on the bridge-selected support and $\psi_{\text{att}}$ encodes the cohort-weighted ATT contrast. The per-cohort SEs (`catt_ses`) have the same form with a cohort selector $\psi_r$ in place of $\psi_{\text{att}}$. This piece is stored on the fitted object as `result$internal$variance_components$att_var_1`; the paper-notation per-unit-scaled version is `result$internal$variance_components$V_1` (with `V_1 = N * att_var_1`).
 
-The overall ATT carries a second variance term, $\mathrm{Var}_2$, that comes from estimating the cohort-membership probabilities $\widehat\pi_r$. This term scales like $1/N$ and is unrelated to the regression residuals.
+## 2.2 $V_2$: propensity-score variance
 
-* If you pass `indep_counts`, the package treats the cohort-membership counts as coming from an independent split, so the two variance terms simply add: $\mathrm{Var}_1 + \mathrm{Var}_2$ is asymptotically exact.
-* If `indep_counts` is omitted (the common case), the package returns the conservative Cauchy-Schwarz bound $\mathrm{Var}_1 + \mathrm{Var}_2 + 2\sqrt{\mathrm{Var}_1\,\mathrm{Var}_2}$, which is valid under any covariance between the two pieces.
+The propensity-score piece accounts for variability from estimating the cohort-membership probabilities $\widehat{\pi}_r$. It scales like $1/N$ and is unrelated to the regression residuals. This piece is stored as `result$internal$variance_components$att_var_2`, with paper-notation per-unit-scaled `V_2 = N * att_var_2`.
 
-Either way, the standard error printed and stored on the object is the square root of this combined variance.
+## 2.3 The combined variance: `tilde_v_N` and the paper's catalogue
 
-# 2. When Assumption F1 may be restrictive in applied DiD
+The unit-scaled total variance is
 
-Assumption F1 is the workhorse setting in the paper and it is well-suited to the asymptotic theory underpinning Theorems 6.1--6.3. In applied DiD work, however, it is not unusual to suspect one or more of the following violations:
+$$
+\tilde{v}_N \;=\; N \cdot \widehat{\text{Var}}(\hat{T}_N),
+$$
 
-## 2.1 Within-unit serial correlation beyond the random effect
+stored as `result$internal$variance_components$tilde_v_N`. The original (un-scaled) paper notation `hat_v_N = T * tilde_v_N` is also exposed.
 
-The unit random effect $c_i$ in F1 absorbs a single, time-constant deviation per unit. It does *not* model serial correlation in the idiosyncratic shocks: under F1, $u_{it}$ and $u_{i,t-1}$ are uncorrelated once $c_i$ is conditioned on. In practice, panel outcomes often exhibit residual time-series structure (mean reversion, lagged shocks, sticky deviations) that the random effect alone cannot explain. Bertrand, Duflo, and Mullainathan (2004) is the classic warning that ignoring within-unit serial correlation can drastically understate DiD standard errors.
+The paper catalogues six variance estimators at line 2006; the package exposes the four that apply to the ATT (the other two apply to the CATT(x), which connects to the on-hold `predict()` work in issue #33):
 
-## 2.2 Heteroskedasticity across units
+| Slot                          | Paper Eq.                                     | Meaning                                     |
+|-------------------------------|-----------------------------------------------|---------------------------------------------|
+| `tilde_v_N_C`                 | `v.n.r.t.att.const`                           | Fixed-π exact (no propensity-score noise)   |
+| `tilde_v_N_C_pi_hat`          | `v.n.r.t.att.rand`                            | Random-π exact (tight Gaussian under (Ψ-IF))|
+| `tilde_v_N_C_pi_hat_cons`     | `v.n.r.t.att.rand.cons`                       | Random-π conservative (Cauchy-Schwarz)      |
+| `tilde_v_N_cons`              | `var.est.kock.wooldridge.subgauss.cons`       | Subgaussian conservative bound              |
 
-F1 imposes a single $\sigma_\varepsilon^2$ across all units. If the residual variance differs across, say, large vs. small states, or volatile vs. stable industries, the model-based variance can be off in either direction relative to a heteroskedasticity-robust alternative.
+The default `att_se` value is computed from `tilde_v_N_C_pi_hat` (via `sqrt(tilde_v_N_C_pi_hat / N)`); `se_type = "conservative"` switches the headline to `tilde_v_N_C_pi_hat_cons`. When `indep_counts` is supplied (two-sample regime), the two-sample-exact formula `tilde_v_N_C_pi_hat` is in force regardless of `se_type`.
 
-## 2.3 Higher-level clustering
+# 3. The conservative fallback: `se_type = "conservative"`
 
-F1 treats units as i.i.d. If observations within a state-year, industry-year, or other higher-level grouping share unobserved shocks across multiple sampled units, the variance estimated under F1 will understate the true sampling variability. The package's current data model does not target this case directly: the natural opt-in cluster level (which is the level the experimental option below uses) is the unit itself.
+If a user's propensity-score estimator violates (Ψ-IF) --- the canonical example being a Robins-Rotnitzky-style augmented doubly-robust estimator that injects outcome-residual information into the cohort weights --- Theorem (c$'$) no longer applies. The paper's fallback is Theorem (c)'s subgaussian result with the **conservative** variance bound
 
-In all three cases, a textbook fix is to replace the model-based variance with a sandwich estimator that does not rely on the compound-symmetric covariance structure.
+$$
+\widehat{\text{Var}}^{\text{(cons)}}(\hat{\tau}_{\text{ATT}})
+\;=\;
+\widehat{\text{Var}}_1 + \widehat{\text{Var}}_2 + 2\sqrt{\widehat{\text{Var}}_1\,\widehat{\text{Var}}_2}.
+$$
 
-# 3. Experimental: cluster-robust standard errors via `se_type = "cluster"`
+This is the Cauchy-Schwarz upper bound on $V_1 + V_2$ that holds without any influence-function structure on the cohort-weight estimator. Until v1.11.7 the package returned this bound as the default; v1.12.0 demoted it to an opt-in fallback via
 
-Starting in version 1.6.0, all four estimators (`fetwfe()`, `betwfe()`, `etwfe()`, `twfeCovs()`) and their `*WithSimulatedData()` wrappers accept an experimental `se_type` argument:
+```{r, eval = FALSE}
+fetwfe(..., se_type = "conservative")
+```
+
+The package does not currently implement any non-(Ψ-IF) propensity-score estimator, so for users running the default cohort-sample-proportions estimator there is no practical reason to pass `se_type = "conservative"`. The argument exists for users who supply their own propensity-score estimates (see issue #32) or who want to reproduce the pre-v1.12.0 conservative default for backward compatibility.
+
+A worked comparison on a clean F1-conforming panel:
+
+```{r}
+set.seed(2026)
+sim_coefs <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+sim_data  <- simulateData(
+  sim_coefs,
+  N = 120,
+  sig_eps_sq = 1,
+  sig_eps_c_sq = 0.5
+)
+
+res_default <- fetwfe(
+  pdata = sim_data$pdata,
+  time_var = sim_data$time_var,
+  unit_var = sim_data$unit_var,
+  treatment = sim_data$treatment,
+  covs = sim_data$covs,
+  response = sim_data$response,
+  sig_eps_sq = sim_data$sig_eps_sq,
+  sig_eps_c_sq = sim_data$sig_eps_c_sq
+)
+res_cons <- fetwfe(
+  pdata = sim_data$pdata,
+  time_var = sim_data$time_var,
+  unit_var = sim_data$unit_var,
+  treatment = sim_data$treatment,
+  covs = sim_data$covs,
+  response = sim_data$response,
+  sig_eps_sq = sim_data$sig_eps_sq,
+  sig_eps_c_sq = sim_data$sig_eps_c_sq,
+  se_type = "conservative"
+)
+
+c(
+  default      = res_default$att_se,
+  conservative = res_cons$att_se,
+  ratio_cons_over_default = res_cons$att_se / res_default$att_se
+)
+```
+
+The conservative SE is strictly wider; the tight Gaussian SE is the asymptotically-exact one under the package's default cohort-sample-proportions estimator.
+
+# 4. Experimental: cluster-robust standard errors via `se_type = "cluster"`
+
+The package's default standard errors rely on the model-based covariance structure (paper Assumption F1: i.i.d. units, idiosyncratic noise plus a unit random effect). In applied DiD work it is not unusual to suspect one or more violations of F1:
+
+* **Within-unit serial correlation beyond the random effect.** The unit random effect $c_i$ in F1 absorbs a single, time-constant deviation per unit. It does *not* model serial correlation in the idiosyncratic shocks. Bertrand, Duflo, and Mullainathan (2004) is the classic warning that ignoring within-unit serial correlation can drastically understate DiD standard errors.
+* **Heteroskedasticity across units.** F1 imposes a single $\sigma_\varepsilon^2$ across all units.
+* **Higher-level clustering.** F1 treats units as i.i.d.; if observations within a state-year or industry-year share unobserved shocks, the unit-level F1 variance will understate the true sampling variability.
+
+Starting in version 1.6.0, all four estimators accept an experimental `se_type` argument with value `"cluster"`:
 
 ```{r, eval = FALSE}
 fetwfe(..., se_type = "cluster")
 ```
 
-Setting `se_type = "cluster"` swaps the model-based regression-coefficient variance $\mathrm{Var}_1$ for a **unit-clustered Liang-Zeger CR1 sandwich** computed on the bridge-selected support. The default (`se_type = "default"`) is unchanged.
+Setting `se_type = "cluster"` swaps the model-based regression-coefficient variance $V_1$ for a **unit-clustered Liang-Zeger CR1 sandwich** computed on the bridge-selected support. The $V_2$ piece and the (Ψ-IF)-tight combination $V_1 + V_2$ are unchanged --- only the $V_1$ formula switches.
 
-## 3.1 The formula
+## 4.1 The formula
 
 Let $\widehat{S}$ be the support selected by the bridge regression, $X_{\widehat{S}}$ the corresponding design matrix in the coordinate system the regression was solved in (GLS-transformed for ETWFE/twfeCovs, fusion-then-GLS-transformed for FETWFE/BETWFE), and $\widehat\varepsilon$ the residuals from OLS on that selected support. The cluster-robust variance is
 
@@ -92,11 +214,11 @@ V_{\text{CR}}
 (X_{\widehat{S}}^\top X_{\widehat{S}})^{-1},
 $$
 
-with units $i = 1, \dots, N$ as clusters and an $N/(N-1)$ small-sample adjustment (matching `sandwich::vcovCL(cadjust = TRUE, type = "HC0")`). The CATT SE for cohort $r$ is $\sqrt{\psi_r^\top V_{\text{CR}} \psi_r}$ (using a zero-padded $\psi_r$ on the full selected support); the ATT regression-coefficient variance is $\psi_{\text{att}}^\top V_{\text{CR}} \psi_{\text{att}}$, replacing $\mathrm{Var}_1$ above. The second variance term $\mathrm{Var}_2$ (from estimating cohort probabilities) is unchanged because it depends on empirical cohort proportions, not regression residuals; the conservative-vs-asymptotically-exact combination logic also carries through unchanged.
+with units $i = 1, \dots, N$ as clusters and an $N/(N-1)$ small-sample adjustment (matching `sandwich::vcovCL(cadjust = TRUE, type = "HC0")`). The CATT SE for cohort $r$ is $\sqrt{\psi_r^\top V_{\text{CR}} \psi_r}$ (using a zero-padded $\psi_r$ on the full selected support); the ATT regression-coefficient variance is $\psi_{\text{att}}^\top V_{\text{CR}} \psi_{\text{att}}$, replacing $V_1$ above. The propensity-score piece $V_2$ is unchanged because it depends on empirical cohort proportions, not regression residuals.
 
 For FETWFE and BETWFE, `se_type = "cluster"` is only meaningful when `q < 1` (the bridge oracle property is required); for `q >= 1` the cluster path returns `NA` just like the default. ETWFE and `twfeCovs` have no `q` argument, so the cluster path always runs when the Gram matrix is invertible.
 
-## 3.2 Why we call this experimental
+## 4.2 Why we call this experimental
 
 The CR1 sandwich is a textbook estimator and the package's implementation matches `sandwich::vcovCL()` to numerical precision on a clean panel without selection. What is *not* yet covered by the paper's theory is:
 
@@ -107,19 +229,9 @@ These extensions are mechanically routine but conceptually non-trivial, and they
 
 **Recommendation.** Until the theory lands, treat `se_type = "cluster"` as a sensitivity check: report both `se_type = "default"` and `se_type = "cluster"` in applied work, comment on the gap, and lean on the default for headline numbers.
 
-## 3.3 Worked example
+## 4.3 Worked cluster comparison
 
 ```{r}
-set.seed(2026)
-sim_coefs <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
-sim_data  <- simulateData(
-  sim_coefs,
-  N = 120,
-  sig_eps_sq = 1,
-  sig_eps_c_sq = 0.5
-)
-
-res_default <- fetwfeWithSimulatedData(sim_data)
 res_cluster <- fetwfeWithSimulatedData(sim_data, se_type = "cluster")
 
 c(
@@ -143,5 +255,7 @@ The CATT SEs and confidence intervals in `catt_df` are recomputed from the same 
 Bertrand, M., Duflo, E., & Mullainathan, S. (2004). "How much should we trust differences-in-differences estimates?" *Quarterly Journal of Economics* 119(1), 249--275.
 
 Faletto, G. (2025). "Fused Extended Two-Way Fixed Effects for Difference-in-Differences with Staggered Adoptions." *arXiv preprint* [arXiv:2312.05985](https://arxiv.org/abs/2312.05985).
+
+Kock, A. B. (2013). "Oracle Efficient Variable Selection in Random and Fixed Effects Panel Data Models." *Econometric Theory* 29(1), 115--152.
 
 Liang, K.-Y., & Zeger, S. L. (1986). "Longitudinal data analysis using generalized linear models." *Biometrika* 73(1), 13--22.
