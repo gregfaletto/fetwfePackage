@@ -427,18 +427,11 @@ fetwfe <- function(
 		# v1.13.0 (#164): lambda-selection method provenance. The CV path
 		# is the new default; pass `lambda_selection = "bic"` to recover
 		# the prior behavior. `cv_folds` and `cv_seed` are NA_integer_
-		# under the BIC path.
+		# under the BIC path (the core's dispatch initializes
+		# `res$cv_seed_used` to NA_integer_ on the BIC branch).
 		lambda_selection = lambda_selection,
-		cv_folds = if (lambda_selection == "cv") {
-			as.integer(cv_folds)
-		} else {
-			NA_integer_
-		},
-		cv_seed = if (lambda_selection == "cv") {
-			as.integer(res$cv_seed_used)
-		} else {
-			NA_integer_
-		},
+		cv_folds = if (lambda_selection == "cv") as.integer(cv_folds) else NA_integer_,
+		cv_seed = res$cv_seed_used,
 		N = res$N,
 		T = res$T,
 		R = res$R,

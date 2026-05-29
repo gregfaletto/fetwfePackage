@@ -244,6 +244,47 @@ checkFetwfeInputs <- function(
 	)
 }
 
+# .untransform_scaled_theta
+#' @title Back-transform scaled bridge coefficients to original-data scale
+#' @description Shared rescaling step used by `getBetaBIC()` and `getBetaCV()`.
+#'   Given a length-`(p + 1)` coefficient vector `theta_hat_scaled` (intercept
+#'   at position 1, slopes at 2..p+1) on the my_scale()-centered/scaled
+#'   design, returns the same shape on the original-data scale.
+#'
+#'   The back-transform: `beta_j = beta_scaled_j / scale_scale_j` for
+#'   `j = 1..p`, and `intercept = intercept_scaled - sum(scale_center *
+#'   (beta_scaled / scale_scale))`.
+#' @keywords internal
+#' @noRd
+.untransform_scaled_theta <- function(
+	theta_hat_scaled,
+	p,
+	scale_center,
+	scale_scale
+) {
+	if (length(theta_hat_scaled) != p + 1L) {
+		stop(
+			"theta_hat_scaled length (",
+			length(theta_hat_scaled),
+			") does not match p + 1 (",
+			p + 1L,
+			")."
+		)
+	}
+	if (length(scale_scale) != p) {
+		stop("Length of scale_scale does not match number of predictors (p).")
+	}
+	if (length(scale_center) != p) {
+		stop("Length of scale_center does not match number of predictors (p).")
+	}
+	adjusted <- theta_hat_scaled
+	slopes_scaled <- theta_hat_scaled[2:(p + 1L)]
+	adjusted[2:(p + 1L)] <- slopes_scaled / scale_scale
+	adjusted[1L] <- theta_hat_scaled[1L] -
+		sum(scale_center * (slopes_scaled / scale_scale))
+	adjusted
+}
+
 # getBetaBIC
 #' @title Select Optimal Coefficients using BIC from gBridge Fit
 #' @description From a `gBridge` fit object (which contains solutions for a
@@ -336,23 +377,12 @@ getBetaBIC <- function(fit, N, T, p, X_mod, y, scale_center, scale_scale) {
 	stopifnot(length(theta_hat) == p + 1)
 	stopifnot(all(!is.na(theta_hat)))
 
-	#
-	# Rescale coefficients back to the original scale.
-	# The coefficient vector theta_hat is of length (p+1), with the first entry
-	# as the intercept.
-	# For predictors: original coefficient = beta_scaled / scale_j.
-	# The intercept is adjusted as: intercept_original =
-	# intercept_scaled - sum(center_j * (beta_scaled/scale_j)).
-	#
-	adjusted_theta_hat <- theta_hat
-	if (length(scale_scale) != p) {
-		stop("Length of scale_scale does not match number of predictors (p).")
-	}
-	for (j in 2:(p + 1)) {
-		adjusted_theta_hat[j] <- theta_hat[j] / scale_scale[j - 1]
-	}
-	adjusted_theta_hat[1] <- theta_hat[1] -
-		sum(scale_center * (theta_hat[2:(p + 1)] / scale_scale))
+	adjusted_theta_hat <- .untransform_scaled_theta(
+		theta_hat_scaled = theta_hat,
+		p = p,
+		scale_center = scale_center,
+		scale_scale = scale_scale
+	)
 
 	return(list(
 		theta_hat = adjusted_theta_hat,
@@ -418,13 +448,6 @@ getBetaCV <- function(
 	cv_folds,
 	cv_seed
 ) {
-	if (length(scale_scale) != p) {
-		stop("Length of scale_scale does not match number of predictors (p).")
-	}
-	if (length(scale_center) != p) {
-		stop("Length of scale_center does not match number of predictors (p).")
-	}
-
 	if (is.null(cv_seed)) {
 		cv_seed <- as.integer(N * T)
 	}
@@ -455,14 +478,12 @@ getBetaCV <- function(
 	stopifnot(length(theta_hat_full) == p + 1L)
 	stopifnot(all(!is.na(theta_hat_full)))
 
-	# Back-transform to the original (unscaled) coefficient space — same
-	# rescaling getBetaBIC() does after BIC selection.
-	adjusted_theta_hat <- theta_hat_full
-	for (j in 2:(p + 1)) {
-		adjusted_theta_hat[j] <- theta_hat_full[j] / scale_scale[j - 1]
-	}
-	adjusted_theta_hat[1] <- theta_hat_full[1] -
-		sum(scale_center * (theta_hat_full[2:(p + 1)] / scale_scale))
+	adjusted_theta_hat <- .untransform_scaled_theta(
+		theta_hat_scaled = theta_hat_full,
+		p = p,
+		scale_center = scale_center,
+		scale_scale = scale_scale
+	)
 
 	list(
 		theta_hat = adjusted_theta_hat,
@@ -729,84 +750,37 @@ fetwfe_core <- function(
 	#
 	#
 
-	# Dispatch on `lambda_selection`. The BIC path is the v1.12.0 behavior
-	# unchanged; the CV path is the new v1.13.0 default. Both produce the
-	# same return contract (`theta_hat`, `lambda_star_ind`,
-	# `lambda_star_model_size`) and the same four lambda-path diagnostics
-	# (`lambda.max`, `lambda.min`, `lambda.max_model_size`,
-	# `lambda.min_model_size`) read from the underlying `grpreg` fit object.
-	cv_seed_used <- NA_integer_
-	if (lambda_selection == "bic") {
-		# Estimate bridge regression. The 4-way gBridge dispatch + lambda-path
-		# diagnostics are shared with betwfe_core() via .fit_bridge_with_lambda_path()
-		# in R/utility.R (issue #119).
-		bridge_fit <- .fit_bridge_with_lambda_path(
-			X_final_scaled = X_final_scaled,
-			y_final = y_final,
-			q = q,
-			lambda.max = lambda.max,
-			lambda.min = lambda.min,
-			nlambda = nlambda,
-			verbose = verbose
-		)
-		fit <- bridge_fit$fit
-		lambda.max <- bridge_fit$lambda.max
-		lambda.min <- bridge_fit$lambda.min
-		lambda.max_model_size <- bridge_fit$lambda.max_model_size
-		lambda.min_model_size <- bridge_fit$lambda.min_model_size
-
-		# Select a single set of fitted coefficients by using BIC to choose among
-		# the penalties that were fitted
-		res <- getBetaBIC(
-			fit = fit,
-			N = N,
-			T = T,
-			p = p,
-			X_mod = X_mod,
-			y = y,
-			scale_center = scale_center,
-			scale_scale = scale_scale
-		)
-	} else {
-		# CV path (v1.13.0+ default). `cv.grpreg` builds its own lambda grid
-		# internally (we don't pass lambda.max/lambda.min/nlambda — the
-		# user-facing knobs are documented as BIC-path only).
-		if (verbose) {
-			message("Estimating bridge regression with 10-fold CV...")
-			t0 <- Sys.time()
-		}
-		res <- getBetaCV(
-			X_final_scaled = X_final_scaled,
-			y_final = y_final,
-			N = N,
-			T = T,
-			p = p,
-			scale_center = scale_center,
-			scale_scale = scale_scale,
-			gamma = q,
-			cv_folds = cv_folds,
-			cv_seed = cv_seed
-		)
-		if (verbose) {
-			message("Done! Time for estimation:")
-			message(Sys.time() - t0)
-		}
-		fit <- res$fit
-		cv_seed_used <- as.integer(res$cv_seed)
-		# Compute the same four lambda-path diagnostics the BIC path
-		# emits, off the cv.grpreg internal `fit` object. The lambda
-		# direction is identical (col 1 = smallest lambda = largest model;
-		# last col = largest lambda = smallest model), so the .max/.min
-		# extraction matches `.fit_bridge_with_lambda_path()`.
-		lambda.max <- max(fit$lambda)
-		lambda.min <- min(fit$lambda)
-		lambda.max_model_size <- sum(fit$beta[, ncol(fit$beta)] != 0)
-		lambda.min_model_size <- sum(fit$beta[, 1] != 0)
-	}
-
-	theta_hat <- res$theta_hat # This includes intercept
-	lambda_star_ind <- res$lambda_star_ind
-	lambda_star_model_size <- res$lambda_star_model_size
+	# Dispatch on `lambda_selection` via the shared CV/BIC helper. Both
+	# paths produce the same return contract; FETWFE-specific input is
+	# the transformed `X_mod` handed to `getBetaBIC()` for SSE.
+	bridge_sel <- .dispatch_bridge_selection(
+		lambda_selection = lambda_selection,
+		X_final_scaled = X_final_scaled,
+		y_final = y_final,
+		q = q,
+		lambda.max = lambda.max,
+		lambda.min = lambda.min,
+		nlambda = nlambda,
+		cv_folds = cv_folds,
+		cv_seed = cv_seed,
+		N = N,
+		T = T,
+		p = p,
+		X_mod_bic = X_mod,
+		y_bic = y,
+		scale_center = scale_center,
+		scale_scale = scale_scale,
+		verbose = verbose
+	)
+	theta_hat <- bridge_sel$theta_hat
+	lambda_star_ind <- bridge_sel$lambda_star_ind
+	lambda_star_model_size <- bridge_sel$lambda_star_model_size
+	fit <- bridge_sel$fit
+	lambda.max <- bridge_sel$lambda.max
+	lambda.min <- bridge_sel$lambda.min
+	lambda.max_model_size <- bridge_sel$lambda.max_model_size
+	lambda.min_model_size <- bridge_sel$lambda.min_model_size
+	cv_seed_used <- bridge_sel$cv_seed_used
 
 	lambda_star <- fit$lambda[lambda_star_ind]
 

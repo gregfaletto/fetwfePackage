@@ -476,18 +476,11 @@ betwfe <- function(
 		lambda_star = res$lambda_star,
 		lambda_star_model_size = res$lambda_star_model_size,
 		# v1.13.0 (#164): lambda-selection method provenance. Mirrors
-		# fetwfe()'s shape.
+		# fetwfe()'s shape. `res$cv_seed_used` is already NA_integer_
+		# under the BIC path (the core's dispatch sets it on that branch).
 		lambda_selection = lambda_selection,
-		cv_folds = if (lambda_selection == "cv") {
-			as.integer(cv_folds)
-		} else {
-			NA_integer_
-		},
-		cv_seed = if (lambda_selection == "cv") {
-			as.integer(res$cv_seed_used)
-		} else {
-			NA_integer_
-		},
+		cv_folds = if (lambda_selection == "cv") as.integer(cv_folds) else NA_integer_,
+		cv_seed = res$cv_seed_used,
 		X_ints = res$X_ints,
 		y = res$y,
 		X_final = res$X_final,
@@ -1032,76 +1025,37 @@ betwfe_core <- function(
 	#
 	#
 
-	# Dispatch on `lambda_selection`. See the corresponding block in
-	# fetwfe_core() for design notes. BETWFE uses the untransformed design
-	# (X_ints), so the BIC SSE computation passes X_mod = X_ints; the CV
-	# path is identical except cv.grpreg evaluates fold-wise MSE directly,
-	# not BIC on the SSE.
-	cv_seed_used <- NA_integer_
-	if (lambda_selection == "bic") {
-		# Estimate bridge regression. The 4-way gBridge dispatch + lambda-path
-		# diagnostics are shared with fetwfe_core() via .fit_bridge_with_lambda_path()
-		# in R/utility.R (issue #119).
-		bridge_fit <- .fit_bridge_with_lambda_path(
-			X_final_scaled = X_final_scaled,
-			y_final = y_final,
-			q = q,
-			lambda.max = lambda.max,
-			lambda.min = lambda.min,
-			nlambda = nlambda,
-			verbose = verbose
-		)
-		fit <- bridge_fit$fit
-		lambda.max <- bridge_fit$lambda.max
-		lambda.min <- bridge_fit$lambda.min
-		lambda.max_model_size <- bridge_fit$lambda.max_model_size
-		lambda.min_model_size <- bridge_fit$lambda.min_model_size
-
-		# Select a single set of fitted coefficients by using BIC to choose among
-		# the penalties that were fitted
-		res <- getBetaBIC(
-			fit = fit,
-			N = N,
-			T = T,
-			p = p,
-			X_mod = X_ints, # Pass untransformed matrix
-			y = y,
-			scale_center = scale_center,
-			scale_scale = scale_scale
-		)
-	} else {
-		# CV path (v1.13.0+ default).
-		if (verbose) {
-			message("Estimating bridge regression with 10-fold CV...")
-			t0 <- Sys.time()
-		}
-		res <- getBetaCV(
-			X_final_scaled = X_final_scaled,
-			y_final = y_final,
-			N = N,
-			T = T,
-			p = p,
-			scale_center = scale_center,
-			scale_scale = scale_scale,
-			gamma = q,
-			cv_folds = cv_folds,
-			cv_seed = cv_seed
-		)
-		if (verbose) {
-			message("Done! Time for estimation:")
-			message(Sys.time() - t0)
-		}
-		fit <- res$fit
-		cv_seed_used <- as.integer(res$cv_seed)
-		lambda.max <- max(fit$lambda)
-		lambda.min <- min(fit$lambda)
-		lambda.max_model_size <- sum(fit$beta[, ncol(fit$beta)] != 0)
-		lambda.min_model_size <- sum(fit$beta[, 1] != 0)
-	}
-
-	beta_hat <- res$theta_hat # This includes intercept
-	lambda_star_ind <- res$lambda_star_ind
-	lambda_star_model_size <- res$lambda_star_model_size
+	# Dispatch on `lambda_selection` via the shared CV/BIC helper. BETWFE
+	# uses the untransformed design (X_ints) for the BIC SSE computation,
+	# unlike FETWFE which passes the fusion-transformed `X_mod`.
+	bridge_sel <- .dispatch_bridge_selection(
+		lambda_selection = lambda_selection,
+		X_final_scaled = X_final_scaled,
+		y_final = y_final,
+		q = q,
+		lambda.max = lambda.max,
+		lambda.min = lambda.min,
+		nlambda = nlambda,
+		cv_folds = cv_folds,
+		cv_seed = cv_seed,
+		N = N,
+		T = T,
+		p = p,
+		X_mod_bic = X_ints,
+		y_bic = y,
+		scale_center = scale_center,
+		scale_scale = scale_scale,
+		verbose = verbose
+	)
+	beta_hat <- bridge_sel$theta_hat
+	lambda_star_ind <- bridge_sel$lambda_star_ind
+	lambda_star_model_size <- bridge_sel$lambda_star_model_size
+	fit <- bridge_sel$fit
+	lambda.max <- bridge_sel$lambda.max
+	lambda.min <- bridge_sel$lambda.min
+	lambda.max_model_size <- bridge_sel$lambda.max_model_size
+	lambda.min_model_size <- bridge_sel$lambda.min_model_size
+	cv_seed_used <- bridge_sel$cv_seed_used
 
 	lambda_star <- fit$lambda[lambda_star_ind]
 
