@@ -65,7 +65,6 @@ test_that("print(res) and summary(res) render an Event Study section on consecut
 
 test_that("print(res) and summary(res) render an Event Study section on divorce (scattered cohorts)", {
 	skip_if_not_installed("bacondecomp")
-	bacondecomp::divorce
 	data(divorce, package = "bacondecomp")
 	res <- suppressWarnings(fetwfe(
 		pdata = divorce[divorce$sex == 2, ],

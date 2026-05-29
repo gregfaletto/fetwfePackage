@@ -26,8 +26,8 @@ bookdown
 Brantly
 broom
 Callaway
-Catalogue
 catalogue
+Catalogue
 catalogued
 catalogues
 catt
@@ -60,6 +60,7 @@ fetwfePackage
 FETWFE’s
 frac
 Gaussianity
+getFirstInds
 ggplot
 glance
 GLS
@@ -68,6 +69,7 @@ Heteroskedasticity
 Hoekstra
 homoskedasticity
 indep
+inds
 ints
 invariants
 invertible
@@ -77,6 +79,7 @@ Kock
 labelled
 Lapack
 le
+len
 lexicographically
 Liang
 lme
@@ -103,6 +106,7 @@ Pesaran
 Pinheiro
 pre
 preprint
+prepXints
 probs
 PRs
 PSD
@@ -124,6 +128,7 @@ Swamy
 tibble
 tidymodels
 tidyverse
+tryCatch
 TWFE
 twfeCovs
 un
