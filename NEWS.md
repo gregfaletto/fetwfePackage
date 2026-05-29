@@ -1,5 +1,23 @@
 # NEWS
 
+## Version 1.13.1 (2026-05-28)
+
+### Performance
+
+- Replaced an explicit `kronecker(diag(N), Omega_sqrt_inv) %*% (y | X_mod)`
+  GLS whitening step in `.estimate_variance_and_gls()` with the
+  block-apply identity `(I_N kron A) %*% vec(M) = vec(A %*% M)`. The
+  pre-fix code allocated an `(N*T) x (N*T)` Kronecker matrix on every
+  call (50 MB at N = 500, 800 MB at N = 2000) before multiplying it by
+  `y` and `X_mod`; the post-fix code allocates nothing larger than the
+  inputs and outputs. End-to-end measured speedups on the
+  Phase B fixture: **3.6× at N = 500 / 5.7× at N = 2000**. The
+  identity is algebraically exact and verified bit-identical (16-digit
+  parity) on randomised fixtures; new direct test in
+  `tests/testthat/test-gls-kronecker-block-apply-165.R`. The speedup
+  carries verbatim to `etwfe()`, `betwfe()`, and `twfeCovs()` (all four
+  estimators share the GLS step). Issue #165.
+
 ## Version 1.13.0 (2026-05-28)
 
 ### Breaking change
