@@ -442,8 +442,35 @@ prep_for_etwfe_core <- function(
 		message(Sys.time() - t0)
 	}
 
-	y_gls <- kronecker(diag(N), sqrt(sig_eps_sq) * Omega_sqrt_inv) %*% y
-	X_gls <- kronecker(diag(N), sqrt(sig_eps_sq) * Omega_sqrt_inv) %*% X_mod
+	# Block-apply form of (I_N kron (sqrt(sig_eps_sq) * Omega_sqrt_inv)).
+	# The transform we're applying is the standard GLS whitening
+	# Sigma^{-1/2} = I_N kron A, where A is the T-by-T per-unit factor
+	# below. y and X_mod are laid out in (unit, time) order with T rows
+	# per unit (the invariant `idCohorts()` enforces and `processCovs()`
+	# re-asserts), so `matrix(y, nrow = T)` puts unit k in column k.
+	# The identity (I_N kron A) %*% vec_{T,N}(M) = vec_{T,N}(A %*% M)
+	# then says: don't form the Kronecker product; apply A on the left
+	# to each unit's T-vector independently. The pre-fix code allocates
+	# a (N*T)x(N*T) Kronecker matrix on every call (800 MB at N=2000),
+	# then does a single dense multiply; the post-fix code allocates
+	# nothing larger than the inputs. Verified bit-exact on the test
+	# fixtures (#165). See R/utility.R::idCohorts and
+	# R/design_matrix.R::processCovs for the row-ordering invariant.
+	stopifnot(length(y) == N * T)
+	stopifnot(nrow(X_mod) == N * T)
+	A <- sqrt(sig_eps_sq) * Omega_sqrt_inv
+	# Preserve the prior return shapes: y_gls is an (N*T) x 1 matrix
+	# (kronecker(...) %*% y produces one), X_gls is an (N*T) x p matrix.
+	# Downstream `grpreg::*()` accepts y as a vector OR a 1-column matrix,
+	# but keeping the matrix form here avoids invalidating reference
+	# fixtures that built expectations against the explicit-Kronecker
+	# return shape (e.g. tests/testthat/test-est-omega-sqrt-inv.R:205).
+	y_gls <- matrix(A %*% matrix(y, nrow = T), nrow = N * T, ncol = 1L)
+	X_gls <- matrix(
+		A %*% matrix(X_mod, nrow = T),
+		nrow = N * T,
+		ncol = ncol(X_mod)
+	)
 
 	stopifnot(ncol(X_gls) == p)
 
