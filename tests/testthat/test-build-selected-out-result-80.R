@@ -58,9 +58,9 @@
 }
 
 # Field ordering the helper must produce for BETWFE-shape returns (Blocks
-# 1 + 2). 37 fields after #141/#146 added 4 variance-component slots
-# (in_sample_att_var_1/2, indep_att_var_1/2) bracketing the existing
-# in_sample_att_se_no_prob / indep_att_se entries. No `theta_hat`.
+# 1 + 2). 38 fields after v1.13.0 (#164) added `cv_seed_used` for
+# CV-path provenance (37 in v1.12.0 after #141/#146 added 4
+# variance-component slots). No `theta_hat`.
 .expected_betwfe_field_order <- c(
 	"in_sample_att_hat",
 	"in_sample_att_se",
@@ -98,11 +98,12 @@
 	"R",
 	"d",
 	"p",
-	"calc_ses"
+	"calc_ses",
+	"cv_seed_used"
 )
 
 # Field ordering the helper must produce for FETWFE-shape returns (Blocks
-# 3 + 4). 38 fields after #141/#146 added 4 variance-component slots.
+# 3 + 4). 39 fields after v1.13.0 added `cv_seed_used` (38 in v1.12.0).
 # `theta_hat` slots between `catt_df` and `beta_hat`.
 .expected_fetwfe_field_order <- c(
 	"in_sample_att_hat",
@@ -142,7 +143,8 @@
 	"R",
 	"d",
 	"p",
-	"calc_ses"
+	"calc_ses",
+	"cv_seed_used"
 )
 
 test_that("BETWFE intercept-only block (Block 1) shape: 37 fields, expected ordering, no theta_hat", {
@@ -155,7 +157,7 @@ test_that("BETWFE intercept-only block (Block 1) shape: 37 fields, expected orde
 	res <- do.call(fetwfe:::.build_selected_out_result, args)
 
 	expect_type(res, "list")
-	expect_length(res, 37L)
+	expect_length(res, 38L)
 	expect_identical(names(res), .expected_betwfe_field_order)
 	expect_false("theta_hat" %in% names(res))
 
@@ -209,7 +211,7 @@ test_that("BETWFE no-treatment block (Block 2) shape: caller-applied add_ridge s
 
 	res <- do.call(fetwfe:::.build_selected_out_result, args)
 
-	expect_length(res, 37L)
+	expect_length(res, 38L)
 	expect_identical(names(res), .expected_betwfe_field_order)
 	expect_false("theta_hat" %in% names(res))
 
@@ -218,7 +220,7 @@ test_that("BETWFE no-treatment block (Block 2) shape: caller-applied add_ridge s
 	expect_identical(unname(res$catt_hats), c(0, 0))
 })
 
-test_that("FETWFE intercept-only block (Block 3) shape: 38 fields, theta_hat between catt_df and beta_hat", {
+test_that("FETWFE intercept-only block (Block 3) shape: 39 fields, theta_hat between catt_df and beta_hat", {
 	args <- .make_helper_args()
 	args$message_text <- "No features selected (or only intercept); all treatment effects estimated to be 0."
 	args$beta_hat <- rep(0, args$p)
@@ -227,7 +229,7 @@ test_that("FETWFE intercept-only block (Block 3) shape: 38 fields, theta_hat bet
 
 	res <- do.call(fetwfe:::.build_selected_out_result, args)
 
-	expect_length(res, 38L)
+	expect_length(res, 39L)
 	expect_identical(names(res), .expected_fetwfe_field_order)
 
 	# theta_hat present, immediately between catt_df (pos 12) and beta_hat (pos 14)
@@ -253,7 +255,7 @@ test_that("FETWFE no-treatment block (Block 4) shape: caller passes untransforme
 
 	res <- do.call(fetwfe:::.build_selected_out_result, args)
 
-	expect_length(res, 38L)
+	expect_length(res, 39L)
 	expect_identical(names(res), .expected_fetwfe_field_order)
 	expect_identical(res$theta_hat, args$theta_hat)
 	expect_identical(res$beta_hat, args$beta_hat)

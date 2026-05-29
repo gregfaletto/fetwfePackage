@@ -148,7 +148,7 @@ test_that("broom::tidy() propagates NA std.error to statistic and p.value", {
 # glance.<class>
 # ------------------------------------------------------------------------------
 
-test_that("glance.fetwfe returns 13 columns including lambda_star", {
+test_that("glance.fetwfe returns 16 columns including lambda_star and lambda_selection", {
 	res <- .fetwfe_fixture()
 	gl <- broom::glance(res)
 	expect_s3_class(gl, "data.frame")
@@ -164,6 +164,10 @@ test_that("glance.fetwfe returns 13 columns including lambda_star", {
 			"n_features",
 			"lambda_star",
 			"lambda_star_model_size",
+			# v1.13.0 (#164): lambda-selection method provenance.
+			"lambda_selection",
+			"cv_folds",
+			"cv_seed",
 			"sig_eps_sq",
 			"sig_eps_c_sq",
 			"alpha",
@@ -200,11 +204,12 @@ test_that("glance.etwfe omits lambda_star columns (11 columns)", {
 	)
 })
 
-test_that("glance.betwfe matches fetwfe schema (13 columns)", {
+test_that("glance.betwfe matches fetwfe schema (16 columns)", {
 	res <- .betwfe_fixture()
 	gl <- broom::glance(res)
-	expect_equal(ncol(gl), 13L)
+	expect_equal(ncol(gl), 16L)
 	expect_true("lambda_star" %in% names(gl))
+	expect_true("lambda_selection" %in% names(gl))
 })
 
 # ------------------------------------------------------------------------------

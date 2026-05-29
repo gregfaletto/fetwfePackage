@@ -1136,7 +1136,8 @@ check_etwfe_core_inputs <- function(
 	d,
 	p,
 	theta_hat = NULL,
-	include_theta = FALSE
+	include_theta = FALSE,
+	cv_seed_used = NA_integer_
 ) {
 	if (verbose) {
 		message(message_text)
@@ -1213,7 +1214,10 @@ check_etwfe_core_inputs <- function(
 		R = R,
 		d = d,
 		p = p,
-		calc_ses = q < 1
+		calc_ses = q < 1,
+		# v1.13.0 (#164): CV-path provenance. NA_integer_ when reached
+		# via the BIC path or an OLS-only early-exit (etwfe / twfeCovs).
+		cv_seed_used = cv_seed_used
 	)
 
 	keep <- c(
@@ -1254,7 +1258,8 @@ check_etwfe_core_inputs <- function(
 		"R",
 		"d",
 		"p",
-		"calc_ses"
+		"calc_ses",
+		"cv_seed_used"
 	)
 	out[keep]
 }

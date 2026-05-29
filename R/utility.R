@@ -1199,7 +1199,10 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 	alpha = 0.05,
 	add_ridge = FALSE,
 	allow_no_never_treated = TRUE,
-	estimator_type
+	estimator_type,
+	lambda_selection = "cv",
+	cv_folds = 10L,
+	cv_seed = NULL
 ) {
 	stopifnot(
 		is.character(estimator_type),
@@ -1230,7 +1233,10 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 			q = q,
 			verbose = verbose,
 			alpha = alpha,
-			add_ridge = add_ridge
+			add_ridge = add_ridge,
+			lambda_selection = lambda_selection,
+			cv_folds = cv_folds,
+			cv_seed = cv_seed
 		)
 	} else {
 		ret <- checkEtwfeInputs(
@@ -1594,12 +1600,141 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 		message(Sys.time() - t0)
 	}
 
+	c(list(fit = fit), .lambda_path_diagnostics(fit))
+}
+
+#' @title Compute lambda-path diagnostics from a grpreg fit
+#' @description Extracts the four diagnostic locals
+#'   (`lambda.max`, `lambda.min`, `lambda.max_model_size`,
+#'   `lambda.min_model_size`) from a `grpreg`/`gBridge`/`cv.grpreg`-internal
+#'   `fit` object. The lambda direction is the same across all of them:
+#'   column 1 is the smallest lambda (largest model); the last column is
+#'   the largest lambda (smallest model).
+#' @keywords internal
+#' @noRd
+.lambda_path_diagnostics <- function(fit) {
 	list(
-		fit = fit,
 		lambda.max = max(fit$lambda),
 		lambda.min = min(fit$lambda),
 		lambda.max_model_size = sum(fit$beta[, ncol(fit$beta)] != 0),
 		lambda.min_model_size = sum(fit$beta[, 1] != 0)
+	)
+}
+
+#' @title Dispatch on `lambda_selection` to fit a bridge regression
+#' @description Shared CV/BIC dispatch for `fetwfe_core()` and
+#'   `betwfe_core()`. The two cores differ only in `X_mod` (the
+#'   FETWFE-transformed design vs the BETWFE/ETWFE-style untransformed
+#'   design) for the BIC path's SSE computation; the CV path is identical
+#'   across both. Returns a list with the bridge regression results plus
+#'   the four lambda-path diagnostic locals so the caller doesn't have
+#'   to compute them.
+#' @param lambda_selection Either `"bic"` or `"cv"`.
+#' @param X_final_scaled,y_final,q,nlambda,verbose Bridge-fit inputs.
+#' @param lambda.max,lambda.min User-supplied lambda-path endpoints; pass
+#'   NA to let `gBridge` pick. Ignored on the CV path.
+#' @param cv_folds,cv_seed CV-path inputs; ignored on the BIC path.
+#' @param N,T,p Dimensions (used by both paths for assertions; BIC also
+#'   uses them for SSE).
+#' @param X_mod_bic The design matrix to pass to `getBetaBIC()` for SSE
+#'   computation (X_mod for FETWFE, X_ints for BETWFE).
+#' @param y_bic Original-response vector (BIC path's SSE input).
+#' @param scale_center,scale_scale `my_scale()` outputs.
+#' @return A list:
+#'   \item{theta_hat}{Selected coefficients on the original-data scale.}
+#'   \item{lambda_star_ind}{Index of the selected lambda in `fit$lambda`.}
+#'   \item{lambda_star_model_size}{Number of nonzero selected coefs (incl. intercept).}
+#'   \item{fit}{The underlying `grpreg`/`cv.grpreg` `fit` object.}
+#'   \item{lambda.max,lambda.min,lambda.max_model_size,lambda.min_model_size}{Lambda-path diagnostics.}
+#'   \item{cv_seed_used}{Integer seed used by the CV path; `NA_integer_` under BIC.}
+#' @keywords internal
+#' @noRd
+.dispatch_bridge_selection <- function(
+	lambda_selection,
+	X_final_scaled,
+	y_final,
+	q,
+	lambda.max,
+	lambda.min,
+	nlambda,
+	cv_folds,
+	cv_seed,
+	N,
+	T,
+	p,
+	X_mod_bic,
+	y_bic,
+	scale_center,
+	scale_scale,
+	verbose
+) {
+	if (lambda_selection == "bic") {
+		bridge_fit <- .fit_bridge_with_lambda_path(
+			X_final_scaled = X_final_scaled,
+			y_final = y_final,
+			q = q,
+			lambda.max = lambda.max,
+			lambda.min = lambda.min,
+			nlambda = nlambda,
+			verbose = verbose
+		)
+		res <- getBetaBIC(
+			fit = bridge_fit$fit,
+			N = N,
+			T = T,
+			p = p,
+			X_mod = X_mod_bic,
+			y = y_bic,
+			scale_center = scale_center,
+			scale_scale = scale_scale
+		)
+		return(list(
+			theta_hat = res$theta_hat,
+			lambda_star_ind = res$lambda_star_ind,
+			lambda_star_model_size = res$lambda_star_model_size,
+			fit = bridge_fit$fit,
+			lambda.max = bridge_fit$lambda.max,
+			lambda.min = bridge_fit$lambda.min,
+			lambda.max_model_size = bridge_fit$lambda.max_model_size,
+			lambda.min_model_size = bridge_fit$lambda.min_model_size,
+			cv_seed_used = NA_integer_
+		))
+	}
+
+	# CV path. cv.grpreg builds its own lambda grid (we don't forward the
+	# user-facing lambda.max/lambda.min/nlambda knobs — those are BIC-path
+	# only).
+	if (verbose) {
+		message("Estimating bridge regression with 10-fold CV...")
+		t0 <- Sys.time()
+	}
+	res <- getBetaCV(
+		X_final_scaled = X_final_scaled,
+		y_final = y_final,
+		N = N,
+		T = T,
+		p = p,
+		scale_center = scale_center,
+		scale_scale = scale_scale,
+		gamma = q,
+		cv_folds = cv_folds,
+		cv_seed = cv_seed
+	)
+	if (verbose) {
+		message("Done! Time for estimation:")
+		message(Sys.time() - t0)
+	}
+	diag <- .lambda_path_diagnostics(res$fit)
+	list(
+		theta_hat = res$theta_hat,
+		lambda_star_ind = res$lambda_star_ind,
+		lambda_star_model_size = res$lambda_star_model_size,
+		fit = res$fit,
+		lambda.max = diag$lambda.max,
+		lambda.min = diag$lambda.min,
+		lambda.max_model_size = diag$lambda.max_model_size,
+		lambda.min_model_size = diag$lambda.min_model_size,
+		cv_seed_used = as.integer(res$cv_seed)
 	)
 }
 

@@ -132,6 +132,29 @@
 #' previous versions used the conservative Cauchy-Schwarz formula as the
 #' default. To recover the prior conservative default behavior, pass
 #' `se_type = "conservative"`.
+#' @param lambda_selection Character; method for selecting the bridge
+#'   penalty parameter `lambda`. Either `"cv"` (10-fold cross-validation
+#'   on `cv.grpreg`; the v1.13.0+ default) or `"bic"` (BIC over the
+#'   `grpreg` lambda grid; the prior default for v1.12.0 and earlier).
+#'   The default changed in v1.13.0 to address a finite-sample bias issue
+#'   documented in simulation studies (see issue #164): under the prior
+#'   BIC default, the overall-ATT estimator was biased toward zero at
+#'   moderate sample sizes, producing 95% confidence intervals whose
+#'   empirical coverage was as low as 0.00 in some regimes.
+#'   Cross-validation restores near-nominal coverage in every regime
+#'   tested. To recover the prior behavior — for example, when
+#'   reproducing analyses run against v1.12.0 or earlier — pass
+#'   `lambda_selection = "bic"`. See the inference vignette section
+#'   "Choosing the bridge penalty parameter" for details.
+#' @param cv_folds Integer; number of folds for the CV path. Ignored when
+#'   `lambda_selection = "bic"`. Default is 10.
+#' @param cv_seed Integer or `NULL`; the seed passed to `set.seed()`
+#'   immediately before the `cv.grpreg()` call, controlling fold
+#'   assignment. If `NULL` (the default), the seed defaults internally to
+#'   `as.integer(N * T)` so consecutive calls on the same dataset are
+#'   reproducible without the user having to specify a seed. The seed
+#'   actually used is stored on the returned object as `cv_seed`.
+#'   Ignored when `lambda_selection = "bic"`.
 #' @return An object of class \code{fetwfe} containing the following elements:
 #' \item{att_hat}{The estimated overall average treatment effect for a randomly selected treated unit.}
 #' \item{att_se}{If `q < 1`, a standard error for the ATT. Under the default `se_type = "default"`, the SE is the tight Gaussian variance `sqrt(att_var_1 + att_var_2)` (Theorem (c$'$) under Assumption (Psi-IF); paper line 1233 onwards). Assumption (Psi-IF) is satisfied by the package's default cohort sample-proportions estimator `hat_pi_r = N_r / N` (and by multinomial logit, any GLM on `W | X`, and kernel/series regression of `1{W = r}` on `X`), so the default SE is asymptotically exact for the package's default estimator. Under `se_type = "conservative"` (or in version <= 1.11.7 by default), the SE is the Cauchy-Schwarz upper bound `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from Theorem (c). When `indep_counts` is provided, the two-sample exact formula `sqrt(att_var_1 + att_var_2)` is used regardless of `se_type`. If `q >= 1`, this will be NA.}
@@ -150,8 +173,11 @@
 #' \item{lambda.max_model_size}{The size of the selected model corresponding to `lambda.max` (for `q <= 1`, this will be the smallest model size). As mentioned above, for `q <= 1` ideally this value is close to 0.}
 #' \item{lambda.min}{Either the provided `lambda.min` or the one that was used, if a value wasn't provided.}
 #' \item{lambda.min_model_size}{The size of the selected model corresponding to `lambda.min` (for `q <= 1`, this will be the largest model size). As mentioned above, for `q <= 1` ideally this value is close to `p`.}
-#' \item{lambda_star}{The value of `lambda` chosen by BIC. If this value is close to `lambda.min` or `lambda.max`, that could suggest that the range of `lambda` values should be expanded.}
+#' \item{lambda_star}{The value of `lambda` chosen by the selection method recorded in `lambda_selection`. If this value is close to `lambda.min` or `lambda.max`, that could suggest that the range of `lambda` values should be expanded.}
 #' \item{lambda_star_model_size}{The size of the model that was selected. If this value is close to `lambda.max_model_size` or `lambda.min_model_size`, that could suggest that the range of `lambda` values should be expanded.}
+#' \item{lambda_selection}{Character scalar; either `"cv"` (10-fold cross-validation on `cv.grpreg`; v1.13.0+ default) or `"bic"` (BIC over the `grpreg` lambda grid; the prior default). Mirrors the `lambda_selection` argument the user passed.}
+#' \item{cv_folds}{Integer scalar; the `cv_folds` value used when `lambda_selection = "cv"`, `NA_integer_` when `lambda_selection = "bic"`.}
+#' \item{cv_seed}{Integer scalar; the seed actually fed to `set.seed()` immediately before `cv.grpreg()` was called. Defaults to `as.integer(N * T)` when the user did not pass a seed. `NA_integer_` when `lambda_selection = "bic"`.}
 #' \item{N}{The final number of units that were in the data set used for estimation (after any units may have been removed because they were treated in the first time period).}
 #' \item{T}{The number of time periods in the final data set.}
 #' \item{R}{The final number of treated cohorts that appear in the final data set.}
@@ -224,6 +250,7 @@
 #'
 #' # No `covs` here: castle's smallest adoption cohorts contain a single
 #' # state, so the design is rank-deficient once any covariate is added.
+#' # The v1.13.0+ default lambda_selection is "cv" (10-fold CV).
 #' res <- fetwfe(
 #'     pdata = castle,
 #'     time_var = "year",
@@ -234,6 +261,16 @@
 #'
 #' # Print results with internal details
 #' print(res, max_cohorts = Inf)
+#'
+#' # To recover the prior BIC behavior (e.g., for reproducing analyses
+#' # run against v1.12.0 or earlier), pass lambda_selection = "bic":
+#' res_bic <- fetwfe(
+#'     pdata = castle,
+#'     time_var = "year",
+#'     unit_var = "state",
+#'     treatment = "treated",
+#'     response = "l_homicide",
+#'     lambda_selection = "bic")
 #'
 #' @export
 fetwfe <- function(
@@ -254,12 +291,19 @@ fetwfe <- function(
 	alpha = 0.05,
 	add_ridge = FALSE,
 	allow_no_never_treated = TRUE,
-	se_type = "default"
+	se_type = "default",
+	lambda_selection = "cv",
+	cv_folds = 10L,
+	cv_seed = NULL
 ) {
 	se_type <- match.arg(
 		se_type,
 		c("default", "conservative", "cluster")
 	)
+	# `lambda_selection` is validated downstream by
+	# `checkFetwfeInputs()` as part of the collect-all-violations
+	# pattern, so a user passing both a bad `lambda_selection` and a
+	# bad `cv_folds` / `cv_seed` sees all the violations at once.
 
 	# Normalize `covs` to a character vector if a one-sided formula was
 	# supplied (#28). All downstream code assumes the character-vector
@@ -290,7 +334,10 @@ fetwfe <- function(
 		alpha = alpha,
 		add_ridge = add_ridge,
 		allow_no_never_treated = allow_no_never_treated,
-		estimator_type = "fetwfe"
+		estimator_type = "fetwfe",
+		lambda_selection = lambda_selection,
+		cv_folds = cv_folds,
+		cv_seed = cv_seed
 	)
 
 	pdata <- prep$pdata
@@ -330,7 +377,10 @@ fetwfe <- function(
 		verbose = verbose,
 		alpha = alpha,
 		add_ridge = add_ridge,
-		se_type = se_type
+		se_type = se_type,
+		lambda_selection = lambda_selection,
+		cv_folds = cv_folds,
+		cv_seed = cv_seed
 	)
 
 	att_branch <- .select_att_branch(
@@ -377,6 +427,14 @@ fetwfe <- function(
 		lambda.min_model_size = res$lambda.min_model_size,
 		lambda_star = res$lambda_star,
 		lambda_star_model_size = res$lambda_star_model_size,
+		# v1.13.0 (#164): lambda-selection method provenance. The CV path
+		# is the new default; pass `lambda_selection = "bic"` to recover
+		# the prior behavior. `cv_folds` and `cv_seed` are NA_integer_
+		# under the BIC path (the core's dispatch initializes
+		# `res$cv_seed_used` to NA_integer_ on the BIC branch).
+		lambda_selection = lambda_selection,
+		cv_folds = if (lambda_selection == "cv") as.integer(cv_folds) else NA_integer_,
+		cv_seed = res$cv_seed_used,
 		N = res$N,
 		T = res$T,
 		R = res$R,
@@ -490,6 +548,29 @@ fetwfe <- function(
 #' previous versions used the conservative Cauchy-Schwarz formula as the
 #' default. To recover the prior conservative default behavior, pass
 #' `se_type = "conservative"`.
+#' @param lambda_selection Character; method for selecting the bridge
+#'   penalty parameter `lambda`. Either `"cv"` (10-fold cross-validation
+#'   on `cv.grpreg`; the v1.13.0+ default) or `"bic"` (BIC over the
+#'   `grpreg` lambda grid; the prior default for v1.12.0 and earlier).
+#'   The default changed in v1.13.0 to address a finite-sample bias issue
+#'   documented in simulation studies (see issue #164): under the prior
+#'   BIC default, the overall-ATT estimator was biased toward zero at
+#'   moderate sample sizes, producing 95% confidence intervals whose
+#'   empirical coverage was as low as 0.00 in some regimes.
+#'   Cross-validation restores near-nominal coverage in every regime
+#'   tested. To recover the prior behavior — for example, when
+#'   reproducing analyses run against v1.12.0 or earlier — pass
+#'   `lambda_selection = "bic"`. See the inference vignette section
+#'   "Choosing the bridge penalty parameter" for details.
+#' @param cv_folds Integer; number of folds for the CV path. Ignored when
+#'   `lambda_selection = "bic"`. Default is 10.
+#' @param cv_seed Integer or `NULL`; the seed passed to `set.seed()`
+#'   immediately before the `cv.grpreg()` call, controlling fold
+#'   assignment. If `NULL` (the default), the seed defaults internally to
+#'   `as.integer(N * T)` so consecutive calls on the same dataset are
+#'   reproducible without the user having to specify a seed. The seed
+#'   actually used is stored on the returned object as `cv_seed`.
+#'   Ignored when `lambda_selection = "bic"`.
 #' @return An object of class \code{fetwfe} containing the following elements:
 #' \item{att_hat}{The estimated overall average treatment effect for a randomly selected treated unit.}
 #' \item{att_se}{If `q < 1`, a standard error for the ATT. Under the default `se_type = "default"`, the SE is the tight Gaussian variance `sqrt(att_var_1 + att_var_2)` (Theorem (c$'$) under Assumption (Psi-IF); paper line 1233 onwards). Assumption (Psi-IF) is satisfied by the package's default cohort sample-proportions estimator `hat_pi_r = N_r / N` (and by multinomial logit, any GLM on `W | X`, and kernel/series regression of `1{W = r}` on `X`), so the default SE is asymptotically exact for the package's default estimator. Under `se_type = "conservative"` (or in version <= 1.11.7 by default), the SE is the Cauchy-Schwarz upper bound `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from Theorem (c). When `indep_counts` is provided, the two-sample exact formula `sqrt(att_var_1 + att_var_2)` is used regardless of `se_type`. If `q >= 1`, this will be NA.}
@@ -508,8 +589,11 @@ fetwfe <- function(
 #' \item{lambda.max_model_size}{The size of the selected model corresponding to `lambda.max` (for `q <= 1`, this will be the smallest model size). As mentioned above, for `q <= 1` ideally this value is close to 0.}
 #' \item{lambda.min}{Either the provided `lambda.min` or the one that was used, if a value wasn't provided.}
 #' \item{lambda.min_model_size}{The size of the selected model corresponding to `lambda.min` (for `q <= 1`, this will be the largest model size). As mentioned above, for `q <= 1` ideally this value is close to `p`.}
-#' \item{lambda_star}{The value of `lambda` chosen by BIC. If this value is close to `lambda.min` or `lambda.max`, that could suggest that the range of `lambda` values should be expanded.}
+#' \item{lambda_star}{The value of `lambda` chosen by the selection method recorded in `lambda_selection`. If this value is close to `lambda.min` or `lambda.max`, that could suggest that the range of `lambda` values should be expanded.}
 #' \item{lambda_star_model_size}{The size of the model that was selected. If this value is close to `lambda.max_model_size` or `lambda.min_model_size`, that could suggest that the range of `lambda` values should be expanded.}
+#' \item{lambda_selection}{Character scalar; either `"cv"` (10-fold cross-validation on `cv.grpreg`; v1.13.0+ default) or `"bic"` (BIC over the `grpreg` lambda grid; the prior default). Mirrors the `lambda_selection` argument the user passed.}
+#' \item{cv_folds}{Integer scalar; the `cv_folds` value used when `lambda_selection = "cv"`, `NA_integer_` when `lambda_selection = "bic"`.}
+#' \item{cv_seed}{Integer scalar; the seed actually fed to `set.seed()` immediately before `cv.grpreg()` was called. Defaults to `as.integer(N * T)` when the user did not pass a seed. `NA_integer_` when `lambda_selection = "bic"`.}
 #' \item{N}{The final number of units that were in the data set used for estimation (after any units may have been removed because they were treated in the first time period).}
 #' \item{T}{The number of time periods in the final data set.}
 #' \item{R}{The final number of treated cohorts that appear in the final data set.}
@@ -574,12 +658,17 @@ fetwfeWithSimulatedData <- function(
 	alpha = 0.05,
 	add_ridge = FALSE,
 	allow_no_never_treated = TRUE,
-	se_type = "default"
+	se_type = "default",
+	lambda_selection = "cv",
+	cv_folds = 10L,
+	cv_seed = NULL
 ) {
 	se_type <- match.arg(
 		se_type,
 		c("default", "conservative", "cluster")
 	)
+	# `lambda_selection` validated downstream by `checkFetwfeInputs()`
+	# (collect-all-violations pattern).
 
 	if (!inherits(simulated_obj, "FETWFE_simulated")) {
 		stop("simulated_obj must be an object of class 'FETWFE_simulated'")
@@ -613,7 +702,10 @@ fetwfeWithSimulatedData <- function(
 		alpha = alpha,
 		add_ridge = add_ridge,
 		allow_no_never_treated = allow_no_never_treated,
-		se_type = se_type
+		se_type = se_type,
+		lambda_selection = lambda_selection,
+		cv_folds = cv_folds,
+		cv_seed = cv_seed
 	)
 
 	return(res)

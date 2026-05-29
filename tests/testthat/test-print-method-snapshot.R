@@ -35,7 +35,14 @@ fit_fetwfe <- fetwfe(
 	treatment = "treatment",
 	response = "y",
 	covs = c("cov1", "cov2"),
-	verbose = FALSE
+	verbose = FALSE,
+	# Pin to BIC so the snapshot is stable across the v1.13.0 default
+	# change. The CV path's stochastic fold assignment would produce a
+	# different `Lambda*` in the printed output (only deterministic given
+	# the seed, but locking the seed here couples the snapshot to the
+	# CV-implementation details rather than to the print-method format,
+	# which is what this guardrail is for).
+	lambda_selection = "bic"
 )
 
 fit_etwfe <- etwfe(
@@ -55,7 +62,9 @@ fit_betwfe <- betwfe(
 	treatment = "treatment",
 	response = "y",
 	covs = c("cov1", "cov2"),
-	verbose = FALSE
+	verbose = FALSE,
+	# Pin to BIC for the same reason as fit_fetwfe above.
+	lambda_selection = "bic"
 )
 
 test_that("print.fetwfe output is stable", {

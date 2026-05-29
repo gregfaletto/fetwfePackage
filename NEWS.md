@@ -1,5 +1,50 @@
 # NEWS
 
+## Version 1.13.0 (2026-05-28)
+
+### Breaking change
+
+The default `lambda_selection` for `fetwfe()` and `betwfe()` is now
+`"cv"` (10-fold cross-validation on `cv.grpreg`), replacing the
+previous BIC-based selection. Empirical validation across multiple
+simulation regimes (#164) showed that the prior BIC selection produced
+biased overall-ATT estimates at moderate sample sizes — 95% Wald CI
+coverage was as low as 0.00 at N = 2000 with the paper's
+second-simulation parameters, and collapsed from 0.83 to 0.33 between
+N = 120 and N = 500 in the paper's first-simulation high-dim regime.
+The new CV default restores near-nominal coverage in every tested
+regime and additionally has the lowest MSE in the high-dim regime
+that FETWFE was originally designed for.
+
+To recover the prior behavior:
+
+```r
+fetwfe(..., lambda_selection = "bic")
+betwfe(..., lambda_selection = "bic")
+```
+
+This is a numerical-results-change-for-default-callers release.
+Confidence intervals and point estimates from the new default may
+differ substantially from prior versions on the same data; see the
+inference vignette section "Choosing the bridge penalty parameter"
+for guidance.
+
+### New features
+
+- `lambda_selection` parameter on `fetwfe()` and `betwfe()` (and the
+  `WithSimulatedData` wrappers).
+- `cv_folds` and `cv_seed` parameters control the CV fitting (defaults
+  `10L` and `NULL`; the latter defaults internally to `as.integer(N * T)`
+  for per-dataset reproducibility without requiring the user to
+  specify a seed).
+- Result objects include new top-level slots `lambda_selection`,
+  `cv_folds`, `cv_seed`. `glance()` exposes all three.
+- `inference_vignette.Rmd` updated with a new "Choosing the bridge
+  penalty parameter" subsection documenting the default change and
+  the BIC opt-out.
+
+Issue #164.
+
 ## Version 1.12.0 (2026-05-27)
 
 ### Breaking changes

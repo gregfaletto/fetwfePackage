@@ -251,6 +251,20 @@ test_that("cross-class slot inventory matches the documented divergence table", 
 		"theta_hat" = list(
 			classes = c("fetwfe"),
 			rationale = "Only fetwfe applies the bridge fusion transform; theta_hat is the transformed coefficient vector."
+		),
+		# v1.13.0 (#164): the CV-tuned lambda-selection knob lives only on
+		# the bridge-penalty estimators.
+		"lambda_selection" = list(
+			classes = c("fetwfe", "betwfe"),
+			rationale = "Only bridge-penalty estimators have a lambda penalty to tune."
+		),
+		"cv_folds" = list(
+			classes = c("fetwfe", "betwfe"),
+			rationale = "Only bridge-penalty estimators have a lambda penalty to tune."
+		),
+		"cv_seed" = list(
+			classes = c("fetwfe", "betwfe"),
+			rationale = "Only bridge-penalty estimators have a lambda penalty to tune."
 		)
 	)
 

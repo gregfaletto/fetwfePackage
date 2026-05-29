@@ -234,7 +234,12 @@ test_that("betwfe(add_ridge = TRUE) numerical regression: att_hat matches post-f
 		sig_eps_sq = 16,
 		sig_eps_c_sq = 8
 	)
-	fit <- betwfeWithSimulatedData(sim, add_ridge = TRUE)
+	# Pin to BIC because the recorded reference value below was generated
+	# under the BIC selection path (v1.12.0 and earlier). The v1.13.0+
+	# default is CV, which produces a slightly different att_hat on this
+	# fixture; that's expected, and is tested separately in
+	# test-lambda-selection-164.R.
+	fit <- betwfeWithSimulatedData(sim, add_ridge = TRUE, lambda_selection = "bic")
 
 	# Sanity: the fit selected something. The pre-fix code on this
 	# fixture also produces a non-degenerate fit, so this is not a

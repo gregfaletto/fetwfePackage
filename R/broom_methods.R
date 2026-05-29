@@ -120,6 +120,10 @@ NULL
 		n_features = x$p,
 		lambda_star = x$lambda_star,
 		lambda_star_model_size = x$lambda_star_model_size,
+		# v1.13.0 (#164): lambda-selection method.
+		lambda_selection = x$lambda_selection,
+		cv_folds = x$cv_folds,
+		cv_seed = x$cv_seed,
 		sig_eps_sq = x$sig_eps_sq,
 		sig_eps_c_sq = x$sig_eps_c_sq,
 		alpha = x$alpha,
@@ -634,7 +638,7 @@ tidy.FETWFE_tes <- function(x, conf.int = TRUE, conf.level = 0.95, ...) {
 #'
 #' @param x An object of class `"fetwfe"`.
 #' @param ... Unused.
-#' @return A one-row data frame with 13 columns.
+#' @return A one-row data frame with 16 columns.
 #' @examples
 #' \dontrun{
 #'   res <- fetwfeWithSimulatedData(
@@ -675,7 +679,7 @@ glance.etwfe <- function(x, ...) {
 #'
 #' @param x An object of class `"betwfe"`.
 #' @param ... Unused.
-#' @return A one-row data frame with 13 columns.
+#' @return A one-row data frame with 16 columns.
 #' @examples
 #' \dontrun{
 #'   res <- betwfeWithSimulatedData(

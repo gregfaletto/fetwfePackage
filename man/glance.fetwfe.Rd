@@ -12,7 +12,7 @@
 \item{...}{Unused.}
 }
 \value{
-A one-row data frame with 13 columns.
+A one-row data frame with 16 columns.
 }
 \description{
 Returns a one-row \code{broom}-style summary data frame with model-level
