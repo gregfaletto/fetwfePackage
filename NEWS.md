@@ -1,5 +1,23 @@
 # NEWS
 
+## Version 1.13.2 (2026-05-28)
+
+### Performance
+
+- Vectorised `idCohorts()`'s per-unit row-filter loop in `R/utility.R`
+  (previously `O(N^2 * T)` due to a `df[df[, unit_var] == s, ]` filter
+  inside a `for (s in units)` loop). The post-fix path sorts the data
+  frame once by `(unit_var, time_var)`, tabulates per-unit row counts,
+  and runs the balance check, absorbing-state check, and cohort
+  assignment via column-wise operations on a reshaped `T x N`
+  treatment matrix. Same observable behaviour: identical balance and
+  absorbing-state violation messages (single grouped `stop()`, same
+  lex-sorted truncated listing), identical first-period-treated
+  `warning()`, identical return shape. `idCohorts()` itself is ~15x
+  faster at N = 2000, T = 5; end-to-end `fetwfe()` at the Phase B
+  fixture speeds up an additional 1.3x on top of #165, for a combined
+  **7.6x vs. pre-#165**. Issue #166.
+
 ## Version 1.13.1 (2026-05-28)
 
 ### Performance
