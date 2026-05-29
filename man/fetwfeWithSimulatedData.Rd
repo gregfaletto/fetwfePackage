@@ -14,7 +14,10 @@ fetwfeWithSimulatedData(
   alpha = 0.05,
   add_ridge = FALSE,
   allow_no_never_treated = TRUE,
-  se_type = "default"
+  se_type = "default",
+  lambda_selection = c("cv", "bic"),
+  cv_folds = 10L,
+  cv_seed = NULL
 )
 }
 \arguments{
@@ -92,6 +95,32 @@ to the new tight Gaussian default introduced in version 1.12.0;
 previous versions used the conservative Cauchy-Schwarz formula as the
 default. To recover the prior conservative default behavior, pass
 \code{se_type = "conservative"}.}
+
+\item{lambda_selection}{Character; method for selecting the bridge
+penalty parameter \code{lambda}. Either \code{"cv"} (10-fold cross-validation
+on \code{cv.grpreg}; the v1.13.0+ default) or \code{"bic"} (BIC over the
+\code{grpreg} lambda grid; the prior default for v1.12.0 and earlier).
+The default changed in v1.13.0 to address a finite-sample bias issue
+documented in simulation studies (see issue #164): under the prior
+BIC default, the overall-ATT estimator was biased toward zero at
+moderate sample sizes, producing 95\% confidence intervals whose
+empirical coverage was as low as 0.00 in some regimes.
+Cross-validation restores near-nominal coverage in every regime
+tested. To recover the prior behavior — for example, when
+reproducing analyses run against v1.12.0 or earlier — pass
+\code{lambda_selection = "bic"}. See the inference vignette section
+"Choosing the bridge penalty parameter" for details.}
+
+\item{cv_folds}{Integer; number of folds for the CV path. Ignored when
+\code{lambda_selection = "bic"}. Default is 10.}
+
+\item{cv_seed}{Integer or \code{NULL}; the seed passed to \code{set.seed()}
+immediately before the \code{cv.grpreg()} call, controlling fold
+assignment. If \code{NULL} (the default), the seed defaults internally to
+\code{as.integer(N * T)} so consecutive calls on the same dataset are
+reproducible without the user having to specify a seed. The seed
+actually used is stored on the returned object as \code{cv_seed}.
+Ignored when \code{lambda_selection = "bic"}.}
 }
 \value{
 An object of class \code{fetwfe} containing the following elements:
@@ -112,8 +141,11 @@ An object of class \code{fetwfe} containing the following elements:
 \item{lambda.max_model_size}{The size of the selected model corresponding to \code{lambda.max} (for \code{q <= 1}, this will be the smallest model size). As mentioned above, for \code{q <= 1} ideally this value is close to 0.}
 \item{lambda.min}{Either the provided \code{lambda.min} or the one that was used, if a value wasn't provided.}
 \item{lambda.min_model_size}{The size of the selected model corresponding to \code{lambda.min} (for \code{q <= 1}, this will be the largest model size). As mentioned above, for \code{q <= 1} ideally this value is close to \code{p}.}
-\item{lambda_star}{The value of \code{lambda} chosen by BIC. If this value is close to \code{lambda.min} or \code{lambda.max}, that could suggest that the range of \code{lambda} values should be expanded.}
+\item{lambda_star}{The value of \code{lambda} chosen by the selection method recorded in \code{lambda_selection}. If this value is close to \code{lambda.min} or \code{lambda.max}, that could suggest that the range of \code{lambda} values should be expanded.}
 \item{lambda_star_model_size}{The size of the model that was selected. If this value is close to \code{lambda.max_model_size} or \code{lambda.min_model_size}, that could suggest that the range of \code{lambda} values should be expanded.}
+\item{lambda_selection}{Character scalar; either \code{"cv"} (10-fold cross-validation on \code{cv.grpreg}; v1.13.0+ default) or \code{"bic"} (BIC over the \code{grpreg} lambda grid; the prior default). Mirrors the \code{lambda_selection} argument the user passed.}
+\item{cv_folds}{Integer scalar; the \code{cv_folds} value used when \code{lambda_selection = "cv"}, \code{NA_integer_} when \code{lambda_selection = "bic"}.}
+\item{cv_seed}{Integer scalar; the seed actually fed to \code{set.seed()} immediately before \code{cv.grpreg()} was called. Defaults to \code{as.integer(N * T)} when the user did not pass a seed. \code{NA_integer_} when \code{lambda_selection = "bic"}.}
 \item{N}{The final number of units that were in the data set used for estimation (after any units may have been removed because they were treated in the first time period).}
 \item{T}{The number of time periods in the final data set.}
 \item{R}{The final number of treated cohorts that appear in the final data set.}

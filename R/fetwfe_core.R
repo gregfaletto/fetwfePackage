@@ -54,7 +54,10 @@ checkFetwfeInputs <- function(
 	q = 0.5,
 	verbose = FALSE,
 	alpha = 0.05,
-	add_ridge = FALSE
+	add_ridge = FALSE,
+	lambda_selection = "cv",
+	cv_folds = 10L,
+	cv_seed = NULL
 ) {
 	res <- .collect_etwfe_input_violations(
 		pdata = pdata,
@@ -167,6 +170,69 @@ checkFetwfeInputs <- function(
 				format(q)
 			)
 		)
+	}
+
+	# --- lambda_selection ------------------------------------------------
+	if (
+		!is.character(lambda_selection) ||
+			length(lambda_selection) != 1 ||
+			!(lambda_selection %in% c("cv", "bic"))
+	) {
+		violations <- c(
+			violations,
+			sprintf(
+				"lambda_selection must be a single character, either \"cv\" or \"bic\"; got %s",
+				format(lambda_selection)
+			)
+		)
+	}
+
+	# --- cv_folds --------------------------------------------------------
+	if (
+		!(is.numeric(cv_folds) || is.integer(cv_folds)) ||
+			length(cv_folds) != 1
+	) {
+		violations <- c(
+			violations,
+			sprintf(
+				"cv_folds must be a single integer; got %s (length %d)",
+				paste(class(cv_folds), collapse = "/"),
+				length(cv_folds)
+			)
+		)
+	} else if (!is.finite(cv_folds) || cv_folds < 2 || cv_folds != round(cv_folds)) {
+		violations <- c(
+			violations,
+			sprintf(
+				"cv_folds must be an integer >= 2; got %s",
+				format(cv_folds)
+			)
+		)
+	}
+
+	# --- cv_seed ---------------------------------------------------------
+	if (!is.null(cv_seed)) {
+		if (
+			!(is.numeric(cv_seed) || is.integer(cv_seed)) ||
+				length(cv_seed) != 1
+		) {
+			violations <- c(
+				violations,
+				sprintf(
+					"cv_seed must be NULL or a single integer; got %s (length %d)",
+					paste(class(cv_seed), collapse = "/"),
+					length(cv_seed)
+				)
+			)
+		} else if (!is.finite(cv_seed) || cv_seed != round(cv_seed)) {
+			violations <- c(
+				violations,
+				sprintf(
+					"cv_seed must be an integer (or NULL); got %s",
+					format(cv_seed)
+				)
+			)
+		}
 	}
 
 	if (length(violations) > 0) {
@@ -293,6 +359,122 @@ getBetaBIC <- function(fit, N, T, p, X_mod, y, scale_center, scale_scale) {
 		lambda_star_ind = lambda_star_final_ind,
 		lambda_star_model_size = model_sizes[lambda_star_final_ind]
 	))
+}
+
+# getBetaCV
+#' @title Select Optimal Coefficients via 10-fold CV on `cv.grpreg`
+#' @description Fits the bridge-penalized regression with `grpreg::cv.grpreg`
+#'   (which performs k-fold CV over the same `grpreg`-derived lambda grid that
+#'   `getBetaBIC()` would walk) and returns the coefficients at the CV-selected
+#'   `lambda.min`, back-transformed to the original-data scale to match
+#'   `getBetaBIC()`'s return contract.
+#'
+#'   The CV path is the v1.13.0 default for `fetwfe()` and `betwfe()`,
+#'   replacing the BIC selection that previously was the only option. Phase B
+#'   simulation studies (see issue #164 and the `lambda-selection-investigation-164`
+#'   planning artifacts) showed that BIC selection produced systematically
+#'   biased overall-ATT estimates with CI coverage collapsing to 0.00 at
+#'   N = 2000 in the paper's second-simulation regime; CV restores
+#'   near-nominal coverage in every tested regime.
+#'
+#'   Seed handling: if `cv_seed` is `NULL`, it defaults internally to
+#'   `as.integer(N * T)` so consecutive calls on the same dataset are
+#'   reproducible without user intervention. The seed is set via `set.seed()`
+#'   immediately before the `cv.grpreg()` call so the fold assignment is
+#'   deterministic.
+#' @param X_final_scaled Numeric matrix; the design matrix after fusion +
+#'   GLS transformations and `my_scale()` centering/scaling. Same matrix
+#'   handed to `gBridge()` in the BIC path.
+#' @param N Integer; number of unique units.
+#' @param T Integer; number of time periods.
+#' @param p Integer; number of predictors in `X_final_scaled` (excluding intercept).
+#' @param scale_center Numeric vector of length `p`; the centering values
+#'   `my_scale()` produced.
+#' @param scale_scale Numeric vector of length `p`; the scaling values.
+#' @param y_final Numeric vector; the GLS-transformed response.
+#' @param gamma Numeric scalar; the bridge-penalty exponent `q`. Passed
+#'   through to `cv.grpreg(penalty = "gBridge", gamma = gamma)`.
+#' @param cv_folds Integer; number of folds for `cv.grpreg`.
+#' @param cv_seed Integer or NULL; if NULL, defaults to `as.integer(N * T)`.
+#' @return A list with the same shape as `getBetaBIC()`:
+#'   \item{theta_hat}{Numeric vector of length `p + 1` with the selected
+#'     coefficients (including intercept at position 1) on the original
+#'     data scale.}
+#'   \item{lambda_star_ind}{Integer; the index of the selected lambda in
+#'     `cv_fit$fit$lambda`.}
+#'   \item{lambda_star_model_size}{Integer; the number of non-zero
+#'     coefficients (including intercept) at the selected lambda.}
+#' @keywords internal
+#' @noRd
+getBetaCV <- function(
+	X_final_scaled,
+	y_final,
+	N,
+	T,
+	p,
+	scale_center,
+	scale_scale,
+	gamma,
+	cv_folds,
+	cv_seed
+) {
+	if (length(scale_scale) != p) {
+		stop("Length of scale_scale does not match number of predictors (p).")
+	}
+	if (length(scale_center) != p) {
+		stop("Length of scale_center does not match number of predictors (p).")
+	}
+
+	if (is.null(cv_seed)) {
+		cv_seed <- as.integer(N * T)
+	}
+	# `set.seed()` here drives the fold assignment for cv.grpreg(). We use
+	# this rather than cv.grpreg's own `seed` argument because the latter
+	# changed semantics across grpreg versions; the global RNG approach is
+	# version-stable.
+	set.seed(cv_seed)
+
+	cv_fit <- grpreg::cv.grpreg(
+		X = X_final_scaled,
+		y = y_final,
+		penalty = "gBridge",
+		gamma = gamma,
+		nfolds = cv_folds
+	)
+
+	lambda_star <- cv_fit$lambda.min
+	lam_idx <- which(cv_fit$fit$lambda == lambda_star)
+	if (length(lam_idx) != 1L) {
+		# Fall back to nearest match in case of floating-point comparison drift.
+		lam_idx <- which.min(abs(cv_fit$fit$lambda - lambda_star))
+	}
+	stopifnot(length(lam_idx) == 1L)
+	stopifnot(nrow(cv_fit$fit$beta) == p + 1L)
+
+	theta_hat_full <- cv_fit$fit$beta[, lam_idx]
+	stopifnot(length(theta_hat_full) == p + 1L)
+	stopifnot(all(!is.na(theta_hat_full)))
+
+	# Back-transform to the original (unscaled) coefficient space — same
+	# rescaling getBetaBIC() does after BIC selection.
+	adjusted_theta_hat <- theta_hat_full
+	for (j in 2:(p + 1)) {
+		adjusted_theta_hat[j] <- theta_hat_full[j] / scale_scale[j - 1]
+	}
+	adjusted_theta_hat[1] <- theta_hat_full[1] -
+		sum(scale_center * (theta_hat_full[2:(p + 1)] / scale_scale))
+
+	list(
+		theta_hat = adjusted_theta_hat,
+		lambda_star_ind = lam_idx,
+		lambda_star_model_size = sum(theta_hat_full != 0),
+		# Carry the cv.grpreg fit object out — fetwfe_core() / betwfe_core()
+		# need access to `fit$lambda`, `fit$beta`, and the four
+		# lambda.max/min diagnostics that .fit_bridge_with_lambda_path()
+		# would otherwise have computed.
+		fit = cv_fit$fit,
+		cv_seed = cv_seed
+	)
 }
 
 
@@ -453,12 +635,16 @@ fetwfe_core <- function(
 	verbose = FALSE,
 	alpha = 0.05,
 	add_ridge = FALSE,
-	se_type = "default"
+	se_type = "default",
+	lambda_selection = "cv",
+	cv_folds = 10L,
+	cv_seed = NULL
 ) {
 	se_type <- match.arg(
 		se_type,
 		c("default", "conservative", "cluster")
 	)
+	lambda_selection <- match.arg(lambda_selection, c("cv", "bic"))
 	ret <- check_etwfe_core_inputs(
 		in_sample_counts = in_sample_counts,
 		N = N,
@@ -543,36 +729,80 @@ fetwfe_core <- function(
 	#
 	#
 
-	# Estimate bridge regression. The 4-way gBridge dispatch + lambda-path
-	# diagnostics are shared with betwfe_core() via .fit_bridge_with_lambda_path()
-	# in R/utility.R (issue #119).
-	bridge_fit <- .fit_bridge_with_lambda_path(
-		X_final_scaled = X_final_scaled,
-		y_final = y_final,
-		q = q,
-		lambda.max = lambda.max,
-		lambda.min = lambda.min,
-		nlambda = nlambda,
-		verbose = verbose
-	)
-	fit <- bridge_fit$fit
-	lambda.max <- bridge_fit$lambda.max
-	lambda.min <- bridge_fit$lambda.min
-	lambda.max_model_size <- bridge_fit$lambda.max_model_size
-	lambda.min_model_size <- bridge_fit$lambda.min_model_size
+	# Dispatch on `lambda_selection`. The BIC path is the v1.12.0 behavior
+	# unchanged; the CV path is the new v1.13.0 default. Both produce the
+	# same return contract (`theta_hat`, `lambda_star_ind`,
+	# `lambda_star_model_size`) and the same four lambda-path diagnostics
+	# (`lambda.max`, `lambda.min`, `lambda.max_model_size`,
+	# `lambda.min_model_size`) read from the underlying `grpreg` fit object.
+	cv_seed_used <- NA_integer_
+	if (lambda_selection == "bic") {
+		# Estimate bridge regression. The 4-way gBridge dispatch + lambda-path
+		# diagnostics are shared with betwfe_core() via .fit_bridge_with_lambda_path()
+		# in R/utility.R (issue #119).
+		bridge_fit <- .fit_bridge_with_lambda_path(
+			X_final_scaled = X_final_scaled,
+			y_final = y_final,
+			q = q,
+			lambda.max = lambda.max,
+			lambda.min = lambda.min,
+			nlambda = nlambda,
+			verbose = verbose
+		)
+		fit <- bridge_fit$fit
+		lambda.max <- bridge_fit$lambda.max
+		lambda.min <- bridge_fit$lambda.min
+		lambda.max_model_size <- bridge_fit$lambda.max_model_size
+		lambda.min_model_size <- bridge_fit$lambda.min_model_size
 
-	# Select a single set of fitted coefficients by using BIC to choose among
-	# the penalties that were fitted
-	res <- getBetaBIC(
-		fit = fit,
-		N = N,
-		T = T,
-		p = p,
-		X_mod = X_mod,
-		y = y,
-		scale_center = scale_center,
-		scale_scale = scale_scale
-	)
+		# Select a single set of fitted coefficients by using BIC to choose among
+		# the penalties that were fitted
+		res <- getBetaBIC(
+			fit = fit,
+			N = N,
+			T = T,
+			p = p,
+			X_mod = X_mod,
+			y = y,
+			scale_center = scale_center,
+			scale_scale = scale_scale
+		)
+	} else {
+		# CV path (v1.13.0+ default). `cv.grpreg` builds its own lambda grid
+		# internally (we don't pass lambda.max/lambda.min/nlambda — the
+		# user-facing knobs are documented as BIC-path only).
+		if (verbose) {
+			message("Estimating bridge regression with 10-fold CV...")
+			t0 <- Sys.time()
+		}
+		res <- getBetaCV(
+			X_final_scaled = X_final_scaled,
+			y_final = y_final,
+			N = N,
+			T = T,
+			p = p,
+			scale_center = scale_center,
+			scale_scale = scale_scale,
+			gamma = q,
+			cv_folds = cv_folds,
+			cv_seed = cv_seed
+		)
+		if (verbose) {
+			message("Done! Time for estimation:")
+			message(Sys.time() - t0)
+		}
+		fit <- res$fit
+		cv_seed_used <- as.integer(res$cv_seed)
+		# Compute the same four lambda-path diagnostics the BIC path
+		# emits, off the cv.grpreg internal `fit` object. The lambda
+		# direction is identical (col 1 = smallest lambda = largest model;
+		# last col = largest lambda = smallest model), so the .max/.min
+		# extraction matches `.fit_bridge_with_lambda_path()`.
+		lambda.max <- max(fit$lambda)
+		lambda.min <- min(fit$lambda)
+		lambda.max_model_size <- sum(fit$beta[, ncol(fit$beta)] != 0)
+		lambda.min_model_size <- sum(fit$beta[, 1] != 0)
+	}
 
 	theta_hat <- res$theta_hat # This includes intercept
 	lambda_star_ind <- res$lambda_star_ind
@@ -632,7 +862,8 @@ fetwfe_core <- function(
 			d = d,
 			p = p,
 			theta_hat = theta_hat, # Includes intercept
-			include_theta = TRUE
+			include_theta = TRUE,
+			cv_seed_used = cv_seed_used
 		))
 	}
 
@@ -715,7 +946,8 @@ fetwfe_core <- function(
 			d = d,
 			p = p,
 			theta_hat = theta_hat, # Full theta_hat with intercept
-			include_theta = TRUE
+			include_theta = TRUE,
+			cv_seed_used = cv_seed_used
 		))
 	}
 
@@ -924,6 +1156,10 @@ fetwfe_core <- function(
 		R = R,
 		d = d,
 		p = p,
-		calc_ses = calc_ses
+		calc_ses = calc_ses,
+		# v1.13.0 (#164): CV-path provenance. cv_seed_used is the integer
+		# seed actually fed to set.seed() before cv.grpreg (NA_integer_
+		# under BIC).
+		cv_seed_used = cv_seed_used
 	))
 }

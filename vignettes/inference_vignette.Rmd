@@ -250,6 +250,24 @@ print(res_cluster)
 
 The CATT SEs and confidence intervals in `catt_df` are recomputed from the same cluster-robust sandwich; the CATT p-values follow accordingly.
 
+# 5. Choosing the bridge penalty parameter `lambda`
+
+As of v1.13.0, `fetwfe()` and `betwfe()` select the bridge penalty `lambda` via 10-fold cross-validation by default (using `grpreg::cv.grpreg`). The prior default was BIC over the same `grpreg` lambda grid. The change addresses a finite-sample bias issue documented in simulation studies (see issue #164 in the package repository): under the prior BIC default, the overall ATT estimator was biased toward zero at moderate sample sizes, producing 95% confidence intervals whose empirical coverage was as low as 0.00 in some regimes. Cross-validation restores near-nominal coverage in every regime tested and additionally has the lowest MSE in the high-dim regime FETWFE was originally designed for.
+
+The `lambda_star` and `lambda_star_model_size` result slots are populated identically under both selection paths; only the underlying selection criterion differs. The CV path stores its provenance in three new top-level slots: `lambda_selection`, `cv_folds`, and `cv_seed`. The seed defaults to `as.integer(N * T)` so consecutive calls on the same dataset are reproducible without the user having to specify a seed.
+
+To recover the prior BIC behavior --- for reproducing results from analyses run against v1.12.0 or earlier, for example --- pass `lambda_selection = "bic"`:
+
+```r
+fit_bic <- fetwfe(..., lambda_selection = "bic")
+```
+
+To control the CV fold assignment explicitly, pass `cv_folds` and/or `cv_seed`:
+
+```r
+fit_cv <- fetwfe(..., cv_folds = 20L, cv_seed = 42L)
+```
+
 # References
 
 Bertrand, M., Duflo, E., & Mullainathan, S. (2004). "How much should we trust differences-in-differences estimates?" *Quarterly Journal of Economics* 119(1), 249--275.

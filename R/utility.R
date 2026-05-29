@@ -1199,7 +1199,10 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 	alpha = 0.05,
 	add_ridge = FALSE,
 	allow_no_never_treated = TRUE,
-	estimator_type
+	estimator_type,
+	lambda_selection = "cv",
+	cv_folds = 10L,
+	cv_seed = NULL
 ) {
 	stopifnot(
 		is.character(estimator_type),
@@ -1230,7 +1233,10 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 			q = q,
 			verbose = verbose,
 			alpha = alpha,
-			add_ridge = add_ridge
+			add_ridge = add_ridge,
+			lambda_selection = lambda_selection,
+			cv_folds = cv_folds,
+			cv_seed = cv_seed
 		)
 	} else {
 		ret <- checkEtwfeInputs(

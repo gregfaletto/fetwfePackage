@@ -124,6 +124,21 @@
 #' was the conservative Cauchy-Schwarz formula in versions <= 1.11.7;
 #' v1.12.0 switched the default to the tight Gaussian variance.
 #' Default is `"default"`.
+#' @param lambda_selection Character; method for selecting the bridge
+#'   penalty parameter `lambda`. Either `"cv"` (10-fold cross-validation
+#'   on `cv.grpreg`; the v1.13.0+ default) or `"bic"` (BIC over the
+#'   `grpreg` lambda grid; the prior default for v1.12.0 and earlier).
+#'   The default changed in v1.13.0 to address a finite-sample bias issue
+#'   documented in simulation studies (see issue #164). Pass
+#'   `lambda_selection = "bic"` to recover the prior behavior. See the
+#'   inference vignette section "Choosing the bridge penalty parameter"
+#'   for details.
+#' @param cv_folds Integer; number of folds for the CV path. Ignored when
+#'   `lambda_selection = "bic"`. Default is 10.
+#' @param cv_seed Integer or `NULL`; the seed passed to `set.seed()`
+#'   immediately before the `cv.grpreg()` call. If `NULL` (the default),
+#'   the seed defaults internally to `as.integer(N * T)`. Ignored when
+#'   `lambda_selection = "bic"`.
 #' @return An object of class \code{betwfe} containing the following elements:
 #' \item{att_hat}{The
 #' estimated overall average treatment effect for a randomly selected treated
@@ -179,11 +194,20 @@
 #' size of the selected model corresponding to `lambda.min` (for `q <= 1`, this
 #' will be the largest model size). As mentioned above, for `q <= 1` ideally
 #' this value is close to `p`.}\item{lambda_star}{The value of `lambda` chosen
-#' by BIC. If this value is close to `lambda.min` or `lambda.max`, that could
-#' suggest that the range of `lambda` values should be expanded.}
+#' by the method recorded in `lambda_selection`. If this value is close to
+#' `lambda.min` or `lambda.max`, that could suggest that the range of
+#' `lambda` values should be expanded.}
 #' \item{lambda_star_model_size}{The size of the model that was selected. If
 #' this value is close to `lambda.max_model_size` or `lambda.min_model_size`,
 #' That could suggest that the range of `lambda` values should be expanded.}
+#' \item{lambda_selection}{Character scalar; either `"cv"` or `"bic"`.
+#' Mirrors the `lambda_selection` argument the user passed.}
+#' \item{cv_folds}{Integer scalar; the `cv_folds` value used when
+#' `lambda_selection = "cv"`, `NA_integer_` when `lambda_selection = "bic"`.}
+#' \item{cv_seed}{Integer scalar; the seed actually fed to `set.seed()`
+#' immediately before `cv.grpreg()` was called. Defaults to
+#' `as.integer(N * T)` when the user did not pass a seed. `NA_integer_`
+#' when `lambda_selection = "bic"`.}
 #' \item{X_ints}{The design matrix created containing all
 #' interactions, time and cohort dummies, etc.} \item{y}{The vector of
 #' responses, containing `nrow(X_ints)` entries.} \item{X_final}{The design
@@ -324,12 +348,16 @@ betwfe <- function(
 	alpha = 0.05,
 	add_ridge = FALSE,
 	allow_no_never_treated = TRUE,
-	se_type = "default"
+	se_type = "default",
+	lambda_selection = c("cv", "bic"),
+	cv_folds = 10L,
+	cv_seed = NULL
 ) {
 	se_type <- match.arg(
 		se_type,
 		c("default", "conservative", "cluster")
 	)
+	lambda_selection <- match.arg(lambda_selection)
 
 	# Normalize `covs` to a character vector if a one-sided formula was
 	# supplied (#28).
@@ -355,7 +383,10 @@ betwfe <- function(
 		alpha = alpha,
 		add_ridge = add_ridge,
 		allow_no_never_treated = allow_no_never_treated,
-		estimator_type = "fetwfe"
+		estimator_type = "fetwfe",
+		lambda_selection = lambda_selection,
+		cv_folds = cv_folds,
+		cv_seed = cv_seed
 	)
 
 	pdata <- prep$pdata
@@ -395,7 +426,10 @@ betwfe <- function(
 		verbose = verbose,
 		alpha = alpha,
 		add_ridge = add_ridge,
-		se_type = se_type
+		se_type = se_type,
+		lambda_selection = lambda_selection,
+		cv_folds = cv_folds,
+		cv_seed = cv_seed
 	)
 
 	att_branch <- .select_att_branch(
@@ -441,6 +475,19 @@ betwfe <- function(
 		lambda.min_model_size = res$lambda.min_model_size,
 		lambda_star = res$lambda_star,
 		lambda_star_model_size = res$lambda_star_model_size,
+		# v1.13.0 (#164): lambda-selection method provenance. Mirrors
+		# fetwfe()'s shape.
+		lambda_selection = lambda_selection,
+		cv_folds = if (lambda_selection == "cv") {
+			as.integer(cv_folds)
+		} else {
+			NA_integer_
+		},
+		cv_seed = if (lambda_selection == "cv") {
+			as.integer(res$cv_seed_used)
+		} else {
+			NA_integer_
+		},
 		X_ints = res$X_ints,
 		y = res$y,
 		X_final = res$X_final,
@@ -547,6 +594,21 @@ betwfe <- function(
 #' was the conservative Cauchy-Schwarz formula in versions <= 1.11.7;
 #' v1.12.0 switched the default to the tight Gaussian variance.
 #' Default is `"default"`.
+#' @param lambda_selection Character; method for selecting the bridge
+#'   penalty parameter `lambda`. Either `"cv"` (10-fold cross-validation
+#'   on `cv.grpreg`; the v1.13.0+ default) or `"bic"` (BIC over the
+#'   `grpreg` lambda grid; the prior default for v1.12.0 and earlier).
+#'   The default changed in v1.13.0 to address a finite-sample bias issue
+#'   documented in simulation studies (see issue #164). Pass
+#'   `lambda_selection = "bic"` to recover the prior behavior. See the
+#'   inference vignette section "Choosing the bridge penalty parameter"
+#'   for details.
+#' @param cv_folds Integer; number of folds for the CV path. Ignored when
+#'   `lambda_selection = "bic"`. Default is 10.
+#' @param cv_seed Integer or `NULL`; the seed passed to `set.seed()`
+#'   immediately before the `cv.grpreg()` call. If `NULL` (the default),
+#'   the seed defaults internally to `as.integer(N * T)`. Ignored when
+#'   `lambda_selection = "bic"`.
 #' @return An object of class \code{betwfe} containing the following elements:
 #' \item{att_hat}{The
 #' estimated overall average treatment effect for a randomly selected treated
@@ -602,11 +664,20 @@ betwfe <- function(
 #' size of the selected model corresponding to `lambda.min` (for `q <= 1`, this
 #' will be the largest model size). As mentioned above, for `q <= 1` ideally
 #' this value is close to `p`.}\item{lambda_star}{The value of `lambda` chosen
-#' by BIC. If this value is close to `lambda.min` or `lambda.max`, that could
-#' suggest that the range of `lambda` values should be expanded.}
+#' by the method recorded in `lambda_selection`. If this value is close to
+#' `lambda.min` or `lambda.max`, that could suggest that the range of
+#' `lambda` values should be expanded.}
 #' \item{lambda_star_model_size}{The size of the model that was selected. If
 #' this value is close to `lambda.max_model_size` or `lambda.min_model_size`,
 #' That could suggest that the range of `lambda` values should be expanded.}
+#' \item{lambda_selection}{Character scalar; either `"cv"` or `"bic"`.
+#' Mirrors the `lambda_selection` argument the user passed.}
+#' \item{cv_folds}{Integer scalar; the `cv_folds` value used when
+#' `lambda_selection = "cv"`, `NA_integer_` when `lambda_selection = "bic"`.}
+#' \item{cv_seed}{Integer scalar; the seed actually fed to `set.seed()`
+#' immediately before `cv.grpreg()` was called. Defaults to
+#' `as.integer(N * T)` when the user did not pass a seed. `NA_integer_`
+#' when `lambda_selection = "bic"`.}
 #' \item{X_ints}{The design matrix created containing all
 #' interactions, time and cohort dummies, etc.} \item{y}{The vector of
 #' responses, containing `nrow(X_ints)` entries.} \item{X_final}{The design
@@ -689,12 +760,16 @@ betwfeWithSimulatedData <- function(
 	alpha = 0.05,
 	add_ridge = FALSE,
 	allow_no_never_treated = TRUE,
-	se_type = "default"
+	se_type = "default",
+	lambda_selection = c("cv", "bic"),
+	cv_folds = 10L,
+	cv_seed = NULL
 ) {
 	se_type <- match.arg(
 		se_type,
 		c("default", "conservative", "cluster")
 	)
+	lambda_selection <- match.arg(lambda_selection)
 
 	if (!inherits(simulated_obj, "FETWFE_simulated")) {
 		stop("simulated_obj must be an object of class 'FETWFE_simulated'")
@@ -728,7 +803,10 @@ betwfeWithSimulatedData <- function(
 		alpha = alpha,
 		add_ridge = add_ridge,
 		allow_no_never_treated = allow_no_never_treated,
-		se_type = se_type
+		se_type = se_type,
+		lambda_selection = lambda_selection,
+		cv_folds = cv_folds,
+		cv_seed = cv_seed
 	)
 
 	return(res)
@@ -884,12 +962,16 @@ betwfe_core <- function(
 	verbose = FALSE,
 	alpha = 0.05,
 	add_ridge = FALSE,
-	se_type = "default"
+	se_type = "default",
+	lambda_selection = "cv",
+	cv_folds = 10L,
+	cv_seed = NULL
 ) {
 	se_type <- match.arg(
 		se_type,
 		c("default", "conservative", "cluster")
 	)
+	lambda_selection <- match.arg(lambda_selection, c("cv", "bic"))
 	ret <- check_etwfe_core_inputs(
 		in_sample_counts = in_sample_counts,
 		N = N,
@@ -950,36 +1032,72 @@ betwfe_core <- function(
 	#
 	#
 
-	# Estimate bridge regression. The 4-way gBridge dispatch + lambda-path
-	# diagnostics are shared with fetwfe_core() via .fit_bridge_with_lambda_path()
-	# in R/utility.R (issue #119).
-	bridge_fit <- .fit_bridge_with_lambda_path(
-		X_final_scaled = X_final_scaled,
-		y_final = y_final,
-		q = q,
-		lambda.max = lambda.max,
-		lambda.min = lambda.min,
-		nlambda = nlambda,
-		verbose = verbose
-	)
-	fit <- bridge_fit$fit
-	lambda.max <- bridge_fit$lambda.max
-	lambda.min <- bridge_fit$lambda.min
-	lambda.max_model_size <- bridge_fit$lambda.max_model_size
-	lambda.min_model_size <- bridge_fit$lambda.min_model_size
+	# Dispatch on `lambda_selection`. See the corresponding block in
+	# fetwfe_core() for design notes. BETWFE uses the untransformed design
+	# (X_ints), so the BIC SSE computation passes X_mod = X_ints; the CV
+	# path is identical except cv.grpreg evaluates fold-wise MSE directly,
+	# not BIC on the SSE.
+	cv_seed_used <- NA_integer_
+	if (lambda_selection == "bic") {
+		# Estimate bridge regression. The 4-way gBridge dispatch + lambda-path
+		# diagnostics are shared with fetwfe_core() via .fit_bridge_with_lambda_path()
+		# in R/utility.R (issue #119).
+		bridge_fit <- .fit_bridge_with_lambda_path(
+			X_final_scaled = X_final_scaled,
+			y_final = y_final,
+			q = q,
+			lambda.max = lambda.max,
+			lambda.min = lambda.min,
+			nlambda = nlambda,
+			verbose = verbose
+		)
+		fit <- bridge_fit$fit
+		lambda.max <- bridge_fit$lambda.max
+		lambda.min <- bridge_fit$lambda.min
+		lambda.max_model_size <- bridge_fit$lambda.max_model_size
+		lambda.min_model_size <- bridge_fit$lambda.min_model_size
 
-	# Select a single set of fitted coefficients by using BIC to choose among
-	# the penalties that were fitted
-	res <- getBetaBIC(
-		fit = fit,
-		N = N,
-		T = T,
-		p = p,
-		X_mod = X_ints, # Pass untransformed matrix
-		y = y,
-		scale_center = scale_center,
-		scale_scale = scale_scale
-	)
+		# Select a single set of fitted coefficients by using BIC to choose among
+		# the penalties that were fitted
+		res <- getBetaBIC(
+			fit = fit,
+			N = N,
+			T = T,
+			p = p,
+			X_mod = X_ints, # Pass untransformed matrix
+			y = y,
+			scale_center = scale_center,
+			scale_scale = scale_scale
+		)
+	} else {
+		# CV path (v1.13.0+ default).
+		if (verbose) {
+			message("Estimating bridge regression with 10-fold CV...")
+			t0 <- Sys.time()
+		}
+		res <- getBetaCV(
+			X_final_scaled = X_final_scaled,
+			y_final = y_final,
+			N = N,
+			T = T,
+			p = p,
+			scale_center = scale_center,
+			scale_scale = scale_scale,
+			gamma = q,
+			cv_folds = cv_folds,
+			cv_seed = cv_seed
+		)
+		if (verbose) {
+			message("Done! Time for estimation:")
+			message(Sys.time() - t0)
+		}
+		fit <- res$fit
+		cv_seed_used <- as.integer(res$cv_seed)
+		lambda.max <- max(fit$lambda)
+		lambda.min <- min(fit$lambda)
+		lambda.max_model_size <- sum(fit$beta[, ncol(fit$beta)] != 0)
+		lambda.min_model_size <- sum(fit$beta[, 1] != 0)
+	}
 
 	beta_hat <- res$theta_hat # This includes intercept
 	lambda_star_ind <- res$lambda_star_ind
@@ -1035,7 +1153,8 @@ betwfe_core <- function(
 			N = N,
 			T = T,
 			d = d,
-			p = p
+			p = p,
+			cv_seed_used = cv_seed_used
 		))
 	}
 
@@ -1103,7 +1222,8 @@ betwfe_core <- function(
 			N = N,
 			T = T,
 			d = d,
-			p = p
+			p = p,
+			cv_seed_used = cv_seed_used
 		))
 	}
 
@@ -1284,6 +1404,8 @@ betwfe_core <- function(
 		R = R,
 		d = d,
 		p = p,
-		calc_ses = calc_ses
+		calc_ses = calc_ses,
+		# v1.13.0 (#164): CV-path provenance.
+		cv_seed_used = cv_seed_used
 	))
 }

@@ -1037,7 +1037,14 @@ test_that("betwfe produces at least one selected-out cohort in a sparse simulati
 		sig_eps_sq = 1,
 		sig_eps_c_sq = 0.5
 	)
-	res <- betwfeWithSimulatedData(dat, verbose = FALSE)
+	# Pin to BIC: this test asserts a stronger-selection property of the
+	# BIC path. The v1.13.0+ CV default is less likely to select out, by
+	# design (CV trades a small bias for substantially better coverage).
+	res <- betwfeWithSimulatedData(
+		dat,
+		verbose = FALSE,
+		lambda_selection = "bic"
+	)
 
 	expect_gt(sum(res$catt_df[["estimate"]] == 0), 0)
 })

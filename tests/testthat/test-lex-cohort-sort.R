@@ -95,6 +95,10 @@ test_that("tidy.<class> sorts cohorts numerically when labels include >= 10", {
 		lambda.min_model_size = p_test + 1L,
 		lambda_star = 0.1,
 		lambda_star_model_size = 5L,
+		# v1.13.0 (#164): lambda-selection method provenance slots.
+		lambda_selection = "cv",
+		cv_folds = 10L,
+		cv_seed = 1300L,
 		N = 100L,
 		T = T_test,
 		R = R_test,

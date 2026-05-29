@@ -12,7 +12,7 @@
 \item{...}{Unused.}
 }
 \value{
-A one-row data frame with 13 columns.
+A one-row data frame with 16 columns.
 }
 \description{
 Same schema as \code{\link[=glance.fetwfe]{glance.fetwfe()}} (BETWFE also has regularization).
