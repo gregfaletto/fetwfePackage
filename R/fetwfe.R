@@ -433,7 +433,11 @@ fetwfe <- function(
 		# under the BIC path (the core's dispatch initializes
 		# `res$cv_seed_used` to NA_integer_ on the BIC branch).
 		lambda_selection = lambda_selection,
-		cv_folds = if (lambda_selection == "cv") as.integer(cv_folds) else NA_integer_,
+		cv_folds = if (lambda_selection == "cv") {
+			as.integer(cv_folds)
+		} else {
+			NA_integer_
+		},
 		cv_seed = res$cv_seed_used,
 		N = res$N,
 		T = res$T,

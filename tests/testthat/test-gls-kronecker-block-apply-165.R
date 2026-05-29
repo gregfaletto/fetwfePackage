@@ -22,7 +22,8 @@ test_that("block-apply form equals explicit Kronecker on (unit, time)-ordered da
 	sig_eps_sq <- 2.3
 	sig_eps_c_sq <- 1.1
 	J_over_T <- matrix(1 / T, nrow = T, ncol = T)
-	Omega_sqrt_inv <- (1 / sqrt(sig_eps_sq)) * (diag(T) - J_over_T) +
+	Omega_sqrt_inv <- (1 / sqrt(sig_eps_sq)) *
+		(diag(T) - J_over_T) +
 		(1 / sqrt(sig_eps_sq + T * sig_eps_c_sq)) * J_over_T
 	A <- sqrt(sig_eps_sq) * Omega_sqrt_inv
 
@@ -60,7 +61,8 @@ test_that("block-apply form is invariant to the trivial sig_eps_c_sq=0 case", {
 
 	sig_eps_sq <- 1.5
 	J_over_T <- matrix(1 / T, nrow = T, ncol = T)
-	Omega_sqrt_inv <- (1 / sqrt(sig_eps_sq)) * (diag(T) - J_over_T) +
+	Omega_sqrt_inv <- (1 / sqrt(sig_eps_sq)) *
+		(diag(T) - J_over_T) +
 		(1 / sqrt(sig_eps_sq + T * 0)) * J_over_T # sig_eps_c_sq = 0
 	A <- sqrt(sig_eps_sq) * Omega_sqrt_inv
 
