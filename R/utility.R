@@ -105,8 +105,13 @@ idCohorts <- function(df, time_var, unit_var, treat_var) {
 			balance_violations <- c(
 				balance_violations,
 				paste0(
-					"unit ", s, " has ", counts[j], " observations (",
-					n_distinct, " distinct time periods)"
+					"unit ",
+					s,
+					" has ",
+					counts[j],
+					" observations (",
+					n_distinct,
+					" distinct time periods)"
 				)
 			)
 		}
@@ -138,8 +143,13 @@ idCohorts <- function(df, time_var, unit_var, treat_var) {
 				balance_violations <- c(
 					balance_violations,
 					paste0(
-						"unit ", s, " has ", T, " observations (",
-						n_distinct, " distinct time periods)"
+						"unit ",
+						s,
+						" has ",
+						T,
+						" observations (",
+						n_distinct,
+						" distinct time periods)"
 					)
 				)
 			}
