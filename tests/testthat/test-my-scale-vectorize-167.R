@@ -8,9 +8,10 @@
 # columns have mean 0, the scaled columns have unit sd (except where
 # the input column had zero variance, which keeps sd = 1 by the
 # zero-variance guard), and the `scaled:center` / `scaled:scale`
-# attributes match `colMeans` / `apply(x, 2, sd)` of the input. The
-# test covers a normal column, a constant (zero-variance) column,
-# and a one-row degenerate input.
+# attributes match `colMeans` / `apply(x, 2, sd)` of the input.
+# The test covers a normal column and a constant (zero-variance)
+# column. The n = 1 case is unreachable from production callers
+# (design matrices always have nrow >= 2) so it is not tested.
 
 library(testthat)
 
@@ -22,7 +23,8 @@ test_that("my_scale centers columns to mean 0 and scales to unit sd", {
 	expect_equal(unname(colMeans(out)), rep(0, 7L), tolerance = 1e-12)
 	# Each column has sd 1.
 	expect_equal(
-		unname(apply(out, 2L, sd)), rep(1, 7L),
+		unname(apply(out, 2L, sd)),
+		rep(1, 7L),
 		tolerance = 1e-12
 	)
 })
@@ -58,28 +60,26 @@ test_that("my_scale handles zero-variance columns by setting scale to 1", {
 	expect_true(all(out[, 3L] == 0))
 	# The other columns are still standardised.
 	expect_equal(
-		unname(colMeans(out[, -3L])), rep(0, 4L),
+		unname(colMeans(out[, -3L])),
+		rep(0, 4L),
 		tolerance = 1e-12
 	)
 	expect_equal(
-		unname(apply(out[, -3L], 2L, sd)), rep(1, 4L),
+		unname(apply(out[, -3L], 2L, sd)),
+		rep(1, 4L),
 		tolerance = 1e-12
 	)
 })
 
 test_that("my_scale parity against a hand-coded reference on full-rank inputs", {
-	# Hand-coded reference inlining the pre-#167 implementation. Note:
-	# on full-rank inputs (no zero-variance columns), the pre-#167 and
-	# post-#167 implementations agree up to FP reorder (~1e-15). On
-	# inputs WITH zero-variance columns, the pre-#167 implementation
-	# had a subtle bug: `apply(x, 2, sd)` returns floating-point noise
-	# (e.g., 5.11e-15) rather than exact 0 for a constant column, so
-	# the `(sds == 0)` guard at the next line did not fire, and the
-	# zero-variance column's `scaled:scale` was stored as 5e-15 rather
-	# than 1. Post-#167 computes the constant column's sd via exact
-	# algebraic zero (centering `c - c = 0` exactly), so the guard
-	# fires correctly and `scaled:scale` is 1. The zero-variance test
-	# above pins the post-#167 (correct) contract.
+	# Hand-coded reference inlining the pre-#167 implementation. On
+	# full-rank inputs (no zero-variance columns), the pre-#167 and
+	# post-#167 implementations agree up to floating-point reorder
+	# (~1e-15). The zero-variance branch is exercised by the
+	# preceding test_that block; both implementations end up storing
+	# `scaled:scale = 1` on a constant column (base R's two-pass
+	# `var()` returns exact 0 on a constant column, so the
+	# `(sds == 0)` guard fires the same way in both code paths).
 	old_my_scale <- function(x) {
 		ctr <- colMeans(x)
 		sds <- apply(x, 2L, sd)

@@ -105,8 +105,13 @@ idCohorts <- function(df, time_var, unit_var, treat_var) {
 			balance_violations <- c(
 				balance_violations,
 				paste0(
-					"unit ", s, " has ", counts[j], " observations (",
-					n_distinct, " distinct time periods)"
+					"unit ",
+					s,
+					" has ",
+					counts[j],
+					" observations (",
+					n_distinct,
+					" distinct time periods)"
 				)
 			)
 		}
@@ -138,8 +143,13 @@ idCohorts <- function(df, time_var, unit_var, treat_var) {
 				balance_violations <- c(
 					balance_violations,
 					paste0(
-						"unit ", s, " has ", T, " observations (",
-						n_distinct, " distinct time periods)"
+						"unit ",
+						s,
+						" has ",
+						T,
+						" observations (",
+						n_distinct,
+						" distinct time periods)"
 					)
 				)
 			}
@@ -819,8 +829,8 @@ my_scale <- function(x) {
 	# unnecessary intermediates and runs at ~3x the cost of the inlined
 	# colSums-based variance + rep(..., each = nrow(x)) broadcasting
 	# below. Numerical result is identical up to floating-point reorder
-	# (the variance formula is the same Welford-style centered-sum-of-
-	# squares / (n - 1) base::var() uses internally). Issue #167.
+	# (the variance formula is the same two-pass centered-sum-of-
+	# squares / (n - 1) `base::var()` uses internally). Issue #167.
 	n <- nrow(x)
 	ctr <- colMeans(x)
 	# Centered in-place; equivalent to sweep(x, 2, ctr, "-").

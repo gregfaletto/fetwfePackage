@@ -12,27 +12,10 @@
   with broadcasted `rep(..., each = nrow(x))` subtract / divide.
   ~2.4x speedup on the function itself (10000 x 50 fixture). Output
   is numerically identical to the prior implementation up to
-  floating-point reorder noise (~1e-15) on full-rank inputs; on
-  inputs with zero-variance columns the post-fix path is *more*
-  correct (the prior path's `(sds == 0)` guard did not fire when
-  `apply(x, 2, sd)` returned FP noise like 5e-15 instead of exact 0,
-  causing the column to be divided by 5e-15; the post-fix path
-  centers a constant column to exact 0 and divides by 1 as
-  intended). The byte-identical-BIC regression test pinned in
+  floating-point reorder noise (~1e-15) on realistic full-rank
+  inputs. The byte-identical-BIC regression test pinned in
   v1.13.0 (#164) passes byte-identically post-this-change,
   confirming the production code paths are unaffected. Issue #167.
-
-### Bug fix
-
-- (Internal, surfaced by the perf rewrite of `my_scale()`.) On the
-  unlikely-in-practice case that `my_scale()` is called with an
-  input matrix containing zero-variance columns, the prior
-  implementation could store a near-zero (5e-15) value in
-  `attr(scaled, "scaled:scale")` for that column rather than 1,
-  because `apply(x, 2, sd)` produces FP noise rather than exact 0 on
-  constant columns. The post-#167 implementation computes the
-  zero-variance check via the algebraic-exact centered sum of
-  squares and so flags constant columns correctly.
 
 ## Version 1.13.2 (2026-05-28)
 
