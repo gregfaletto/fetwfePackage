@@ -16,7 +16,8 @@
 #      CV/BIC dispatch with `lambda_selection = "bic"` on the fixture
 #      below; future refactors that disturb the BIC path will cause
 #      this test to fail.
-#   6. Invalid `lambda_selection` errors cleanly (match.arg behavior).
+#   6. Invalid `lambda_selection` errors cleanly via the
+#      collect-all-violations validator (not `match.arg`).
 #   7. `cv_folds < 2` errors cleanly (bounds check).
 #   8. `glance()` exposes the three new slots.
 #   9. Both paths are exposed for `betwfe()` as well as `fetwfe()`.
@@ -178,8 +179,36 @@ test_that("invalid lambda_selection errors cleanly", {
 			response = "y",
 			lambda_selection = "aic"
 		),
-		"should be one of"
+		"lambda_selection must be a single character"
 	)
+})
+
+test_that("bad lambda_selection + cv_folds + cv_seed surface as a single Invalid inputs block", {
+	# Regression test for the post-execution review's R2 note (#164):
+	# `match.arg(lambda_selection)` used to fire before the
+	# collect-all-violations validator, so a user passing multiple
+	# bad arguments only saw the lambda_selection error first.
+	# v1.13.0 removes that match.arg from user-facing wrappers, so
+	# the validator surfaces all three errors together.
+	df <- generate_panel_data()
+	err <- tryCatch(
+		fetwfe(
+			pdata = df,
+			time_var = "time",
+			unit_var = "unit",
+			treatment = "treatment",
+			covs = c("cov1", "cov2"),
+			response = "y",
+			lambda_selection = "aic",
+			cv_folds = 1L,
+			cv_seed = "not_an_integer"
+		),
+		error = function(e) conditionMessage(e)
+	)
+	expect_match(err, "Invalid inputs:")
+	expect_match(err, "lambda_selection")
+	expect_match(err, "cv_folds")
+	expect_match(err, "cv_seed")
 })
 
 # ------------------------------------------------------------------------------

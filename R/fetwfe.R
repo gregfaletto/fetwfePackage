@@ -292,7 +292,7 @@ fetwfe <- function(
 	add_ridge = FALSE,
 	allow_no_never_treated = TRUE,
 	se_type = "default",
-	lambda_selection = c("cv", "bic"),
+	lambda_selection = "cv",
 	cv_folds = 10L,
 	cv_seed = NULL
 ) {
@@ -300,7 +300,10 @@ fetwfe <- function(
 		se_type,
 		c("default", "conservative", "cluster")
 	)
-	lambda_selection <- match.arg(lambda_selection)
+	# `lambda_selection` is validated downstream by
+	# `checkFetwfeInputs()` as part of the collect-all-violations
+	# pattern, so a user passing both a bad `lambda_selection` and a
+	# bad `cv_folds` / `cv_seed` sees all the violations at once.
 
 	# Normalize `covs` to a character vector if a one-sided formula was
 	# supplied (#28). All downstream code assumes the character-vector
@@ -656,7 +659,7 @@ fetwfeWithSimulatedData <- function(
 	add_ridge = FALSE,
 	allow_no_never_treated = TRUE,
 	se_type = "default",
-	lambda_selection = c("cv", "bic"),
+	lambda_selection = "cv",
 	cv_folds = 10L,
 	cv_seed = NULL
 ) {
@@ -664,7 +667,8 @@ fetwfeWithSimulatedData <- function(
 		se_type,
 		c("default", "conservative", "cluster")
 	)
-	lambda_selection <- match.arg(lambda_selection)
+	# `lambda_selection` validated downstream by `checkFetwfeInputs()`
+	# (collect-all-violations pattern).
 
 	if (!inherits(simulated_obj, "FETWFE_simulated")) {
 		stop("simulated_obj must be an object of class 'FETWFE_simulated'")

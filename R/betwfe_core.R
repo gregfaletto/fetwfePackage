@@ -349,7 +349,7 @@ betwfe <- function(
 	add_ridge = FALSE,
 	allow_no_never_treated = TRUE,
 	se_type = "default",
-	lambda_selection = c("cv", "bic"),
+	lambda_selection = "cv",
 	cv_folds = 10L,
 	cv_seed = NULL
 ) {
@@ -357,7 +357,8 @@ betwfe <- function(
 		se_type,
 		c("default", "conservative", "cluster")
 	)
-	lambda_selection <- match.arg(lambda_selection)
+	# `lambda_selection` validated downstream by `checkFetwfeInputs()`
+	# (collect-all-violations pattern).
 
 	# Normalize `covs` to a character vector if a one-sided formula was
 	# supplied (#28).
@@ -754,7 +755,7 @@ betwfeWithSimulatedData <- function(
 	add_ridge = FALSE,
 	allow_no_never_treated = TRUE,
 	se_type = "default",
-	lambda_selection = c("cv", "bic"),
+	lambda_selection = "cv",
 	cv_folds = 10L,
 	cv_seed = NULL
 ) {
@@ -762,7 +763,8 @@ betwfeWithSimulatedData <- function(
 		se_type,
 		c("default", "conservative", "cluster")
 	)
-	lambda_selection <- match.arg(lambda_selection)
+	# `lambda_selection` validated downstream by `checkFetwfeInputs()`
+	# (collect-all-violations pattern).
 
 	if (!inherits(simulated_obj, "FETWFE_simulated")) {
 		stop("simulated_obj must be an object of class 'FETWFE_simulated'")

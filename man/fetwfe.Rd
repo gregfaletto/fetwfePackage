@@ -23,7 +23,7 @@ fetwfe(
   add_ridge = FALSE,
   allow_no_never_treated = TRUE,
   se_type = "default",
-  lambda_selection = c("cv", "bic"),
+  lambda_selection = "cv",
   cv_folds = 10L,
   cv_seed = NULL
 )

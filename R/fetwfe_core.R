@@ -449,7 +449,24 @@ getBetaCV <- function(
 	cv_seed
 ) {
 	if (is.null(cv_seed)) {
-		cv_seed <- as.integer(N * T)
+		# Default seed = N * T. Guard the (implausible) case where N * T
+		# exceeds .Machine$integer.max ≈ 2.15e9: `as.integer()` would
+		# silently coerce to `NA_integer_` and `set.seed(NA)` would then
+		# error opaquely from the user's perspective ("supplied seed is
+		# not a valid integer") because they never passed a seed. Clip to
+		# the integer ceiling and warn so the user knows to override.
+		nt_double <- as.numeric(N) * as.numeric(T)
+		if (nt_double > .Machine$integer.max) {
+			warning(
+				"Default cv_seed (N * T = ",
+				format(nt_double, scientific = FALSE),
+				") exceeds .Machine$integer.max; clipping. ",
+				"Pass cv_seed = <integer> to silence."
+			)
+			cv_seed <- .Machine$integer.max
+		} else {
+			cv_seed <- as.integer(nt_double)
+		}
 	}
 	# `set.seed()` here drives the fold assignment for cv.grpreg(). We use
 	# this rather than cv.grpreg's own `seed` argument because the latter
