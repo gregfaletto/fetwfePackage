@@ -25,33 +25,32 @@
 	out
 }
 
-# Helper: build a minimal classed object carrying only the fields each
-# `print.<class>(show_internal = FALSE)` body touches. The exact field
-# inventory was confirmed by reading each print method end-to-end during
-# the plan-review pass.
+# Helper: build a printable classed object on a small simulated fixture,
+# then overwrite `catt_df` with the 5-row stub above. Prior to #174 we
+# used a sparse hand-rolled list with only the slots `print.<class>()`
+# read; #174 removed the silent-swallow `tryCatch(eventStudy(x), ...)`
+# in `print` so it now also exercises the full slot inventory via
+# `eventStudy()`'s precondition (which calls `.validate_<class>()`).
+# Sourcing the fixture once per call keeps the test focused on
+# truncation behavior while satisfying the post-#174 contract.
+# The fixture pins R = 5 because the validator's C4 contract requires
+# `nrow(catt_df) == R`; the 5-row stub above is the load-bearing piece
+# for the truncation assertions, so the fixture's R has to match.
 .make_minimal_obj <- function(klass) {
-	obj <- list(
-		alpha = 0.05,
-		att_hat = 0.3,
-		att_se = 0.05,
-		att_p_value = 0.01,
-		# se_type must mirror the live `match.arg(c("default", "cluster"))`
-		# choice in the estimator entry points; "standard" was a stale
-		# mock value (issue #55).
-		se_type = "default",
-		catt_df = .make_catt_df_5(),
-		N = 100,
-		T = 6,
-		R = 3,
-		d = 2,
-		p = 30
+	set.seed(2026)
+	coefs <- genCoefs(R = 5, T = 7, d = 0, density = 0.5, eff_size = 1)
+	sim <- simulateData(coefs, N = 80, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+	obj <- switch(
+		klass,
+		fetwfe = fetwfeWithSimulatedData(sim, q = 0.5),
+		etwfe = etwfeWithSimulatedData(sim),
+		betwfe = betwfeWithSimulatedData(sim, q = 0.5),
+		stop("Unknown klass: ", klass)
 	)
-	if (klass %in% c("fetwfe", "betwfe")) {
-		obj$att_selected <- TRUE
-		obj$lambda_star_model_size <- 5L
-		obj$lambda_star <- 0.1
-	}
-	class(obj) <- klass
+	# Pre-#174 the mock pinned `R = 3 / N = 100 / lambda_star = 0.1`
+	# etc.; only `catt_df` is load-bearing for truncation behavior, so
+	# we keep the 5-row stub there and let the real fit supply the rest.
+	obj$catt_df <- .make_catt_df_5()
 	obj
 }
 

@@ -259,6 +259,7 @@ internally). Consumed by \verb{augment.<class>()}.}
 \item{theta_hat}{The vector of estimated coefficients in the transformed (fused) space, including the intercept as the first element.}
 \item{calc_ses}{Logical indicating whether standard errors were calculated.}
 \item{variance_components}{A list exposing the two variance pieces (\code{att_var_1}, \code{att_var_2}) plus their paper-notation counterparts (\code{V_1}, \code{V_2}) and the unit-scaled variance estimators (\code{tilde_v_N}, \code{hat_v_N}, \code{tilde_v_N_C}, \code{tilde_v_N_C_pi_hat}, \code{tilde_v_N_C_pi_hat_cons}, \code{tilde_v_N_cons}) catalogued at paper line 2006. The Wald CI is \verb{[hat_T_N +- qnorm(1-alpha/2) * sqrt(tilde_v_N / N)]} (paper Eq. \code{conf.int.form}). New in v1.12.0 (issue #141 + #146).}
+\item{first_year}{Integer or numeric scalar; the first (earliest) \code{time_var} value in the panel after \code{idCohorts()} processing. Consumed by \code{eventStudy()} to map \code{cohort_probs}' cohort labels (treatment-start years) to 1-based panel-time-index offsets when the labels are integer-coercible. New in v1.13.3 (issue #174).}
 }
 }
 

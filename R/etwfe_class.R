@@ -118,7 +118,8 @@ print.summary.etwfe <- function(x, ...) {
 	"X_final",
 	"y_final",
 	"calc_ses",
-	"variance_components"
+	"variance_components",
+	"first_year"
 )
 
 #' @title Validate an `etwfe`-classed object's contracts

@@ -108,7 +108,25 @@ eventStudy <- function(x, alpha = NULL) {
 	y_final <- x$y_final
 	se_type <- if (is.null(x$se_type)) "default" else x$se_type
 	is_indep <- isTRUE(x$indep_counts_used)
-	first_inds <- getFirstInds(R = R, T = T)
+	# v1.13.3 (#174): if cohort labels on the fit are parseable as panel-
+	# time values (and the fit exposes its `first_year`), use the actual
+	# offsets so scattered-cohort panels (`bacondecomp::divorce` is the
+	# canonical reproducer) work; otherwise fall back to the consecutive-
+	# cohort assumption to preserve byte-identical results on synthetic
+	# fixtures whose `cohort_probs` carry no integer-coercible names.
+	# `cohort_offsets_int` is also used for the per-event-time validity
+	# set `V_e <- which(cohort_offsets_int <= T - e)`; for consecutive
+	# cohorts this reduces to the pre-#174 `seq_len(R) <= T - 1L - e`.
+	cohort_offsets_int <- .derive_cohort_offsets_from_fit(x)
+	if (is.null(cohort_offsets_int)) {
+		cohort_offsets_int <- seq.int(2L, R + 1L)
+		first_inds <- getFirstInds(R = R, T = T)
+	} else {
+		first_inds <- getFirstIndsFromOffsets(
+			cohort_offsets_int = cohort_offsets_int,
+			T = T
+		)
+	}
 	tes <- beta_hat[treat_inds]
 
 	# Determine the selected support
@@ -165,7 +183,13 @@ eventStudy <- function(x, alpha = NULL) {
 
 	for (k in seq_along(event_times)) {
 		e <- event_times[k]
-		V_e <- which(seq_len(R) <= T - 1L - e)
+		# v1.13.3 (#174): use the actual cohort offsets to determine
+		# which cohorts contribute at event time `e` (cohort `r` has a
+		# treatment-effect cell at `(r, e)` iff `cohort_offsets[r] + e
+		# <= T`, equivalently `cohort_offsets[r] <= T - e`). For
+		# consecutive offsets this reduces to the pre-#174
+		# `seq_len(R) <= T - 1L - e`.
+		V_e <- which(cohort_offsets_int <= T - e)
 		n_cohorts[k] <- length(V_e)
 		if (length(V_e) == 0L) {
 			estimates[k] <- 0
@@ -302,7 +326,19 @@ eventStudy <- function(x, alpha = NULL) {
 	theta_hat_full <- x$internal$theta_hat
 	se_type <- if (is.null(x$se_type)) "default" else x$se_type
 	is_indep <- isTRUE(x$indep_counts_used)
-	first_inds <- getFirstInds(R = R, T = T)
+	# v1.13.3 (#174): see matching block in `.event_study_etwfe_betwfe()`
+	# above for rationale. The fall-back keeps synthetic-fixture results
+	# byte-identical to the pre-#174 path.
+	cohort_offsets_int <- .derive_cohort_offsets_from_fit(x)
+	if (is.null(cohort_offsets_int)) {
+		cohort_offsets_int <- seq.int(2L, R + 1L)
+		first_inds <- getFirstInds(R = R, T = T)
+	} else {
+		first_inds <- getFirstIndsFromOffsets(
+			cohort_offsets_int = cohort_offsets_int,
+			T = T
+		)
+	}
 	tes <- beta_hat[treat_inds]
 
 	# Selected support in theta-space (slopes only; drop intercept)
@@ -369,7 +405,9 @@ eventStudy <- function(x, alpha = NULL) {
 
 	for (k in seq_along(event_times)) {
 		e <- event_times[k]
-		V_e <- which(seq_len(R) <= T - 1L - e)
+		# v1.13.3 (#174): see matching block in `.event_study_etwfe_betwfe()`
+		# above for rationale.
+		V_e <- which(cohort_offsets_int <= T - e)
 		n_cohorts[k] <- length(V_e)
 		if (length(V_e) == 0L) {
 			estimates[k] <- 0

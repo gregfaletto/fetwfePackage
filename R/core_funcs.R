@@ -298,6 +298,7 @@ prep_for_etwfe_core <- function(
 	in_sample_counts <- res$in_sample_counts
 	num_treats <- res$num_treats
 	first_inds <- res$first_inds
+	first_year <- res$first_year
 
 	rm(res)
 
@@ -356,6 +357,7 @@ prep_for_etwfe_core <- function(
 		in_sample_counts = in_sample_counts,
 		num_treats = num_treats,
 		first_inds = first_inds,
+		first_year = first_year,
 		R = R
 	))
 }

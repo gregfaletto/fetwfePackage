@@ -82,7 +82,8 @@ print.twfeCovs <- function(x, ...) {
 	"X_final",
 	"y_final",
 	"calc_ses",
-	"variance_components"
+	"variance_components",
+	"first_year"
 )
 
 #' @title Validate a `twfeCovs`-shaped object's contracts
