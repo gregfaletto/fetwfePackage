@@ -75,60 +75,149 @@ idCohorts <- function(df, time_var, unit_var, treat_var) {
 	balance_violations <- character(0)
 	absorbing_violations <- character(0)
 
-	for (s in units) {
-		df_s <- df[df[, unit_var] == s, ]
+	# Vectorised replacement for the per-unit `for (s in units) df[df[,
+	# unit_var] == s, ]` filter loop that was O(N^2 * T) (#166). Strategy:
+	# sort `df` once by `(unit_var, time_var)` so each unit's T rows are
+	# contiguous at positions `(k-1)*T + 1 .. k*T` of the k-th lex-sorted
+	# unit; then reshape the treatment vector for balanced units into a
+	# `T x N_bal` matrix and run the absorbing-state check + cohort
+	# assignment column-wise. This is structurally the same rewrite that
+	# `processCovs()` got in #84 item 15 — see
+	# `R/design_matrix.R:393-401` for the analogous pattern.
+	df_sorted <- df[order(df[, unit_var], df[, time_var]), , drop = FALSE]
+	units_v <- df_sorted[, unit_var]
+	times_v <- df_sorted[, time_var]
+	treat_v <- df_sorted[, treat_var]
+	units_sorted <- sort(units) # lex order matches df_sorted's unit blocks
 
-		# Balance check (gates the absorbing-state check on the same unit;
-		# we can't trust the per-period treatment vector when observations
-		# are missing or when a time period is duplicated). The
-		# setequal() clause catches the (1, 2, 2)-style duplicate-time
-		# case that nrow == T silently passed pre-#75.
-		if (nrow(df_s) != T || !setequal(df_s[, time_var], times)) {
+	# Per-unit row counts via tabulate.
+	counts <- as.integer(tabulate(factor(units_v, levels = units_sorted)))
+
+	# 1. Units with count != T are unbalanced by row count.
+	bad_count_idx <- which(counts != T)
+	if (length(bad_count_idx) > 0) {
+		# For each unbalanced-by-count unit, build the existing canonical
+		# violation message. n_distinct is per-unit; cheap on the (small)
+		# bad-unit subset.
+		for (j in bad_count_idx) {
+			s <- units_sorted[j]
+			n_distinct <- length(unique(times_v[units_v == s]))
 			balance_violations <- c(
 				balance_violations,
 				paste0(
-					"unit ",
-					s,
-					" has ",
-					nrow(df_s),
-					" observations (",
-					length(unique(df_s[, time_var])),
-					" distinct time periods)"
+					"unit ", s, " has ", counts[j], " observations (",
+					n_distinct, " distinct time periods)"
 				)
 			)
-			next
+		}
+	}
+
+	# 2. Units with count == T may still have duplicate-time-within-unit
+	# (the (1, 2, 2)-style case from #75). For the balanced-by-count
+	# subset, their T-row blocks in df_sorted are contiguous, so we can
+	# reshape to a T x N_bal time matrix and compare each column to
+	# `times`.
+	balanced_mask <- (counts == T)
+	balanced_units <- units_sorted[balanced_mask]
+	balanced_rows <- units_v %in% balanced_units
+	N_bal <- length(balanced_units)
+
+	dup_time_in_block <- logical(N_bal) # default FALSE
+	if (N_bal > 0) {
+		times_mat <- matrix(times_v[balanced_rows], nrow = T, ncol = N_bal)
+		# vapply column-wise check; `times` is already sorted.
+		dup_time_in_block <- vapply(
+			seq_len(N_bal),
+			function(k) !isTRUE(all.equal(sort(times_mat[, k]), times)),
+			logical(1)
+		)
+		if (any(dup_time_in_block)) {
+			for (k in which(dup_time_in_block)) {
+				s <- balanced_units[k]
+				n_distinct <- length(unique(times_mat[, k]))
+				balance_violations <- c(
+					balance_violations,
+					paste0(
+						"unit ", s, " has ", T, " observations (",
+						n_distinct, " distinct time periods)"
+					)
+				)
+			}
+		}
+	}
+
+	# After both balance checks: re-narrow to units that passed BOTH.
+	if (N_bal > 0 && any(dup_time_in_block)) {
+		passed_balance_mask_in_balanced <- !dup_time_in_block
+		balanced_units <- balanced_units[passed_balance_mask_in_balanced]
+		balanced_rows <- units_v %in% balanced_units
+		N_bal <- length(balanced_units)
+	}
+
+	# 3. Absorbing-state check + cohort assignment on the balanced subset.
+	# At this point, balanced_rows selects exactly the rows belonging to
+	# units that passed BOTH balance checks (count and time-set).
+	if (N_bal > 0) {
+		treat_mat <- matrix(treat_v[balanced_rows], nrow = T, ncol = N_bal)
+		is_treat_mat <- (treat_mat == 1)
+		any_treat <- colSums(is_treat_mat) > 0
+
+		first_treat_idx <- rep(NA_integer_, N_bal)
+		if (any(any_treat)) {
+			# For each treated column, find the first row where treat == 1.
+			# max.col on the column-transpose returns the column index per
+			# row of the transpose, which is the row index of the first
+			# `1` per column of the original.
+			first_treat_idx[any_treat] <- max.col(
+				t(is_treat_mat[, any_treat, drop = FALSE]),
+				ties.method = "first"
+			)
 		}
 
-		if (any(df_s[, treat_var] == 1)) {
-			# Identify first year of treatment (and cohort)
-			# Ensure df_s is sorted by time before finding min
-			df_s_sorted <- df_s[order(df_s[, time_var]), ]
-			treat_year_s_ind_in_sorted_times <- min(which(
-				df_s_sorted[, treat_var] == 1
-			))
-			actual_treat_time <- df_s_sorted[
-				treat_year_s_ind_in_sorted_times,
-				time_var
-			]
-
-			# Absorbing-state check.
-			# Check from the actual_treat_time onwards in the original df for unit s
-			original_unit_times_from_treatment <- df[
-				(df[, unit_var] == s) & (df[, time_var] >= actual_treat_time),
-				treat_var
-			]
-			if (any(original_unit_times_from_treatment != 1)) {
-				absorbing_violations <- c(absorbing_violations, as.character(s))
-				# Do NOT append to cohorts: only units that pass BOTH the
-				# balance and absorbing-state checks contribute to cohort
-				# membership. (load-bearing: without `next`, this unit would
-				# leak into the cohorts list before stop() fires below.)
-				next
+		# Absorbing-state check: for each treated unit, check the tail
+		# from `first_treat_idx[k]` onwards is all 1s.
+		abs_bad_mask <- logical(N_bal)
+		treated_cols <- which(any_treat)
+		for (k in treated_cols) {
+			tail_vals <- treat_mat[first_treat_idx[k]:T, k]
+			if (any(tail_vals != 1L)) {
+				abs_bad_mask[k] <- TRUE
+				absorbing_violations <- c(
+					absorbing_violations,
+					as.character(balanced_units[k])
+				)
 			}
-			cohorts[[as.character(actual_treat_time)]] <- c(
-				cohorts[[as.character(actual_treat_time)]],
-				s
+		}
+
+		# Cohort assignment: only treated units that pass the absorbing
+		# check (and trivially balance). Use `split()` for O(N) grouping
+		# instead of per-unit `c()` (O(N^2) on the appends). Preserve
+		# declaration order within each cohort by sorting the to-assign
+		# unit list by its position in the original `units` vector.
+		cohort_assign_mask <- any_treat & !abs_bad_mask
+		if (any(cohort_assign_mask)) {
+			to_assign_units <- balanced_units[cohort_assign_mask]
+			to_assign_keys <- as.character(
+				times[first_treat_idx[cohort_assign_mask]]
 			)
+			# Stable declaration-order: each to_assign_unit's index in
+			# the original `units` vector.
+			decl_order <- match(to_assign_units, units)
+			ord <- order(decl_order)
+			to_assign_units <- to_assign_units[ord]
+			to_assign_keys <- to_assign_keys[ord]
+			split_groups <- split(
+				to_assign_units,
+				factor(to_assign_keys, levels = names(cohorts))
+			)
+			for (key in names(split_groups)) {
+				if (length(split_groups[[key]]) > 0) {
+					cohorts[[key]] <- c(
+						cohorts[[key]],
+						as.character(split_groups[[key]])
+					)
+				}
+			}
 		}
 	}
 
