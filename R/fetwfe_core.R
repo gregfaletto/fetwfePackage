@@ -24,6 +24,16 @@
 #' @param verbose Logical; if TRUE, print progress. Default `FALSE`.
 #' @param alpha Numeric; significance level for confidence intervals. Default `0.05`.
 #' @param add_ridge Logical; if TRUE, add small ridge penalty. Default `FALSE`.
+#' @param lambda_selection Character scalar; either `"cv"` (10-fold
+#'   cross-validation, the v1.13.0+ default) or `"bic"` (BIC over the
+#'   `grpreg`-generated lambda path). Default `"cv"`.
+#' @param cv_folds Integer; number of CV folds when `lambda_selection
+#'   = "cv"`. Default `10L`.
+#' @param cv_seed Integer or NULL; the seed to pass to `set.seed()`
+#'   before calling `grpreg::cv.grpreg()` so CV fold assignment is
+#'   reproducible. `NULL` defaults to `as.integer(N * T)` (clipped to
+#'   `.Machine$integer.max` with a warning on overflow). Default
+#'   `NULL`.
 #' @return A list with two elements:
 #'   - `pdata`: the (possibly tibble-coerced) panel data frame.
 #'   - `indep_count_data_available`: logical; `TRUE` if a valid

@@ -191,7 +191,7 @@
 #' argument was provided and used for asymptotically-exact ATT inference,
 #' `FALSE` otherwise.}
 #' \item{se_type}{Character scalar; the `se_type` argument the user passed
-#' (`"default"` or `"cluster"`).}
+#' (`"default"`, `"conservative"`, or `"cluster"`).}
 #' \item{y_mean}{Numeric scalar; the mean of the original (pre-centering)
 #'   response. Stored so downstream methods (`augment()`, `predict()`)
 #'   can return fitted values on the original-response scale.}
@@ -618,7 +618,7 @@ fetwfe <- function(
 #' argument was provided and used for asymptotically-exact ATT inference,
 #' `FALSE` otherwise.}
 #' \item{se_type}{Character scalar; the `se_type` argument the user passed
-#' (`"default"` or `"cluster"`).}
+#' (`"default"`, `"conservative"`, or `"cluster"`).}
 #' \item{y_mean}{Numeric scalar; the mean of the original (pre-centering)
 #'   response. Stored so downstream methods (`augment()`, `predict()`)
 #'   can return fitted values on the original-response scale.}
@@ -885,7 +885,7 @@ fetwfeWithSimulatedData <- function(
 #' argument was provided and used for asymptotically-exact ATT inference,
 #' `FALSE` otherwise.}
 #' \item{se_type}{Character scalar; the `se_type` argument the user passed
-#' (`"default"` or `"cluster"`).}
+#' (`"default"`, `"conservative"`, or `"cluster"`).}
 #' \item{y_mean}{Numeric scalar; the mean of the original (pre-centering)
 #'   response. Stored so downstream methods (`augment()`, `predict()`)
 #'   can return fitted values on the original-response scale.}
@@ -901,8 +901,11 @@ fetwfeWithSimulatedData <- function(
 #' \item{internal}{A list containing internal outputs that are typically
 #'   not needed for interpretation, packaged here for parity with
 #'   `fetwfe()` so downstream consumers can use a single canonical
-#'   access path across all four estimator classes (#144). The five
-#'   sub-slots are also duplicated at top level for backward compat:
+#'   access path across all four estimator classes (#144). The first
+#'   five sub-slots (`X_ints`, `y`, `X_final`, `y_final`, `calc_ses`)
+#'   are also duplicated at top level for backward compat;
+#'   `variance_components` and `first_year` live only under
+#'   `$internal`:
 #'   \describe{
 #'     \item{X_ints}{The design matrix containing all interactions,
 #'       time and cohort dummies, etc. Same value as top-level `X_ints`.}
@@ -1244,7 +1247,7 @@ etwfe <- function(
 #' argument was provided and used for asymptotically-exact ATT inference,
 #' `FALSE` otherwise.}
 #' \item{se_type}{Character scalar; the `se_type` argument the user passed
-#' (`"default"` or `"cluster"`).}
+#' (`"default"`, `"conservative"`, or `"cluster"`).}
 #' \item{y_mean}{Numeric scalar; the mean of the original (pre-centering)
 #'   response. Stored so downstream methods (`augment()`, `predict()`) can
 #'   return fitted values on the original-response scale.}
@@ -1258,8 +1261,11 @@ etwfe <- function(
 #' \item{internal}{A list containing internal outputs that are typically
 #'   not needed for interpretation, packaged here for parity with
 #'   `fetwfe()` so downstream consumers can use a single canonical
-#'   access path across all four estimator classes (#144). The five
-#'   sub-slots are also duplicated at top level for backward compat:
+#'   access path across all four estimator classes (#144). The first
+#'   five sub-slots (`X_ints`, `y`, `X_final`, `y_final`, `calc_ses`)
+#'   are also duplicated at top level for backward compat;
+#'   `variance_components` and `first_year` live only under
+#'   `$internal`:
 #'   \describe{
 #'     \item{X_ints}{The design matrix containing all interactions,
 #'       time and cohort dummies, etc. Same value as top-level `X_ints`.}

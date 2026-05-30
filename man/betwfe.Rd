@@ -290,12 +290,15 @@ variance of the overall ATT.}
 argument was provided and used for asymptotically-exact ATT inference,
 \code{FALSE} otherwise.}
 \item{se_type}{Character scalar; the \code{se_type} argument the user passed
-(\code{"default"} or \code{"cluster"}).}
+(\code{"default"}, \code{"conservative"}, or \code{"cluster"}).}
 \item{internal}{A list containing internal outputs that are typically
 not needed for interpretation, packaged here for parity with
 \code{fetwfe()} so downstream consumers can use a single canonical
-access path across all four estimator classes (#144). The five
-sub-slots are also duplicated at top level for backward compat:
+access path across all four estimator classes (#144). The first
+five sub-slots (\code{X_ints}, \code{y}, \code{X_final}, \code{y_final}, \code{calc_ses})
+are also duplicated at top level for backward compat;
+\code{variance_components} and \code{first_year} live only under
+\verb{$internal}:
 \describe{
 \item{X_ints}{The design matrix containing all interactions,
 time and cohort dummies, etc. Same value as top-level \code{X_ints}.}
