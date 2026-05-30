@@ -315,12 +315,6 @@ idCohorts <- function(df, time_var, unit_var, treat_var) {
 		cohorts <- cohorts[order(as.numeric(names(cohorts)))]
 	}
 
-	# If after removing first-period treated, there are no treated cohorts left:
-	if (length(cohorts) == 0) {
-		# This implies all treated units were treated in the first period.
-		stop("all units appear to have been treated in the first period")
-	}
-
 	# This should have been the first cohort
 	stopifnot(length(cohorts[[1]]) == 0)
 

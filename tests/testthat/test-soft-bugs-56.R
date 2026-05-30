@@ -49,13 +49,15 @@ test_that(".assemble_event_study_df masks zero and negative SEs to NA p-value", 
 # ------------------------------------------------------------------------------
 
 .minimal_ols_call <- function(cohort_probs_overall) {
-	# Minimal valid call shape for getSecondVarTermOLS: R=2, num_treats=3,
-	# first_inds = c(1, 3) so sel_inds = list(1:2, 3:3) and unlist = 1:3.
+	# Minimal valid call shape for getSecondVarTermOLS: R=2, num_treats=3.
+	# Post-#180 (DC2) the function no longer accepts `first_inds` — the
+	# pre-#180 helper passed `first_inds = c(1L, 3L)` only to feed a
+	# tautological `stopifnot(all.equal(unlist(sel_inds), 1:num_treats))`
+	# assertion inside the function, which was dropped.
 	fetwfe:::getSecondVarTermOLS(
 		psi_mat = matrix(c(0.5, 0.5, 0, 0, 0, 1), nrow = 3, ncol = 2),
 		tes = c(1, 2, 3),
 		cohort_probs_overall = cohort_probs_overall,
-		first_inds = c(1L, 3L),
 		num_treats = 3L,
 		N = 100L,
 		T = 3L,

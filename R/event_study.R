@@ -298,7 +298,6 @@ eventStudy <- function(x, alpha = NULL) {
 				psi_mat = psi_e_mat,
 				tes = tes,
 				cohort_probs_overall = masked_probs,
-				first_inds = first_inds,
 				num_treats = num_treats,
 				N = N,
 				T = T,

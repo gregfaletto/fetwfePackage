@@ -73,9 +73,11 @@ print.twfeCovs <- function(x, ...) {
 # Inner slots under `$internal` (#144). Parallel to
 # `.EXPECTED_INTERNAL_SLOTS_FETWFE` in `R/fetwfe_class.R`. The OLS-family
 # `$internal` omits `theta_hat` (bridge-selection-only, no analog here).
-# Same values are also duplicated at top level for backward compat per
-# the pure-additive strategy adopted in PR #154; the canonical path is
-# `$internal` going forward.
+# The first five sub-slots (`X_ints`, `y`, `X_final`, `y_final`,
+# `calc_ses`) are also duplicated at top level for backward compat per
+# the pure-additive strategy adopted in PR #154; `variance_components`
+# and `first_year` live only under `$internal`. Both top-level and
+# `$internal` are canonical and kept in sync (#180).
 .EXPECTED_INTERNAL_SLOTS_TWFECOVS <- c(
 	"X_ints",
 	"y",

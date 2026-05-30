@@ -67,14 +67,19 @@ test_that("OLS-family: $internal slots equal top-level slots (parity)", {
 })
 
 # ----------------------------------------------------------------------
-# 3) fetwfe: the inner slots are EXCLUSIVELY under `$internal` (existing
-#    behavior, regression guard). Documents the asymmetry that #144
-#    consciously preserves: fetwfe gates these slots through
-#    `$internal` as the only access path; the OLS-family duplicates for
-#    backward compat.
+# 3) fetwfe: inner slots are EXCLUSIVELY under `$internal` EXCEPT
+#    `calc_ses` (added at top level in #180 / PR-D IB1 for parity with
+#    the OLS-family). Documents the post-#180 asymmetry: fetwfe gates
+#    `X_ints` / `y` / `X_final` / `y_final` / `theta_hat` / `variance_components` /
+#    `first_year` through `$internal` as the only access path, but
+#    `calc_ses` is duplicated at top level to match `etwfe()` /
+#    `betwfe()` / `twfeCovs()`. The pre-#180 test ("$internal slots
+#    are NOT duplicated at top level") explicitly locked the
+#    calc_ses-included asymmetry; this rewrite reflects the IB1
+#    parity-closing.
 # ----------------------------------------------------------------------
 
-test_that("fetwfe: $internal slots are NOT duplicated at top level", {
+test_that("fetwfe: $internal slots are NOT duplicated at top level (except calc_ses, #180)", {
 	sim <- .parity_setup()
 	res <- fetwfeWithSimulatedData(sim)
 	expect_true(!is.null(res$internal$X_ints))
@@ -86,7 +91,11 @@ test_that("fetwfe: $internal slots are NOT duplicated at top level", {
 	expect_null(res[["X_final"]])
 	expect_null(res[["y_final"]])
 	expect_null(res[["theta_hat"]])
-	expect_null(res[["calc_ses"]])
+	# IB1 (#180): calc_ses IS duplicated at top level for parity with
+	# the OLS-family; lock the parity invariant (mirrors the OLS-family
+	# `expect_identical(res$internal$calc_ses, res$calc_ses)` at the
+	# OLS-family-parity test above).
+	expect_identical(res$internal$calc_ses, res$calc_ses)
 })
 
 # ----------------------------------------------------------------------
