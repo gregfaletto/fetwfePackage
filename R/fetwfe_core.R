@@ -473,7 +473,32 @@ getBetaCV <- function(
 	# `set.seed()` here drives the fold assignment for cv.grpreg(). We use
 	# this rather than cv.grpreg's own `seed` argument because the latter
 	# changed semantics across grpreg versions; the global RNG approach is
-	# version-stable.
+	# version-stable. We save and restore the caller's .Random.seed via
+	# on.exit() so the call leaves the caller's RNG state untouched
+	# (issue #177 — without this, every default-path fetwfe() / betwfe()
+	# call would silently mutate the user's seed, a v1.13.0 regression
+	# vs the v1.12.x BIC default).
+	old_rng <- if (
+		exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+	) {
+		.GlobalEnv$.Random.seed
+	} else {
+		NULL
+	}
+	on.exit(
+		{
+			if (is.null(old_rng)) {
+				if (
+					exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+				) {
+					rm(".Random.seed", envir = .GlobalEnv)
+				}
+			} else {
+				assign(".Random.seed", old_rng, envir = .GlobalEnv)
+			}
+		},
+		add = TRUE
+	)
 	set.seed(cv_seed)
 
 	cv_fit <- grpreg::cv.grpreg(

@@ -368,3 +368,33 @@ test_that("CV path has |bias| < 0.10 on a representative DGP (smoke test)", {
 	# Tolerance 0.10 is loose enough to absorb 10-rep Monte Carlo error.
 	expect_lt(abs(mean_bias), 0.10)
 })
+
+# ------------------------------------------------------------------------------
+# Test: getBetaCV() preserves caller's .Random.seed (regression for #177).
+#
+# Before the fix, `set.seed(cv_seed)` inside getBetaCV() leaked into the
+# caller's .GlobalEnv$.Random.seed, so a second set.seed(K) + runif() after
+# the fit would diverge from a baseline set.seed(K) + runif() without the
+# fit. The BIC path never mutated RNG (no set.seed call); we lock BOTH paths
+# now so a future regression on either is caught.
+# ------------------------------------------------------------------------------
+
+test_that("CV path preserves caller's .Random.seed (#177)", {
+	sim <- .lambda_sel_fixture()
+	set.seed(42L)
+	before <- runif(3L)
+	set.seed(42L)
+	invisible(fetwfeWithSimulatedData(sim))
+	after <- runif(3L)
+	expect_identical(before, after)
+})
+
+test_that("BIC path preserves caller's .Random.seed (#177)", {
+	sim <- .lambda_sel_fixture()
+	set.seed(42L)
+	before <- runif(3L)
+	set.seed(42L)
+	invisible(fetwfeWithSimulatedData(sim, lambda_selection = "bic"))
+	after <- runif(3L)
+	expect_identical(before, after)
+})

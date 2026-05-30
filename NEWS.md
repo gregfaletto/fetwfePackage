@@ -1,5 +1,20 @@
 # NEWS
 
+## Version 1.13.5 (2026-05-29)
+
+### Bug fixes
+
+- Fixed a silent RNG-state regression introduced in v1.13.0 (#177):
+  every default-path `fetwfe()` / `betwfe()` call was overwriting
+  the caller's `.GlobalEnv$.Random.seed` because `getBetaCV()` in
+  `R/fetwfe_core.R` called `set.seed(cv_seed)` without saving and
+  restoring the previous state. Wrapped the `set.seed` call in an
+  `on.exit({ assign(".Random.seed", old, envir = .GlobalEnv) })`
+  guard so the caller's RNG state is preserved across the fit. The
+  v1.12.x default BIC path was unaffected (it never set a seed);
+  this fix restores RNG semantics to that prior behavior on the
+  CV-default path. Estimator output is unchanged.
+
 ## Version 1.13.4 (2026-05-29)
 
 ### Bug fixes
