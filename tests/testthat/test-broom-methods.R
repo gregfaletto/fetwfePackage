@@ -537,12 +537,23 @@ test_that("tidy.eventStudy recomputes CIs at a custom conf.level", {
 	es <- eventStudy(res)
 	td_95 <- broom::tidy(es, conf.level = 0.95)
 	td_99 <- broom::tidy(es, conf.level = 0.99)
-	# 99% widths should be wider than 95% widths everywhere (allowing
-	# tiny floating-point slack).
-	expect_true(all(
-		(td_99$conf.high - td_99$conf.low) >=
-			(td_95$conf.high - td_95$conf.low) - 1e-10
-	))
+	# Sharp check: the CI half-width is `qnorm(1 - alpha/2) * std.error`,
+	# so the difference between 99% and 95% high bounds is
+	# `(qnorm(0.995) - qnorm(0.975)) * std.error` at every row. The pre-
+	# #178 parametric `width_99 >= width_95 - 1e-10` assertion held even
+	# if `conf.level` were ignored entirely (two equal widths satisfy
+	# `>=`); the sharp form pins the exact formula. `td_95$std.error`
+	# is used because it equals `td_99$std.error` (`std.error` doesn't
+	# depend on `conf.level`).
+	z_diff <- stats::qnorm(0.995) - stats::qnorm(0.975)
+	expect_equal(
+		td_99$conf.high - td_95$conf.high,
+		z_diff * td_95$std.error
+	)
+	expect_equal(
+		td_95$conf.low - td_99$conf.low,
+		z_diff * td_95$std.error
+	)
 })
 
 test_that("tidy.eventStudy localizes error when required columns are missing", {
