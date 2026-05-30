@@ -215,6 +215,7 @@
 #'     \item{theta_hat}{The vector of estimated coefficients in the transformed (fused) space, including the intercept as the first element.}
 #'     \item{calc_ses}{Logical indicating whether standard errors were calculated.}
 #'     \item{variance_components}{A list exposing the two variance pieces (`att_var_1`, `att_var_2`) plus their paper-notation counterparts (`V_1`, `V_2`) and the unit-scaled variance estimators (`tilde_v_N`, `hat_v_N`, `tilde_v_N_C`, `tilde_v_N_C_pi_hat`, `tilde_v_N_C_pi_hat_cons`, `tilde_v_N_cons`) catalogued at paper line 2006. The Wald CI is `[hat_T_N +- qnorm(1-alpha/2) * sqrt(tilde_v_N / N)]` (paper Eq. `conf.int.form`). New in v1.12.0 (issue #141 + #146).}
+#'     \item{first_year}{Integer or numeric scalar; the first (earliest) `time_var` value in the panel after `idCohorts()` processing. Consumed by `eventStudy()` to map `cohort_probs`' cohort labels (treatment-start years) to 1-based panel-time-index offsets when the labels are integer-coercible. New in v1.13.3 (issue #174).}
 #'   }
 #' }
 #'
@@ -352,6 +353,7 @@ fetwfe <- function(
 	in_sample_counts <- prep$in_sample_counts
 	num_treats <- prep$num_treats
 	first_inds <- prep$first_inds
+	first_year <- prep$first_year
 	R <- prep$R
 	indep_count_data_available <- prep$indep_count_data_available
 
@@ -463,7 +465,12 @@ fetwfe <- function(
 		y_final = res$y_final,
 		theta_hat = res$theta_hat,
 		calc_ses = res$calc_ses,
-		variance_components = variance_components
+		variance_components = variance_components,
+		# v1.13.3 (#174): first panel year, surfaced from `prepXints` so
+		# `eventStudy()` can map `cohort_probs`' cohort labels back to
+		# panel-time offsets. See `R/event_study.R` and
+		# `R/utility.R::getFirstIndsFromOffsets`.
+		first_year = first_year
 	)
 
 	# Validate constructed object's contracts (#85). Catches malformed
@@ -635,6 +642,7 @@ fetwfe <- function(
 #'     \item{theta_hat}{The vector of estimated coefficients in the transformed (fused) space, including the intercept as the first element.}
 #'     \item{calc_ses}{Logical indicating whether standard errors were calculated.}
 #'     \item{variance_components}{A list exposing the two variance pieces (`att_var_1`, `att_var_2`) plus their paper-notation counterparts (`V_1`, `V_2`) and the unit-scaled variance estimators (`tilde_v_N`, `hat_v_N`, `tilde_v_N_C`, `tilde_v_N_C_pi_hat`, `tilde_v_N_C_pi_hat_cons`, `tilde_v_N_cons`) catalogued at paper line 2006. The Wald CI is `[hat_T_N +- qnorm(1-alpha/2) * sqrt(tilde_v_N / N)]` (paper Eq. `conf.int.form`). New in v1.12.0 (issue #141 + #146).}
+#'     \item{first_year}{Integer or numeric scalar; the first (earliest) `time_var` value in the panel after `idCohorts()` processing. Consumed by `eventStudy()` to map `cohort_probs`' cohort labels (treatment-start years) to 1-based panel-time-index offsets when the labels are integer-coercible. New in v1.13.3 (issue #174).}
 #'   }
 #' }
 #'
@@ -912,6 +920,11 @@ fetwfeWithSimulatedData <- function(
 #'       `tilde_v_N_C_pi_hat_cons`, `tilde_v_N_cons`). The Wald CI is
 #'       `[hat_T_N +- qnorm(1-alpha/2) * sqrt(tilde_v_N / N)]` (paper Eq.
 #'       `conf.int.form`). New in v1.12.0 (issue #141 + #146).}
+#'     \item{first_year}{Integer or numeric scalar; the first (earliest)
+#'       `time_var` value in the panel after `idCohorts()` processing.
+#'       Consumed by `eventStudy()` to map `cohort_probs`' cohort labels
+#'       (treatment-start years) to 1-based panel-time-index offsets when
+#'       the labels are integer-coercible. New in v1.13.3 (issue #174).}
 #'   }
 #' }
 #' @author Gregory Faletto
@@ -1015,6 +1028,7 @@ etwfe <- function(
 	in_sample_counts <- prep$in_sample_counts
 	num_treats <- prep$num_treats
 	first_inds <- prep$first_inds
+	first_year <- prep$first_year
 	R <- prep$R
 	indep_count_data_available <- prep$indep_count_data_available
 
@@ -1111,7 +1125,9 @@ etwfe <- function(
 		X_final = res$X_final,
 		y_final = res$y_final,
 		calc_ses = res$calc_ses,
-		variance_components = variance_components
+		variance_components = variance_components,
+		# v1.13.3 (#174): see `fetwfe()` for rationale.
+		first_year = first_year
 	)
 
 	# Validate constructed object's contracts (#85).
@@ -1261,6 +1277,11 @@ etwfe <- function(
 #'       `tilde_v_N_C_pi_hat_cons`, `tilde_v_N_cons`). The Wald CI is
 #'       `[hat_T_N +- qnorm(1-alpha/2) * sqrt(tilde_v_N / N)]` (paper Eq.
 #'       `conf.int.form`). New in v1.12.0 (issue #141 + #146).}
+#'     \item{first_year}{Integer or numeric scalar; the first (earliest)
+#'       `time_var` value in the panel after `idCohorts()` processing.
+#'       Consumed by `eventStudy()` to map `cohort_probs`' cohort labels
+#'       (treatment-start years) to 1-based panel-time-index offsets when
+#'       the labels are integer-coercible. New in v1.13.3 (issue #174).}
 #'   }
 #' }
 #'

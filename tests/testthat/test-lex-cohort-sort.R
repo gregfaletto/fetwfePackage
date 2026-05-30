@@ -133,7 +133,14 @@ test_that("tidy.<class> sorts cohorts numerically when labels include >= 10", {
 				tilde_v_N_cons = NA_real_,
 				se_type = "default",
 				indep_counts_used = FALSE
-			)
+			),
+			# v1.13.3 (#174): first panel year used by `eventStudy()` to
+			# map `cohort_probs` labels to panel-time-index offsets.
+			# Required by the post-#174 validator's
+			# `.EXPECTED_INTERNAL_SLOTS_FETWFE`. Not actually used by
+			# `tidy.fetwfe()` (the function under test); set to a benign
+			# placeholder to keep this mock minimal.
+			first_year = 1L
 		)
 	)
 	class(obj) <- "fetwfe"

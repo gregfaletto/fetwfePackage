@@ -227,6 +227,11 @@ calculated. Same as top-level \code{calc_ses}.}
 \code{tilde_v_N_C_pi_hat_cons}, \code{tilde_v_N_cons}). The Wald CI is
 \verb{[hat_T_N +- qnorm(1-alpha/2) * sqrt(tilde_v_N / N)]} (paper Eq.
 \code{conf.int.form}). New in v1.12.0 (issue #141 + #146).}
+\item{first_year}{Integer or numeric scalar; the first (earliest)
+\code{time_var} value in the panel after \code{idCohorts()} processing.
+Consumed by \code{eventStudy()} to map \code{cohort_probs}' cohort labels
+(treatment-start years) to 1-based panel-time-index offsets when
+the labels are integer-coercible. New in v1.13.3 (issue #174).}
 }
 }
 }

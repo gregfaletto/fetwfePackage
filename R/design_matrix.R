@@ -328,7 +328,17 @@ prepXints <- function(
 		p = p,
 		in_sample_counts = in_sample_counts,
 		num_treats = num_treats,
-		first_inds = first_inds
+		first_inds = first_inds,
+		# v1.13.3 (#174): expose the panel's first (earliest) time-period
+		# value so downstream consumers (notably `eventStudy()`) can map
+		# `cohort_probs`' cohort-year-string names back to 1-based panel
+		# offsets via `offset = year - first_year + 1`. Without this slot
+		# the event-study D-inverse-matrix construction would have to
+		# assume consecutive cohort offsets `2, 3, ..., R + 1`, which
+		# fails on panels with scattered cohort adoption years
+		# (`bacondecomp::divorce` is the canonical reproducer; see
+		# `R/utility.R::getFirstIndsFromOffsets`).
+		first_year = times[1]
 	))
 }
 

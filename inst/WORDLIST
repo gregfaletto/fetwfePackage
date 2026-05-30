@@ -62,6 +62,7 @@ FETWFE’s
 FP
 frac
 Gaussianity
+getFirstInds
 ggplot
 glance
 GLS
@@ -70,6 +71,7 @@ Heteroskedasticity
 Hoekstra
 homoskedasticity
 indep
+inds
 ints
 invariants
 invertible
@@ -79,6 +81,7 @@ Kock
 labelled
 Lapack
 le
+len
 lexicographically
 Liang
 lme
@@ -106,6 +109,7 @@ Pesaran
 Pinheiro
 pre
 preprint
+prepXints
 probs
 PRs
 PSD
@@ -127,6 +131,7 @@ Swamy
 tibble
 tidymodels
 tidyverse
+tryCatch
 TWFE
 twfeCovs
 un

@@ -57,34 +57,18 @@ test_that("summary() output carries event_study field with eventStudy() shape", 
 })
 
 # ----------------------------------------------------------------------
-# 2) print() and summary() silently skip the event-study block when
-#    eventStudy() would error -- defense-in-depth so a fit with a
-#    configuration that breaks eventStudy() doesn't crash the routine
-#    display. Currently no realistic fit triggers this path (the
-#    eventStudy() dispatch handles fetwfe/etwfe/betwfe explicitly), but
-#    the tryCatch is exercised via a synthetic broken object.
+# 2) (Removed in #174.) Previous block tested that print() / summary()
+#    silently swallowed `eventStudy()` errors via a defense-in-depth
+#    tryCatch. #174 deleted the tryCatch (it had masked the canonical
+#    scattered-cohort bug on `bacondecomp::divorce` for two releases);
+#    the strict no-silent-swallow contract is now guarded by
+#    test-event-study-no-silent-swallow-174.R. The block's old "broken"
+#    fixture wasn't even broken — its class mutation still dispatched
+#    cleanly through `eventStudy()`, so the test passed against the old
+#    tryCatch by accident rather than by exercising it. Both the
+#    behavioral test and the silent-swallow guard now live in
+#    test-event-study-no-silent-swallow-174.R.
 # ----------------------------------------------------------------------
-
-test_that("print() / summary() skip event-study block when eventStudy() errors", {
-	sim <- .es_display_setup()
-	res <- etwfeWithSimulatedData(sim)
-	# Mutate the object so eventStudy() would fail. eventStudy() dispatches
-	# on class; stripping it to plain list (but keeping `etwfe` first so
-	# print.etwfe still dispatches) breaks the eventStudy() class check.
-	broken <- res
-	class(broken) <- c("etwfe", "list_without_eventStudy_dispatch")
-	# eventStudy itself errors on this object (no longer matches the
-	# class chain it expects internally).
-	# print() should NOT crash; the tryCatch in .print_estimator_output
-	# absorbs the error and skips the event-study block.
-	out <- capture.output(print(broken))
-	joined <- paste(out, collapse = "\n")
-	# Header still rendered.
-	expect_match(joined, "Extended Two-Way Fixed Effects Results")
-	# Other blocks still rendered.
-	expect_match(joined, "Cohort Average Treatment Effects")
-	expect_match(joined, "Model Details")
-})
 
 # ----------------------------------------------------------------------
 # 3) max_event_times truncation: the displayed event-study preview is

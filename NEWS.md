@@ -1,5 +1,67 @@
 # NEWS
 
+## Version 1.13.4 (2026-05-29)
+
+### Bug fixes
+
+- Fixed `eventStudy()` on panels with non-consecutive cohort years.
+  PR #156 (closing #138) wrapped the `eventStudy(x)` call inside
+  `print.<class>()` and `summary.<class>()` in
+  `tryCatch(..., error = function(e) NULL)`; on panels where treated
+  cohorts adopt at scattered time indices (the canonical
+  `bacondecomp::divorce` panel: states adopt no-fault divorce in
+  1969-1985 with gaps at 1978, 1979, 1981, 1982, 1983) the underlying
+  `eventStudy()` raised `first_inds[R] <= n_vars is not TRUE` inside
+  `genInvTwoWayFusionTransformMat()` because `getFirstInds(R, T)` and
+  `getNumTreats(R, T)` both assumed cohorts adopt at consecutive
+  offsets `2, 3, ..., R + 1`. The tryCatch then silently omitted the
+  section, so users on real-world panels saw nothing where the Event
+  Study block should have rendered. Two layers of fix:
+  - **Layer A (no silent swallow).** The `tryCatch` swallow in
+    `R/class_helpers.R::.print_estimator_output()` and
+    `.summary_estimator_output()` is removed. `eventStudy()`'s
+    contract is "succeeds on any fit produced by `fetwfe()` /
+    `betwfe()` / `etwfe()` / `twfeCovs()`"; if it fails on a valid
+    fit, that is always a bug and the error propagates.
+  - **Layer B (offset-aware D-inverse).** A new internal helper
+    `getFirstIndsFromOffsets(cohort_offsets_int, T)` (in
+    `R/utility.R`) parallels `getFirstInds(R, T)` but accepts an
+    arbitrary strictly-increasing vector of cohort offsets. The
+    helper formula `first_inds[r] = 1 + sum_{k < r} (T - offsets[k]
+    + 1)` reduces to the existing `1 + (r - 1) * (2 * T - r) / 2`
+    when `offsets = c(2, 3, ..., R + 1)`. `eventStudy()` derives the
+    actual offsets from `names(x$cohort_probs)` (treatment-start
+    years) and `x$internal$first_year` (a new internal slot exposed
+    by `prepXints()`); if the cohort labels are not integer-
+    coercible (synthetic genCoefs-based fixtures) the path falls
+    back to `getFirstInds(R, T)`, preserving byte-identical results
+    on the synthetic test suite. The validity set `V_e` at each
+    event time is reworked from `seq_len(R) <= T - 1 - e` to the
+    offset-aware `cohort_offsets_int <= T - e` for the same reason.
+  Issue #174.
+
+### Internal
+
+- New `$internal$first_year` slot on `fetwfe`, `etwfe`, `betwfe`,
+  `twfeCovs` results (integer or numeric scalar; the first
+  (earliest) `time_var` value in the panel after `idCohorts()`
+  processing). Surfaced from `prepXints()`. Used by `eventStudy()` to
+  map cohort labels to panel-time-index offsets. Added to all four
+  `.EXPECTED_INTERNAL_SLOTS_*` vectors and documented in the
+  estimators' `@return` blocks. Pure-additive change.
+
+### Breaking change for v1.13.3-or-earlier serialized fits
+
+- The new `$internal$first_year` slot is added to
+  `.EXPECTED_INTERNAL_SLOTS_<CLASS>` on all four estimator classes,
+  so `.validate_<class>()` stops with `"Missing slot(s): first_year"`
+  when `print()` or `summary()` is called on a fit serialized under
+  v1.13.3 or earlier. This matches the established convention from
+  #85 (the validator framework) and recurs with every prior
+  `.EXPECTED_INTERNAL_SLOTS_*` addition (most recently
+  `variance_components` in #141 / #146 / PR #163, v1.12.0). Users
+  with saved v1.13.3 fits need to re-fit under v1.13.4.
+
 ## Version 1.13.3 (2026-05-28)
 
 ### Performance

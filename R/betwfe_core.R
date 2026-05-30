@@ -266,6 +266,11 @@
 #'       `tilde_v_N_C_pi_hat_cons`, `tilde_v_N_cons`). The Wald CI is
 #'       `[hat_T_N +- qnorm(1-alpha/2) * sqrt(tilde_v_N / N)]` (paper Eq.
 #'       `conf.int.form`). New in v1.12.0 (issue #141 + #146).}
+#'     \item{first_year}{Integer or numeric scalar; the first (earliest)
+#'       `time_var` value in the panel after `idCohorts()` processing.
+#'       Consumed by `eventStudy()` to map `cohort_probs`' cohort labels
+#'       (treatment-start years) to 1-based panel-time-index offsets when
+#'       the labels are integer-coercible. New in v1.13.3 (issue #174).}
 #'   }
 #' }
 #' @author Gregory Faletto
@@ -402,6 +407,7 @@ betwfe <- function(
 	in_sample_counts <- prep$in_sample_counts
 	num_treats <- prep$num_treats
 	first_inds <- prep$first_inds
+	first_year <- prep$first_year
 	R <- prep$R
 	indep_count_data_available <- prep$indep_count_data_available
 
@@ -515,7 +521,9 @@ betwfe <- function(
 		X_final = res$X_final,
 		y_final = res$y_final,
 		calc_ses = res$calc_ses,
-		variance_components = variance_components
+		variance_components = variance_components,
+		# v1.13.3 (#174): see `fetwfe()` for rationale.
+		first_year = first_year
 	)
 	# Validate constructed object's contracts (#85).
 	.validate_betwfe(out)
@@ -733,6 +741,11 @@ betwfe <- function(
 #'       `tilde_v_N_C_pi_hat_cons`, `tilde_v_N_cons`). The Wald CI is
 #'       `[hat_T_N +- qnorm(1-alpha/2) * sqrt(tilde_v_N / N)]` (paper Eq.
 #'       `conf.int.form`). New in v1.12.0 (issue #141 + #146).}
+#'     \item{first_year}{Integer or numeric scalar; the first (earliest)
+#'       `time_var` value in the panel after `idCohorts()` processing.
+#'       Consumed by `eventStudy()` to map `cohort_probs`' cohort labels
+#'       (treatment-start years) to 1-based panel-time-index offsets when
+#'       the labels are integer-coercible. New in v1.13.3 (issue #174).}
 #'   }
 #' }
 #'

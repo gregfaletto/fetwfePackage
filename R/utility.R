@@ -1006,6 +1006,138 @@ getFirstInds <- function(R, T) {
 	return(f_inds)
 }
 
+#' First treatment-effect indices for arbitrary (non-consecutive) cohort offsets
+#'
+#' @description
+#' Generalisation of `getFirstInds(R, T)` that drops the consecutive-cohort
+#' assumption. Computes the starting indices of treatment-effect parameters
+#' for each cohort in the concatenated treatment block, given an arbitrary
+#' (strictly increasing) vector of cohort offsets into the panel's time-index
+#' space.
+#'
+#' For a cohort with offset `o` (`o = (year - first_panel_year + 1)`) into the
+#' time-index space, the number of treatment effects estimated for that cohort
+#' is `T - o + 1`. Concatenating per-cohort effects in cohort order then gives:
+#'
+#' \preformatted{
+#' first_inds[r] = 1 + sum_{k = 1}^{r - 1} (T - offsets[k] + 1)
+#' }
+#'
+#' Equivalently `1 + (r - 1) * T - sum_{k = 1}^{r - 1} (offsets[k] - 1)`.
+#' When `offsets = c(2, 3, ..., R + 1)` (the consecutive-cohort case) this
+#' reduces exactly to the existing `getFirstInds(R, T)` formula
+#' `1 + (r - 1) * (2 * T - r) / 2` (verifiable algebraically).
+#'
+#' @param cohort_offsets_int Integer vector of length `R`, strictly
+#'   increasing, with each entry in `2:T`. Each entry is the 1-based
+#'   panel-time-index offset at which the corresponding cohort first adopts
+#'   treatment (`offset = (treatment_start_year - first_panel_year + 1)`).
+#' @param T Integer; the total number of time periods.
+#'
+#' @return An integer vector of length `length(cohort_offsets_int)`; element
+#'   `r` is the 1-based starting index of cohort `r`'s treatment-effect
+#'   block in the concatenated treatment vector. The total number of
+#'   treatment-effect parameters across cohorts equals
+#'   `sum(T - cohort_offsets_int + 1)`; the assertion
+#'   `first_inds[R] <= num_treats` holds by construction.
+#' @keywords internal
+#' @noRd
+getFirstIndsFromOffsets <- function(cohort_offsets_int, T) {
+	R <- length(cohort_offsets_int)
+	if (R == 0L) {
+		return(integer(0))
+	}
+	stopifnot(is.numeric(cohort_offsets_int) || is.integer(cohort_offsets_int))
+	stopifnot(all(!is.na(cohort_offsets_int)))
+	stopifnot(all(cohort_offsets_int >= 2L))
+	stopifnot(all(cohort_offsets_int <= T))
+	if (R > 1L) {
+		stopifnot(all(diff(cohort_offsets_int) > 0L))
+	}
+
+	# Per-cohort treatment-effect counts: cohort with offset `o` contributes
+	# `T - o + 1` effects (one per period `o, o+1, ..., T`).
+	n_per_cohort <- as.integer(T - cohort_offsets_int + 1L)
+	stopifnot(all(n_per_cohort >= 1L))
+
+	# first_inds[1] = 1; first_inds[r] = 1 + cumsum(n_per_cohort[1:(r-1)]).
+	f_inds <- integer(R)
+	f_inds[1] <- 1L
+	if (R > 1L) {
+		f_inds[2:R] <- 1L + cumsum(n_per_cohort[seq_len(R - 1L)])
+	}
+
+	num_treats <- sum(n_per_cohort)
+	stopifnot(f_inds[R] <= num_treats)
+	stopifnot(f_inds[R] == num_treats - n_per_cohort[R] + 1L)
+
+	f_inds
+}
+
+#' Derive integer cohort offsets from a fitted estimator object
+#'
+#' @description
+#' Internal helper used by `eventStudy()`. Reads `names(x$cohort_probs)` and
+#' attempts to interpret them as panel-time values (e.g., calendar years like
+#' `"1969"`, `"1970"`). If interpretation succeeds and the panel's first year
+#' is available on the fit (`x$internal$first_year`), returns the 1-based
+#' panel-time-index offsets at which each cohort first adopts treatment:
+#' `offsets[r] = (year_r - first_panel_year + 1L)`.
+#'
+#' Returns `NULL` when offsets cannot be derived from the fit's cohort labels
+#' (e.g., names are absent, non-integer-coercible, or the fit was produced by
+#' a code path that did not surface `first_year`). Callers fall back to
+#' `getFirstInds(R, T)` (the consecutive-cohort assumption) in that case so
+#' synthetic fixtures from `genCoefs()` (whose cohort labels reduce to
+#' consecutive offsets `2, 3, ..., R + 1`) remain byte-identical post-#174.
+#'
+#' @param x A fitted object (one of `"fetwfe"`, `"etwfe"`, `"betwfe"`).
+#'
+#' @return Integer vector of cohort offsets, or `NULL` to signal fall back.
+#' @keywords internal
+#' @noRd
+.derive_cohort_offsets_from_fit <- function(x) {
+	cohort_probs <- x$cohort_probs
+	if (is.null(cohort_probs) || length(cohort_probs) == 0L) {
+		return(NULL)
+	}
+	cohort_names <- names(cohort_probs)
+	if (is.null(cohort_names) || any(!nzchar(cohort_names))) {
+		return(NULL)
+	}
+	# Try integer-coerce; suppress the introduced-by-coercion warning so the
+	# fall-back path doesn't pollute caller output. NA = uncoercible.
+	offsets_year <- suppressWarnings(as.integer(cohort_names))
+	if (any(is.na(offsets_year))) {
+		return(NULL)
+	}
+
+	first_year <- x$internal$first_year
+	if (is.null(first_year)) {
+		return(NULL)
+	}
+	first_year_int <- suppressWarnings(as.integer(first_year))
+	if (length(first_year_int) != 1L || is.na(first_year_int)) {
+		return(NULL)
+	}
+
+	offsets <- offsets_year - first_year_int + 1L
+
+	# Validity guards: every offset must be in `2:T` and strictly increasing.
+	# `x$T` is the post-truncation panel length stamped on the fit.
+	if (length(x$T) != 1L || is.na(x$T)) {
+		return(NULL)
+	}
+	if (any(offsets < 2L) || any(offsets > as.integer(x$T))) {
+		return(NULL)
+	}
+	if (length(offsets) > 1L && any(diff(offsets) <= 0L)) {
+		return(NULL)
+	}
+
+	offsets
+}
+
 # sse_bridge
 #' @title Calculate Sum of Squared Errors for Bridge Regression
 #' @description Computes the sum of squared errors (SSE) for a given set of
@@ -1282,11 +1414,14 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #'   both `fetwfe()` and `betwfe()` (they share `checkFetwfeInputs()`);
 #'   `"etwfe"` covers both `etwfe()` and `twfeCovs()` (they share
 #'   `checkEtwfeInputs()`).
-#' @return A list with exactly 14 elements:
+#' @return A list with exactly 15 elements:
 #'   `pdata`, `covs`, `X_ints`, `y`, `y_mean`, `N`, `T`, `d`, `p`,
-#'   `in_sample_counts`, `num_treats`, `first_inds`, `R`,
+#'   `in_sample_counts`, `num_treats`, `first_inds`, `first_year`, `R`,
 #'   `indep_count_data_available`. Each caller unpacks these into local
-#'   variables before invoking its `_core()` function.
+#'   variables before invoking its `_core()` function. `first_year` is
+#'   the first (earliest) time-period value in the panel; consumers use it
+#'   to map cohort labels back to 1-based panel offsets (see #174 and
+#'   `R/utility.R::getFirstIndsFromOffsets`).
 #' @keywords internal
 #' @noRd
 .run_estimator_input_prep <- function(
@@ -1400,6 +1535,7 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 		in_sample_counts = res1$in_sample_counts,
 		num_treats = res1$num_treats,
 		first_inds = res1$first_inds,
+		first_year = res1$first_year,
 		R = res1$R,
 		indep_count_data_available = indep_count_data_available
 	)

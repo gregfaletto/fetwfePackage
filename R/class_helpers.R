@@ -682,13 +682,16 @@
 	}
 	cat("\n")
 
-	## Event-study effects (#138). Computed on demand via `eventStudy(x)`;
-	## wrapped in `tryCatch` so a fit with a configuration `eventStudy()`
-	## doesn't support (e.g., `twfeCovs` if this helper is ever reused for
-	## that class) silently skips the block rather than crashing print.
-	## twfeCovs currently does not use this helper, so the tryCatch is a
-	## defense-in-depth measure for future extensions.
-	es <- tryCatch(eventStudy(x), error = function(e) NULL)
+	## Event-study effects (#174 / #138). Strict policy: `eventStudy()`'s
+	## contract is "succeeds on any fit produced by `fetwfe()` /
+	## `betwfe()` / `etwfe()`". If it fails on a valid fit, that is
+	## always a bug — let the error propagate so it surfaces to the user
+	## and the developer rather than producing a print/summary that
+	## silently omits the section. The prior tryCatch swallow (added
+	## defensively for hypothetical future twfeCovs reuse, #138) masked
+	## the scattered-cohort bug on `bacondecomp::divorce` for two
+	## releases; #174 is the cure.
+	es <- eventStudy(x)
 	if (!is.null(es) && nrow(es) > 0L) {
 		es_preview <- .truncate_event_study(es, max_event_times)
 		cat("Event-Study Average Treatment Effects (per event time):\n")
@@ -784,10 +787,11 @@
 	# the print-side default is 10. Summary keeps a larger preview
 	# because it is a one-shot interactive inspection rather than a
 	# screen-formatted layout.
-	# Compute event-study on demand (#138). `tryCatch` so a fit
-	# configuration that `eventStudy()` doesn't support silently skips
-	# the field rather than crashing `summary()`.
-	es <- tryCatch(eventStudy(object), error = function(e) NULL)
+	# Compute event-study on demand (#174 / #138). Strict policy: see the
+	# matching block in `.print_estimator_output()` for rationale. Any
+	# `eventStudy()` failure on a valid fit is a bug and surfaces here
+	# rather than being swallowed.
+	es <- eventStudy(object)
 	event_study <- if (is.null(es) || nrow(es) == 0L) {
 		NULL
 	} else {
@@ -924,10 +928,11 @@
 	}
 	cat("\n")
 
-	## Event-study preview (#138). Reads from the cached field set by
-	## `.summary_estimator_output()`; no recompute. NULL means the
-	## eventStudy computation failed at summary-build time -- silently
-	## omit the block.
+	## Event-study preview (#174 / #138). Reads from the cached field set
+	## by `.summary_estimator_output()`; no recompute. NULL means
+	## `eventStudy()` returned an empty data frame (e.g., R = 0); a true
+	## eventStudy() failure now propagates rather than being silently
+	## swallowed (strict policy, #174).
 	if (!is.null(x$event_study)) {
 		cat("Event Study (preview):\n")
 		.print_catt_tbl(x$event_study)
