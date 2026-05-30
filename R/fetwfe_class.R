@@ -106,6 +106,7 @@ print.summary.fetwfe <- function(x, ...) {
 	"d",
 	"p",
 	"alpha",
+	"calc_ses",
 	"indep_counts_used",
 	"se_type",
 	"y_mean",

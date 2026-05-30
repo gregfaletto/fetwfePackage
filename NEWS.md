@@ -1,5 +1,55 @@
 # NEWS
 
+## Version 1.13.8 (2026-05-30)
+
+### Internal
+
+- Deleted an unreachable `if (length(cohorts) == 0) stop(...)` block
+  in `idCohorts()` (#180 DC1). The block sits AFTER an unconditional
+  `cohorts[[as.character(times[1])]] <- character()` insertion, so
+  `length(cohorts) >= 1` always by the time it runs. The actual
+  "all units treated in first period" catch lives earlier in the
+  function at `if (length(units) == 0) stop(...)`. Zero behavior
+  change; 5 lines deleted.
+
+- Dropped a vestigial `sel_inds` list and the now-unused `first_inds`
+  parameter from `getSecondVarTermOLS()` in `R/variance_machinery.R`
+  (#180 DC2). The list was built solely to feed a tautological
+  `stopifnot(all.equal(...))` assertion; the Jacobian construction
+  below it never read the list. Both call sites
+  (`getTeResultsOLS()` and the `eventStudy()` dispatcher) updated to
+  stop passing `first_inds`. The sibling function
+  `getSecondVarTermDataApp()` keeps its own `sel_inds` — there it
+  is genuinely used to slice `d_inv_treat_sel`. Zero behavior
+  change.
+
+- Closed the cross-estimator parity gap from PR #144 (#180). FETWFE
+  fits now expose `fit$calc_ses` at top level, matching `etwfe()` /
+  `betwfe()` / `twfeCovs()`. Value is identical to
+  `fit$internal$calc_ses` (already present). `.EXPECTED_SLOTS_FETWFE`
+  and the `@return` doc updated. Pure addition; no existing slot
+  removed.
+
+### Documentation
+
+- Reworded the misleading "canonical path is `$internal` going
+  forward" comment in `R/etwfe_class.R`, `R/betwfe_class.R`,
+  `R/twfeCovs_class.R` to match what the code actually does (#180).
+  PR #154's `$internal` migration was paused without ever being
+  completed — the print extractors in each class file still read
+  top-level — so "going forward" was forward-looking but inaccurate.
+  The new comment correctly identifies which sub-slots are duplicated
+  at top level (the first five: `X_ints`, `y`, `X_final`, `y_final`,
+  `calc_ses`) and which live only under `$internal`
+  (`variance_components`, `first_year`).
+
+- Reworded 3 inline-source "The five slots" comments at
+  `R/fetwfe.R`, `R/betwfe_core.R`, `R/twfeCovs.R` to match the
+  post-#179 roxygen wording (#180 carry-over from #179). Both
+  reviewers of #179 flagged these as scope-appropriate for #180
+  because they contained both the now-stale "five slots" wording
+  and the now-retired "canonical going forward" claim.
+
 ## Version 1.13.7 (2026-05-30)
 
 ### Documentation

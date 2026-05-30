@@ -105,6 +105,9 @@ test_that("tidy.<class> sorts cohorts numerically when labels include >= 10", {
 		d = d_test,
 		p = p_test,
 		alpha = 0.05,
+		# IB1 (#180): calc_ses is now at top level for parity with the
+		# OLS-family; the validator's .EXPECTED_SLOTS_FETWFE requires it.
+		calc_ses = TRUE,
 		indep_counts_used = FALSE,
 		se_type = "default",
 		y_mean = 0,

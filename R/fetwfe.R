@@ -184,6 +184,7 @@
 #' \item{d}{The final number of covariates that appear in the final data set (after any covariates may have been removed because they contained missing values or all contained the same value for every unit).}
 #' \item{p}{The final number of columns in the full set of covariates used to estimate the model.}
 #' \item{alpha}{The alpha level used for confidence intervals.}
+#' \item{calc_ses}{Logical indicating whether standard errors were calculated. Same as `$internal$calc_ses`; duplicated at top level for parity with `etwfe()`, `betwfe()`, and `twfeCovs()` (#180).}
 #' \item{cohort_probs_overall}{A vector of the estimated cohort probabilities
 #' on the overall sample (treated and untreated), used in computing the
 #' variance of the overall ATT.}
@@ -447,6 +448,7 @@ fetwfe <- function(
 		d = res$d,
 		p = res$p,
 		alpha = alpha,
+		calc_ses = res$calc_ses,
 		se_type = se_type,
 		indep_counts_used = indep_count_data_available,
 		y_mean = y_mean,
@@ -611,6 +613,7 @@ fetwfe <- function(
 #' \item{d}{The final number of covariates that appear in the final data set (after any covariates may have been removed because they contained missing values or all contained the same value for every unit).}
 #' \item{p}{The final number of columns in the full set of covariates used to estimate the model.}
 #' \item{alpha}{The alpha level used for confidence intervals.}
+#' \item{calc_ses}{Logical indicating whether standard errors were calculated. Same as `$internal$calc_ses`; duplicated at top level for parity with `etwfe()`, `betwfe()`, and `twfeCovs()` (#180).}
 #' \item{cohort_probs_overall}{A vector of the estimated cohort probabilities
 #' on the overall sample (treated and untreated), used in computing the
 #' variance of the overall ATT.}
@@ -1120,8 +1123,10 @@ etwfe <- function(
 	)
 
 	# Add internal outputs in a separate list for parity with `fetwfe()` (#144).
-	# The five slots are also duplicated at top level for backward compat;
-	# `$internal` is the canonical access path going forward.
+	# The first five sub-slots (`X_ints`, `y`, `X_final`, `y_final`,
+	# `calc_ses`) are also duplicated at top level for backward compat;
+	# `variance_components` and `first_year` live only under `$internal`
+	# (#179, #180).
 	out$internal <- list(
 		X_ints = res$X_ints,
 		y = res$y,

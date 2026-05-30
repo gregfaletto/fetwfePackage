@@ -228,6 +228,7 @@ An object of class \code{fetwfe} containing the following elements:
 \item{d}{The final number of covariates that appear in the final data set (after any covariates may have been removed because they contained missing values or all contained the same value for every unit).}
 \item{p}{The final number of columns in the full set of covariates used to estimate the model.}
 \item{alpha}{The alpha level used for confidence intervals.}
+\item{calc_ses}{Logical indicating whether standard errors were calculated. Same as \verb{$internal$calc_ses}; duplicated at top level for parity with \code{etwfe()}, \code{betwfe()}, and \code{twfeCovs()} (#180).}
 \item{cohort_probs_overall}{A vector of the estimated cohort probabilities
 on the overall sample (treated and untreated), used in computing the
 variance of the overall ATT.}

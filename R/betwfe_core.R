@@ -516,8 +516,10 @@ betwfe <- function(
 		covs = covs_orig
 	)
 	# Add internal outputs in a separate list for parity with `fetwfe()` (#144).
-	# The five slots are also duplicated at top level for backward compat;
-	# `$internal` is the canonical access path going forward.
+	# The first five sub-slots (`X_ints`, `y`, `X_final`, `y_final`,
+	# `calc_ses`) are also duplicated at top level for backward compat;
+	# `variance_components` and `first_year` live only under `$internal`
+	# (#179, #180).
 	out$internal <- list(
 		X_ints = res$X_ints,
 		y = res$y,

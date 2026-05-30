@@ -162,7 +162,6 @@ getTeResultsOLS <- function(
 			psi_mat = psi_mat,
 			tes = tes,
 			cohort_probs_overall = cohort_probs_overall,
-			first_inds = first_inds,
 			num_treats = num_treats,
 			N = N,
 			T = T,
@@ -219,8 +218,6 @@ getTeResultsOLS <- function(
 #'   `num_treats` possible cohort-time combinations.
 #' @param cohort_probs_overall Numeric vector; estimated marginal probabilities
 #'   of belonging to each treated cohort (P(W=r)). Length `R`.
-#' @param first_inds Integer vector; indices of the first treatment effect for
-#'   each cohort within the `num_treats` block.
 #' @param num_treats Integer; total number of base treatment effect parameters.
 #' @param N Integer; total number of units.
 #' @param T Integer; total number of time periods.
@@ -239,7 +236,6 @@ getSecondVarTermOLS <- function(
 	psi_mat,
 	tes,
 	cohort_probs_overall,
-	first_inds,
 	num_treats,
 	N,
 	T,
@@ -252,20 +248,6 @@ getSecondVarTermOLS <- function(
 
 	stopifnot(nrow(Sigma_pi_hat) == R)
 	stopifnot(ncol(Sigma_pi_hat) == R)
-
-	# Gather a list of the indices corresponding to the treatment coefficients
-	# for each cohort. (Will be used to construct the Jacobian matrix.)
-	sel_inds <- list()
-
-	for (r in 1:R) {
-		sel_inds[[r]] <- .cohort_block_inds(r, R, first_inds, num_treats)
-		if (r > 1) {
-			stopifnot(min(sel_inds[[r]]) > max(sel_inds[[r - 1]]))
-			stopifnot(length(sel_inds[[r]]) <= length(sel_inds[[r - 1]]))
-		}
-	}
-
-	stopifnot(all.equal(unlist(sel_inds), 1:num_treats))
 
 	# Construct Jacobian matrix corresponding to the mapping from the
 	# individual cohort probabilities to the proportions calculated for the ATT.
