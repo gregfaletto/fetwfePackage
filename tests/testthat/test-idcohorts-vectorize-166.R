@@ -19,11 +19,26 @@ test_that("idCohorts assigns treated units to the correct cohort under varied fi
 		# u01 treated at t=2, u02 treated at t=3, u03 never-treated,
 		# u04 treated at t=4 (last period), u05 never-treated.
 		treat = c(
-			0L, 1L, 1L, 1L,
-			0L, 0L, 1L, 1L,
-			0L, 0L, 0L, 0L,
-			0L, 0L, 0L, 1L,
-			0L, 0L, 0L, 0L
+			0L,
+			1L,
+			1L,
+			1L,
+			0L,
+			0L,
+			1L,
+			1L,
+			0L,
+			0L,
+			0L,
+			0L,
+			0L,
+			0L,
+			0L,
+			1L,
+			0L,
+			0L,
+			0L,
+			0L
 		),
 		stringsAsFactors = FALSE
 	)
@@ -48,10 +63,18 @@ test_that("idCohorts groups multiple units into the same cohort", {
 		unit = rep(c("a", "b", "c", "d"), each = 3L),
 		time = rep(c(1L, 2L, 3L), times = 4L),
 		treat = c(
-			0L, 1L, 1L, # a treated t=2
-			0L, 1L, 1L, # b treated t=2
-			0L, 0L, 1L, # c treated t=3
-			0L, 0L, 0L  # d never-treated
+			0L,
+			1L,
+			1L, # a treated t=2
+			0L,
+			1L,
+			1L, # b treated t=2
+			0L,
+			0L,
+			1L, # c treated t=3
+			0L,
+			0L,
+			0L # d never-treated
 		),
 		stringsAsFactors = FALSE
 	)
@@ -67,22 +90,36 @@ test_that("idCohorts groups multiple units into the same cohort", {
 test_that("idCohorts reports unbalanced + duplicate-time + absorbing violations together", {
 	df <- data.frame(
 		unit = c(
-			rep("balA", 3),               # balanced, fine
-			rep("dupT", 3),               # T=3 rows but times {1, 2, 2}
-			rep("miss", 2),               # only 2 rows
-			rep("absV", 3)                # treat 0/1/0 (non-absorbing)
+			rep("balA", 3), # balanced, fine
+			rep("dupT", 3), # T=3 rows but times {1, 2, 2}
+			rep("miss", 2), # only 2 rows
+			rep("absV", 3) # treat 0/1/0 (non-absorbing)
 		),
 		time = c(
-			1L, 2L, 3L,
-			1L, 2L, 2L,
-			1L, 2L,
-			1L, 2L, 3L
+			1L,
+			2L,
+			3L,
+			1L,
+			2L,
+			2L,
+			1L,
+			2L,
+			1L,
+			2L,
+			3L
 		),
 		treat = c(
-			0L, 0L, 0L,
-			0L, 0L, 0L,
-			0L, 0L,
-			0L, 1L, 0L
+			0L,
+			0L,
+			0L,
+			0L,
+			0L,
+			0L,
+			0L,
+			0L,
+			0L,
+			1L,
+			0L
 		),
 		stringsAsFactors = FALSE
 	)
@@ -94,8 +131,16 @@ test_that("idCohorts reports unbalanced + duplicate-time + absorbing violations 
 	expect_match(err, "Panel does not appear to be balanced")
 	expect_match(err, "Treatment does not appear to be an absorbing state")
 	# All three balance violations named.
-	expect_match(err, "dupT has 3 observations (2 distinct time periods)", fixed = TRUE)
-	expect_match(err, "miss has 2 observations (2 distinct time periods)", fixed = TRUE)
+	expect_match(
+		err,
+		"dupT has 3 observations (2 distinct time periods)",
+		fixed = TRUE
+	)
+	expect_match(
+		err,
+		"miss has 2 observations (2 distinct time periods)",
+		fixed = TRUE
+	)
 	# Absorbing violation named.
 	expect_match(err, "absV")
 })

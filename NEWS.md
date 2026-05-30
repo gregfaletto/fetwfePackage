@@ -1,5 +1,22 @@
 # NEWS
 
+## Version 1.13.3 (2026-05-28)
+
+### Performance
+
+- Vectorised `my_scale()` in `R/utility.R` (called once per `fetwfe()`
+  / `etwfe()` / `betwfe()` / `twfeCovs()` call from
+  `prep_for_etwfe_regression()`). Replaced the per-column
+  `apply(x, 2, sd)` R-level loop with a single-pass `colSums(x_c^2)`-
+  based variance, and the two `sweep(..., FUN = "-" | "/")` calls
+  with broadcasted `rep(..., each = nrow(x))` subtract / divide.
+  ~2.4x speedup on the function itself (10000 x 50 fixture). Output
+  is numerically identical to the prior implementation up to
+  floating-point reorder noise (~1e-15) on realistic full-rank
+  inputs. The byte-identical-BIC regression test pinned in
+  v1.13.0 (#164) passes byte-identically post-this-change,
+  confirming the production code paths are unaffected. Issue #167.
+
 ## Version 1.13.2 (2026-05-28)
 
 ### Performance
