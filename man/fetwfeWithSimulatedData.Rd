@@ -159,7 +159,7 @@ variance of the overall ATT.}
 argument was provided and used for asymptotically-exact ATT inference,
 \code{FALSE} otherwise.}
 \item{se_type}{Character scalar; the \code{se_type} argument the user passed
-(\code{"default"} or \code{"cluster"}).}
+(\code{"default"}, \code{"conservative"}, or \code{"cluster"}).}
 \item{y_mean}{Numeric scalar; the mean of the original (pre-centering)
 response. Stored so downstream methods (\code{augment()}, \code{predict()})
 can return fitted values on the original-response scale.}

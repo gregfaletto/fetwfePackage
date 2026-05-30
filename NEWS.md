@@ -1,5 +1,24 @@
 # NEWS
 
+## Version 1.13.7 (2026-05-30)
+
+### Documentation
+
+- Fixed three roxygen documentation issues in the four estimator
+  entry points and their `*WithSimulatedData()` wrappers (#179):
+  (a) eight `@return \item{se_type}{}` parenthetical notes across
+  `R/fetwfe.R` / `R/betwfe_core.R` / `R/twfeCovs.R` listed only
+  `"default"` and `"cluster"`, dropping `"conservative"` (added in
+  v1.12.0 / PR #163); they now correctly list all three values;
+  (b) six `@return $internal` describe-blocks said "The five
+  sub-slots are also duplicated at top level" but the describe-list
+  contained seven sub-slots; the framing now correctly notes that
+  `variance_components` and `first_year` live only under
+  `$internal`; (c) the internal helper `checkFetwfeInputs()` was
+  missing `@param` lines for `lambda_selection`, `cv_folds`, and
+  `cv_seed`. Zero behavior change; affects rendered help pages
+  only.
+
 ## Version 1.13.6 (2026-05-29)
 
 ### Bug fixes
