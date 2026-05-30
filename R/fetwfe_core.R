@@ -360,7 +360,19 @@ getBetaBIC <- function(fit, N, T, p, X_mod, y, scale_center, scale_scale) {
 		model_sizes[k] <- s
 
 		stopifnot(is.na(BICs[k]))
-		BICs[k] <- N * T * log(mse_hat) + s * log(N * T)
+		# Coerce N * T to numeric before multiplying. `N * T` is integer
+		# arithmetic and overflows at .Machine$integer.max ≈ 2.15e9
+		# (panels with N * T > ~2.15e9, e.g. 50,000 x 50,000). On
+		# overflow, R returns NA_integer_ and downstream
+		# `which(BICs == min(BICs))` is empty, tripping the
+		# `stopifnot(length(lambda_star_final_ind) == 1)` at line ~378
+		# with an unhelpful message. The CV path already handles this
+		# safely at lines ~460-471 (clip to integer.max with a warning);
+		# mirror the same as.numeric() coercion here. No regression test:
+		# the bug fires only at panel sizes too large to construct in CI
+		# (#178).
+		nt_double <- as.numeric(N) * as.numeric(T)
+		BICs[k] <- nt_double * log(mse_hat) + s * log(nt_double)
 	}
 
 	lambda_star_ind <- which(BICs == min(BICs))

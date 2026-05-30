@@ -1,5 +1,35 @@
 # NEWS
 
+## Version 1.13.6 (2026-05-29)
+
+### Bug fixes
+
+- Guarded against integer overflow in `getBetaBIC()`'s BIC formula
+  (`R/fetwfe_core.R`) at panels with `N * T > .Machine$integer.max ≈
+  2.15e9` (#178). Coerces `N * T` to numeric before multiplying,
+  mirroring the existing `getBetaCV()` safeguard. No user-visible
+  change at realistic panel sizes; the BIC opt-in path on
+  >2.15e9-cell panels now computes correctly instead of failing
+  with an unhelpful `stopifnot` trace.
+
+### Internal
+
+- Rewrote `test-gls-kronecker-block-apply-165.R` (#178) to call
+  `.estimate_variance_and_gls()` directly rather than re-deriving
+  both sides of the block-apply identity inline. The previous test
+  asserted an algebraic identity that holds by construction; the
+  new test pins the production function's `y_gls` / `X_gls` against
+  an explicit-Kronecker reference, so a future refactor that
+  silently breaks the GLS reshape step is caught here rather than
+  via downstream end-to-end tests.
+
+- Sharpened the `tidy.eventStudy(es, conf.level = ...)` regression
+  test in `test-broom-methods.R` (#178). The previous parametric
+  assertion `(td_99 width) >= (td_95 width)` held even if
+  `conf.level` were completely ignored; the new sharp
+  `expect_equal((qnorm(0.995) - qnorm(0.975)) * std.error)` form
+  pins the exact CI half-width formula.
+
 ## Version 1.13.5 (2026-05-29)
 
 ### Bug fixes
