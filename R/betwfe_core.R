@@ -486,7 +486,11 @@ betwfe <- function(
 		# fetwfe()'s shape. `res$cv_seed_used` is already NA_integer_
 		# under the BIC path (the core's dispatch sets it on that branch).
 		lambda_selection = lambda_selection,
-		cv_folds = if (lambda_selection == "cv") as.integer(cv_folds) else NA_integer_,
+		cv_folds = if (lambda_selection == "cv") {
+			as.integer(cv_folds)
+		} else {
+			NA_integer_
+		},
 		cv_seed = res$cv_seed_used,
 		X_ints = res$X_ints,
 		y = res$y,

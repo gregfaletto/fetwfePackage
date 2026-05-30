@@ -1,6 +1,6 @@
 # NEWS
 
-## Version 1.13.3 (2026-05-29)
+## Version 1.13.4 (2026-05-29)
 
 ### Bug fixes
 
@@ -50,19 +50,48 @@
   `.EXPECTED_INTERNAL_SLOTS_*` vectors and documented in the
   estimators' `@return` blocks. Pure-additive change.
 
+### Breaking change for v1.13.3-or-earlier serialized fits
+
+- The new `$internal$first_year` slot is added to
+  `.EXPECTED_INTERNAL_SLOTS_<CLASS>` on all four estimator classes,
+  so `.validate_<class>()` stops with `"Missing slot(s): first_year"`
+  when `print()` or `summary()` is called on a fit serialized under
+  v1.13.3 or earlier. This matches the established convention from
+  #85 (the validator framework) and recurs with every prior
+  `.EXPECTED_INTERNAL_SLOTS_*` addition (most recently
+  `variance_components` in #141 / #146 / PR #163, v1.12.0). Users
+  with saved v1.13.3 fits need to re-fit under v1.13.4.
+
+## Version 1.13.3 (2026-05-28)
+
+### Performance
+
+- Vectorised `my_scale()` in `R/utility.R` (called once per `fetwfe()`
+  / `etwfe()` / `betwfe()` / `twfeCovs()` call from
+  `prep_for_etwfe_regression()`). Replaced the per-column
+  `apply(x, 2, sd)` R-level loop with a single-pass `colSums(x_c^2)`-
+  based variance, and the two `sweep(..., FUN = "-" | "/")` calls
+  with broadcasted `rep(..., each = nrow(x))` subtract / divide.
+  ~2.4x speedup on the function itself (10000 x 50 fixture). Output
+  is numerically identical to the prior implementation up to
+  floating-point reorder noise (~1e-15) on realistic full-rank
+  inputs. The byte-identical-BIC regression test pinned in
+  v1.13.0 (#164) passes byte-identically post-this-change,
+  confirming the production code paths are unaffected. Issue #167.
+
 ## Version 1.13.2 (2026-05-28)
 
 ### Performance
 
-- Vectorised `idCohorts()`'s per-unit row-filter loop in `R/utility.R`
+- Vectorized `idCohorts()`'s per-unit row-filter loop in `R/utility.R`
   (previously `O(N^2 * T)` due to a `df[df[, unit_var] == s, ]` filter
   inside a `for (s in units)` loop). The post-fix path sorts the data
   frame once by `(unit_var, time_var)`, tabulates per-unit row counts,
   and runs the balance check, absorbing-state check, and cohort
   assignment via column-wise operations on a reshaped `T x N`
-  treatment matrix. Same observable behaviour: identical balance and
+  treatment matrix. Same observable behavior: identical balance and
   absorbing-state violation messages (single grouped `stop()`, same
-  lex-sorted truncated listing), identical first-period-treated
+  lexicographically-sorted truncated listing), identical first-period-treated
   `warning()`, identical return shape. `idCohorts()` itself is ~15x
   faster at N = 2000, T = 5; end-to-end `fetwfe()` at the Phase B
   fixture speeds up an additional 1.3x on top of #165, for a combined
@@ -81,7 +110,7 @@
   inputs and outputs. End-to-end measured speedups on the
   Phase B fixture: **3.6× at N = 500 / 5.7× at N = 2000**. The
   identity is algebraically exact and verified bit-identical (16-digit
-  parity) on randomised fixtures; new direct test in
+  parity) on randomized fixtures; new direct test in
   `tests/testthat/test-gls-kronecker-block-apply-165.R`. The speedup
   carries verbatim to `etwfe()`, `betwfe()`, and `twfeCovs()` (all four
   estimators share the GLS step). Issue #165.

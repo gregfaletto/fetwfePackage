@@ -239,7 +239,11 @@ test_that("betwfe(add_ridge = TRUE) numerical regression: att_hat matches post-f
 	# default is CV, which produces a slightly different att_hat on this
 	# fixture; that's expected, and is tested separately in
 	# test-lambda-selection-164.R.
-	fit <- betwfeWithSimulatedData(sim, add_ridge = TRUE, lambda_selection = "bic")
+	fit <- betwfeWithSimulatedData(
+		sim,
+		add_ridge = TRUE,
+		lambda_selection = "bic"
+	)
 
 	# Sanity: the fit selected something. The pre-fix code on this
 	# fixture also produces a non-degenerate fit, so this is not a

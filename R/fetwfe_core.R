@@ -200,7 +200,9 @@ checkFetwfeInputs <- function(
 				length(cv_folds)
 			)
 		)
-	} else if (!is.finite(cv_folds) || cv_folds < 2 || cv_folds != round(cv_folds)) {
+	} else if (
+		!is.finite(cv_folds) || cv_folds < 2 || cv_folds != round(cv_folds)
+	) {
 		violations <- c(
 			violations,
 			sprintf(

@@ -20,6 +20,78 @@ If you need methodological context, read `paper_arxiv.tex` (or the arXiv link
 in `README.md`) — do not infer the math from the code alone. The code
 implements specific equations and lemmas from that paper.
 
+## Working in this repo as a coding agent
+
+For any non-trivial PR, follow the ExecPlan workflow defined in `.workflow/`.
+The directory is `.gitignore`d (it is the maintainer's personal workflow
+configuration) but it is load-bearing for how the repo is meant to be
+developed: it specifies the plan format, the multi-subagent review cycle, the
+per-PR CRAN gate, and the recurring failure modes that PRs need to defend
+against. The mandate is not optional — `.workflow/PLANS.md` says ExecPlans
+must be followed "to the letter" for any plan that lands in this repo.
+
+**"Non-trivial" means anything matching the criteria in
+`.workflow/IMPLEMENTER_AGENT.md` § "When to use this subagent":** multi-file
+refactors, any change ≥ 50 lines, any change that would generate ≥ 5000
+tokens of tool output during implementation, math-touching changes, or new
+exported functions. The exemption is small in-thread fixes — ≤ 10-line bug
+fixes, trivial CRAN-NOTE cleanups, single-line typo fixes — and even those
+must satisfy the per-PR CRAN gate including `air format .`,
+`devtools::spell_check()`, and `urlchecker::url_check()`.
+
+The `.workflow/` directory contains the following documents. Read them when
+the task at hand falls in their scope:
+
+- `PLANS.md` — ExecPlan format and the per-PR acceptance criteria. The
+  authoritative specification for any plan that lands in this repo. The
+  living-document sections (`Progress`, `Surprises & Discoveries`,
+  `Decision Log`, `Outcomes & Retrospective`) are mandatory and must be kept
+  current as work proceeds. The plan filename convention is `PLAN.md`
+  (in `.plans/<branch>/`), not `SPEC.md`.
+- `CHOOSING_A_PR.md` — how to pick the next target plus the
+  **issue-clarification protocol** that is mandatory when working from
+  underspecified GitHub issues (which most fetwfe issues are). Read before
+  drafting any plan.
+- `DEV_INSTRUCTIONS.md` — branch/PR git workflow targeting `main`, PR
+  description style, the no-fork convention, and the requirement to draft
+  the PR description at `.plans/<branch>/<branch>_pr_description.md`
+  before opening the PR.
+- `R_WORKFLOW.md` — daily R + RStudio/VS Code edit/test loop, common error
+  decoding (rank-condition failures, S3 dispatch errors, `Matrix` /
+  `glmnet` / `grpreg` shape mismatches), and the per-PR CRAN gate's exact
+  command sequence.
+- `IMPLEMENTER_AGENT.md` — implementer subagent role specification. Defines
+  what work is implementer-scope vs. in-thread orchestrator-scope, the
+  smoke-test cadence, and the escalation criteria.
+- `REVIEW_AGENT.md` — post-execution review checklist. Every non-trivial PR
+  gets reviewed by a subagent against this specification before opening
+  for Greg.
+- `SENTINEL_AGENT.md` — drift sentinel that runs twice per cycle (pre- and
+  post-implementation). Catches three specific drift classes: copy-paste
+  duplication across sibling files, missing `.check_for_<method>(x)`
+  preconditions on new methods that read from estimator class objects, and
+  anti-pattern recurrence in tests (tautological round-trips, fixtures
+  that bypass the code path under test, well-formedness-only assertions).
+- `PERIODIC_CODE_REVIEW.md` — quarterly multi-agent review pass for
+  cross-PR structural concerns. Not a per-PR gate; run on a separate
+  cadence.
+- `PRIORITIZATION.md` — tier order for choosing among candidate PRs
+  (inference bugs → workflow → other bugs → simpler-code refactors →
+  robustness refactors → docs → periodic review → new features) plus
+  heuristics for choosing within a tier.
+- `WORKFLOW_LESSONS.md` — failure modes that have actually bitten past
+  contributions (NAMESPACE drift after roxygen edits, version-string
+  drift across `DESCRIPTION` / `NEWS.md` / `inst/CITATION`, copy-paste
+  drift between sibling files, etc.). Plans should pre-empt these.
+
+The standard four-subagent cycle for a non-trivial PR is: (1) planning
+reviewer reviews the draft `PLAN.md` per `PLANS.md` § "Plan review and
+iteration"; (2) drift sentinel runs against the plan; (3) implementer
+applies the plan per `IMPLEMENTER_AGENT.md`; (4) drift sentinel and
+post-execution reviewer run against the diff in parallel per
+`SENTINEL_AGENT.md` and `REVIEW_AGENT.md`. Each review round writes to a
+file and iterates to convergence; never overwrite earlier rounds.
+
 ## Estimators exported by the package
 
 There are four estimators, each with a `*WithSimulatedData()` wrapper that
