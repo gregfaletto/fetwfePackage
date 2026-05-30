@@ -21,15 +21,15 @@
 
 ### Performance
 
-- Vectorised `idCohorts()`'s per-unit row-filter loop in `R/utility.R`
+- Vectorized `idCohorts()`'s per-unit row-filter loop in `R/utility.R`
   (previously `O(N^2 * T)` due to a `df[df[, unit_var] == s, ]` filter
   inside a `for (s in units)` loop). The post-fix path sorts the data
   frame once by `(unit_var, time_var)`, tabulates per-unit row counts,
   and runs the balance check, absorbing-state check, and cohort
   assignment via column-wise operations on a reshaped `T x N`
-  treatment matrix. Same observable behaviour: identical balance and
+  treatment matrix. Same observable behavior: identical balance and
   absorbing-state violation messages (single grouped `stop()`, same
-  lex-sorted truncated listing), identical first-period-treated
+  lexicographically-sorted truncated listing), identical first-period-treated
   `warning()`, identical return shape. `idCohorts()` itself is ~15x
   faster at N = 2000, T = 5; end-to-end `fetwfe()` at the Phase B
   fixture speeds up an additional 1.3x on top of #165, for a combined
@@ -48,7 +48,7 @@
   inputs and outputs. End-to-end measured speedups on the
   Phase B fixture: **3.6× at N = 500 / 5.7× at N = 2000**. The
   identity is algebraically exact and verified bit-identical (16-digit
-  parity) on randomised fixtures; new direct test in
+  parity) on randomized fixtures; new direct test in
   `tests/testthat/test-gls-kronecker-block-apply-165.R`. The speedup
   carries verbatim to `etwfe()`, `betwfe()`, and `twfeCovs()` (all four
   estimators share the GLS step). Issue #165.
