@@ -560,15 +560,17 @@
 				R,
 				d
 			)
-			# When the user passed a non-default assignment_interaction_strength
-			# (per round-1 Q2 + RC1: stored on assignment_coefs by
-			# .gen_assignment_coefs() when K > 0L), name it so they know which
-			# knob to lower.
+			# When interactions are present (K > 0L), .gen_assignment_coefs()
+			# stores the effective interaction strength on assignment_coefs.
+			# Surface it so the user knows which knob to lower; the value is
+			# the effective (post-fallthrough) value, which equals
+			# assignment_strength when assignment_interaction_strength was
+			# left at its NULL default (per round-1 Q2 + RC1).
 			if (!is.null(assignment_coefs$interaction_strength)) {
 				msg <- paste0(
 					msg,
 					sprintf(
-						" (assignment_interaction_strength = %g was also set; consider lowering it.)",
+						" (effective assignment_interaction_strength = %g; consider lowering it or assignment_strength.)",
 						assignment_coefs$interaction_strength
 					)
 				)
