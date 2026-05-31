@@ -1,5 +1,27 @@
 # NEWS
 
+## Version 1.14.0 (2026-05-30)
+
+### New features
+
+- Added covariate-dependent cohort-assignment DGPs to `genCoefs()` and
+  `simulateData()` (#162). New arguments `assignment_type` (`"marginal"`
+  / `"multinomial"` / `"ordered"`) and `assignment_strength` control whether
+  cohort membership in the simulated panel is drawn marginally (the current
+  default behavior, preserved byte-identically) or from a multinomial-logit
+  or ordered-logit (proportional-odds) propensity-score model over the
+  covariates. The `FETWFE_coefs` object gains `$assignment_type`,
+  `$assignment_strength`, and `$assignment_coefs` slots; the `FETWFE_tes`
+  object gains a `$cohort_weights` slot. `getTes()` updated to compute the
+  propensity-weighted population ATT truth under the new DGPs via Monte Carlo
+  integration over the covariate distribution, matching Eq.
+  `att.estimator.weighted` (Faletto 2025, line 837). New
+  `simulation_vignette.Rmd` section demonstrates the three DGP modes
+  side-by-side with worked examples. Unlocks realistic Monte Carlo studies
+  where FETWFE has to handle conditional-on-covariate cohort selection
+  (relevant to the FETWFE vs Callaway-Sant'Anna comparison work tracked at
+  #140).
+
 ## Version 1.13.8 (2026-05-30)
 
 ### Internal

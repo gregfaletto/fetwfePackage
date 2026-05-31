@@ -164,8 +164,158 @@ squared_error_piped = (result_piped$att_hat - true_tes_piped$att_true)^2
 cat("Squared estimation error:", squared_error_piped, "\n")
 ```
 
+# Covariate-dependent cohort assignment
+
+The simulator workflow above generates panels in which cohort assignment is independent of the covariates. Each unit is assigned to one of the $R + 1$ cohorts with uniform probability $1/(R + 1)$, regardless of its covariate values. This is the simplest data-generating process (DGP) for cohort assignment, but in many realistic settings, cohort membership is correlated with observable characteristics — adoption decisions depend on firm size, industry, region, and so on.
+
+Version 1.14.0 of `{fetwfe}` introduces two covariate-dependent DGPs to `genCoefs()` via the new `assignment_type` and `assignment_strength` arguments:
+
+- `assignment_type = "marginal"` (default): the original uniform marginal DGP. Preserves pre-1.14.0 behavior exactly.
+- `assignment_type = "multinomial"`: a multinomial-logit propensity-score model. Each unit's cohort probability is
+  $$\pi_r(x) = \frac{\exp(\gamma_r^\top x)}{\sum_{r' = 0}^{R} \exp(\gamma_{r'}^\top x)}, \quad r = 0, 1, \ldots, R,$$
+  with $\gamma_0 \equiv 0$ for the never-treated reference cohort and $\gamma_r$ drawn from a Gaussian (scaled by `assignment_strength`) for each treated cohort $r$.
+- `assignment_type = "ordered"`: an ordered-logit (proportional-odds) model that exploits the natural ordering of the adoption times. The ordinal scale runs through treated cohorts in temporal-adoption order with never-treated at the top: slot 1 is cohort 1 (the earliest-adopting cohort), slot 2 is cohort 2, ..., slot $R$ is cohort $R$ (the latest-adopting cohort), and slot $R + 1$ is never-treated. Cumulative probabilities follow the standard McCullagh proportional-odds parameterization with the subtraction convention,
+  $$P(W' \le r \mid x) = \mathrm{plogis}(\alpha_r - \gamma^\top x), \quad r = 1, \ldots, R,$$
+  with a single shared $\gamma$ vector and cutpoints $\alpha_r$ chosen so the marginal cohort probabilities are approximately uniform $1/(R + 1)$. As $\gamma^\top x$ increases monotonically, the modal cohort traverses the ordinal scale in order: cohort 1 $\to$ cohort 2 $\to \ldots \to$ cohort $R$ $\to$ never-treated. Low $\gamma^\top x$ concentrates mass at the *bottom* of the scale (earliest-adopting cohorts); high $\gamma^\top x$ concentrates mass at the *top* (never-treated, with later cohorts at intermediate values). $\gamma$ is the propensity for being *later* on the treatment-timing scale.
+
+Both DGPs are the canonical reference models named in the FETWFE paper (Faletto 2025, line 1016).
+
+## Multinomial-logit DGP
+
+We generate a panel where adoption probabilities depend on the covariates via a multinomial-logit model. The `assignment_strength` parameter scales the logit coefficients: at `assignment_strength = 0`, the DGP collapses to the marginal case (uniform $1/(R + 1)$ probabilities, regardless of $X$); larger values produce stronger covariate-cohort coupling.
+
+```{r}
+sim_coefs_mn <- genCoefs(
+  R                   = 3,
+  T                   = 4,
+  d                   = 2,
+  density             = 0.1,
+  eff_size            = 2,
+  assignment_type     = "multinomial",
+  assignment_strength = 1.0,
+  seed                = 101
+)
+```
+
+The returned `FETWFE_coefs` object now carries three new slots:
+
+```{r}
+sim_coefs_mn$assignment_type
+sim_coefs_mn$assignment_strength
+str(sim_coefs_mn$assignment_coefs)
+```
+
+`assignment_coefs$coefs` is the $d \times R$ matrix of $\gamma_r$ vectors; column $r$ holds the propensity coefficients for treated cohort $r$. We can simulate a panel and verify that the empirical cohort proportions reflect covariate-cohort coupling rather than uniform marginal assignment:
+
+```{r}
+sim_mn <- simulateData(
+  sim_coefs_mn,
+  N            = 200,
+  sig_eps_sq   = 1,
+  sig_eps_c_sq = 1
+)
+cat("Empirical cohort proportions:\n")
+print(round(sim_mn$assignments / sum(sim_mn$assignments), 3))
+```
+
+We can fit FETWFE on this panel exactly as before:
+
+```{r}
+fit_mn <- fetwfeWithSimulatedData(sim_mn, verbose = FALSE)
+cat("Estimated overall ATT:", fit_mn$att_hat, "\n")
+```
+
+## Ordered-logit DGP
+
+The proportional-odds variant uses a single shared $\gamma$ vector and $R$ cutpoints. It is appropriate when the cohorts have a natural ordering — earlier adopters being "more like" later adopters than never-treated units, for instance. The ordinal scale runs in temporal order with never-treated at the top: slot 1 = cohort 1 (first treated), ..., slot $R$ = cohort $R$ (last treated), slot $R + 1$ = never-treated. As $\gamma^\top x$ increases, the modal cohort moves up the scale from cohort 1 toward never-treated.
+
+```{r}
+sim_coefs_ord <- genCoefs(
+  R                   = 3,
+  T                   = 4,
+  d                   = 2,
+  density             = 0.1,
+  eff_size            = 2,
+  assignment_type     = "ordered",
+  assignment_strength = 1.0,
+  seed                = 101
+)
+```
+
+```{r}
+str(sim_coefs_ord$assignment_coefs)
+```
+
+Here `assignment_coefs$coefs` is a length-$d$ vector (the shared $\gamma$) and `cutpoints` is the length-$R$ vector of cutpoints $\alpha_r$. The cutpoints are chosen by root-finding on the marginal-uniform condition: for each $r \in 1, \ldots, R$, the package solves for $\alpha_r$ such that $E_X[\mathrm{plogis}(\alpha_r - \gamma^\top X)] = r / (R + 1)$. This guarantees that the marginal cohort proportions are approximately uniform $1/(R + 1)$ for any choice of `assignment_strength` — the strength controls the *conditional* coupling between $X$ and $W$, not the marginal cohort proportions.
+
+```{r}
+sim_ord <- simulateData(
+  sim_coefs_ord,
+  N            = 200,
+  sig_eps_sq   = 1,
+  sig_eps_c_sq = 1
+)
+cat("Empirical cohort proportions (ordered):\n")
+print(round(sim_ord$assignments / sum(sim_ord$assignments), 3))
+```
+
+## Effect of assignment strength
+
+The `assignment_strength` parameter controls how strongly the covariates predict cohort membership. Below is a side-by-side comparison of the cohort distribution at three strength levels:
+
+```{r}
+for (s in c(0.0, 1.0, 5.0)) {
+  coefs_s <- genCoefs(
+    R                   = 3,
+    T                   = 4,
+    d                   = 2,
+    density             = 0.1,
+    eff_size            = 2,
+    assignment_type     = "multinomial",
+    assignment_strength = s,
+    seed                = 101
+  )
+  sim_s <- simulateData(
+    coefs_s,
+    N            = 200,
+    sig_eps_sq   = 1,
+    sig_eps_c_sq = 1
+  )
+  cat(sprintf(
+    "strength = %.1f -> proportions: %s\n",
+    s,
+    paste(
+      round(sim_s$assignments / sum(sim_s$assignments), 3),
+      collapse = ", "
+    )
+  ))
+}
+```
+
+At `assignment_strength = 0` the cohort proportions are approximately uniform $1/(R + 1) = 0.25$. At higher strength, the proportions deviate from uniform because the covariate distribution drives the assignment.
+
+## Truth derivation under non-marginal DGPs
+
+Under the default marginal DGP, the overall true ATT is the equal-weighted average of the cohort-specific effects:
+$$\tau_\mathrm{ATT} = \frac{1}{R} \sum_{r = 1}^{R} \tau_\mathrm{ATT}(r).$$
+
+Under covariate-dependent DGPs this aggregation must use cohort-share weights instead, matching Faletto (2025) Eq. `att.estimator.weighted` (line 837). `getTes()` automatically computes the propensity-weighted aggregation when the input `FETWFE_coefs` object was built with a non-marginal `assignment_type`:
+
+```{r}
+te_mn <- getTes(sim_coefs_mn)
+cat("Multinomial-DGP cohort weights:\n")
+print(round(te_mn$cohort_weights, 3))
+cat("Propensity-weighted overall ATT:", round(te_mn$att_true, 4), "\n")
+cat("(Uniform-weighted ATT for comparison:",
+    round(mean(te_mn$actual_cohort_tes), 4), ")\n")
+```
+
+The `cohort_weights` slot is new in 1.14.0. Under the marginal DGP it is exactly uniform $1/R$; under the multinomial or ordered DGPs it reflects $E[\pi_r(X)] / \sum_{r' \text{ treated}} E[\pi_{r'}(X)]$, estimated by Monte Carlo integration over the covariate distribution.
+
+The per-cohort CATT vector `actual_cohort_tes` is unchanged across DGPs — it is intrinsic to the coefficient vector $\beta$ and does not depend on how cohorts are assigned.
+
 # Conclusion
 
-In this vignette, we walked through how to use the simulation functions in the `{fetwfe}` package to simulate data and run simulations similar to the ones in the simulation studies section of [the FETWFE paper](https://arxiv.org/abs/2312.05985).
+In this vignette, we walked through how to use the simulation functions in the `{fetwfe}` package to simulate data and run simulations similar to the ones in the simulation studies section of [the FETWFE paper](https://arxiv.org/abs/2312.05985). Version 1.14.0 adds covariate-dependent cohort-assignment DGPs (multinomial-logit and ordered-logit) so Monte Carlo studies can stress-test FETWFE against the realistic regime where cohort selection depends on observable characteristics.
 
 This pipeline streamlines simulation experiments so you can rapidly evaluate FETWFE’s performance under varying scenarios. For more details, consult the package documentation or reach out to the author.
