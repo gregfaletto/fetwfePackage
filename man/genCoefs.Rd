@@ -12,6 +12,8 @@ genCoefs(
   eff_size,
   assignment_type = c("marginal", "multinomial", "ordered"),
   assignment_strength = 1,
+  assignment_interactions = NULL,
+  assignment_interaction_strength = NULL,
   seed = NULL
 )
 }
@@ -57,6 +59,33 @@ non-marginal types to the uniform marginal distribution by construction.
 Larger values produce stronger covariate-cohort coupling. Defaults to
 \code{1.0}. Ignored when \code{assignment_type = "marginal"}.}
 
+\item{assignment_interactions}{Optional. A list of length-2 integer
+vectors, each naming a pair of covariate indices \eqn{(j, k)} in
+\eqn{[1, d]} whose elementwise product \eqn{x_{i,j} \cdot x_{i,k}}
+enters the propensity model as an additional column. Self-interactions
+\code{c(j, j)} are allowed and yield a quadratic term \eqn{x_j^2}.
+Unordered pairs are canonicalized to \code{c(min(j, k), max(j, k))}
+and duplicates are silently deduplicated (inspect
+\code{coefs$assignment_coefs$interactions} on the returned object to
+verify the retained list). The interaction columns enter the
+propensity model only; the outcome model continues to use the
+original covariates. Defaults to \code{NULL} (no interactions —
+v1.14.0 behavior is preserved byte-identically). Passing \code{list()}
+(empty list) is treated as equivalent to \code{NULL} — no interactions
+specified, behavior is identical to the v1.14.0 marginal-cohort path
+within \code{multinomial} / \code{ordered} DGPs. Errors when
+\code{assignment_type = "marginal"} (the marginal DGP has no
+propensity model to augment). New in 1.14.1.}
+
+\item{assignment_interaction_strength}{Optional non-negative numeric
+scalar. Scales the Gaussian draws of the interaction coefficients
+independently of \code{assignment_strength}. Defaults to \code{NULL},
+which means "fall through to \code{assignment_strength}". Useful when
+stress-testing whether the nonlinear-propensity angle alone drives
+downstream differences (without simultaneously cranking the linear
+angle). Ignored when \code{assignment_interactions = NULL}. New in
+1.14.1.}
+
 \item{seed}{(Optional) Integer. Seed for reproducibility. Three
 deterministic offsets share this seed: the main coefficient draw uses
 \code{seed}; the assignment coefficients use \code{seed + 1L}; the
@@ -80,10 +109,22 @@ restrictions encoded in the FETWFE model are sparse. \code{beta} is derived from
 New in 1.14.0.}
 \item{assignment_strength}{The scaling factor applied to the assignment
 coefficients. New in 1.14.0.}
+\item{assignment_interaction_strength}{The scaling factor applied to
+the interaction coefficients. \code{NULL} when no interactions
+were specified or when the user passed \code{NULL} (the
+fall-through default). New in 1.14.1.}
 \item{assignment_coefs}{\code{NULL} when
 \code{assignment_type = "marginal"}; otherwise a list with elements
 \code{type}, \code{strength}, \code{coefs} (the gamma matrix or
-vector), and (for ordered) \code{cutpoints}. New in 1.14.0.}
+vector), and (for ordered) \code{cutpoints}. Starting in 1.14.1,
+\code{assignment_coefs} also carries the sub-slots
+\code{interactions} (the canonicalized + deduplicated list of
+pairs, or \code{NULL}), \code{delta} (the interaction coefficient
+matrix for multinomial or vector for ordered, or \code{NULL}),
+and \code{interaction_strength} (the effective scaling factor
+used for the \code{delta} draws, or \code{NULL} when no
+interactions). New in 1.14.0; \code{interactions}, \code{delta},
+and \code{interaction_strength} sub-slots new in 1.14.1.}
 }
 }
 \description{
@@ -137,6 +178,17 @@ Eq. \code{att.estimator.weighted} (line 837).
     seed = 123
   )
   sim_mn <- simulateData(coefs_mn, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5)
+
+  # Covariate-dependent cohort assignment with nonlinear propensity
+  # (multinomial-logit + a single x1*x2 interaction term in the propensity
+  # model only; outcome model continues to use plain X):
+  coefs_int <- genCoefs(
+    R = 5, T = 30, d = 12, density = 0.1, eff_size = 2,
+    assignment_type = "multinomial",
+    assignment_interactions = list(c(1, 2)),
+    assignment_interaction_strength = 1.5,
+    seed = 123
+  )
 }
 
 }

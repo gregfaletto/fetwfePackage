@@ -53,6 +53,31 @@
 #'   non-marginal types to the uniform marginal distribution by construction.
 #'   Larger values produce stronger covariate-cohort coupling. Defaults to
 #'   \code{1.0}. Ignored when \code{assignment_type = "marginal"}.
+#' @param assignment_interactions Optional. A list of length-2 integer
+#'   vectors, each naming a pair of covariate indices \eqn{(j, k)} in
+#'   \eqn{[1, d]} whose elementwise product \eqn{x_{i,j} \cdot x_{i,k}}
+#'   enters the propensity model as an additional column. Self-interactions
+#'   \code{c(j, j)} are allowed and yield a quadratic term \eqn{x_j^2}.
+#'   Unordered pairs are canonicalized to \code{c(min(j, k), max(j, k))}
+#'   and duplicates are silently deduplicated (inspect
+#'   \code{coefs$assignment_coefs$interactions} on the returned object to
+#'   verify the retained list). The interaction columns enter the
+#'   propensity model only; the outcome model continues to use the
+#'   original covariates. Defaults to \code{NULL} (no interactions —
+#'   v1.14.0 behavior is preserved byte-identically). Passing \code{list()}
+#'   (empty list) is treated as equivalent to \code{NULL} — no interactions
+#'   specified, behavior is identical to the v1.14.0 marginal-cohort path
+#'   within \code{multinomial} / \code{ordered} DGPs. Errors when
+#'   \code{assignment_type = "marginal"} (the marginal DGP has no
+#'   propensity model to augment). New in 1.14.1.
+#' @param assignment_interaction_strength Optional non-negative numeric
+#'   scalar. Scales the Gaussian draws of the interaction coefficients
+#'   independently of \code{assignment_strength}. Defaults to \code{NULL},
+#'   which means "fall through to \code{assignment_strength}". Useful when
+#'   stress-testing whether the nonlinear-propensity angle alone drives
+#'   downstream differences (without simultaneously cranking the linear
+#'   angle). Ignored when \code{assignment_interactions = NULL}. New in
+#'   1.14.1.
 #' @param seed (Optional) Integer. Seed for reproducibility. Three
 #'   deterministic offsets share this seed: the main coefficient draw uses
 #'   \code{seed}; the assignment coefficients use \code{seed + 1L}; the
@@ -75,10 +100,22 @@
 #'         New in 1.14.0.}
 #'   \item{assignment_strength}{The scaling factor applied to the assignment
 #'         coefficients. New in 1.14.0.}
+#'   \item{assignment_interaction_strength}{The scaling factor applied to
+#'         the interaction coefficients. \code{NULL} when no interactions
+#'         were specified or when the user passed \code{NULL} (the
+#'         fall-through default). New in 1.14.1.}
 #'   \item{assignment_coefs}{\code{NULL} when
 #'         \code{assignment_type = "marginal"}; otherwise a list with elements
 #'         \code{type}, \code{strength}, \code{coefs} (the gamma matrix or
-#'         vector), and (for ordered) \code{cutpoints}. New in 1.14.0.}
+#'         vector), and (for ordered) \code{cutpoints}. Starting in 1.14.1,
+#'         \code{assignment_coefs} also carries the sub-slots
+#'         \code{interactions} (the canonicalized + deduplicated list of
+#'         pairs, or \code{NULL}), \code{delta} (the interaction coefficient
+#'         matrix for multinomial or vector for ordered, or \code{NULL}),
+#'         and \code{interaction_strength} (the effective scaling factor
+#'         used for the \code{delta} draws, or \code{NULL} when no
+#'         interactions). New in 1.14.0; \code{interactions}, \code{delta},
+#'         and \code{interaction_strength} sub-slots new in 1.14.1.}
 #' }
 #'
 #' @details
@@ -123,6 +160,17 @@
 #'     seed = 123
 #'   )
 #'   sim_mn <- simulateData(coefs_mn, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5)
+#'
+#'   # Covariate-dependent cohort assignment with nonlinear propensity
+#'   # (multinomial-logit + a single x1*x2 interaction term in the propensity
+#'   # model only; outcome model continues to use plain X):
+#'   coefs_int <- genCoefs(
+#'     R = 5, T = 30, d = 12, density = 0.1, eff_size = 2,
+#'     assignment_type = "multinomial",
+#'     assignment_interactions = list(c(1, 2)),
+#'     assignment_interaction_strength = 1.5,
+#'     seed = 123
+#'   )
 #' }
 #'
 #' @export
@@ -134,6 +182,8 @@ genCoefs <- function(
 	eff_size,
 	assignment_type = c("marginal", "multinomial", "ordered"),
 	assignment_strength = 1.0,
+	assignment_interactions = NULL,
+	assignment_interaction_strength = NULL,
 	seed = NULL
 ) {
 	# Check that T is a numeric scalar and at least 3.
@@ -188,6 +238,85 @@ genCoefs <- function(
 		))
 	}
 
+	# Interactions × marginal cross-check
+	if (!is.null(assignment_interactions) && assignment_type == "marginal") {
+		stop(paste0(
+			"assignment_interactions can only be specified when assignment_type ",
+			"is 'multinomial' or 'ordered'; the marginal DGP does not use a ",
+			"propensity model."
+		))
+	}
+
+	# Interactions structural validation + canonicalize + dedupe
+	if (!is.null(assignment_interactions)) {
+		if (!is.list(assignment_interactions)) {
+			stop(
+				"assignment_interactions must be a list of length-2 integer-pair vectors (or NULL)"
+			)
+		}
+		canon <- vector("list", length(assignment_interactions))
+		for (k in seq_along(assignment_interactions)) {
+			p <- assignment_interactions[[k]]
+			if (!is.numeric(p) || length(p) != 2L) {
+				stop(sprintf(
+					"assignment_interactions[[%d]] must be a length-2 numeric vector; got length %d",
+					k,
+					length(p)
+				))
+			}
+			j <- as.integer(p[1L])
+			k_idx <- as.integer(p[2L])
+			if (anyNA(c(j, k_idx))) {
+				stop(sprintf(
+					"assignment_interactions[[%d]] coerced to NA; must be integer indices",
+					k
+				))
+			}
+			if (j < 1L || j > d || k_idx < 1L || k_idx > d) {
+				stop(sprintf(
+					"assignment_interactions[[%d]] = c(%d, %d) has an index outside [1, d = %d]",
+					k,
+					j,
+					k_idx,
+					d
+				))
+			}
+			canon[[k]] <- c(min(j, k_idx), max(j, k_idx))
+		}
+		# Dedupe silently (no message() — per Decision Log Q1; users verify
+		# via coefs$assignment_coefs$interactions inspection).
+		deduped <- list()
+		for (k in seq_along(canon)) {
+			already <- FALSE
+			for (existing in deduped) {
+				if (identical(canon[[k]], existing)) {
+					already <- TRUE
+					break
+				}
+			}
+			if (!already) {
+				deduped[[length(deduped) + 1L]] <- canon[[k]]
+			}
+		}
+		assignment_interactions <- deduped
+		# Note: assignment_interactions = list() (empty list, e.g. from a
+		# user passing list() directly) is treated as equivalent to NULL
+		# downstream — see Decision Log RC2 maintainer override.
+	}
+
+	# Interaction strength validation
+	if (!is.null(assignment_interaction_strength)) {
+		if (
+			!is.numeric(assignment_interaction_strength) ||
+				length(assignment_interaction_strength) != 1L ||
+				assignment_interaction_strength < 0
+		) {
+			stop(
+				"assignment_interaction_strength must be a non-negative numeric scalar (or NULL)"
+			)
+		}
+	}
+
 	stopifnot(R >= 2)
 	stopifnot(T >= 3)
 	stopifnot(R <= T - 1)
@@ -218,6 +347,8 @@ genCoefs <- function(
 			d = d,
 			type = assignment_type,
 			strength = assignment_strength,
+			interactions = assignment_interactions,
+			interaction_strength = assignment_interaction_strength,
 			seed = assignment_seed
 		)
 	}
@@ -232,6 +363,7 @@ genCoefs <- function(
 		seed = seed,
 		assignment_type = assignment_type,
 		assignment_strength = assignment_strength,
+		assignment_interaction_strength = assignment_interaction_strength,
 		assignment_coefs = assignment_coefs
 	)
 	class(obj) <- "FETWFE_coefs"
