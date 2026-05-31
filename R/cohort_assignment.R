@@ -36,28 +36,45 @@
 #'   normal) gamma draw. `strength = 0` yields gamma = 0 so the
 #'   cohort-probability distribution reduces to uniform 1/(R+1) by
 #'   construction.
+#' @param interactions Optional. A list of canonicalized length-2
+#'   integer-pair vectors `list(c(j, k), ...)` whose elementwise products
+#'   `X[, j] * X[, k]` augment the propensity linear predictor. The list
+#'   is assumed to be canonicalized + deduplicated by the caller
+#'   (`genCoefs()`). Defaults to `NULL` (no interactions; v1.14.0
+#'   behavior is preserved byte-identically, including RNG ordering).
+#'   New in 1.14.1.
+#' @param interaction_strength Optional non-negative numeric scalar.
+#'   Scales the Gaussian draws of the interaction coefficients
+#'   independently of `strength`. Defaults to `NULL`, which falls
+#'   through to `strength`. New in 1.14.1.
 #' @param seed Optional integer for reproducibility.
 #'
-#' @return A list with elements `type`, `strength`, `coefs`, and (for
-#'   `"ordered"`) `cutpoints`. For multinomial, `coefs` is a `d x R`
-#'   matrix; column `r` is `gamma_r` (the never-treated reference
-#'   cohort has `gamma_0 = 0` implicitly). For ordered, `coefs` is a
-#'   length-`d` vector (one shared `gamma`) and `cutpoints` is a
+#' @return A list with elements `type`, `strength`, `coefs`, `interactions`,
+#'   `delta`, `interaction_strength`, and (for `"ordered"`) `cutpoints`.
+#'   For multinomial, `coefs` is a `d x R` matrix; column `r` is
+#'   `gamma_r` (the never-treated reference cohort has `gamma_0 = 0`
+#'   implicitly), and `delta` is a `K x R` matrix of per-cohort
+#'   interaction coefficients (or `NULL` when no interactions). For
+#'   ordered, `coefs` is a length-`d` vector (one shared `gamma`),
+#'   `delta` is a length-`K` vector (or `NULL`), and `cutpoints` is a
 #'   length-`R` vector of cutpoints chosen so the marginal cohort
-#'   probabilities are uniform 1/(R+1).
+#'   probabilities are uniform 1/(R+1). `interaction_strength` is
+#'   `NULL` when no interactions; otherwise the effective scaling
+#'   factor used for the `delta` draws.
 #'
 #' @details
 #' The ordered cutpoints are chosen by root-finding on the
 #' marginal-uniform condition: for each `r` in `1..R`, solve
-#' `E_X[plogis(alpha_r - gamma^T X)] = r / (R + 1)` via
-#' `uniroot()` over a Monte Carlo reference sample of `gamma^T X`
-#' (standard McCullagh proportional-odds parameterization with the
-#' subtraction convention: high `gamma^T x` shifts mass UP the ordinal
-#' scale toward never-treated; low `gamma^T x` shifts mass toward the
-#' earliest-adopting cohort). At `strength = 0` (gamma = 0) the
-#' cutpoints collapse to `qlogis((1:R) / (R + 1))` and the marginal
-#' probabilities are exactly uniform. At positive strength the marginal
-#' probabilities are approximately uniform up to MC noise.
+#' `E_X[plogis(alpha_r - gamma^T X - delta^T X_int)] = r / (R + 1)` via
+#' `uniroot()` over a Monte Carlo reference sample of the augmented
+#' linear predictor (standard McCullagh proportional-odds parameterization
+#' with the subtraction convention: high augmented linpred shifts mass UP
+#' the ordinal scale toward never-treated; low augmented linpred shifts
+#' mass toward the earliest-adopting cohort). At `strength = 0` (gamma = 0)
+#' AND no interactions the cutpoints collapse to `qlogis((1:R) / (R + 1))`
+#' and the marginal probabilities are exactly uniform. At positive
+#' strength the marginal probabilities are approximately uniform up to
+#' MC noise.
 #'
 #' The `uniroot()` search interval is `c(-200, 200)` to accommodate
 #' stress-test usage at very high strength (linpred ranges scale with
@@ -65,9 +82,24 @@
 #' cutpoints can land near +/- 50, which would exceed a narrower
 #' interval).
 #'
+#' The augmented linear predictor extends the standard multinomial-logit
+#' / proportional-odds parameterization (see Faletto 2025 line 1016 for
+#' the linear-in-X form). Interaction terms are user-specified pairwise
+#' products of covariate columns and remain within the paper's framework
+#' because the multinomial-logit MLE with interaction features still
+#' satisfies Assumption (Psi-IF) (line 2018) via M-estimator theory.
+#'
 #' @keywords internal
 #' @noRd
-.gen_assignment_coefs <- function(R, d, type, strength, seed = NULL) {
+.gen_assignment_coefs <- function(
+	R,
+	d,
+	type,
+	strength,
+	interactions = NULL,
+	interaction_strength = NULL,
+	seed = NULL
+) {
 	if (!is.null(seed)) {
 		set.seed(seed)
 	}
@@ -85,24 +117,51 @@
 			"Covariate-dependent cohort assignment requires d >= 1 (at least one covariate)"
 		)
 	}
+	K <- if (is.null(interactions)) 0L else length(interactions)
+	effective_int_strength <- if (is.null(interaction_strength)) {
+		strength
+	} else {
+		interaction_strength
+	}
 	if (type == "multinomial") {
 		coefs_mat <- matrix(
 			rnorm(d * R) * strength,
 			nrow = d,
 			ncol = R
 		)
+		delta_mat <- if (K > 0L) {
+			matrix(
+				rnorm(K * R) * effective_int_strength,
+				nrow = K,
+				ncol = R
+			)
+		} else {
+			NULL
+		}
 		return(list(
 			type = "multinomial",
 			strength = strength,
-			coefs = coefs_mat
+			coefs = coefs_mat,
+			interactions = interactions,
+			delta = delta_mat,
+			interaction_strength = if (K > 0L) effective_int_strength else NULL
 		))
 	}
 	# type == "ordered"
 	gamma <- rnorm(d) * strength
+	delta <- if (K > 0L) {
+		rnorm(K) * effective_int_strength
+	} else {
+		NULL
+	}
 	# Root-find on the marginal-uniform condition: solve for alpha_r such
-	# that mean(plogis(alpha_r - linpred_mc)) = r / (R + 1). At strength = 0,
-	# linpred_mc is identically 0 and the cutpoints reduce to
-	# qlogis((1:R) / (R + 1)) by construction.
+	# that mean(plogis(alpha_r - linpred_mc)) = r / (R + 1). At strength = 0
+	# and no interactions, linpred_mc is identically 0 and the cutpoints
+	# reduce to qlogis((1:R) / (R + 1)) by construction. With interactions,
+	# the MC sample integrates over the augmented covariate distribution so
+	# the marginal-uniform invariant is preserved up to MC noise. See
+	# Faletto 2025 line 1016 for the linear-in-X form; this extends the
+	# parameterization to include user-specified pairwise interactions.
 	M_cutpoints <- 5000L
 	X_mc <- matrix(
 		rnorm(M_cutpoints * d),
@@ -110,6 +169,10 @@
 		ncol = d
 	)
 	linpred_mc <- as.numeric(X_mc %*% gamma)
+	if (K > 0L) {
+		X_int_mc <- .build_x_int(X_mc, interactions)
+		linpred_mc <- linpred_mc + as.numeric(X_int_mc %*% delta)
+	}
 	solve_cutpoint <- function(target_prob) {
 		stats::uniroot(
 			function(alpha) {
@@ -127,8 +190,47 @@
 		type = "ordered",
 		strength = strength,
 		coefs = gamma,
-		cutpoints = cutpoints
+		cutpoints = cutpoints,
+		interactions = interactions,
+		delta = delta,
+		interaction_strength = if (K > 0L) effective_int_strength else NULL
 	)
+}
+
+
+#' Build the per-pair pairwise-product augmentation matrix `X_int`
+#'
+#' Returns the `N x K` matrix whose column `k` is the elementwise product
+#' `X[, j_k] * X[, k_k]` for the `k`-th pair `c(j_k, k_k)` in
+#' `interactions`. Used only inside the propensity model — the outcome
+#' design matrix never sees `X_int`.
+#'
+#' Centralized to one helper so the live propensity computation in
+#' `.compute_cohort_prob_matrix()` and the ordered cutpoint root-finder's
+#' Monte Carlo sample in `.gen_assignment_coefs()` use byte-identical
+#' construction logic. See `.workflow/WORKFLOW_LESSONS.md` §14 (Class A
+#' drift discipline).
+#'
+#' @param X Numeric matrix, `N x d`.
+#' @param interactions A list of canonicalized length-2 integer-pair
+#'   vectors. `NULL` or empty list returns `NULL`.
+#'
+#' @return Numeric matrix `N x K`, or `NULL` when no interactions are
+#'   specified.
+#'
+#' @keywords internal
+#' @noRd
+.build_x_int <- function(X, interactions) {
+	if (is.null(interactions) || length(interactions) == 0L) {
+		return(NULL)
+	}
+	K <- length(interactions)
+	X_int <- matrix(NA_real_, nrow = nrow(X), ncol = K)
+	for (k in seq_len(K)) {
+		pair <- interactions[[k]]
+		X_int[, k] <- X[, pair[1L]] * X[, pair[2L]]
+	}
+	X_int
 }
 
 
@@ -158,9 +260,19 @@
 	stopifnot(is.matrix(X))
 	stopifnot(!is.null(assignment_coefs))
 	type <- assignment_coefs$type
+	# Interactions (NULL or empty list -> no augmentation; v1.14.0 byte path).
+	# See Faletto 2025 line 1016 for the linear-in-X form; this extends the
+	# parameterization to include user-specified pairwise interactions.
+	interactions <- assignment_coefs$interactions
+	delta <- assignment_coefs$delta
+	has_int <- !is.null(interactions) && length(interactions) > 0L
 	if (type == "multinomial") {
 		# linpred is N x R; the never-treated reference column is identically 0.
 		linpred <- X %*% assignment_coefs$coefs
+		if (has_int) {
+			X_int <- .build_x_int(X, interactions)
+			linpred <- linpred + X_int %*% delta
+		}
 		log_probs_unnorm <- cbind(0, linpred)
 		# Subtract row maxima for numerical stability (invariant under softmax).
 		row_max <- apply(log_probs_unnorm, 1, max)
@@ -170,6 +282,10 @@
 	}
 	if (type == "ordered") {
 		linpred <- as.numeric(X %*% assignment_coefs$coefs)
+		if (has_int) {
+			X_int <- .build_x_int(X, interactions)
+			linpred <- linpred + as.numeric(X_int %*% delta)
+		}
 		cutpoints <- assignment_coefs$cutpoints
 		# Ordinal scale W' = 1..R+1 in temporal-adoption order with never-
 		# treated at the top:
@@ -426,7 +542,7 @@
 			break
 		}
 		if (attempt >= max_iters) {
-			stop(sprintf(
+			msg <- sprintf(
 				paste0(
 					"Failed to draw %scohort assignments satisfying the rank condition ",
 					"(min count >= d + 1) after %d attempts at assignment_type = '%s', ",
@@ -443,7 +559,21 @@
 				N,
 				R,
 				d
-			))
+			)
+			# When the user passed a non-default assignment_interaction_strength
+			# (per round-1 Q2 + RC1: stored on assignment_coefs by
+			# .gen_assignment_coefs() when K > 0L), name it so they know which
+			# knob to lower.
+			if (!is.null(assignment_coefs$interaction_strength)) {
+				msg <- paste0(
+					msg,
+					sprintf(
+						" (assignment_interaction_strength = %g was also set; consider lowering it.)",
+						assignment_coefs$interaction_strength
+					)
+				)
+			}
+			stop(msg)
 		}
 	}
 	list(
