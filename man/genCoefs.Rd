@@ -4,7 +4,16 @@
 \alias{genCoefs}
 \title{Generate Coefficient Vector for Data Generation}
 \usage{
-genCoefs(R, T, d, density, eff_size, seed = NULL)
+genCoefs(
+  R,
+  T,
+  d,
+  density,
+  eff_size,
+  assignment_type = c("marginal", "multinomial", "ordered"),
+  assignment_strength = 1,
+  seed = NULL
+)
 }
 \arguments{
 \item{R}{Integer. The number of treated cohorts (treatment is assumed to start in periods 2 to
@@ -22,7 +31,36 @@ coefficient vector \code{theta} is nonzero.}
 nonzero entry is set to \code{eff_size} or \code{-eff_size} (with a 60 percent chance for a
 positive value).}
 
-\item{seed}{(Optional) Integer. Seed for reproducibility.}
+\item{assignment_type}{Character. One of \code{"marginal"} (default),
+\code{"multinomial"}, or \code{"ordered"}. Selects the data-generating
+process for cohort assignment in \code{simulateData()}.
+\itemize{
+\item \code{"marginal"}: each unit's cohort is drawn uniformly,
+independent of its covariates. Original pre-1.14.0 behavior,
+preserved byte-identically.
+\item \code{"multinomial"}: cohort assignment follows a
+multinomial-logit propensity-score model
+\eqn{\pi_r(x) = \exp(\gamma_r^\top x) / \sum_{r'} \exp(\gamma_{r'}^\top x)}{pi_r(x) = exp(gamma_r' x) / sum_r' exp(gamma_r'' x)}
+with \eqn{\gamma_0 \equiv 0}{gamma_0 = 0} (never-treated reference).
+Requires \eqn{d \ge 1}{d >= 1}.
+\item \code{"ordered"}: cohort assignment follows a proportional-odds
+(ordered-logit) model with cumulative probabilities
+\eqn{P(W \le r | x) = \mathrm{plogis}(\alpha_r - \gamma^\top x)}{P(W <= r | x) = plogis(alpha_r - gamma' x)}.
+Cutpoints \eqn{\alpha_r}{alpha_r} are chosen so the marginal cohort
+probabilities are approximately uniform 1/(R + 1). Requires
+\eqn{d \ge 1}{d >= 1}.
+}}
+
+\item{assignment_strength}{Non-negative numeric scalar. Scales the logit
+coefficients in the propensity-score model. \code{0} reduces both
+non-marginal types to the uniform marginal distribution by construction.
+Larger values produce stronger covariate-cohort coupling. Defaults to
+\code{1.0}. Ignored when \code{assignment_type = "marginal"}.}
+
+\item{seed}{(Optional) Integer. Seed for reproducibility. Three
+deterministic offsets share this seed: the main coefficient draw uses
+\code{seed}; the assignment coefficients use \code{seed + 1L}; the
+Monte Carlo integration in \code{getTes()} uses \code{seed + 2L}.}
 }
 \value{
 An object of class \code{"FETWFE_coefs"}, which is a list containing:
@@ -37,6 +75,15 @@ restrictions encoded in the FETWFE model are sparse. \code{beta} is derived from
 \item{T}{The provided number of time periods.}
 \item{d}{The provided number of covariates.}
 \item{seed}{The provided seed.}
+\item{assignment_type}{The selected cohort-assignment DGP
+(\code{"marginal"} / \code{"multinomial"} / \code{"ordered"}).
+New in 1.14.0.}
+\item{assignment_strength}{The scaling factor applied to the assignment
+coefficients. New in 1.14.0.}
+\item{assignment_coefs}{\code{NULL} when
+\code{assignment_type = "marginal"}; otherwise a list with elements
+\code{type}, \code{strength}, \code{coefs} (the gamma matrix or
+vector), and (for ordered) \code{cutpoints}. New in 1.14.0.}
 }
 }
 \description{
@@ -46,6 +93,15 @@ extended two-way fixed effects estimator. It returns an S3 object of class
 \code{T}, and \code{d}. See the simulation studies section of Faletto (2025) for details.
 }
 \details{
+Optional arguments \code{assignment_type} and \code{assignment_strength}
+control whether cohort membership in the simulated panel is drawn
+marginally (independent of the covariates, the original behavior) or from
+a covariate-dependent propensity-score model — either a multinomial-logit
+or an ordered-logit (proportional-odds) model. The default
+\code{assignment_type = "marginal"} preserves the pre-1.14.0 behavior
+byte-identically. See \code{vignette("simulation_vignette", package = "fetwfe")}
+for worked examples.
+
 The length of \code{beta} is given by
 \deqn{p = R + (T - 1) + d + dR + d(T - 1) + \mathit{num\_treats} + (\mathit{num\_treats} \times d)}{p = R + (T - 1) + d + dR + d(T - 1) + num_treats + (num_treats * d)},
 where the number of treatment parameters is defined as
@@ -60,6 +116,11 @@ occurring with probability \code{density}. Nonzero entries are set to \code{eff_
 transform to \code{theta} using internal routines (e.g.,
 \code{genBackwardsInvFusionTransformMat()} and \code{genInvTwoWayFusionTransformMat()}).
 }
+
+The multinomial-logit and proportional-odds reference DGPs are the
+canonical parametric propensity-score models named in Faletto (2025)
+line 1016; the propensity-weighted population-truth aggregation matches
+Eq. \code{att.estimator.weighted} (line 837).
 }
 \examples{
 \dontrun{
@@ -68,6 +129,14 @@ transform to \code{theta} using internal routines (e.g.,
 
   # Simulate data using the coefficients
   sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5)
+
+  # Covariate-dependent cohort assignment: multinomial-logit DGP
+  coefs_mn <- genCoefs(
+    R = 5, T = 30, d = 12, density = 0.1, eff_size = 2,
+    assignment_type = "multinomial", assignment_strength = 1.0,
+    seed = 123
+  )
+  sim_mn <- simulateData(coefs_mn, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5)
 }
 
 }

@@ -119,6 +119,15 @@ simulateData <- function(
 	d <- coefs_obj$d
 	beta <- coefs_obj$beta
 	seed <- coefs_obj$seed
+	# Backward-compat: saved-from-v1.13.x FETWFE_coefs objects don't have
+	# these slots; coerce a missing $assignment_type to "marginal" so the
+	# upgrade path doesn't crash on match.arg(NULL, c(...)) downstream.
+	assignment_type <- if (is.null(coefs_obj$assignment_type)) {
+		"marginal"
+	} else {
+		coefs_obj$assignment_type
+	}
+	assignment_coefs <- coefs_obj$assignment_coefs
 
 	sim_data <- simulateDataCore(
 		N = N,
@@ -131,7 +140,9 @@ simulateData <- function(
 		seed = seed,
 		gen_ints = TRUE,
 		distribution = distribution,
-		guarantee_rank_condition = guarantee_rank_condition
+		guarantee_rank_condition = guarantee_rank_condition,
+		assignment_type = assignment_type,
+		assignment_coefs = assignment_coefs
 	)
 
 	required_fields <- c(
@@ -220,6 +231,15 @@ simulateData <- function(
 #' data set is guaranteed to have at least `d + 1` units per cohort, which is
 #' necessary for the final design matrix to have full column rank. Default is
 #' FALSE, in which case no such condition is enforced.
+#' @param assignment_type Character. One of \code{"marginal"} (default),
+#'   \code{"multinomial"}, or \code{"ordered"}. Selects the cohort-assignment
+#'   DGP. \code{"marginal"} preserves the pre-1.14.0 behavior. The
+#'   non-marginal types require a non-NULL \code{assignment_coefs} argument
+#'   (typically pulled from a \code{FETWFE_coefs} object built with the
+#'   matching \code{assignment_type}).
+#' @param assignment_coefs Optional list returned by
+#'   \code{.gen_assignment_coefs()} (an internal helper). Required when
+#'   \code{assignment_type != "marginal"}.
 #'
 #' @return An object of class \code{"FETWFE_simulated"}, which is a list containing:
 #' \describe{
@@ -316,10 +336,28 @@ simulateDataCore <- function(
 	seed = NULL,
 	gen_ints = FALSE,
 	distribution = "gaussian",
-	guarantee_rank_condition = FALSE
+	guarantee_rank_condition = FALSE,
+	assignment_type = "marginal",
+	assignment_coefs = NULL
 ) {
 	if (!is.null(seed)) {
 		set.seed(seed)
+	}
+
+	# Normalize assignment_type defensively (backward-compat for callers
+	# that pass NULL directly).
+	if (is.null(assignment_type)) {
+		assignment_type <- "marginal"
+	}
+	assignment_type <- match.arg(
+		assignment_type,
+		c("marginal", "multinomial", "ordered")
+	)
+	if (assignment_type != "marginal" && is.null(assignment_coefs)) {
+		stop(sprintf(
+			"assignment_type = '%s' requires non-NULL assignment_coefs",
+			assignment_type
+		))
 	}
 
 	res <- testGenRandomDataInputs(
@@ -337,15 +375,30 @@ simulateDataCore <- function(
 
 	rm(res)
 
-	# Generate base effects and covariates (using specified distribution)
-	res_base <- generateBaseEffects(
-		N = N,
-		d = d,
-		T = T,
-		R = R,
-		distribution = distribution,
-		guarantee_rank_condition = guarantee_rank_condition
-	)
+	# Generate base effects and covariates. Marginal path keeps the
+	# pre-1.14.0 byte-identical behavior; covariate path samples per-unit
+	# cohort labels from the propensity-score model in `assignment_coefs`
+	# and sorts by W to preserve the row-block invariant.
+	if (assignment_type == "marginal") {
+		res_base <- generateBaseEffects(
+			N = N,
+			d = d,
+			T = T,
+			R = R,
+			distribution = distribution,
+			guarantee_rank_condition = guarantee_rank_condition
+		)
+	} else {
+		res_base <- .generateBaseEffectsCovariate(
+			N = N,
+			d = d,
+			T = T,
+			R = R,
+			distribution = distribution,
+			guarantee_rank_condition = guarantee_rank_condition,
+			assignment_coefs = assignment_coefs
+		)
+	}
 	cohort_fe <- res_base$cohort_fe
 	time_fe <- res_base$time_fe
 	X_long <- res_base$X_long
@@ -362,12 +415,29 @@ simulateDataCore <- function(
 		cbind(cohort_fe, time_fe)
 	}
 
-	indep_assignments <- genAssignments(
-		N = N,
-		R = R,
-		guarantee_rank_condition = guarantee_rank_condition,
-		d = d
-	)
+	# Auxiliary cohort counts (indep_counts). Marginal path uses the
+	# original uniform multinomial draw. Non-marginal path draws an
+	# independent X' + W' under the SAME DGP so indep_counts is drawn
+	# from the same distribution as the main panel (BL2 fix per
+	# round-1 review). Same rank-condition retry guard applies.
+	if (assignment_type == "marginal") {
+		indep_assignments <- genAssignments(
+			N = N,
+			R = R,
+			guarantee_rank_condition = guarantee_rank_condition,
+			d = d
+		)
+	} else {
+		indep_assignments <- .draw_indep_assignments_covariate(
+			N = N,
+			d = d,
+			T = T,
+			R = R,
+			distribution = distribution,
+			guarantee_rank_condition = guarantee_rank_condition,
+			assignment_coefs = assignment_coefs
+		)
+	}
 
 	if (d > 0) {
 		res_ints <- generateFEInts(X_long, cohort_fe, time_fe, N, T, R, d)

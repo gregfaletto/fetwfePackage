@@ -3,10 +3,45 @@
 # `genTreatVarsSim()`, `rfunc()`, and `testGenRandomDataInputs()`.
 # Moved from R/gen_funcs.R in 1.9.25.
 
+#' Draw covariates and their long-format expansion
+#'
+#' Helper shared between \code{generateBaseEffects()} (marginal cohort
+#' assignment path) and \code{.generateBaseEffectsCovariate()}
+#' (covariate-dependent cohort assignment path). Adding a new
+#' distribution branch only needs to happen here.
+#'
+#' @param N Integer. Number of units.
+#' @param d Integer. Number of covariates.
+#' @param T Integer. Number of time periods.
+#' @param distribution Character. \code{"gaussian"} or \code{"uniform"}.
+#'
+#' @return A list with \code{X} (the \code{N x d} unit-level matrix) and
+#'   \code{X_long} (the row-repeated \code{(N * T) x d} long-format
+#'   expansion).
+#' @keywords internal
+#' @noRd
+.drawCovariates <- function(N, d, T, distribution = "gaussian") {
+	if (distribution == "gaussian") {
+		X <- matrix(rnorm(N * d), nrow = N, ncol = d)
+	} else if (distribution == "uniform") {
+		# U(-sqrt(3), sqrt(3)) so variance = 1 (matches standard normal).
+		a <- sqrt(3)
+		X <- matrix(runif(N * d, min = -a, max = a), nrow = N, ncol = d)
+	} else {
+		stop("Unsupported distribution. Please choose 'gaussian' or 'uniform'.")
+	}
+	X_long <- X[rep(seq_len(N), each = T), , drop = FALSE]
+	list(X = X, X_long = X_long)
+}
+
+
 #' Generate Base Fixed Effects and Covariates for Simulation
 #'
 #' Creates cohort fixed effects, time fixed effects, and a long-format covariate matrix
 #' for simulating panel data. Covariates are drawn based on the specified distribution.
+#' This is the marginal-cohort-assignment path (cohort assignment independent
+#' of covariates); the covariate-dependent path is in
+#' \code{.generateBaseEffectsCovariate()}.
 #'
 #' @param N Integer. Number of units in the panel.
 #' @param d Integer. Number of time-invariant covariates.
@@ -46,19 +81,11 @@ generateBaseEffects <- function(
 		guarantee_rank_condition = guarantee_rank_condition
 	)
 
-	if (distribution == "gaussian") {
-		X <- matrix(rnorm(N * d), nrow = N, ncol = d)
-	} else if (distribution == "uniform") {
-		# Generate U(-sqrt(3), sqrt(3)) so that variance = 1 (same as standard normal)
-		a <- sqrt(3)
-		X <- matrix(runif(N * d, min = -a, max = a), nrow = N, ncol = d)
-	} else {
-		stop("Unsupported distribution. Please choose 'gaussian' or 'uniform'.")
-	}
+	cov <- .drawCovariates(N = N, d = d, T = T, distribution = distribution)
+	X_long <- cov$X_long
 
 	stopifnot(ncol(ret$cohort_fe) == R)
 
-	X_long <- X[rep(1:N, each = T), , drop = FALSE]
 	return(list(
 		cohort_fe = ret$cohort_fe,
 		time_fe = ret$time_fe,
@@ -66,6 +93,115 @@ generateBaseEffects <- function(
 		assignments = ret$assignments,
 		cohort_inds = ret$inds
 	))
+}
+
+
+#' Generate Base Fixed Effects and Covariates under Covariate-Dependent Cohort Assignment
+#'
+#' Sibling of \code{generateBaseEffects()} for the non-marginal
+#' \code{assignment_type}s ("multinomial" / "ordered"). Differs in that
+#' cohort membership is drawn per-unit from
+#' \code{.sample_cohort_assignments(X, assignment_coefs)} rather than
+#' from a uniform multinomial. Units are then sorted by drawn cohort
+#' label so the row-block structure expected by downstream consumers
+#' (\code{prepXints()}, cohort-block indexing in \code{simulateDataCore()})
+#' is preserved.
+#'
+#' @param N Integer. Number of units.
+#' @param d Integer >= 1. Number of covariates.
+#' @param T Integer. Number of time periods.
+#' @param R Integer. Number of treated cohorts.
+#' @param distribution Character. Covariate distribution
+#'   (\code{"gaussian"} / \code{"uniform"}).
+#' @param guarantee_rank_condition Logical. If TRUE, retry the joint
+#'   X + W draw until each cohort has at least \code{d + 1} units (up to
+#'   \code{max_iters}; errors with a user-actionable message if exhausted).
+#' @param assignment_coefs Non-NULL assignment-coefs object from
+#'   \code{.gen_assignment_coefs()}.
+#' @param max_iters Integer. Maximum number of joint X + W re-draws when
+#'   \code{guarantee_rank_condition = TRUE}. Default 100.
+#'
+#' @return A list with the same shape as \code{generateBaseEffects()}'s
+#'   return value: \code{cohort_fe}, \code{time_fe}, \code{X_long},
+#'   \code{assignments}, \code{cohort_inds}. The covariates are sorted
+#'   to match the row-block order of \code{cohort_fe}.
+#' @keywords internal
+#' @noRd
+.generateBaseEffectsCovariate <- function(
+	N,
+	d,
+	T,
+	R,
+	distribution,
+	guarantee_rank_condition,
+	assignment_coefs,
+	max_iters = 100L
+) {
+	stopifnot(!is.null(assignment_coefs))
+	stopifnot(d >= 1)
+	stopifnot(N >= (R + 1))
+	if (guarantee_rank_condition) {
+		stopifnot(N >= (R + 1) * (d + 1))
+	}
+
+	# Draw (X, W) jointly with rank-condition retries via the shared
+	# `.retry_until_rank_ok()` helper (also used by the auxiliary
+	# `.draw_indep_assignments_covariate()` path). RNG state advances per
+	# iteration — retries are deterministic given the initial seed.
+	res <- .retry_until_rank_ok(
+		N = N,
+		d = d,
+		T = T,
+		R = R,
+		distribution = distribution,
+		guarantee_rank_condition = guarantee_rank_condition,
+		assignment_coefs = assignment_coefs,
+		max_iters = max_iters,
+		label = ""
+	)
+	X <- res$X
+	W <- res$W
+	counts <- res$counts
+
+	# Sort units by W (units are exchangeable; sorting is a permutation
+	# that doesn't change the joint distribution of (X_i, W_i) but
+	# restores the row-block invariant expected by downstream code).
+	ord <- order(W)
+	W <- W[ord]
+	X <- X[ord, , drop = FALSE]
+	X_long <- X[rep(seq_len(N), each = T), , drop = FALSE]
+
+	# Now W is sorted: first counts[1] entries are 0 (never-treated),
+	# next counts[2] are cohort 1, etc. Build cohort_fe and inds the
+	# same way genCohortTimeFE() does.
+	assignments <- counts
+	stopifnot(sum(assignments) == N)
+	stopifnot(length(assignments) == R + 1L)
+
+	cohort_fe <- matrix(0, N * T, R)
+	inds <- list()
+	first_ind_r <- assignments[1] * T + 1
+	for (r in seq_len(R)) {
+		last_ind_r <- first_ind_r + assignments[r + 1] * T - 1
+		cohort_fe[first_ind_r:last_ind_r, r] <- rep(1, assignments[r + 1] * T)
+		inds[[r]] <- first_ind_r:last_ind_r
+		first_ind_r <- last_ind_r + 1
+	}
+	stopifnot(last_ind_r == N * T)
+
+	time_fe <- matrix(0, N * T, T - 1)
+	for (t in seq_len(T - 1)) {
+		rows_t <- (0:(N - 1)) * T + t + 1
+		time_fe[rows_t, t] <- rep(1, N)
+	}
+
+	list(
+		cohort_fe = cohort_fe,
+		time_fe = time_fe,
+		X_long = X_long,
+		assignments = assignments,
+		cohort_inds = inds
+	)
 }
 
 

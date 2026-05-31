@@ -15,7 +15,9 @@ simulateDataCore(
   seed = NULL,
   gen_ints = FALSE,
   distribution = "gaussian",
-  guarantee_rank_condition = FALSE
+  guarantee_rank_condition = FALSE,
+  assignment_type = "marginal",
+  assignment_coefs = NULL
 )
 }
 \arguments{
@@ -58,6 +60,17 @@ from \eqn{[-\sqrt{3}, \sqrt{3}]}.}
 data set is guaranteed to have at least \code{d + 1} units per cohort, which is
 necessary for the final design matrix to have full column rank. Default is
 FALSE, in which case no such condition is enforced.}
+
+\item{assignment_type}{Character. One of \code{"marginal"} (default),
+\code{"multinomial"}, or \code{"ordered"}. Selects the cohort-assignment
+DGP. \code{"marginal"} preserves the pre-1.14.0 behavior. The
+non-marginal types require a non-NULL \code{assignment_coefs} argument
+(typically pulled from a \code{FETWFE_coefs} object built with the
+matching \code{assignment_type}).}
+
+\item{assignment_coefs}{Optional list returned by
+\code{.gen_assignment_coefs()} (an internal helper). Required when
+\code{assignment_type != "marginal"}.}
 }
 \value{
 An object of class \code{"FETWFE_simulated"}, which is a list containing:
