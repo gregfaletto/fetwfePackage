@@ -116,6 +116,11 @@ test_that("tidy.<class> sorts cohorts numerically when labels include >= 10", {
 		unit_var = "unit",
 		treatment = "treatment",
 		covs = c("cov1", "cov2"),
+		# #197: ci_type slot is now required by .EXPECTED_SLOTS_FETWFE.
+		# Set to "pointwise" so C10 (simultaneous >= pointwise band width)
+		# is skipped on this hand-built catt_df, preserving this test's
+		# intent (cohort SORTING, not band type).
+		ci_type = "pointwise",
 		internal = list(
 			X_ints = matrix(0, 100L * T_test, p_test),
 			y = rep(0, 100L * T_test),

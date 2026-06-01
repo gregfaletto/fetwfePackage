@@ -532,28 +532,26 @@ test_that("tidy.eventStudy respects conf.int = FALSE", {
 	expect_false("conf.high" %in% names(td))
 })
 
-test_that("tidy.eventStudy recomputes CIs at a custom conf.level", {
-	res <- .fetwfe_fixture()
+test_that("tidy.eventStudy passes through the object's ci_low/ci_high (Option B, #197)", {
+	# As of #197 (Option B), tidy.eventStudy() PASSES THROUGH the eventStudy
+	# object's stored `ci_low` / `ci_high` (reflecting the fit's `ci_type`)
+	# rather than recomputing `estimate +/- z * se` at `conf.level`. So the CI
+	# columns equal `es$ci_low` / `es$ci_high` and do NOT change with
+	# `conf.level`. (This is the cross-surface-consistency fix: tidy now agrees
+	# with print / summary / plot / simultaneousCIs under the default.)
+	res <- .fetwfe_fixture() # default ci_type = "simultaneous"
 	es <- eventStudy(res)
+	fin <- is.finite(es$se)
+
 	td_95 <- broom::tidy(es, conf.level = 0.95)
 	td_99 <- broom::tidy(es, conf.level = 0.99)
-	# Sharp check: the CI half-width is `qnorm(1 - alpha/2) * std.error`,
-	# so the difference between 99% and 95% high bounds is
-	# `(qnorm(0.995) - qnorm(0.975)) * std.error` at every row. The pre-
-	# #178 parametric `width_99 >= width_95 - 1e-10` assertion held even
-	# if `conf.level` were ignored entirely (two equal widths satisfy
-	# `>=`); the sharp form pins the exact formula. `td_95$std.error`
-	# is used because it equals `td_99$std.error` (`std.error` doesn't
-	# depend on `conf.level`).
-	z_diff <- stats::qnorm(0.995) - stats::qnorm(0.975)
-	expect_equal(
-		td_99$conf.high - td_95$conf.high,
-		z_diff * td_95$std.error
-	)
-	expect_equal(
-		td_95$conf.low - td_99$conf.low,
-		z_diff * td_95$std.error
-	)
+
+	# Pass-through: CI columns equal the object's stored bounds (finite rows).
+	expect_equal(td_95$conf.low[fin], es$ci_low[fin])
+	expect_equal(td_95$conf.high[fin], es$ci_high[fin])
+	# conf.level no longer alters the event-study CI columns (pass-through).
+	expect_equal(td_99$conf.low, td_95$conf.low)
+	expect_equal(td_99$conf.high, td_95$conf.high)
 })
 
 test_that("tidy.eventStudy localizes error when required columns are missing", {
@@ -578,12 +576,16 @@ test_that("tidy.eventStudy localizes error when required columns are missing", {
 		broom::tidy(es_broken2),
 		"missing required columns: se, p_value"
 	)
-	# CI columns are NOT required (this method computes its own CIs from
-	# estimate +/- z * se). Dropping them should NOT fire the guard.
+	# As of #197 (Option B) the CI columns ARE required: tidy.eventStudy()
+	# now PASSES THROUGH `ci_low` / `ci_high` (reflecting the fit's `ci_type`)
+	# rather than recomputing them, so dropping them fires the guard.
 	es_no_ci <- es
 	es_no_ci$ci_low <- NULL
 	es_no_ci$ci_high <- NULL
-	expect_silent(broom::tidy(es_no_ci))
+	expect_error(
+		broom::tidy(es_no_ci),
+		"missing required columns: ci_low, ci_high"
+	)
 })
 
 test_that("FETWFE_tes carries cohort_times slot (simulator convention)", {
