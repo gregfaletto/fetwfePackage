@@ -82,6 +82,11 @@
 #'   deterministic offsets share this seed: the main coefficient draw uses
 #'   \code{seed}; the assignment coefficients use \code{seed + 1L}; the
 #'   Monte Carlo integration in \code{getTes()} uses \code{seed + 2L}.
+#' @param verbose Logical. If \code{TRUE}, emit a \code{message()} when
+#'   \code{assignment_interactions} canonicalization removes duplicate or
+#'   unordered pairs (e.g., when the user passes both \code{c(1, 2)} and
+#'   \code{c(2, 1)}). Default \code{FALSE} (silent — users can verify the
+#'   final canonical list via \code{coefs$assignment_coefs$interactions}).
 #'
 #' @return An object of class \code{"FETWFE_coefs"}, which is a list containing:
 #' \describe{
@@ -184,7 +189,8 @@ genCoefs <- function(
 	assignment_strength = 1.0,
 	assignment_interactions = NULL,
 	assignment_interaction_strength = NULL,
-	seed = NULL
+	seed = NULL,
+	verbose = FALSE
 ) {
 	# Check that T is a numeric scalar and at least 3.
 	if (!is.numeric(T) || length(T) != 1 || T < 3) {
@@ -224,13 +230,7 @@ genCoefs <- function(
 	}
 
 	assignment_type <- match.arg(assignment_type)
-	if (
-		!is.numeric(assignment_strength) ||
-			length(assignment_strength) != 1 ||
-			assignment_strength < 0
-	) {
-		stop("assignment_strength must be a non-negative numeric scalar")
-	}
+	.validate_strength_arg(assignment_strength, "assignment_strength")
 	if (assignment_type != "marginal" && d < 1) {
 		stop(sprintf(
 			"assignment_type = '%s' requires d >= 1 (at least one covariate)",
@@ -283,8 +283,10 @@ genCoefs <- function(
 			}
 			canon[[k]] <- c(min(j, k_idx), max(j, k_idx))
 		}
-		# Dedupe silently (no message() — per Decision Log Q1; users verify
-		# via coefs$assignment_coefs$interactions inspection).
+		# Dedupe. Silent by default (per Decision Log Q1: users verify via
+		# coefs$assignment_coefs$interactions inspection); when verbose =
+		# TRUE the canonicalize/dedup step emits a message naming the
+		# count of removed pairs.
 		deduped <- list()
 		for (k in seq_along(canon)) {
 			already <- FALSE
@@ -298,6 +300,12 @@ genCoefs <- function(
 				deduped[[length(deduped) + 1L]] <- canon[[k]]
 			}
 		}
+		if (verbose && length(canon) > length(deduped)) {
+			message(sprintf(
+				"Deduplicated %d assignment_interactions pair(s) after canonicalization.",
+				length(canon) - length(deduped)
+			))
+		}
 		assignment_interactions <- deduped
 		# Note: assignment_interactions = list() (empty list, e.g. from a
 		# user passing list() directly) is treated as equivalent to NULL
@@ -305,17 +313,11 @@ genCoefs <- function(
 	}
 
 	# Interaction strength validation
-	if (!is.null(assignment_interaction_strength)) {
-		if (
-			!is.numeric(assignment_interaction_strength) ||
-				length(assignment_interaction_strength) != 1L ||
-				assignment_interaction_strength < 0
-		) {
-			stop(
-				"assignment_interaction_strength must be a non-negative numeric scalar (or NULL)"
-			)
-		}
-	}
+	.validate_strength_arg(
+		assignment_interaction_strength,
+		"assignment_interaction_strength",
+		allow_null = TRUE
+	)
 
 	stopifnot(R >= 2)
 	stopifnot(T >= 3)

@@ -503,6 +503,40 @@ test_that("assignment_interactions canonicalizes + dedupes pairs (#191)", {
 		),
 		regexp = "outside \\[1, d"
 	)
+
+	# verbose = TRUE emits a dedup message when canonicalization removes
+	# pairs (per post-execution review item #6 maintainer-elevation:
+	# verbose-gated message preserves silent default while giving users
+	# an opt-in signal that dedup happened).
+	expect_message(
+		genCoefs(
+			R = 3,
+			T = 5,
+			d = 2,
+			density = 0.5,
+			eff_size = 2,
+			assignment_type = "multinomial",
+			assignment_interactions = list(c(2, 1), c(1, 2)),
+			verbose = TRUE,
+			seed = 42
+		),
+		regexp = "Deduplicated 1 assignment_interactions pair"
+	)
+
+	# verbose = FALSE (default) stays silent even when dedup happens.
+	expect_silent(
+		genCoefs(
+			R = 3,
+			T = 5,
+			d = 2,
+			density = 0.5,
+			eff_size = 2,
+			assignment_type = "multinomial",
+			assignment_interactions = list(c(2, 1), c(1, 2)),
+			verbose = FALSE,
+			seed = 42
+		)
+	)
 })
 
 # ------------------------------------------------------------------------------

@@ -11,6 +11,47 @@
 # and ordered-cumprobs logic in both the sampler and the truth-
 # derivation MC integrator (round-1 reviewer / sentinel convergence).
 
+#' Validate a non-negative numeric scalar argument (with optional NULL allowance)
+#'
+#' Shared validator for the `assignment_strength` and
+#' `assignment_interaction_strength` arguments on `genCoefs()` and the
+#' `strength` argument on `.gen_assignment_coefs()`. Centralises the
+#' "non-negative numeric scalar" check that existed at three sites
+#' before #191 added `assignment_interaction_strength`. Errors with a
+#' user-readable message naming the offending argument.
+#'
+#' @param x The value to validate.
+#' @param name Character; the user-facing name of the argument (used in
+#'   the error message).
+#' @param allow_null Logical; if `TRUE`, `x = NULL` is accepted as a
+#'   valid default. Used for `assignment_interaction_strength`'s
+#'   `NULL` fall-through to `assignment_strength`. Default `FALSE`.
+#'
+#' @return Invisibly `NULL`. Called for its side-effect (`stop()` on
+#'   invalid input).
+#'
+#' @keywords internal
+#' @noRd
+.validate_strength_arg <- function(x, name, allow_null = FALSE) {
+	if (is.null(x)) {
+		if (allow_null) {
+			return(invisible(NULL))
+		}
+		stop(sprintf("%s must be a non-negative numeric scalar", name))
+	}
+	if (!is.numeric(x) || length(x) != 1 || x < 0) {
+		if (allow_null) {
+			stop(sprintf(
+				"%s must be a non-negative numeric scalar (or NULL)",
+				name
+			))
+		}
+		stop(sprintf("%s must be a non-negative numeric scalar", name))
+	}
+	invisible(NULL)
+}
+
+
 #' Generate assignment-coefficient object for covariate-dependent cohorts
 #'
 #' Returns the (gamma, cutpoints) object that parameterizes the
@@ -103,9 +144,7 @@
 	if (!is.null(seed)) {
 		set.seed(seed)
 	}
-	if (!is.numeric(strength) || length(strength) != 1 || strength < 0) {
-		stop("assignment_strength must be a non-negative numeric scalar")
-	}
+	.validate_strength_arg(strength, "assignment_strength")
 	if (!(type %in% c("multinomial", "ordered"))) {
 		stop(sprintf(
 			"Internal error: .gen_assignment_coefs() called with type = '%s'",

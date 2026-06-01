@@ -14,10 +14,15 @@
   `c(min, max)` and silently deduplicated. The `assignment_coefs` slot
   on `FETWFE_coefs` gains `$interactions` and `$delta` sub-slots; a
   new top-level `$assignment_interaction_strength` slot mirrors
-  `$assignment_strength`. Unlocks adversarial-propensity Monte Carlo
-  DGPs for the FETWFE vs Callaway-Sant'Anna comparison work tracked
-  at #140. Default `assignment_interactions = NULL` preserves v1.14.0
-  behavior byte-identically on every existing test.
+  `$assignment_strength`. `genCoefs()` also gains a `verbose = FALSE`
+  argument; setting `verbose = TRUE` emits a `message()` when
+  canonicalization removes duplicate or unordered pairs (default is
+  silent — users can verify the final canonical list via
+  `coefs$assignment_coefs$interactions`). Unlocks adversarial-
+  propensity Monte Carlo DGPs for the FETWFE vs Callaway-Sant'Anna
+  comparison work tracked at #140. Default
+  `assignment_interactions = NULL` preserves v1.14.0 behavior
+  byte-identically on every existing test.
 
 ## Version 1.14.0 (2026-05-30)
 

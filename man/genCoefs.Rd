@@ -14,7 +14,8 @@ genCoefs(
   assignment_strength = 1,
   assignment_interactions = NULL,
   assignment_interaction_strength = NULL,
-  seed = NULL
+  seed = NULL,
+  verbose = FALSE
 )
 }
 \arguments{
@@ -90,6 +91,12 @@ angle). Ignored when \code{assignment_interactions = NULL}. New in
 deterministic offsets share this seed: the main coefficient draw uses
 \code{seed}; the assignment coefficients use \code{seed + 1L}; the
 Monte Carlo integration in \code{getTes()} uses \code{seed + 2L}.}
+
+\item{verbose}{Logical. If \code{TRUE}, emit a \code{message()} when
+\code{assignment_interactions} canonicalization removes duplicate or
+unordered pairs (e.g., when the user passes both \code{c(1, 2)} and
+\code{c(2, 1)}). Default \code{FALSE} (silent — users can verify the
+final canonical list via \code{coefs$assignment_coefs$interactions}).}
 }
 \value{
 An object of class \code{"FETWFE_coefs"}, which is a list containing:
