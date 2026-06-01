@@ -1160,6 +1160,126 @@ getSecondVarTermDataApp <- function(
 }
 
 
+# .assemble_joint_cov_var1
+#' @title K x K regression-coefficient covariance block (Sigma_1)
+#' @description
+#' The K-effect generalization of the scalar `att_var_1` formula in
+#' `getTeResults2()` / `getTeResultsOLS()`. Given a `p_sel x K` matrix `Psi`
+#' whose column `k` is effect `k`'s contrast on the selected
+#' treatment-effect support, returns the K x K block
+#' `sig_eps_sq / (N*T) * t(Psi) %*% gram_inv %*% Psi` (model-based path) or,
+#' under `se_type = "cluster"`, the zero-padded cluster-robust sandwich form
+#' `t(Psi_full) %*% sandwich_full %*% Psi_full`. The K = 1 case reproduces the
+#' scalar `att_var_1` exactly. Built by `.simultaneous_cis_impl()`; the joint
+#' covariance is not persisted on the fit (see #192 Decision Log).
+#' @param Psi Numeric matrix, `p_sel x K`. Column `k` is the contrast vector
+#'   that picks effect `k` out of the selected treatment-effect support. The
+#'   caller is responsible for shaping `Psi` in the right space (theta-space
+#'   for FETWFE, beta-space for the OLS family).
+#' @param gram_inv Numeric matrix; the Gram inverse restricted to the selected
+#'   treatment-effect features (from `getGramInv()`). Used in the non-cluster
+#'   path.
+#' @param sig_eps_sq Numeric scalar; idiosyncratic error variance.
+#' @param N,T Integers; units and time periods.
+#' @param se_type Character; `"default"` / `"conservative"` use the model-based
+#'   form, `"cluster"` uses the sandwich form.
+#' @param sandwich_full Numeric matrix or `NULL`; the full cluster-robust
+#'   sandwich on the selected support (required when `se_type = "cluster"`).
+#' @param treat_block_mask Logical vector or `NULL`; marks which selected
+#'   columns are treatment-effect features (required when
+#'   `se_type = "cluster"`), used to zero-pad `Psi` to the sandwich's full
+#'   feature space.
+#' @return A numeric K x K matrix. Diagonal entries are floored at zero in the
+#'   cluster path (issue #84 item 9 / issue #127), mirroring the scalar sites.
+#' @keywords internal
+#' @noRd
+.assemble_joint_cov_var1 <- function(
+	Psi,
+	gram_inv,
+	sig_eps_sq,
+	N,
+	T,
+	se_type = "default",
+	sandwich_full = NULL,
+	treat_block_mask = NULL
+) {
+	K <- ncol(Psi)
+	if (identical(se_type, "cluster")) {
+		stopifnot(!is.null(sandwich_full))
+		stopifnot(!is.null(treat_block_mask))
+		stopifnot(sum(treat_block_mask) == nrow(Psi))
+		Psi_full <- matrix(0, nrow = length(treat_block_mask), ncol = K)
+		Psi_full[treat_block_mask, ] <- Psi
+		out <- t(Psi_full) %*% sandwich_full %*% Psi_full
+		# Floor diagonal entries at zero against floating-point drift; the
+		# Liang-Zeger sandwich quadratic form is PSD in exact arithmetic
+		# (issue #84 item 9 / issue #127). Off-diagonals can be either sign
+		# and are left as-is.
+		diag(out) <- pmax(diag(out), 0)
+	} else {
+		out <- sig_eps_sq * (t(Psi) %*% gram_inv %*% Psi) / (N * T)
+	}
+	out
+}
+
+
+# .assemble_joint_cov_var2
+#' @title K x K cohort-probability covariance block (Sigma_2)
+#' @description
+#' The K-effect generalization of the scalar `att_var_2` (`getSecondVarTermOLS`
+#' / `getSecondVarTermDataApp`). Block `(k, l)` of the K x K output is
+#' `T/(N*T) * theta_sel' J_k' Sigma_pi_hat J_l theta_sel`, where `J_k` is the
+#' per-effect Jacobian (R x p_sel for FETWFE; R x R for the OLS family) built by
+#' `.build_jacobian()`. The K = 1 case reproduces the scalar `att_var_2`.
+#'
+#' Round-1 B1: the single-global-Jacobian sketch was empirically wrong for
+#' `family = "event_study"` (it gave the wrong diagonal against the existing
+#' `var_2(e)` scalars). Per-effect Jacobians (each masked to its own valid
+#' cohort set) reproduce the existing scalars exactly. Per-family `J_list`
+#' construction lives in `.simultaneous_cis_impl()`. Round-2 N3: the single
+#' global `Sigma_pi_hat` is correct — the zero-rows of `J_k` for cohorts not in
+#' effect `k`'s valid set zero out the relevant `Sigma_pi_hat` entries
+#' automatically, so a per-effect masked `Sigma_pi_hat` is unnecessary.
+#' @param J_list Length-K list of per-effect Jacobian matrices (each R x p_sel
+#'   for FETWFE, R x R for the OLS family).
+#' @param theta_sel Numeric vector; the selected treatment-effect coefficient
+#'   vector (theta-space for FETWFE, beta-space for the OLS family). Length
+#'   matches `ncol(J_list[[k]])`.
+#' @param Sigma_pi_hat Numeric matrix, R x R; the multinomial covariance of the
+#'   cohort-count vector (from `.multinomial_cov(cohort_probs_overall[1:R])`).
+#' @param N,T Integers; units and time periods.
+#' @return A numeric K x K matrix. Diagonal entries are floored at zero (issue
+#'   #127), mirroring the scalar sites.
+#' @keywords internal
+#' @noRd
+.assemble_joint_cov_var2 <- function(
+	J_list,
+	theta_sel,
+	Sigma_pi_hat,
+	N,
+	T
+) {
+	K <- length(J_list)
+	out <- matrix(0, K, K)
+	for (k in seq_len(K)) {
+		for (l in seq_len(K)) {
+			out[k, l] <- T *
+				as.numeric(
+					t(theta_sel) %*%
+						t(J_list[[k]]) %*%
+						Sigma_pi_hat %*%
+						J_list[[l]] %*%
+						theta_sel
+				) /
+				(N * T)
+		}
+	}
+	# Floor diagonal (parallels the issue #127 floor at the scalar sites).
+	diag(out) <- pmax(diag(out), 0)
+	out
+}
+
+
 # getCohortATTsFinal
 #' @description
 #' Computes the **Cohort Average Treatment Effect on the Treated**
