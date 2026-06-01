@@ -222,7 +222,7 @@ For FETWFE and BETWFE, `se_type = "cluster"` is only meaningful when `q < 1` (th
 
 The CR1 sandwich is a textbook estimator and the package's implementation matches `sandwich::vcovCL()` to numerical precision on a clean panel without selection. What is *not* yet covered by the paper's theory is:
 
-* Verification that the bridge oracle property of Theorem 6.2 still holds under the relaxed covariance structure that motivates cluster-robust SEs in the first place.
+* Verification that the bridge oracle property of Theorem 6.3 still holds under the relaxed covariance structure that motivates cluster-robust SEs in the first place.
 * Sandwich consistency *after model selection*, i.e., that the CR1 sandwich evaluated at the bridge-selected support is a consistent estimator of the true asymptotic variance.
 
 These extensions are mechanically routine but conceptually non-trivial, and they are explicitly outside the package's current scope. Until they land, `se_type = "cluster"` is exposed as an opt-in, clearly-labelled experimental feature.
@@ -290,6 +290,48 @@ The critical value is computed via `mvtnorm::qmvnorm(..., algorithm = mvtnorm::G
 The `mvtnorm` package is in `Suggests` (not `Imports`) --- `simultaneousCIs()` requires it only when called (and only when `K > 1` under the default variance). Install it with `install.packages("mvtnorm")` if you have not already. The `plot.simultaneous_cis` method additionally requires `ggplot2` (also in `Suggests`).
 
 The pattern matches `did::aggte(cband = TRUE)` from the Callaway-Sant'Anna `did` package, which computes simultaneous bands via the CCK (2013) multiplier bootstrap. Asymptotically the two critical values are identical under fixed-dim Gaussianity; the parametric `simultaneousCIs()` path here is deterministic and sub-second, whereas the multiplier-bootstrap path is stochastic and resampling-based.
+
+# 7. Selection consistency as an implicit zero-effect test
+
+A question applied users ask constantly is: *is this cohort's treatment effect distinguishable from zero --- and can I conclude that it actually **is** zero?* For `fetwfe()` (and `betwfe()`), the answer is built into the estimator. The bridge penalty's *restriction selection consistency* (Faletto 2025, Theorem 6.2) makes the `selected` flag on `catt_df` an **implicit hypothesis test** of $H_0: \tau_{\text{ATT}}(r) = 0$, for free, with no extra computation. The mapping is:
+
+* `selected = TRUE` (estimate $\neq 0$) is the asymptotic analogue of **reject $H_0$**: the effect is nonzero.
+* `selected = FALSE` (estimate exactly $0$) is the asymptotic analogue of **fail to reject $H_0$** --- and, under Theorem 6.2, it is the *stronger* statement that the truth is zero with probability tending to one.
+
+The conclusion for a selected-out cohort is delivered by the `selected` flag, **not** by a p-value. A cohort the penalty zeros out has `estimate == 0`, `se == 0`, and `p_value == NA` by construction --- there is no Wald p-value to read, and the inferential content lives entirely in `selected`. (A condensed, first-time-user-oriented version of this discussion appears under "Testing the zero-effect null" in the main package vignette; the treatment here is the deeper, inference-focused one.)
+
+## Why this is stronger than a confidence interval on an unregularized estimator
+
+For an unregularized estimator --- OLS, or plain `etwfe()` --- the coefficient estimate $\hat\beta$ is a continuous random variable, so $\hat\beta = 0$ *exactly* is a **measure-zero event**: it essentially never happens, and would carry no information about the truth if it did. The only zero-effect inference such an estimator offers is "the confidence interval contains $0$," i.e. *fail to reject* --- never *accept*. Selection consistency changes the picture qualitatively. Under Theorem 6.2, $\hat\beta_j = 0$ exactly with probability $\to 1$ when the truth is zero, and $\hat\beta_j \neq 0$ with probability $\to 1$ when the truth is nonzero, so observing $\hat\beta_j = 0$ *is* informative. The paper states the consequence directly: if $\tau_{\text{ATT}}(r,t) = 0$ then $\lim_{N\to\infty} P(\hat\tau_{\text{ATT}}(r,t) = 0) = 1$, which it calls "stronger than convergence in probability to $0$" (Faletto 2025, around the statement of Theorem 6.2).
+
+It is worth being precise about *which* part of the theory delivers the test, because the paper is careful here. A conventional Wald statistic **cannot** test the zero null in this setting: when the relevant effect is truly zero the statistic is not asymptotically normal (it converges in probability to $0$ even after scaling by $\sqrt{N}$), so there is no valid Wald test of $H_0: \tau = 0$ to construct. That is *precisely why* the right tool is selection consistency and the `selected` flag, rather than a Wald statistic on the point estimate. The complementary half of the theory backs the effects the estimator *retains*: when an effect is truly nonzero, FETWFE is $\sqrt{N}$-consistent and asymptotically Gaussian on the selected support (the oracle property, Theorem 6.3), with the practical Wald confidence intervals and p-values of Theorem 6.4 --- the same machinery documented in Sections 1--2. So `selected = TRUE` cohorts come with the usual valid CIs and finite p-values, while `selected = FALSE` cohorts carry the stronger, selection-based zero-effect conclusion.
+
+## The `q < 1` caveat
+
+This interpretation rests on selection consistency, which the paper proves **only for the bridge exponent $q \in (0, 1)$**. The package default $q = 0.5$ satisfies it. For $q = 1$ (the lasso) selection consistency of FETWFE is *not* proven, so the implicit-test framing does not apply; for $q = 2$ (ridge) the solver never zeros coefficients at all, so `selected` is trivially `TRUE` everywhere and conveys nothing. Read the `selected` flag as a zero-effect test only under the default (or any $q < 1$) bridge penalty.
+
+## A controlled-truth worked example
+
+The cleanest way to see the implicit test is on simulated data where the truth is known. We draw coefficients in which the *middle* treated cohort has a true average treatment effect of exactly zero while its two neighbors are nonzero, then check whether FETWFE selects out exactly the zero cohort. `getTes()` reports the known per-cohort truth for comparison.
+
+```{r implicit-test-demo, message = FALSE}
+# Known truth: cohort 3 (the middle treated cohort) has a true effect of
+# exactly zero; cohorts 2 and 4 are nonzero.
+coefs <- genCoefs(R = 3, T = 6, d = 2, density = 0.2, eff_size = 2, seed = 3)
+getTes(coefs)$actual_cohort_tes
+
+dat <- simulateData(coefs, N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+res <- fetwfeWithSimulatedData(dat, verbose = FALSE)
+
+# The implicit test: the `selected` and `p_value` columns of catt_df.
+res$catt_df[, c("cohort", "estimate", "se", "p_value", "selected")]
+```
+
+The true effects are $(-1.6, 0, 1.333)$: cohort 3's effect is exactly zero. FETWFE selects out precisely that cohort --- cohort 3 returns `selected = FALSE` with an estimate of exactly $0$ and `p_value = NA` --- while it recovers the two truly-nonzero cohorts with `selected = TRUE` and finite standard errors and p-values. Reading the `selected` column through the test mapping above: cohort 3 is *"fail to reject (and conclude zero),"* cohorts 2 and 4 are *"reject."* The estimator performed the zero-effect test automatically, and its verdict matches the known truth.
+
+## Scope: this is the *post-treatment* zero-effect test
+
+The package currently estimates only post-treatment treatment effects (event times $e \geq 0$), so the demonstration above is specifically the **post-treatment** zero-effect test, surfaced through `catt_df`. The same selection-consistency logic would support two further applications once the corresponding extended regression specifications exist: (a) selecting out pre-treatment placebo coefficients would give a **parallel-trends test**, and (b) selecting out heterogeneous-trend augmenting parameters would give a **homogeneous-trends test**. The package does not estimate those terms today, so this vignette makes no claim to perform either test; they are noted only as the natural extensions the same `selected`-as-implicit-test reasoning will cover when the specifications land.
 
 # References
 
