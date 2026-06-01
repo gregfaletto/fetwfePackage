@@ -545,7 +545,7 @@ simultaneousCIs.twfeCovs <- function(
 			# preserved by save/restoring the caller's .Random.seed + a fixed
 			# internal set.seed(1L) immediately before the qmvnorm() call. This
 			# matches the in-package precedent at PR #181 / v1.13.5
-			# (R/fetwfe_core.R::getBetaCV() lines 498-523), which uses the same
+			# (R/fetwfe_core.R::getBetaCV() lines 503-524), which uses the same
 			# pattern for internal RNG use without mutating caller-side RNG
 			# state.
 			old_rng <- if (
