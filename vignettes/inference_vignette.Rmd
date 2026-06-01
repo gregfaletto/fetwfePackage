@@ -222,7 +222,7 @@ For FETWFE and BETWFE, `se_type = "cluster"` is only meaningful when `q < 1` (th
 
 The CR1 sandwich is a textbook estimator and the package's implementation matches `sandwich::vcovCL()` to numerical precision on a clean panel without selection. What is *not* yet covered by the paper's theory is:
 
-* Verification that the bridge oracle property of Theorem 6.3 still holds under the relaxed covariance structure that motivates cluster-robust SEs in the first place.
+* Verification that the bridge oracle property of Theorem 6.2 still holds under the relaxed covariance structure that motivates cluster-robust SEs in the first place.
 * Sandwich consistency *after model selection*, i.e., that the CR1 sandwich evaluated at the bridge-selected support is a consistent estimator of the true asymptotic variance.
 
 These extensions are mechanically routine but conceptually non-trivial, and they are explicitly outside the package's current scope. Until they land, `se_type = "cluster"` is exposed as an opt-in, clearly-labelled experimental feature.
