@@ -1,6 +1,6 @@
 Package: fetwfe
 Title: Fused Extended Two-Way Fixed Effects
-Version: 1.14.1
+Version: 1.15.0
 Authors@R: 
     person(given = "Gregory", family = "Faletto", email = "gfaletto@gmail.com", role = c("aut", "cre"), comment = c(ORCID = "0000-0001-8298-1401"))
 Maintainer: Gregory Faletto <gfaletto@gmail.com>
@@ -28,6 +28,7 @@ Suggests:
     ggplot2,
     broom,
     lme4,
+    mvtnorm,
     testthat (>= 3.0.0),
     tibble
 VignetteBuilder:
