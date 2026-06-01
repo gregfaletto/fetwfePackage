@@ -62,6 +62,7 @@ FETWFE’s
 FP
 frac
 Gaussianity
+geq
 getFirstInds
 ggplot
 glance
@@ -72,6 +73,7 @@ Hoekstra
 homoskedasticity
 indep
 inds
+infty
 ints
 invariants
 invertible
@@ -83,6 +85,7 @@ Lapack
 le
 len
 lexicographically
+lim
 Liang
 lme
 lmer
@@ -97,6 +100,7 @@ mundlak
 Mundlak
 Naqvi
 natively
+neq
 NSE
 onwards
 orchestrator
@@ -136,6 +140,7 @@ TWFE
 twfeCovs
 un
 uncentered
+unregularized
 unselected
 UX
 validator
