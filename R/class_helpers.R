@@ -554,6 +554,24 @@
 	invisible(x)
 }
 
+#' @title Method precondition: simultaneousCIs
+#' @description Validates the input + derives `has_valid_ses` (the contract
+#' gate). Mirrors `.check_for_event_study(x)`. `calc_ses` lives in different
+#' paths across classes: nested under `$internal` for fetwfe; top-level for
+#' etwfe/betwfe/twfeCovs.
+#' @return list(has_valid_ses = logical).
+#' @keywords internal
+#' @noRd
+.check_for_simultaneous_cis <- function(x) {
+	.assert_estimator_object(x)
+	calc_ses <- if (inherits(x, "fetwfe")) {
+		x$internal$calc_ses
+	} else {
+		x$calc_ses
+	}
+	list(has_valid_ses = isTRUE(calc_ses))
+}
+
 #' @title Method precondition: coef
 #' @keywords internal
 #' @noRd

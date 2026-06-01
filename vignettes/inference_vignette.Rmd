@@ -268,6 +268,29 @@ To control the CV fold assignment explicitly, pass `cv_folds` and/or `cv_seed`:
 fit_cv <- fetwfe(..., cv_folds = 20L, cv_seed = 42L)
 ```
 
+# 6. Simultaneous confidence intervals via `simultaneousCIs()`
+
+The package's per-point standard errors and Wald intervals deliver `(1 - alpha)` coverage *per effect*: for any single cohort ATT, or any single event-time coefficient, the CI contains the true value with probability approximately `1 - alpha`. But when you make a claim involving multiple effects jointly --- for example, "no event-time coefficient is significantly positive at the 5% level" --- per-effect coverage does not imply family-wise coverage. The probability that *every* coefficient in a family of `K` effects lies in its per-point CI can be far below `1 - alpha` when `K` is large.
+
+`simultaneousCIs()` returns intervals that maintain family-wise coverage at the requested `1 - alpha`, using the exact joint multivariate-normal critical value $c_{1-\alpha}$ defined as the $(1 - \alpha)$ quantile of $\max_k |Z_k|$ where $Z \sim N(0, \rho)$ and $\rho$ is the correlation matrix of the effect family's joint covariance. Under Theorem (c$'$) (`paper_arxiv.tex:1233`) and Assumption $(\Psi\text{-IF})$ (assumption equation `paper_arxiv.tex:2013`; in-prose discussion of when it implies tight Gaussianity at paper line 1268), this joint Gaussianity is exact asymptotically; under the paper's fixed-dim framing (AE 1(d)), no high-dimensional correction is needed.
+
+For an event-study family on the fitted `res_default` object from the previous sections:
+
+```{r}
+sci <- simultaneousCIs(res_default, family = "event_study", alpha = 0.05)
+print(sci)
+```
+
+The function returns a `simultaneous_cis` S3 object with `$ci` (the interval data frame), `$critical_value` (the simultaneous $c_{1-\alpha}$), `$pointwise_critical_value` ($z_{1-\alpha/2}$, for reference), and `$bonferroni_critical_value` ($z_{1-\alpha/(2K)}$, the conservative family-wise upper bound). When effects are positively correlated --- as they typically are in DiD, because event-study coefficients share the regression-coefficient variance piece --- the simultaneous critical value sits strictly between the pointwise and Bonferroni values, giving tighter intervals than Bonferroni while preserving family-wise coverage.
+
+The four available family options are `"event_study"` (one effect per post-treatment event time), `"cohort"` (one effect per treated cohort), `"all_post_treatment"` (one effect per `(r, t)` cell), and `"custom"` (a user-supplied `K x num_treats` contrast matrix following the `multcomp::glht()` convention; see `?simultaneousCIs`).
+
+The critical value is computed via `mvtnorm::qmvnorm(..., algorithm = mvtnorm::GenzBretz())` (mvtnorm's default quasi-Monte Carlo integrator), sub-second on a typical fit for any realistic FETWFE family (no `K` cap of practical concern). The function is deterministic in its inputs: the same fit plus the same family plus the same `alpha` plus the same `contrasts` produces the same critical value across calls. This is achieved by save/restoring the caller's `.Random.seed` and using a fixed internal seed immediately before the `qmvnorm()` call; the function does not mutate the caller's RNG state.
+
+The `mvtnorm` package is in `Suggests` (not `Imports`) --- `simultaneousCIs()` requires it only when called (and only when `K > 1` under the default variance). Install it with `install.packages("mvtnorm")` if you have not already. The `plot.simultaneous_cis` method additionally requires `ggplot2` (also in `Suggests`).
+
+The pattern matches `did::aggte(cband = TRUE)` from the Callaway-Sant'Anna `did` package, which computes simultaneous bands via the CCK (2013) multiplier bootstrap. Asymptotically the two critical values are identical under fixed-dim Gaussianity; the parametric `simultaneousCIs()` path here is deterministic and sub-second, whereas the multiplier-bootstrap path is stochastic and resampling-based.
+
 # References
 
 Bertrand, M., Duflo, E., & Mullainathan, S. (2004). "How much should we trust differences-in-differences estimates?" *Quarterly Journal of Economics* 119(1), 249--275.

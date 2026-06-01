@@ -568,17 +568,18 @@ eventStudy <- function(x, alpha = NULL) {
 	# Diagonal: (S_V - pi_r)/S_V^2 * d_inv_treat_sel[idx(r, e), ]
 	# Off-diagonal: subtract pi_{r'}/S_V^2 * d_inv_treat_sel[idx(r', e), ]
 	# for r' in V_e \ {r}. Off-diagonal coefficient uses the COLUMN-index
-	# pi_{r'}, matching paper Theorem 6.3.
-	jacobian_e <- matrix(0, nrow = R, ncol = ncol(d_inv_treat_sel))
-	for (r in V_e) {
-		cons_r <- (S_V - masked[r]) / S_V^2
-		jacobian_e[r, ] <- cons_r * d_inv_treat_sel[first_inds[r] + e, ]
-		for (r_prime in setdiff(V_e, r)) {
-			cons_off <- masked[r_prime] / S_V^2
-			jacobian_e[r, ] <- jacobian_e[r, ] -
-				cons_off * d_inv_treat_sel[first_inds[r_prime] + e, ]
-		}
-	}
+	# pi_{r'}, matching paper Theorem 6.3. Consolidated into `.build_jacobian()`
+	# (#192, WORKFLOW_LESSONS §14 Class A); the per-effect-masked path returns
+	# this construction byte-identically.
+	jacobian_e <- .build_jacobian(
+		cohort_probs_overall = cohort_probs_overall,
+		R = R,
+		d_inv_treat_sel = d_inv_treat_sel,
+		mode = "per_effect_masked",
+		V_e = V_e,
+		first_inds = first_inds,
+		e = e
+	)
 
 	T *
 		as.numeric(

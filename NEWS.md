@@ -1,5 +1,48 @@
 # NEWS
 
+## Version 1.15.0 (2026-05-31)
+
+### New features
+
+- Added `simultaneousCIs()` (#192): a new exported S3 generic that returns
+  parametric simultaneous `(1 - alpha)` confidence intervals over user-
+  specified families of treatment effects from a fitted `fetwfe()` /
+  `etwfe()` / `betwfe()` / `twfeCovs()` object. The simultaneous critical
+  value is the `(1 - alpha)` quantile of `max_k |Z_k|` under the joint
+  multivariate-normal distribution of the effect family, computed via
+  `mvtnorm::qmvnorm(..., algorithm = mvtnorm::GenzBretz())` (mvtnorm's
+  default quasi-Monte Carlo integration; deterministic in its inputs via an
+  internal fixed seed that does not perturb the caller's random stream),
+  under Faletto (2025) Theorem (c') tight Gaussianity and Assumption
+  (Psi-IF). Supports four families: `"event_study"` (one effect per post-
+  treatment event time), `"cohort"` (one effect per treated cohort),
+  `"all_post_treatment"` (one effect per `(r, t)` cell), and `"custom"`
+  (a user-supplied `K x num_treats` contrast matrix matching the
+  `multcomp::glht()` convention). Returns a `simultaneous_cis` S3 object
+  with a `$ci` data frame (estimate / simultaneous / pointwise CIs side by
+  side), `$critical_value`, `$pointwise_critical_value`
+  (`qnorm(1 - alpha/2)`, for reference), and `$bonferroni_critical_value`
+  (`qnorm(1 - alpha/(2K))`, for reference; strictly larger than the
+  simultaneous critical value when effects are positively correlated, as is
+  typical in DiD). Includes `print` / `tidy` / `plot` methods following the
+  existing S3 patterns; `plot()` requires `ggplot2` (already in Suggests).
+  `mvtnorm` is added to `Suggests` (used only when this function is called;
+  the defensive `requireNamespace()` guard fires with an actionable `stop()`
+  if missing, and only when `K > 1` and `se_type != "conservative"`). A new
+  vignette section in `inference_vignette.Rmd` shows a worked event-study
+  example contrasting simultaneous vs per-point CIs.
+
+### Refactor
+
+- Consolidated three existing inline Jacobian-build sites
+  (`getSecondVarTermOLS`, `getSecondVarTermDataApp`,
+  `.event_study_var2_fetwfe`) into a single `.build_jacobian()` helper in
+  `R/variance_machinery.R` (#192; WORKFLOW_LESSONS §14 Class A: the third
+  copy triggers a refactor, ahead of `simultaneousCIs()` becoming a fourth
+  call site). Byte-identity of the overall-ATT, per-cohort CATT, and per-
+  event-time event-study standard errors was verified pre- and post-
+  refactor.
+
 ## Version 1.14.1 (2026-05-31)
 
 ### New features
