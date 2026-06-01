@@ -1,5 +1,23 @@
 # NEWS
 
+## Version 1.15.1 (2026-06-01)
+
+### Documentation
+
+- Expanded the inference vignette (`vignette("inference_vignette")`) with a
+  new section explaining FETWFE's restriction selection consistency
+  (Faletto 2025, Theorem 6.2) as an implicit test of the zero-effect null:
+  a cohort the bridge penalty selects out (`catt_df$selected == FALSE`,
+  `p_value == NA`) is the asymptotic conclusion that the cohort's true effect
+  is zero --- a stronger statement than a confidence interval on an
+  unregularized estimator can provide, where an exactly-zero estimate is a
+  measure-zero event. The section attributes the conclusion to the `selected`
+  flag (not a Wald statistic, which the paper notes cannot test the zero null),
+  states the `q < 1` caveat, and includes a controlled-truth simulated worked
+  example in which FETWFE selects out exactly the truly-zero cohort. Also
+  corrected a stale theorem cross-reference in the cluster-robust section
+  (the bridge oracle property is Theorem 6.3, not 6.2) (#30).
+
 ## Version 1.15.0 (2026-05-31)
 
 ### New features
