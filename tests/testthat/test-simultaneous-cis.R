@@ -194,15 +194,15 @@ test_that("simultaneousCIs achieves ~nominal simultaneous coverage", {
 
 	coverage <- mean(covered)
 	# Band [0.90, 0.99]. Empirically, at N = 500 the residual finite-sample
-	# bias leaves simultaneous coverage near 0.93 (measured 0.932 / 0.93x /
-	# 0.93x across three independent 500-rep seed ranges; see the plan's
-	# Surprises & Discoveries), so a [0.92, 0.98] band would sit only ~1 sigma
-	# above the lower edge -- not FAIL-0-not-flaky. The wider [0.90, 0.99] band
-	# (the sentinel's recommended alternative) gives ~2.8 sigma headroom below
-	# and ample headroom above, while still catching genuine over/under-
-	# coverage. The test isolates family-wise-error control; the gap from 0.95
-	# to 0.93 is the estimator's bias (identical in eventStudy()), not the
-	# simultaneous machinery.
+	# bias leaves simultaneous coverage near 0.92-0.93 (measured 0.932 /
+	# 0.920 / 0.918 across three independent 500-rep seed ranges; see the
+	# plan's Surprises & Discoveries), so a [0.92, 0.98] band would sit on the
+	# lower edge -- not FAIL-0-not-flaky. The wider [0.90, 0.99] band (the
+	# sentinel's recommended alternative) gives ~2.8 sigma headroom below at
+	# the test seeds (0.932) and ample headroom above, while still catching
+	# genuine over/under-coverage. The test isolates family-wise-error control;
+	# the gap from 0.95 to ~0.93 is the estimator's finite-sample bias
+	# (identical in eventStudy()), not the simultaneous machinery.
 	expect_gt(coverage, 0.90)
 	expect_lt(coverage, 0.99)
 })
