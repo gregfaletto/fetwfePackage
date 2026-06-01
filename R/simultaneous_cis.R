@@ -203,7 +203,11 @@ simultaneousCIs.betwfe <- function(
 #'   simultaneous CIs returned here are still mathematically well-defined on
 #'   the `twfeCovs` CATT vector under the package's variance machinery, but the
 #'   underlying point estimates are not unbiased. Prefer
-#'   `simultaneousCIs.fetwfe` / `.etwfe` / `.betwfe` for inference.
+#'   `simultaneousCIs.fetwfe` / `.etwfe` / `.betwfe` for inference. `twfeCovs`
+#'   estimates a single pooled effect per cohort (no per-`(r, t)` cell or
+#'   event-time structure), so only `family = "cohort"` and
+#'   `family = "custom"` are defined for it; `"event_study"` and
+#'   `"all_post_treatment"` raise an error.
 #' @export
 simultaneousCIs.twfeCovs <- function(
 	result,
@@ -270,6 +274,28 @@ simultaneousCIs.twfeCovs <- function(
 	offs <- .resolve_event_study_offsets_and_first_inds(x, R = R, T = T_)
 	cohort_offsets_int <- offs$cohort_offsets_int
 	first_inds <- offs$first_inds
+
+	# twfeCovs estimates a single pooled treatment effect PER COHORT (so
+	# `treat_inds` has length R = num_treats, and each effect is already a
+	# cohort ATT), not one effect per (r, t) cell. There is therefore no
+	# event-time or per-cell structure to expand: only the `cohort` and
+	# `custom` families are well-defined (this is why eventStudy() excludes
+	# twfeCovs, R/event_study.R:73-75). Override first_inds to the per-cohort
+	# singletons and reject the per-cell families with a clear message.
+	if (inherits(x, "twfeCovs")) {
+		if (!family %in% c("cohort", "custom")) {
+			stop(
+				"simultaneousCIs(): family = '",
+				family,
+				"' is not defined for a twfeCovs object, which estimates a ",
+				"single pooled effect per cohort (no per-(r, t) cell or ",
+				"event-time structure). Use family = 'cohort' or ",
+				"family = 'custom'.",
+				call. = FALSE
+			)
+		}
+		first_inds <- seq_len(R)
+	}
 
 	# --- 4. Build the K x num_treats psi_tes matrix (row k = the contrast
 	#        that picks effect k out of the (r, t) treatment-effect vector). ---

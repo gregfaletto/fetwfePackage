@@ -290,6 +290,50 @@ test_that("simultaneousCIs handles custom contrasts and validates them", {
 })
 
 # ------------------------------------------------------------------------------
+# Test 5b: cross-estimator dispatch (etwfe / betwfe / twfeCovs).
+# twfeCovs estimates one pooled effect per cohort (treat_inds has length R, not
+# num_treats), so only the cohort/custom families are defined for it; the
+# per-cell families must error. The cohort family must reproduce catt_df.
+# ------------------------------------------------------------------------------
+test_that("simultaneousCIs dispatches across all four estimator classes", {
+	fixture <- make_simul_cis_panel(R = 3, T = 6, d = 2, N = 200)
+
+	# etwfe + betwfe: event_study sqrt(diag(Sigma)) == eventStudy() SE.
+	for (fit in list(
+		etwfeWithSimulatedData(fixture$sim),
+		betwfeWithSimulatedData(fixture$sim)
+	)) {
+		es <- eventStudy(fit)
+		sci <- simultaneousCIs(fit, family = "event_study")
+		implied_se <- (sci$ci$pointwise_ci_high - sci$ci$estimate) /
+			sci$pointwise_critical_value
+		expect_equal(unname(implied_se), unname(es$se), tolerance = 1e-9)
+	}
+
+	# twfeCovs: cohort family works and reproduces catt_df; per-cell families
+	# error with a clear message.
+	ft <- twfeCovsWithSimulatedData(fixture$sim)
+	sci_c <- simultaneousCIs(ft, family = "cohort")
+	expect_identical(sci_c$K, as.integer(ft$R))
+	expect_equal(
+		sci_c$ci$estimate,
+		unname(ft$catt_df$estimate)
+	)
+	implied_se_c <- (sci_c$ci$pointwise_ci_high - sci_c$ci$estimate) /
+		sci_c$pointwise_critical_value
+	expect_equal(unname(implied_se_c), unname(ft$catt_df$se), tolerance = 1e-9)
+
+	expect_error(
+		simultaneousCIs(ft, family = "event_study"),
+		"not defined for a twfeCovs"
+	)
+	expect_error(
+		simultaneousCIs(ft, family = "all_post_treatment"),
+		"not defined for a twfeCovs"
+	)
+})
+
+# ------------------------------------------------------------------------------
 # Test 6: requireNamespace("mvtnorm") guard.
 # Uses with_mocked_bindings() (testthat >= 3.2.0) to test the real production
 # code path with mvtnorm "removed", without uninstalling it from the dev
