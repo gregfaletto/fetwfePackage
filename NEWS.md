@@ -1,5 +1,29 @@
 # NEWS
 
+## Version 1.14.1 (2026-05-31)
+
+### New features
+
+- Added optional `assignment_interactions` and
+  `assignment_interaction_strength` arguments to `genCoefs()` (#191).
+  When non-`NULL`, the covariate-dependent propensity DGPs introduced
+  in 1.14.0 gain pairwise multiplicative interaction terms (including
+  self-interactions / quadratic terms via `c(j, j)`) in the linear
+  predictor — only inside the propensity model; the outcome model
+  continues to use the original `X`. Pairs are canonicalized to
+  `c(min, max)` and silently deduplicated. The `assignment_coefs` slot
+  on `FETWFE_coefs` gains `$interactions` and `$delta` sub-slots; a
+  new top-level `$assignment_interaction_strength` slot mirrors
+  `$assignment_strength`. `genCoefs()` also gains a `verbose = FALSE`
+  argument; setting `verbose = TRUE` emits a `message()` when
+  canonicalization removes duplicate or unordered pairs (default is
+  silent — users can verify the final canonical list via
+  `coefs$assignment_coefs$interactions`). Unlocks adversarial-
+  propensity Monte Carlo DGPs for the FETWFE vs Callaway-Sant'Anna
+  comparison work tracked at #140. Default
+  `assignment_interactions = NULL` preserves v1.14.0 behavior
+  byte-identically on every existing test.
+
 ## Version 1.14.0 (2026-05-30)
 
 ### New features

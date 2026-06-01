@@ -148,8 +148,10 @@ YYYY
 YYYYMM
 YYYYMMDD
 Zeger
+canonicalized
 cutpoint
 cutpoints
+deduplicated
 expit
 ldots
 logit

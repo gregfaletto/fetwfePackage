@@ -294,6 +294,44 @@ for (s in c(0.0, 1.0, 5.0)) {
 
 At `assignment_strength = 0` the cohort proportions are approximately uniform $1/(R + 1) = 0.25$. At higher strength, the proportions deviate from uniform because the covariate distribution drives the assignment.
 
+## Nonlinear propensity via interactions
+
+Sometimes the propensity model needs to be nonlinear in the covariates — for example, to stress-test estimators that assume a linear propensity. The `assignment_interactions` argument injects multiplicative interaction terms into the propensity model only; the outcome model continues to use the original covariates. The argument accepts a list of integer pairs naming the columns of $X$ whose product enters the propensity:
+
+```{r}
+sim_coefs_int <- genCoefs(
+  R                               = 3,
+  T                               = 4,
+  d                               = 2,
+  density                         = 0.1,
+  eff_size                        = 2,
+  assignment_type                 = "multinomial",
+  assignment_strength             = 1.0,
+  assignment_interactions         = list(c(1, 2)),
+  assignment_interaction_strength = 1.0,
+  seed                            = 101
+)
+str(sim_coefs_int$assignment_coefs$interactions)
+str(sim_coefs_int$assignment_coefs$delta)
+```
+
+Self-interactions are allowed and produce quadratic terms $x_j^2$:
+
+```{r}
+sim_coefs_quad <- genCoefs(
+  R                       = 3,
+  T                       = 4,
+  d                       = 2,
+  density                 = 0.1,
+  eff_size                = 2,
+  assignment_type         = "multinomial",
+  assignment_interactions = list(c(1, 1)),
+  seed                    = 101
+)
+```
+
+The interaction columns are constructed internally inside the propensity model each time it is evaluated; the simulated `pdata` keeps just the original $d$ covariate columns (the outcome design matrix is unchanged). Pairs are canonicalized to `c(min, max)` and duplicates are silently deduplicated.
+
 ## Truth derivation under non-marginal DGPs
 
 Under the default marginal DGP, the overall true ATT is the equal-weighted average of the cohort-specific effects:
