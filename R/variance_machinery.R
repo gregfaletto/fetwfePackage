@@ -251,31 +251,15 @@ getSecondVarTermOLS <- function(
 
 	# Construct Jacobian matrix corresponding to the mapping from the
 	# individual cohort probabilities to the proportions calculated for the ATT.
-	# See Proof of Theorem 6.1 for form.
-	jacobian_mat <- matrix(
-		as.numeric(NA),
-		nrow = R,
-		ncol = R
+	# See Proof of Theorem 6.1 for form. Consolidated into `.build_jacobian()`
+	# (#192, WORKFLOW_LESSONS §14 Class A); the OLS-family path (d_inv = NULL)
+	# returns the R x R column-indexed Jacobian byte-identically.
+	jacobian_mat <- .build_jacobian(
+		cohort_probs_overall = cohort_probs_overall,
+		R = R,
+		d_inv_treat_sel = NULL,
+		mode = "scalar_block_avg"
 	)
-
-	stopifnot(length(cohort_probs_overall) == R)
-	stopifnot(sum(cohort_probs_overall) < 1 - 1e-6)
-
-	for (r in 1:R) {
-		# All terms in rth column have the same value except the diagonal term
-		col_r_val <- -cohort_probs_overall[r] / sum(cohort_probs_overall)^2
-
-		jacobian_mat[, r] <- rep(col_r_val, R)
-
-		# Diagonal term
-		cons_r <- (sum(cohort_probs_overall) -
-			cohort_probs_overall[r]) /
-			sum(cohort_probs_overall)^2
-
-		jacobian_mat[r, r] <- cons_r
-	}
-
-	stopifnot(all(!is.na(jacobian_mat)))
 
 	stopifnot(nrow(psi_mat) <= num_treats)
 	stopifnot(ncol(psi_mat) == R)
@@ -987,58 +971,17 @@ getSecondVarTermDataApp <- function(
 	## Each column block of d_inv_treat_sel belongs to a selected theta coordinate;
 	## averaging the rows of cohorts gives the vector needed to multiply theta_sel.
 	##
-	jacobian_mat <- matrix(
-		as.numeric(NA),
-		nrow = R,
-		ncol = length(sel_treat_inds_shifted)
+	## Consolidated into `.build_jacobian()` (#192, WORKFLOW_LESSONS §14 Class
+	## A); the FETWFE scalar-block-averaging path (d_inv non-NULL) returns the
+	## R x p_sel block-averaged Jacobian byte-identically.
+	jacobian_mat <- .build_jacobian(
+		cohort_probs_overall = cohort_probs_overall,
+		R = R,
+		d_inv_treat_sel = d_inv_treat_sel,
+		mode = "scalar_block_avg",
+		first_inds = first_inds,
+		num_treats = num_treats
 	)
-
-	# Gather a list of the indices corresponding to the treatment coefficients
-	# for each cohort
-	sel_inds <- list()
-
-	for (r in 1:R) {
-		sel_inds[[r]] <- .cohort_block_inds(r, R, first_inds, num_treats)
-		if (r > 1) {
-			stopifnot(min(sel_inds[[r]]) > max(sel_inds[[r - 1]]))
-			stopifnot(length(sel_inds[[r]]) <= length(sel_inds[[r - 1]]))
-		}
-	}
-	stopifnot(all.equal(unlist(sel_inds), 1:num_treats))
-
-	stopifnot(length(cohort_probs_overall) == R)
-	stopifnot(sum(cohort_probs_overall) < 1 - 1e-6)
-
-	for (r in 1:R) {
-		## diagonal contribution
-		cons_r <- (sum(cohort_probs_overall) -
-			cohort_probs_overall[r]) /
-			sum(cohort_probs_overall)^2
-
-		if (length(sel_treat_inds_shifted) > 1) {
-			jacobian_mat[r, ] <- cons_r *
-				colMeans(d_inv_treat_sel[sel_inds[[r]], , drop = FALSE])
-		} else {
-			jacobian_mat[r, ] <- cons_r *
-				mean(d_inv_treat_sel[sel_inds[[r]], , drop = FALSE])
-		}
-
-		## off-diagonal: subtract sum_{s!=r} pi_s / S^2  x  block-mean of cohort s
-		for (r_double_prime in setdiff(1:R, r)) {
-			cons_r_double_prime <- cohort_probs_overall[r_double_prime] /
-				sum(cohort_probs_overall)^2
-
-			jacobian_mat[r, ] <- jacobian_mat[r, ] -
-				cons_r_double_prime *
-					colMeans(d_inv_treat_sel[
-						sel_inds[[r_double_prime]],
-						,
-						drop = FALSE
-					])
-		}
-	}
-
-	stopifnot(all(!is.na(jacobian_mat)))
 
 	## variance term: theta_sel' J' sum_pi J theta_sel / N
 	# Issue #127: floor `att_var_2` at zero, mirroring the `att_var_1`
@@ -1061,6 +1004,159 @@ getSecondVarTermDataApp <- function(
 	)
 
 	return(att_var_2)
+}
+
+
+# .build_jacobian
+#' @title Unified multinomial-weight Jacobian builder
+#' @description
+#' Single home for the cohort-weight-function Jacobian \eqn{J} used by the
+#' package's Term-2 (cohort-probability) variance machinery. Consolidates the
+#' three pre-#192 inline Jacobian-build sites
+#' (`getSecondVarTermOLS()`, `getSecondVarTermDataApp()`, and
+#' `.event_study_var2_fetwfe()` in `R/event_study.R`) plus the new
+#' `simultaneousCIs()` call site into one helper (WORKFLOW_LESSONS §14 Class A:
+#' the third copy triggers a refactor). All four sites implement the same
+#' delta-method gradient of \eqn{f_r(\pi)=\pi_r/\sum_k \pi_k}; the column-index
+#' off-diagonal coefficient \eqn{J_{rs}=-\pi_s/S^2} matches paper Theorem 6.3
+#' (`paper_arxiv.tex:2577-2592`). Prior to v1.8.0 the off-diagonal used the
+#' outer-loop row index; see issue #46.
+#' @param cohort_probs_overall Numeric vector of length `R`; marginal cohort
+#'   probabilities P(W = r). For `mode = "per_effect_masked"` the caller passes
+#'   the full (un-masked) vector; this helper masks to `V_e` internally.
+#' @param R Integer; number of treated cohorts.
+#' @param d_inv_treat_sel Numeric matrix (`num_treats` x `p_sel`) or `NULL`.
+#'   `NULL` selects the OLS-family R x R identity path (reproduces
+#'   `getSecondVarTermOLS()`); non-`NULL` selects the FETWFE R x p_sel path
+#'   (block-averaged for `scalar_block_avg`, single-row for
+#'   `per_effect_masked`).
+#' @param mode Character; one of `"scalar_block_avg"` (cohort-block averaging,
+#'   used by the two overall-ATT Term-2 helpers) or `"per_effect_masked"`
+#'   (per-event-time single-row masked construction, used by the event-study
+#'   Term-2 helper and `simultaneousCIs()`).
+#' @param V_e Integer vector; required for `mode = "per_effect_masked"`. The
+#'   cohorts valid at the event time (`which(cohort_offsets_int <= T - e)`).
+#' @param first_inds Integer vector of length `R`; required for FETWFE paths.
+#'   Index of the first treatment effect for each cohort within the
+#'   `num_treats` block.
+#' @param e Integer; required for `mode = "per_effect_masked"`. The event-time
+#'   offset.
+#' @param num_treats Integer; total number of base treatment effect parameters.
+#'   Required for the FETWFE `scalar_block_avg` path (cohort-block indexing).
+#' @return A numeric matrix: R x R when `d_inv_treat_sel` is `NULL`, otherwise
+#'   R x `ncol(d_inv_treat_sel)`. For `mode = "per_effect_masked"` with
+#'   `|V_e| <= 1` (or zero masked mass) the all-zero matrix is returned (the
+#'   single-cohort weight is 1, so the Jacobian rows vanish).
+#' @keywords internal
+#' @noRd
+.build_jacobian <- function(
+	cohort_probs_overall,
+	R,
+	d_inv_treat_sel = NULL,
+	mode = c("scalar_block_avg", "per_effect_masked"),
+	V_e = NULL,
+	first_inds = NULL,
+	e = NULL,
+	num_treats = NULL
+) {
+	mode <- match.arg(mode)
+
+	if (mode == "scalar_block_avg") {
+		stopifnot(length(cohort_probs_overall) == R)
+		stopifnot(sum(cohort_probs_overall) < 1 - 1e-6)
+
+		if (is.null(d_inv_treat_sel)) {
+			# OLS-family path (reproduces getSecondVarTermOLS L252-276):
+			# R x R Jacobian. Column r is -pi_r/S^2 everywhere except the
+			# diagonal (S - pi_r)/S^2.
+			jacobian_mat <- matrix(as.numeric(NA), nrow = R, ncol = R)
+			for (r in 1:R) {
+				col_r_val <- -cohort_probs_overall[r] /
+					sum(cohort_probs_overall)^2
+				jacobian_mat[, r] <- rep(col_r_val, R)
+				cons_r <- (sum(cohort_probs_overall) -
+					cohort_probs_overall[r]) /
+					sum(cohort_probs_overall)^2
+				jacobian_mat[r, r] <- cons_r
+			}
+			stopifnot(all(!is.na(jacobian_mat)))
+			return(jacobian_mat)
+		}
+
+		# FETWFE path (reproduces getSecondVarTermDataApp L990-1041): R x
+		# p_sel Jacobian. Row r averages the d_inv_treat_sel rows of each
+		# cohort block, weighted by the delta-method gradient.
+		stopifnot(!is.null(first_inds), !is.null(num_treats))
+		p_sel <- ncol(d_inv_treat_sel)
+		jacobian_mat <- matrix(as.numeric(NA), nrow = R, ncol = p_sel)
+
+		sel_inds <- list()
+		for (r in 1:R) {
+			sel_inds[[r]] <- .cohort_block_inds(r, R, first_inds, num_treats)
+			if (r > 1) {
+				stopifnot(min(sel_inds[[r]]) > max(sel_inds[[r - 1]]))
+				stopifnot(length(sel_inds[[r]]) <= length(sel_inds[[r - 1]]))
+			}
+		}
+		stopifnot(all.equal(unlist(sel_inds), 1:num_treats))
+
+		for (r in 1:R) {
+			cons_r <- (sum(cohort_probs_overall) -
+				cohort_probs_overall[r]) /
+				sum(cohort_probs_overall)^2
+
+			if (p_sel > 1) {
+				jacobian_mat[r, ] <- cons_r *
+					colMeans(d_inv_treat_sel[sel_inds[[r]], , drop = FALSE])
+			} else {
+				jacobian_mat[r, ] <- cons_r *
+					mean(d_inv_treat_sel[sel_inds[[r]], , drop = FALSE])
+			}
+
+			for (r_double_prime in setdiff(1:R, r)) {
+				cons_r_double_prime <- cohort_probs_overall[r_double_prime] /
+					sum(cohort_probs_overall)^2
+
+				jacobian_mat[r, ] <- jacobian_mat[r, ] -
+					cons_r_double_prime *
+						colMeans(d_inv_treat_sel[
+							sel_inds[[r_double_prime]],
+							,
+							drop = FALSE
+						])
+			}
+		}
+		stopifnot(all(!is.na(jacobian_mat)))
+		return(jacobian_mat)
+	}
+
+	# mode == "per_effect_masked" (reproduces .event_study_var2_fetwfe
+	# L572-581): R x p_sel Jacobian for a specific event-time `e`'s V_e,
+	# with cohort_probs_overall masked to zero outside V_e. Rows for
+	# r not in V_e are left at zero.
+	stopifnot(
+		!is.null(V_e),
+		!is.null(first_inds),
+		!is.null(e),
+		!is.null(d_inv_treat_sel)
+	)
+	masked <- numeric(R)
+	masked[V_e] <- cohort_probs_overall[V_e]
+	S_V <- sum(masked)
+	if (S_V <= 0 || length(V_e) <= 1L) {
+		return(matrix(0, nrow = R, ncol = ncol(d_inv_treat_sel)))
+	}
+	jacobian_e <- matrix(0, nrow = R, ncol = ncol(d_inv_treat_sel))
+	for (r in V_e) {
+		cons_r <- (S_V - masked[r]) / S_V^2
+		jacobian_e[r, ] <- cons_r * d_inv_treat_sel[first_inds[r] + e, ]
+		for (r_prime in setdiff(V_e, r)) {
+			cons_off <- masked[r_prime] / S_V^2
+			jacobian_e[r, ] <- jacobian_e[r, ] -
+				cons_off * d_inv_treat_sel[first_inds[r_prime] + e, ]
+		}
+	}
+	jacobian_e
 }
 
 
