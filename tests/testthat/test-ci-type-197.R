@@ -56,6 +56,91 @@ make_scattered_degenerate_panel <- function(n_per = 40, T = 7, seed = 909) {
 	do.call(rbind, rows)
 }
 
+# AR(1)-corrupted panel for the se_type = "cluster" matrix cells: simulateData()
+# produces F1-conforming (independent) shocks, so a clean panel's cluster band ~
+# default. To make the cluster sandwich bite (and keep >= 2 finite-SE cohorts so
+# the strict simultaneous > pointwise widening is assertable) we add a per-unit
+# AR(1) shock on top of the simulated response. Mirrors test-fetwfe.R's
+# make_ar1_panel but at R = 4 (the file's K = 4 convention).
+make_ci_ar1_panel <- function(seed = 7, N = 150, rho = 0.85, sd_e = 1) {
+	set.seed(seed)
+	sim_coefs <- genCoefs(R = 4, T = 6, d = 2, density = 0.5, eff_size = 2)
+	sim <- simulateData(sim_coefs, N = N, sig_eps_sq = 0.5, sig_eps_c_sq = 0.5)
+	pdata <- sim$pdata
+	pdata <- pdata[order(pdata$unit, pdata$time), ]
+	units <- unique(pdata$unit)
+	T_ <- length(unique(pdata$time))
+	set.seed(seed + 100)
+	for (u in units) {
+		idx <- which(pdata$unit == u)
+		ar <- numeric(T_)
+		ar[1] <- stats::rnorm(1, sd = sd_e / sqrt(1 - rho^2))
+		for (t in 2:T_) {
+			ar[t] <- rho * ar[t - 1] + stats::rnorm(1, sd = sd_e)
+		}
+		pdata[idx, sim$response] <- pdata[idx, sim$response] + ar
+	}
+	sim$pdata <- pdata
+	sim
+}
+
+# Smoke-level assertion shared by the interaction-matrix cells (Tests 14-19):
+# the fit ran under the simultaneous default, the slot is set, and catt_df is
+# well-formed (finite-SE rows bracket the estimate; degenerate rows are NA or 0
+# per the established convention). Where >= 2 finite-SE cohorts survive, the
+# simultaneous band is wider-or-equal vs a pointwise refit, and a pointwise
+# refit reverts the bounds to estimate +/- qnorm(1 - alpha/2)*se. Behavioral
+# (not well-formedness-only): the widen + revert checks are the locks.
+expect_simultaneous_matrix_cell <- function(
+	fit_s,
+	fit_p,
+	alpha = 0.05,
+	label = ""
+) {
+	testthat::expect_identical(fit_s$ci_type, "simultaneous")
+	testthat::expect_identical(fit_p$ci_type, "pointwise")
+	z <- stats::qnorm(1 - alpha / 2)
+	cd_s <- fit_s$catt_df
+	cd_p <- fit_p$catt_df
+
+	# (2) well-formed: finite-SE rows bracket the estimate; degenerate rows are
+	# NA or 0 (the .build_selected_out_result() fallback writes 0).
+	fin <- is.finite(cd_s$se) & cd_s$se > 0
+	testthat::expect_true(all(
+		cd_s$ci_low[fin] <= cd_s$estimate[fin] &
+			cd_s$estimate[fin] <= cd_s$ci_high[fin]
+	))
+	deg <- !fin
+	testthat::expect_true(all(
+		is.na(cd_s$ci_low[deg]) | cd_s$ci_low[deg] == 0
+	))
+
+	# se unchanged across ci_type (only the multiplier differs).
+	testthat::expect_equal(cd_s$se, cd_p$se)
+
+	# (3) >= 2 finite-SE cohorts -> simultaneous wider-or-equal vs pointwise.
+	if (sum(fin) >= 2L) {
+		w_s <- (cd_s$ci_high - cd_s$ci_low)[fin]
+		w_p <- (cd_p$ci_high - cd_p$ci_low)[fin]
+		testthat::expect_true(all(w_s >= w_p - 1e-9))
+	}
+
+	# (4) pointwise refit reverts to estimate +/- z*se on finite-SE rows.
+	if (any(fin)) {
+		testthat::expect_equal(
+			cd_p$ci_low[fin],
+			(cd_p$estimate - z * cd_p$se)[fin],
+			tolerance = 1e-12
+		)
+		testthat::expect_equal(
+			cd_p$ci_high[fin],
+			(cd_p$estimate + z * cd_p$se)[fin],
+			tolerance = 1e-12
+		)
+	}
+	invisible(NULL)
+}
+
 # ------------------------------------------------------------------------------
 # Test 1: Default is simultaneous; bounds are wider than pointwise.
 # ------------------------------------------------------------------------------
@@ -461,4 +546,191 @@ test_that("ci_type honors a non-default alpha and suppresses the conservative me
 			verbose = FALSE
 		)
 	)
+})
+
+# ==============================================================================
+# New-option interaction matrix (#197 post-review R1; PLAN.md Validation
+# "New-option interaction matrix"). ci_type (default "simultaneous", plus a
+# "pointwise" revert check) crossed with each fit-time option that can
+# interact: q in {1, 2}, add_ridge, se_type = "cluster", indep_counts,
+# allow_no_never_treated. The q = 0.5 default + alpha are already covered by
+# Tests 1-13. Each cell asserts (per expect_simultaneous_matrix_cell):
+# (1) the fit runs under the simultaneous default; (2) ci_type slot set +
+# catt_df well-formed; (3) >= 2 finite-SE cohorts -> wider-or-equal vs
+# pointwise; (4) a pointwise refit reverts. Behavioral locks (widen + revert),
+# not well-formedness-only. Seeds pinned; the cluster cross-estimator cell
+# (most refits) is skip_on_cran-gated.
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Test 14: ci_type x q in {1, 2} (fetwfe + betwfe; lasso q = 1 and ridge q = 2).
+# Both q >= 1 force calc_ses = FALSE (the oracle-property gate; SEs require
+# q < 1 -- cf. test-fetwfe.R "q >= 1 returns NA SE"), so the simultaneous path
+# degrades to NA bounds with NO stop() at fit time. NOTE: the plan's
+# parenthetical "q = 2 -> all cohorts selected so the band spans all R cohorts"
+# refers to ridge SELECTION; the BAND still degrades to NA because calc_ses is
+# FALSE for any q >= 1. The substantive q-interaction lock is therefore the
+# graceful-degradation NA path (the wider-band q-cell is q = 0.5, Tests 1/3).
+# ------------------------------------------------------------------------------
+test_that("ci_type x q in {1, 2}: q >= 1 (calc_ses FALSE) degrades to NA bounds (fetwfe/betwfe)", {
+	sim <- make_ci_panel()
+	for (qv in c(1, 2)) {
+		for (est in c("fetwfe", "betwfe")) {
+			fn <- get(paste0(est, "WithSimulatedData"))
+			fit <- expect_no_error(fn(sim, q = qv))
+			expect_identical(fit$ci_type, "simultaneous")
+			expect_false(isTRUE(fit$calc_ses))
+			# Pointwise NA path is unchanged: bounds NA (not 0, not widened).
+			expect_true(all(is.na(fit$catt_df$ci_low)))
+			expect_true(all(is.na(fit$catt_df$ci_high)))
+			# Validator accepts the degraded simultaneous object.
+			validator <- get(
+				paste0(".validate_", est),
+				envir = asNamespace("fetwfe")
+			)
+			expect_silent(validator(fit))
+		}
+	}
+	# fetwfe q >= 1 has an event-study surface; it also degrades to NA.
+	es <- expect_no_error(eventStudy(fetwfeWithSimulatedData(sim, q = 1)))
+	expect_true(all(is.na(es$ci_low)))
+})
+
+# ------------------------------------------------------------------------------
+# Test 15: ci_type x add_ridge = TRUE (fetwfe + etwfe + twfeCovs). add_ridge
+# perturbs the coefficients pre-fit; it is orthogonal to the band computation
+# (which reads se / Sigma off the fitted object). Smoke: the band still widens
+# and reverts.
+# ------------------------------------------------------------------------------
+test_that("ci_type x add_ridge = TRUE: band widens and reverts (fetwfe/etwfe/twfeCovs)", {
+	sim <- make_ci_panel()
+	for (est in c("fetwfe", "etwfe", "twfeCovs")) {
+		fn <- get(paste0(est, "WithSimulatedData"))
+		fit_s <- expect_no_error(fn(sim, add_ridge = TRUE))
+		fit_p <- fn(sim, add_ridge = TRUE, ci_type = "pointwise")
+		expect_simultaneous_matrix_cell(fit_s, fit_p, label = est)
+	}
+})
+
+# ------------------------------------------------------------------------------
+# Test 16: ci_type x se_type = "cluster" -- THE genuine interaction. The
+# cluster-robust sandwich changes Sigma_1, so the simultaneous band must
+# consume the cluster covariance (not the default one). Run on an AR(1) panel
+# so the sandwich bites AND >= 2 finite-SE cohorts survive (strict widening
+# assertable). Cohort family for all four estimators; event-study widening
+# checked for the estimators that expose it. skip_on_cran (cross-estimator
+# refits).
+# ------------------------------------------------------------------------------
+test_that("ci_type x se_type = 'cluster': simultaneous band consumes the cluster cov (all estimators)", {
+	skip_on_cran()
+	mk <- make_ci_ar1_panel()
+	z <- stats::qnorm(1 - 0.05 / 2)
+
+	for (est in c("fetwfe", "etwfe", "betwfe", "twfeCovs")) {
+		fn <- get(paste0(est, "WithSimulatedData"))
+		fit_s <- expect_no_error(fn(mk, se_type = "cluster"))
+		fit_p <- fn(mk, se_type = "cluster", ci_type = "pointwise")
+		expect_identical(fit_s$se_type, "cluster")
+		expect_simultaneous_matrix_cell(fit_s, fit_p, label = est)
+
+		# The cluster panel keeps >= 2 finite-SE cohorts, so demand STRICT
+		# widening here (the genuine-interaction substance, not >=).
+		cd_s <- fit_s$catt_df
+		cd_p <- fit_p$catt_df
+		fin <- is.finite(cd_s$se) & cd_s$se > 0
+		expect_gte(sum(fin), 2L)
+		w_s <- (cd_s$ci_high - cd_s$ci_low)[fin]
+		w_p <- (cd_p$ci_high - cd_p$ci_low)[fin]
+		expect_true(all(w_s > w_p))
+
+		# The band is wired to the cluster-aware worker (row-aligned).
+		sci <- simultaneousCIs(fit_s, family = "cohort")
+		expect_equal(cd_s$ci_low, sci$ci$simultaneous_ci_low)
+	}
+
+	# Event-study surface (fetwfe/etwfe/betwfe; twfeCovs has none) also widens
+	# under the cluster covariance.
+	for (est in c("fetwfe", "etwfe", "betwfe")) {
+		fn <- get(paste0(est, "WithSimulatedData"))
+		fit_s <- fn(mk, se_type = "cluster")
+		fit_p <- fn(mk, se_type = "cluster", ci_type = "pointwise")
+		es_s <- eventStudy(fit_s)
+		es_p <- eventStudy(fit_p)
+		es_fin <- is.finite(es_s$se) & es_s$se > 0
+		if (sum(es_fin) >= 2L) {
+			ew_s <- (es_s$ci_high - es_s$ci_low)[es_fin]
+			ew_p <- (es_p$ci_high - es_p$ci_low)[es_fin]
+			expect_true(all(ew_s > ew_p))
+		}
+	}
+})
+
+# ------------------------------------------------------------------------------
+# Test 17: ci_type x indep_counts supplied. indep_counts makes the OVERALL-ATT
+# two-sample exact; the COHORT / EVENT-STUDY families' Sigma is unaffected by
+# it (it governs only the overall-ATT combination), so the simultaneous
+# cohort/event-study band is well-formed and widens regardless. The
+# *WithSimulatedData wrappers always pass the simulator's indep_counts (the
+# tight path), so this cell locks that the band is correct WHEN indep_counts
+# was consumed (indep_counts_used == TRUE).
+# ------------------------------------------------------------------------------
+test_that("ci_type x indep_counts: simultaneous band well-formed when indep_counts consumed", {
+	sim <- make_ci_panel()
+	expect_false(is.null(sim$indep_counts)) # fixture supplies them
+
+	for (est in c("fetwfe", "etwfe", "betwfe", "twfeCovs")) {
+		fn <- get(paste0(est, "WithSimulatedData"))
+		fit_s <- expect_no_error(fn(sim))
+		fit_p <- fn(sim, ci_type = "pointwise")
+		# indep_counts was actually consumed (the two-sample overall-ATT path).
+		expect_true(isTRUE(fit_s$indep_counts_used))
+		expect_simultaneous_matrix_cell(fit_s, fit_p, label = est)
+	}
+})
+
+# ------------------------------------------------------------------------------
+# Test 18: ci_type x allow_no_never_treated = TRUE. A panel with NO
+# never-treated units is auto-truncated (a panel-preprocessing toggle,
+# orthogonal to the band). The truncated panel still produces a catt_df that
+# flows through the finalizer. On this fixture selection zeroes every cohort
+# (the .build_selected_out_result() degenerate fallback: estimate = se = 0,
+# ci_low = ci_high = 0), so there are 0 finite-SE cohorts -- the wider-than-
+# pointwise assertion is correctly gated off (no >= 2 finite-SE cohorts); the
+# lock here is "runs + ci_type set + well-formed degenerate (0) bounds +
+# pointwise revert + validates". Uses generate_bad_panel_data + a DIRECT
+# fetwfe() call (the bad-panel helper returns a bare data.frame, and the
+# truncation emits a one-time "auto-truncated" warning).
+# ------------------------------------------------------------------------------
+test_that("ci_type x allow_no_never_treated = TRUE: finalizer handles the auto-truncated degenerate fit", {
+	df_bad <- generate_bad_panel_data(N = 200, T = 10, seed = 123)
+	common <- list(
+		pdata = df_bad,
+		time_var = "time",
+		unit_var = "unit",
+		treatment = "treatment",
+		covs = c("cov1", "cov2"),
+		response = "y",
+		allow_no_never_treated = TRUE,
+		verbose = FALSE
+	)
+	expect_warning(
+		fit_s <- do.call(fetwfe, common),
+		"auto-truncated"
+	)
+	expect_warning(
+		fit_p <- do.call(fetwfe, c(common, list(ci_type = "pointwise"))),
+		"auto-truncated"
+	)
+	# Cell assertions (gated: 0 finite-SE cohorts here, so no strict widening).
+	expect_simultaneous_matrix_cell(
+		fit_s,
+		fit_p,
+		label = "allow_no_never_treated"
+	)
+	# Explicitly confirm the degenerate-fallback convention on this fixture.
+	expect_false(any(is.finite(fit_s$catt_df$se) & fit_s$catt_df$se > 0))
+	expect_true(all(fit_s$catt_df$ci_low == 0))
+	expect_true(all(fit_s$catt_df$ci_high == 0))
+	# Validator accepts the simultaneous (degenerate) object.
+	expect_silent(fetwfe:::.validate_fetwfe(fit_s))
 })
