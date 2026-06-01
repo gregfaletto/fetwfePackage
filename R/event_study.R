@@ -37,6 +37,17 @@ utils::globalVariables(c("event_time", "estimate", "ci_low", "ci_high"))
 #' @param x A fitted object of class `"fetwfe"`, `"etwfe"`, or `"betwfe"`.
 #' @param alpha (Optional) Significance level for confidence intervals.
 #'   Defaults to `x$alpha` (the alpha used at fit time).
+#' @param ci_type (Optional) Character; one of `"simultaneous"` or
+#'   `"pointwise"`, or `NULL` (default). Controls whether the returned
+#'   `ci_low` / `ci_high` are the event-study-family simultaneous (family-wise,
+#'   uniform) band or the per-event-time pointwise Wald intervals. `NULL`
+#'   inherits the fit's stored `ci_type` (so a fit made with the default
+#'   `ci_type = "simultaneous"` yields simultaneous event-study bands, which
+#'   `print` / `summary` / `plot` then display); for objects fitted before
+#'   version 1.16.0 (no `ci_type` slot) `NULL` falls back to `"pointwise"`. The
+#'   `se` column is identical under both settings; only the interval bounds and
+#'   their critical-value multiplier differ. Degenerate event times (no valid
+#'   contributing cohorts) carry `NA` bounds under both settings.
 #' @return A data frame with class `c("eventStudy", "data.frame")` and
 #'   columns:
 #'   \describe{
@@ -63,16 +74,36 @@ utils::globalVariables(c("event_time", "estimate", "ci_low", "ci_high"))
 #'   eventStudy(res)
 #' }
 #' @export
-eventStudy <- function(x, alpha = NULL) {
+eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	if (inherits(x, "fetwfe")) {
-		return(.event_study_fetwfe(x, alpha))
+		return(.event_study_fetwfe(x, alpha, ci_type))
 	}
 	if (inherits(x, "etwfe") || inherits(x, "betwfe")) {
-		return(.event_study_etwfe_betwfe(x, alpha))
+		return(.event_study_etwfe_betwfe(x, alpha, ci_type))
 	}
 	stop(
 		"eventStudy() requires an object of class 'fetwfe', 'etwfe', or 'betwfe'."
 	)
+}
+
+#' Resolve the effective `ci_type` for an `eventStudy()` call
+#'
+#' @description `NULL` inherits the fit's stored `ci_type` slot (or
+#'   `"pointwise"` for pre-1.16.0 objects with no slot); a non-`NULL` value is
+#'   `match.arg`-validated and overrides for that call. Factored so both
+#'   `.event_study_*` dispatchers resolve it identically (#197).
+#' @keywords internal
+#' @noRd
+.resolve_event_study_ci_type <- function(x, ci_type) {
+	if (is.null(ci_type)) {
+		if (is.null(x$ci_type)) {
+			"pointwise"
+		} else {
+			x$ci_type
+		}
+	} else {
+		match.arg(ci_type, c("simultaneous", "pointwise"))
+	}
 }
 
 #' Resolve cohort offsets and first-treatment-effect indices for event-study
@@ -117,7 +148,7 @@ eventStudy <- function(x, alpha = NULL) {
 #' Event-study aggregation for ETWFE / BETWFE
 #' @keywords internal
 #' @noRd
-.event_study_etwfe_betwfe <- function(x, alpha = NULL) {
+.event_study_etwfe_betwfe <- function(x, alpha = NULL, ci_type = NULL) {
 	# Method-entry precondition (#86). Validates the fitted object and
 	# derives `has_valid_ses` — the contract gate that fixes #73
 	# (eventStudy reporting finite SEs when the fit's att_se is NA
@@ -128,6 +159,9 @@ eventStudy <- function(x, alpha = NULL) {
 		alpha <- x$alpha
 	}
 	z <- stats::qnorm(1 - alpha / 2)
+	# Resolve the band type (#197): NULL inherits the fit's stored ci_type
+	# (pointwise for pre-1.16.0 objects); an explicit value overrides.
+	ci_type <- .resolve_event_study_ci_type(x, ci_type)
 
 	if (is.null(x$cohort_probs_overall)) {
 		stop(
@@ -318,13 +352,31 @@ eventStudy <- function(x, alpha = NULL) {
 		}
 	}
 
-	.assemble_event_study_df(event_times, n_cohorts, estimates, ses, z)
+	# Simultaneous band (#197): when ci_type == "simultaneous" and SEs are
+	# available, override the pointwise bounds with the event-study-family
+	# simultaneous band (degrading to pointwise on any error, and preserving
+	# NA on degenerate rows). `calc_ses` here is the LOCAL value (FALSE if the
+	# Gram on the selected support was singular), which is the right gate.
+	sb <- if (identical(ci_type, "simultaneous") && calc_ses) {
+		.event_study_simultaneous_bounds(x, alpha, estimates, ses)
+	} else {
+		NULL
+	}
+	.assemble_event_study_df(
+		event_times,
+		n_cohorts,
+		estimates,
+		ses,
+		z,
+		ci_low = sb$ci_low,
+		ci_high = sb$ci_high
+	)
 }
 
 #' Event-study aggregation for FETWFE
 #' @keywords internal
 #' @noRd
-.event_study_fetwfe <- function(x, alpha = NULL) {
+.event_study_fetwfe <- function(x, alpha = NULL, ci_type = NULL) {
 	# Method-entry precondition (#86). Validates the fitted object and
 	# derives `has_valid_ses` — the contract gate that fixes #73
 	# (eventStudy reporting finite SEs when the fit's att_se is NA
@@ -335,6 +387,9 @@ eventStudy <- function(x, alpha = NULL) {
 		alpha <- x$alpha
 	}
 	z <- stats::qnorm(1 - alpha / 2)
+	# Resolve the band type (#197): NULL inherits the fit's stored ci_type
+	# (pointwise for pre-1.16.0 objects); an explicit value overrides.
+	ci_type <- .resolve_event_study_ci_type(x, ci_type)
 
 	if (is.null(x$internal) || is.null(x$internal$theta_hat)) {
 		stop(
@@ -518,7 +573,23 @@ eventStudy <- function(x, alpha = NULL) {
 		}
 	}
 
-	.assemble_event_study_df(event_times, n_cohorts, estimates, ses, z)
+	# Simultaneous band (#197): see the matching block in
+	# `.event_study_etwfe_betwfe()`. `calc_ses` is the LOCAL value (FALSE if
+	# the selected-support Gram was singular).
+	sb <- if (identical(ci_type, "simultaneous") && calc_ses) {
+		.event_study_simultaneous_bounds(x, alpha, estimates, ses)
+	} else {
+		NULL
+	}
+	.assemble_event_study_df(
+		event_times,
+		n_cohorts,
+		estimates,
+		ses,
+		z,
+		ci_low = sb$ci_low,
+		ci_high = sb$ci_high
+	)
 }
 
 #' Per-event-time second-variance term for FETWFE event-study
@@ -593,6 +664,19 @@ eventStudy <- function(x, alpha = NULL) {
 }
 
 #' Assemble the event-study output data frame
+#'
+#' @description Builds the `eventStudy`-classed data frame. By default the
+#'   confidence-interval bounds are the pointwise Wald bounds
+#'   `estimate +/- z * se`. When `ci_low` / `ci_high` are supplied (the
+#'   `ci_type = "simultaneous"` path, #197), those override the pointwise
+#'   computation --- the single-function-with-optional-args form keeps the two
+#'   bound-construction paths in ONE place (WORKFLOW_LESSONS §14, avoiding a
+#'   sibling `_with_bounds()` copy). `se` and `p_value` are always the same
+#'   pointwise quantities regardless of which bounds are used.
+#' @param event_times,n_cohorts,estimates,ses,z See the per-event-time loops.
+#' @param ci_low,ci_high Optional numeric vectors (length `length(estimates)`)
+#'   to use as the CI bounds instead of `estimate +/- z * se`. `NULL` (default)
+#'   computes the pointwise bounds.
 #' @keywords internal
 #' @noRd
 .assemble_event_study_df <- function(
@@ -600,10 +684,16 @@ eventStudy <- function(x, alpha = NULL) {
 	n_cohorts,
 	estimates,
 	ses,
-	z
+	z,
+	ci_low = NULL,
+	ci_high = NULL
 ) {
-	ci_low <- estimates - z * ses
-	ci_high <- estimates + z * ses
+	if (is.null(ci_low)) {
+		ci_low <- estimates - z * ses
+	}
+	if (is.null(ci_high)) {
+		ci_high <- estimates + z * ses
+	}
 	p_value <- .compute_p_values(estimates, ses)
 	out <- data.frame(
 		event_time = as.integer(event_times),
@@ -616,6 +706,69 @@ eventStudy <- function(x, alpha = NULL) {
 	)
 	class(out) <- c("eventStudy", "data.frame")
 	out
+}
+
+#' Compute event-study-family simultaneous CI bounds at fit time
+#'
+#' @description Internal helper for the `ci_type = "simultaneous"` default
+#'   (#197). Calls the #192 event-study-family worker
+#'   `.simultaneous_cis_impl(family = "event_study")` and returns its
+#'   `simultaneous_ci_low` / `simultaneous_ci_high`, aligned to event-time
+#'   order `0:(T-2)` (the same order the `eventStudy()` loop produces).
+#'   Returns `NULL` to fall back to pointwise on any error or shape mismatch.
+#'   `suppressMessages()` silences the `se_type = "conservative"`
+#'   Bonferroni-substitution `message()` (same verbose-gating rationale as the
+#'   cohort helper).
+#'
+#'   BLOCKER FIX (#197 round 1): preserves `NA` on every degenerate event-time
+#'   row (where `eventStudy()`'s own loop set `se = NA`). The worker routes a
+#'   zero-variance / empty-valid-cohort-set effect through its zero-variance
+#'   handling and returns `0/0`; `eventStudy()` represents it as `NA/NA`.
+#'   Blindly mapping the worker's `0/0` would silently turn `NA/NA` into `0/0`
+#'   --- a representation change contradicting the documented invariant
+#'   "bounds are `NA` under both settings when SEs are unavailable". So
+#'   wherever `ses` is not finite, the simultaneous bounds are forced back to
+#'   `NA`.
+#' @param x A fully-classed `fetwfe`/`etwfe`/`betwfe` object.
+#' @param alpha Numeric significance level.
+#' @param estimates,ses The per-event-time point estimates and SEs the
+#'   `eventStudy()` loop already computed (used for the `NA`-preservation mask).
+#' @return A list with `ci_low` / `ci_high` (length `length(estimates)`), or
+#'   `NULL` to fall back to pointwise.
+#' @keywords internal
+#' @noRd
+.event_study_simultaneous_bounds <- function(x, alpha, estimates, ses) {
+	sci <- tryCatch(
+		suppressMessages(
+			.simultaneous_cis_impl(
+				x = x,
+				family = "event_study",
+				alpha = alpha,
+				contrasts = NULL,
+				has_valid_ses = TRUE
+			)
+		),
+		error = function(e) NULL
+	)
+	if (is.null(sci)) {
+		return(NULL)
+	}
+	# Positional alignment: `.build_psi_tes_for_family(family = "event_study")`
+	# iterates over event_times 0:(T-2), the SAME order the eventStudy() loop
+	# produces. Assert the row count defensively before mapping.
+	if (nrow(sci$ci) != length(estimates)) {
+		return(NULL)
+	}
+	ci_low <- sci$ci$simultaneous_ci_low
+	ci_high <- sci$ci$simultaneous_ci_high
+	# BLOCKER FIX (#197 round 1): preserve NA on degenerate event-time rows.
+	# `eventStudy()`'s loop sets se = NA -> NA bounds for an empty/degenerate
+	# valid-cohort-set event time; the worker returns 0/0 there. Mapping the
+	# worker's 0/0 would silently turn NA/NA into 0/0.
+	na_rows <- !is.finite(ses)
+	ci_low[na_rows] <- NA_real_
+	ci_high[na_rows] <- NA_real_
+	list(ci_low = ci_low, ci_high = ci_high)
 }
 
 # `plot.<class>` methods and the rendering helpers were consolidated

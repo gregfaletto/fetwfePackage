@@ -14,6 +14,10 @@
 # plot.simultaneous_cis() are intentional (NSE); declare them here so R CMD
 # check doesn't emit a "no visible binding for global variable" NOTE (matches
 # the pattern in R/plot.R and R/event_study.R).
+
+#' @importFrom mvtnorm qmvnorm GenzBretz
+NULL
+
 utils::globalVariables(c(
 	"effect_idx",
 	"estimate",
@@ -103,10 +107,13 @@ utils::globalVariables(c(
 #' **Numerical integration.** The critical value is computed via
 #' `mvtnorm::qmvnorm(..., algorithm = mvtnorm::GenzBretz())` (mvtnorm's default
 #' quasi-Monte Carlo integrator; sub-second through `K` up to about 100, so no
-#' `K` cap is of practical concern for FETWFE families). `mvtnorm` is in
-#' `Suggests`; the function requires it only when `K > 1` and
+#' `K` cap is of practical concern for FETWFE families). `mvtnorm` is an
+#' `Imports` dependency (as of version 1.16.0, when simultaneous bands became
+#' the default reported confidence interval; see the `ci_type` argument of
+#' [fetwfe()]). The function uses it only when `K > 1` and
 #' `se_type != "conservative"` (the `K = 1` and conservative paths bypass the
-#' dependency), and emits an actionable `stop()` if it is not installed.
+#' dependency), and retains a defensive `stop()` with an actionable message if
+#' it is somehow unavailable (e.g., a corrupted install).
 #'
 #' **Determinism contract.** The function is deterministic in its inputs: the
 #' same fit plus the same `family`, `alpha`, and `contrasts` always produces
@@ -620,6 +627,107 @@ simultaneousCIs.twfeCovs <- function(
 		K = K
 	)
 	class(out) <- "simultaneous_cis"
+	out
+}
+
+#' @title Recompute a fit's cohort-family CIs as simultaneous bands (fit-time)
+#' @description Internal helper for the `ci_type = "simultaneous"` default
+#'   (#197). Calls the #192 worker `.simultaneous_cis_impl()` for the cohort
+#'   family and returns the simultaneous lower/upper bounds aligned to the
+#'   fit's `catt_df` cohort row order. Degrades gracefully: when standard
+#'   errors are unavailable (`calc_ses = FALSE`), the family is degenerate, or
+#'   `K = 1`, the worker returns bounds equal to the existing pointwise bounds
+#'   (no widening) and any error short-circuits to `NULL` (leave `catt_df`
+#'   unchanged).
+#' @param x A fully-classed `fetwfe`/`etwfe`/`betwfe`/`twfeCovs` object.
+#' @param alpha Numeric; the alpha the fit's `catt_df` was built at (`x$alpha`
+#'   for fetwfe/etwfe/betwfe, `0.05` for twfeCovs, which has no `alpha` slot).
+#'   Passed explicitly so all four callers agree.
+#' @param has_valid_ses Logical; `res$calc_ses` from the core (read off the
+#'   classed object by the caller).
+#' @return A list with elements `ci_low` and `ci_high` (numeric vectors of
+#'   length `R`, aligned to `x$catt_df` cohort order), or `NULL` to signal
+#'   "leave `catt_df` unchanged".
+#' @keywords internal
+#' @noRd
+.apply_simultaneous_catt_band <- function(x, alpha, has_valid_ses) {
+	# If no valid SEs, nothing to widen -> leave the pointwise bounds (which
+	# are NA / 0 in this case) untouched.
+	if (!isTRUE(has_valid_ses)) {
+		return(NULL)
+	}
+	# Cohort family. Wrap in tryCatch: a rank-deficient or degenerate family
+	# should NOT abort the fit -> fall back to pointwise (NULL).
+	# suppressMessages(): under se_type = "conservative" the worker emits a
+	# Bonferroni-substitution message(); we do NOT want unprompted chatter on
+	# every conservative fit (verbose-gating convention). The user retains the
+	# note by calling simultaneousCIs() directly. See Decision Log "Q1 / R2".
+	sci <- tryCatch(
+		suppressMessages(
+			.simultaneous_cis_impl(
+				x = x,
+				family = "cohort",
+				alpha = alpha,
+				contrasts = NULL,
+				has_valid_ses = TRUE
+			)
+		),
+		error = function(e) NULL
+	)
+	if (is.null(sci)) {
+		return(NULL)
+	}
+	# Positional alignment: `.build_psi_tes_for_family(family = "cohort")`
+	# iterates r = 1:R in cohort-block order, the SAME order
+	# `getCohortATTsFinal()` builds `catt_df`. So `sci$ci` is already
+	# row-aligned to `catt_df`. The `effect` labels differ
+	# ("Cohort <offset>" vs `catt_df$cohort` = `c_names`), so rely on
+	# position, not labels; assert the row count defensively.
+	if (nrow(sci$ci) != nrow(x$catt_df)) {
+		return(NULL)
+	}
+	list(
+		ci_low = sci$ci$simultaneous_ci_low,
+		ci_high = sci$ci$simultaneous_ci_high
+	)
+}
+
+#' @title Apply the fit's `ci_type` to its cohort-family bounds (fit-time)
+#' @description Internal finalizer for the `ci_type` default (#197). Given a
+#'   fully-classed estimator object, if `ci_type == "simultaneous"` it
+#'   overwrites `catt_df`'s `ci_low`/`ci_high` with the cohort-family
+#'   simultaneous band (via `.apply_simultaneous_catt_band()`), re-validates,
+#'   and returns the updated object. For `ci_type == "pointwise"` (or when the
+#'   band degrades to `NULL`) it is a no-op pass-through. Hoisted out of the
+#'   four entry-point tails to avoid a 4-site copy (WORKFLOW_LESSONS §14).
+#' @param out A fully-classed `fetwfe`/`etwfe`/`betwfe`/`twfeCovs` object.
+#' @param alpha Numeric; the alpha the fit used (`0.05` for twfeCovs).
+#' @return `out` with `catt_df` bounds overwritten when simultaneous, else
+#'   `out` unchanged.
+#' @keywords internal
+#' @noRd
+.finalize_ci_type <- function(out, alpha) {
+	if (!identical(out$ci_type, "simultaneous")) {
+		return(out)
+	}
+	band <- .apply_simultaneous_catt_band(
+		out,
+		alpha = alpha,
+		has_valid_ses = out$calc_ses
+	)
+	if (!is.null(band)) {
+		# Overwrite ONLY the two interval-bound columns; se / p_value /
+		# selected / estimate are untouched. (The catt_df S3 layer only
+		# intercepts the OLD Title-Case names; ci_low/ci_high fall through.)
+		cd <- out$catt_df
+		cd$ci_low <- band$ci_low
+		cd$ci_high <- band$ci_high
+		out$catt_df <- cd
+	}
+	# Re-validate the final object (defense-in-depth; the ci_type slot + the
+	# widened-band contract C9/C10 are now in place). `.assert_estimator_object()`
+	# is class-dispatched off `out`, so no per-class name is hardcoded here.
+	.assert_estimator_object(out)
 	out
 }
 

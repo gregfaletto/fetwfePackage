@@ -10,7 +10,8 @@ etwfeWithSimulatedData(
   alpha = 0.05,
   add_ridge = FALSE,
   allow_no_never_treated = TRUE,
-  se_type = "default"
+  se_type = "default",
+  ci_type = c("simultaneous", "pointwise")
 )
 }
 \arguments{
@@ -56,6 +57,24 @@ to the new tight Gaussian default introduced in version 1.12.0;
 previous versions used the conservative Cauchy-Schwarz formula as the
 default. To recover the prior conservative default behavior, pass
 \code{se_type = "conservative"}.}
+
+\item{ci_type}{Character; one of \code{"simultaneous"} (default) or
+\code{"pointwise"}. Controls the confidence-interval bounds reported for the
+cohort-specific ATTs (in \code{catt_df}) and the event-study effects (from
+\code{\link[=eventStudy]{eventStudy()}}, shown by \code{print} / \code{summary} / \code{plot}, and surfaced by
+\code{\link[broom:reexports]{broom::tidy()}} on the fitted object and on the \code{\link[=eventStudy]{eventStudy()}} /
+\code{\link[=cohortStudy]{cohortStudy()}} outputs). \code{"simultaneous"} reports parametric simultaneous
+(family-wise, uniform) bands computed via \code{\link[=simultaneousCIs]{simultaneousCIs()}}: each
+family's band covers all of its effects jointly with probability
+\code{1 - alpha}, matching the default presentation of
+\code{did::aggte(cband = TRUE)}. \code{"pointwise"} reports per-effect Wald intervals
+(each covers its own effect with probability \code{1 - alpha}, no joint
+guarantee --- the behavior of versions <= 1.15.1). Only the interval
+bounds change; the standard errors (\code{se}), per-cohort p-values
+(\code{p_value}), and the overall-ATT confidence interval (a single scalar)
+are identical under both settings. When standard errors are unavailable
+(e.g., a rank-deficient design) the bounds are \code{NA} under both settings.
+Default is \code{"simultaneous"}.}
 }
 \value{
 An object of class \code{etwfe} containing the following elements:
@@ -117,6 +136,7 @@ argument was provided and used for asymptotically-exact ATT inference,
 \code{FALSE} otherwise.}
 \item{se_type}{Character scalar; the \code{se_type} argument the user passed
 (\code{"default"}, \code{"conservative"}, or \code{"cluster"}).}
+\item{ci_type}{Character scalar; the \code{ci_type} argument the user passed (\code{"simultaneous"} or \code{"pointwise"}), controlling whether the reported \code{catt_df} / \code{eventStudy()} confidence-interval bounds are simultaneous (family-wise) or pointwise.}
 \item{y_mean}{Numeric scalar; the mean of the original (pre-centering)
 response. Stored so downstream methods (\code{augment()}, \code{predict()}) can
 return fitted values on the original-response scale.}

@@ -19,7 +19,8 @@ twfeCovs(
   alpha = 0.05,
   add_ridge = FALSE,
   allow_no_never_treated = TRUE,
-  se_type = "default"
+  se_type = "default",
+  ci_type = c("simultaneous", "pointwise")
 )
 }
 \arguments{
@@ -126,6 +127,21 @@ for the formula, the assumptions, and the theory-pending caveat).
 Default is \code{"default"}. v1.12.0 introduced the tight Gaussian default;
 versions <= 1.11.7 used the conservative Cauchy-Schwarz formula as
 the default.}
+
+\item{ci_type}{Character; one of \code{"simultaneous"} (default) or
+\code{"pointwise"}. Controls the confidence-interval bounds reported for the
+cohort-specific ATTs (in \code{catt_df}). \code{"simultaneous"} reports parametric
+simultaneous (family-wise, uniform) bands computed via \code{\link[=simultaneousCIs]{simultaneousCIs()}}:
+the band covers all cohort effects jointly with probability \code{1 - alpha},
+matching the default presentation of \code{did::aggte(cband = TRUE)}.
+\code{"pointwise"} reports per-effect Wald intervals (each covers its own
+effect with probability \code{1 - alpha}, no joint guarantee --- the behavior
+of versions <= 1.15.1). Only the interval bounds change; the standard
+errors (\code{se}) and per-cohort p-values (\code{p_value}) are identical under both
+settings. \code{twfeCovs} estimates a single pooled effect per cohort, so only
+the cohort family is affected (it has no event-study surface). When
+standard errors are unavailable (e.g., a rank-deficient design) the bounds
+are \code{NA} under both settings. Default is \code{"simultaneous"}.}
 }
 \value{
 An object of class \code{twfeCovs} containing the following elements:
@@ -195,6 +211,7 @@ argument was provided and used for asymptotically-exact ATT inference,
 \code{FALSE} otherwise.}
 \item{se_type}{Character scalar; the \code{se_type} argument the user passed
 (\code{"default"}, \code{"conservative"}, or \code{"cluster"}).}
+\item{ci_type}{Character scalar; the \code{ci_type} argument the user passed (\code{"simultaneous"} or \code{"pointwise"}), controlling whether the reported \code{catt_df} confidence-interval bounds are simultaneous (family-wise) or pointwise.}
 \item{internal}{A list containing internal outputs that are typically
 not needed for interpretation, packaged here for parity with
 \code{fetwfe()} so downstream consumers can use a single canonical

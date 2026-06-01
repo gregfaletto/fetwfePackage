@@ -100,6 +100,20 @@
 #' Default is `"default"`. v1.12.0 introduced the tight Gaussian default;
 #' versions <= 1.11.7 used the conservative Cauchy-Schwarz formula as
 #' the default.
+#' @param ci_type Character; one of `"simultaneous"` (default) or
+#'   `"pointwise"`. Controls the confidence-interval bounds reported for the
+#'   cohort-specific ATTs (in `catt_df`). `"simultaneous"` reports parametric
+#'   simultaneous (family-wise, uniform) bands computed via [simultaneousCIs()]:
+#'   the band covers all cohort effects jointly with probability `1 - alpha`,
+#'   matching the default presentation of `did::aggte(cband = TRUE)`.
+#'   `"pointwise"` reports per-effect Wald intervals (each covers its own
+#'   effect with probability `1 - alpha`, no joint guarantee --- the behavior
+#'   of versions <= 1.15.1). Only the interval bounds change; the standard
+#'   errors (`se`) and per-cohort p-values (`p_value`) are identical under both
+#'   settings. `twfeCovs` estimates a single pooled effect per cohort, so only
+#'   the cohort family is affected (it has no event-study surface). When
+#'   standard errors are unavailable (e.g., a rank-deficient design) the bounds
+#'   are `NA` under both settings. Default is `"simultaneous"`.
 #' @return An object of class \code{twfeCovs} containing the following elements:
 #' \item{att_hat}{The
 #' estimated overall average treatment effect for a randomly selected treated
@@ -168,6 +182,7 @@
 #' `FALSE` otherwise.}
 #' \item{se_type}{Character scalar; the `se_type` argument the user passed
 #' (`"default"`, `"conservative"`, or `"cluster"`).}
+#' \item{ci_type}{Character scalar; the `ci_type` argument the user passed (`"simultaneous"` or `"pointwise"`), controlling whether the reported `catt_df` confidence-interval bounds are simultaneous (family-wise) or pointwise.}
 #' \item{internal}{A list containing internal outputs that are typically
 #'   not needed for interpretation, packaged here for parity with
 #'   `fetwfe()` so downstream consumers can use a single canonical
@@ -258,12 +273,14 @@ twfeCovs <- function(
 	alpha = 0.05,
 	add_ridge = FALSE,
 	allow_no_never_treated = TRUE,
-	se_type = "default"
+	se_type = "default",
+	ci_type = c("simultaneous", "pointwise")
 ) {
 	se_type <- match.arg(
 		se_type,
 		c("default", "conservative", "cluster")
 	)
+	ci_type <- match.arg(ci_type)
 
 	# Normalize `covs` to a character vector if a one-sided formula was
 	# supplied (#28).
@@ -384,7 +401,8 @@ twfeCovs <- function(
 		time_var = time_var,
 		unit_var = unit_var,
 		treatment = treatment,
-		covs = covs_orig
+		covs = covs_orig,
+		ci_type = ci_type
 	)
 	# Add internal outputs in a separate list for parity with `fetwfe()` (#144).
 	# The first five sub-slots (`X_ints`, `y`, `X_final`, `y_final`,
@@ -405,6 +423,11 @@ twfeCovs <- function(
 	# on the list shape regardless of class, then class is assigned.
 	.validate_twfeCovs(out)
 	class(out) <- "twfeCovs"
+	# Apply ci_type to the cohort-family bounds (#197). twfeCovs has no
+	# `alpha` slot; its catt_df is built at alpha = 0.05 (the entry-point
+	# default), so the finalizer must be passed alpha = 0.05 explicitly.
+	# No-op unless ci_type == "simultaneous". Re-validates internally.
+	out <- .finalize_ci_type(out, alpha = 0.05)
 	return(out)
 }
 
@@ -448,6 +471,20 @@ twfeCovs <- function(
 #' Default is `"default"`. v1.12.0 introduced the tight Gaussian default;
 #' versions <= 1.11.7 used the conservative Cauchy-Schwarz formula as
 #' the default.
+#' @param ci_type Character; one of `"simultaneous"` (default) or
+#'   `"pointwise"`. Controls the confidence-interval bounds reported for the
+#'   cohort-specific ATTs (in `catt_df`). `"simultaneous"` reports parametric
+#'   simultaneous (family-wise, uniform) bands computed via [simultaneousCIs()]:
+#'   the band covers all cohort effects jointly with probability `1 - alpha`,
+#'   matching the default presentation of `did::aggte(cband = TRUE)`.
+#'   `"pointwise"` reports per-effect Wald intervals (each covers its own
+#'   effect with probability `1 - alpha`, no joint guarantee --- the behavior
+#'   of versions <= 1.15.1). Only the interval bounds change; the standard
+#'   errors (`se`) and per-cohort p-values (`p_value`) are identical under both
+#'   settings. `twfeCovs` estimates a single pooled effect per cohort, so only
+#'   the cohort family is affected (it has no event-study surface). When
+#'   standard errors are unavailable (e.g., a rank-deficient design) the bounds
+#'   are `NA` under both settings. Default is `"simultaneous"`.
 #' @return An object of class \code{twfeCovs} containing the following elements:
 #' \item{att_hat}{The
 #' estimated overall average treatment effect for a randomly selected treated
@@ -511,6 +548,7 @@ twfeCovs <- function(
 #' `FALSE` otherwise.}
 #' \item{se_type}{Character scalar; the `se_type` argument the user passed
 #' (`"default"`, `"conservative"`, or `"cluster"`).}
+#' \item{ci_type}{Character scalar; the `ci_type` argument the user passed (`"simultaneous"` or `"pointwise"`), controlling whether the reported `catt_df` confidence-interval bounds are simultaneous (family-wise) or pointwise.}
 #' \item{y_mean}{Numeric scalar; mean of the original (pre-centering) response.
 #' Stored so downstream methods (`augment()`, `predict()`) can return fitted
 #' values on the original-response scale.}
@@ -571,12 +609,14 @@ twfeCovsWithSimulatedData <- function(
 	alpha = 0.05,
 	add_ridge = FALSE,
 	allow_no_never_treated = TRUE,
-	se_type = "default"
+	se_type = "default",
+	ci_type = c("simultaneous", "pointwise")
 ) {
 	se_type <- match.arg(
 		se_type,
 		c("default", "conservative", "cluster")
 	)
+	ci_type <- match.arg(ci_type)
 
 	if (!inherits(simulated_obj, "FETWFE_simulated")) {
 		stop("simulated_obj must be an object of class 'FETWFE_simulated'")
@@ -606,7 +646,8 @@ twfeCovsWithSimulatedData <- function(
 		alpha = alpha,
 		add_ridge = add_ridge,
 		allow_no_never_treated = allow_no_never_treated,
-		se_type = se_type
+		se_type = se_type,
+		ci_type = ci_type
 	)
 
 	return(res)

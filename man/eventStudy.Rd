@@ -4,13 +4,25 @@
 \alias{eventStudy}
 \title{Compute pooled event-time treatment-effect estimates}
 \usage{
-eventStudy(x, alpha = NULL)
+eventStudy(x, alpha = NULL, ci_type = NULL)
 }
 \arguments{
 \item{x}{A fitted object of class \code{"fetwfe"}, \code{"etwfe"}, or \code{"betwfe"}.}
 
 \item{alpha}{(Optional) Significance level for confidence intervals.
 Defaults to \code{x$alpha} (the alpha used at fit time).}
+
+\item{ci_type}{(Optional) Character; one of \code{"simultaneous"} or
+\code{"pointwise"}, or \code{NULL} (default). Controls whether the returned
+\code{ci_low} / \code{ci_high} are the event-study-family simultaneous (family-wise,
+uniform) band or the per-event-time pointwise Wald intervals. \code{NULL}
+inherits the fit's stored \code{ci_type} (so a fit made with the default
+\code{ci_type = "simultaneous"} yields simultaneous event-study bands, which
+\code{print} / \code{summary} / \code{plot} then display); for objects fitted before
+version 1.16.0 (no \code{ci_type} slot) \code{NULL} falls back to \code{"pointwise"}. The
+\code{se} column is identical under both settings; only the interval bounds and
+their critical-value multiplier differ. Degenerate event times (no valid
+contributing cohorts) carry \code{NA} bounds under both settings.}
 }
 \value{
 A data frame with class \code{c("eventStudy", "data.frame")} and

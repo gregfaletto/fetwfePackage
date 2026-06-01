@@ -139,6 +139,24 @@
 #'   immediately before the `cv.grpreg()` call. If `NULL` (the default),
 #'   the seed defaults internally to `as.integer(N * T)`. Ignored when
 #'   `lambda_selection = "bic"`.
+#' @param ci_type Character; one of `"simultaneous"` (default) or
+#'   `"pointwise"`. Controls the confidence-interval bounds reported for the
+#'   cohort-specific ATTs (in `catt_df`) and the event-study effects (from
+#'   [eventStudy()], shown by `print` / `summary` / `plot`, and surfaced by
+#'   [broom::tidy()] on the fitted object and on the [eventStudy()] /
+#'   [cohortStudy()] outputs). `"simultaneous"` reports parametric simultaneous
+#'   (family-wise, uniform) bands computed via [simultaneousCIs()]: each
+#'   family's band covers all of its effects jointly with probability
+#'   `1 - alpha`, matching the default presentation of
+#'   `did::aggte(cband = TRUE)`. `"pointwise"` reports per-effect Wald intervals
+#'   (each covers its own effect with probability `1 - alpha`, no joint
+#'   guarantee --- the behavior of versions <= 1.15.1). Only the interval
+#'   bounds change; the standard errors (`se`), per-cohort p-values
+#'   (`p_value`), and selection flags (`selected`) are identical under both
+#'   settings, and the overall-ATT confidence interval (a single scalar) is
+#'   unaffected. When standard errors are unavailable (`q >= 1`, or a
+#'   rank-deficient design) the bounds are `NA` under both settings. Default
+#'   is `"simultaneous"`.
 #' @return An object of class \code{betwfe} containing the following elements:
 #' \item{att_hat}{The
 #' estimated overall average treatment effect for a randomly selected treated
@@ -208,6 +226,7 @@
 #' immediately before `cv.grpreg()` was called. Defaults to
 #' `as.integer(N * T)` when the user did not pass a seed. `NA_integer_`
 #' when `lambda_selection = "bic"`.}
+#' \item{ci_type}{Character scalar; the `ci_type` argument the user passed (`"simultaneous"` or `"pointwise"`), controlling whether the reported `catt_df` / `eventStudy()` confidence-interval bounds are simultaneous (family-wise) or pointwise.}
 #' \item{X_ints}{The design matrix created containing all
 #' interactions, time and cohort dummies, etc.} \item{y}{The vector of
 #' responses, containing `nrow(X_ints)` entries.} \item{X_final}{The design
@@ -359,12 +378,14 @@ betwfe <- function(
 	se_type = "default",
 	lambda_selection = "cv",
 	cv_folds = 10L,
-	cv_seed = NULL
+	cv_seed = NULL,
+	ci_type = c("simultaneous", "pointwise")
 ) {
 	se_type <- match.arg(
 		se_type,
 		c("default", "conservative", "cluster")
 	)
+	ci_type <- match.arg(ci_type)
 	# `lambda_selection` validated downstream by `checkFetwfeInputs()`
 	# (collect-all-violations pattern).
 
@@ -513,7 +534,8 @@ betwfe <- function(
 		time_var = time_var,
 		unit_var = unit_var,
 		treatment = treatment,
-		covs = covs_orig
+		covs = covs_orig,
+		ci_type = ci_type
 	)
 	# Add internal outputs in a separate list for parity with `fetwfe()` (#144).
 	# The first five sub-slots (`X_ints`, `y`, `X_final`, `y_final`,
@@ -533,6 +555,9 @@ betwfe <- function(
 	# Validate constructed object's contracts (#85).
 	.validate_betwfe(out)
 	class(out) <- "betwfe"
+	# Apply ci_type to the cohort-family bounds (#197). No-op unless
+	# ci_type == "simultaneous"; runs after classing. Re-validates internally.
+	out <- .finalize_ci_type(out, alpha = alpha)
 	return(out)
 }
 
@@ -620,6 +645,24 @@ betwfe <- function(
 #'   immediately before the `cv.grpreg()` call. If `NULL` (the default),
 #'   the seed defaults internally to `as.integer(N * T)`. Ignored when
 #'   `lambda_selection = "bic"`.
+#' @param ci_type Character; one of `"simultaneous"` (default) or
+#'   `"pointwise"`. Controls the confidence-interval bounds reported for the
+#'   cohort-specific ATTs (in `catt_df`) and the event-study effects (from
+#'   [eventStudy()], shown by `print` / `summary` / `plot`, and surfaced by
+#'   [broom::tidy()] on the fitted object and on the [eventStudy()] /
+#'   [cohortStudy()] outputs). `"simultaneous"` reports parametric simultaneous
+#'   (family-wise, uniform) bands computed via [simultaneousCIs()]: each
+#'   family's band covers all of its effects jointly with probability
+#'   `1 - alpha`, matching the default presentation of
+#'   `did::aggte(cband = TRUE)`. `"pointwise"` reports per-effect Wald intervals
+#'   (each covers its own effect with probability `1 - alpha`, no joint
+#'   guarantee --- the behavior of versions <= 1.15.1). Only the interval
+#'   bounds change; the standard errors (`se`), per-cohort p-values
+#'   (`p_value`), and selection flags (`selected`) are identical under both
+#'   settings, and the overall-ATT confidence interval (a single scalar) is
+#'   unaffected. When standard errors are unavailable (`q >= 1`, or a
+#'   rank-deficient design) the bounds are `NA` under both settings. Default
+#'   is `"simultaneous"`.
 #' @return An object of class \code{betwfe} containing the following elements:
 #' \item{att_hat}{The
 #' estimated overall average treatment effect for a randomly selected treated
@@ -689,6 +732,7 @@ betwfe <- function(
 #' immediately before `cv.grpreg()` was called. Defaults to
 #' `as.integer(N * T)` when the user did not pass a seed. `NA_integer_`
 #' when `lambda_selection = "bic"`.}
+#' \item{ci_type}{Character scalar; the `ci_type` argument the user passed (`"simultaneous"` or `"pointwise"`), controlling whether the reported `catt_df` / `eventStudy()` confidence-interval bounds are simultaneous (family-wise) or pointwise.}
 #' \item{X_ints}{The design matrix created containing all
 #' interactions, time and cohort dummies, etc.} \item{y}{The vector of
 #' responses, containing `nrow(X_ints)` entries.} \item{X_final}{The design
@@ -782,12 +826,14 @@ betwfeWithSimulatedData <- function(
 	se_type = "default",
 	lambda_selection = "cv",
 	cv_folds = 10L,
-	cv_seed = NULL
+	cv_seed = NULL,
+	ci_type = c("simultaneous", "pointwise")
 ) {
 	se_type <- match.arg(
 		se_type,
 		c("default", "conservative", "cluster")
 	)
+	ci_type <- match.arg(ci_type)
 	# `lambda_selection` validated downstream by `checkFetwfeInputs()`
 	# (collect-all-violations pattern).
 
@@ -826,7 +872,8 @@ betwfeWithSimulatedData <- function(
 		se_type = se_type,
 		lambda_selection = lambda_selection,
 		cv_folds = cv_folds,
-		cv_seed = cv_seed
+		cv_seed = cv_seed,
+		ci_type = ci_type
 	)
 
 	return(res)

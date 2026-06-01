@@ -12,9 +12,13 @@
 \item{conf.int}{Logical. If \code{TRUE} (default), \code{conf.low} and \code{conf.high}
 columns are included.}
 
-\item{conf.level}{Numeric in (0, 1). Confidence level for the CI columns.
-Defaults to \code{1 - x$alpha} (faithful to the alpha used at fit time;
-deviates from \code{broom::tidy.lm}'s \code{0.95} default by design).}
+\item{conf.level}{Numeric in (0, 1). Applies only to the overall-ATT row
+(row 1), whose CI is recomputed at this level; defaults to \code{1 - x$alpha}
+(faithful to the alpha used at fit time; deviates from \code{broom::tidy.lm}'s
+\code{0.95} default by design). The cohort rows pass through the fit-time
+\code{catt_df} bounds (reflecting the fit's \code{ci_type} and the fit-time alpha)
+and are NOT recomputed at \code{conf.level} (#197) --- mirroring
+\code{\link[=tidy.cohortStudy]{tidy.cohortStudy()}}'s stored-bounds behavior.}
 
 \item{...}{Unused; present for S3 compatibility.}
 }
@@ -32,6 +36,15 @@ z-statistic, and p-value reflect the value of \code{se_type} used at fit time
 (model-based by default, cluster-robust under \code{se_type = "cluster"}).
 Cohorts that the bridge penalty zeroed out (\code{selected = FALSE}) carry
 \code{NA} for \code{std.error} / \code{statistic} / \code{p.value}.
+}
+\details{
+The cohort-row \code{conf.low} / \code{conf.high} columns pass through the fit's
+stored \code{catt_df} bounds, so they reflect the fit's \code{ci_type} (#197):
+simultaneous (family-wise) by default, or pointwise when the fit used
+\code{ci_type = "pointwise"}. They are NOT recomputed from \code{conf.level} (see the
+\code{conf.level} note). The overall-ATT row (row 1) is a scalar, so its CI is
+the pointwise Wald interval at \code{conf.level} (pointwise == simultaneous for a
+single effect).
 }
 \examples{
 \dontrun{

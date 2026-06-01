@@ -279,6 +279,56 @@
 	)
 }
 
+#' @title Resolve the alpha a fit's catt_df was built at
+#' @description `x$alpha` for fetwfe/etwfe/betwfe; `0.05` for twfeCovs
+#'   (which omits the `alpha` slot but builds its catt_df at the entry
+#'   point's `alpha = 0.05` default).
+#' @keywords internal
+#' @noRd
+.alpha_of <- function(x) {
+	if (inherits(x, "twfeCovs")) {
+		0.05
+	} else {
+		x$alpha
+	}
+}
+
+#' @title C10 -- Simultaneous band is never narrower than the pointwise band
+#' @description
+#' Encodes the core invariant of the `ci_type = "simultaneous"` default (#197):
+#' a family-wise (uniform) band is never narrower than the per-effect pointwise
+#' Wald band. Gated to run only when meaningful: `ci_type == "simultaneous"`,
+#' standard errors available, at least two cohorts (no widening when `K = 1`),
+#' and all `se` finite and strictly positive (degenerate / selected-out rows
+#' are exempt). For `ci_type == "pointwise"` the check is skipped entirely, and
+#' the gate is satisfied-by-equality on pre-overwrite pointwise bounds, so the
+#' double-validation (pre-classing pointwise + post-finalizer simultaneous)
+#' never produces a false positive.
+#' @keywords internal
+#' @noRd
+.check_ci_band_width <- function(x, cls) {
+	if (!identical(x$ci_type, "simultaneous")) {
+		return(invisible(NULL))
+	}
+	cd <- x$catt_df
+	se <- cd$se
+	if (
+		isTRUE(nrow(cd) >= 2L) &&
+			all(is.finite(se)) &&
+			all(se > 0)
+	) {
+		z <- stats::qnorm(1 - .alpha_of(x) / 2)
+		pw_width <- 2 * z * se
+		sim_width <- cd$ci_high - cd$ci_low
+		.assert_contract(
+			all(sim_width >= pw_width - 1e-6 * pmax(pw_width, 1)),
+			"C10 simultaneous band >= pointwise band",
+			cls
+		)
+	}
+	invisible(NULL)
+}
+
 #' @title C5 -- Cohort-probability structural sanity
 #' @keywords internal
 #' @noRd
@@ -420,6 +470,15 @@
 		"C8 se_type in c('default', 'conservative', 'cluster')",
 		cls,
 		detail = paste0("se_type = ", format(x$se_type))
+	)
+	# C9 (#197): ci_type slot sanity. Universal across all four classes
+	# (every fit produced by version >= 1.16.0 carries a `ci_type` slot).
+	.assert_contract(
+		length(x$ci_type) == 1L &&
+			x$ci_type %in% c("simultaneous", "pointwise"),
+		"C9 ci_type in c('simultaneous', 'pointwise')",
+		cls,
+		detail = paste0("ci_type = ", format(x$ci_type))
 	)
 	.assert_contract(
 		is.logical(x$indep_counts_used) && length(x$indep_counts_used) == 1L,
@@ -689,8 +748,21 @@
 	))
 
 	## Cohort effects
+	# Band-type label (#197): the reported CI bounds are simultaneous
+	# (family-wise) by default, or pointwise when the fit used
+	# ci_type = "pointwise". Older fits (pre-1.16.0) carry no ci_type slot
+	# and are labeled pointwise (their bounds are pointwise).
+	band_label <- if (identical(x$ci_type, "simultaneous")) {
+		"simultaneous"
+	} else {
+		"pointwise"
+	}
 	catt_df <- .truncate_catt(x$catt_df, max_cohorts, order_by)
-	cat("Cohort Average Treatment Effects (CATT):\n")
+	cat(sprintf(
+		"Cohort Average Treatment Effects (CATT) [%s %.0f%% CI]:\n",
+		band_label,
+		100 * (1 - x$alpha)
+	))
 	.print_catt_tbl(catt_df)
 	if (isTRUE(attr(catt_df, "truncated"))) {
 		cat(sprintf(
@@ -712,7 +784,11 @@
 	es <- eventStudy(x)
 	if (!is.null(es) && nrow(es) > 0L) {
 		es_preview <- .truncate_event_study(es, max_event_times)
-		cat("Event-Study Average Treatment Effects (per event time):\n")
+		cat(sprintf(
+			"Event-Study Average Treatment Effects (per event time) [%s %.0f%% CI]:\n",
+			band_label,
+			100 * (1 - x$alpha)
+		))
 		.print_catt_tbl(es_preview)
 		if (isTRUE(attr(es_preview, "truncated"))) {
 			cat(sprintf(
@@ -841,7 +917,11 @@
 			sig_eps_c_sq = object$sig_eps_c_sq
 		),
 		alpha = object$alpha,
-		se_type = object$se_type
+		se_type = object$se_type,
+		# #197: carry ci_type so print.summary.<class> can label the CATT /
+		# event-study previews (simultaneous vs pointwise). Pre-1.16.0 fits
+		# have no slot -> NULL -> labeled pointwise downstream.
+		ci_type = object$ci_type
 	)
 
 	keep <- c(
@@ -854,7 +934,10 @@
 		"event_study",
 		"model_info",
 		"alpha",
-		"se_type"
+		"se_type",
+		# #197: ci_type appears last, after se_type (the band-type label
+		# source for the CATT / event-study previews).
+		"ci_type"
 	)
 	out <- out[keep]
 
@@ -912,6 +995,13 @@
 	cat(header)
 
 	ci_pct <- 100 * (1 - x$alpha)
+	# Band-type label (#197): simultaneous (family-wise) by default, pointwise
+	# under ci_type = "pointwise" or for pre-1.16.0 summaries with no slot.
+	band_label <- if (identical(x$ci_type, "simultaneous")) {
+		"simultaneous"
+	} else {
+		"pointwise"
+	}
 	ci_low <- x$att["estimate"] - qnorm(1 - x$alpha / 2) * x$att["se"]
 	ci_high <- x$att["estimate"] + qnorm(1 - x$alpha / 2) * x$att["se"]
 	p_val <- x$att["p_value"]
@@ -939,7 +1029,11 @@
 		cat("\n")
 	}
 
-	cat("CATT (preview):\n")
+	cat(sprintf(
+		"CATT (preview) [%s %.0f%% CI]:\n",
+		band_label,
+		ci_pct
+	))
 	.print_catt_tbl(x$catt)
 	if (isTRUE(attr(x$catt, "truncated"))) {
 		cat(sprintf("  ... + %d more cohorts.\n", attr(x$catt, "n_discarded")))
@@ -952,7 +1046,11 @@
 	## eventStudy() failure now propagates rather than being silently
 	## swallowed (strict policy, #174).
 	if (!is.null(x$event_study)) {
-		cat("Event Study (preview):\n")
+		cat(sprintf(
+			"Event Study (preview) [%s %.0f%% CI]:\n",
+			band_label,
+			ci_pct
+		))
 		.print_catt_tbl(x$event_study)
 		if (isTRUE(attr(x$event_study, "truncated"))) {
 			cat(sprintf(
