@@ -31,8 +31,9 @@ print.twfeCovs <- function(x, ...) {
 
 #-------------------------------------------------------------------------------
 # Constructor validator (#85). See R/fetwfe_class.R for the design rationale.
-# twfeCovs differs from etwfe in: no `alpha` slot (twfeCovs has no inference
-# output).
+# twfeCovs carries an `alpha` slot like etwfe (#204): the user's `alpha` is
+# threaded into the default simultaneous catt_df band and read by the C10
+# band-width validator.
 #-------------------------------------------------------------------------------
 
 .EXPECTED_SLOTS_TWFECOVS <- c(
@@ -62,6 +63,7 @@ print.twfeCovs <- function(x, ...) {
 	"calc_ses",
 	"indep_counts_used",
 	"se_type",
+	"alpha",
 	"y_mean",
 	"response_col_name",
 	"time_var",
@@ -102,7 +104,7 @@ print.twfeCovs <- function(x, ...) {
 		cls,
 		where = "internal"
 	)
-	.check_type_sanity(x, cls, has_alpha = FALSE, has_att_selected = FALSE)
+	.check_type_sanity(x, cls, has_alpha = TRUE, has_att_selected = FALSE)
 	.check_se_consistency(x, calc_ses_path = "calc_ses", cls)
 	.check_p_value_na(x, cls)
 	.check_catt_df_shape(x, cls)
