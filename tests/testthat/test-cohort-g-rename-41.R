@@ -73,7 +73,14 @@ test_that("genCoefs errors when the cohort count is missing entirely", {
 })
 
 test_that("genCoefsCore(R = ) warns and equals genCoefsCore(G = )", {
-	g <- genCoefsCore(G = 3, T = 6, d = 2, density = 0.5, eff_size = 1, seed = 1)
+	g <- genCoefsCore(
+		G = 3,
+		T = 6,
+		d = 2,
+		density = 0.5,
+		eff_size = 1,
+		seed = 1
+	)
 	expect_warning(
 		r <- genCoefsCore(
 			R = 3,

@@ -1,5 +1,22 @@
 # NEWS
 
+## Version 1.17.0 (2026-06-01)
+
+### Deprecations
+
+- The user-facing cohort-count is now named **`G`** (the canonical name),
+  matching the `did` / Callaway-Sant'Anna staggered-adoption convention. This
+  applies to the `genCoefs()` / `genCoefsCore()` / `simulateDataCore()`
+  cohort-count argument, the returned-list field on every estimator
+  (`fetwfe()`, `etwfe()`, `betwfe()`, `twfeCovs()`) and on the simulation
+  objects (`FETWFE_coefs`, `FETWFE_simulated`, `FETWFE_tes`), and the
+  `print()` / `summary()` display (`Treated cohorts (G)`). The old name `R`
+  is **deprecated**: passing `R =` to those functions still works but emits a
+  one-time warning and is mapped to `G`, and the `$R` field is still populated
+  (with the same value as `$G`). The deprecated `R` argument and `$R` field
+  will be removed in a future release; pass `G` (and read `$G`) to silence the
+  warning and adopt the new name (#41).
+
 ## Version 1.16.0 (2026-06-01)
 
 ### Changed defaults
