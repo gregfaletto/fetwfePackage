@@ -156,7 +156,7 @@ already contains never-treated units. Default is \code{TRUE}.}
 (Psi-IF); this is asymptotically exact for the package's default
 cohort sample-proportions estimator and for every standard
 propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
-any GLM on \code{W | X}, kernel/series regression of \verb{1\{W = r\}} on \code{X}).
+any GLM on \code{W | X}, kernel/series regression of \verb{1\{W = g\}} on \code{X}).
 \code{"conservative"} returns the Cauchy-Schwarz upper bound from Theorem
 (c); use only if the propensity-score estimator violates (Psi-IF).
 \code{"cluster"} is an \emph{experimental} unit-clustered Liang-Zeger sandwich

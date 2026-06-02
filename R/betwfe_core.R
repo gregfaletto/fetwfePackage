@@ -113,7 +113,7 @@
 #' (Psi-IF); this is asymptotically exact for the package's default
 #' cohort sample-proportions estimator and for every standard
 #' propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
-#' any GLM on `W | X`, kernel/series regression of `1{W = r}` on `X`).
+#' any GLM on `W | X`, kernel/series regression of `1{W = g}` on `X`).
 #' `"conservative"` returns the Cauchy-Schwarz upper bound from Theorem
 #' (c); use only if the propensity-score estimator violates (Psi-IF).
 #' `"cluster"` is an *experimental* unit-clustered Liang-Zeger sandwich
@@ -623,7 +623,7 @@ betwfe <- function(
 #' (Psi-IF); this is asymptotically exact for the package's default
 #' cohort sample-proportions estimator and for every standard
 #' propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
-#' any GLM on `W | X`, kernel/series regression of `1{W = r}` on `X`).
+#' any GLM on `W | X`, kernel/series regression of `1{W = g}` on `X`).
 #' `"conservative"` returns the Cauchy-Schwarz upper bound from Theorem
 #' (c); use only if the propensity-score estimator violates (Psi-IF).
 #' `"cluster"` is an *experimental* unit-clustered Liang-Zeger sandwich

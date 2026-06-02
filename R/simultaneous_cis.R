@@ -57,7 +57,7 @@ utils::globalVariables(c(
 #'   resolution.
 #' @param alpha Numeric in `(0, 1)`; significance level. Default `0.05`.
 #' @param contrasts For `family = "custom"`, a `K x num_treats` matrix whose
-#'   rows give the `K` linear combinations of the underlying per-`(r, t)`
+#'   rows give the `K` linear combinations of the underlying per-`(g, t)`
 #'   treatment-effect vector (the `multcomp::glht()` convention). Ignored for
 #'   the other families.
 #' @return An object of S3 class `"simultaneous_cis"`: a list with
@@ -78,7 +78,7 @@ utils::globalVariables(c(
 #' **Family resolution and `K`.** `"event_study"` resolves to one effect per
 #' post-treatment event time `e = 0, ..., T - 2` (`K = T - 1`); `"cohort"` to
 #' one effect per treated cohort (`K = R`); `"all_post_treatment"` to one
-#' effect per `(r, t)` cell (`K = num_treats`); `"custom"` to the
+#' effect per `(g, t)` cell (`K = num_treats`); `"custom"` to the
 #' `K = nrow(contrasts)` user-supplied contrasts.
 #'
 #' **Joint covariance.** The `K x K` covariance `Sigma = Sigma_1 + Sigma_2` is
@@ -211,7 +211,7 @@ simultaneousCIs.betwfe <- function(
 #'   the `twfeCovs` CATT vector under the package's variance machinery, but the
 #'   underlying point estimates are not unbiased. Prefer
 #'   `simultaneousCIs.fetwfe` / `.etwfe` / `.betwfe` for inference. `twfeCovs`
-#'   estimates a single pooled effect per cohort (no per-`(r, t)` cell or
+#'   estimates a single pooled effect per cohort (no per-`(g, t)` cell or
 #'   event-time structure), so only `family = "cohort"` and
 #'   `family = "custom"` are defined for it; `"event_study"` and
 #'   `"all_post_treatment"` raise an error.
@@ -295,7 +295,7 @@ simultaneousCIs.twfeCovs <- function(
 				"simultaneousCIs(): family = '",
 				family,
 				"' is not defined for a twfeCovs object, which estimates a ",
-				"single pooled effect per cohort (no per-(r, t) cell or ",
+				"single pooled effect per cohort (no per-(g, t) cell or ",
 				"event-time structure). Use family = 'cohort' or ",
 				"family = 'custom'.",
 				call. = FALSE

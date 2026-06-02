@@ -116,7 +116,7 @@
 #' (Psi-IF); this is asymptotically exact for the package's default
 #' cohort sample-proportions estimator and for every standard
 #' propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
-#' any GLM on `W | X`, kernel/series regression of `1{W = r}` on `X`).
+#' any GLM on `W | X`, kernel/series regression of `1{W = g}` on `X`).
 #' `"conservative"` returns the Cauchy-Schwarz upper bound
 #' `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from
 #' Theorem (c); use only if the propensity-score estimator violates
@@ -175,7 +175,7 @@
 #'   is `"simultaneous"`.
 #' @return An object of class \code{fetwfe} containing the following elements:
 #' \item{att_hat}{The estimated overall average treatment effect for a randomly selected treated unit.}
-#' \item{att_se}{If `q < 1`, a standard error for the ATT. Under the default `se_type = "default"`, the SE is the tight Gaussian variance `sqrt(att_var_1 + att_var_2)` (Theorem (c$'$) under Assumption (Psi-IF); paper line 1233 onwards). Assumption (Psi-IF) is satisfied by the package's default cohort sample-proportions estimator `hat_pi_r = N_r / N` (and by multinomial logit, any GLM on `W | X`, and kernel/series regression of `1{W = r}` on `X`), so the default SE is asymptotically exact for the package's default estimator. Under `se_type = "conservative"` (or in version <= 1.11.7 by default), the SE is the Cauchy-Schwarz upper bound `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from Theorem (c). When `indep_counts` is provided, the two-sample exact formula `sqrt(att_var_1 + att_var_2)` is used regardless of `se_type`. If `q >= 1`, this will be NA.}
+#' \item{att_se}{If `q < 1`, a standard error for the ATT. Under the default `se_type = "default"`, the SE is the tight Gaussian variance `sqrt(att_var_1 + att_var_2)` (Theorem (c$'$) under Assumption (Psi-IF); paper line 1233 onwards). Assumption (Psi-IF) is satisfied by the package's default cohort sample-proportions estimator `hat_pi_g = N_g / N` (and by multinomial logit, any GLM on `W | X`, and kernel/series regression of `1{W = g}` on `X`), so the default SE is asymptotically exact for the package's default estimator. Under `se_type = "conservative"` (or in version <= 1.11.7 by default), the SE is the Cauchy-Schwarz upper bound `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from Theorem (c). When `indep_counts` is provided, the two-sample exact formula `sqrt(att_var_1 + att_var_2)` is used regardless of `se_type`. If `q >= 1`, this will be NA.}
 #' \item{att_p_value}{A two-sided p-value for the overall ATT against the null `H_0: tau = 0`, computed as `2 * pnorm(-|att_hat / att_se|)`. `NA` if `att_se` is zero or `NA` (e.g., under the bridge solver's selected-out fallback). See the package vignette section "Testing the zero-effect null" for interpretation guidance under selection consistency.}
 #' \item{att_selected}{Logical scalar; `TRUE` if `att_hat` is not exactly zero (i.e., at least one cohort's bridge-penalized coefficient survived selection), `FALSE` otherwise. Under FETWFE Theorem 6.2 (restriction selection consistency), `att_selected = FALSE` is the asymptotic statement that the truth is zero. For ridge (`q = 2`) the bridge solver does not zero coefficients, so this will typically be `TRUE`.}
 #' \item{catt_hats}{A named vector containing the estimated average treatment effects for each cohort.}
@@ -575,7 +575,7 @@ fetwfe <- function(
 #' (Psi-IF); this is asymptotically exact for the package's default
 #' cohort sample-proportions estimator and for every standard
 #' propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
-#' any GLM on `W | X`, kernel/series regression of `1{W = r}` on `X`).
+#' any GLM on `W | X`, kernel/series regression of `1{W = g}` on `X`).
 #' `"conservative"` returns the Cauchy-Schwarz upper bound
 #' `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from
 #' Theorem (c); use only if the propensity-score estimator violates
@@ -634,7 +634,7 @@ fetwfe <- function(
 #'   is `"simultaneous"`.
 #' @return An object of class \code{fetwfe} containing the following elements:
 #' \item{att_hat}{The estimated overall average treatment effect for a randomly selected treated unit.}
-#' \item{att_se}{If `q < 1`, a standard error for the ATT. Under the default `se_type = "default"`, the SE is the tight Gaussian variance `sqrt(att_var_1 + att_var_2)` (Theorem (c$'$) under Assumption (Psi-IF); paper line 1233 onwards). Assumption (Psi-IF) is satisfied by the package's default cohort sample-proportions estimator `hat_pi_r = N_r / N` (and by multinomial logit, any GLM on `W | X`, and kernel/series regression of `1{W = r}` on `X`), so the default SE is asymptotically exact for the package's default estimator. Under `se_type = "conservative"` (or in version <= 1.11.7 by default), the SE is the Cauchy-Schwarz upper bound `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from Theorem (c). When `indep_counts` is provided, the two-sample exact formula `sqrt(att_var_1 + att_var_2)` is used regardless of `se_type`. If `q >= 1`, this will be NA.}
+#' \item{att_se}{If `q < 1`, a standard error for the ATT. Under the default `se_type = "default"`, the SE is the tight Gaussian variance `sqrt(att_var_1 + att_var_2)` (Theorem (c$'$) under Assumption (Psi-IF); paper line 1233 onwards). Assumption (Psi-IF) is satisfied by the package's default cohort sample-proportions estimator `hat_pi_g = N_g / N` (and by multinomial logit, any GLM on `W | X`, and kernel/series regression of `1{W = g}` on `X`), so the default SE is asymptotically exact for the package's default estimator. Under `se_type = "conservative"` (or in version <= 1.11.7 by default), the SE is the Cauchy-Schwarz upper bound `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from Theorem (c). When `indep_counts` is provided, the two-sample exact formula `sqrt(att_var_1 + att_var_2)` is used regardless of `se_type`. If `q >= 1`, this will be NA.}
 #' \item{att_p_value}{A two-sided p-value for the overall ATT against the null `H_0: tau = 0`, computed as `2 * pnorm(-|att_hat / att_se|)`. `NA` if `att_se` is zero or `NA` (e.g., under the bridge solver's selected-out fallback). See the package vignette section "Testing the zero-effect null" for interpretation guidance under selection consistency.}
 #' \item{att_selected}{Logical scalar; `TRUE` if `att_hat` is not exactly zero (i.e., at least one cohort's bridge-penalized coefficient survived selection), `FALSE` otherwise. Under FETWFE Theorem 6.2 (restriction selection consistency), `att_selected = FALSE` is the asymptotic statement that the truth is zero. For ridge (`q = 2`) the bridge solver does not zero coefficients, so this will typically be `TRUE`.}
 #' \item{catt_hats}{A named vector containing the estimated average treatment effects for each cohort.}
@@ -870,7 +870,7 @@ fetwfeWithSimulatedData <- function(
 #' (Psi-IF); this is asymptotically exact for the package's default
 #' cohort sample-proportions estimator and for every standard
 #' propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
-#' any GLM on `W | X`, kernel/series regression of `1{W = r}` on `X`).
+#' any GLM on `W | X`, kernel/series regression of `1{W = g}` on `X`).
 #' `"conservative"` returns the Cauchy-Schwarz upper bound
 #' `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from
 #' Theorem (c); use only if the propensity-score estimator violates
@@ -1263,7 +1263,7 @@ etwfe <- function(
 #' (Psi-IF); this is asymptotically exact for the package's default
 #' cohort sample-proportions estimator and for every standard
 #' propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
-#' any GLM on `W | X`, kernel/series regression of `1{W = r}` on `X`).
+#' any GLM on `W | X`, kernel/series regression of `1{W = g}` on `X`).
 #' `"conservative"` returns the Cauchy-Schwarz upper bound
 #' `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from
 #' Theorem (c); use only if the propensity-score estimator violates

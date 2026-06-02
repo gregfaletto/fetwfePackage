@@ -63,9 +63,9 @@ per paper Eq. `conf.int.form` (line 1259). The same combined variance backs the 
 Assumption (Ψ-IF) requires the cohort-weight estimator $\widehat{\boldsymbol{\psi}}_N$ to admit an i.i.d.-across-$i$ unit-level influence-function representation. It is satisfied by
 
 * **Cohort sample proportions** $\widehat{\pi}_g = N_g / N$ --- the package's *default* propensity-score estimator. So out of the box the tight Gaussian CI is asymptotically exact.
-* **Multinomial-logit MLE** for $P(W = r \mid \boldsymbol{X})$.
+* **Multinomial-logit MLE** for $P(W = g \mid \boldsymbol{X})$.
 * **Any GLM** fit by maximum likelihood on $W \mid \boldsymbol{X}$.
-* **Kernel or series regression** of $\mathbf{1}\{W = r\}$ on $\boldsymbol{X}$.
+* **Kernel or series regression** of $\mathbf{1}\{W = g\}$ on $\boldsymbol{X}$.
 
 (See the discussion at paper line 1268: "When (Ψ-IF) holds --- which is the case for every standard parametric or semi-parametric propensity-score estimator listed in Remark `psi.if.coverage` (cohort sample proportions, multinomial logit, any GLM, kernel/series regression) --- Theorem `te.asym.norm.thm`(c$'$) gives asymptotic Gaussianity with the tight variance $V_1 + V_2$.")
 
@@ -101,7 +101,7 @@ where $\widehat G^{-1}$ is the Gram inverse on the bridge-selected support and $
 
 ## 2.2 $V_2$: propensity-score variance
 
-The propensity-score piece accounts for variability from estimating the cohort-membership probabilities $\widehat{\pi}_r$. It scales like $1/N$ and is unrelated to the regression residuals. This piece is stored as `result$internal$variance_components$att_var_2`, with paper-notation per-unit-scaled `V_2 = N * att_var_2`.
+The propensity-score piece accounts for variability from estimating the cohort-membership probabilities $\widehat{\pi}_g$. It scales like $1/N$ and is unrelated to the regression residuals. This piece is stored as `result$internal$variance_components$att_var_2`, with paper-notation per-unit-scaled `V_2 = N * att_var_2`.
 
 ## 2.3 The combined variance: `tilde_v_N` and the paper's catalogue
 
@@ -283,7 +283,7 @@ print(sci)
 
 The function returns a `simultaneous_cis` S3 object with `$ci` (the interval data frame), `$critical_value` (the simultaneous $c_{1-\alpha}$), `$pointwise_critical_value` ($z_{1-\alpha/2}$, for reference), and `$bonferroni_critical_value` ($z_{1-\alpha/(2K)}$, the conservative family-wise upper bound). When effects are positively correlated --- as they typically are in DiD, because event-study coefficients share the regression-coefficient variance piece --- the simultaneous critical value sits strictly between the pointwise and Bonferroni values, giving tighter intervals than Bonferroni while preserving family-wise coverage.
 
-The four available family options are `"event_study"` (one effect per post-treatment event time), `"cohort"` (one effect per treated cohort), `"all_post_treatment"` (one effect per `(r, t)` cell), and `"custom"` (a user-supplied `K x num_treats` contrast matrix following the `multcomp::glht()` convention; see `?simultaneousCIs`).
+The four available family options are `"event_study"` (one effect per post-treatment event time), `"cohort"` (one effect per treated cohort), `"all_post_treatment"` (one effect per `(g, t)` cell), and `"custom"` (a user-supplied `K x num_treats` contrast matrix following the `multcomp::glht()` convention; see `?simultaneousCIs`).
 
 The critical value is computed via `mvtnorm::qmvnorm(..., algorithm = mvtnorm::GenzBretz())` (mvtnorm's default quasi-Monte Carlo integrator), sub-second on a typical fit for any realistic FETWFE family (no `K` cap of practical concern). The function is deterministic in its inputs: the same fit plus the same family plus the same `alpha` plus the same `contrasts` produces the same critical value across calls. This is achieved by save/restoring the caller's `.Random.seed` and using a fixed internal seed immediately before the `qmvnorm()` call; the function does not mutate the caller's RNG state.
 
