@@ -73,7 +73,7 @@ large number of units, you can optionally randomly split your data set in
 half (with \code{N} units in each data set). The data for half of the units should
 go in the \code{pdata} argument provided above. For the other \code{N} units, simply
 provide the counts for how many units appear in the untreated cohort plus
-each of the other \code{R} cohorts in this argument \code{indep_counts}. The benefit
+each of the other \code{G} cohorts in this argument \code{indep_counts}. The benefit
 of doing this is that the standard error for the average treatment effect
 will be (asymptotically) exact instead of conservative. The length of
 \code{indep_counts} must equal 1 plus the number of treated cohorts in \code{pdata}.
@@ -156,7 +156,7 @@ already contains never-treated units. Default is \code{TRUE}.}
 (Psi-IF); this is asymptotically exact for the package's default
 cohort sample-proportions estimator and for every standard
 propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
-any GLM on \code{W | X}, kernel/series regression of \verb{1\{W = r\}} on \code{X}).
+any GLM on \code{W | X}, kernel/series regression of \verb{1\{W = g\}} on \code{X}).
 \code{"conservative"} returns the Cauchy-Schwarz upper bound
 \code{sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))} from
 Theorem (c); use only if the propensity-score estimator violates
@@ -221,7 +221,7 @@ is \code{"simultaneous"}.}
 \value{
 An object of class \code{fetwfe} containing the following elements:
 \item{att_hat}{The estimated overall average treatment effect for a randomly selected treated unit.}
-\item{att_se}{If \code{q < 1}, a standard error for the ATT. Under the default \code{se_type = "default"}, the SE is the tight Gaussian variance \code{sqrt(att_var_1 + att_var_2)} (Theorem (c$'$) under Assumption (Psi-IF); paper line 1233 onwards). Assumption (Psi-IF) is satisfied by the package's default cohort sample-proportions estimator \code{hat_pi_r = N_r / N} (and by multinomial logit, any GLM on \code{W | X}, and kernel/series regression of \verb{1\{W = r\}} on \code{X}), so the default SE is asymptotically exact for the package's default estimator. Under \code{se_type = "conservative"} (or in version <= 1.11.7 by default), the SE is the Cauchy-Schwarz upper bound \code{sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))} from Theorem (c). When \code{indep_counts} is provided, the two-sample exact formula \code{sqrt(att_var_1 + att_var_2)} is used regardless of \code{se_type}. If \code{q >= 1}, this will be NA.}
+\item{att_se}{If \code{q < 1}, a standard error for the ATT. Under the default \code{se_type = "default"}, the SE is the tight Gaussian variance \code{sqrt(att_var_1 + att_var_2)} (Theorem (c$'$) under Assumption (Psi-IF); paper line 1233 onwards). Assumption (Psi-IF) is satisfied by the package's default cohort sample-proportions estimator \code{hat_pi_g = N_g / N} (and by multinomial logit, any GLM on \code{W | X}, and kernel/series regression of \verb{1\{W = g\}} on \code{X}), so the default SE is asymptotically exact for the package's default estimator. Under \code{se_type = "conservative"} (or in version <= 1.11.7 by default), the SE is the Cauchy-Schwarz upper bound \code{sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))} from Theorem (c). When \code{indep_counts} is provided, the two-sample exact formula \code{sqrt(att_var_1 + att_var_2)} is used regardless of \code{se_type}. If \code{q >= 1}, this will be NA.}
 \item{att_p_value}{A two-sided p-value for the overall ATT against the null \code{H_0: tau = 0}, computed as \verb{2 * pnorm(-|att_hat / att_se|)}. \code{NA} if \code{att_se} is zero or \code{NA} (e.g., under the bridge solver's selected-out fallback). See the package vignette section "Testing the zero-effect null" for interpretation guidance under selection consistency.}
 \item{att_selected}{Logical scalar; \code{TRUE} if \code{att_hat} is not exactly zero (i.e., at least one cohort's bridge-penalized coefficient survived selection), \code{FALSE} otherwise. Under FETWFE Theorem 6.2 (restriction selection consistency), \code{att_selected = FALSE} is the asymptotic statement that the truth is zero. For ridge (\code{q = 2}) the bridge solver does not zero coefficients, so this will typically be \code{TRUE}.}
 \item{catt_hats}{A named vector containing the estimated average treatment effects for each cohort.}
@@ -245,7 +245,8 @@ An object of class \code{fetwfe} containing the following elements:
 \item{ci_type}{Character scalar; the \code{ci_type} argument the user passed (\code{"simultaneous"} or \code{"pointwise"}), controlling whether the reported \code{catt_df} / \code{eventStudy()} confidence-interval bounds are simultaneous (family-wise) or pointwise.}
 \item{N}{The final number of units that were in the data set used for estimation (after any units may have been removed because they were treated in the first time period).}
 \item{T}{The number of time periods in the final data set.}
-\item{R}{The final number of treated cohorts that appear in the final data set.}
+\item{G}{The final number of treated cohorts that appear in the final data set.}
+\item{R}{Deprecated alias for \code{G}, retained for backward compatibility; populated with the same value. Use \code{G}. Will be removed in a future release.}
 \item{d}{The final number of covariates that appear in the final data set (after any covariates may have been removed because they contained missing values or all contained the same value for every unit).}
 \item{p}{The final number of columns in the full set of covariates used to estimate the model.}
 \item{alpha}{The alpha level used for confidence intervals.}

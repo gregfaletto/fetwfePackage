@@ -17,7 +17,7 @@ library(fetwfe)
 # ------------------------------------------------------------------------
 .cs_setup <- function(seed = 20260525) {
 	coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 6,
 		d = 2,
 		density = 0.5,

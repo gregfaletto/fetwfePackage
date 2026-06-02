@@ -22,7 +22,7 @@ if (!requireNamespace("broom", quietly = TRUE)) {
 
 .parity_fixture <- function(seed = 20260516) {
 	coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 6,
 		d = 2,
 		density = 0.5,

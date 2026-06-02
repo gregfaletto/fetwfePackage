@@ -80,7 +80,7 @@ already contains never-treated units. Default is \code{TRUE}.}
 (Psi-IF); this is asymptotically exact for the package's default
 cohort sample-proportions estimator and for every standard
 propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
-any GLM on \code{W | X}, kernel/series regression of \verb{1\{W = r\}} on \code{X}).
+any GLM on \code{W | X}, kernel/series regression of \verb{1\{W = g\}} on \code{X}).
 \code{"conservative"} returns the Cauchy-Schwarz upper bound from Theorem
 (c); use only if the propensity-score estimator violates (Psi-IF).
 \code{"cluster"} is an \emph{experimental} unit-clustered Liang-Zeger sandwich
@@ -210,8 +210,11 @@ multiplying on the left by the square root inverse of the estimated
 covariance matrix for each unit.} \item{N}{The final number of units that
 were in the  data set used for estimation (after any units may have been
 removed because they were treated in the first time period).} \item{T}{The
-number of time periods in the final data set.} \item{R}{The final number of
-treated cohorts that appear in the final data set.} \item{d}{The final number
+number of time periods in the final data set.} \item{G}{The final number of
+treated cohorts that appear in the final data set.} \item{R}{Deprecated alias
+for \code{G}, retained for backward compatibility; populated with the same
+value. Use \code{G}. Will be removed in a future release.} \item{d}{The final
+number
 of covariates that appear in the final data set (after any covariates may
 have been removed because they contained missing values or all contained the
 same value for every unit).} \item{p}{The final number of columns in the full
@@ -278,7 +281,7 @@ match their counterparts in \code{betwfe()}.
 \examples{
 \dontrun{
   # Generate coefficients
-  coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
+  coefs <- genCoefs(G = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
 
   # Simulate data using the coefficients
   sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5)

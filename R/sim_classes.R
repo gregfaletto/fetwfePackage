@@ -14,16 +14,16 @@ print.FETWFE_simulated <- function(x, ...) {
 		x$T
 	))
 	cat(sprintf(
-		"  R = %d treated cohorts, d = %d covariates, p = %d design columns\n",
-		x$R,
+		"  G = %d treated cohorts, d = %d covariates, p = %d design columns\n",
+		x$G,
 		x$d,
 		x$p
 	))
 	cohort_sizes <- paste(
 		sprintf(
 			"cohort %d = %d",
-			seq_len(x$R),
-			x$assignments[seq_len(x$R) + 1L]
+			seq_len(x$G),
+			x$assignments[seq_len(x$G) + 1L]
 		),
 		collapse = ", "
 	)
@@ -53,8 +53,8 @@ print.FETWFE_coefs <- function(x, ...) {
 	n_nonzero <- sum(x$theta != 0)
 	p <- length(x$theta)
 	cat(sprintf(
-		"FETWFE coefficient vector: R = %d cohorts, T = %d periods, d = %d covariates\n",
-		x$R,
+		"FETWFE coefficient vector: G = %d cohorts, T = %d periods, d = %d covariates\n",
+		x$G,
 		x$T,
 		x$d
 	))

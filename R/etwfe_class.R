@@ -90,6 +90,7 @@ print.summary.etwfe <- function(x, ...) {
 	"y_final",
 	"N",
 	"T",
+	"G",
 	"R",
 	"d",
 	"p",

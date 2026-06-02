@@ -7,7 +7,7 @@
 #'
 #' This function generates a coefficient vector \code{beta} for simulation studies of the fused
 #' extended two-way fixed effects estimator. It returns an S3 object of class
-#' \code{"FETWFE_coefs"} containing \code{beta} along with simulation parameters \code{R},
+#' \code{"FETWFE_coefs"} containing \code{beta} along with simulation parameters \code{G},
 #' \code{T}, and \code{d}. See the simulation studies section of Faletto (2025) for details.
 #'
 #' Optional arguments \code{assignment_type} and \code{assignment_strength}
@@ -19,8 +19,8 @@
 #' byte-identically. See \code{vignette("simulation_vignette", package = "fetwfe")}
 #' for worked examples.
 #'
-#' @param R Integer. The number of treated cohorts (treatment is assumed to start in periods 2 to
-#'   \code{R + 1}).
+#' @param G Integer. The number of treated cohorts (treatment is assumed to start in periods 2 to
+#'   \code{G + 1}).
 #' @param T Integer. The total number of time periods.
 #' @param d Integer. The number of time-invariant covariates. If \code{d > 0}, additional terms
 #'   corresponding to covariate main effects and interactions are included in \code{beta}.
@@ -38,14 +38,14 @@
 #'       preserved byte-identically.
 #'     \item \code{"multinomial"}: cohort assignment follows a
 #'       multinomial-logit propensity-score model
-#'       \eqn{\pi_r(x) = \exp(\gamma_r^\top x) / \sum_{r'} \exp(\gamma_{r'}^\top x)}{pi_r(x) = exp(gamma_r' x) / sum_r' exp(gamma_r'' x)}
+#'       \eqn{\pi_g(x) = \exp(\gamma_g^\top x) / \sum_{g'} \exp(\gamma_{g'}^\top x)}{pi_g(x) = exp(gamma_g' x) / sum_g' exp(gamma_g'' x)}
 #'       with \eqn{\gamma_0 \equiv 0}{gamma_0 = 0} (never-treated reference).
 #'       Requires \eqn{d \ge 1}{d >= 1}.
 #'     \item \code{"ordered"}: cohort assignment follows a proportional-odds
 #'       (ordered-logit) model with cumulative probabilities
-#'       \eqn{P(W \le r | x) = \mathrm{plogis}(\alpha_r - \gamma^\top x)}{P(W <= r | x) = plogis(alpha_r - gamma' x)}.
-#'       Cutpoints \eqn{\alpha_r}{alpha_r} are chosen so the marginal cohort
-#'       probabilities are approximately uniform 1/(R + 1). Requires
+#'       \eqn{P(W \le g | x) = \mathrm{plogis}(\alpha_g - \gamma^\top x)}{P(W <= g | x) = plogis(alpha_g - gamma' x)}.
+#'       Cutpoints \eqn{\alpha_g}{alpha_g} are chosen so the marginal cohort
+#'       probabilities are approximately uniform 1/(G + 1). Requires
 #'       \eqn{d \ge 1}{d >= 1}.
 #'   }
 #' @param assignment_strength Non-negative numeric scalar. Scales the logit
@@ -87,6 +87,9 @@
 #'   unordered pairs (e.g., when the user passes both \code{c(1, 2)} and
 #'   \code{c(2, 1)}). Default \code{FALSE} (silent — users can verify the
 #'   final canonical list via \code{coefs$assignment_coefs$interactions}).
+#' @param R Deprecated. The former name for \code{G}; still accepted with a
+#'   deprecation warning, and will be removed in a future release. Use
+#'   \code{G}.
 #'
 #' @return An object of class \code{"FETWFE_coefs"}, which is a list containing:
 #' \describe{
@@ -96,7 +99,10 @@
 #'		space. \code{theta} is a sparse vector, which aligns with an assumption that deviations from the
 #'		restrictions encoded in the FETWFE model are sparse. \code{beta} is derived from
 #'		\code{theta}.}
-#'   \item{R}{The provided number of treated cohorts.}
+#'   \item{G}{The provided number of treated cohorts.}
+#'   \item{R}{Deprecated alias for \code{G}, retained for backward
+#'      compatibility; populated with the same value. Use \code{G}. Will be
+#'      removed in a future release.}
 #'   \item{T}{The provided number of time periods.}
 #'   \item{d}{The provided number of covariates.}
 #'   \item{seed}{The provided seed.}
@@ -125,9 +131,9 @@
 #'
 #' @details
 #' The length of \code{beta} is given by
-#' \deqn{p = R + (T - 1) + d + dR + d(T - 1) + \mathit{num\_treats} + (\mathit{num\_treats} \times d)}{p = R + (T - 1) + d + dR + d(T - 1) + num_treats + (num_treats * d)},
+#' \deqn{p = G + (T - 1) + d + dG + d(T - 1) + \mathit{num\_treats} + (\mathit{num\_treats} \times d)}{p = G + (T - 1) + d + dG + d(T - 1) + num_treats + (num_treats * d)},
 #' where the number of treatment parameters is defined as
-#' \deqn{\mathit{num\_treats} = T \times R - \frac{R(R+1)}{2}}{num_treats = T * R - R(R+1)/2}.
+#' \deqn{\mathit{num\_treats} = T \times G - \frac{G(G+1)}{2}}{num_treats = T * G - G(G+1)/2}.
 #'
 #' The function operates in two steps:
 #' \enumerate{
@@ -153,14 +159,14 @@
 #' @examples
 #' \dontrun{
 #'   # Generate coefficients
-#'   coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
+#'   coefs <- genCoefs(G = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
 #'
 #'   # Simulate data using the coefficients
 #'   sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5)
 #'
 #'   # Covariate-dependent cohort assignment: multinomial-logit DGP
 #'   coefs_mn <- genCoefs(
-#'     R = 5, T = 30, d = 12, density = 0.1, eff_size = 2,
+#'     G = 5, T = 30, d = 12, density = 0.1, eff_size = 2,
 #'     assignment_type = "multinomial", assignment_strength = 1.0,
 #'     seed = 123
 #'   )
@@ -170,7 +176,7 @@
 #'   # (multinomial-logit + a single x1*x2 interaction term in the propensity
 #'   # model only; outcome model continues to use plain X):
 #'   coefs_int <- genCoefs(
-#'     R = 5, T = 30, d = 12, density = 0.1, eff_size = 2,
+#'     G = 5, T = 30, d = 12, density = 0.1, eff_size = 2,
 #'     assignment_type = "multinomial",
 #'     assignment_interactions = list(c(1, 2)),
 #'     assignment_interaction_strength = 1.5,
@@ -180,7 +186,7 @@
 #'
 #' @export
 genCoefs <- function(
-	R,
+	G = NULL,
 	T,
 	d,
 	density,
@@ -190,8 +196,15 @@ genCoefs <- function(
 	assignment_interactions = NULL,
 	assignment_interaction_strength = NULL,
 	seed = NULL,
-	verbose = FALSE
+	verbose = FALSE,
+	R = NULL
 ) {
+	# Resolve the canonical cohort count (G), mapping the deprecated `R`
+	# alias and warning if it is supplied (#41). The body below keeps using
+	# `R` internally via the `R <- G` line, so it is otherwise unchanged.
+	G <- .resolve_cohort_count_arg(G, R, "genCoefs")
+	R <- G
+
 	# Check that T is a numeric scalar and at least 3.
 	if (!is.numeric(T) || length(T) != 1 || T < 3) {
 		stop("T must be a numeric value greater than or equal to 3")
@@ -324,7 +337,7 @@ genCoefs <- function(
 	stopifnot(R <= T - 1)
 
 	core_obj <- genCoefsCore(
-		R = R,
+		G = R,
 		T = T,
 		d = d,
 		density = density,
@@ -359,6 +372,7 @@ genCoefs <- function(
 	obj <- list(
 		beta = core_obj$beta,
 		theta = core_obj$theta,
+		G = R,
 		R = R,
 		T = T,
 		d = d,
@@ -382,7 +396,7 @@ genCoefs <- function(
 #' ATT is the equal-weighted mean of the cohort-specific effects. Under the
 #' covariate-dependent DGPs introduced in 1.14.0, the overall ATT is a
 #' propensity-weighted mean using cohort weights
-#' \eqn{E[\pi_r(X)] / \sum_{r' \text{ treated}} E[\pi_{r'}(X)]}{E[pi_r(X)] / sum_{r' treated} E[pi_r'(X)]},
+#' \eqn{E[\pi_g(X)] / \sum_{g' \text{ treated}} E[\pi_{g'}(X)]}{E[pi_g(X)] / sum_{g' treated} E[pi_g'(X)]},
 #' matching Faletto (2025) Eq. \code{att.estimator.weighted} (line 837) at the
 #' population level. The expected propensities are computed by Monte Carlo
 #' integration over the covariate distribution.
@@ -398,23 +412,26 @@ genCoefs <- function(
 #'         equal-weighted mean of the cohort-specific effects; under
 #'         covariate-dependent DGPs it is the propensity-weighted mean using
 #'         \code{cohort_weights}.}
-#'   \item{actual_cohort_tes}{A numeric vector of length \code{R} containing the
+#'   \item{actual_cohort_tes}{A numeric vector of length \code{G} containing the
 #'         true cohort-specific treatment effects, calculated by averaging the
 #'         coefficients corresponding to the treatment dummies for each cohort.
 #'         Intrinsic to \eqn{\beta}{beta}; does not depend on the assignment
 #'         DGP.}
-#'   \item{cohort_times}{An integer vector of length \code{R} giving the calendar
+#'   \item{cohort_times}{An integer vector of length \code{G} giving the calendar
 #'         time period at which each treated cohort first adopts treatment. In
-#'         the simulator's convention cohort \code{r} adopts at calendar time
-#'         \code{r + 1} (cohort 0 is never-treated).}
-#'   \item{cohort_weights}{Numeric vector of length \code{R} summing to 1. Under
-#'         the marginal DGP this is uniform \code{1/R}. Under
+#'         the simulator's convention cohort \code{g} adopts at calendar time
+#'         \code{g + 1} (cohort 0 is never-treated).}
+#'   \item{cohort_weights}{Numeric vector of length \code{G} summing to 1. Under
+#'         the marginal DGP this is uniform \code{1/G}. Under
 #'         \code{assignment_type = "multinomial"} or \code{"ordered"} it is
-#'         \eqn{E[\pi_r(X)] / \sum_{r' \text{ treated}} E[\pi_{r'}(X)]}{E[pi_r(X)] / sum_{r' treated} E[pi_r'(X)]}.
+#'         \eqn{E[\pi_g(X)] / \sum_{g' \text{ treated}} E[\pi_{g'}(X)]}{E[pi_g(X)] / sum_{g' treated} E[pi_g'(X)]}.
 #'         New in 1.14.0.}
-#'   \item{R, T, d, seed}{The generating parameters carried over from
+#'   \item{G, T, d, seed}{The generating parameters carried over from
 #'         \code{coefs_obj} so that \code{print()} and \code{summary()} on the
 #'         returned object are self-describing.}
+#'   \item{R}{Deprecated alias for \code{G}, retained for backward
+#'         compatibility; populated with the same value. Use \code{G}. Will be
+#'         removed in a future release.}
 #' }
 #' Use \code{print()} or \code{summary()} on the returned object for a
 #' formatted display.
@@ -426,7 +443,7 @@ genCoefs <- function(
 #' is computed as a weighted average of the cohort-specific effects (uniform
 #' weights under the marginal DGP, propensity weights otherwise).
 #'
-#' Under non-marginal DGPs, \eqn{E[\pi_r(X)]}{E[pi_r(X)]} is estimated by
+#' Under non-marginal DGPs, \eqn{E[\pi_g(X)]}{E[pi_g(X)]} is estimated by
 #' Monte Carlo integration over the X distribution (Gaussian by default) with
 #' \code{M = 10000} draws. The Monte Carlo seed is offset from the main
 #' \code{coefs_obj$seed} by \code{+ 2L} per the documented seed-offset
@@ -441,7 +458,7 @@ genCoefs <- function(
 #' @examples
 #' \dontrun{
 #' # Generate coefficients
-#' coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
+#' coefs <- genCoefs(G = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
 #'
 #' # Compute the true treatment effects:
 #' te_results <- getTes(coefs)
@@ -456,12 +473,12 @@ genCoefs <- function(
 #' print(te_results)
 #'
 #' # Propensity-weighted truth under covariate-dependent DGP:
-#' coefs_mn <- genCoefs(R = 3, T = 5, d = 2, density = 0.5, eff_size = 2,
+#' coefs_mn <- genCoefs(G = 3, T = 5, d = 2, density = 0.5, eff_size = 2,
 #'                     assignment_type = "multinomial", assignment_strength = 1.0,
 #'                     seed = 42)
 #' te_mn <- getTes(coefs_mn)
 #' te_mn$att_true       # propensity-weighted overall ATT
-#' te_mn$cohort_weights # length R; sums to 1
+#' te_mn$cohort_weights # length G; sums to 1
 #' }
 #'
 #' @export
@@ -541,6 +558,7 @@ getTes <- function(coefs_obj) {
 	out <- list(
 		att_true = att_true,
 		actual_cohort_tes = actual_cohort_tes,
+		G = R,
 		R = R,
 		T = T,
 		d = d,
@@ -562,8 +580,8 @@ getTes <- function(coefs_obj) {
 #' vector \code{theta} is sparse, with nonzero entries occurring with probability \code{density} and
 #' scaled by \code{eff_size}. See the simulation studies section of Faletto (2025) for details.
 #'
-#' @param R Integer. The number of treated cohorts (treatment is assumed to start in periods 2 to
-#' \code{R + 1}).
+#' @param G Integer. The number of treated cohorts (treatment is assumed to start in periods 2 to
+#' \code{G + 1}).
 #' @param T Integer. The total number of time periods.
 #' @param d Integer. The number of time-invariant covariates. If \code{d > 0}, additional terms
 #' corresponding to covariate main effects and interactions are included in \code{beta}.
@@ -573,6 +591,8 @@ getTes <- function(coefs_obj) {
 #' nonzero entry is set to \code{eff_size} or \code{-eff_size} (with a 60 percent chance for a
 #' positive value).
 #' @param seed (Optional) Integer. Seed for reproducibility.
+#' @param R Deprecated. The former name for \code{G}; still accepted with a
+#' deprecation warning, and will be removed in a future release. Use \code{G}.
 #'
 #' @return A list with two elements:
 #' \describe{
@@ -586,9 +606,9 @@ getTes <- function(coefs_obj) {
 #'
 #' @details
 #' The length of \code{beta} is given by
-#' \deqn{p = R + (T - 1) + d + dR + d(T - 1) + \mathit{num\_treats} + (\mathit{num\_treats} \times d)}{p = R + (T - 1) + d + dR + d(T - 1) + num_treats + (num_treats * d)},
+#' \deqn{p = G + (T - 1) + d + dG + d(T - 1) + \mathit{num\_treats} + (\mathit{num\_treats} \times d)}{p = G + (T - 1) + d + dG + d(T - 1) + num_treats + (num_treats * d)},
 #' where the number of treatment parameters is defined as
-#' \deqn{\mathit{num\_treats} = T \times R - \frac{R(R+1)}{2}}{num_treats = T * R - R(R+1)/2}.
+#' \deqn{\mathit{num\_treats} = T \times G - \frac{G(G+1)}{2}}{num_treats = T * G - G(G+1)/2}.
 #'
 #' The function operates in two steps:
 #' \enumerate{
@@ -610,7 +630,7 @@ getTes <- function(coefs_obj) {
 #' @examples
 #' \dontrun{
 #'   # Set parameters for the coefficient generation
-#'   R <- 3         # Number of treated cohorts
+#'   G <- 3         # Number of treated cohorts
 #'   T <- 6         # Total number of time periods
 #'   d <- 2         # Number of covariates
 #'   density <- 0.1 # Probability that an entry in the initial vector is nonzero
@@ -618,23 +638,37 @@ getTes <- function(coefs_obj) {
 #'   seed <- 789    # Seed for reproducibility
 #'
 #'   # Generate coefficients using genCoefsCore()
-#'   coefs_core <- genCoefsCore(R = R, T = T, d = d, density = density,
+#'   coefs_core <- genCoefsCore(G = G, T = T, d = d, density = density,
 #'   eff_size = eff_size, seed = seed)
 #'   beta <- coefs_core$beta
 #'   theta <- coefs_core$theta
 #'
 #'   # For diagnostic purposes, compute the expected length of beta.
 #'   # The length p is defined internally as:
-#'   #   p = R + (T - 1) + d + d*R + d*(T - 1) + num_treats + num_treats*d,
-#'   # where num_treats = T * R - (R*(R+1))/2.
-#'   num_treats <- T * R - (R * (R + 1)) / 2
-#'   p_expected <- R + (T - 1) + d + d * R + d * (T - 1) + num_treats + num_treats * d
+#'   #   p = G + (T - 1) + d + d*G + d*(T - 1) + num_treats + num_treats*d,
+#'   # where num_treats = T * G - (G*(G+1))/2.
+#'   num_treats <- T * G - (G * (G + 1)) / 2
+#'   p_expected <- G + (T - 1) + d + d * G + d * (T - 1) + num_treats + num_treats * d
 #'
 #'   cat("Length of beta:", length(beta), "\nExpected length:", p_expected, "\n")
 #' }
 #'
 #' @export
-genCoefsCore <- function(R, T, d, density, eff_size, seed = NULL) {
+genCoefsCore <- function(
+	G = NULL,
+	T,
+	d,
+	density,
+	eff_size,
+	seed = NULL,
+	R = NULL
+) {
+	# Resolve the canonical cohort count (G), mapping the deprecated `R`
+	# alias and warning if it is supplied (#41). The body below keeps using
+	# `R` internally via the `R <- G` line, so it is otherwise unchanged.
+	G <- .resolve_cohort_count_arg(G, R, "genCoefsCore")
+	R <- G
+
 	if (!is.null(seed)) {
 		set.seed(seed)
 	}

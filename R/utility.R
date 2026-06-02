@@ -2,6 +2,44 @@
 #' @importFrom Matrix bdiag
 #' @importFrom stats qnorm pnorm predict coef model.matrix setNames lm
 
+#' @title Resolve the cohort-count argument (G canonical, R deprecated)
+#' @description Internal helper for the `R -> G` user-facing rename (#41).
+#'   Returns the canonical cohort count. If the deprecated `R` argument is
+#'   supplied (non-NULL), emits a one-time base-R deprecation warning and
+#'   maps it to `G`. If both are supplied and disagree, errors. If neither
+#'   is supplied, errors (the count is required).
+#' @param G The canonical cohort-count argument (may be NULL if the caller
+#'   used the deprecated `R` name positionally/by keyword).
+#' @param R The deprecated alias (NULL when not supplied).
+#' @param fn_name Character; the calling function's name, for the message.
+#' @return The resolved cohort count (numeric scalar).
+#' @keywords internal
+#' @noRd
+.resolve_cohort_count_arg <- function(G, R, fn_name) {
+	if (!is.null(R)) {
+		if (!is.null(G) && !identical(as.numeric(G), as.numeric(R))) {
+			stop(sprintf(
+				"Supply only one of `G` or `R` to %s(); they disagree (G = %s, R = %s).",
+				fn_name,
+				format(G),
+				format(R)
+			))
+		}
+		warning(
+			sprintf(
+				"The `R` argument to %s() is deprecated and will be removed in a future release; use `G` instead.",
+				fn_name
+			),
+			call. = FALSE
+		)
+		return(R)
+	}
+	if (is.null(G)) {
+		stop(sprintf("%s() requires the cohort count `G`.", fn_name))
+	}
+	G
+}
+
 #-------------------------------------------------------------------------------
 # Helper Functions for Data Processing
 #-------------------------------------------------------------------------------

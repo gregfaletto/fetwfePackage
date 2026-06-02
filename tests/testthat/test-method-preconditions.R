@@ -13,7 +13,7 @@
 
 .precond_fixture <- function(q = 0.5, seed = 1) {
 	sim <- simulateData(
-		genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2, seed = seed),
+		genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2, seed = seed),
 		N = 120,
 		sig_eps_sq = 1,
 		sig_eps_c_sq = 0.5
@@ -162,7 +162,7 @@ test_that("precondition catches hand-modified objects that violate C1 (att_se NA
 test_that("eventStudy respects calc_ses under se_type='cluster' × q=1", {
 	# Use a panel large enough for the cluster path to be well-conditioned.
 	sim <- simulateData(
-		genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2, seed = 1),
+		genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2, seed = 1),
 		N = 200,
 		sig_eps_sq = 1,
 		sig_eps_c_sq = 0.5

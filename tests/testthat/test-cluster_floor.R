@@ -223,7 +223,7 @@ test_that("cluster-SE fit on well-conditioned data does not trigger the diagnost
 	# Small but well-conditioned: same recipe as several existing tests.
 	set.seed(2026)
 	coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 5,
 		density = 0.5,
 		eff_size = 1,

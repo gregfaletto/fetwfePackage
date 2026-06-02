@@ -67,7 +67,7 @@ large number of units, you can optionally randomly split your data set in
 half (with \code{N} units in each data set). The data for half of the units should
 go in the \code{pdata} argument provided above. For the other \code{N} units, simply
 provide the counts for how many units appear in the untreated cohort plus
-each of the other \code{R} cohorts in this argument \code{indep_counts}. The benefit
+each of the other \code{G} cohorts in this argument \code{indep_counts}. The benefit
 of doing this is that the standard error for the average treatment effect
 will be (asymptotically) exact instead of conservative. The length of
 \code{indep_counts} must equal 1 plus the number of treated cohorts in \code{pdata}.
@@ -187,8 +187,11 @@ multiplying on the left by the square root inverse of the estimated
 covariance matrix for each unit.} \item{N}{The final number of units that
 were in the  data set used for estimation (after any units may have been
 removed because they were treated in the first time period).} \item{T}{The
-number of time periods in the final data set.} \item{R}{The final number of
-treated cohorts that appear in the final data set.} \item{d}{The final number
+number of time periods in the final data set.} \item{G}{The final number of
+treated cohorts that appear in the final data set.} \item{R}{Deprecated alias
+for \code{G}, retained for backward compatibility; populated with the same
+value. Use \code{G}. Will be removed in a future release.} \item{d}{The final
+number
 of covariates that appear in the final data set (after any covariates may
 have been removed because they contained missing values or all contained the
 same value for every unit).} \item{p}{The final number of columns in the full

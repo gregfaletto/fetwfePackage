@@ -28,7 +28,7 @@
       Model Details:
         Units (N)           : 30
         Time periods (T)    : 5
-        Treated cohorts (R) : 2
+        Treated cohorts (G) : 2
         Covariates (d)      : 2
         Features (p)        : 41
         Selected size       : 1
@@ -60,7 +60,7 @@
       Model Details:
         Units (N)           : 30
         Time periods (T)    : 5
-        Treated cohorts (R) : 2
+        Treated cohorts (G) : 2
         Covariates (d)      : 2
         Features (p)        : 41
         Selected size       : 1
@@ -95,7 +95,7 @@
       Model Details:
         Units (N)           : 30
         Time periods (T)    : 5
-        Treated cohorts (R) : 2
+        Treated cohorts (G) : 2
         Covariates (d)      : 2
         Features (p)        : 41
 
@@ -124,7 +124,7 @@
       Model Details:
         Units (N)           : 30
         Time periods (T)    : 5
-        Treated cohorts (R) : 2
+        Treated cohorts (G) : 2
         Covariates (d)      : 2
         Features (p)        : 41
 
@@ -158,7 +158,7 @@
       Model Details:
         Units (N)           : 30
         Time periods (T)    : 5
-        Treated cohorts (R) : 2
+        Treated cohorts (G) : 2
         Covariates (d)      : 2
         Features (p)        : 41
         Selected size       : 1
@@ -190,7 +190,7 @@
       Model Details:
         Units (N)           : 30
         Time periods (T)    : 5
-        Treated cohorts (R) : 2
+        Treated cohorts (G) : 2
         Covariates (d)      : 2
         Features (p)        : 41
         Selected size       : 1

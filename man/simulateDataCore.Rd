@@ -7,7 +7,7 @@
 simulateDataCore(
   N,
   T,
-  R,
+  G = NULL,
   d,
   sig_eps_sq,
   sig_eps_c_sq,
@@ -17,7 +17,8 @@ simulateDataCore(
   distribution = "gaussian",
   guarantee_rank_condition = FALSE,
   assignment_type = "marginal",
-  assignment_coefs = NULL
+  assignment_coefs = NULL,
+  R = NULL
 )
 }
 \arguments{
@@ -25,7 +26,7 @@ simulateDataCore(
 
 \item{T}{Integer. Number of time periods.}
 
-\item{R}{Integer. Number of treated cohorts (with treatment starting in periods 2 to T).}
+\item{G}{Integer. Number of treated cohorts (with treatment starting in periods 2 to T).}
 
 \item{d}{Integer. Number of time-invariant covariates.}
 
@@ -39,12 +40,12 @@ random effects).}
 on the value of \code{gen_ints}:
 \itemize{
 \item If \code{gen_ints = TRUE} and \code{d > 0}, the expected length is
-\eqn{p = R + (T-1) + d + dR + d(T-1) + num\_treats + num\_treats \times d}, where
-\eqn{num\_treats = T \times R - \frac{R(R+1)}{2}}.
+\eqn{p = G + (T-1) + d + dG + d(T-1) + num\_treats + num\_treats \times d}, where
+\eqn{num\_treats = T \times G - \frac{G(G+1)}{2}}.
 \item If \code{gen_ints = TRUE} and \code{d = 0}, the expected length is
-\eqn{p = R + (T-1) + num\_treats}.
+\eqn{p = G + (T-1) + num\_treats}.
 \item If \code{gen_ints = FALSE}, the expected length is
-\eqn{p = R + (T-1) + d + num\_treats}.
+\eqn{p = G + (T-1) + d + num\_treats}.
 }}
 
 \item{seed}{(Optional) Integer. Seed for reproducibility.}
@@ -71,6 +72,10 @@ matching \code{assignment_type}).}
 \item{assignment_coefs}{Optional list returned by
 \code{.gen_assignment_coefs()} (an internal helper). Required when
 \code{assignment_type != "marginal"}.}
+
+\item{R}{Deprecated. The former name for \code{G}; still accepted with a
+deprecation warning, and will be removed in a future release. Use
+\code{G}.}
 }
 \value{
 An object of class \code{"FETWFE_simulated"}, which is a list containing:
@@ -89,13 +94,16 @@ or simply an empty vector (if \eqn{d = 0})}
 \item{first_inds}{A vector of indices indicating the first treatment effect for each treated
 cohort.}
 \item{N_UNTREATED}{The number of never-treated units.}
-\item{assignments}{A vector of counts (of length \eqn{R+1}) indicating how many units fall into
-the never-treated group and each of the \eqn{R} treated cohorts.}
+\item{assignments}{A vector of counts (of length \eqn{G+1}) indicating how many units fall into
+the never-treated group and each of the \eqn{G} treated cohorts.}
 \item{indep_counts}{Independent cohort assignments (for auxiliary purposes).}
 \item{p}{The number of columns in the design matrix \eqn{X}.}
 \item{N}{Number of units.}
 \item{T}{Number of time periods.}
-\item{R}{Number of treated cohorts.}
+\item{G}{Number of treated cohorts.}
+\item{R}{Deprecated alias for \code{G}, retained for backward
+compatibility; populated with the same value. Use \code{G}. Will be
+removed in a future release.}
 \item{d}{Number of covariates.}
 \item{sig_eps_sq}{The idiosyncratic noise variance.}
 \item{sig_eps_c_sq}{The unit-level noise variance.}
@@ -139,21 +147,21 @@ and their interactions.
   # Set simulation parameters
   N <- 100           # Number of units in the panel
   T <- 5             # Number of time periods
-  R <- 3             # Number of treated cohorts
+  G <- 3             # Number of treated cohorts
   d <- 2             # Number of time-invariant covariates
   sig_eps_sq <- 1    # Variance of observation-level noise
   sig_eps_c_sq <- 0.5  # Variance of unit-level random effects
 
   # Generate coefficient vector using genCoefsCore()
   # (Here, density controls sparsity and eff_size scales nonzero entries)
-  coefs_core <- genCoefsCore(R = R, T = T, d = d, density = 0.2, eff_size = 2, seed = 123)
+  coefs_core <- genCoefsCore(G = G, T = T, d = d, density = 0.2, eff_size = 2, seed = 123)
 
   # Now simulate the data. Setting gen_ints = TRUE generates the full design
   matrix with interactions.
   sim_data <- simulateDataCore(
     N = N,
     T = T,
-    R = R,
+    G = G,
     d = d,
     sig_eps_sq = sig_eps_sq,
     sig_eps_c_sq = sig_eps_c_sq,

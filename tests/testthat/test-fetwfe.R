@@ -915,7 +915,7 @@ test_that("tibbles work as input to fewtfe", {
 # ------------------------------------------------------------------------------
 test_that("fetwfe surfaces p_value and selected in catt_df", {
 	set.seed(2026)
-	sim <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+	sim <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
 	dat <- simulateData(
 		sim,
 		N = 120,
@@ -955,7 +955,7 @@ test_that("fetwfe surfaces p_value and selected in catt_df", {
 # ------------------------------------------------------------------------------
 test_that("fetwfe produces at least one selected-out cohort in a sparse simulation", {
 	set.seed(2026)
-	sim <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+	sim <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
 	dat <- simulateData(
 		sim,
 		N = 120,
@@ -975,7 +975,7 @@ test_that("order_by = 'pvalue' sorts CATT by ascending p_value with NAs last", {
 	# selected-out (NA p_value) cohorts so we can verify both the
 	# ascending sort AND the NA-last placement, not just one or the other.
 	set.seed(2026)
-	sim <- genCoefs(R = 4, T = 6, d = 2, density = 0.3, eff_size = 2)
+	sim <- genCoefs(G = 4, T = 6, d = 2, density = 0.3, eff_size = 2)
 	dat <- simulateData(
 		sim,
 		N = 120,
@@ -1109,13 +1109,13 @@ test_that("fetwfe errors cleanly when no-never-treated truncation would yield < 
 # ------------------------------------------------------------------------------
 make_se_type_panel <- function(seed = 2026, N = 120) {
 	set.seed(seed)
-	sim_coefs <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+	sim_coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
 	simulateData(sim_coefs, N = N, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
 }
 
 make_ar1_panel <- function(seed = 7, N = 150, rho = 0.85, sd_e = 1) {
 	set.seed(seed)
-	sim_coefs <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+	sim_coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
 	sim <- simulateData(
 		sim_coefs,
 		N = N,
@@ -1193,7 +1193,7 @@ test_that("fetwfe runs end-to-end with REML estimation + cluster SE", {
 
 	set.seed(20260519)
 	sim_coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 6,
 		d = 2,
 		density = 0.5,
@@ -1265,7 +1265,7 @@ test_that("fetwfe $se_type slot reflects the argument value", {
 test_that("fetwfe runs and gives sensible output with zero covariates", {
 	set.seed(2026)
 	sim_coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 6,
 		d = 0,
 		density = 0.5,

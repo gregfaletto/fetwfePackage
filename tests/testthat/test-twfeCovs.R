@@ -870,7 +870,7 @@ test_that("twfeCovs throws error when a cohort contains fewer than d + 1 units",
 # ------------------------------------------------------------------------------
 test_that("twfeCovs surfaces p_value but not selected in catt_df", {
 	set.seed(2026)
-	sim <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+	sim <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
 	dat <- simulateData(
 		sim,
 		N = 120,
@@ -987,13 +987,13 @@ test_that("twfeCovs errors cleanly when no-never-treated truncation would yield 
 # ------------------------------------------------------------------------------
 make_se_type_panel <- function(seed = 2026, N = 120) {
 	set.seed(seed)
-	sim_coefs <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+	sim_coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
 	simulateData(sim_coefs, N = N, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
 }
 
 make_ar1_panel <- function(seed = 7, N = 150, rho = 0.85, sd_e = 1) {
 	set.seed(seed)
-	sim_coefs <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+	sim_coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
 	sim <- simulateData(
 		sim_coefs,
 		N = N,
@@ -1075,7 +1075,7 @@ test_that("twfeCovs $se_type slot reflects the argument value", {
 test_that("twfeCovs returns a classed object with working print + coef methods (#76 Item 1)", {
 	set.seed(42)
 	sim <- simulateData(
-		genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2, seed = 42),
+		genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2, seed = 42),
 		N = 60,
 		sig_eps_sq = 1,
 		sig_eps_c_sq = 0.5

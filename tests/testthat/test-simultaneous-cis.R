@@ -25,7 +25,7 @@ make_simul_cis_panel <- function(
 	eff_size = 2
 ) {
 	coefs <- genCoefs(
-		R = R,
+		G = R,
 		T = T,
 		d = d,
 		density = 0.5,
@@ -135,7 +135,7 @@ test_that("simultaneousCIs achieves ~nominal simultaneous coverage", {
 	d_ <- 2L
 	N_ <- 500L
 	coefs_master <- genCoefs(
-		R = R_,
+		G = R_,
 		T = T_,
 		d = d_,
 		density = 0.5,

@@ -101,6 +101,8 @@ test_that("tidy.<class> sorts cohorts numerically when labels include >= 10", {
 		cv_seed = 1300L,
 		N = 100L,
 		T = T_test,
+		# #41: G is the canonical cohort-count slot, dual-populated with R.
+		G = R_test,
 		R = R_test,
 		d = d_test,
 		p = p_test,

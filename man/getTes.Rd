@@ -19,23 +19,26 @@ effect on the treated. Under the marginal DGP this is the
 equal-weighted mean of the cohort-specific effects; under
 covariate-dependent DGPs it is the propensity-weighted mean using
 \code{cohort_weights}.}
-\item{actual_cohort_tes}{A numeric vector of length \code{R} containing the
+\item{actual_cohort_tes}{A numeric vector of length \code{G} containing the
 true cohort-specific treatment effects, calculated by averaging the
 coefficients corresponding to the treatment dummies for each cohort.
 Intrinsic to \eqn{\beta}{beta}; does not depend on the assignment
 DGP.}
-\item{cohort_times}{An integer vector of length \code{R} giving the calendar
+\item{cohort_times}{An integer vector of length \code{G} giving the calendar
 time period at which each treated cohort first adopts treatment. In
-the simulator's convention cohort \code{r} adopts at calendar time
-\code{r + 1} (cohort 0 is never-treated).}
-\item{cohort_weights}{Numeric vector of length \code{R} summing to 1. Under
-the marginal DGP this is uniform \code{1/R}. Under
+the simulator's convention cohort \code{g} adopts at calendar time
+\code{g + 1} (cohort 0 is never-treated).}
+\item{cohort_weights}{Numeric vector of length \code{G} summing to 1. Under
+the marginal DGP this is uniform \code{1/G}. Under
 \code{assignment_type = "multinomial"} or \code{"ordered"} it is
-\eqn{E[\pi_r(X)] / \sum_{r' \text{ treated}} E[\pi_{r'}(X)]}{E[pi_r(X)] / sum_{r' treated} E[pi_r'(X)]}.
+\eqn{E[\pi_g(X)] / \sum_{g' \text{ treated}} E[\pi_{g'}(X)]}{E[pi_g(X)] / sum_{g' treated} E[pi_g'(X)]}.
 New in 1.14.0.}
-\item{R, T, d, seed}{The generating parameters carried over from
+\item{G, T, d, seed}{The generating parameters carried over from
 \code{coefs_obj} so that \code{print()} and \code{summary()} on the
 returned object are self-describing.}
+\item{R}{Deprecated alias for \code{G}, retained for backward
+compatibility; populated with the same value. Use \code{G}. Will be
+removed in a future release.}
 }
 Use \code{print()} or \code{summary()} on the returned object for a
 formatted display.
@@ -47,7 +50,7 @@ overall ATT. Under the default marginal cohort-assignment DGP, the overall
 ATT is the equal-weighted mean of the cohort-specific effects. Under the
 covariate-dependent DGPs introduced in 1.14.0, the overall ATT is a
 propensity-weighted mean using cohort weights
-\eqn{E[\pi_r(X)] / \sum_{r' \text{ treated}} E[\pi_{r'}(X)]}{E[pi_r(X)] / sum_{r' treated} E[pi_r'(X)]},
+\eqn{E[\pi_g(X)] / \sum_{g' \text{ treated}} E[\pi_{g'}(X)]}{E[pi_g(X)] / sum_{g' treated} E[pi_g'(X)]},
 matching Faletto (2025) Eq. \code{att.estimator.weighted} (line 837) at the
 population level. The expected propensities are computed by Monte Carlo
 integration over the covariate distribution.
@@ -59,7 +62,7 @@ correct indices of treatment effect coefficients in \code{beta}. The overall tre
 is computed as a weighted average of the cohort-specific effects (uniform
 weights under the marginal DGP, propensity weights otherwise).
 
-Under non-marginal DGPs, \eqn{E[\pi_r(X)]}{E[pi_r(X)]} is estimated by
+Under non-marginal DGPs, \eqn{E[\pi_g(X)]}{E[pi_g(X)]} is estimated by
 Monte Carlo integration over the X distribution (Gaussian by default) with
 \code{M = 10000} draws. The Monte Carlo seed is offset from the main
 \code{coefs_obj$seed} by \code{+ 2L} per the documented seed-offset
@@ -68,7 +71,7 @@ convention.
 \examples{
 \dontrun{
 # Generate coefficients
-coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
+coefs <- genCoefs(G = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
 
 # Compute the true treatment effects:
 te_results <- getTes(coefs)
@@ -83,12 +86,12 @@ print(te_results$actual_cohort_tes)
 print(te_results)
 
 # Propensity-weighted truth under covariate-dependent DGP:
-coefs_mn <- genCoefs(R = 3, T = 5, d = 2, density = 0.5, eff_size = 2,
+coefs_mn <- genCoefs(G = 3, T = 5, d = 2, density = 0.5, eff_size = 2,
                     assignment_type = "multinomial", assignment_strength = 1.0,
                     seed = 42)
 te_mn <- getTes(coefs_mn)
 te_mn$att_true       # propensity-weighted overall ATT
-te_mn$cohort_weights # length R; sums to 1
+te_mn$cohort_weights # length G; sums to 1
 }
 
 }

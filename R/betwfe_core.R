@@ -41,7 +41,7 @@
 #' half (with `N` units in each data set). The data for half of the units should
 #' go in the `pdata` argument provided above. For the other `N` units, simply
 #' provide the counts for how many units appear in the untreated cohort plus
-#' each of the other `R` cohorts in this argument `indep_counts`. The benefit
+#' each of the other `G` cohorts in this argument `indep_counts`. The benefit
 #' of doing this is that the standard error for the average treatment effect
 #' will be (asymptotically) exact instead of conservative. The length of
 #' `indep_counts` must equal 1 plus the number of treated cohorts in `pdata`.
@@ -113,7 +113,7 @@
 #' (Psi-IF); this is asymptotically exact for the package's default
 #' cohort sample-proportions estimator and for every standard
 #' propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
-#' any GLM on `W | X`, kernel/series regression of `1{W = r}` on `X`).
+#' any GLM on `W | X`, kernel/series regression of `1{W = g}` on `X`).
 #' `"conservative"` returns the Cauchy-Schwarz upper bound from Theorem
 #' (c); use only if the propensity-score estimator violates (Psi-IF).
 #' `"cluster"` is an *experimental* unit-clustered Liang-Zeger sandwich
@@ -237,8 +237,11 @@
 #' covariance matrix for each unit.} \item{N}{The final number of units that
 #' were in the  data set used for estimation (after any units may have been
 #' removed because they were treated in the first time period).} \item{T}{The
-#' number of time periods in the final data set.} \item{R}{The final number of
-#' treated cohorts that appear in the final data set.} \item{d}{The final number
+#' number of time periods in the final data set.} \item{G}{The final number of
+#' treated cohorts that appear in the final data set.} \item{R}{Deprecated alias
+#' for \code{G}, retained for backward compatibility; populated with the same
+#' value. Use \code{G}. Will be removed in a future release.} \item{d}{The final
+#' number
 #' of covariates that appear in the final data set (after any covariates may
 #' have been removed because they contained missing values or all contained the
 #' same value for every unit).} \item{p}{The final number of columns in the full
@@ -522,6 +525,7 @@ betwfe <- function(
 		y_final = res$y_final,
 		N = res$N,
 		T = res$T,
+		G = res$R,
 		R = res$R,
 		d = res$d,
 		p = res$p,
@@ -619,7 +623,7 @@ betwfe <- function(
 #' (Psi-IF); this is asymptotically exact for the package's default
 #' cohort sample-proportions estimator and for every standard
 #' propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
-#' any GLM on `W | X`, kernel/series regression of `1{W = r}` on `X`).
+#' any GLM on `W | X`, kernel/series regression of `1{W = g}` on `X`).
 #' `"conservative"` returns the Cauchy-Schwarz upper bound from Theorem
 #' (c); use only if the propensity-score estimator violates (Psi-IF).
 #' `"cluster"` is an *experimental* unit-clustered Liang-Zeger sandwich
@@ -743,8 +747,11 @@ betwfe <- function(
 #' covariance matrix for each unit.} \item{N}{The final number of units that
 #' were in the  data set used for estimation (after any units may have been
 #' removed because they were treated in the first time period).} \item{T}{The
-#' number of time periods in the final data set.} \item{R}{The final number of
-#' treated cohorts that appear in the final data set.} \item{d}{The final number
+#' number of time periods in the final data set.} \item{G}{The final number of
+#' treated cohorts that appear in the final data set.} \item{R}{Deprecated alias
+#' for \code{G}, retained for backward compatibility; populated with the same
+#' value. Use \code{G}. Will be removed in a future release.} \item{d}{The final
+#' number
 #' of covariates that appear in the final data set (after any covariates may
 #' have been removed because they contained missing values or all contained the
 #' same value for every unit).} \item{p}{The final number of columns in the full
@@ -804,7 +811,7 @@ betwfe <- function(
 #' @examples
 #' \dontrun{
 #'   # Generate coefficients
-#'   coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
+#'   coefs <- genCoefs(G = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
 #'
 #'   # Simulate data using the coefficients
 #'   sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5)

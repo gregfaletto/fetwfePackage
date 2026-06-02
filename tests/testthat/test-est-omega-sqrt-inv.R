@@ -21,7 +21,7 @@ test_that("estOmegaSqrtInv recovers sig_eps_sq and sig_eps_c_sq via REML", {
 	# Generate a synthetic panel with known variance components.
 	set.seed(20260515)
 	coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 6,
 		d = 2,
 		density = 0.5,
@@ -60,7 +60,7 @@ test_that("fetwfe() invokes the REML estimator when sig values are NA", {
 	# where the estimator collapsed to ~0 silently).
 	set.seed(20260516)
 	coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 6,
 		d = 2,
 		density = 0.5,
@@ -170,7 +170,7 @@ test_that("end-to-end fetwfe outputs unchanged with closed-form Omega^(-1/2)", {
 
 	set.seed(20260519)
 	coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 6,
 		d = 2,
 		density = 0.5,

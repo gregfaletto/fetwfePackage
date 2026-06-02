@@ -19,7 +19,7 @@
 
 .validator_fixture <- function(q = 0.5, seed = 17052026) {
 	sim <- simulateData(
-		genCoefs(R = 2, T = 3, d = 2, density = 0.5, eff_size = 1, seed = seed),
+		genCoefs(G = 2, T = 3, d = 2, density = 0.5, eff_size = 1, seed = seed),
 		N = 80,
 		sig_eps_sq = 1,
 		sig_eps_c_sq = 0.5
@@ -66,7 +66,7 @@ test_that("validators accept well-formed all-zero-theta fallback objects", {
 	# Use small N + tiny effects to maximize chance of full selection-out.
 	sim_small <- simulateData(
 		genCoefs(
-			R = 2,
+			G = 2,
 			T = 3,
 			d = 0,
 			density = 0.001,

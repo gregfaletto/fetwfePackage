@@ -50,13 +50,16 @@ or simply an empty vector (if \eqn{d = 0})}
 \item{first_inds}{A vector of indices indicating the first treatment effect for each treated
 cohort.}
 \item{N_UNTREATED}{The number of never-treated units.}
-\item{assignments}{A vector of counts (of length \eqn{R+1}) indicating how many units fall into
-the never-treated group and each of the \eqn{R} treated cohorts.}
+\item{assignments}{A vector of counts (of length \eqn{G+1}) indicating how many units fall into
+the never-treated group and each of the \eqn{G} treated cohorts.}
 \item{indep_counts}{Independent cohort assignments (for auxiliary purposes).}
 \item{p}{The number of columns in the design matrix \eqn{X}.}
 \item{N}{Number of units.}
 \item{T}{Number of time periods.}
-\item{R}{Number of treated cohorts.}
+\item{G}{Number of treated cohorts.}
+\item{R}{Deprecated alias for \code{G}, retained for backward
+compatibility; populated with the same value. Use \code{G}. Will be
+removed in a future release.}
 \item{d}{Number of covariates.}
 \item{sig_eps_sq}{The idiosyncratic noise variance.}
 \item{sig_eps_c_sq}{The unit-level noise variance.}
@@ -66,7 +69,7 @@ the never-treated group and each of the \eqn{R} treated cohorts.}
 Generates a random panel data set for simulation studies of the fused extended two-way fixed
 effects (FETWFE) estimator by taking an object of class  \code{"FETWFE_coefs"} (produced by
 \code{genCoefs()}) and using it to simulate data. The function creates a balanced panel
-with \eqn{N} units over \eqn{T} time periods, assigns treatment status across \eqn{R}
+with \eqn{N} units over \eqn{T} time periods, assigns treatment status across \eqn{G}
 treated cohorts (with equal marginal probabilities for treatment and non-treatment), and
 constructs a design matrix along with the corresponding outcome. The covariates are
 generated according to the specified \code{distribution}: by default, covariates are drawn
@@ -92,7 +95,7 @@ and their interactions.
 \examples{
 \dontrun{
   # Generate coefficients
-  coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
+  coefs <- genCoefs(G = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
 
   # Simulate data using the coefficients
   sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5)
