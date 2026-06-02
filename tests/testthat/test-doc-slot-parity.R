@@ -65,6 +65,35 @@
 	unique(trimws(unlist(strsplit(result, ","))))
 }
 
+# Direct \item children of the \value{} node -- top-level @return slots only,
+# NOT the nested $internal sub-slots. A slot documented twice at the top level
+# is a bug (the #206 ci_type duplicate); the intentional top-level/$internal
+# dual-documentation of X_ints / y / X_final / y_final / calc_ses (#154, #180)
+# is not, so this deliberately does not recurse the way .extract_value_items().
+.extract_top_level_value_items <- function(rd) {
+	value_idx <- which(sapply(
+		rd,
+		function(n) identical(attr(n, "Rd_tag"), "\\value")
+	))
+	if (length(value_idx) == 0L) {
+		return(character(0))
+	}
+	keys <- character(0)
+	for (child in rd[[value_idx[1L]]]) {
+		if (
+			is.list(child) &&
+				identical(attr(child, "Rd_tag"), "\\item") &&
+				length(child) >= 1L
+		) {
+			keys <- c(
+				keys,
+				paste(unlist(lapply(child[[1L]], as.character)), collapse = "")
+			)
+		}
+	}
+	trimws(unlist(strsplit(keys, ",")))
+}
+
 # ------------------------------------------------------------------------------
 # Test 1: @return slot parity for the 4 public estimators and their 3 wrappers.
 #
@@ -150,6 +179,42 @@ test_that("public estimator @return blocks match live names()", {
 				length(extra),
 				" slot(s) documented but not in live names(): ",
 				paste(extra, collapse = ", ")
+			)
+		)
+	}
+})
+
+# ------------------------------------------------------------------------------
+# Test 1b (#206): no @return \item is documented twice at the top level.
+#
+# .extract_value_items()'s unique() (and the setequal() comparisons above) is
+# duplicate-insensitive, so a doubled top-level \item{} collapsed to one entry
+# and shipped to the rendered manual undetected (the ci_type duplicate in
+# ?fetwfe / ?fetwfeWithSimulatedData that #206 fixed). Check only the top-level
+# slots, excluding the intentional $internal dual-doc (#154, #180).
+# ------------------------------------------------------------------------------
+
+test_that("public estimator @return blocks contain no duplicate \\item names (#206)", {
+	db <- .get_rd_db()
+	rd_keys <- c(
+		"fetwfe.Rd",
+		"fetwfeWithSimulatedData.Rd",
+		"etwfe.Rd",
+		"etwfeWithSimulatedData.Rd",
+		"betwfe.Rd",
+		"betwfeWithSimulatedData.Rd",
+		"twfeCovs.Rd",
+		"twfeCovsWithSimulatedData.Rd"
+	)
+	for (rd_key in rd_keys) {
+		raw <- .extract_top_level_value_items(db[[rd_key]])
+		dups <- unique(raw[duplicated(raw)])
+		expect_true(
+			length(dups) == 0L,
+			info = paste0(
+				rd_key,
+				" documents these @return \\item(s) more than once: ",
+				paste(dups, collapse = ", ")
 			)
 		)
 	}
