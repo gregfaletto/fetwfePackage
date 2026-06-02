@@ -61,7 +61,7 @@ test_that("BETWFE SE/SD ratio is ~1 under partial selection (MC)", {
 	# set.seed() internally. Wrapping the loop in set.seed(i) does NOT
 	# vary noise across reps. Must mutate coefs_obj$seed.
 	coefs_template <- genCoefs(
-		R = 2,
+		G = 2,
 		T = 5,
 		d = 2,
 		density = 0.5,

@@ -16,7 +16,7 @@ test_that("getTes returns a list with att_true and actual_cohort_tes", {
 
 	# Call getTes() with the coefs object
 	res <- genCoefs(
-		R = R_val,
+		G = R_val,
 		T = T_val,
 		d = d_val,
 		density = 0.1,
@@ -39,7 +39,7 @@ test_that("att_true equals mean(actual_cohort_tes)", {
 	d_val <- 12
 
 	res <- genCoefs(
-		R = R_val,
+		G = R_val,
 		T = T_val,
 		d = d_val,
 		density = 0.1,
@@ -64,7 +64,7 @@ test_that("actual_cohort_tes matches expected output", {
 	d_val <- 12
 
 	res_coefs <- genCoefs(
-		R = R_val,
+		G = R_val,
 		T = T_val,
 		d = d_val,
 		density = 0.1,
@@ -112,7 +112,7 @@ test_that("getTes errors with invalid beta length", {
 	d_val <- 12
 
 	res_coefs <- genCoefs(
-		R = R_val,
+		G = R_val,
 		T = T_val,
 		d = d_val,
 		density = 0.1,
@@ -136,7 +136,7 @@ test_that("getTes errors with invalid beta length", {
 # ------------------------------------------------------------------------------
 test_that("getTes returns an object of class FETWFE_tes with carried params", {
 	coefs <- genCoefs(
-		R = 5,
+		G = 5,
 		T = 30,
 		d = 12,
 		density = 0.1,
@@ -154,12 +154,12 @@ test_that("getTes returns an object of class FETWFE_tes with carried params", {
 # ------------------------------------------------------------------------------
 # Test 6: print method writes the expected lines.
 # NOTE: the regexes below intentionally lock the print-output labels
-# ("Cohorts (R)", "Time periods (T)", "Covariates (d)"). Any cosmetic
+# ("Cohorts (G)", "Time periods (T)", "Covariates (d)"). Any cosmetic
 # relabeling of print.FETWFE_tes requires updating this test.
 # ------------------------------------------------------------------------------
 test_that("print.FETWFE_tes writes the expected sections", {
 	coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 5,
 		d = 2,
 		density = 0.5,
@@ -172,7 +172,7 @@ test_that("print.FETWFE_tes writes the expected sections", {
 	expect_match(joined, "Cohort 1")
 	expect_match(joined, "Cohort 2")
 	expect_match(joined, "Cohort 3")
-	expect_match(joined, "Cohorts \\(R\\)")
+	expect_match(joined, "Cohorts \\(G\\)")
 	expect_match(joined, "Time periods \\(T\\)")
 	expect_match(joined, "Covariates \\(d\\)")
 	expect_match(joined, "Seed")
@@ -183,7 +183,7 @@ test_that("print.FETWFE_tes writes the expected sections", {
 # ------------------------------------------------------------------------------
 test_that("summary.FETWFE_tes returns expected fields and dispersion stats", {
 	coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 5,
 		d = 2,
 		density = 0.5,

@@ -905,7 +905,7 @@ test_that("tibbles work as input to fewtfe", {
 # Helper: a small simulated betwfe result reused across S3 method tests.
 .s3_betwfe_fixture <- function() {
 	coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 6,
 		d = 2,
 		density = 0.5,
@@ -993,7 +993,7 @@ test_that("print.betwfe show_internal = TRUE reads top-level fields", {
 # ------------------------------------------------------------------------------
 test_that("betwfe surfaces p_value and selected in catt_df", {
 	set.seed(2026)
-	sim <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+	sim <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
 	dat <- simulateData(
 		sim,
 		N = 120,
@@ -1030,7 +1030,7 @@ test_that("betwfe surfaces p_value and selected in catt_df", {
 # ------------------------------------------------------------------------------
 test_that("betwfe produces at least one selected-out cohort in a sparse simulation", {
 	set.seed(2026)
-	sim <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+	sim <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
 	dat <- simulateData(
 		sim,
 		N = 120,
@@ -1054,7 +1054,7 @@ test_that("betwfe produces at least one selected-out cohort in a sparse simulati
 # ------------------------------------------------------------------------------
 test_that("order_by = 'pvalue' sorts CATT by ascending p_value with NAs last", {
 	set.seed(2026)
-	sim <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+	sim <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
 	dat <- simulateData(
 		sim,
 		N = 120,
@@ -1158,13 +1158,13 @@ test_that("betwfe errors cleanly when no-never-treated truncation would yield < 
 # ------------------------------------------------------------------------------
 make_se_type_panel <- function(seed = 2026, N = 120) {
 	set.seed(seed)
-	sim_coefs <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+	sim_coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
 	simulateData(sim_coefs, N = N, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
 }
 
 make_ar1_panel <- function(seed = 7, N = 150, rho = 0.85, sd_e = 1) {
 	set.seed(seed)
-	sim_coefs <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+	sim_coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
 	sim <- simulateData(
 		sim_coefs,
 		N = N,

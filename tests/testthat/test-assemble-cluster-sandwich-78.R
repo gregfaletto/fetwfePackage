@@ -155,7 +155,7 @@ test_that(".assemble_cluster_robust_sandwich integration parity: betwfe cluster-
 	# call to the helper (e.g., swaps which arg gets passed to
 	# `sel_feat_inds`), the assertion fails.
 	coefs <- genCoefs(
-		R = 2,
+		G = 2,
 		T = 5,
 		d = 2,
 		density = 0.5,

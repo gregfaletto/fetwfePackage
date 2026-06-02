@@ -19,7 +19,7 @@ if (!requireNamespace("broom", quietly = TRUE)) {
 # nrow(sim$pdata) == res$N * res$T == nrow(res[$internal]$X_ints).
 .simulated_setup <- function(seed = 20260515) {
 	coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 6,
 		d = 2,
 		density = 0.5,
@@ -705,7 +705,7 @@ test_that("broom S3 methods are registered AND dispatch correctly for fetwfe / e
 # ------------------------------------------------------------------------------
 test_that("tidy.FETWFE_tes accepts conf.int and conf.level (#84 item 14)", {
 	coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 6,
 		d = 2,
 		density = 0.5,

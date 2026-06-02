@@ -79,7 +79,7 @@
 
 test_that("public estimator @return blocks match live names()", {
 	coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 5,
 		d = 0,
 		density = 0.5,
@@ -345,7 +345,7 @@ test_that("cross-class slot inventory matches the documented divergence table", 
 
 test_that("eventStudy() @return matches live names() across estimator classes (#84 item 4)", {
 	coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 5,
 		d = 0,
 		density = 0.5,
@@ -408,7 +408,7 @@ test_that("eventStudy() @return matches live names() across estimator classes (#
 test_that("tidy.eventStudy() schema is locked across conf.int branches (#84 item 4)", {
 	skip_if_not_installed("broom")
 	coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 5,
 		d = 0,
 		density = 0.5,

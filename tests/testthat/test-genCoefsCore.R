@@ -18,7 +18,7 @@ compute_p <- function(T, R, d) {
 #         and that both are numeric vectors.
 # ------------------------------------------------------------------------------
 test_that("genCoefsCore returns expected output structure", {
-	res <- genCoefsCore(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2)
+	res <- genCoefsCore(G = 5, T = 30, d = 12, density = 0.1, eff_size = 2)
 
 	expect_type(res, "list")
 	expect_true("beta" %in% names(res))
@@ -37,7 +37,7 @@ test_that("genCoefsCore returns beta and theta of correct length", {
 	d <- 12
 	expected_length <- compute_p(T, R, d)
 
-	res <- genCoefsCore(R = R, T = T, d = d, density = 0.1, eff_size = 2)
+	res <- genCoefsCore(G = R, T = T, d = d, density = 0.1, eff_size = 2)
 	expect_equal(length(res$beta), expected_length)
 	expect_equal(length(res$theta), expected_length)
 })
@@ -47,7 +47,7 @@ test_that("genCoefsCore returns beta and theta of correct length", {
 # ------------------------------------------------------------------------------
 test_that("genCoefsCore is reproducible with the same seed", {
 	res1 <- genCoefsCore(
-		R = 5,
+		G = 5,
 		T = 30,
 		density = 0.1,
 		eff_size = 2,
@@ -56,7 +56,7 @@ test_that("genCoefsCore is reproducible with the same seed", {
 	)
 
 	res2 <- genCoefsCore(
-		R = 5,
+		G = 5,
 		T = 30,
 		density = 0.1,
 		eff_size = 2,
@@ -76,7 +76,7 @@ test_that("beta from genCoefsCore is a valid input for simulateDataCore", {
 	R <- 5
 	T <- 30
 	d <- 12
-	res_coefs <- genCoefsCore(R = R, T = T, d = d, density = 0.1, eff_size = 2)
+	res_coefs <- genCoefsCore(G = R, T = T, d = d, density = 0.1, eff_size = 2)
 
 	N <- 120
 	sig_eps_sq <- 5
@@ -86,7 +86,7 @@ test_that("beta from genCoefsCore is a valid input for simulateDataCore", {
 	sim_data <- simulateDataCore(
 		N = N,
 		T = T,
-		R = R,
+		G = R,
 		d = d,
 		sig_eps_sq = sig_eps_sq,
 		sig_eps_c_sq = sig_eps_c_sq,
@@ -114,7 +114,7 @@ test_that("genCoefsCore produces theta with approximately correct sparsity", {
 	T <- 30
 	d <- 12
 	density <- 0.1
-	res <- genCoefsCore(R = R, T = T, d = d, density = density, eff_size = 2)
+	res <- genCoefsCore(G = R, T = T, d = d, density = density, eff_size = 2)
 	theta <- res$theta
 	total <- length(theta)
 	nonzero <- sum(theta != 0)
@@ -144,7 +144,7 @@ test_that("simulateDataCore and fetwfe work when d = 0", {
 
 	# Generate coefficients with no covariates using genCoefsCore.
 	coefs <- genCoefsCore(
-		R = R_val,
+		G = R_val,
 		T = T_val,
 		density = 0.1,
 		eff_size = 2,
@@ -155,7 +155,7 @@ test_that("simulateDataCore and fetwfe work when d = 0", {
 	sim_data <- simulateDataCore(
 		N = N,
 		T = T_val,
-		R = R_val,
+		G = R_val,
 		d = d_val,
 		sig_eps_sq = sig_eps_sq,
 		sig_eps_c_sq = sig_eps_c_sq,
@@ -194,14 +194,14 @@ test_that("simulateDataCore and fetwfe work when d = 0", {
 
 test_that("genCoefsCore errors when T < 3", {
 	expect_error(
-		genCoefsCore(R = 5, T = 2, density = 0.1, eff_size = 2, d = 12),
+		genCoefsCore(G = 5, T = 2, density = 0.1, eff_size = 2, d = 12),
 		regexp = "T must be a numeric value greater than or equal to 3"
 	)
 })
 
 test_that("genCoefsCore errors when R < 2", {
 	expect_error(
-		genCoefsCore(R = 1, T = 30, density = 0.1, eff_size = 2, d = 12),
+		genCoefsCore(G = 1, T = 30, density = 0.1, eff_size = 2, d = 12),
 		regexp = "R must be a numeric value greater than or equal to 2"
 	)
 })
@@ -209,32 +209,32 @@ test_that("genCoefsCore errors when R < 2", {
 test_that("genCoefsCore errors when R > T - 1", {
 	# For example, if T = 30 then R must be <= 29.
 	expect_error(
-		genCoefsCore(R = 30, T = 30, density = 0.1, eff_size = 2, d = 12),
+		genCoefsCore(G = 30, T = 30, density = 0.1, eff_size = 2, d = 12),
 		regexp = "R must be less than or equal to T - 1"
 	)
 })
 
 test_that("genCoefsCore errors when d is negative", {
 	expect_error(
-		genCoefsCore(R = 5, T = 30, density = 0.1, eff_size = 2, d = -1),
+		genCoefsCore(G = 5, T = 30, density = 0.1, eff_size = 2, d = -1),
 		regexp = "d must be a non-negative numeric value"
 	)
 })
 
 test_that("genCoefsCore errors when density is not between 0 and 1", {
 	expect_error(
-		genCoefsCore(R = 5, T = 30, density = -0.1, eff_size = 2, d = 12),
+		genCoefsCore(G = 5, T = 30, density = -0.1, eff_size = 2, d = 12),
 		regexp = "density must be"
 	)
 	expect_error(
-		genCoefsCore(R = 5, T = 30, density = 1.1, eff_size = 2, d = 12),
+		genCoefsCore(G = 5, T = 30, density = 1.1, eff_size = 2, d = 12),
 		regexp = "density must be"
 	)
 })
 
 test_that("genCoefsCore errors when eff_size is not numeric", {
 	expect_error(
-		genCoefsCore(R = 5, T = 30, density = 0.1, eff_size = "2", d = 12),
+		genCoefsCore(G = 5, T = 30, density = 0.1, eff_size = "2", d = 12),
 		regexp = "eff_size must be a numeric value"
 	)
 })

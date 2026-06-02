@@ -101,7 +101,7 @@ test_that("non-character, non-formula input is rejected with class info", {
 # Build a small simulated panel WITH d > 0 so covs actually matters.
 .covs_setup <- function() {
 	set.seed(2026)
-	coefs <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+	coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
 	dat <- simulateData(coefs, N = 60, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
 	# simulateData() produces pdata with covariate columns named "X1", "X2".
 	# Extract for direct fits.

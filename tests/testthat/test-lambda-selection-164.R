@@ -37,7 +37,7 @@ library(fetwfe)
 
 .lambda_sel_fixture <- function(seed = 2026, N = 120) {
 	sim_coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 5,
 		d = 2,
 		density = 0.5,
@@ -334,7 +334,7 @@ test_that("CV path has |bias| < 0.10 on a representative DGP (smoke test)", {
 	skip_on_cran()
 
 	template <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 5,
 		d = 2,
 		density = 0.5,

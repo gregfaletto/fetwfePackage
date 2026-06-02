@@ -86,7 +86,7 @@ test_that("simulateData is reproducible with same seed", {
 	sig_eps_c_sq <- 5
 
 	coefs_obj <- genCoefs(
-		R = R_val,
+		G = R_val,
 		T = T_val,
 		d = d_val,
 		density = 0.1,
@@ -155,7 +155,7 @@ test_that("simulateData errors when beta has wrong length", {
 # ------------------------------------------------------------------------------
 test_that("Output from simulateData can be piped into fetwfeWithSimulatedData", {
 	coefs_obj <- genCoefs(
-		R = 5,
+		G = 5,
 		T = 6,
 		d = 4,
 		density = 0.1,
@@ -175,7 +175,7 @@ test_that("Output from simulateData can be piped into fetwfeWithSimulatedData", 
 # ------------------------------------------------------------------------------
 test_that("Output from simulateData can be piped into fetwfeWithSimulatedData", {
 	coefs_obj <- genCoefs(
-		R = 5,
+		G = 5,
 		T = 6,
 		d = 0,
 		density = 0.1,
@@ -204,7 +204,7 @@ test_that("Covariates are uniformly bounded when distribution = 'uniform'", {
 	# For gen_ints = FALSE, expected p = R + (T-1) + d + num_treats.
 	p_expected <- compute_p_int(T_val, R_val, d_val)
 	coefs_obj <- genCoefs(
-		R = R_val,
+		G = R_val,
 		T = T_val,
 		d = d_val,
 		density = 0.1,
@@ -246,7 +246,7 @@ test_that("Covariates are constant over time within each unit", {
 	p_expected <- compute_p_int(T_val, R_val, d_val)
 
 	coefs_obj <- genCoefs(
-		R = R_val,
+		G = R_val,
 		T = T_val,
 		d = d_val,
 		density = 0.1,
@@ -360,7 +360,7 @@ test_that("simulateData errors when N < R", {
 # ------------------------------------------------------------------------------
 test_that("print.FETWFE_simulated summarizes instead of dumping (#84 item 13)", {
 	coefs <- genCoefs(
-		R = 2,
+		G = 2,
 		T = 5,
 		d = 2,
 		density = 0.5,
@@ -378,7 +378,7 @@ test_that("print.FETWFE_simulated summarizes instead of dumping (#84 item 13)", 
 	# Names the dimensions.
 	expect_true(any(grepl("N = 20", out)))
 	expect_true(any(grepl("T = 5", out)))
-	expect_true(any(grepl("R = 2", out)))
+	expect_true(any(grepl("G = 2", out)))
 	expect_true(any(grepl("d = 2", out)))
 
 	# Names cohort sizes.
@@ -402,7 +402,7 @@ test_that("print.FETWFE_simulated summarizes instead of dumping (#84 item 13)", 
 # ------------------------------------------------------------------------------
 test_that("simulateData accepts sig_eps_c_sq = 0 (#109 Case 2)", {
 	coefs <- genCoefs(
-		R = 2,
+		G = 2,
 		T = 5,
 		d = 2,
 		density = 0.5,
@@ -420,7 +420,7 @@ test_that("simulateData accepts sig_eps_c_sq = 0 (#109 Case 2)", {
 
 test_that("simulateData still rejects negative sig_eps_c_sq (#109 Case 2)", {
 	coefs <- genCoefs(
-		R = 2,
+		G = 2,
 		T = 5,
 		d = 2,
 		density = 0.5,
