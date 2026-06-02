@@ -17,6 +17,16 @@
   will be removed in a future release; pass `G` (and read `$G`) to silence the
   warning and adopt the new name (#41).
 
+### Bug fixes
+
+- Replaced three non-ASCII characters (`Ψ`, `′`, `→`) in the roxygen
+  documentation of `eventStudy()` and `tidy.eventStudy()` with LaTeX-safe
+  `\eqn{}` equivalents, so the PDF reference manual builds. These characters
+  were introduced with the simultaneous-CI / tight-Gaussianity documentation
+  in 1.15.0–1.16.0 and would have failed `R CMD check`'s PDF-manual build at
+  the next CRAN submission (`devtools::check()` runs with `--no-manual`, so
+  the per-PR checks did not surface them).
+
 ## Version 1.16.0 (2026-06-01)
 
 ### Changed defaults

@@ -435,7 +435,7 @@ tidy.betwfe <- function(
 #'
 #' Returns a `broom`-style tidy data frame for the output of
 #' [eventStudy()]. Renames existing columns to broom conventions
-#' (`se` → `std.error`, `p_value` → `p.value`) and adds a `term`
+#' (`se` \eqn{\to} `std.error`, `p_value` \eqn{\to} `p.value`) and adds a `term`
 #' column (`"e<event_time>"`) plus a `statistic` column
 #' (`estimate / std.error`) so the schema matches `tidy.<estimator>()`
 #' for downstream `bind_rows()` consumers.
