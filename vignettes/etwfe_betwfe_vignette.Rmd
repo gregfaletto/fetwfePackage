@@ -43,7 +43,7 @@ We use the `genCoefs()` + `simulateData()` pipeline (the same approach as the si
 
 ```{r}
 sim_coefs <- genCoefs(
-  R         = 3,
+  G         = 3,
   T         = 6,
   d         = 2,
   density   = 0.5,
@@ -110,7 +110,7 @@ The examples above use a panel with `d = 2` time-invariant covariates. The packa
 
 ```{r}
 sim_coefs_d0 <- genCoefs(
-  R         = 3,
+  G         = 3,
   T         = 6,
   d         = 0,
   density   = 0.5,

@@ -62,7 +62,7 @@ per paper Eq. `conf.int.form` (line 1259). The same combined variance backs the 
 
 Assumption (Ψ-IF) requires the cohort-weight estimator $\widehat{\boldsymbol{\psi}}_N$ to admit an i.i.d.-across-$i$ unit-level influence-function representation. It is satisfied by
 
-* **Cohort sample proportions** $\widehat{\pi}_r = N_r / N$ --- the package's *default* propensity-score estimator. So out of the box the tight Gaussian CI is asymptotically exact.
+* **Cohort sample proportions** $\widehat{\pi}_g = N_g / N$ --- the package's *default* propensity-score estimator. So out of the box the tight Gaussian CI is asymptotically exact.
 * **Multinomial-logit MLE** for $P(W = r \mid \boldsymbol{X})$.
 * **Any GLM** fit by maximum likelihood on $W \mid \boldsymbol{X}$.
 * **Kernel or series regression** of $\mathbf{1}\{W = r\}$ on $\boldsymbol{X}$.
@@ -97,7 +97,7 @@ $$
 \frac{\sigma_\varepsilon^2}{NT}\;\psi_{\text{att}}^\top \widehat G^{-1} \psi_{\text{att}},
 $$
 
-where $\widehat G^{-1}$ is the Gram inverse on the bridge-selected support and $\psi_{\text{att}}$ encodes the cohort-weighted ATT contrast. The per-cohort SEs (`catt_ses`) have the same form with a cohort selector $\psi_r$ in place of $\psi_{\text{att}}$. This piece is stored on the fitted object as `result$internal$variance_components$att_var_1`; the paper-notation per-unit-scaled version is `result$internal$variance_components$V_1` (with `V_1 = N * att_var_1`).
+where $\widehat G^{-1}$ is the Gram inverse on the bridge-selected support and $\psi_{\text{att}}$ encodes the cohort-weighted ATT contrast. The per-cohort SEs (`catt_ses`) have the same form with a cohort selector $\psi_g$ in place of $\psi_{\text{att}}$. This piece is stored on the fitted object as `result$internal$variance_components$att_var_1`; the paper-notation per-unit-scaled version is `result$internal$variance_components$V_1` (with `V_1 = N * att_var_1`).
 
 ## 2.2 $V_2$: propensity-score variance
 
@@ -146,7 +146,7 @@ A worked comparison on a clean F1-conforming panel:
 
 ```{r}
 set.seed(2026)
-sim_coefs <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+sim_coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
 sim_data  <- simulateData(
   sim_coefs,
   N = 120,
@@ -214,7 +214,7 @@ V_{\text{CR}}
 (X_{\widehat{S}}^\top X_{\widehat{S}})^{-1},
 $$
 
-with units $i = 1, \dots, N$ as clusters and an $N/(N-1)$ small-sample adjustment (matching `sandwich::vcovCL(cadjust = TRUE, type = "HC0")`). The CATT SE for cohort $r$ is $\sqrt{\psi_r^\top V_{\text{CR}} \psi_r}$ (using a zero-padded $\psi_r$ on the full selected support); the ATT regression-coefficient variance is $\psi_{\text{att}}^\top V_{\text{CR}} \psi_{\text{att}}$, replacing $V_1$ above. The propensity-score piece $V_2$ is unchanged because it depends on empirical cohort proportions, not regression residuals.
+with units $i = 1, \dots, N$ as clusters and an $N/(N-1)$ small-sample adjustment (matching `sandwich::vcovCL(cadjust = TRUE, type = "HC0")`). The CATT SE for cohort $g$ is $\sqrt{\psi_g^\top V_{\text{CR}} \psi_g}$ (using a zero-padded $\psi_g$ on the full selected support); the ATT regression-coefficient variance is $\psi_{\text{att}}^\top V_{\text{CR}} \psi_{\text{att}}$, replacing $V_1$ above. The propensity-score piece $V_2$ is unchanged because it depends on empirical cohort proportions, not regression residuals.
 
 For FETWFE and BETWFE, `se_type = "cluster"` is only meaningful when `q < 1` (the bridge oracle property is required); for `q >= 1` the cluster path returns `NA` just like the default. ETWFE and `twfeCovs` have no `q` argument, so the cluster path always runs when the Gram matrix is invertible.
 
@@ -317,7 +317,7 @@ Because the tidiers pass the object's bounds straight through, every CI surface 
 
 # 7. Selection consistency as an implicit zero-effect test
 
-A question applied users ask constantly is: *is this cohort's treatment effect distinguishable from zero --- and can I conclude that it actually **is** zero?* For `fetwfe()` (and `betwfe()`), the answer is built into the estimator. The bridge penalty's *restriction selection consistency* (Faletto 2025, Theorem 6.2) makes the `selected` flag on `catt_df` an **implicit hypothesis test** of $H_0: \tau_{\text{ATT}}(r) = 0$, for free, with no extra computation. The mapping is:
+A question applied users ask constantly is: *is this cohort's treatment effect distinguishable from zero --- and can I conclude that it actually **is** zero?* For `fetwfe()` (and `betwfe()`), the answer is built into the estimator. The bridge penalty's *restriction selection consistency* (Faletto 2025, Theorem 6.2) makes the `selected` flag on `catt_df` an **implicit hypothesis test** of $H_0: \tau_{\text{ATT}}(g) = 0$, for free, with no extra computation. The mapping is:
 
 * `selected = TRUE` (estimate $\neq 0$) is the asymptotic analogue of **reject $H_0$**: the effect is nonzero.
 * `selected = FALSE` (estimate exactly $0$) is the asymptotic analogue of **fail to reject $H_0$** --- and, under Theorem 6.2, it is the *stronger* statement that the truth is zero with probability tending to one.
@@ -326,7 +326,7 @@ The conclusion for a selected-out cohort is delivered by the `selected` flag, **
 
 ## Why this is stronger than a confidence interval on an unregularized estimator
 
-For an unregularized estimator --- OLS, or plain `etwfe()` --- the coefficient estimate $\hat\beta$ is a continuous random variable, so $\hat\beta = 0$ *exactly* is a **measure-zero event**: it essentially never happens, and would carry no information about the truth if it did. The only zero-effect inference such an estimator offers is "the confidence interval contains $0$," i.e. *fail to reject* --- never *accept*. Selection consistency changes the picture qualitatively. Under Theorem 6.2, $\hat\beta_j = 0$ exactly with probability $\to 1$ when the truth is zero, and $\hat\beta_j \neq 0$ with probability $\to 1$ when the truth is nonzero, so observing $\hat\beta_j = 0$ *is* informative. The paper states the consequence directly: if $\tau_{\text{ATT}}(r,t) = 0$ then $\lim_{N\to\infty} P(\hat\tau_{\text{ATT}}(r,t) = 0) = 1$, which it calls "stronger than convergence in probability to $0$" (Faletto 2025, around the statement of Theorem 6.2).
+For an unregularized estimator --- OLS, or plain `etwfe()` --- the coefficient estimate $\hat\beta$ is a continuous random variable, so $\hat\beta = 0$ *exactly* is a **measure-zero event**: it essentially never happens, and would carry no information about the truth if it did. The only zero-effect inference such an estimator offers is "the confidence interval contains $0$," i.e. *fail to reject* --- never *accept*. Selection consistency changes the picture qualitatively. Under Theorem 6.2, $\hat\beta_j = 0$ exactly with probability $\to 1$ when the truth is zero, and $\hat\beta_j \neq 0$ with probability $\to 1$ when the truth is nonzero, so observing $\hat\beta_j = 0$ *is* informative. The paper states the consequence directly: if $\tau_{\text{ATT}}(g,t) = 0$ then $\lim_{N\to\infty} P(\hat\tau_{\text{ATT}}(g,t) = 0) = 1$, which it calls "stronger than convergence in probability to $0$" (Faletto 2025, around the statement of Theorem 6.2).
 
 It is worth being precise about *which* part of the theory delivers the test, because the paper is careful here. A conventional Wald statistic **cannot** test the zero null in this setting: when the relevant effect is truly zero the statistic is not asymptotically normal (it converges in probability to $0$ even after scaling by $\sqrt{N}$), so there is no valid Wald test of $H_0: \tau = 0$ to construct. That is *precisely why* the right tool is selection consistency and the `selected` flag, rather than a Wald statistic on the point estimate. The complementary half of the theory backs the effects the estimator *retains*: when an effect is truly nonzero, FETWFE is $\sqrt{N}$-consistent and asymptotically Gaussian on the selected support (the oracle property, Theorem 6.3), with the practical Wald confidence intervals and p-values of Theorem 6.4 --- the same machinery documented in Sections 1--2. So `selected = TRUE` cohorts come with the usual valid CIs and finite p-values, while `selected = FALSE` cohorts carry the stronger, selection-based zero-effect conclusion.
 
@@ -341,7 +341,7 @@ The cleanest way to see the implicit test is on simulated data where the truth i
 ```{r implicit-test-demo, message = FALSE}
 # Known truth: cohort 3 (the middle treated cohort) has a true effect of
 # exactly zero; cohorts 2 and 4 are nonzero.
-coefs <- genCoefs(R = 3, T = 6, d = 2, density = 0.2, eff_size = 2, seed = 3)
+coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.2, eff_size = 2, seed = 3)
 getTes(coefs)$actual_cohort_tes
 
 dat <- simulateData(coefs, N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
