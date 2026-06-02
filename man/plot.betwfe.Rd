@@ -20,9 +20,20 @@ interval error bars.}
 
 \item{alpha}{Numeric; overrides the fit's alpha for CI computation.
 \code{NULL} (default) uses the fit's alpha (so 95\% CIs when the fit's
-alpha is 0.05). For the \code{"event_study"} view, this is forwarded to
-\code{\link[=eventStudy]{eventStudy()}}; for the \code{"catt"} view, this triggers a recomputation
-of \code{ci_low} / \code{ci_high} from \verb{estimate +/- qnorm(1 - alpha/2) * se}.}
+alpha is 0.05). With the default \code{NULL}, both views show the fit's
+\code{ci_type} band (simultaneous by default): the \code{"catt"} view reads the
+bounds stored in \code{catt_df}, and the \code{"event_study"} view re-derives them
+via \code{\link[=eventStudy]{eventStudy()}} (which inherits the fit's \code{ci_type}).
+\strong{Asymmetry under an explicit \code{alpha}:} for the \code{"event_study"} view, the
+explicit alpha is forwarded to \code{\link[=eventStudy]{eventStudy()}}, which re-runs the joint
+machinery and so still produces a \emph{simultaneous} band at that alpha (when
+the fit's \code{ci_type} is \code{"simultaneous"}); for the \code{"catt"} view, an
+explicit alpha recomputes \code{ci_low} / \code{ci_high} from
+\verb{estimate +/- qnorm(1 - alpha/2) * se}, i.e. a \emph{pointwise} band at that
+alpha (the stored simultaneous bounds are at the fit's alpha and are not
+re-derived at a new alpha for the catt view). To plot simultaneous catt
+bands at a different alpha, refit at that alpha or call
+\code{\link[=simultaneousCIs]{simultaneousCIs()}} directly.}
 
 \item{...}{Currently unused; reserved for future arguments.}
 }

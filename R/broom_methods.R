@@ -24,11 +24,15 @@ NULL
 #' follow broom conventions: `term`, `estimate`, `std.error`, `statistic`,
 #' `p.value`, and (when `conf.int = TRUE`) `conf.low` / `conf.high`. When
 #' `include_selected = TRUE` (FETWFE / BETWFE), a logical `selected` column
-#' is appended carrying the per-row selection status.
+#' is appended carrying the per-row selection status. The cohort-row CI
+#' columns pass through the fit's `catt_df` bounds (reflecting `ci_type`,
+#' #197); the overall-ATT row's CI is the scalar Wald interval at `conf.level`.
 #'
 #' @param x A fitted object of class `"fetwfe"`, `"etwfe"`, or `"betwfe"`.
 #' @param conf.int Logical; include `conf.low` / `conf.high` columns.
-#' @param conf.level Numeric in (0, 1); confidence level for the CI columns.
+#' @param conf.level Numeric in (0, 1); confidence level for the overall-ATT
+#'   row's CI only (the cohort rows pass through the fit-time `catt_df`
+#'   bounds).
 #' @param include_selected Logical; include the `selected` column.
 #' @return A data frame with `R + 1` rows.
 #' @keywords internal
@@ -85,10 +89,19 @@ NULL
 	)
 
 	if (conf.int) {
+		# Overall-ATT row (K = 1) stays the scalar Wald interval at
+		# `conf.level` (pointwise == simultaneous for a scalar).
 		att_lo <- att_estimate - z * att_se
 		att_hi <- att_estimate + z * att_se
-		cohort_lo <- cohort_estimates - z * cohort_ses
-		cohort_hi <- cohort_estimates + z * cohort_ses
+		# Cohort rows pass through `catt_df`'s stored bounds (#197, Option B),
+		# so they reflect the fit's `ci_type` (simultaneous by default). `catt`
+		# is the SAME post-sort frame `cohort_estimates` / `cohort_ses` came
+		# from, so `catt$ci_low` / `catt$ci_high` are already in `cohort_terms`
+		# order. This is a pass-through SIMPLIFICATION, not a pointwise
+		# recompute: `conf.level` no longer governs the cohort-row CI columns
+		# (they carry the fit-time alpha + ci_type); see the roxygen note.
+		cohort_lo <- catt$ci_low
+		cohort_hi <- catt$ci_high
 		out$conf.low <- c(att_lo, cohort_lo)
 		out$conf.high <- c(att_hi, cohort_hi)
 	}
@@ -316,12 +329,24 @@ NULL
 #' Cohorts that the bridge penalty zeroed out (`selected = FALSE`) carry
 #' `NA` for `std.error` / `statistic` / `p.value`.
 #'
+#' The cohort-row `conf.low` / `conf.high` columns pass through the fit's
+#' stored `catt_df` bounds, so they reflect the fit's `ci_type` (#197):
+#' simultaneous (family-wise) by default, or pointwise when the fit used
+#' `ci_type = "pointwise"`. They are NOT recomputed from `conf.level` (see the
+#' `conf.level` note). The overall-ATT row (row 1) is a scalar, so its CI is
+#' the pointwise Wald interval at `conf.level` (pointwise == simultaneous for a
+#' single effect).
+#'
 #' @param x An object of class `"fetwfe"` returned by [fetwfe()].
 #' @param conf.int Logical. If `TRUE` (default), `conf.low` and `conf.high`
 #'   columns are included.
-#' @param conf.level Numeric in (0, 1). Confidence level for the CI columns.
-#'   Defaults to `1 - x$alpha` (faithful to the alpha used at fit time;
-#'   deviates from `broom::tidy.lm`'s `0.95` default by design).
+#' @param conf.level Numeric in (0, 1). Applies only to the overall-ATT row
+#'   (row 1), whose CI is recomputed at this level; defaults to `1 - x$alpha`
+#'   (faithful to the alpha used at fit time; deviates from `broom::tidy.lm`'s
+#'   `0.95` default by design). The cohort rows pass through the fit-time
+#'   `catt_df` bounds (reflecting the fit's `ci_type` and the fit-time alpha)
+#'   and are NOT recomputed at `conf.level` (#197) --- mirroring
+#'   [tidy.cohortStudy()]'s stored-bounds behavior.
 #' @param ... Unused; present for S3 compatibility.
 #' @return A data frame with `R + 1` rows and columns `term`, `estimate`,
 #'   `std.error`, `statistic`, `p.value`, optionally `conf.low` /
@@ -351,7 +376,10 @@ tidy.fetwfe <- function(
 #'
 #' @param x An object of class `"etwfe"` returned by [etwfe()].
 #' @param conf.int Logical; include CI columns.
-#' @param conf.level Numeric in (0, 1); defaults to `1 - x$alpha`.
+#' @param conf.level Numeric in (0, 1); defaults to `1 - x$alpha`. Applies only
+#'   to the overall-ATT row; the cohort rows pass through the fit-time
+#'   `catt_df` bounds (reflecting the fit's `ci_type`) and are not recomputed
+#'   at `conf.level` (#197). See [tidy.fetwfe()].
 #' @param ... Unused.
 #' @return A data frame with `R + 1` rows.
 #' @examples
@@ -379,7 +407,10 @@ tidy.etwfe <- function(
 #'
 #' @param x An object of class `"betwfe"` returned by [betwfe()].
 #' @param conf.int Logical; include CI columns.
-#' @param conf.level Numeric in (0, 1); defaults to `1 - x$alpha`.
+#' @param conf.level Numeric in (0, 1); defaults to `1 - x$alpha`. Applies only
+#'   to the overall-ATT row; the cohort rows pass through the fit-time
+#'   `catt_df` bounds (reflecting the fit's `ci_type`) and are not recomputed
+#'   at `conf.level` (#197). See [tidy.fetwfe()].
 #' @param ... Unused.
 #' @return A data frame with `R + 1` rows.
 #' @examples
@@ -409,20 +440,25 @@ tidy.betwfe <- function(
 #' (`estimate / std.error`) so the schema matches `tidy.<estimator>()`
 #' for downstream `bind_rows()` consumers.
 #'
-#' The `eventStudy()` output stores Wald CIs at the alpha passed at
-#' computation time. When `conf.int = TRUE` (the default), `conf.low` /
-#' `conf.high` are recomputed from `estimate` and `std.error` at the
-#' supplied `conf.level`, which can therefore differ from the
-#' computation-time alpha. When `conf.int = FALSE`, the CI columns are
-#' omitted.
+#' The `eventStudy()` output stores its confidence-interval bounds (`ci_low` /
+#' `ci_high`), which reflect the fit's `ci_type` (#197): simultaneous
+#' (family-wise, uniform) by default, or pointwise when the fit used
+#' `ci_type = "pointwise"`. When `conf.int = TRUE` (the default), `conf.low` /
+#' `conf.high` PASS THROUGH those stored bounds rather than recomputing from
+#' `estimate +/- z * se` --- so the tidied event-study CIs agree with
+#' `print` / `summary` / `plot` and with [simultaneousCIs()] under the default.
+#' When `conf.int = FALSE`, the CI columns are omitted. (Degenerate event times
+#' carry `NA` bounds under both `ci_type` settings.)
 #'
 #' @param x An object of class `"eventStudy"` returned by
 #'   [eventStudy()].
 #' @param conf.int Logical; include `conf.low` / `conf.high` columns.
-#' @param conf.level Numeric in (0, 1). Confidence level for the CI
-#'   columns; defaults to `0.95` (`eventStudy()` does not store the
-#'   alpha it was called with, so there is no fitted-object value to
-#'   default to).
+#' @param conf.level Numeric in (0, 1). Retained for `broom`-convention parity
+#'   (default `0.95`) but no longer recomputes the event-study CIs: as of
+#'   version 1.16.0 (#197) the `conf.low` / `conf.high` columns pass through the
+#'   `eventStudy` object's stored `ci_low` / `ci_high` (reflecting the fit's
+#'   `ci_type`). To change the confidence level, recompute `eventStudy(fit,
+#'   alpha = ...)` at the desired alpha first.
 #' @param ... Unused.
 #' @return A data frame with one row per event-time and columns `term`,
 #'   `event_time`, `n_cohorts`, `estimate`, `std.error`, `statistic`,
@@ -448,9 +484,18 @@ tidy.eventStudy <- function(
 	# "arguments imply differing number of rows" from `data.frame()` when
 	# `x$<col>` returns NULL on an absent column. Parallels the guard added
 	# to `tidy.cohortStudy()` in PR #150. The CI columns `ci_low` / `ci_high`
-	# are NOT in the required list — this method recomputes CIs from
-	# `estimate +/- z * se` rather than reading them from the input.
-	required <- c("event_time", "n_cohorts", "estimate", "se", "p_value")
+	# ARE required now (#197, Option B): the method passes them through
+	# (reflecting the fit's `ci_type`) rather than recomputing from
+	# `estimate +/- z * se`.
+	required <- c(
+		"event_time",
+		"n_cohorts",
+		"estimate",
+		"se",
+		"ci_low",
+		"ci_high",
+		"p_value"
+	)
 	missing_cols <- setdiff(required, names(x))
 	if (length(missing_cols) > 0L) {
 		stop(
@@ -477,9 +522,12 @@ tidy.eventStudy <- function(
 		stringsAsFactors = FALSE
 	)
 	if (conf.int) {
-		z <- stats::qnorm(1 - (1 - conf.level) / 2)
-		out$conf.low <- x$estimate - z * x$se
-		out$conf.high <- x$estimate + z * x$se
+		# Pass through the eventStudy object's stored bounds (#197, Option B),
+		# which are simultaneous-or-pointwise per the fit's `ci_type`. This is
+		# a SIMPLIFICATION of the prior `estimate +/- z * se` recompute;
+		# `conf.level` no longer governs these columns (see the roxygen note).
+		out$conf.low <- x$ci_low
+		out$conf.high <- x$ci_high
 	}
 	out
 }

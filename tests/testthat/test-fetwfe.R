@@ -991,8 +991,11 @@ test_that("order_by = 'pvalue' sorts CATT by ascending p_value with NAs last", {
 
 	output_lines <- capture.output(print(res, order_by = "pvalue"))
 
+	# Match the CATT block header regardless of the band-type label suffix
+	# added in #197 ("... (CATT) [simultaneous 95% CI]:"). This test locks
+	# the cohort SORT order, not the header text.
 	header_idx <- grep(
-		"Cohort Average Treatment Effects \\(CATT\\):",
+		"Cohort Average Treatment Effects \\(CATT\\)",
 		output_lines
 	)
 	expect_length(header_idx, 1)

@@ -12,10 +12,11 @@
 
 \item{conf.int}{Logical; include \code{conf.low} / \code{conf.high} columns.}
 
-\item{conf.level}{Numeric in (0, 1). Confidence level for the CI
-columns; defaults to \code{0.95} (\code{eventStudy()} does not store the
-alpha it was called with, so there is no fitted-object value to
-default to).}
+\item{conf.level}{Numeric in (0, 1). Retained for \code{broom}-convention parity
+(default \code{0.95}) but no longer recomputes the event-study CIs: as of
+version 1.16.0 (#197) the \code{conf.low} / \code{conf.high} columns pass through the
+\code{eventStudy} object's stored \code{ci_low} / \code{ci_high} (reflecting the fit's
+\code{ci_type}). To change the confidence level, recompute \code{eventStudy(fit, alpha = ...)} at the desired alpha first.}
 
 \item{...}{Unused.}
 }
@@ -33,12 +34,15 @@ column (\code{"e<event_time>"}) plus a \code{statistic} column
 for downstream \code{bind_rows()} consumers.
 }
 \details{
-The \code{eventStudy()} output stores Wald CIs at the alpha passed at
-computation time. When \code{conf.int = TRUE} (the default), \code{conf.low} /
-\code{conf.high} are recomputed from \code{estimate} and \code{std.error} at the
-supplied \code{conf.level}, which can therefore differ from the
-computation-time alpha. When \code{conf.int = FALSE}, the CI columns are
-omitted.
+The \code{eventStudy()} output stores its confidence-interval bounds (\code{ci_low} /
+\code{ci_high}), which reflect the fit's \code{ci_type} (#197): simultaneous
+(family-wise, uniform) by default, or pointwise when the fit used
+\code{ci_type = "pointwise"}. When \code{conf.int = TRUE} (the default), \code{conf.low} /
+\code{conf.high} PASS THROUGH those stored bounds rather than recomputing from
+\verb{estimate +/- z * se} --- so the tidied event-study CIs agree with
+\code{print} / \code{summary} / \code{plot} and with \code{\link[=simultaneousCIs]{simultaneousCIs()}} under the default.
+When \code{conf.int = FALSE}, the CI columns are omitted. (Degenerate event times
+carry \code{NA} bounds under both \code{ci_type} settings.)
 }
 \examples{
 \dontrun{

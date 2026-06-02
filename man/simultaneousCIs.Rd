@@ -95,10 +95,13 @@ field is set to the Bonferroni value in this branch.
 \strong{Numerical integration.} The critical value is computed via
 \code{mvtnorm::qmvnorm(..., algorithm = mvtnorm::GenzBretz())} (mvtnorm's default
 quasi-Monte Carlo integrator; sub-second through \code{K} up to about 100, so no
-\code{K} cap is of practical concern for FETWFE families). \code{mvtnorm} is in
-\code{Suggests}; the function requires it only when \code{K > 1} and
+\code{K} cap is of practical concern for FETWFE families). \code{mvtnorm} is an
+\code{Imports} dependency (as of version 1.16.0, when simultaneous bands became
+the default reported confidence interval; see the \code{ci_type} argument of
+\code{\link[=fetwfe]{fetwfe()}}). The function uses it only when \code{K > 1} and
 \code{se_type != "conservative"} (the \code{K = 1} and conservative paths bypass the
-dependency), and emits an actionable \code{stop()} if it is not installed.
+dependency), and retains a defensive \code{stop()} with an actionable message if
+it is somehow unavailable (e.g., a corrupted install).
 
 \strong{Determinism contract.} The function is deterministic in its inputs: the
 same fit plus the same \code{family}, \code{alpha}, and \code{contrasts} always produces

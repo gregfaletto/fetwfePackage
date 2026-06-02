@@ -11,7 +11,10 @@
 
 \item{conf.int}{Logical; include CI columns.}
 
-\item{conf.level}{Numeric in (0, 1); defaults to \code{1 - x$alpha}.}
+\item{conf.level}{Numeric in (0, 1); defaults to \code{1 - x$alpha}. Applies only
+to the overall-ATT row; the cohort rows pass through the fit-time
+\code{catt_df} bounds (reflecting the fit's \code{ci_type}) and are not recomputed
+at \code{conf.level} (#197). See \code{\link[=tidy.fetwfe]{tidy.fetwfe()}}.}
 
 \item{...}{Unused.}
 }

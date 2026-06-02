@@ -52,9 +52,20 @@ utils::globalVariables(c(
 #'   interval error bars.
 #' @param alpha Numeric; overrides the fit's alpha for CI computation.
 #'   `NULL` (default) uses the fit's alpha (so 95% CIs when the fit's
-#'   alpha is 0.05). For the `"event_study"` view, this is forwarded to
-#'   [eventStudy()]; for the `"catt"` view, this triggers a recomputation
-#'   of `ci_low` / `ci_high` from `estimate +/- qnorm(1 - alpha/2) * se`.
+#'   alpha is 0.05). With the default `NULL`, both views show the fit's
+#'   `ci_type` band (simultaneous by default): the `"catt"` view reads the
+#'   bounds stored in `catt_df`, and the `"event_study"` view re-derives them
+#'   via [eventStudy()] (which inherits the fit's `ci_type`).
+#'   **Asymmetry under an explicit `alpha`:** for the `"event_study"` view, the
+#'   explicit alpha is forwarded to [eventStudy()], which re-runs the joint
+#'   machinery and so still produces a *simultaneous* band at that alpha (when
+#'   the fit's `ci_type` is `"simultaneous"`); for the `"catt"` view, an
+#'   explicit alpha recomputes `ci_low` / `ci_high` from
+#'   `estimate +/- qnorm(1 - alpha/2) * se`, i.e. a *pointwise* band at that
+#'   alpha (the stored simultaneous bounds are at the fit's alpha and are not
+#'   re-derived at a new alpha for the catt view). To plot simultaneous catt
+#'   bands at a different alpha, refit at that alpha or call
+#'   [simultaneousCIs()] directly.
 #' @param ... Currently unused; reserved for future arguments.
 #'
 #' @return A `ggplot` object. Users can customize further via standard

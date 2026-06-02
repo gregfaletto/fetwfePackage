@@ -1,5 +1,33 @@
 # NEWS
 
+## Version 1.16.0 (2026-06-01)
+
+### Changed defaults
+
+- Behavior change: the default confidence-interval bounds reported for
+  cohort-specific ATTs (`catt_df$ci_low` / `catt_df$ci_high`, also surfaced by
+  `cohortStudy()` and `broom::tidy()`) and for event-study effects
+  (`eventStudy()`, shown in `print` / `summary` / `plot` and surfaced by
+  `broom::tidy()`) are now **simultaneous (family-wise, uniform) bands** rather
+  than per-effect pointwise Wald intervals (#197). Each family's band now
+  covers all of its effects jointly with probability `1 - alpha`, matching the
+  default presentation of `did::aggte(cband = TRUE)` (which uses a multiplier
+  bootstrap; `fetwfe` uses the parametric `simultaneousCIs()` machinery added
+  in 1.15.0). A new fit-time argument
+  `ci_type = c("simultaneous", "pointwise")` (default `"simultaneous"`)
+  controls this; pass `ci_type = "pointwise"` to `fetwfe()` / `etwfe()` /
+  `betwfe()` / `twfeCovs()` to restore the exact pre-1.16.0 bounds everywhere
+  (the `broom::tidy()` outputs included). Only the interval bounds change:
+  standard errors, per-cohort p-values, selection flags, and the overall-ATT
+  confidence interval are identical under both settings.
+
+### Dependencies
+
+- `mvtnorm` moved from `Suggests` to `Imports`. Because simultaneous confidence
+  bands are now computed by default at fit time, `mvtnorm` is no longer
+  optional (a default whose output depended on whether a suggested package were
+  installed would not be reproducible).
+
 ## Version 1.15.1 (2026-06-01)
 
 ### Documentation

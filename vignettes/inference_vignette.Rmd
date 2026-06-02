@@ -287,9 +287,33 @@ The four available family options are `"event_study"` (one effect per post-treat
 
 The critical value is computed via `mvtnorm::qmvnorm(..., algorithm = mvtnorm::GenzBretz())` (mvtnorm's default quasi-Monte Carlo integrator), sub-second on a typical fit for any realistic FETWFE family (no `K` cap of practical concern). The function is deterministic in its inputs: the same fit plus the same family plus the same `alpha` plus the same `contrasts` produces the same critical value across calls. This is achieved by save/restoring the caller's `.Random.seed` and using a fixed internal seed immediately before the `qmvnorm()` call; the function does not mutate the caller's RNG state.
 
-The `mvtnorm` package is in `Suggests` (not `Imports`) --- `simultaneousCIs()` requires it only when called (and only when `K > 1` under the default variance). Install it with `install.packages("mvtnorm")` if you have not already. The `plot.simultaneous_cis` method additionally requires `ggplot2` (also in `Suggests`).
+As of version 1.16.0 the `mvtnorm` package is an `Imports` dependency (it ships with the package), because simultaneous bands are now computed by default at fit time --- see the `ci_type` subsection below. (In versions 1.15.x `mvtnorm` was in `Suggests` and only loaded when `simultaneousCIs()` was called.) The `plot.simultaneous_cis` method additionally requires `ggplot2`, which is in `Suggests`; install it with `install.packages("ggplot2")` if you have not already.
 
 The pattern matches `did::aggte(cband = TRUE)` from the Callaway-Sant'Anna `did` package, which computes simultaneous bands via the CCK (2013) multiplier bootstrap. Asymptotically the two critical values are identical under fixed-dim Gaussianity; the parametric `simultaneousCIs()` path here is deterministic and sub-second, whereas the multiplier-bootstrap path is stochastic and resampling-based.
+
+## Simultaneous bands are the default: the `ci_type` argument
+
+As of version 1.16.0, the confidence-interval bounds that `fetwfe()` / `etwfe()` / `betwfe()` / `twfeCovs()` *return and display* are simultaneous by default --- matching `did`'s `cband = TRUE` default. A new fit-time argument `ci_type = c("simultaneous", "pointwise")` controls this:
+
+* `ci_type = "simultaneous"` (the default) makes the returned `catt_df$ci_low` / `catt_df$ci_high` the **cohort-family** simultaneous bounds, and `eventStudy()`'s `ci_low` / `ci_high` the **event-study-family** simultaneous bounds --- the very bounds `simultaneousCIs(fit, family = "cohort")` / `simultaneousCIs(fit, family = "event_study")` return. `print()`, `summary()`, and `plot()` display these (labeled `[simultaneous 95% CI]`), and `broom::tidy()` (on the fit, on `eventStudy()`, and on `cohortStudy()`) surfaces them too.
+* `ci_type = "pointwise"` restores the pre-1.16.0 per-effect Wald intervals everywhere (the bounds you would get from `estimate ± qnorm(1 - alpha/2) * se`).
+
+Only the interval bounds change. The standard errors (`se`), per-cohort p-values (`p_value`), selection flags (`selected`), and the overall-ATT confidence interval (a single scalar, with no family and hence no widening) are **identical** under both settings --- the only difference is the critical-value multiplier (`qnorm(1 - alpha/2)` for pointwise vs the joint $c_{1-\alpha}$ for simultaneous).
+
+```{r}
+fit_sim <- fetwfeWithSimulatedData(sim_data) # ci_type = "simultaneous" (default)
+fit_pw <- fetwfeWithSimulatedData(sim_data, ci_type = "pointwise")
+
+# Same point estimates and SEs; only the bounds differ (simultaneous wider).
+cbind(
+  estimate = fit_sim$catt_df$estimate,
+  se = fit_sim$catt_df$se,
+  simul_width = fit_sim$catt_df$ci_high - fit_sim$catt_df$ci_low,
+  pointwise_width = fit_pw$catt_df$ci_high - fit_pw$catt_df$ci_low
+)
+```
+
+Because the tidiers pass the object's bounds straight through, every CI surface in the package agrees under the default: `broom::tidy(fit)`'s cohort rows, `summary(fit)`, `cohortStudy(fit)`, and `plot(fit, type = "catt")` all report the same simultaneous bounds. (The overall-ATT row of `broom::tidy(fit)` stays the scalar pointwise interval.) When standard errors are unavailable (`q >= 1` for the bridge estimators, or a rank-deficient design) the bounds are `NA` under both settings, and the fit still succeeds --- the simultaneous path degrades cleanly to the (`NA`) pointwise bounds rather than throwing an error.
 
 # 7. Selection consistency as an implicit zero-effect test
 

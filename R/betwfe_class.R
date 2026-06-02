@@ -119,6 +119,7 @@ print.summary.betwfe <- function(x, ...) {
 	"unit_var",
 	"treatment",
 	"covs",
+	"ci_type",
 	"internal"
 )
 
@@ -157,6 +158,7 @@ print.summary.betwfe <- function(x, ...) {
 	.check_selection_consistency(x, cls)
 	.check_p_value_na(x, cls)
 	.check_catt_df_shape(x, cls)
+	.check_ci_band_width(x, cls)
 	.check_cohort_probs(x, cls)
 	.check_lambda_monotonicity(x, cls)
 	.assert_contract(
