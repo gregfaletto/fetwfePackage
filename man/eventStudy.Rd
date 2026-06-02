@@ -60,16 +60,16 @@ SEs, or the cluster-robust sandwich under \code{se_type = "cluster"}), and
 \code{getSecondVarTermOLS} / \code{getSecondVarTermDataApp} machinery, with the
 multinomial Jacobian restricted to cohorts valid at event time \code{e}).
 Combined as \code{sqrt(var_1 + var_2)} by default (asymptotically exact
-under paper Theorem \code{te.asym.norm.thm}(c′) / Assumption (Ψ-IF), which
+under paper Theorem \code{te.asym.norm.thm}(\eqn{c'}) / Assumption (\eqn{\Psi}-IF), which
 the package's default cohort-sample-proportions estimator satisfies);
 the conservative Cauchy-Schwarz bound \verb{sqrt(var_1 + var_2 + 2 sqrt(var_1 * var_2))} is available via \code{se_type = "conservative"}
-(for users with non-(Ψ-IF) propensity-score estimators). When
+(for users with non-(\eqn{\Psi}-IF) propensity-score estimators). When
 \code{indep_counts} was supplied at fit time, the tight formula applies
 regardless of \code{se_type} (two-sample regime, Theorem (b)).
 }
 \examples{
 \dontrun{
-  coefs <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+  coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
   dat <- simulateData(coefs, N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
   res <- fetwfeWithSimulatedData(dat)
   eventStudy(res)

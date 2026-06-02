@@ -7,7 +7,7 @@
 #' Generates a random panel data set for simulation studies of the fused extended two-way fixed
 #' effects (FETWFE) estimator by taking an object of class  \code{"FETWFE_coefs"} (produced by
 #' \code{genCoefs()}) and using it to simulate data. The function creates a balanced panel
-#' with \eqn{N} units over \eqn{T} time periods, assigns treatment status across \eqn{R}
+#' with \eqn{N} units over \eqn{T} time periods, assigns treatment status across \eqn{G}
 #' treated cohorts (with equal marginal probabilities for treatment and non-treatment), and
 #' constructs a design matrix along with the corresponding outcome. The covariates are
 #' generated according to the specified \code{distribution}: by default, covariates are drawn
@@ -46,13 +46,16 @@
 #'   \item{first_inds}{A vector of indices indicating the first treatment effect for each treated
 #'         cohort.}
 #'   \item{N_UNTREATED}{The number of never-treated units.}
-#'   \item{assignments}{A vector of counts (of length \eqn{R+1}) indicating how many units fall into
-#'         the never-treated group and each of the \eqn{R} treated cohorts.}
+#'   \item{assignments}{A vector of counts (of length \eqn{G+1}) indicating how many units fall into
+#'         the never-treated group and each of the \eqn{G} treated cohorts.}
 #'   \item{indep_counts}{Independent cohort assignments (for auxiliary purposes).}
 #'   \item{p}{The number of columns in the design matrix \eqn{X}.}
 #'   \item{N}{Number of units.}
 #'   \item{T}{Number of time periods.}
-#'   \item{R}{Number of treated cohorts.}
+#'   \item{G}{Number of treated cohorts.}
+#'   \item{R}{Deprecated alias for \code{G}, retained for backward
+#'         compatibility; populated with the same value. Use \code{G}. Will be
+#'         removed in a future release.}
 #'   \item{d}{Number of covariates.}
 #'   \item{sig_eps_sq}{The idiosyncratic noise variance.}
 #'   \item{sig_eps_c_sq}{The unit-level noise variance.}
@@ -81,7 +84,7 @@
 #' @examples
 #' \dontrun{
 #'   # Generate coefficients
-#'   coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
+#'   coefs <- genCoefs(G = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
 #'
 #'   # Simulate data using the coefficients
 #'   sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5)
@@ -132,7 +135,7 @@ simulateData <- function(
 	sim_data <- simulateDataCore(
 		N = N,
 		T = T,
-		R = R,
+		G = R,
 		d = d,
 		sig_eps_sq = sig_eps_sq,
 		sig_eps_c_sq = sig_eps_c_sq,
@@ -162,6 +165,7 @@ simulateData <- function(
 		"p",
 		"N",
 		"T",
+		"G",
 		"R",
 		"d",
 		"sig_eps_sq",
@@ -204,7 +208,7 @@ simulateData <- function(
 #'
 #' @param N Integer. Number of units in the panel.
 #' @param T Integer. Number of time periods.
-#' @param R Integer. Number of treated cohorts (with treatment starting in periods 2 to T).
+#' @param G Integer. Number of treated cohorts (with treatment starting in periods 2 to T).
 #' @param d Integer. Number of time-invariant covariates.
 #' @param sig_eps_sq Numeric. Variance of the idiosyncratic (observation-level) noise.
 #' @param sig_eps_c_sq Numeric. Variance of the unit-level random effects.
@@ -214,12 +218,12 @@ simulateData <- function(
 #' on the value of \code{gen_ints}:
 #'   \itemize{
 #'     \item If \code{gen_ints = TRUE} and \code{d > 0}, the expected length is
-#'       \eqn{p = R + (T-1) + d + dR + d(T-1) + num\_treats + num\_treats \times d}, where
-#'       \eqn{num\_treats = T \times R - \frac{R(R+1)}{2}}.
+#'       \eqn{p = G + (T-1) + d + dG + d(T-1) + num\_treats + num\_treats \times d}, where
+#'       \eqn{num\_treats = T \times G - \frac{G(G+1)}{2}}.
 #'     \item If \code{gen_ints = TRUE} and \code{d = 0}, the expected length is
-#'       \eqn{p = R + (T-1) + num\_treats}.
+#'       \eqn{p = G + (T-1) + num\_treats}.
 #'     \item If \code{gen_ints = FALSE}, the expected length is
-#'       \eqn{p = R + (T-1) + d + num\_treats}.
+#'       \eqn{p = G + (T-1) + d + num\_treats}.
 #'   }
 #' @param seed (Optional) Integer. Seed for reproducibility.
 #' @param gen_ints Logical. If \code{TRUE}, generate the full design matrix with interactions;
@@ -240,6 +244,9 @@ simulateData <- function(
 #' @param assignment_coefs Optional list returned by
 #'   \code{.gen_assignment_coefs()} (an internal helper). Required when
 #'   \code{assignment_type != "marginal"}.
+#' @param R Deprecated. The former name for \code{G}; still accepted with a
+#'   deprecation warning, and will be removed in a future release. Use
+#'   \code{G}.
 #'
 #' @return An object of class \code{"FETWFE_simulated"}, which is a list containing:
 #' \describe{
@@ -257,13 +264,16 @@ simulateData <- function(
 #'   \item{first_inds}{A vector of indices indicating the first treatment effect for each treated
 #'   cohort.}
 #'   \item{N_UNTREATED}{The number of never-treated units.}
-#'   \item{assignments}{A vector of counts (of length \eqn{R+1}) indicating how many units fall into
-#'         the never-treated group and each of the \eqn{R} treated cohorts.}
+#'   \item{assignments}{A vector of counts (of length \eqn{G+1}) indicating how many units fall into
+#'         the never-treated group and each of the \eqn{G} treated cohorts.}
 #'   \item{indep_counts}{Independent cohort assignments (for auxiliary purposes).}
 #'   \item{p}{The number of columns in the design matrix \eqn{X}.}
 #'   \item{N}{Number of units.}
 #'   \item{T}{Number of time periods.}
-#'   \item{R}{Number of treated cohorts.}
+#'   \item{G}{Number of treated cohorts.}
+#'   \item{R}{Deprecated alias for \code{G}, retained for backward
+#'         compatibility; populated with the same value. Use \code{G}. Will be
+#'         removed in a future release.}
 #'   \item{d}{Number of covariates.}
 #'   \item{sig_eps_sq}{The idiosyncratic noise variance.}
 #'   \item{sig_eps_c_sq}{The unit-level noise variance.}
@@ -296,21 +306,21 @@ simulateData <- function(
 #'   # Set simulation parameters
 #'   N <- 100           # Number of units in the panel
 #'   T <- 5             # Number of time periods
-#'   R <- 3             # Number of treated cohorts
+#'   G <- 3             # Number of treated cohorts
 #'   d <- 2             # Number of time-invariant covariates
 #'   sig_eps_sq <- 1    # Variance of observation-level noise
 #'   sig_eps_c_sq <- 0.5  # Variance of unit-level random effects
 #'
 #'   # Generate coefficient vector using genCoefsCore()
 #'   # (Here, density controls sparsity and eff_size scales nonzero entries)
-#'   coefs_core <- genCoefsCore(R = R, T = T, d = d, density = 0.2, eff_size = 2, seed = 123)
+#'   coefs_core <- genCoefsCore(G = G, T = T, d = d, density = 0.2, eff_size = 2, seed = 123)
 #'
 #'   # Now simulate the data. Setting gen_ints = TRUE generates the full design
 #'   matrix with interactions.
 #'   sim_data <- simulateDataCore(
 #'     N = N,
 #'     T = T,
-#'     R = R,
+#'     G = G,
 #'     d = d,
 #'     sig_eps_sq = sig_eps_sq,
 #'     sig_eps_c_sq = sig_eps_c_sq,
@@ -328,7 +338,7 @@ simulateData <- function(
 simulateDataCore <- function(
 	N,
 	T,
-	R,
+	G = NULL,
 	d,
 	sig_eps_sq,
 	sig_eps_c_sq,
@@ -338,8 +348,15 @@ simulateDataCore <- function(
 	distribution = "gaussian",
 	guarantee_rank_condition = FALSE,
 	assignment_type = "marginal",
-	assignment_coefs = NULL
+	assignment_coefs = NULL,
+	R = NULL
 ) {
+	# Resolve the canonical cohort count (G), mapping the deprecated `R`
+	# alias and warning if it is supplied (#41). The body below keeps using
+	# `R` internally via the `R <- G` line, so it is otherwise unchanged.
+	G <- .resolve_cohort_count_arg(G, R, "simulateDataCore")
+	R <- G
+
 	if (!is.null(seed)) {
 		set.seed(seed)
 	}
@@ -595,6 +612,7 @@ simulateDataCore <- function(
 		p = p_expected,
 		N = N,
 		T = T,
+		G = R,
 		R = R,
 		d = d,
 		sig_eps_sq = sig_eps_sq,

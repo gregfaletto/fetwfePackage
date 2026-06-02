@@ -28,7 +28,7 @@ column reflecting BETWFE's bridge-penalized selection.
 \examples{
 \dontrun{
   res <- betwfeWithSimulatedData(
-    simulateData(genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
+    simulateData(genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
                  N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
   )
   broom::tidy(res)

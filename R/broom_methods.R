@@ -354,7 +354,7 @@ NULL
 #' @examples
 #' \dontrun{
 #'   res <- fetwfeWithSimulatedData(
-#'     simulateData(genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
+#'     simulateData(genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
 #'                  N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
 #'   )
 #'   broom::tidy(res)
@@ -385,7 +385,7 @@ tidy.fetwfe <- function(
 #' @examples
 #' \dontrun{
 #'   res <- etwfeWithSimulatedData(
-#'     simulateData(genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
+#'     simulateData(genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
 #'                  N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
 #'   )
 #'   broom::tidy(res)
@@ -416,7 +416,7 @@ tidy.etwfe <- function(
 #' @examples
 #' \dontrun{
 #'   res <- betwfeWithSimulatedData(
-#'     simulateData(genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
+#'     simulateData(genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
 #'                  N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
 #'   )
 #'   broom::tidy(res)
@@ -435,7 +435,7 @@ tidy.betwfe <- function(
 #'
 #' Returns a `broom`-style tidy data frame for the output of
 #' [eventStudy()]. Renames existing columns to broom conventions
-#' (`se` → `std.error`, `p_value` → `p.value`) and adds a `term`
+#' (`se` \eqn{\to} `std.error`, `p_value` \eqn{\to} `p.value`) and adds a `term`
 #' column (`"e<event_time>"`) plus a `statistic` column
 #' (`estimate / std.error`) so the schema matches `tidy.<estimator>()`
 #' for downstream `bind_rows()` consumers.
@@ -466,7 +466,7 @@ tidy.betwfe <- function(
 #' @examples
 #' \dontrun{
 #'   res <- fetwfeWithSimulatedData(
-#'     simulateData(genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
+#'     simulateData(genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
 #'                  N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
 #'   )
 #'   broom::tidy(eventStudy(res))
@@ -559,7 +559,7 @@ tidy.eventStudy <- function(
 #' @examples
 #' \dontrun{
 #'   res <- fetwfeWithSimulatedData(
-#'     simulateData(genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
+#'     simulateData(genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
 #'                  N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
 #'   )
 #'   broom::tidy(cohortStudy(res))
@@ -640,7 +640,7 @@ tidy.cohortStudy <- function(x, ...) {
 #'   `conf.int = TRUE`) `conf.low` / `conf.high`.
 #' @examples
 #' \dontrun{
-#'   coefs <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+#'   coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
 #'   broom::tidy(getTes(coefs))
 #' }
 #' @export
@@ -690,7 +690,7 @@ tidy.FETWFE_tes <- function(x, conf.int = TRUE, conf.level = 0.95, ...) {
 #' @examples
 #' \dontrun{
 #'   res <- fetwfeWithSimulatedData(
-#'     simulateData(genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
+#'     simulateData(genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
 #'                  N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
 #'   )
 #'   broom::glance(res)
@@ -711,7 +711,7 @@ glance.fetwfe <- function(x, ...) {
 #' @examples
 #' \dontrun{
 #'   res <- etwfeWithSimulatedData(
-#'     simulateData(genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
+#'     simulateData(genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
 #'                  N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
 #'   )
 #'   broom::glance(res)
@@ -731,7 +731,7 @@ glance.etwfe <- function(x, ...) {
 #' @examples
 #' \dontrun{
 #'   res <- betwfeWithSimulatedData(
-#'     simulateData(genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
+#'     simulateData(genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
 #'                  N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
 #'   )
 #'   broom::glance(res)
@@ -772,7 +772,7 @@ glance.betwfe <- function(x, ...) {
 #'   and `.resid`.
 #' @examples
 #' \dontrun{
-#'   sim <- simulateData(genCoefs(R = 3, T = 6, d = 2, density = 0.5,
+#'   sim <- simulateData(genCoefs(G = 3, T = 6, d = 2, density = 0.5,
 #'                                eff_size = 2),
 #'                       N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
 #'   res <- fetwfeWithSimulatedData(sim)
@@ -797,7 +797,7 @@ augment.fetwfe <- function(x, data, ...) {
 #' @return `data` with `.fitted` and `.resid` columns appended.
 #' @examples
 #' \dontrun{
-#'   sim <- simulateData(genCoefs(R = 3, T = 6, d = 2, density = 0.5,
+#'   sim <- simulateData(genCoefs(G = 3, T = 6, d = 2, density = 0.5,
 #'                                eff_size = 2),
 #'                       N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
 #'   res <- etwfeWithSimulatedData(sim)
@@ -822,7 +822,7 @@ augment.etwfe <- function(x, data, ...) {
 #' @return `data` with `.fitted` and `.resid` columns appended.
 #' @examples
 #' \dontrun{
-#'   sim <- simulateData(genCoefs(R = 3, T = 6, d = 2, density = 0.5,
+#'   sim <- simulateData(genCoefs(G = 3, T = 6, d = 2, density = 0.5,
 #'                                eff_size = 2),
 #'                       N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
 #'   res <- betwfeWithSimulatedData(sim)

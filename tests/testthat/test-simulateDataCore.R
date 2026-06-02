@@ -34,7 +34,7 @@ test_that("simulateDataCore (with interactions) returns expected output", {
 	res <- simulateDataCore(
 		N = N,
 		T = T_val,
-		R = R_val,
+		G = R_val,
 		d = d_val,
 		sig_eps_sq = sig_eps_sq,
 		sig_eps_c_sq = sig_eps_c_sq,
@@ -528,7 +528,7 @@ test_that("Input from genCoefsCore() works", {
 	eff_size <- 1
 
 	res <- genCoefsCore(
-		R = R_val,
+		G = R_val,
 		T = T_val,
 		d = d_val,
 		density = density,
@@ -542,7 +542,7 @@ test_that("Input from genCoefsCore() works", {
 	sim_data <- simulateDataCore(
 		N = N,
 		T = T_val,
-		R = R_val,
+		G = R_val,
 		d = d_val,
 		sig_eps_sq = sig_eps_sq,
 		sig_eps_c_sq = sig_eps_c_sq,

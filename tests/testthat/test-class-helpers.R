@@ -38,7 +38,7 @@
 # for the truncation assertions, so the fixture's R has to match.
 .make_minimal_obj <- function(klass) {
 	set.seed(2026)
-	coefs <- genCoefs(R = 5, T = 7, d = 0, density = 0.5, eff_size = 1)
+	coefs <- genCoefs(G = 5, T = 7, d = 0, density = 0.5, eff_size = 1)
 	sim <- simulateData(coefs, N = 80, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
 	obj <- switch(
 		klass,

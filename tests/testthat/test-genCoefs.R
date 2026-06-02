@@ -18,7 +18,7 @@ compute_p <- function(T, R, d) {
 # ------------------------------------------------------------------------------
 test_that("genCoefs returns expected output structure", {
 	res <- genCoefs(
-		R = 5,
+		G = 5,
 		T = 30,
 		d = 12,
 		density = 0.1,
@@ -56,7 +56,7 @@ test_that("genCoefs returns beta of correct length", {
 	d <- 12
 	expected_length <- compute_p(T, R, d)
 
-	res <- genCoefs(R = R, T = T, d = d, density = 0.1, eff_size = 2)
+	res <- genCoefs(G = R, T = T, d = d, density = 0.1, eff_size = 2)
 	expect_equal(length(res$beta), expected_length)
 })
 
@@ -65,7 +65,7 @@ test_that("genCoefs returns beta of correct length", {
 # ------------------------------------------------------------------------------
 test_that("genCoefs is reproducible with the same seed", {
 	res1 <- genCoefs(
-		R = 5,
+		G = 5,
 		T = 30,
 		density = 0.1,
 		eff_size = 2,
@@ -74,7 +74,7 @@ test_that("genCoefs is reproducible with the same seed", {
 	)
 
 	res2 <- genCoefs(
-		R = 5,
+		G = 5,
 		T = 30,
 		density = 0.1,
 		eff_size = 2,
@@ -93,7 +93,7 @@ test_that("beta from genCoefs is a valid input for simulateData", {
 	R <- 5
 	T <- 30
 	d <- 12
-	res_coefs <- genCoefs(R = R, T = T, d = d, density = 0.1, eff_size = 2)
+	res_coefs <- genCoefs(G = R, T = T, d = d, density = 0.1, eff_size = 2)
 
 	N <- 120
 	sig_eps_sq <- 5
@@ -137,7 +137,7 @@ test_that("simulateData and fetwfe work when d = 0", {
 
 	# Generate coefficients with no covariates using genCoefs.
 	coefs <- genCoefs(
-		R = R_val,
+		G = R_val,
 		T = T_val,
 		density = 0.1,
 		eff_size = 2,
@@ -176,14 +176,14 @@ test_that("simulateData and fetwfe work when d = 0", {
 
 test_that("genCoefs errors when T < 3", {
 	expect_error(
-		genCoefs(R = 5, T = 2, density = 0.1, eff_size = 2, d = 12),
+		genCoefs(G = 5, T = 2, density = 0.1, eff_size = 2, d = 12),
 		regexp = "T must be a numeric value greater than or equal to 3"
 	)
 })
 
 test_that("genCoefs errors when R < 2", {
 	expect_error(
-		genCoefs(R = 1, T = 30, density = 0.1, eff_size = 2, d = 12),
+		genCoefs(G = 1, T = 30, density = 0.1, eff_size = 2, d = 12),
 		regexp = "R must be a numeric value greater than or equal to 2"
 	)
 })
@@ -191,32 +191,32 @@ test_that("genCoefs errors when R < 2", {
 test_that("genCoefs errors when R > T - 1", {
 	# For example, if T = 30 then R must be <= 29.
 	expect_error(
-		genCoefs(R = 30, T = 30, density = 0.1, eff_size = 2, d = 12),
+		genCoefs(G = 30, T = 30, density = 0.1, eff_size = 2, d = 12),
 		regexp = "R must be less than or equal to T - 1"
 	)
 })
 
 test_that("genCoefs errors when d is negative", {
 	expect_error(
-		genCoefs(R = 5, T = 30, density = 0.1, eff_size = 2, d = -1),
+		genCoefs(G = 5, T = 30, density = 0.1, eff_size = 2, d = -1),
 		regexp = "d must be a non-negative numeric value"
 	)
 })
 
 test_that("genCoefs errors when density is not between 0 and 1", {
 	expect_error(
-		genCoefs(R = 5, T = 30, density = -0.1, eff_size = 2, d = 12),
+		genCoefs(G = 5, T = 30, density = -0.1, eff_size = 2, d = 12),
 		regexp = "density must be"
 	)
 	expect_error(
-		genCoefs(R = 5, T = 30, density = 1.1, eff_size = 2, d = 12),
+		genCoefs(G = 5, T = 30, density = 1.1, eff_size = 2, d = 12),
 		regexp = "density must be"
 	)
 })
 
 test_that("genCoefs errors when eff_size is not numeric", {
 	expect_error(
-		genCoefs(R = 5, T = 30, density = 0.1, eff_size = "2", d = 12),
+		genCoefs(G = 5, T = 30, density = 0.1, eff_size = "2", d = 12),
 		regexp = "eff_size must be a numeric value"
 	)
 })
@@ -227,7 +227,7 @@ test_that("genCoefs errors when eff_size is not numeric", {
 # ------------------------------------------------------------------------------
 test_that("print.FETWFE_coefs summarizes instead of dumping (#84 item 13)", {
 	coefs <- genCoefs(
-		R = 2,
+		G = 2,
 		T = 5,
 		d = 2,
 		density = 0.5,
@@ -242,7 +242,7 @@ test_that("print.FETWFE_coefs summarizes instead of dumping (#84 item 13)", {
 	expect_lt(length(out), 5)
 
 	# Names the dimensions.
-	expect_true(any(grepl("R = 2", out)))
+	expect_true(any(grepl("G = 2", out)))
 	expect_true(any(grepl("T = 5", out)))
 	expect_true(any(grepl("d = 2", out)))
 
@@ -259,7 +259,7 @@ test_that("print.FETWFE_coefs summarizes instead of dumping (#84 item 13)", {
 
 test_that("print.FETWFE_coefs handles seed = NULL cleanly (#84 item 13)", {
 	# genCoefs has seed = NULL as the default.
-	coefs <- genCoefs(R = 2, T = 5, d = 2, density = 0.5, eff_size = 4)
+	coefs <- genCoefs(G = 2, T = 5, d = 2, density = 0.5, eff_size = 4)
 	expect_s3_class(coefs, "FETWFE_coefs")
 	expect_null(coefs$seed)
 

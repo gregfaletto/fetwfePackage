@@ -221,7 +221,7 @@ test_that("betwfe(add_ridge = TRUE) numerical regression: att_hat matches post-f
 	# the bug's downstream effect on att_hat (from ~2e-6 at sig=1
 	# to ~5e-5 at sig=16).
 	coefs <- genCoefs(
-		R = 2,
+		G = 2,
 		T = 5,
 		d = 2,
 		density = 0.5,

@@ -36,7 +36,7 @@ library(fetwfe)
 
 test_that("print(res) and summary(res) render an Event Study section on consecutive-cohort synthetic fits", {
 	set.seed(2026)
-	coefs <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+	coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
 	sim <- simulateData(coefs, N = 60, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
 	for (res in list(
 		fetwfeWithSimulatedData(sim, q = 0.5),

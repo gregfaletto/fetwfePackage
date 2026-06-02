@@ -4,11 +4,11 @@
 \alias{genCoefsCore}
 \title{Generate Coefficient Vector for Data Generation (core)}
 \usage{
-genCoefsCore(R, T, d, density, eff_size, seed = NULL)
+genCoefsCore(G = NULL, T, d, density, eff_size, seed = NULL, R = NULL)
 }
 \arguments{
-\item{R}{Integer. The number of treated cohorts (treatment is assumed to start in periods 2 to
-\code{R + 1}).}
+\item{G}{Integer. The number of treated cohorts (treatment is assumed to start in periods 2 to
+\code{G + 1}).}
 
 \item{T}{Integer. The total number of time periods.}
 
@@ -23,6 +23,9 @@ nonzero entry is set to \code{eff_size} or \code{-eff_size} (with a 60 percent c
 positive value).}
 
 \item{seed}{(Optional) Integer. Seed for reproducibility.}
+
+\item{R}{Deprecated. The former name for \code{G}; still accepted with a
+deprecation warning, and will be removed in a future release. Use \code{G}.}
 }
 \value{
 A list with two elements:
@@ -45,9 +48,9 @@ scaled by \code{eff_size}. See the simulation studies section of Faletto (2025) 
 }
 \details{
 The length of \code{beta} is given by
-\deqn{p = R + (T - 1) + d + dR + d(T - 1) + \mathit{num\_treats} + (\mathit{num\_treats} \times d)}{p = R + (T - 1) + d + dR + d(T - 1) + num_treats + (num_treats * d)},
+\deqn{p = G + (T - 1) + d + dG + d(T - 1) + \mathit{num\_treats} + (\mathit{num\_treats} \times d)}{p = G + (T - 1) + d + dG + d(T - 1) + num_treats + (num_treats * d)},
 where the number of treatment parameters is defined as
-\deqn{\mathit{num\_treats} = T \times R - \frac{R(R+1)}{2}}{num_treats = T * R - R(R+1)/2}.
+\deqn{\mathit{num\_treats} = T \times G - \frac{G(G+1)}{2}}{num_treats = T * G - G(G+1)/2}.
 
 The function operates in two steps:
 \enumerate{
@@ -63,7 +66,7 @@ transform to \code{theta} using internal routines (e.g.,
 \examples{
 \dontrun{
   # Set parameters for the coefficient generation
-  R <- 3         # Number of treated cohorts
+  G <- 3         # Number of treated cohorts
   T <- 6         # Total number of time periods
   d <- 2         # Number of covariates
   density <- 0.1 # Probability that an entry in the initial vector is nonzero
@@ -71,17 +74,17 @@ transform to \code{theta} using internal routines (e.g.,
   seed <- 789    # Seed for reproducibility
 
   # Generate coefficients using genCoefsCore()
-  coefs_core <- genCoefsCore(R = R, T = T, d = d, density = density,
+  coefs_core <- genCoefsCore(G = G, T = T, d = d, density = density,
   eff_size = eff_size, seed = seed)
   beta <- coefs_core$beta
   theta <- coefs_core$theta
 
   # For diagnostic purposes, compute the expected length of beta.
   # The length p is defined internally as:
-  #   p = R + (T - 1) + d + d*R + d*(T - 1) + num_treats + num_treats*d,
-  # where num_treats = T * R - (R*(R+1))/2.
-  num_treats <- T * R - (R * (R + 1)) / 2
-  p_expected <- R + (T - 1) + d + d * R + d * (T - 1) + num_treats + num_treats * d
+  #   p = G + (T - 1) + d + d*G + d*(T - 1) + num_treats + num_treats*d,
+  # where num_treats = T * G - (G*(G+1))/2.
+  num_treats <- T * G - (G * (G + 1)) / 2
+  p_expected <- G + (T - 1) + d + d * G + d * (T - 1) + num_treats + num_treats * d
 
   cat("Length of beta:", length(beta), "\nExpected length:", p_expected, "\n")
 }

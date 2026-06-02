@@ -26,11 +26,11 @@ utils::globalVariables(c("event_time", "estimate", "ci_low", "ci_high"))
 #' `getSecondVarTermOLS` / `getSecondVarTermDataApp` machinery, with the
 #' multinomial Jacobian restricted to cohorts valid at event time `e`).
 #' Combined as `sqrt(var_1 + var_2)` by default (asymptotically exact
-#' under paper Theorem `te.asym.norm.thm`(c′) / Assumption (Ψ-IF), which
+#' under paper Theorem `te.asym.norm.thm`(\eqn{c'}) / Assumption (\eqn{\Psi}-IF), which
 #' the package's default cohort-sample-proportions estimator satisfies);
 #' the conservative Cauchy-Schwarz bound `sqrt(var_1 + var_2 +
 #' 2 sqrt(var_1 * var_2))` is available via `se_type = "conservative"`
-#' (for users with non-(Ψ-IF) propensity-score estimators). When
+#' (for users with non-(\eqn{\Psi}-IF) propensity-score estimators). When
 #' `indep_counts` was supplied at fit time, the tight formula applies
 #' regardless of `se_type` (two-sample regime, Theorem (b)).
 #'
@@ -68,7 +68,7 @@ utils::globalVariables(c("event_time", "estimate", "ci_low", "ci_high"))
 #' @seealso [cohortStudy()] for the parallel per-cohort accessor.
 #' @examples
 #' \dontrun{
-#'   coefs <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+#'   coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
 #'   dat <- simulateData(coefs, N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
 #'   res <- fetwfeWithSimulatedData(dat)
 #'   eventStudy(res)

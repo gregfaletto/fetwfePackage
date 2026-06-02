@@ -44,7 +44,7 @@
 #' half (with `N` units in each data set). The data for half of the units should
 #' go in the `pdata` argument provided above. For the other `N` units, simply
 #' provide the counts for how many units appear in the untreated cohort plus
-#' each of the other `R` cohorts in this argument `indep_counts`. The benefit
+#' each of the other `G` cohorts in this argument `indep_counts`. The benefit
 #' of doing this is that the standard error for the average treatment effect
 #' will be (asymptotically) exact instead of conservative. The length of
 #' `indep_counts` must equal 1 plus the number of treated cohorts in `pdata`.
@@ -116,7 +116,7 @@
 #' (Psi-IF); this is asymptotically exact for the package's default
 #' cohort sample-proportions estimator and for every standard
 #' propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
-#' any GLM on `W | X`, kernel/series regression of `1{W = r}` on `X`).
+#' any GLM on `W | X`, kernel/series regression of `1{W = g}` on `X`).
 #' `"conservative"` returns the Cauchy-Schwarz upper bound
 #' `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from
 #' Theorem (c); use only if the propensity-score estimator violates
@@ -175,7 +175,7 @@
 #'   is `"simultaneous"`.
 #' @return An object of class \code{fetwfe} containing the following elements:
 #' \item{att_hat}{The estimated overall average treatment effect for a randomly selected treated unit.}
-#' \item{att_se}{If `q < 1`, a standard error for the ATT. Under the default `se_type = "default"`, the SE is the tight Gaussian variance `sqrt(att_var_1 + att_var_2)` (Theorem (c$'$) under Assumption (Psi-IF); paper line 1233 onwards). Assumption (Psi-IF) is satisfied by the package's default cohort sample-proportions estimator `hat_pi_r = N_r / N` (and by multinomial logit, any GLM on `W | X`, and kernel/series regression of `1{W = r}` on `X`), so the default SE is asymptotically exact for the package's default estimator. Under `se_type = "conservative"` (or in version <= 1.11.7 by default), the SE is the Cauchy-Schwarz upper bound `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from Theorem (c). When `indep_counts` is provided, the two-sample exact formula `sqrt(att_var_1 + att_var_2)` is used regardless of `se_type`. If `q >= 1`, this will be NA.}
+#' \item{att_se}{If `q < 1`, a standard error for the ATT. Under the default `se_type = "default"`, the SE is the tight Gaussian variance `sqrt(att_var_1 + att_var_2)` (Theorem (c$'$) under Assumption (Psi-IF); paper line 1233 onwards). Assumption (Psi-IF) is satisfied by the package's default cohort sample-proportions estimator `hat_pi_g = N_g / N` (and by multinomial logit, any GLM on `W | X`, and kernel/series regression of `1{W = g}` on `X`), so the default SE is asymptotically exact for the package's default estimator. Under `se_type = "conservative"` (or in version <= 1.11.7 by default), the SE is the Cauchy-Schwarz upper bound `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from Theorem (c). When `indep_counts` is provided, the two-sample exact formula `sqrt(att_var_1 + att_var_2)` is used regardless of `se_type`. If `q >= 1`, this will be NA.}
 #' \item{att_p_value}{A two-sided p-value for the overall ATT against the null `H_0: tau = 0`, computed as `2 * pnorm(-|att_hat / att_se|)`. `NA` if `att_se` is zero or `NA` (e.g., under the bridge solver's selected-out fallback). See the package vignette section "Testing the zero-effect null" for interpretation guidance under selection consistency.}
 #' \item{att_selected}{Logical scalar; `TRUE` if `att_hat` is not exactly zero (i.e., at least one cohort's bridge-penalized coefficient survived selection), `FALSE` otherwise. Under FETWFE Theorem 6.2 (restriction selection consistency), `att_selected = FALSE` is the asymptotic statement that the truth is zero. For ridge (`q = 2`) the bridge solver does not zero coefficients, so this will typically be `TRUE`.}
 #' \item{catt_hats}{A named vector containing the estimated average treatment effects for each cohort.}
@@ -199,7 +199,8 @@
 #' \item{ci_type}{Character scalar; the `ci_type` argument the user passed (`"simultaneous"` or `"pointwise"`), controlling whether the reported `catt_df` / `eventStudy()` confidence-interval bounds are simultaneous (family-wise) or pointwise.}
 #' \item{N}{The final number of units that were in the data set used for estimation (after any units may have been removed because they were treated in the first time period).}
 #' \item{T}{The number of time periods in the final data set.}
-#' \item{R}{The final number of treated cohorts that appear in the final data set.}
+#' \item{G}{The final number of treated cohorts that appear in the final data set.}
+#' \item{R}{Deprecated alias for \code{G}, retained for backward compatibility; populated with the same value. Use \code{G}. Will be removed in a future release.}
 #' \item{d}{The final number of covariates that appear in the final data set (after any covariates may have been removed because they contained missing values or all contained the same value for every unit).}
 #' \item{p}{The final number of columns in the full set of covariates used to estimate the model.}
 #' \item{alpha}{The alpha level used for confidence intervals.}
@@ -466,6 +467,7 @@ fetwfe <- function(
 		cv_seed = res$cv_seed_used,
 		N = res$N,
 		T = res$T,
+		G = res$R,
 		R = res$R,
 		d = res$d,
 		p = res$p,
@@ -573,7 +575,7 @@ fetwfe <- function(
 #' (Psi-IF); this is asymptotically exact for the package's default
 #' cohort sample-proportions estimator and for every standard
 #' propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
-#' any GLM on `W | X`, kernel/series regression of `1{W = r}` on `X`).
+#' any GLM on `W | X`, kernel/series regression of `1{W = g}` on `X`).
 #' `"conservative"` returns the Cauchy-Schwarz upper bound
 #' `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from
 #' Theorem (c); use only if the propensity-score estimator violates
@@ -632,7 +634,7 @@ fetwfe <- function(
 #'   is `"simultaneous"`.
 #' @return An object of class \code{fetwfe} containing the following elements:
 #' \item{att_hat}{The estimated overall average treatment effect for a randomly selected treated unit.}
-#' \item{att_se}{If `q < 1`, a standard error for the ATT. Under the default `se_type = "default"`, the SE is the tight Gaussian variance `sqrt(att_var_1 + att_var_2)` (Theorem (c$'$) under Assumption (Psi-IF); paper line 1233 onwards). Assumption (Psi-IF) is satisfied by the package's default cohort sample-proportions estimator `hat_pi_r = N_r / N` (and by multinomial logit, any GLM on `W | X`, and kernel/series regression of `1{W = r}` on `X`), so the default SE is asymptotically exact for the package's default estimator. Under `se_type = "conservative"` (or in version <= 1.11.7 by default), the SE is the Cauchy-Schwarz upper bound `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from Theorem (c). When `indep_counts` is provided, the two-sample exact formula `sqrt(att_var_1 + att_var_2)` is used regardless of `se_type`. If `q >= 1`, this will be NA.}
+#' \item{att_se}{If `q < 1`, a standard error for the ATT. Under the default `se_type = "default"`, the SE is the tight Gaussian variance `sqrt(att_var_1 + att_var_2)` (Theorem (c$'$) under Assumption (Psi-IF); paper line 1233 onwards). Assumption (Psi-IF) is satisfied by the package's default cohort sample-proportions estimator `hat_pi_g = N_g / N` (and by multinomial logit, any GLM on `W | X`, and kernel/series regression of `1{W = g}` on `X`), so the default SE is asymptotically exact for the package's default estimator. Under `se_type = "conservative"` (or in version <= 1.11.7 by default), the SE is the Cauchy-Schwarz upper bound `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from Theorem (c). When `indep_counts` is provided, the two-sample exact formula `sqrt(att_var_1 + att_var_2)` is used regardless of `se_type`. If `q >= 1`, this will be NA.}
 #' \item{att_p_value}{A two-sided p-value for the overall ATT against the null `H_0: tau = 0`, computed as `2 * pnorm(-|att_hat / att_se|)`. `NA` if `att_se` is zero or `NA` (e.g., under the bridge solver's selected-out fallback). See the package vignette section "Testing the zero-effect null" for interpretation guidance under selection consistency.}
 #' \item{att_selected}{Logical scalar; `TRUE` if `att_hat` is not exactly zero (i.e., at least one cohort's bridge-penalized coefficient survived selection), `FALSE` otherwise. Under FETWFE Theorem 6.2 (restriction selection consistency), `att_selected = FALSE` is the asymptotic statement that the truth is zero. For ridge (`q = 2`) the bridge solver does not zero coefficients, so this will typically be `TRUE`.}
 #' \item{catt_hats}{A named vector containing the estimated average treatment effects for each cohort.}
@@ -656,7 +658,8 @@ fetwfe <- function(
 #' \item{ci_type}{Character scalar; the `ci_type` argument the user passed (`"simultaneous"` or `"pointwise"`), controlling whether the reported `catt_df` / `eventStudy()` confidence-interval bounds are simultaneous (family-wise) or pointwise.}
 #' \item{N}{The final number of units that were in the data set used for estimation (after any units may have been removed because they were treated in the first time period).}
 #' \item{T}{The number of time periods in the final data set.}
-#' \item{R}{The final number of treated cohorts that appear in the final data set.}
+#' \item{G}{The final number of treated cohorts that appear in the final data set.}
+#' \item{R}{Deprecated alias for \code{G}, retained for backward compatibility; populated with the same value. Use \code{G}. Will be removed in a future release.}
 #' \item{d}{The final number of covariates that appear in the final data set (after any covariates may have been removed because they contained missing values or all contained the same value for every unit).}
 #' \item{p}{The final number of columns in the full set of covariates used to estimate the model.}
 #' \item{alpha}{The alpha level used for confidence intervals.}
@@ -702,7 +705,7 @@ fetwfe <- function(
 #' @examples
 #' \dontrun{
 #'   # Generate coefficients
-#'   coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
+#'   coefs <- genCoefs(G = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
 #'
 #'   # Simulate data using the coefficients
 #'   sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5)
@@ -821,7 +824,7 @@ fetwfeWithSimulatedData <- function(
 #' half (with `N` units in each data set). The data for half of the units should
 #' go in the `pdata` argument provided above. For the other `N` units, simply
 #' provide the counts for how many units appear in the untreated cohort plus
-#' each of the other `R` cohorts in this argument `indep_counts`. The benefit
+#' each of the other `G` cohorts in this argument `indep_counts`. The benefit
 #' of doing this is that the standard error for the average treatment effect
 #' will be (asymptotically) exact instead of conservative. The length of
 #' `indep_counts` must equal 1 plus the number of treated cohorts in `pdata`.
@@ -867,7 +870,7 @@ fetwfeWithSimulatedData <- function(
 #' (Psi-IF); this is asymptotically exact for the package's default
 #' cohort sample-proportions estimator and for every standard
 #' propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
-#' any GLM on `W | X`, kernel/series regression of `1{W = r}` on `X`).
+#' any GLM on `W | X`, kernel/series regression of `1{W = g}` on `X`).
 #' `"conservative"` returns the Cauchy-Schwarz upper bound
 #' `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from
 #' Theorem (c); use only if the propensity-score estimator violates
@@ -941,8 +944,11 @@ fetwfeWithSimulatedData <- function(
 #' covariance matrix for each unit.} \item{N}{The final number of units that
 #' were in the  data set used for estimation (after any units may have been
 #' removed because they were treated in the first time period).} \item{T}{The
-#' number of time periods in the final data set.} \item{R}{The final number of
-#' treated cohorts that appear in the final data set.} \item{d}{The final number
+#' number of time periods in the final data set.} \item{G}{The final number of
+#' treated cohorts that appear in the final data set.} \item{R}{Deprecated alias
+#' for \code{G}, retained for backward compatibility; populated with the same
+#' value. Use \code{G}. Will be removed in a future release.} \item{d}{The final
+#' number
 #' of covariates that appear in the final data set (after any covariates may
 #' have been removed because they contained missing values or all contained the
 #' same value for every unit).} \item{p}{The final number of columns in the full
@@ -1178,6 +1184,7 @@ etwfe <- function(
 		y_final = res$y_final,
 		N = res$N,
 		T = res$T,
+		G = res$R,
 		R = res$R,
 		d = res$d,
 		p = res$p,
@@ -1256,7 +1263,7 @@ etwfe <- function(
 #' (Psi-IF); this is asymptotically exact for the package's default
 #' cohort sample-proportions estimator and for every standard
 #' propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
-#' any GLM on `W | X`, kernel/series regression of `1{W = r}` on `X`).
+#' any GLM on `W | X`, kernel/series regression of `1{W = g}` on `X`).
 #' `"conservative"` returns the Cauchy-Schwarz upper bound
 #' `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from
 #' Theorem (c); use only if the propensity-score estimator violates
@@ -1330,8 +1337,11 @@ etwfe <- function(
 #' covariance matrix for each unit.} \item{N}{The final number of units that
 #' were in the  data set used for estimation (after any units may have been
 #' removed because they were treated in the first time period).} \item{T}{The
-#' number of time periods in the final data set.} \item{R}{The final number of
-#' treated cohorts that appear in the final data set.} \item{d}{The final number
+#' number of time periods in the final data set.} \item{G}{The final number of
+#' treated cohorts that appear in the final data set.} \item{R}{Deprecated alias
+#' for \code{G}, retained for backward compatibility; populated with the same
+#' value. Use \code{G}. Will be removed in a future release.} \item{d}{The final
+#' number
 #' of covariates that appear in the final data set (after any covariates may
 #' have been removed because they contained missing values or all contained the
 #' same value for every unit).} \item{p}{The final number of columns in the full
@@ -1393,7 +1403,7 @@ etwfe <- function(
 #' @examples
 #' \dontrun{
 #'   # Generate coefficients
-#'   coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
+#'   coefs <- genCoefs(G = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
 #'
 #'   # Simulate data using the coefficients
 #'   sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5)

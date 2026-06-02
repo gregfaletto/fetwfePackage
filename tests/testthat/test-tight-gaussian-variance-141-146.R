@@ -30,7 +30,7 @@ test_that("default `att_se` is the tight Gaussian variance sqrt(V1 + V2)", {
 	# regression).
 	set.seed(141)
 	sim_coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 6,
 		d = 2,
 		density = 0.5,
@@ -73,7 +73,7 @@ test_that("default `att_se` is the tight Gaussian variance sqrt(V1 + V2)", {
 test_that("se_type = 'conservative' recovers the Cauchy-Schwarz bound (pre-v1.12.0 default)", {
 	set.seed(141)
 	sim_coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 6,
 		d = 2,
 		density = 0.5,
@@ -127,7 +127,7 @@ test_that("se_type = 'conservative' recovers the Cauchy-Schwarz bound (pre-v1.12
 test_that("variance_components block exposes paper-notation V_1, V_2, and tilde_v_N family", {
 	set.seed(141)
 	sim_coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 6,
 		d = 2,
 		density = 0.5,
@@ -210,7 +210,7 @@ test_that("variance_components block exposes paper-notation V_1, V_2, and tilde_
 test_that("variance_components block: conservative se_type swaps the headline tilde_v_N", {
 	set.seed(141)
 	sim_coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 6,
 		d = 2,
 		density = 0.5,
@@ -277,7 +277,7 @@ test_that("variance_components block: indep_counts path uses tight formula regar
 	# formula.
 	set.seed(141)
 	sim_coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 6,
 		d = 2,
 		density = 0.5,
@@ -320,7 +320,7 @@ test_that("variance_components block: q >= 1 path returns NA-filled slots", {
 	# variance-components block should be NA-filled in lockstep.
 	set.seed(141)
 	sim_coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 6,
 		d = 2,
 		density = 0.5,
@@ -356,7 +356,7 @@ test_that("etwfe, betwfe, twfeCovs all expose the variance_components block", {
 	# extends this to `$internal$variance_components`).
 	set.seed(141)
 	sim_coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 6,
 		d = 2,
 		density = 0.5,
@@ -440,7 +440,7 @@ test_that("tight Gaussian default delivers near-nominal 95% CI coverage on simul
 	for (i in seq_len(n_reps)) {
 		seed_i <- 1000L + i
 		coefs <- genCoefs(
-			R = 3,
+			G = 3,
 			T = 6,
 			d = 2,
 			density = 0.5,

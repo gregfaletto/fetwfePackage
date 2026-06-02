@@ -444,6 +444,14 @@
 			detail = paste0(slot, " = ", format(val))
 		)
 	}
+	# C8 -- the canonical cohort-count field `G` is dual-populated with the
+	# same value as the deprecated `R` alias (#41).
+	.assert_contract(
+		identical(as.numeric(x$G), as.numeric(x$R)),
+		"C8 G equals R (dual-populated cohort count)",
+		cls,
+		detail = paste0("G = ", format(x$G), ", R = ", format(x$R))
+	)
 	# d may be 0 (no covariates).
 	.assert_contract(
 		is.numeric(x$d) && length(x$d) == 1L && x$d >= 0L && x$d == round(x$d),
@@ -803,7 +811,7 @@
 	cat("Model Details:\n")
 	cat(sprintf("  Units (N)           : %d\n", x$N))
 	cat(sprintf("  Time periods (T)    : %d\n", x$T))
-	cat(sprintf("  Treated cohorts (R) : %d\n", x$R))
+	cat(sprintf("  Treated cohorts (G) : %d\n", x$G))
 	cat(sprintf("  Covariates (d)      : %d\n", x$d))
 	cat(sprintf("  Features (p)        : %d\n", x$p))
 	if (show_lambda) {
@@ -908,6 +916,7 @@
 		model_info = list(
 			N = object$N,
 			T = object$T,
+			G = object$R,
 			R = object$R,
 			d = object$d,
 			p = object$p,
@@ -944,6 +953,7 @@
 	out$model_info <- out$model_info[c(
 		"N",
 		"T",
+		"G",
 		"R",
 		"d",
 		"p",
@@ -1065,7 +1075,7 @@
 	cat("Model Details:\n")
 	cat(sprintf("  Units (N)           : %d\n", x$model_info$N))
 	cat(sprintf("  Time periods (T)    : %d\n", x$model_info$T))
-	cat(sprintf("  Treated cohorts (R) : %d\n", x$model_info$R))
+	cat(sprintf("  Treated cohorts (G) : %d\n", x$model_info$G))
 	cat(sprintf("  Covariates (d)      : %d\n", x$model_info$d))
 	cat(sprintf("  Features (p)        : %d\n", x$model_info$p))
 	if (show_lambda) {

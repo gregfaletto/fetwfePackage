@@ -23,7 +23,7 @@ library(fetwfe)
 .make_var2_fit <- function() {
 	set.seed(31)
 	coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 6,
 		d = 0,
 		density = 0.5,

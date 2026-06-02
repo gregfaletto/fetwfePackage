@@ -14,7 +14,7 @@ make_es_panel <- function(
 ) {
 	set.seed(seed)
 	coefs <- genCoefs(
-		R = R,
+		G = R,
 		T = T,
 		d = d,
 		density = 0.5,

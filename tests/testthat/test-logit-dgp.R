@@ -43,7 +43,7 @@ test_that("marginal DGP: byte-identical to v1.13.x at default assignment_type", 
 	# ae515b6. Locks in the pre-1.14.0 behavior at the strictest possible
 	# assertion. Any drift in the marginal-path RNG ordering fires here.
 	coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 5,
 		d = 2,
 		density = 0.5,
@@ -72,7 +72,7 @@ test_that("multinomial DGP: empirical cohort proportions converge to MC expectat
 	# N = 10000 gives sqrt(p(1-p)/N) SE < 0.005 per cohort; tolerance 0.03
 	# is comfortable.
 	coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 5,
 		d = 2,
 		density = 0.5,
@@ -107,7 +107,7 @@ test_that("ordered DGP: empirical cohort proportions match cutpoint structure", 
 	# strength = 0; ~0.002 deviation at strength = 1 per round-2 plan
 	# verification).
 	coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 5,
 		d = 2,
 		density = 0.5,
@@ -134,7 +134,7 @@ test_that("FETWFE smoke test: fits run cleanly on multinomial and ordered DGPs",
 	# for numerical correctness; that's covered by test #5 below).
 	for (type in c("multinomial", "ordered")) {
 		coefs <- genCoefs(
-			R = 3,
+			G = 3,
 			T = 5,
 			d = 2,
 			density = 0.5,
@@ -181,7 +181,7 @@ test_that("getTes returns propensity-weighted att_true under multinomial DGP", {
 	#   att_true = sum(cohort_weights * actual_cohort_tes)
 	# with cohort_weights = E[pi_r(X)] / sum E[pi_r(X)] (treated only).
 	coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 5,
 		d = 2,
 		density = 0.5,
@@ -226,7 +226,7 @@ test_that("high-strength assignment: covariates strongly predict cohort", {
 	# deterministic given X. Verify: max-row-probability of P(W|X) is
 	# well above the uniform-baseline 1/(R+1) = 0.25 at most units.
 	coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 5,
 		d = 2,
 		density = 0.5,
@@ -260,7 +260,7 @@ test_that("high-strength assignment: covariates strongly predict cohort", {
 test_that("interactions-augmented multinomial DGP injects propensity nonlinearity (#191)", {
 	skip_on_cran()
 	coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 5,
 		d = 2,
 		density = 0.5,
@@ -342,7 +342,7 @@ test_that("interactions-augmented multinomial DGP injects propensity nonlinearit
 test_that("getTes() accounts for interactions in MC integration (#191)", {
 	skip_on_cran()
 	coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 5,
 		d = 2,
 		density = 0.5,
@@ -394,7 +394,7 @@ test_that("getTes() accounts for interactions in MC integration (#191)", {
 test_that("ordered DGP with interactions preserves marginal uniformity + baseline contrast (#191)", {
 	skip_on_cran()
 	coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 5,
 		d = 2,
 		density = 0.5,
@@ -419,7 +419,7 @@ test_that("ordered DGP with interactions preserves marginal uniformity + baselin
 	# (b) No-interactions baseline contrast — identical inputs except
 	# assignment_interactions = NULL. Same seed for reproducibility.
 	coefs_baseline <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 5,
 		d = 2,
 		density = 0.5,
@@ -448,7 +448,7 @@ test_that("ordered DGP with interactions preserves marginal uniformity + baselin
 # ------------------------------------------------------------------------------
 test_that("assignment_interactions canonicalizes + dedupes pairs (#191)", {
 	coefs <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 5,
 		d = 2,
 		density = 0.5,
@@ -464,7 +464,7 @@ test_that("assignment_interactions canonicalizes + dedupes pairs (#191)", {
 
 	# Self-interactions (quadratic) are allowed.
 	coefs_quad <- genCoefs(
-		R = 3,
+		G = 3,
 		T = 5,
 		d = 2,
 		density = 0.5,
@@ -481,7 +481,7 @@ test_that("assignment_interactions canonicalizes + dedupes pairs (#191)", {
 	# Index outside [1, d] errors with the informative message.
 	expect_error(
 		genCoefs(
-			R = 3,
+			G = 3,
 			T = 5,
 			d = 2,
 			density = 0.5,
@@ -493,7 +493,7 @@ test_that("assignment_interactions canonicalizes + dedupes pairs (#191)", {
 	)
 	expect_error(
 		genCoefs(
-			R = 3,
+			G = 3,
 			T = 5,
 			d = 2,
 			density = 0.5,
@@ -510,7 +510,7 @@ test_that("assignment_interactions canonicalizes + dedupes pairs (#191)", {
 	# an opt-in signal that dedup happened).
 	expect_message(
 		genCoefs(
-			R = 3,
+			G = 3,
 			T = 5,
 			d = 2,
 			density = 0.5,
@@ -526,7 +526,7 @@ test_that("assignment_interactions canonicalizes + dedupes pairs (#191)", {
 	# verbose = FALSE (default) stays silent even when dedup happens.
 	expect_silent(
 		genCoefs(
-			R = 3,
+			G = 3,
 			T = 5,
 			d = 2,
 			density = 0.5,
@@ -559,7 +559,7 @@ test_that("v1.14.0 FETWFE_coefs round-trips through simulateData + getTes (#191)
 	# Pull beta + theta off a freshly-constructed v1.14.1 object, then
 	# strip the new top-level + sub-slots to simulate a v1.14.0 object.
 	template <- genCoefs(
-		R = R,
+		G = R,
 		T = T,
 		d = d,
 		density = 0.5,

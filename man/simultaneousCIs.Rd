@@ -23,7 +23,7 @@ resolution.}
 \item{alpha}{Numeric in \verb{(0, 1)}; significance level. Default \code{0.05}.}
 
 \item{contrasts}{For \code{family = "custom"}, a \verb{K x num_treats} matrix whose
-rows give the \code{K} linear combinations of the underlying per-\verb{(r, t)}
+rows give the \code{K} linear combinations of the underlying per-\verb{(g, t)}
 treatment-effect vector (the \code{multcomp::glht()} convention). Ignored for
 the other families.}
 }
@@ -66,7 +66,7 @@ differences, where effects share the regression-coefficient variance piece).
 \strong{Family resolution and \code{K}.} \code{"event_study"} resolves to one effect per
 post-treatment event time \verb{e = 0, ..., T - 2} (\code{K = T - 1}); \code{"cohort"} to
 one effect per treated cohort (\code{K = R}); \code{"all_post_treatment"} to one
-effect per \verb{(r, t)} cell (\code{K = num_treats}); \code{"custom"} to the
+effect per \verb{(g, t)} cell (\code{K = num_treats}); \code{"custom"} to the
 \code{K = nrow(contrasts)} user-supplied contrasts.
 
 \strong{Joint covariance.} The \verb{K x K} covariance \code{Sigma = Sigma_1 + Sigma_2} is
@@ -117,7 +117,7 @@ and downstream RNG-using code observes no perturbation.
 }
 \examples{
 \donttest{
-  coefs <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+  coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
   sim <- simulateData(coefs, N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
   fit <- fetwfeWithSimulatedData(sim)
   sci <- simultaneousCIs(fit, family = "event_study", alpha = 0.05)

@@ -19,7 +19,7 @@ make_ci_panel <- function(
 	eff_size = 2
 ) {
 	coefs <- genCoefs(
-		R = R,
+		G = R,
 		T = T,
 		d = d,
 		density = 0.5,
@@ -64,7 +64,7 @@ make_scattered_degenerate_panel <- function(n_per = 40, T = 7, seed = 909) {
 # make_ar1_panel but at R = 4 (the file's K = 4 convention).
 make_ci_ar1_panel <- function(seed = 7, N = 150, rho = 0.85, sd_e = 1) {
 	set.seed(seed)
-	sim_coefs <- genCoefs(R = 4, T = 6, d = 2, density = 0.5, eff_size = 2)
+	sim_coefs <- genCoefs(G = 4, T = 6, d = 2, density = 0.5, eff_size = 2)
 	sim <- simulateData(sim_coefs, N = N, sig_eps_sq = 0.5, sig_eps_c_sq = 0.5)
 	pdata <- sim$pdata
 	pdata <- pdata[order(pdata$unit, pdata$time), ]
@@ -296,7 +296,7 @@ test_that("ci_type = 'simultaneous' degrades gracefully when calc_ses = FALSE (q
 
 # ------------------------------------------------------------------------------
 # Test 8: K = 1 bypass via a DIRECT unit test of .apply_simultaneous_catt_band()
-# on a hand-built 1-row catt_df. genCoefs(R = 1) errors (R >= 2 required) and
+# on a hand-built 1-row catt_df. genCoefs(G = 1) errors (R >= 2 required) and
 # genCoefs(T = 2) errors (T >= 3 required), so a K = 1 family is NOT
 # simulator-constructible -- the direct unit test is the only viable route.
 # The worker's K = 1 branch (R/simultaneous_cis.R: sum(nondeg) <= 1 ->

@@ -28,7 +28,7 @@ A data frame with one row per event-time and columns \code{term},
 \description{
 Returns a \code{broom}-style tidy data frame for the output of
 \code{\link[=eventStudy]{eventStudy()}}. Renames existing columns to broom conventions
-(\code{se} → \code{std.error}, \code{p_value} → \code{p.value}) and adds a \code{term}
+(\code{se} \eqn{\to} \code{std.error}, \code{p_value} \eqn{\to} \code{p.value}) and adds a \code{term}
 column (\code{"e<event_time>"}) plus a \code{statistic} column
 (\code{estimate / std.error}) so the schema matches \verb{tidy.<estimator>()}
 for downstream \code{bind_rows()} consumers.
@@ -47,7 +47,7 @@ carry \code{NA} bounds under both \code{ci_type} settings.)
 \examples{
 \dontrun{
   res <- fetwfeWithSimulatedData(
-    simulateData(genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
+    simulateData(genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
                  N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
   )
   broom::tidy(eventStudy(res))

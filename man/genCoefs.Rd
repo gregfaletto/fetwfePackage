@@ -5,7 +5,7 @@
 \title{Generate Coefficient Vector for Data Generation}
 \usage{
 genCoefs(
-  R,
+  G = NULL,
   T,
   d,
   density,
@@ -15,12 +15,13 @@ genCoefs(
   assignment_interactions = NULL,
   assignment_interaction_strength = NULL,
   seed = NULL,
-  verbose = FALSE
+  verbose = FALSE,
+  R = NULL
 )
 }
 \arguments{
-\item{R}{Integer. The number of treated cohorts (treatment is assumed to start in periods 2 to
-\code{R + 1}).}
+\item{G}{Integer. The number of treated cohorts (treatment is assumed to start in periods 2 to
+\code{G + 1}).}
 
 \item{T}{Integer. The total number of time periods.}
 
@@ -43,14 +44,14 @@ independent of its covariates. Original pre-1.14.0 behavior,
 preserved byte-identically.
 \item \code{"multinomial"}: cohort assignment follows a
 multinomial-logit propensity-score model
-\eqn{\pi_r(x) = \exp(\gamma_r^\top x) / \sum_{r'} \exp(\gamma_{r'}^\top x)}{pi_r(x) = exp(gamma_r' x) / sum_r' exp(gamma_r'' x)}
+\eqn{\pi_g(x) = \exp(\gamma_g^\top x) / \sum_{g'} \exp(\gamma_{g'}^\top x)}{pi_g(x) = exp(gamma_g' x) / sum_g' exp(gamma_g'' x)}
 with \eqn{\gamma_0 \equiv 0}{gamma_0 = 0} (never-treated reference).
 Requires \eqn{d \ge 1}{d >= 1}.
 \item \code{"ordered"}: cohort assignment follows a proportional-odds
 (ordered-logit) model with cumulative probabilities
-\eqn{P(W \le r | x) = \mathrm{plogis}(\alpha_r - \gamma^\top x)}{P(W <= r | x) = plogis(alpha_r - gamma' x)}.
-Cutpoints \eqn{\alpha_r}{alpha_r} are chosen so the marginal cohort
-probabilities are approximately uniform 1/(R + 1). Requires
+\eqn{P(W \le g | x) = \mathrm{plogis}(\alpha_g - \gamma^\top x)}{P(W <= g | x) = plogis(alpha_g - gamma' x)}.
+Cutpoints \eqn{\alpha_g}{alpha_g} are chosen so the marginal cohort
+probabilities are approximately uniform 1/(G + 1). Requires
 \eqn{d \ge 1}{d >= 1}.
 }}
 
@@ -97,6 +98,10 @@ Monte Carlo integration in \code{getTes()} uses \code{seed + 2L}.}
 unordered pairs (e.g., when the user passes both \code{c(1, 2)} and
 \code{c(2, 1)}). Default \code{FALSE} (silent — users can verify the
 final canonical list via \code{coefs$assignment_coefs$interactions}).}
+
+\item{R}{Deprecated. The former name for \code{G}; still accepted with a
+deprecation warning, and will be removed in a future release. Use
+\code{G}.}
 }
 \value{
 An object of class \code{"FETWFE_coefs"}, which is a list containing:
@@ -107,7 +112,10 @@ transform.}
 space. \code{theta} is a sparse vector, which aligns with an assumption that deviations from the
 restrictions encoded in the FETWFE model are sparse. \code{beta} is derived from
 \code{theta}.}
-\item{R}{The provided number of treated cohorts.}
+\item{G}{The provided number of treated cohorts.}
+\item{R}{Deprecated alias for \code{G}, retained for backward
+compatibility; populated with the same value. Use \code{G}. Will be
+removed in a future release.}
 \item{T}{The provided number of time periods.}
 \item{d}{The provided number of covariates.}
 \item{seed}{The provided seed.}
@@ -137,7 +145,7 @@ and \code{interaction_strength} sub-slots new in 1.14.1.}
 \description{
 This function generates a coefficient vector \code{beta} for simulation studies of the fused
 extended two-way fixed effects estimator. It returns an S3 object of class
-\code{"FETWFE_coefs"} containing \code{beta} along with simulation parameters \code{R},
+\code{"FETWFE_coefs"} containing \code{beta} along with simulation parameters \code{G},
 \code{T}, and \code{d}. See the simulation studies section of Faletto (2025) for details.
 }
 \details{
@@ -151,9 +159,9 @@ byte-identically. See \code{vignette("simulation_vignette", package = "fetwfe")}
 for worked examples.
 
 The length of \code{beta} is given by
-\deqn{p = R + (T - 1) + d + dR + d(T - 1) + \mathit{num\_treats} + (\mathit{num\_treats} \times d)}{p = R + (T - 1) + d + dR + d(T - 1) + num_treats + (num_treats * d)},
+\deqn{p = G + (T - 1) + d + dG + d(T - 1) + \mathit{num\_treats} + (\mathit{num\_treats} \times d)}{p = G + (T - 1) + d + dG + d(T - 1) + num_treats + (num_treats * d)},
 where the number of treatment parameters is defined as
-\deqn{\mathit{num\_treats} = T \times R - \frac{R(R+1)}{2}}{num_treats = T * R - R(R+1)/2}.
+\deqn{\mathit{num\_treats} = T \times G - \frac{G(G+1)}{2}}{num_treats = T * G - G(G+1)/2}.
 
 The function operates in two steps:
 \enumerate{
@@ -173,14 +181,14 @@ Eq. \code{att.estimator.weighted} (line 837).
 \examples{
 \dontrun{
   # Generate coefficients
-  coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
+  coefs <- genCoefs(G = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
 
   # Simulate data using the coefficients
   sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5)
 
   # Covariate-dependent cohort assignment: multinomial-logit DGP
   coefs_mn <- genCoefs(
-    R = 5, T = 30, d = 12, density = 0.1, eff_size = 2,
+    G = 5, T = 30, d = 12, density = 0.1, eff_size = 2,
     assignment_type = "multinomial", assignment_strength = 1.0,
     seed = 123
   )
@@ -190,7 +198,7 @@ Eq. \code{att.estimator.weighted} (line 837).
   # (multinomial-logit + a single x1*x2 interaction term in the propensity
   # model only; outcome model continues to use plain X):
   coefs_int <- genCoefs(
-    R = 5, T = 30, d = 12, density = 0.1, eff_size = 2,
+    G = 5, T = 30, d = 12, density = 0.1, eff_size = 2,
     assignment_type = "multinomial",
     assignment_interactions = list(c(1, 2)),
     assignment_interaction_strength = 1.5,
