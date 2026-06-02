@@ -117,7 +117,7 @@ and downstream RNG-using code observes no perturbation.
 }
 \examples{
 \donttest{
-  coefs <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+  coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
   sim <- simulateData(coefs, N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
   fit <- fetwfeWithSimulatedData(sim)
   sci <- simultaneousCIs(fit, family = "event_study", alpha = 0.05)

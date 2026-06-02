@@ -44,7 +44,7 @@ sampling distribution for a population truth. When
 }
 \examples{
 \dontrun{
-  coefs <- genCoefs(R = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+  coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
   broom::tidy(getTes(coefs))
 }
 }

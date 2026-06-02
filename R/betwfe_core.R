@@ -41,7 +41,7 @@
 #' half (with `N` units in each data set). The data for half of the units should
 #' go in the `pdata` argument provided above. For the other `N` units, simply
 #' provide the counts for how many units appear in the untreated cohort plus
-#' each of the other `R` cohorts in this argument `indep_counts`. The benefit
+#' each of the other `G` cohorts in this argument `indep_counts`. The benefit
 #' of doing this is that the standard error for the average treatment effect
 #' will be (asymptotically) exact instead of conservative. The length of
 #' `indep_counts` must equal 1 plus the number of treated cohorts in `pdata`.
@@ -811,7 +811,7 @@ betwfe <- function(
 #' @examples
 #' \dontrun{
 #'   # Generate coefficients
-#'   coefs <- genCoefs(R = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
+#'   coefs <- genCoefs(G = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
 #'
 #'   # Simulate data using the coefficients
 #'   sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5)

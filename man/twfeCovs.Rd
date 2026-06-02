@@ -67,7 +67,7 @@ large number of units, you can optionally randomly split your data set in
 half (with \code{N} units in each data set). The data for half of the units should
 go in the \code{pdata} argument provided above. For the other \code{N} units, simply
 provide the counts for how many units appear in the untreated cohort plus
-each of the other \code{R} cohorts in this argument \code{indep_counts}. The benefit
+each of the other \code{G} cohorts in this argument \code{indep_counts}. The benefit
 of doing this is that the standard error for the average treatment effect
 will be (asymptotically) exact instead of conservative. The length of
 \code{indep_counts} must equal 1 plus the number of treated cohorts in \code{pdata}.
