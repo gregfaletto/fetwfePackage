@@ -172,8 +172,12 @@ test_that("ci_type = 'simultaneous' fit exposes $G == $R (cross-feature with #19
 # ------------------------------------------------------------------------------
 
 test_that("a representative pipeline emits no deprecation warning", {
-	withr::local_options(warn = 1)
-	expect_no_condition(
+	# Collect every warning the pipeline signals and assert that NONE of them
+	# is the package's own deprecation warning (i.e. no in-package caller
+	# self-triggers the `R` deprecation). Unrelated benign warnings, if any,
+	# do not fail this test -- only a "deprecated" warning would.
+	deprecation_warnings <- character(0)
+	withCallingHandlers(
 		{
 			cf <- genCoefs(
 				G = 3,
@@ -193,6 +197,15 @@ test_that("a representative pipeline emits no deprecation warning", {
 			broom::tidy(fit)
 			eventStudy(fit)
 		},
-		class = "warning"
+		warning = function(w) {
+			if (grepl("deprecated", conditionMessage(w))) {
+				deprecation_warnings <<- c(
+					deprecation_warnings,
+					conditionMessage(w)
+				)
+			}
+			invokeRestart("muffleWarning")
+		}
 	)
+	expect_equal(length(deprecation_warnings), 0L)
 })
