@@ -106,6 +106,7 @@ print.summary.betwfe <- function(x, ...) {
 	"y_final",
 	"N",
 	"T",
+	"G",
 	"R",
 	"d",
 	"p",

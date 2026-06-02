@@ -17,7 +17,7 @@ print.FETWFE_tes <- function(x, ...) {
 	}
 	cat("\n")
 	cat("Generated from:\n")
-	cat(sprintf("  Cohorts (R)      : %d\n", x$R))
+	cat(sprintf("  Cohorts (G)      : %d\n", x$G))
 	cat(sprintf("  Time periods (T) : %d\n", x$T))
 	cat(sprintf("  Covariates (d)   : %d\n", x$d))
 	cat(sprintf(
@@ -36,6 +36,7 @@ summary.FETWFE_tes <- function(object, ...) {
 	out <- list(
 		att_true = object$att_true,
 		actual_cohort_tes = tes,
+		G = object$R,
 		R = object$R,
 		T = object$T,
 		d = object$d,
@@ -77,7 +78,7 @@ print.summary.FETWFE_tes <- function(x, ...) {
 	))
 	cat("\n")
 	cat("Generated from:\n")
-	cat(sprintf("  Cohorts (R)      : %d\n", x$R))
+	cat(sprintf("  Cohorts (G)      : %d\n", x$G))
 	cat(sprintf("  Time periods (T) : %d\n", x$T))
 	cat(sprintf("  Covariates (d)   : %d\n", x$d))
 	cat(sprintf(

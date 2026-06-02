@@ -169,7 +169,8 @@ An object of class \code{fetwfe} containing the following elements:
 \item{ci_type}{Character scalar; the \code{ci_type} argument the user passed (\code{"simultaneous"} or \code{"pointwise"}), controlling whether the reported \code{catt_df} / \code{eventStudy()} confidence-interval bounds are simultaneous (family-wise) or pointwise.}
 \item{N}{The final number of units that were in the data set used for estimation (after any units may have been removed because they were treated in the first time period).}
 \item{T}{The number of time periods in the final data set.}
-\item{R}{The final number of treated cohorts that appear in the final data set.}
+\item{G}{The final number of treated cohorts that appear in the final data set.}
+\item{R}{Deprecated alias for \code{G}, retained for backward compatibility; populated with the same value. Use \code{G}. Will be removed in a future release.}
 \item{d}{The final number of covariates that appear in the final data set (after any covariates may have been removed because they contained missing values or all contained the same value for every unit).}
 \item{p}{The final number of columns in the full set of covariates used to estimate the model.}
 \item{alpha}{The alpha level used for confidence intervals.}

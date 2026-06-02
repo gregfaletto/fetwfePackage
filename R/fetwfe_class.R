@@ -102,6 +102,7 @@ print.summary.fetwfe <- function(x, ...) {
 	"cv_seed",
 	"N",
 	"T",
+	"G",
 	"R",
 	"d",
 	"p",
