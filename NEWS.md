@@ -1,5 +1,16 @@
 # NEWS
 
+## Version 1.17.2
+
+### Bug fixes
+
+- Fixed: `getGramInv()` now degrades gracefully (a warning plus
+  `calc_ses = FALSE`) instead of aborting with an uncaught LAPACK
+  "system is computationally singular" error when the selected-feature Gram is
+  near-singular (reciprocal condition number below `solve()`'s tolerance). The
+  singularity guard is now condition-number-aware and `solve()` is wrapped in a
+  `tryCatch()` routing to the same fallback. (#205)
+
 ## Version 1.17.1
 
 ### Bug fixes
