@@ -58,15 +58,20 @@ utils::globalVariables(c(
 #' @param alpha Numeric in `(0, 1)`; significance level. Default `0.05`.
 #' @param contrasts For `family = "custom"`, a `K x num_treats` matrix whose
 #'   rows give the `K` linear combinations of the underlying per-`(g, t)`
-#'   treatment-effect vector (the `multcomp::glht()` convention). Ignored for
-#'   the other families.
+#'   treatment-effect vector (the `multcomp::glht()` convention; `num_treats`
+#'   is the number of estimated effects, equal to `R` for `twfeCovs`). Ignored
+#'   for the other families. Note that the `"custom"` family omits the
+#'   cohort-probability variance term (`Sigma_2 = 0`), so a custom contrast
+#'   that pools across cohorts in a probability-weighted way is
+#'   anti-conservative (its band can under-cover); use `family = "cohort"` for
+#'   cohort-pooled effects.
 #' @return An object of S3 class `"simultaneous_cis"`: a list with
 #'   \describe{
 #'     \item{ci}{A data frame with columns `effect`, `estimate`,
 #'       `simultaneous_ci_low`, `simultaneous_ci_high`, `pointwise_ci_low`,
 #'       `pointwise_ci_high` (one row per effect in the family).}
 #'     \item{critical_value}{The simultaneous critical value `c_{1 - alpha}`
-#'       (or, under `se_type = "conservative"`, the Bonferroni critical value
+#'       (or, when the fit used `se_type = "conservative"`, the Bonferroni critical value
 #'       `qnorm(1 - alpha/(2K))` -- see Details).}
 #'     \item{pointwise_critical_value}{`qnorm(1 - alpha/2)`, for reference.}
 #'     \item{bonferroni_critical_value}{`qnorm(1 - alpha/(2K))`, for reference.}
@@ -98,7 +103,7 @@ utils::globalVariables(c(
 #' cohort-sample-proportions estimator satisfies; the fixed-dim framing follows
 #' the paper's AE point 1(d).
 #'
-#' **Conservative fallback.** Under `se_type = "conservative"` the function
+#' **Conservative fallback.** When the fit was made with `se_type = "conservative"`, the function
 #' falls back to Bonferroni-corrected pointwise CIs (the Cauchy-Schwarz upper
 #' bound used for the conservative scalar SE does not generalize to a `K x K`
 #' covariance matrix) and emits a brief `message()`. The `$critical_value`
@@ -823,8 +828,11 @@ simultaneousCIs.twfeCovs <- function(
 #'   `family = "event_study"` produces non-zero Jacobians; the cohort and
 #'   all-post-treatment families have no cohort-probability weighting in a
 #'   single effect, so their Jacobians (and hence `Sigma_2`) are zero. For
-#'   `family = "custom"`, `Sigma_2` is conservatively set to zero (the user's
-#'   contrasts operate directly on the fixed per-cell effects).
+#'   `family = "custom"`, `Sigma_2` is set to zero on the assumption that the
+#'   user's contrasts operate directly on the fixed per-cell effects; note this
+#'   is anti-conservative (not conservative) for a contrast that pools across
+#'   cohorts in a probability-weighted way, which does carry cohort-probability
+#'   variance.
 #' @param family,K,R,T,num_treats,cohort_offsets_int,first_inds,cohort_probs_overall,d_inv_treat_sel
 #'   See `.simultaneous_cis_impl()`.
 #' @return A length-K list of numeric matrices (each `R x ncol(d_inv_treat_sel)`).

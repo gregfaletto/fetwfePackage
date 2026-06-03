@@ -24,8 +24,13 @@ resolution.}
 
 \item{contrasts}{For \code{family = "custom"}, a \verb{K x num_treats} matrix whose
 rows give the \code{K} linear combinations of the underlying per-\verb{(g, t)}
-treatment-effect vector (the \code{multcomp::glht()} convention). Ignored for
-the other families.}
+treatment-effect vector (the \code{multcomp::glht()} convention; \code{num_treats}
+is the number of estimated effects, equal to \code{R} for \code{twfeCovs}). Ignored
+for the other families. Note that the \code{"custom"} family omits the
+cohort-probability variance term (\code{Sigma_2 = 0}), so a custom contrast
+that pools across cohorts in a probability-weighted way is
+anti-conservative (its band can under-cover); use \code{family = "cohort"} for
+cohort-pooled effects.}
 }
 \value{
 An object of S3 class \code{"simultaneous_cis"}: a list with
@@ -34,7 +39,7 @@ An object of S3 class \code{"simultaneous_cis"}: a list with
 \code{simultaneous_ci_low}, \code{simultaneous_ci_high}, \code{pointwise_ci_low},
 \code{pointwise_ci_high} (one row per effect in the family).}
 \item{critical_value}{The simultaneous critical value \verb{c_\{1 - alpha\}}
-(or, under \code{se_type = "conservative"}, the Bonferroni critical value
+(or, when the fit used \code{se_type = "conservative"}, the Bonferroni critical value
 \verb{qnorm(1 - alpha/(2K))} -- see Details).}
 \item{pointwise_critical_value}{\code{qnorm(1 - alpha/2)}, for reference.}
 \item{bonferroni_critical_value}{\verb{qnorm(1 - alpha/(2K))}, for reference.}
@@ -86,7 +91,7 @@ paper line 1268) is the influence-function condition the package's default
 cohort-sample-proportions estimator satisfies; the fixed-dim framing follows
 the paper's AE point 1(d).
 
-\strong{Conservative fallback.} Under \code{se_type = "conservative"} the function
+\strong{Conservative fallback.} When the fit was made with \code{se_type = "conservative"}, the function
 falls back to Bonferroni-corrected pointwise CIs (the Cauchy-Schwarz upper
 bound used for the conservative scalar SE does not generalize to a \verb{K x K}
 covariance matrix) and emits a brief \code{message()}. The \verb{$critical_value}

@@ -1040,7 +1040,14 @@ check_etwfe_core_inputs <- function(
 		)
 	}
 
-	stopifnot(R >= 2)
+	# Mirror prep_for_etwfe_core()'s friendly message (#208) so that whichever
+	# validator fires first, the user sees the same actionable text rather than
+	# an opaque `stopifnot` failure.
+	if (R < 2) {
+		stop(
+			"Only one treated cohort detected in data. Currently fetwfe and etwfe only support data sets with at least two treated cohorts."
+		)
+	}
 	stopifnot(R <= T - 1)
 
 	indep_count_data_available <- FALSE

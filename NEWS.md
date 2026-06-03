@@ -1,5 +1,20 @@
 # NEWS
 
+## Version 1.17.4
+
+### Documentation and messages
+
+- Doc/message sweep (#208): corrected stale documentation introduced by the
+  #192/#197 simultaneous-CI changes -- `cohortStudy()`'s `ci_low`/`ci_high` are
+  now described by the fit's `ci_type` (simultaneous by default) rather than as
+  a "Wald CI"; `simultaneousCIs()`'s `se_type` references and the `custom`-family
+  variance caveat were clarified (the `Sigma_2 = 0` simplification is
+  anti-conservative for a contrast that pools across cohorts in a
+  probability-weighted way); and notes were added on `genCoefs()`'s `G = NULL`
+  default and `simulateData()`'s deterministic re-seeding. In addition,
+  `check_etwfe_core_inputs()` now emits the same friendly single-cohort error
+  message as `prep_for_etwfe_core()` instead of a bare `stopifnot` failure.
+
 ## Version 1.17.3
 
 ### Bug fixes
