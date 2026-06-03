@@ -196,7 +196,6 @@
 #' \item{lambda_selection}{Character scalar; either `"cv"` (10-fold cross-validation on `cv.grpreg`; v1.13.0+ default) or `"bic"` (BIC over the `grpreg` lambda grid; the prior default). Mirrors the `lambda_selection` argument the user passed.}
 #' \item{cv_folds}{Integer scalar; the `cv_folds` value used when `lambda_selection = "cv"`, `NA_integer_` when `lambda_selection = "bic"`.}
 #' \item{cv_seed}{Integer scalar; the seed actually fed to `set.seed()` immediately before `cv.grpreg()` was called. Defaults to `as.integer(N * T)` when the user did not pass a seed. `NA_integer_` when `lambda_selection = "bic"`.}
-#' \item{ci_type}{Character scalar; the `ci_type` argument the user passed (`"simultaneous"` or `"pointwise"`), controlling whether the reported `catt_df` / `eventStudy()` confidence-interval bounds are simultaneous (family-wise) or pointwise.}
 #' \item{N}{The final number of units that were in the data set used for estimation (after any units may have been removed because they were treated in the first time period).}
 #' \item{T}{The number of time periods in the final data set.}
 #' \item{G}{The final number of treated cohorts that appear in the final data set.}
@@ -655,7 +654,6 @@ fetwfe <- function(
 #' \item{lambda_selection}{Character scalar; either `"cv"` (10-fold cross-validation on `cv.grpreg`; v1.13.0+ default) or `"bic"` (BIC over the `grpreg` lambda grid; the prior default). Mirrors the `lambda_selection` argument the user passed.}
 #' \item{cv_folds}{Integer scalar; the `cv_folds` value used when `lambda_selection = "cv"`, `NA_integer_` when `lambda_selection = "bic"`.}
 #' \item{cv_seed}{Integer scalar; the seed actually fed to `set.seed()` immediately before `cv.grpreg()` was called. Defaults to `as.integer(N * T)` when the user did not pass a seed. `NA_integer_` when `lambda_selection = "bic"`.}
-#' \item{ci_type}{Character scalar; the `ci_type` argument the user passed (`"simultaneous"` or `"pointwise"`), controlling whether the reported `catt_df` / `eventStudy()` confidence-interval bounds are simultaneous (family-wise) or pointwise.}
 #' \item{N}{The final number of units that were in the data set used for estimation (after any units may have been removed because they were treated in the first time period).}
 #' \item{T}{The number of time periods in the final data set.}
 #' \item{G}{The final number of treated cohorts that appear in the final data set.}

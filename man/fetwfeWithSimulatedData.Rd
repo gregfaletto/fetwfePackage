@@ -166,7 +166,6 @@ An object of class \code{fetwfe} containing the following elements:
 \item{lambda_selection}{Character scalar; either \code{"cv"} (10-fold cross-validation on \code{cv.grpreg}; v1.13.0+ default) or \code{"bic"} (BIC over the \code{grpreg} lambda grid; the prior default). Mirrors the \code{lambda_selection} argument the user passed.}
 \item{cv_folds}{Integer scalar; the \code{cv_folds} value used when \code{lambda_selection = "cv"}, \code{NA_integer_} when \code{lambda_selection = "bic"}.}
 \item{cv_seed}{Integer scalar; the seed actually fed to \code{set.seed()} immediately before \code{cv.grpreg()} was called. Defaults to \code{as.integer(N * T)} when the user did not pass a seed. \code{NA_integer_} when \code{lambda_selection = "bic"}.}
-\item{ci_type}{Character scalar; the \code{ci_type} argument the user passed (\code{"simultaneous"} or \code{"pointwise"}), controlling whether the reported \code{catt_df} / \code{eventStudy()} confidence-interval bounds are simultaneous (family-wise) or pointwise.}
 \item{N}{The final number of units that were in the data set used for estimation (after any units may have been removed because they were treated in the first time period).}
 \item{T}{The number of time periods in the final data set.}
 \item{G}{The final number of treated cohorts that appear in the final data set.}

@@ -1,5 +1,15 @@
 # NEWS
 
+## Version 1.17.3
+
+### Bug fixes
+
+- Fixed: removed a duplicated `ci_type` entry from the `fetwfe()` and
+  `fetwfeWithSimulatedData()` `@return` documentation, so the slot is listed
+  once (not twice) in `?fetwfe` / `?fetwfeWithSimulatedData`. The
+  `doc-slot-parity` test now also guards against duplicate top-level `@return`
+  items. (#206)
+
 ## Version 1.17.2
 
 ### Bug fixes
