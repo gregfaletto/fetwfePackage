@@ -764,18 +764,30 @@ getGramInv <- function(
 	stopifnot(nrow(gram) == p_sel)
 	stopifnot(ncol(gram) == p_sel)
 
-	min_gram_eigen <- min(
-		eigen(gram, symmetric = TRUE, only.values = TRUE)$values
-	)
+	gram_eigvals <- eigen(gram, symmetric = TRUE, only.values = TRUE)$values
+	min_gram_eigen <- min(gram_eigvals)
+	max_gram_eigen <- max(gram_eigvals)
 
-	if (min_gram_eigen < 10^(-16)) {
-		warning(
-			"Gram matrix corresponding to selected features is not invertible. Assumptions needed for inference are not satisfied. Standard errors will not be calculated."
-		)
+	gram_singular_msg <- "Gram matrix corresponding to selected features is not invertible. Assumptions needed for inference are not satisfied. Standard errors will not be calculated."
+
+	# Guard Gram inversion with an rcond-aware relative tolerance (#205):
+	# solve() aborts on reciprocal condition number, not absolute min
+	# eigenvalue, and the old absolute floor (1e-16) sat below
+	# .Machine$double.eps, letting near-singular Grams reach an unguarded
+	# solve(). The tryCatch below backstops any residual rcond case so the
+	# fit degrades to calc_ses = FALSE rather than aborting.
+	if (
+		min_gram_eigen < max(dim(gram)) * .Machine$double.eps * max_gram_eigen
+	) {
+		warning(gram_singular_msg)
 		return(list(gram_inv = NA, calc_ses = FALSE))
 	}
 
-	gram_inv <- solve(gram)
+	gram_inv <- tryCatch(solve(gram), error = function(e) NULL)
+	if (is.null(gram_inv)) {
+		warning(gram_singular_msg)
+		return(list(gram_inv = NA, calc_ses = FALSE))
+	}
 
 	if (any(!is.na(sel_feat_inds))) {
 		# Get only the parts of gram_inv that have to do with treatment effects
