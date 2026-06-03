@@ -1,5 +1,21 @@
 # NEWS
 
+## Version 1.18.0
+
+### Inference
+
+- `catt_df` (cohort ATTs) and `eventStudy()` now report a multiplicity-adjusted
+  `p_value` that follows the fit's `ci_type`, completing the simultaneous-
+  inference default introduced in #197 (#200). Under `ci_type = "simultaneous"`
+  (the default) the `p_value` is the single-step max-T (family-wise) adjusted
+  p-value -- the exact dual of the simultaneous band, so a coefficient lies
+  outside its `1 - alpha` band iff its adjusted `p_value < alpha`. Under
+  `ci_type = "pointwise"` the `p_value` stays the per-effect Wald p-value
+  (unchanged). The adjustment reuses the joint covariance assembled for the
+  band (`mvtnorm::pmvnorm()`; Bonferroni under `se_type = "conservative"`), and
+  `simultaneousCIs()` now returns the per-effect `adjusted_p_values`. The
+  overall-ATT `att_p_value` is a single scalar (`K = 1`) and is unchanged.
+
 ## Version 1.17.5
 
 ### Performance

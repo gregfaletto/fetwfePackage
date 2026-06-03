@@ -15,7 +15,7 @@
 # check doesn't emit a "no visible binding for global variable" NOTE (matches
 # the pattern in R/plot.R and R/event_study.R).
 
-#' @importFrom mvtnorm qmvnorm GenzBretz
+#' @importFrom mvtnorm qmvnorm pmvnorm GenzBretz
 NULL
 
 utils::globalVariables(c(
@@ -70,6 +70,14 @@ utils::globalVariables(c(
 #'     \item{ci}{A data frame with columns `effect`, `estimate`,
 #'       `simultaneous_ci_low`, `simultaneous_ci_high`, `pointwise_ci_low`,
 #'       `pointwise_ci_high` (one row per effect in the family).}
+#'     \item{adjusted_p_values}{Numeric vector of length `K`: the single-step
+#'       max-T multiplicity-adjusted (family-wise) p-value for each effect, the
+#'       exact dual of the simultaneous band (a coefficient lies outside the
+#'       `(1 - alpha)` band iff its adjusted p-value is `< alpha`). Computed via
+#'       `mvtnorm::pmvnorm()` over the same correlation matrix the band uses
+#'       (or, under `se_type = "conservative"`, the Bonferroni adjustment
+#'       `min(1, K * pointwise_p)`). `NA` for degenerate (zero-variance)
+#'       effects. (#200)}
 #'     \item{critical_value}{The simultaneous critical value `c_{1 - alpha}`
 #'       (or, when the fit used `se_type = "conservative"`, the Bonferroni critical value
 #'       `qnorm(1 - alpha/(2K))` -- see Details).}
@@ -410,6 +418,7 @@ simultaneousCIs.twfeCovs <- function(
 		)
 		out <- list(
 			ci = ci,
+			adjusted_p_values = rep(NA_real_, K),
 			critical_value = pointwise_crit,
 			pointwise_critical_value = pointwise_crit,
 			bonferroni_critical_value = bonferroni_crit,
@@ -524,8 +533,16 @@ simultaneousCIs.twfeCovs <- function(
 		nondeg <- diag(Sigma) > var_tol
 		if (sum(nondeg) <= 1L) {
 			# Zero or one non-degenerate effect: no joint correlation to
-			# integrate; the per-effect critical value is exact.
+			# integrate; the per-effect critical value is exact, and the
+			# single-step max-T adjusted p-value reduces to the pointwise Wald
+			# p-value for the lone non-degenerate effect (NA for degenerate ones).
 			crit <- pointwise_crit
+			adjusted_p_values <- rep(NA_real_, K)
+			nd_one <- which(nondeg)
+			if (length(nd_one) == 1L) {
+				adjusted_p_values[nd_one] <- 2 *
+					stats::pnorm(-abs(estimates[nd_one] / ses[nd_one]))
+			}
 		} else {
 			Sigma_nd <- Sigma[nondeg, nondeg, drop = FALSE]
 			# Numerical-instability guard around cov2cor().
@@ -604,6 +621,17 @@ simultaneousCIs.twfeCovs <- function(
 				algorithm = mvtnorm::GenzBretz()
 			)
 			crit <- qmv$quantile
+
+			# Single-step max-T adjusted p-values over the non-degenerate
+			# sub-family -- the exact dual of the qmvnorm band, in the same
+			# RNG-protected region (the caller's .Random.seed is restored
+			# on exit).
+			adjusted_p_values <- .maxt_adjusted_p_nd(
+				estimates,
+				ses,
+				nondeg,
+				rho
+			)
 		}
 	} else {
 		# Conservative same-data: the Cauchy-Schwarz upper bound does not
@@ -613,6 +641,15 @@ simultaneousCIs.twfeCovs <- function(
 		v2 <- pmax(diag(Sigma_2), 0)
 		ses <- sqrt(v1 + v2 + 2 * sqrt(v1 * v2))
 		crit <- if (K == 1L) pointwise_crit else bonferroni_crit
+		# Bonferroni-adjusted p-values -- the dual of the Bonferroni band --
+		# computed from the same Cauchy-Schwarz ses; degenerate (se = 0)
+		# effects -> NA.
+		pw_cons <- ifelse(
+			ses > 0,
+			2 * stats::pnorm(-abs(estimates / ses)),
+			NA_real_
+		)
+		adjusted_p_values <- pmin(1, K * pw_cons)
 		message(
 			"simultaneousCIs(): under se_type = 'conservative' the Cauchy-",
 			"Schwarz upper bound does not extend to a joint K x K covariance ",
@@ -635,6 +672,7 @@ simultaneousCIs.twfeCovs <- function(
 
 	out <- list(
 		ci = ci,
+		adjusted_p_values = adjusted_p_values,
 		critical_value = crit,
 		pointwise_critical_value = pointwise_crit,
 		bonferroni_critical_value = bonferroni_crit,
@@ -644,6 +682,47 @@ simultaneousCIs.twfeCovs <- function(
 	)
 	class(out) <- "simultaneous_cis"
 	out
+}
+
+# .maxt_adjusted_p_nd
+#' @title Single-step max-T multiplicity-adjusted p-values
+#' @description Computes the single-step max-T (family-wise) adjusted p-value for
+#'   each non-degenerate effect in a family, the exact dual of the simultaneous
+#'   band's `mvtnorm::qmvnorm()` critical value. For effect `k` with standardized
+#'   statistic `z_k = estimate_k / se_k`, the adjusted p-value is
+#'   `1 - P(max_j |Z_j| <= |z_k|)` for `Z ~ N(0, rho)`, evaluated via
+#'   `mvtnorm::pmvnorm()` over the **same** non-degenerate correlation matrix the
+#'   band uses (Hothorn, Bretz & Westfall 2008; `multcomp`-style single step).
+#' @param estimates Numeric vector of length `K`; the family's point estimates.
+#' @param ses Numeric vector of length `K`; the per-effect standard errors
+#'   (`sqrt(diag(Sigma))`).
+#' @param nondeg Logical vector of length `K`; `TRUE` for non-degenerate
+#'   (positive-variance) effects, with `sum(nondeg) >= 2`.
+#' @param rho The `sum(nondeg) x sum(nondeg)` correlation matrix
+#'   `cov2cor(Sigma[nondeg, nondeg])` (the band's `rho`).
+#' @return Numeric vector of length `K`: the adjusted p-value for each
+#'   non-degenerate effect, `NA_real_` for degenerate effects.
+#' @details Must be called inside the caller's `.Random.seed` save/restore region
+#'   (it consumes RNG via `mvtnorm::GenzBretz()`). The result is clamped to
+#'   `[0, 1]` to absorb the quasi-Monte-Carlo integration noise.
+#' @keywords internal
+#' @noRd
+.maxt_adjusted_p_nd <- function(estimates, ses, nondeg, rho) {
+	K <- length(estimates)
+	adj <- rep(NA_real_, K)
+	nd_idx <- which(nondeg)
+	m <- length(nd_idx)
+	z <- abs(estimates[nd_idx] / ses[nd_idx])
+	for (j in seq_len(m)) {
+		prob <- mvtnorm::pmvnorm(
+			lower = rep(-z[j], m),
+			upper = rep(z[j], m),
+			corr = rho,
+			algorithm = mvtnorm::GenzBretz()
+		)
+		adj[nd_idx[j]] <- min(1, max(0, 1 - as.numeric(prob)))
+	}
+	adj
 }
 
 #' @title Recompute a fit's cohort-family CIs as simultaneous bands (fit-time)
@@ -661,9 +740,9 @@ simultaneousCIs.twfeCovs <- function(
 #'   explicitly so all four callers agree.
 #' @param has_valid_ses Logical; `res$calc_ses` from the core (read off the
 #'   classed object by the caller).
-#' @return A list with elements `ci_low` and `ci_high` (numeric vectors of
-#'   length `R`, aligned to `x$catt_df` cohort order), or `NULL` to signal
-#'   "leave `catt_df` unchanged".
+#' @return A list with elements `ci_low`, `ci_high`, and `adjusted_p_values`
+#'   (numeric vectors of length `R`, aligned to `x$catt_df` cohort order), or
+#'   `NULL` to signal "leave `catt_df` unchanged".
 #' @keywords internal
 #' @noRd
 .apply_simultaneous_catt_band <- function(x, alpha, has_valid_ses) {
@@ -704,7 +783,8 @@ simultaneousCIs.twfeCovs <- function(
 	}
 	list(
 		ci_low = sci$ci$simultaneous_ci_low,
-		ci_high = sci$ci$simultaneous_ci_high
+		ci_high = sci$ci$simultaneous_ci_high,
+		adjusted_p_values = sci$adjusted_p_values
 	)
 }
 
@@ -732,12 +812,16 @@ simultaneousCIs.twfeCovs <- function(
 		has_valid_ses = out$calc_ses
 	)
 	if (!is.null(band)) {
-		# Overwrite ONLY the two interval-bound columns; se / p_value /
-		# selected / estimate are untouched. (The catt_df S3 layer only
-		# intercepts the OLD Title-Case names; ci_low/ci_high fall through.)
+		# Overwrite the two interval-bound columns AND p_value with the
+		# simultaneous-band duals: under ci_type = "simultaneous" the p_value
+		# becomes the single-step max-T multiplicity-adjusted p-value that
+		# matches the band (#200). se / selected / estimate are untouched.
+		# (The catt_df S3 layer only intercepts the OLD Title-Case names;
+		# ci_low / ci_high / p_value fall through to `$<-.data.frame`.)
 		cd <- out$catt_df
 		cd$ci_low <- band$ci_low
 		cd$ci_high <- band$ci_high
+		cd$p_value <- band$adjusted_p_values
 		out$catt_df <- cd
 	}
 	# Re-validate the final object (defense-in-depth; the ci_type slot + the

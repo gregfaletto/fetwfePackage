@@ -20,9 +20,12 @@ inherits the fit's stored \code{ci_type} (so a fit made with the default
 \code{ci_type = "simultaneous"} yields simultaneous event-study bands, which
 \code{print} / \code{summary} / \code{plot} then display); for objects fitted before
 version 1.16.0 (no \code{ci_type} slot) \code{NULL} falls back to \code{"pointwise"}. The
-\code{se} column is identical under both settings; only the interval bounds and
-their critical-value multiplier differ. Degenerate event times (no valid
-contributing cohorts) carry \code{NA} bounds under both settings.}
+\code{se} column is identical under both settings; the interval bounds, their
+critical-value multiplier, and the \code{p_value} differ (under
+\code{"simultaneous"} the \code{p_value} is the single-step max-T multiplicity-
+adjusted dual of the band, under \code{"pointwise"} the per-effect Wald
+p-value; #200). Degenerate event times (no valid contributing cohorts)
+carry \code{NA} bounds and \code{NA} \code{p_value} under both settings.}
 }
 \value{
 A data frame with class \code{c("eventStudy", "data.frame")} and
@@ -36,8 +39,12 @@ pooled estimate at event time \code{e}.}
 \item{se}{Numeric; combined standard error.}
 \item{ci_low}{Numeric; lower bound of the (1 - alpha) Wald CI.}
 \item{ci_high}{Numeric; upper bound of the (1 - alpha) Wald CI.}
-\item{p_value}{Numeric; two-sided Wald p-value
-(\verb{2 * pnorm(-|estimate / se|)}), \code{NA} when \code{se} is \code{0} or \code{NA}.}
+\item{p_value}{Numeric; follows the fit's \code{ci_type}. Under
+\code{"pointwise"}, the two-sided Wald p-value
+(\verb{2 * pnorm(-|estimate / se|)}); under \code{"simultaneous"} (the
+default), the single-step max-T multiplicity-adjusted (family-wise)
+p-value matching the simultaneous band (#200). \code{NA} when \code{se} is \code{0}
+or \code{NA}.}
 }
 Only post-treatment event times (\code{e >= 0}) are included; pre-treatment
 placebo periods would require an extended regression specification and

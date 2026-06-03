@@ -59,8 +59,10 @@ the band covers all cohort effects jointly with probability \code{1 - alpha},
 matching the default presentation of \code{did::aggte(cband = TRUE)}.
 \code{"pointwise"} reports per-effect Wald intervals (each covers its own
 effect with probability \code{1 - alpha}, no joint guarantee --- the behavior
-of versions <= 1.15.1). Only the interval bounds change; the standard
-errors (\code{se}) and per-cohort p-values (\code{p_value}) are identical under both
+of versions <= 1.15.1). Both the interval bounds and the
+per-cohort p-values (\code{p_value}) follow \code{ci_type} (single-step max-T
+multiplicity-adjusted under \code{"simultaneous"}, per-cohort Wald under
+\code{"pointwise"}; #200); the standard errors (\code{se}) are identical under both
 settings. \code{twfeCovs} estimates a single pooled effect per cohort, so only
 the cohort family is affected (it has no event-study surface). When
 standard errors are unavailable (e.g., a rank-deficient design) the bounds

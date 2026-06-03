@@ -45,9 +45,12 @@ utils::globalVariables(c("event_time", "estimate", "ci_low", "ci_high"))
 #'   `ci_type = "simultaneous"` yields simultaneous event-study bands, which
 #'   `print` / `summary` / `plot` then display); for objects fitted before
 #'   version 1.16.0 (no `ci_type` slot) `NULL` falls back to `"pointwise"`. The
-#'   `se` column is identical under both settings; only the interval bounds and
-#'   their critical-value multiplier differ. Degenerate event times (no valid
-#'   contributing cohorts) carry `NA` bounds under both settings.
+#'   `se` column is identical under both settings; the interval bounds, their
+#'   critical-value multiplier, and the `p_value` differ (under
+#'   `"simultaneous"` the `p_value` is the single-step max-T multiplicity-
+#'   adjusted dual of the band, under `"pointwise"` the per-effect Wald
+#'   p-value; #200). Degenerate event times (no valid contributing cohorts)
+#'   carry `NA` bounds and `NA` `p_value` under both settings.
 #' @return A data frame with class `c("eventStudy", "data.frame")` and
 #'   columns:
 #'   \describe{
@@ -59,8 +62,12 @@ utils::globalVariables(c("event_time", "estimate", "ci_low", "ci_high"))
 #'     \item{se}{Numeric; combined standard error.}
 #'     \item{ci_low}{Numeric; lower bound of the (1 - alpha) Wald CI.}
 #'     \item{ci_high}{Numeric; upper bound of the (1 - alpha) Wald CI.}
-#'     \item{p_value}{Numeric; two-sided Wald p-value
-#'       (`2 * pnorm(-|estimate / se|)`), `NA` when `se` is `0` or `NA`.}
+#'     \item{p_value}{Numeric; follows the fit's `ci_type`. Under
+#'       `"pointwise"`, the two-sided Wald p-value
+#'       (`2 * pnorm(-|estimate / se|)`); under `"simultaneous"` (the
+#'       default), the single-step max-T multiplicity-adjusted (family-wise)
+#'       p-value matching the simultaneous band (#200). `NA` when `se` is `0`
+#'       or `NA`.}
 #'   }
 #'   Only post-treatment event times (`e >= 0`) are included; pre-treatment
 #'   placebo periods would require an extended regression specification and
@@ -370,7 +377,8 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 		ses,
 		z,
 		ci_low = sb$ci_low,
-		ci_high = sb$ci_high
+		ci_high = sb$ci_high,
+		p_value = sb$adjusted_p_values
 	)
 }
 
@@ -590,7 +598,8 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 		ses,
 		z,
 		ci_low = sb$ci_low,
-		ci_high = sb$ci_high
+		ci_high = sb$ci_high,
+		p_value = sb$adjusted_p_values
 	)
 }
 
@@ -673,12 +682,19 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #'   `ci_type = "simultaneous"` path, #197), those override the pointwise
 #'   computation --- the single-function-with-optional-args form keeps the two
 #'   bound-construction paths in ONE place (WORKFLOW_LESSONS §14, avoiding a
-#'   sibling `_with_bounds()` copy). `se` and `p_value` are always the same
-#'   pointwise quantities regardless of which bounds are used.
+#'   sibling `_with_bounds()` copy). `se` is always the same pointwise quantity;
+#'   `p_value` defaults to the pointwise Wald p but is overridden when the
+#'   `p_value` argument is supplied --- the `ci_type = "simultaneous"`
+#'   single-step max-T adjusted dual (#200), masked to `NA` on the same
+#'   degenerate rows as the bounds.
 #' @param event_times,n_cohorts,estimates,ses,z See the per-event-time loops.
 #' @param ci_low,ci_high Optional numeric vectors (length `length(estimates)`)
 #'   to use as the CI bounds instead of `estimate +/- z * se`. `NULL` (default)
 #'   computes the pointwise bounds.
+#' @param p_value Optional numeric vector (length `length(estimates)`) of
+#'   adjusted p-values to use instead of the pointwise Wald p (the
+#'   `ci_type = "simultaneous"` path). `NULL` (default) computes the pointwise
+#'   Wald p-value.
 #' @keywords internal
 #' @noRd
 .assemble_event_study_df <- function(
@@ -688,7 +704,8 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	ses,
 	z,
 	ci_low = NULL,
-	ci_high = NULL
+	ci_high = NULL,
+	p_value = NULL
 ) {
 	if (is.null(ci_low)) {
 		ci_low <- estimates - z * ses
@@ -696,7 +713,9 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	if (is.null(ci_high)) {
 		ci_high <- estimates + z * ses
 	}
-	p_value <- .compute_p_values(estimates, ses)
+	if (is.null(p_value)) {
+		p_value <- .compute_p_values(estimates, ses)
+	}
 	out <- data.frame(
 		event_time = as.integer(event_times),
 		n_cohorts = as.integer(n_cohorts),
@@ -735,8 +754,10 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #' @param alpha Numeric significance level.
 #' @param estimates,ses The per-event-time point estimates and SEs the
 #'   `eventStudy()` loop already computed (used for the `NA`-preservation mask).
-#' @return A list with `ci_low` / `ci_high` (length `length(estimates)`), or
-#'   `NULL` to fall back to pointwise.
+#' @return A list with `ci_low` / `ci_high` / `adjusted_p_values` (length
+#'   `length(estimates)`), or `NULL` to fall back to pointwise. Under
+#'   `ci_type = "simultaneous"` the adjusted p-values are the single-step max-T
+#'   duals of the band (#200); degenerate rows are `NA` to match the bounds.
 #' @keywords internal
 #' @noRd
 .event_study_simultaneous_bounds <- function(x, alpha, estimates, ses) {
@@ -770,7 +791,16 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	na_rows <- !is.finite(ses)
 	ci_low[na_rows] <- NA_real_
 	ci_high[na_rows] <- NA_real_
-	list(ci_low = ci_low, ci_high = ci_high)
+	# Single-step max-T adjusted p-values (#200) -- the dual of the band.
+	# Force NA on the same degenerate rows the bounds are NA'd on, mirroring
+	# `.compute_p_values()` (which returns NA wherever se is NA).
+	adjusted_p_values <- sci$adjusted_p_values
+	adjusted_p_values[na_rows] <- NA_real_
+	list(
+		ci_low = ci_low,
+		ci_high = ci_high,
+		adjusted_p_values = adjusted_p_values
+	)
 }
 
 # `plot.<class>` methods and the rendering helpers were consolidated

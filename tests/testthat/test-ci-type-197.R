@@ -223,13 +223,23 @@ test_that("simultaneous bands are strictly wider than pointwise (>= 2 cohorts)",
 # Test 4: se / p_value / selected / estimate / overall-ATT CI are identical
 # across ci_type. Bounds the blast radius to the two interval-bound columns.
 # ------------------------------------------------------------------------------
-test_that("only ci_low/ci_high differ across ci_type; se/p_value/selected/ATT identical", {
+test_that("ci_low/ci_high/p_value follow ci_type; se/selected/ATT identical", {
 	sim <- make_ci_panel()
 	fit_s <- fetwfeWithSimulatedData(sim)
 	fit_p <- fetwfeWithSimulatedData(sim, ci_type = "pointwise")
 
 	expect_equal(fit_s$catt_df$se, fit_p$catt_df$se)
-	expect_equal(fit_s$catt_df$p_value, fit_p$catt_df$p_value)
+	# #200: p_value now ALSO follows ci_type -- simultaneous is the single-step
+	# max-T adjusted p-value, pointwise is the Wald p-value. They are NOT equal
+	# in general; the adjusted one is >= the pointwise one (multiplicity only
+	# widens). The detailed band/p-value duality lives in
+	# test-maxt-pvalues-200.R.
+	finite_p <- is.finite(fit_s$catt_df$p_value) &
+		is.finite(fit_p$catt_df$p_value)
+	expect_true(all(
+		fit_s$catt_df$p_value[finite_p] >=
+			fit_p$catt_df$p_value[finite_p] - 1e-9
+	))
 	expect_identical(fit_s$catt_df$selected, fit_p$catt_df$selected)
 	expect_equal(fit_s$catt_df$estimate, fit_p$catt_df$estimate)
 

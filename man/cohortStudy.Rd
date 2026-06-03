@@ -26,8 +26,12 @@ confidence-interval bounds, reflecting the fit's \code{ci_type} --
 simultaneous (family-wise) by default, or pointwise \code{1 - alpha}
 Wald bounds when the fit used \code{ci_type = "pointwise"} (\code{alpha} is
 the value passed at fit time).}
-\item{p_value}{Numeric; two-sided Wald p-value
-(\verb{2 * pnorm(-|estimate / se|)}), \code{NA} when \code{se} is \code{0} or \code{NA}.}
+\item{p_value}{Numeric; follows the fit's \code{ci_type}. Under
+\code{"pointwise"}, the two-sided Wald p-value
+(\verb{2 * pnorm(-|estimate / se|)}); under \code{"simultaneous"} (the
+default), the single-step max-T multiplicity-adjusted (family-wise)
+p-value matching the simultaneous band (#200). \code{NA} when \code{se} is \code{0}
+or \code{NA}.}
 \item{selected}{(\code{fetwfe()} / \code{betwfe()} only.) Logical; \code{TRUE} when
 the bridge penalty left the cohort's ATT nonzero. Absent for
 \code{etwfe()} and \code{twfeCovs()}, which do not perform selection.}
