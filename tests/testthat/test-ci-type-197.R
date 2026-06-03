@@ -667,11 +667,14 @@ test_that("ci_type x se_type = 'cluster': simultaneous band consumes the cluster
 		es_s <- eventStudy(fit_s)
 		es_p <- eventStudy(fit_p)
 		es_fin <- is.finite(es_s$se) & es_s$se > 0
-		if (sum(es_fin) >= 2L) {
-			ew_s <- (es_s$ci_high - es_s$ci_low)[es_fin]
-			ew_p <- (es_p$ci_high - es_p$ci_low)[es_fin]
-			expect_true(all(ew_s > ew_p))
-		}
+		# The AR(1) panel keeps >= 2 finite-SE event times for every estimator
+		# (mirrors the cohort-family guarantee above), so assert it rather than
+		# silently skipping: a conditionally-empty assertion would let a
+		# regression that NA-ed the event-study SEs masquerade as a pass.
+		expect_gte(sum(es_fin), 2L)
+		ew_s <- (es_s$ci_high - es_s$ci_low)[es_fin]
+		ew_p <- (es_p$ci_high - es_p$ci_low)[es_fin]
+		expect_true(all(ew_s > ew_p))
 	}
 })
 
