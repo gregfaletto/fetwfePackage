@@ -23,8 +23,6 @@
 #'   (original parameterization).
 #' @param cohort_probs_overall Numeric vector; estimated marginal probabilities
 #'   of belonging to each treated cohort P(W=r). Length `R`.
-#' @param first_inds Integer vector; indices of the first treatment effect for
-#'   each cohort.
 #' @param calc_ses Logical; if `TRUE`, calculate standard errors.
 #' @param indep_probs Logical; if `TRUE`, assumes `cohort_probs` (and
 #'   `cohort_probs_overall`) were estimated from an independent sample, leading
@@ -102,7 +100,6 @@ getTeResultsOLS <- function(
 	gram_inv,
 	tes,
 	cohort_probs_overall,
-	first_inds,
 	calc_ses,
 	indep_probs = FALSE,
 	se_type = "default",
@@ -536,8 +533,6 @@ getPsiRUnfused <- function(
 #'   treatment effect features.
 #' @param sel_treat_inds_shifted Integer vector; indices of selected treatment
 #'   effects within the `num_treats` block (shifted to start from 1).
-#' @param tes Numeric vector; all `num_treats` estimated treatment effects
-#'   (original parameterization).
 #' @param d_inv_treat_sel Numeric matrix; block of the inverse fusion matrix for
 #'   selected treatment effects.
 #' @param cohort_probs_overall Numeric vector; estimated marginal probabilities
@@ -628,7 +623,6 @@ getTeResults2 <- function(
 	psi_mat,
 	gram_inv,
 	sel_treat_inds_shifted,
-	tes,
 	d_inv_treat_sel,
 	cohort_probs_overall,
 	first_inds,

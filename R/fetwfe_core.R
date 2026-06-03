@@ -794,7 +794,6 @@ fetwfe_core <- function(
 		psi_mat = psi_mat,
 		gram_inv = gram_inv,
 		sel_treat_inds_shifted = sel_treat_inds_shifted,
-		tes = tes, # Untransformed treatment effect estimates beta_hat[treat_inds]
 		d_inv_treat_sel = d_inv_treat_sel,
 		cohort_probs_overall = cohort_probs_overall, # In-sample pi_r (unconditional on treated)
 		first_inds = first_inds,
@@ -828,7 +827,6 @@ fetwfe_core <- function(
 			psi_mat = psi_mat,
 			gram_inv = gram_inv,
 			sel_treat_inds_shifted = sel_treat_inds_shifted,
-			tes = tes,
 			d_inv_treat_sel = d_inv_treat_sel,
 			cohort_probs_overall = indep_cohort_probs_overall, # indep pi_r (unconditional)
 			first_inds = first_inds,
