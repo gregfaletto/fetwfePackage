@@ -319,7 +319,7 @@ getSecondVarTermOLS <- function(
 #'   the Treated (ATT). Specifically, `psi_r` places the constant
 #'   `1 / k_full` (where `k_full = last_ind_r - first_ind_r + 1` is the
 #'   cohort's full treatment-block size) at each position corresponding to a
-#'   selected treatment effect in cohort `r`, and zero elsewhere — so that
+#'   selected treatment effect in cohort `r`, and zero elsewhere --- so that
 #'   `t(psi_r) %*% theta_hat_treat_sel == cohort_tes[r]`.
 #' @param first_ind_r Integer; the index of the first treatment effect for
 #'   cohort `r` within the `num_treats` block of treatment effects.
@@ -1019,7 +1019,7 @@ getSecondVarTermDataApp <- function(
 #' three pre-#192 inline Jacobian-build sites
 #' (`getSecondVarTermOLS()`, `getSecondVarTermDataApp()`, and
 #' `.event_study_var2_fetwfe()` in `R/event_study.R`) plus the new
-#' `simultaneousCIs()` call site into one helper (WORKFLOW_LESSONS §14 Class A:
+#' `simultaneousCIs()` call site into one helper (WORKFLOW_LESSONS section 14 Class A:
 #' the third copy triggers a refactor). All four sites implement the same
 #' delta-method gradient of \eqn{f_r(\pi)=\pi_r/\sum_k \pi_k}; the column-index
 #' off-diagonal coefficient \eqn{J_{rs}=-\pi_s/S^2} matches paper Theorem 6.3
@@ -1241,7 +1241,7 @@ getSecondVarTermDataApp <- function(
 #' `var_2(e)` scalars). Per-effect Jacobians (each masked to its own valid
 #' cohort set) reproduce the existing scalars exactly. Per-family `J_list`
 #' construction lives in `.simultaneous_cis_impl()`. Round-2 N3: the single
-#' global `Sigma_pi_hat` is correct — the zero-rows of `J_k` for cohorts not in
+#' global `Sigma_pi_hat` is correct --- the zero-rows of `J_k` for cohorts not in
 #' effect `k`'s valid set zero out the relevant `Sigma_pi_hat` entries
 #' automatically, so a per-effect masked `Sigma_pi_hat` is unnecessary.
 #' @param J_list Length-K list of per-effect Jacobian matrices (each R x p_sel
@@ -1311,7 +1311,7 @@ getSecondVarTermDataApp <- function(
 #' @param sel_feat_inds Integer vector OR `NULL`. Indices of all features
 #'   selected by the penalized regression in the transformed space. Pass
 #'   `NULL` for OLS callers (`etwfe()` / `twfeCovs()`) where no penalized
-#'   selection occurred — the unified function treats `NULL` as a sentinel
+#'   selection occurred --- the unified function treats `NULL` as a sentinel
 #'   for "use all features" and dispatches the OLS code path inside
 #'   `getGramInv()` and `.assemble_cluster_robust_sandwich()`.
 #' @param treat_inds Integer vector; indices in the original (untransformed)

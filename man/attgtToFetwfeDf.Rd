@@ -20,8 +20,8 @@ attgtToFetwfeDf(
 \arguments{
 \item{data}{A \code{data.frame} in \strong{long} format containing at least the four
 columns used by \code{did::att_gt()}: outcome \code{yname}, time \code{tname}, unit id
-\code{idname}, and the first‑treatment period \code{gname} (which is 0 for the
-never‑treated group).}
+\code{idname}, and the first-treatment period \code{gname} (which is 0 for the
+never-treated group).}
 
 \item{yname}{Character scalar. Name of the outcome column.}
 
@@ -32,7 +32,7 @@ integer). This becomes \code{time_var} in the returned dataframe.}
 character and returned as \code{unit_var}.}
 
 \item{gname}{Character scalar. Name of the \emph{group} variable holding the
-first period of treatment. Values must be 0 for never‑treated, or a
+first period of treatment. Values must be 0 for never-treated, or a
 positive integer representing the first treated period.}
 
 \item{covars}{Character vector of additional covariate column names to carry
@@ -67,7 +67,7 @@ formatted for \code{did::att_gt()} (Callaway and Sant'Anna 2021) so that it can 
 passed directly to \code{fetwfe()} or \code{etwfe()} from the \code{fetwfe} package. In
 particular, it
 \itemize{
-\item creates an \emph{absorbing‑state} treatment dummy that equals 1 from the
+\item creates an \emph{absorbing-state} treatment dummy that equals 1 from the
 first treated period onward* and 0 otherwise,
 \item (optionally) drops units that are already treated in the very first
 period of the sample (because \code{fetwfe()} removes them internally), and

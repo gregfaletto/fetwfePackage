@@ -36,7 +36,7 @@ object returned by \code{\link[=getTes]{getTes()}}. Row 1 is the overall true AT
 convention that cohort \code{r} adopts at calendar time 1, so
 the labels match what \verb{tidy.<estimator>} uses on a fitted panel
 generated from the same \code{FETWFE_coefs}). Standard error /
-statistic / p-value columns are always \code{NA_real_} — there is no
+statistic / p-value columns are always \code{NA_real_} --- there is no
 sampling distribution for a population truth. When
 \code{conf.int = TRUE} (default, matching the sibling tidy methods),
 \code{conf.low} / \code{conf.high} columns are included and also set to

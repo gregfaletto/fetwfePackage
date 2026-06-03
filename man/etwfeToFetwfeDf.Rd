@@ -28,7 +28,7 @@ etwfeToFetwfeDf(
 \item{idvar}{Character. Column name of the unit identifier (the variable you would
 cluster on, or pass to \code{etwfe(..., ivar = idvar)} if you were using unit FEs).}
 
-\item{gvar}{Character. Column name of the “first treated” cohort variable passed to \code{etwfe()} as \code{gvar}.
+\item{gvar}{Character. Column name of the "first treated" cohort variable passed to \code{etwfe()} as \code{gvar}.
 Must be \code{0} for never-treated units, or the (strictly positive) first treated period.}
 
 \item{covars}{Character vector of \emph{additional} covariate columns to keep (default \code{character(0)}).}
@@ -39,7 +39,7 @@ here keeps the returned dataframe clean.)  Default \code{TRUE}.}
 
 \item{out_names}{Named list giving the column names that the returned dataframe should have.
 The default (\code{time_var}, \code{unit_var}, \code{treatment}, \code{response}) matches the arguments usually supplied to
-\code{fetwfe()}. \strong{Do not change the \emph{names} of this list} – only the \emph{values} – and keep all four.}
+\code{fetwfe()}. \strong{Do not change the \emph{names} of this list} -- only the \emph{values} -- and keep all four.}
 
 \item{verbose}{Logical. If \code{TRUE}, a \code{message()} reports the count of
 first-period-treated unit-period rows dropped when
@@ -62,7 +62,7 @@ formatted for \code{etwfe::etwfe()} (McDermott 2024) so that it can be
 passed directly to \code{fetwfe()} or \code{etwfe()} from the \code{fetwfe} package. In
 particular, it
 \itemize{
-\item creates an \emph{absorbing‑state} treatment dummy that equals 1 from the
+\item creates an \emph{absorbing-state} treatment dummy that equals 1 from the
 first treated period onward* and 0 otherwise,
 \item (optionally) drops units that are already treated in the very first
 period of the sample (because \code{fetwfe()} removes them internally), and

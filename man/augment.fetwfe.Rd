@@ -10,7 +10,7 @@
 \item{x}{An object of class \code{"fetwfe"}.}
 
 \item{data}{A panel \code{data.frame} with one row per unit-period (any
-sort order — augment auto-sorts), containing the response column
+sort order --- augment auto-sorts), containing the response column
 under the same name used at fit time (see \code{x$response_col_name}).
 First-period-treated units, if present, are auto-trimmed.}
 
@@ -33,7 +33,7 @@ scale without the caller having to remember either.
 by \verb{(unit, time)}, and any first-period-treated units (whose treatment
 effect cannot be identified by the estimator) are auto-trimmed via
 \code{idCohorts()}. So you can pass the same raw \code{pdata} you handed to
-\code{fetwfe()} — the method takes care of alignment. The only hard
+\code{fetwfe()} --- the method takes care of alignment. The only hard
 requirement is that \code{data} contains the response column under its
 original name.
 }

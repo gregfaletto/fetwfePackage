@@ -31,7 +31,7 @@
 #'   `is.character(time_var) is not TRUE` style to named, actionable
 #'   lines naming the arg, the expected shape, and (when feasible) the
 #'   received shape (GitHub #84). The message header is
-#'   `"Invalid inputs:"` — deliberately caller-agnostic so error text
+#'   `"Invalid inputs:"` --- deliberately caller-agnostic so error text
 #'   stays byte-identical across the four entry points (locked by the
 #'   PR #103 snapshot tests).
 #' @keywords internal
