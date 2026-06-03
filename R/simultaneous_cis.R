@@ -582,56 +582,31 @@ simultaneousCIs.twfeCovs <- function(
 			#
 			# mvtnorm::GenzBretz() (mvtnorm's default; quasi-Monte Carlo) is
 			# sub-second through K ~ 100. Byte-determinism across calls is
-			# preserved by save/restoring the caller's .Random.seed + a fixed
-			# internal set.seed(1L) immediately before the qmvnorm() call. This
-			# matches the in-package precedent at PR #181 / v1.13.5
-			# (R/fetwfe_core.R::getBetaCV() lines 503-524), which uses the same
-			# pattern for internal RNG use without mutating caller-side RNG
-			# state.
-			old_rng <- if (
-				exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
-			) {
-				.GlobalEnv$.Random.seed
-			} else {
-				NULL
-			}
-			on.exit(
-				{
-					if (is.null(old_rng)) {
-						if (
-							exists(
-								".Random.seed",
-								envir = .GlobalEnv,
-								inherits = FALSE
-							)
-						) {
-							rm(".Random.seed", envir = .GlobalEnv)
-						}
-					} else {
-						assign(".Random.seed", old_rng, envir = .GlobalEnv)
-					}
-				},
-				add = TRUE
-			)
-			set.seed(1L)
-			qmv <- mvtnorm::qmvnorm(
-				p = 1 - alpha,
-				corr = rho,
-				tail = "both.tails",
-				algorithm = mvtnorm::GenzBretz()
-			)
-			crit <- qmv$quantile
-
-			# Single-step max-T adjusted p-values over the non-degenerate
-			# sub-family -- the exact dual of the qmvnorm band, in the same
-			# RNG-protected region (the caller's .Random.seed is restored
-			# on exit).
-			adjusted_p_values <- .maxt_adjusted_p_nd(
-				estimates,
-				ses,
-				nondeg,
-				rho
-			)
+			# preserved by `.with_preserved_rng()`, which save/restores the
+			# caller's .Random.seed around a fixed internal set.seed(1L) (the
+			# same helper getBetaCV() uses; #195).
+			rng_out <- .with_preserved_rng(1L, {
+				qmv <- mvtnorm::qmvnorm(
+					p = 1 - alpha,
+					corr = rho,
+					tail = "both.tails",
+					algorithm = mvtnorm::GenzBretz()
+				)
+				# Single-step max-T adjusted p-values over the
+				# non-degenerate sub-family -- the exact dual of the qmvnorm
+				# band, in the same RNG-protected region.
+				list(
+					crit = qmv$quantile,
+					adjusted_p_values = .maxt_adjusted_p_nd(
+						estimates,
+						ses,
+						nondeg,
+						rho
+					)
+				)
+			})
+			crit <- rng_out$crit
+			adjusted_p_values <- rng_out$adjusted_p_values
 		}
 	} else {
 		# Conservative same-data: the Cauchy-Schwarz upper bound does not
