@@ -1,3 +1,31 @@
+# .combine_att_variance
+#' @title Combine the two ATT variance pieces into the headline variance
+#' @description Returns the tight Gaussian sum `att_var_1 + att_var_2`
+#'   (independent-sample case, or same-data (Psi-IF) case under
+#'   `se_type != "conservative"`) or the Cauchy-Schwarz upper bound
+#'   `att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2)` (same-data
+#'   non-(Psi-IF) case via `se_type = "conservative"`). Returns a VARIANCE;
+#'   callers apply `sqrt()` for a standard error. Theorem (c') / (c),
+#'   Assumption (Psi-IF); see `paper_arxiv.tex` ~ line 1233 and ~ line 2013.
+#'   Consolidates five copies of this selection (#209): `getTeResultsOLS()`,
+#'   `getTeResults2()`, `.build_variance_components()`, and the two
+#'   `.event_study_*` helpers.
+#' @param att_var_1,att_var_2 Numeric; the regression-coefficient and
+#'   cohort-probability variance pieces (applied elementwise).
+#' @param indep Logical; `TRUE` in the independent-sample case (each caller's
+#'   local flag: `indep_probs` / `indep_counts_used` / `is_indep`).
+#' @param se_type Character; the fit's `se_type`.
+#' @return Numeric; the combined variance. Apply `sqrt()` for a standard error.
+#' @keywords internal
+#' @noRd
+.combine_att_variance <- function(att_var_1, att_var_2, indep, se_type) {
+	if (indep || !identical(se_type, "conservative")) {
+		att_var_1 + att_var_2
+	} else {
+		att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2)
+	}
+}
+
 # getTeResultsOLS
 #' @title Calculate Overall ATT and its Standard Error for ETWFE
 #' @description Computes the overall Average Treatment Effect on the Treated
@@ -173,18 +201,9 @@ getTeResultsOLS <- function(
 		# non-(Psi-IF) case via `se_type = "conservative"`. See
 		# Theorem `te.asym.norm.thm`(c$'$) and Assumption (Psi-IF)
 		# (`paper_arxiv.tex` ~ line 1233 and ~ line 2013).
-		if (indep_probs || !identical(se_type, "conservative")) {
-			att_te_se <- sqrt(att_var_1 + att_var_2)
-		} else {
-			att_te_se <- sqrt(
-				att_var_1 +
-					att_var_2 +
-					2 *
-						sqrt(
-							att_var_1 * att_var_2
-						)
-			)
-		}
+		att_te_se <- sqrt(
+			.combine_att_variance(att_var_1, att_var_2, indep_probs, se_type)
+		)
 
 		att_te_se_no_prob <- sqrt(att_var_1)
 	} else {
@@ -714,18 +733,9 @@ getTeResults2 <- function(
 		# (`paper_arxiv.tex` ~ line 1233 and ~ line 2013). Prior to v1.12.0
 		# the same-data path defaulted to the Cauchy-Schwarz bound regardless
 		# of (Psi-IF); v1.12.0 inverted that default.
-		if (indep_probs || !identical(se_type, "conservative")) {
-			att_te_se <- sqrt(att_var_1 + att_var_2)
-		} else {
-			att_te_se <- sqrt(
-				att_var_1 +
-					att_var_2 +
-					2 *
-						sqrt(
-							att_var_1 * att_var_2
-						)
-			)
-		}
+		att_te_se <- sqrt(
+			.combine_att_variance(att_var_1, att_var_2, indep_probs, se_type)
+		)
 
 		att_te_se_no_prob <- sqrt(att_var_1)
 	} else {

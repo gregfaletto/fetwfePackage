@@ -1758,13 +1758,12 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 	# Which combination is the headline `att_se`? `att_se = sqrt(<this> / N) * N`
 	# below, i.e., `tilde_v_N = N * <this>`. Per paper line 1259, the Wald CI
 	# half-width is `qnorm * sqrt(tilde_v_N / N)`, matching `att_se` exactly.
-	att_var_headline <- if (
-		indep_counts_used || !identical(se_type, "conservative")
-	) {
-		att_var_tight
-	} else {
-		att_var_cons
-	}
+	att_var_headline <- .combine_att_variance(
+		att_var_1,
+		att_var_2,
+		indep_counts_used,
+		se_type
+	)
 
 	V_1 <- N * att_var_1
 	V_2 <- N * att_var_2
