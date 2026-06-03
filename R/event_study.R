@@ -345,11 +345,12 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 		# under (Psi-IF) (Theorem (c$'$), paper line 1233 onwards); the
 		# Cauchy-Schwarz upper bound is opt-in via `se_type = "conservative"`
 		# for the rare non-(Psi-IF) propensity-score-estimator case.
-		if (is_indep || !identical(se_type, "conservative")) {
-			ses[k] <- sqrt(var_1_e + var_2_e)
-		} else {
-			ses[k] <- sqrt(var_1_e + var_2_e + 2 * sqrt(var_1_e * var_2_e))
-		}
+		ses[k] <- sqrt(.combine_att_variance(
+			var_1_e,
+			var_2_e,
+			is_indep,
+			se_type
+		))
 	}
 
 	# Simultaneous band (#197): when ci_type == "simultaneous" and SEs are
@@ -566,11 +567,12 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 		# `.event_study_etwfe_betwfe` above): tight Gaussian by default
 		# under (Psi-IF), conservative bound only via `se_type =
 		# "conservative"`.
-		if (is_indep || !identical(se_type, "conservative")) {
-			ses[k] <- sqrt(var_1_e + var_2_e)
-		} else {
-			ses[k] <- sqrt(var_1_e + var_2_e + 2 * sqrt(var_1_e * var_2_e))
-		}
+		ses[k] <- sqrt(.combine_att_variance(
+			var_1_e,
+			var_2_e,
+			is_indep,
+			se_type
+		))
 	}
 
 	# Simultaneous band (#197): see the matching block in
