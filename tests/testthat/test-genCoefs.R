@@ -184,15 +184,15 @@ test_that("genCoefs errors when T < 3", {
 test_that("genCoefs errors when R < 2", {
 	expect_error(
 		genCoefs(G = 1, T = 30, density = 0.1, eff_size = 2, d = 12),
-		regexp = "R must be a numeric value greater than or equal to 2"
+		regexp = "G must be a numeric value greater than or equal to 2"
 	)
 })
 
 test_that("genCoefs errors when R > T - 1", {
-	# For example, if T = 30 then R must be <= 29.
+	# For example, if T = 30 then G must be <= 29.
 	expect_error(
 		genCoefs(G = 30, T = 30, density = 0.1, eff_size = 2, d = 12),
-		regexp = "R must be less than or equal to T - 1"
+		regexp = "G must be less than or equal to T - 1"
 	)
 })
 

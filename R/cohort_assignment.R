@@ -2,9 +2,9 @@
 # simulator (#162). Four helpers:
 #
 #   .gen_assignment_coefs()    draws gamma (and cutpoints) given type/strength.
-#   .compute_cohort_prob_matrix()    N x (R+1) per-unit propensity matrix.
+#   .compute_cohort_prob_matrix()    N x (G+1) per-unit propensity matrix.
 #   .sample_cohort_assignments() per-unit categorical draws of W_i in 0..R.
-#   .expected_cohort_probs()   length-(R+1) MC estimate of E[pi_r(X)].
+#   .expected_cohort_probs()   length-(G+1) MC estimate of E[pi_g(X)].
 #
 # All four are @keywords internal @noRd. The factoring of
 # .compute_cohort_prob_matrix() avoids duplicating the multinomial-softmax
@@ -65,9 +65,9 @@
 #'   - `seed`      -> main coefficient vector / theta draw (`genCoefsCore`).
 #'   - `seed + 1L` -> assignment coefficients (this function).
 #'   - `seed + 2L` -> Monte Carlo integration in `getTes()` for
-#'                    `E[pi_r(X)]`.
+#'                    `E[pi_g(X)]`.
 #'
-#' @param R Integer >= 2. Number of treated cohorts.
+#' @param G Integer >= 2. Number of treated cohorts.
 #' @param d Integer >= 1. Number of covariates. Only called when
 #'   `type != "marginal"`, which requires `d >= 1`.
 #' @param type Character. One of `"multinomial"` or `"ordered"`. The
@@ -75,7 +75,7 @@
 #'   function.
 #' @param strength Non-negative numeric. Scales the (otherwise standard
 #'   normal) gamma draw. `strength = 0` yields gamma = 0 so the
-#'   cohort-probability distribution reduces to uniform 1/(R+1) by
+#'   cohort-probability distribution reduces to uniform 1/(G+1) by
 #'   construction.
 #' @param interactions Optional. A list of canonicalized length-2
 #'   integer-pair vectors `list(c(j, k), ...)` whose elementwise products
@@ -92,27 +92,27 @@
 #'
 #' @return A list with elements `type`, `strength`, `coefs`, `interactions`,
 #'   `delta`, `interaction_strength`, and (for `"ordered"`) `cutpoints`.
-#'   For multinomial, `coefs` is a `d x R` matrix; column `r` is
-#'   `gamma_r` (the never-treated reference cohort has `gamma_0 = 0`
-#'   implicitly), and `delta` is a `K x R` matrix of per-cohort
+#'   For multinomial, `coefs` is a `d x G` matrix; column `g` is
+#'   `gamma_g` (the never-treated reference cohort has `gamma_0 = 0`
+#'   implicitly), and `delta` is a `K x G` matrix of per-cohort
 #'   interaction coefficients (or `NULL` when no interactions). For
 #'   ordered, `coefs` is a length-`d` vector (one shared `gamma`),
 #'   `delta` is a length-`K` vector (or `NULL`), and `cutpoints` is a
-#'   length-`R` vector of cutpoints chosen so the marginal cohort
-#'   probabilities are uniform 1/(R+1). `interaction_strength` is
+#'   length-`G` vector of cutpoints chosen so the marginal cohort
+#'   probabilities are uniform 1/(G+1). `interaction_strength` is
 #'   `NULL` when no interactions; otherwise the effective scaling
 #'   factor used for the `delta` draws.
 #'
 #' @details
 #' The ordered cutpoints are chosen by root-finding on the
-#' marginal-uniform condition: for each `r` in `1..R`, solve
-#' `E_X[plogis(alpha_r - gamma^T X - delta^T X_int)] = r / (R + 1)` via
+#' marginal-uniform condition: for each `g` in `1..R`, solve
+#' `E_X[plogis(alpha_g - gamma^T X - delta^T X_int)] = g / (G + 1)` via
 #' `uniroot()` over a Monte Carlo reference sample of the augmented
 #' linear predictor (standard McCullagh proportional-odds parameterization
 #' with the subtraction convention: high augmented linpred shifts mass UP
 #' the ordinal scale toward never-treated; low augmented linpred shifts
 #' mass toward the earliest-adopting cohort). At `strength = 0` (gamma = 0)
-#' AND no interactions the cutpoints collapse to `qlogis((1:R) / (R + 1))`
+#' AND no interactions the cutpoints collapse to `qlogis((1:G) / (G + 1))`
 #' and the marginal probabilities are exactly uniform. At positive
 #' strength the marginal probabilities are approximately uniform up to
 #' MC noise.
@@ -133,7 +133,7 @@
 #' @keywords internal
 #' @noRd
 .gen_assignment_coefs <- function(
-	R,
+	G,
 	d,
 	type,
 	strength,
@@ -164,15 +164,15 @@
 	}
 	if (type == "multinomial") {
 		coefs_mat <- matrix(
-			rnorm(d * R) * strength,
+			rnorm(d * G) * strength,
 			nrow = d,
-			ncol = R
+			ncol = G
 		)
 		delta_mat <- if (K > 0L) {
 			matrix(
-				rnorm(K * R) * effective_int_strength,
+				rnorm(K * G) * effective_int_strength,
 				nrow = K,
-				ncol = R
+				ncol = G
 			)
 		} else {
 			NULL
@@ -193,10 +193,10 @@
 	} else {
 		NULL
 	}
-	# Root-find on the marginal-uniform condition: solve for alpha_r such
-	# that mean(plogis(alpha_r - linpred_mc)) = r / (R + 1). At strength = 0
+	# Root-find on the marginal-uniform condition: solve for alpha_g such
+	# that mean(plogis(alpha_g - linpred_mc)) = g / (G + 1). At strength = 0
 	# and no interactions, linpred_mc is identically 0 and the cutpoints
-	# reduce to qlogis((1:R) / (R + 1)) by construction. With interactions,
+	# reduce to qlogis((1:G) / (G + 1)) by construction. With interactions,
 	# the MC sample integrates over the augmented covariate distribution so
 	# the marginal-uniform invariant is preserved up to MC noise. See
 	# Faletto 2025 line 1016 for the linear-in-X form; this extends the
@@ -221,8 +221,8 @@
 		)$root
 	}
 	cutpoints <- vapply(
-		seq_len(R),
-		function(r) solve_cutpoint(r / (R + 1)),
+		seq_len(G),
+		function(g) solve_cutpoint(g / (G + 1)),
 		numeric(1)
 	)
 	list(
@@ -273,11 +273,11 @@
 }
 
 
-#' Compute the N x (R + 1) per-unit cohort-probability matrix
+#' Compute the N x (G + 1) per-unit cohort-probability matrix
 #'
 #' Given per-unit covariates `X` (an `N x d` matrix) and the
 #' `assignment_coefs` object produced by `.gen_assignment_coefs()`,
-#' returns an `N x (R + 1)` matrix of cohort probabilities. Column 1 is
+#' returns an `N x (G + 1)` matrix of cohort probabilities. Column 1 is
 #' the never-treated reference cohort; columns `2..R+1` are the
 #' treated cohorts `1..R`.
 #'
@@ -291,7 +291,7 @@
 #'   never reaches this function (cf. the `simulateDataCore()` dispatch
 #'   on `assignment_type`).
 #'
-#' @return Numeric matrix, `N x (R + 1)`. Each row sums to 1.
+#' @return Numeric matrix, `N x (G + 1)`. Each row sums to 1.
 #'
 #' @keywords internal
 #' @noRd
@@ -306,7 +306,7 @@
 	delta <- assignment_coefs$delta
 	has_int <- !is.null(interactions) && length(interactions) > 0L
 	if (type == "multinomial") {
-		# linpred is N x R; the never-treated reference column is identically 0.
+		# linpred is N x G; the never-treated reference column is identically 0.
 		linpred <- X %*% assignment_coefs$coefs
 		if (has_int) {
 			X_int <- .build_x_int(X, interactions)
@@ -332,13 +332,13 @@
 		#   slot 1 = cohort 1 (earliest treated)
 		#   slot 2 = cohort 2
 		#   ...
-		#   slot R = cohort R (latest treated)
-		#   slot R+1 = never-treated ("treatment timing -> infinity")
+		#   slot G = cohort G (latest treated)
+		#   slot G+1 = never-treated ("treatment timing -> infinity")
 		#
 		# Standard McCullagh proportional-odds parameterization with the
 		# subtraction convention:
 		#
-		#   P(W' <= r | X) = plogis(alpha_r - gamma^T X)   for r = 1..R.
+		#   P(W' <= g | X) = plogis(alpha_g - gamma^T X)   for g = 1..R.
 		#
 		# Low gamma^T x makes the cumulative prob LARGE -> mass concentrates
 		# on LOW W' (earliest-adopting cohorts). High gamma^T x makes the
@@ -346,7 +346,7 @@
 		# cohorts and, at the extreme, never-treated). As gamma^T X
 		# increases monotonically from -infinity to +infinity, the modal
 		# cohort traverses the ordinal scale in order: cohort 1 -> cohort 2
-		# -> ... -> cohort R -> never-treated. gamma is the propensity for
+		# -> ... -> cohort G -> never-treated. gamma is the propensity for
 		# being LATER on the treatment-timing scale.
 		cumprobs <- vapply(
 			cutpoints,
@@ -361,7 +361,7 @@
 				ncol = length(cutpoints)
 			)
 		}
-		# Probabilities in ORDINAL order [cohort 1, cohort 2, ..., cohort R,
+		# Probabilities in ORDINAL order [cohort 1, cohort 2, ..., cohort G,
 		# never-treated]:
 		probs_ord <- cbind(
 			cumprobs[, 1, drop = FALSE],
@@ -370,7 +370,7 @@
 			1 - cumprobs[, ncol(cumprobs)]
 		)
 		# Rearrange to the package's COHORT-LABEL order [cohort 0 (never-
-		# treated), cohort 1, ..., cohort R] so the rest of the simulator
+		# treated), cohort 1, ..., cohort G] so the rest of the simulator
 		# (which indexes cohort 0 = never as the first column) is unaffected.
 		R_local <- ncol(probs_ord) - 1L
 		probs <- cbind(
@@ -411,17 +411,17 @@
 	# always falls in some bin (u_i == 1 occurs with probability 0).
 	cumprobs_mat <- t(apply(probs, 1, cumsum))
 	assignments <- rowSums(u >= cumprobs_mat)
-	# Cap at R defensively (in case of floating-point edge cases where
-	# u_i == 1.0). Without this cap, an exact u_i == 1 would map to R + 1.
+	# Cap at G defensively (in case of floating-point edge cases where
+	# u_i == 1.0). Without this cap, an exact u_i == 1 would map to G + 1.
 	assignments <- pmin(assignments, ncol(probs) - 1L)
 	as.integer(assignments)
 }
 
 
-#' Monte Carlo estimate of `E[pi_r(X)]` for `r` in `0..R`
+#' Monte Carlo estimate of `E[pi_g(X)]` for `g` in `0..R`
 #'
 #' Used by `getTes()` to compute the propensity-weighted population ATT
-#' truth under non-marginal DGPs. Returns a length-`(R + 1)` numeric
+#' truth under non-marginal DGPs. Returns a length-`(G + 1)` numeric
 #' vector summing to 1 (the marginal cohort probabilities under the
 #' specified DGP and X distribution).
 #'
@@ -436,7 +436,7 @@
 #'   seed-offset convention in `.gen_assignment_coefs()`, this is
 #'   typically `coefs_obj$seed + 2L`.
 #'
-#' @return Numeric vector of length `R + 1`, sums to 1.
+#' @return Numeric vector of length `G + 1`, sums to 1.
 #'
 #' @keywords internal
 #' @noRd
@@ -482,21 +482,21 @@
 #' @param d Integer >= 1. Number of covariates.
 #' @param T Integer. Number of time periods (kept for signature parity
 #'   with `.drawCovariates()`; the count vector doesn't depend on T).
-#' @param R Integer. Number of treated cohorts.
+#' @param G Integer. Number of treated cohorts.
 #' @param distribution Character. Covariate distribution.
 #' @param guarantee_rank_condition Logical. If TRUE, retry until each
 #'   cohort has at least `d + 1` units.
 #' @param assignment_coefs Non-NULL assignment-coefs object.
 #' @param max_iters Integer. Maximum retry attempts. Default 100.
 #'
-#' @return Integer vector of length `R + 1` of cohort counts, summing to N.
+#' @return Integer vector of length `G + 1` of cohort counts, summing to N.
 #' @keywords internal
 #' @noRd
 .draw_indep_assignments_covariate <- function(
 	N,
 	d,
 	T,
-	R,
+	G,
 	distribution,
 	guarantee_rank_condition,
 	assignment_coefs,
@@ -507,7 +507,7 @@
 		N = N,
 		d = d,
 		T = T,
-		R = R,
+		G = G,
 		distribution = distribution,
 		guarantee_rank_condition = guarantee_rank_condition,
 		assignment_coefs = assignment_coefs,
@@ -535,7 +535,7 @@
 #' @param N Integer. Number of units.
 #' @param d Integer >= 1. Number of covariates.
 #' @param T Integer. Number of time periods (for X_long expansion).
-#' @param R Integer. Number of treated cohorts.
+#' @param G Integer. Number of treated cohorts.
 #' @param distribution Character. Covariate distribution.
 #' @param guarantee_rank_condition Logical.
 #' @param assignment_coefs Non-NULL assignment-coefs object.
@@ -546,7 +546,7 @@
 #'   accurate message at each call site.
 #'
 #' @return List with `X` (N x d matrix), `X_long` (N*T x d matrix),
-#'   `W` (length-N integer vector, values 0..R), and `counts` (length-(R+1)
+#'   `W` (length-N integer vector, values 0..R), and `counts` (length-(G+1)
 #'   integer vector).
 #' @keywords internal
 #' @noRd
@@ -554,7 +554,7 @@
 	N,
 	d,
 	T,
-	R,
+	G,
 	distribution,
 	guarantee_rank_condition,
 	assignment_coefs,
@@ -571,7 +571,7 @@
 			distribution = distribution
 		)
 		W <- .sample_cohort_assignments(cov$X, assignment_coefs)
-		counts <- tabulate(W + 1L, nbins = R + 1L)
+		counts <- tabulate(W + 1L, nbins = G + 1L)
 		min_count <- min(counts)
 		ok <- min_count >= 1L
 		if (guarantee_rank_condition) {
@@ -585,7 +585,7 @@
 				paste0(
 					"Failed to draw %scohort assignments satisfying the rank condition ",
 					"(min count >= d + 1) after %d attempts at assignment_type = '%s', ",
-					"assignment_strength = %g, N = %d, R = %d, d = %d. ",
+					"assignment_strength = %g, N = %d, G = %d, d = %d. ",
 					"Under covariate-dependent assignment with strong covariate-cohort ",
 					"coupling, the smallest treated cohorts can have arbitrarily small ",
 					"counts. Try a larger N, a smaller assignment_strength, or set ",
@@ -596,7 +596,7 @@
 				assignment_coefs$type,
 				assignment_coefs$strength,
 				N,
-				R,
+				G,
 				d
 			)
 			# When interactions are present (K > 0L), .gen_assignment_coefs()

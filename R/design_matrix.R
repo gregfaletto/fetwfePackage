@@ -133,7 +133,7 @@ processFactors <- function(pdata, covs) {
 #'     (including "Never_treated"), indicating the number of units in each cohort
 #'     within the provided `data`.}
 #'   \item{num_treats}{The total number of unique treatment effect parameters
-#'     (e.g., \eqn{\tau_{rt}} from the paper).}
+#'     (e.g., \eqn{\tau_{gt}} from the paper).}
 #'   \item{first_inds}{A numeric vector indicating the starting column index within
 #'     the block of treatment effect parameters in `X_ints` (and subsequently in
 #'     `beta_hat`) for each respective cohort's first treatment period.}
@@ -202,11 +202,11 @@ prepXints <- function(
 
 	N <- length(units)
 	T <- length(times)
-	R <- length(cohorts)
+	G <- length(cohorts)
 
-	stopifnot(R >= 1)
+	stopifnot(G >= 1)
 	stopifnot(T >= 2)
-	stopifnot(R <= T - 1)
+	stopifnot(G <= T - 1)
 
 	N_treated <- length(unlist(cohorts))
 
@@ -215,10 +215,10 @@ prepXints <- function(
 	N_UNTREATED <- N - N_treated
 
 	# Get in-sample counts of units in each cohort
-	in_sample_counts <- rep(as.numeric(NA), R + 1)
+	in_sample_counts <- rep(as.numeric(NA), G + 1)
 
-	for (r in 1:R) {
-		in_sample_counts[r + 1] <- length(cohorts[[r]])
+	for (g in 1:G) {
+		in_sample_counts[g + 1] <- length(cohorts[[g]])
 	}
 
 	in_sample_counts[1] <- N - N_treated
@@ -271,7 +271,7 @@ prepXints <- function(
 		unit_var = unit_var,
 		time_var = time_var,
 		resp_var = response,
-		n_cohorts = R
+		n_cohorts = G
 	)
 
 	y <- ret$y # response
@@ -282,7 +282,7 @@ prepXints <- function(
 	cohort_vars <- ret$cohort_vars # Names of cohort dummies
 	first_inds <- ret$first_inds # Among blocks of treatment variables, indices
 	# of first treatment effects corresponding to each cohort
-	cohort_var_mat <- ret$cohort_var_mat # Cohort dummies; R columns total
+	cohort_var_mat <- ret$cohort_var_mat # Cohort dummies; G columns total
 	time_var_mat <- ret$time_var_mat # Time dummies; T - 1 columns total
 	treat_var_mat <- ret$treat_var_mat # Treatment dummies
 
@@ -300,9 +300,9 @@ prepXints <- function(
 	rm(data)
 
 	#### Create matrix with all interactions
-	p <- getP(R = R, T = T, d = d, num_treats = num_treats)
+	p <- getP(G = G, T = T, d = d, num_treats = num_treats)
 
-	stopifnot(ncol(cohort_var_mat) == R)
+	stopifnot(ncol(cohort_var_mat) == G)
 	stopifnot(is.matrix(covariate_mat))
 
 	X_ints <- genXintsData(
@@ -311,7 +311,7 @@ prepXints <- function(
 		X_long = covariate_mat,
 		treat_mat_long = treat_var_mat,
 		N = N,
-		R = R,
+		G = G,
 		T = T,
 		d = d,
 		N_UNTREATED = N_UNTREATED,
@@ -334,7 +334,7 @@ prepXints <- function(
 		# `cohort_probs`' cohort-year-string names back to 1-based panel
 		# offsets via `offset = year - first_year + 1`. Without this slot
 		# the event-study D-inverse-matrix construction would have to
-		# assume consecutive cohort offsets `2, 3, ..., R + 1`, which
+		# assume consecutive cohort offsets `2, 3, ..., G + 1`, which
 		# fails on panels with scattered cohort adoption years
 		# (`bacondecomp::divorce` is the canonical reproducer; see
 		# `R/utility.R::getFirstIndsFromOffsets`).
@@ -696,7 +696,7 @@ genTreatVarsRealData <- function(
 #' @param unit_var Character string; name of the unit identifier column in `df`.
 #' @param time_var Character string; name of the time variable column in `df`.
 #' @param resp_var Character string; name of the response variable column in `df`.
-#' @param n_cohorts Integer; the number of treated cohorts (R from the paper).
+#' @param n_cohorts Integer; the number of treated cohorts (G from the paper).
 #'
 #' @details
 #' For each cohort:
@@ -938,29 +938,29 @@ addDummies <- function(
 #'
 #' @param X_long A matrix of time-invariant covariates, with `N*T` rows and `d`
 #'   columns. Each unit's `d` covariate values are repeated `T` times.
-#' @param cohort_fe A matrix of cohort dummy variables (N*T rows, R columns).
+#' @param cohort_fe A matrix of cohort dummy variables (N*T rows, G columns).
 #' @param time_fe A matrix of time dummy variables (N*T rows, T-1 columns).
 #' @param N Integer; total number of unique units.
 #' @param T Integer; total number of time periods.
-#' @param R Integer; total number of treated cohorts.
+#' @param G Integer; total number of treated cohorts.
 #' @param d Integer; total number of covariates.
 #'
 #' @details
 #' If `d` (number of covariates) is 0, returns empty matrices.
 #' Otherwise:
 #' - `X_long_cohort`: Interaction of each covariate with each cohort dummy.
-#'   The resulting matrix has `R*d` columns. Columns are ordered such that
+#'   The resulting matrix has `G*d` columns. Columns are ordered such that
 #'   the first `d` columns are interactions of `X_long` with `cohort_fe[,1]`,
 #'   the next `d` columns with `cohort_fe[,2]`, and so on.
 #' - `X_long_time`: Interaction of each covariate with each time dummy.
 #'   The resulting matrix has `(T-1)*d` columns, ordered similarly.
 #'
 #' @return A list containing:
-#'   \item{X_long_cohort}{Matrix of cohort-covariate interactions (N*T rows, R*d columns).}
+#'   \item{X_long_cohort}{Matrix of cohort-covariate interactions (N*T rows, G*d columns).}
 #'   \item{X_long_time}{Matrix of time-covariate interactions (N*T rows, (T-1)*d columns).}
 #' @keywords internal
 #' @noRd
-generateFEInts <- function(X_long, cohort_fe, time_fe, N, T, R, d) {
+generateFEInts <- function(X_long, cohort_fe, time_fe, N, T, G, d) {
 	# If no covariates are present, return empty matrices.
 	if (d == 0) {
 		return(list(
@@ -970,36 +970,36 @@ generateFEInts <- function(X_long, cohort_fe, time_fe, N, T, R, d) {
 	}
 
 	# Interact with cohort effects
-	X_long_cohort <- matrix(as.numeric(NA), nrow = N * T, ncol = R * d)
+	X_long_cohort <- matrix(as.numeric(NA), nrow = N * T, ncol = G * d)
 
-	stopifnot(ncol(cohort_fe) == R)
+	stopifnot(ncol(cohort_fe) == G)
 	stopifnot(nrow(cohort_fe) == N * T)
 	stopifnot(ncol(time_fe) == (T - 1) || T == 1) # time_fe can be 0-col if T=1
 	stopifnot(ncol(X_long) == d)
 	stopifnot(is.matrix(X_long))
 	stopifnot(!is.data.frame(X_long))
 
-	for (r_idx in 1:R) {
-		# iterate R times for R cohorts
+	for (g_idx in 1:G) {
+		# iterate G times for G cohorts
 		# Notice that these are arranged one cohort at a time, interacted with
 		# all covariates
-		first_col_r <- (r_idx - 1) * d + 1
-		last_col_r <- r_idx * d
+		first_col_g <- (g_idx - 1) * d + 1
+		last_col_g <- g_idx * d
 
-		stopifnot(last_col_r - first_col_r + 1 == d)
-		stopifnot(all(is.na(X_long_cohort[, first_col_r:last_col_r])))
+		stopifnot(last_col_g - first_col_g + 1 == d)
+		stopifnot(all(is.na(X_long_cohort[, first_col_g:last_col_g])))
 
-		# Element-wise multiplication of cohort_fe[,r_idx] (a vector) with each column of X_long
-		# This creates d columns for the r_idx-th cohort
-		interaction_block_r <- cohort_fe[, r_idx] * X_long
-		stopifnot(ncol(interaction_block_r) == d)
+		# Element-wise multiplication of cohort_fe[,g_idx] (a vector) with each column of X_long
+		# This creates d columns for the g_idx-th cohort
+		interaction_block_g <- cohort_fe[, g_idx] * X_long
+		stopifnot(ncol(interaction_block_g) == d)
 
-		X_long_cohort[, first_col_r:last_col_r] <- interaction_block_r
+		X_long_cohort[, first_col_g:last_col_g] <- interaction_block_g
 	}
 
 	stopifnot(all(!is.na(X_long_cohort)))
 	stopifnot(nrow(X_long_cohort) == N * T)
-	stopifnot(ncol(X_long_cohort) == R * d)
+	stopifnot(ncol(X_long_cohort) == G * d)
 
 	# Interact with time effects
 	if (T > 1) {
@@ -1044,11 +1044,11 @@ generateFEInts <- function(X_long, cohort_fe, time_fe, N, T, R, d) {
 #'   Each unit's `d` covariate values are repeated `T` times.
 #' @param n_treats Integer; total number of unique treatment-period dummies
 #'   (columns in `treat_mat_long`).
-#' @param cohort_fe A matrix of cohort dummy variables (N*T rows, R columns).
+#' @param cohort_fe A matrix of cohort dummy variables (N*T rows, G columns).
 #'   Used to identify units within each cohort for centering covariates.
 #' @param N Integer; total number of unique units.
 #' @param T Integer; total number of time periods.
-#' @param R Integer; total number of treated cohorts.
+#' @param G Integer; total number of treated cohorts.
 #' @param d Integer; total number of covariates.
 #' @param N_UNTREATED Integer; number of never-treated units.
 #'
@@ -1075,7 +1075,7 @@ genTreatInts <- function(
 	cohort_fe,
 	N,
 	T,
-	R,
+	G,
 	d,
 	N_UNTREATED
 ) {
@@ -1084,7 +1084,7 @@ genTreatInts <- function(
 		return(matrix(nrow = N * T, ncol = 0))
 	}
 
-	stopifnot(ncol(cohort_fe) == R)
+	stopifnot(ncol(cohort_fe) == G)
 	stopifnot(ncol(treat_mat_long) == n_treats)
 
 	stopifnot(is.numeric(d) || is.integer(d))
@@ -1118,22 +1118,22 @@ genTreatInts <- function(
 		scale = FALSE
 	)
 
-	for (r in 1:R) {
+	for (g in 1:G) {
 		# Notice that these are arranged column-wise one cohort at a time,
 		# interacted with all treatment effects
 
-		cohort_r_inds <- which(cohort_fe[, r] == 1)
+		cohort_g_inds <- which(cohort_fe[, g] == 1)
 
 		new_mat <- scale(
-			X_long[cohort_r_inds, , drop = FALSE],
+			X_long[cohort_g_inds, , drop = FALSE],
 			center = TRUE,
 			scale = FALSE
 		)
 
 		stopifnot(all(!is.na(new_mat)))
-		stopifnot(all(is.na(X_long_centered[cohort_r_inds, ])))
+		stopifnot(all(is.na(X_long_centered[cohort_g_inds, ])))
 
-		X_long_centered[cohort_r_inds, ] <- new_mat
+		X_long_centered[cohort_g_inds, ] <- new_mat
 	}
 	# Final index should correspond to last row
 	stopifnot(all(!is.na(X_long_centered)))
@@ -1163,13 +1163,13 @@ genTreatInts <- function(
 #' treatment-period dummies, and all their relevant two-way interactions
 #' (cohort-covariate, time-covariate, treatment-covariate).
 #'
-#' @param cohort_fe Matrix of cohort dummy variables (N*T rows, R columns).
+#' @param cohort_fe Matrix of cohort dummy variables (N*T rows, G columns).
 #' @param time_fe Matrix of time dummy variables (N*T rows, T-1 columns).
 #' @param X_long Matrix of time-invariant covariates (N*T rows, `d` columns).
 #' @param treat_mat_long Matrix of treatment-period dummy variables (N*T rows,
 #'   `num_treats` columns).
 #' @param N Integer; total number of unique units.
-#' @param R Integer; total number of treated cohorts.
+#' @param G Integer; total number of treated cohorts.
 #' @param T Integer; total number of time periods.
 #' @param d Integer; total number of covariates.
 #' @param N_UNTREATED Integer; number of never-treated units.
@@ -1178,10 +1178,10 @@ genTreatInts <- function(
 #' @details
 #' The matrix `X_ints` is constructed by column-binding the following blocks in order:
 #' \enumerate{
-#'   \item `cohort_fe` (`R` columns)
+#'   \item `cohort_fe` (`G` columns)
 #'   \item `time_fe` (`T-1` columns, or 0 if `T=1`)
 #'   \item `X_long` (`d` columns, or 0 if `d=0`)
-#'   \item Cohort-covariate interactions from `generateFEInts` (`R*d` columns)
+#'   \item Cohort-covariate interactions from `generateFEInts` (`G*d` columns)
 #'   \item Time-covariate interactions from `generateFEInts` (`(T-1)*d` columns)
 #'   \item `treat_mat_long` (`num_treats` columns)
 #'   \item Treatment-covariate interactions from `genTreatInts` (`d*num_treats` columns)
@@ -1197,7 +1197,7 @@ genXintsData <- function(
 	X_long,
 	treat_mat_long,
 	N,
-	R,
+	G,
 	T,
 	d,
 	N_UNTREATED,
@@ -1206,7 +1206,7 @@ genXintsData <- function(
 	stopifnot(is.matrix(X_long))
 	# X_long may be an empty matrix if d == 0.
 	X_int <- cbind(cohort_fe, time_fe, X_long)
-	stopifnot(ncol(X_int) == R + T - 1 + d)
+	stopifnot(ncol(X_int) == G + T - 1 + d)
 
 	# Generate interactions of X with time and cohort fixed effects
 	# Note: columns of X_long_cohort are arranged in blocks of size d for one
@@ -1214,8 +1214,8 @@ genXintsData <- function(
 	# all d features with the indicator variables for the first block, and
 	# so on). Similarly, the columns of X_long_time are arranged in T - 1
 	# blocks of size d.
-	stopifnot(ncol(cohort_fe) == R)
-	res <- generateFEInts(X_long, cohort_fe, time_fe, N, T, R, d)
+	stopifnot(ncol(cohort_fe) == G)
+	res <- generateFEInts(X_long, cohort_fe, time_fe, N, T, G, d)
 
 	X_long_cohort <- res$X_long_cohort
 	X_long_time <- res$X_long_time
@@ -1229,7 +1229,7 @@ genXintsData <- function(
 	)
 	stopifnot(ncol(treat_mat_long) >= 1)
 
-	stopifnot(ncol(cohort_fe) == R)
+	stopifnot(ncol(cohort_fe) == G)
 
 	# Generate interactions between treatment effects and X (if any)
 	X_long_treat <- genTreatInts(
@@ -1239,21 +1239,21 @@ genXintsData <- function(
 		cohort_fe = cohort_fe,
 		N = N,
 		T = T,
-		R = R,
+		G = G,
 		d = d,
 		N_UNTREATED = N_UNTREATED
 	)
 
-	# The first R columns are the cohort fixed effects in order
+	# The first G columns are the cohort fixed effects in order
 	# Next T are time fixed effects in order
 	# Next d are X
-	# Next d*R are cohort effects interacted with X. (The first d of these
+	# Next d*G are cohort effects interacted with X. (The first d of these
 	# are first cohort effects interacted with X, and so on until the Rth
 	# cohort.)
 	# Next d*T are time effects interacted with X (similarly to the above,
 	# the first d are first time effects interacted with X, and so on until
 	# the Tth time).
-	# Next num_treats = R*T - R*(R + 1)/2 columns are base treatment effects
+	# Next num_treats = G*T - G*(G + 1)/2 columns are base treatment effects
 	# (for each cohort and time)
 	# Finally, the next num_treats*d are interactions of all of these
 	# treatment effects over time--first d are the first column of
@@ -1266,8 +1266,8 @@ genXintsData <- function(
 			ncol(X_int),
 			", p =",
 			p,
-			", R =",
-			R,
+			", G =",
+			G,
 			", T =",
 			T,
 			", d =",

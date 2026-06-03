@@ -33,7 +33,7 @@ library(fetwfe)
 	sim <- simulateData(coefs, N = 300, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
 	res <- fetwfeWithSimulatedData(sim, q = 0.5)
 
-	R_val <- res$R
+	R_val <- res$G
 	T_val <- res$T
 	N_val <- res$N
 	num_treats <- length(res$treat_inds)
@@ -52,19 +52,19 @@ library(fetwfe)
 	)
 	d_inv_treat_sel <- d_inv_full[, sel_treat_inds_shifted, drop = FALSE]
 
-	# sel_inds[[r]] matches getSecondVarTermDataApp's internal convention:
-	# the FULL cohort-r block in 1:num_treats indexing (rows of d_inv_treat_sel),
+	# sel_inds[[g]] matches getSecondVarTermDataApp's internal convention:
+	# the FULL cohort-g block in 1:num_treats indexing (rows of d_inv_treat_sel),
 	# NOT the restriction to the selected-theta support.
 	sel_inds <- list()
-	for (r in 1:R_val) {
-		first_ind_r <- first_inds[r]
-		last_ind_r <- if (r < R_val) first_inds[r + 1] - 1 else num_treats
-		sel_inds[[r]] <- first_ind_r:last_ind_r
+	for (g in 1:R_val) {
+		first_ind_g <- first_inds[g]
+		last_ind_g <- if (g < R_val) first_inds[g + 1] - 1 else num_treats
+		sel_inds[[g]] <- first_ind_g:last_ind_g
 	}
 
 	list(
 		res = res,
-		R = R_val,
+		G = R_val,
 		T = T_val,
 		N = N_val,
 		num_treats = num_treats,
@@ -80,7 +80,7 @@ library(fetwfe)
 # Hand-built overall-ATT var_2 quadratic form. `off_use_outer` selects the buggy
 # (outer-loop) or correct (column-index) off-diagonal Jacobian construction.
 .overall_var_2 <- function(fit, off_use_outer) {
-	R_val <- fit$R
+	R_val <- fit$G
 	T_val <- fit$T
 	N_val <- fit$N
 	cp <- fit$cohort_probs_overall
@@ -92,14 +92,14 @@ library(fetwfe)
 	diag(Sigma_pi_hat) <- cp * (1 - cp)
 
 	J <- matrix(0, nrow = R_val, ncol = ncol(d_inv))
-	for (r in 1:R_val) {
-		cons_r <- (S - cp[r]) / S^2
-		J[r, ] <- cons_r * colMeans(d_inv[sel_inds[[r]], , drop = FALSE])
-		for (r2 in setdiff(1:R_val, r)) {
-			idx_pi <- if (off_use_outer) r else r2
+	for (g in 1:R_val) {
+		cons_g <- (S - cp[g]) / S^2
+		J[g, ] <- cons_g * colMeans(d_inv[sel_inds[[g]], , drop = FALSE])
+		for (g2 in setdiff(1:R_val, g)) {
+			idx_pi <- if (off_use_outer) g else g2
 			cons_off <- cp[idx_pi] / S^2
-			J[r, ] <- J[r, ] -
-				cons_off * colMeans(d_inv[sel_inds[[r2]], , drop = FALSE])
+			J[g, ] <- J[g, ] -
+				cons_off * colMeans(d_inv[sel_inds[[g2]], , drop = FALSE])
 		}
 	}
 
@@ -131,7 +131,7 @@ test_that("FETWFE att_var_2 helper matches paper Theorem 6.3 Jacobian by hand", 
 		num_treats = fit$num_treats,
 		N = fit$N,
 		T = fit$T,
-		R = fit$R,
+		G = fit$G,
 		d_inv_treat_sel = fit$d_inv_treat_sel
 	)
 
@@ -171,7 +171,7 @@ test_that("FETWFE corrected var_2 matches a multinomial-resampling MC", {
 	g_draws <- numeric(n_mc)
 	for (i in seq_len(n_mc)) {
 		pi_hat_full <- rmultinom(1, fit$N, p_full)[, 1] / fit$N
-		g_draws[i] <- g_fn(pi_hat_full[1:fit$R])
+		g_draws[i] <- g_fn(pi_hat_full[1:fit$G])
 	}
 	mc_var <- var(g_draws)
 
@@ -185,7 +185,7 @@ test_that("FETWFE corrected var_2 matches a multinomial-resampling MC", {
 		num_treats = fit$num_treats,
 		N = fit$N,
 		T = fit$T,
-		R = fit$R,
+		G = fit$G,
 		d_inv_treat_sel = fit$d_inv_treat_sel
 	)
 	# Buggy formula is reconstructed in-test (the helper after the fix no

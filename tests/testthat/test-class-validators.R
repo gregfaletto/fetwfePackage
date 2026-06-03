@@ -157,7 +157,7 @@ test_that("C4 catt_df shape: validator catches wrong nrow", {
 	res$catt_df <- res$catt_df[1, , drop = FALSE]
 	expect_error(
 		fetwfe:::.validate_fetwfe(res),
-		"C4 catt_df: nrow == R",
+		"C4 catt_df: nrow == G",
 		fixed = TRUE
 	)
 })
@@ -170,7 +170,7 @@ test_that("C5 cohort_probs: validator catches wrong length", {
 	res$cohort_probs <- res$cohort_probs[1]
 	expect_error(
 		fetwfe:::.validate_fetwfe(res),
-		"C5 cohort_probs length == R",
+		"C5 cohort_probs length == G",
 		fixed = TRUE
 	)
 })

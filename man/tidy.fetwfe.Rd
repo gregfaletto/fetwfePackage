@@ -23,7 +23,7 @@ and are NOT recomputed at \code{conf.level} (#197) --- mirroring
 \item{...}{Unused; present for S3 compatibility.}
 }
 \value{
-A data frame with \code{R + 1} rows and columns \code{term}, \code{estimate},
+A data frame with \code{G + 1} rows and columns \code{term}, \code{estimate},
 \code{std.error}, \code{statistic}, \code{p.value}, optionally \code{conf.low} /
 \code{conf.high}, and \code{selected} (logical).
 }

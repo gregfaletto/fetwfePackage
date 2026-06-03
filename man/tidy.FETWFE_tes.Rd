@@ -24,7 +24,7 @@ default to).}
 \item{...}{Unused.}
 }
 \value{
-A data frame with \code{R + 1} rows and columns \code{term},
+A data frame with \code{G + 1} rows and columns \code{term},
 \code{estimate}, \code{std.error}, \code{statistic}, \code{p.value}, and (when
 \code{conf.int = TRUE}) \code{conf.low} / \code{conf.high}.
 }
@@ -33,7 +33,7 @@ Returns a \code{broom}-style tidy data frame for the population-truth
 object returned by \code{\link[=getTes]{getTes()}}. Row 1 is the overall true ATT
 (\code{term = "ATT_true"}); subsequent rows are the true cohort ATTs
 (\code{term = "Cohort <adoption-time>"}, using the simulator's
-convention that cohort \code{r} adopts at calendar time 1, so
+convention that cohort \code{g} adopts at calendar time \code{g + 1}, so
 the labels match what \verb{tidy.<estimator>} uses on a fitted panel
 generated from the same \code{FETWFE_coefs}). Standard error /
 statistic / p-value columns are always \code{NA_real_} --- there is no

@@ -19,7 +19,7 @@ at \code{conf.level} (#197). See \code{\link[=tidy.fetwfe]{tidy.fetwfe()}}.}
 \item{...}{Unused.}
 }
 \value{
-A data frame with \code{R + 1} rows.
+A data frame with \code{G + 1} rows.
 }
 \description{
 Like \code{\link[=tidy.fetwfe]{tidy.fetwfe()}} but for a BETWFE fit. Includes the \code{selected}

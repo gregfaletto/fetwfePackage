@@ -20,7 +20,7 @@ NULL
 #' @description
 #' Shared implementation behind `tidy.fetwfe()` / `tidy.etwfe()` /
 #' `tidy.betwfe()`. Builds a data frame with row 1 = overall ATT and rows
-#' 2..(R+1) = per-cohort CATTs, sorted by ascending cohort label. Columns
+#' 2..(G+1) = per-cohort CATTs, sorted by ascending cohort label. Columns
 #' follow broom conventions: `term`, `estimate`, `std.error`, `statistic`,
 #' `p.value`, and (when `conf.int = TRUE`) `conf.low` / `conf.high`. When
 #' `include_selected = TRUE` (FETWFE / BETWFE), a logical `selected` column
@@ -39,7 +39,7 @@ NULL
 #'   row's CI only (the cohort rows pass through the fit-time `catt_df`
 #'   bounds).
 #' @param include_selected Logical; include the `selected` column.
-#' @return A data frame with `R + 1` rows.
+#' @return A data frame with `G + 1` rows.
 #' @keywords internal
 #' @noRd
 .tidy_estimator_output <- function(
@@ -133,7 +133,7 @@ NULL
 		nobs = x$N * x$T,
 		n_units = x$N,
 		n_periods = x$T,
-		n_cohorts = x$R,
+		n_cohorts = x$G,
 		n_covs = x$d,
 		n_features = x$p,
 		lambda_star = x$lambda_star,
@@ -160,7 +160,7 @@ NULL
 		nobs = x$N * x$T,
 		n_units = x$N,
 		n_periods = x$T,
-		n_cohorts = x$R,
+		n_cohorts = x$G,
 		n_covs = x$d,
 		n_features = x$p,
 		sig_eps_sq = x$sig_eps_sq,
@@ -353,7 +353,7 @@ NULL
 #'   and are NOT recomputed at `conf.level` (#197) --- mirroring
 #'   [tidy.cohortStudy()]'s stored-bounds behavior.
 #' @param ... Unused; present for S3 compatibility.
-#' @return A data frame with `R + 1` rows and columns `term`, `estimate`,
+#' @return A data frame with `G + 1` rows and columns `term`, `estimate`,
 #'   `std.error`, `statistic`, `p.value`, optionally `conf.low` /
 #'   `conf.high`, and `selected` (logical).
 #' @examples
@@ -386,7 +386,7 @@ tidy.fetwfe <- function(
 #'   `catt_df` bounds (reflecting the fit's `ci_type`) and are not recomputed
 #'   at `conf.level` (#197). See [tidy.fetwfe()].
 #' @param ... Unused.
-#' @return A data frame with `R + 1` rows.
+#' @return A data frame with `G + 1` rows.
 #' @examples
 #' \dontrun{
 #'   res <- etwfeWithSimulatedData(
@@ -417,7 +417,7 @@ tidy.etwfe <- function(
 #'   `catt_df` bounds (reflecting the fit's `ci_type`) and are not recomputed
 #'   at `conf.level` (#197). See [tidy.fetwfe()].
 #' @param ... Unused.
-#' @return A data frame with `R + 1` rows.
+#' @return A data frame with `G + 1` rows.
 #' @examples
 #' \dontrun{
 #'   res <- betwfeWithSimulatedData(
@@ -619,7 +619,7 @@ tidy.cohortStudy <- function(x, ...) {
 #' object returned by [getTes()]. Row 1 is the overall true ATT
 #' (`term = "ATT_true"`); subsequent rows are the true cohort ATTs
 #' (`term = "Cohort <adoption-time>"`, using the simulator's
-#' convention that cohort `r` adopts at calendar time `r + 1`, so
+#' convention that cohort `g` adopts at calendar time `g + 1`, so
 #' the labels match what `tidy.<estimator>` uses on a fitted panel
 #' generated from the same `FETWFE_coefs`). Standard error /
 #' statistic / p-value columns are always `NA_real_` --- there is no
@@ -640,7 +640,7 @@ tidy.cohortStudy <- function(x, ...) {
 #'   not carry an alpha slot, so there is no fitted-object value to
 #'   default to).
 #' @param ... Unused.
-#' @return A data frame with `R + 1` rows and columns `term`,
+#' @return A data frame with `G + 1` rows and columns `term`,
 #'   `estimate`, `std.error`, `statistic`, `p.value`, and (when
 #'   `conf.int = TRUE`) `conf.low` / `conf.high`.
 #' @examples
@@ -651,27 +651,27 @@ tidy.cohortStudy <- function(x, ...) {
 #' @export
 tidy.FETWFE_tes <- function(x, conf.int = TRUE, conf.level = 0.95, ...) {
 	stopifnot(conf.level > 0, conf.level < 1)
-	R <- length(x$actual_cohort_tes)
+	G <- length(x$actual_cohort_tes)
 	cohort_times <- if (!is.null(x$cohort_times)) {
 		x$cohort_times
 	} else {
 		# Fallback for pre-1.9.0 dev objects without the slot: use the
-		# simulator's convention that cohort r adopts at calendar time r + 1.
-		as.integer(seq_len(R) + 1L)
+		# simulator's convention that cohort g adopts at calendar time g + 1.
+		as.integer(seq_len(G) + 1L)
 	}
 	terms <- c("ATT_true", paste0("Cohort ", cohort_times))
 	estimates <- c(x$att_true, x$actual_cohort_tes)
 	out <- data.frame(
 		term = terms,
 		estimate = estimates,
-		std.error = rep(NA_real_, R + 1L),
-		statistic = rep(NA_real_, R + 1L),
-		p.value = rep(NA_real_, R + 1L),
+		std.error = rep(NA_real_, G + 1L),
+		statistic = rep(NA_real_, G + 1L),
+		p.value = rep(NA_real_, G + 1L),
 		stringsAsFactors = FALSE
 	)
 	if (conf.int) {
-		out$conf.low <- rep(NA_real_, R + 1L)
-		out$conf.high <- rep(NA_real_, R + 1L)
+		out$conf.low <- rep(NA_real_, G + 1L)
+		out$conf.high <- rep(NA_real_, G + 1L)
 	}
 	out
 }

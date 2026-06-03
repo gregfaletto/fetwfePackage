@@ -12,8 +12,8 @@ print.FETWFE_tes <- function(x, ...) {
 	)
 	cat(sprintf("Overall true ATT: %.4f\n\n", x$att_true))
 	cat("Cohort effects:\n")
-	for (r in seq_along(x$actual_cohort_tes)) {
-		cat(sprintf("  Cohort %d: %.4f\n", r, x$actual_cohort_tes[r]))
+	for (g in seq_along(x$actual_cohort_tes)) {
+		cat(sprintf("  Cohort %d: %.4f\n", g, x$actual_cohort_tes[g]))
 	}
 	cat("\n")
 	cat("Generated from:\n")
@@ -30,14 +30,14 @@ print.FETWFE_tes <- function(x, ...) {
 #' @export
 summary.FETWFE_tes <- function(object, ...) {
 	tes <- object$actual_cohort_tes
-	# Defensive: genCoefs() currently enforces R >= 2, so length(tes) >= 2 is
+	# Defensive: genCoefs() currently enforces G >= 2, so length(tes) >= 2 is
 	# always true in practice. Guard is retained in case that validation ever
 	# changes upstream (sd() of a length-1 vector is NA).
 	out <- list(
 		att_true = object$att_true,
 		actual_cohort_tes = tes,
-		G = object$R,
-		R = object$R,
+		G = object$G,
+		R = object$G,
 		T = object$T,
 		d = object$d,
 		seed = object$seed,
@@ -60,8 +60,8 @@ print.summary.FETWFE_tes <- function(x, ...) {
 	)
 	cat(sprintf("Overall true ATT: %.4f\n\n", x$att_true))
 	cat("Cohort effects:\n")
-	for (r in seq_along(x$actual_cohort_tes)) {
-		cat(sprintf("  Cohort %d: %.4f\n", r, x$actual_cohort_tes[r]))
+	for (g in seq_along(x$actual_cohort_tes)) {
+		cat(sprintf("  Cohort %d: %.4f\n", g, x$actual_cohort_tes[g]))
 	}
 	cat("\n")
 	cat("Cohort effect dispersion:\n")

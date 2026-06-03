@@ -31,7 +31,7 @@ test_that("simulateData (with interactions) returns expected output", {
 	p_int <- compute_p_int(T_val, R_val, d_val)
 	beta_int <- rnorm(p_int)
 
-	obj <- list(beta = beta_int, R = R_val, T = T_val, d = d_val, seed = 843)
+	obj <- list(beta = beta_int, G = R_val, T = T_val, d = d_val, seed = 843)
 	class(obj) <- "FETWFE_coefs"
 
 	res <- obj |>
@@ -131,7 +131,7 @@ test_that("simulateData errors when beta has wrong length", {
 	# Manually construct a bad coefs object.
 	bad_coefs <- list(
 		beta = beta_wrong,
-		R = R_val,
+		G = R_val,
 		T = T_val,
 		d = d_val,
 		seed = 123
@@ -300,12 +300,12 @@ test_that("simulateData errors when R >= T", {
 	p_expected <- compute_p_int(T_val, R_val, d_val)
 	beta <- rnorm(p_expected)
 
-	obj <- list(beta = beta, R = R_val, T = T_val, d = d_val, seed = 123)
+	obj <- list(beta = beta, G = R_val, T = T_val, d = d_val, seed = 123)
 	class(obj) <- "FETWFE_coefs"
 
 	expect_error(
 		simulateData(coefs_obj = obj, N = N, sig_eps_sq = 5, sig_eps_c_sq = 2),
-		regexp = "R <= T - 1" # Expect an error message indicating R must be <= T-1
+		regexp = "G <= T - 1" # Expect an error message indicating G must be <= T-1
 	)
 })
 
@@ -322,7 +322,7 @@ test_that("simulateData errors when T < 3", {
 	p_expected <- compute_p_int(T_val, R_val, d_val)
 	beta <- rnorm(p_expected)
 
-	obj <- list(beta = beta, R = R_val, T = T_val, d = d_val, seed = 123)
+	obj <- list(beta = beta, G = R_val, T = T_val, d = d_val, seed = 123)
 	class(obj) <- "FETWFE_coefs"
 
 	expect_error(
@@ -344,12 +344,12 @@ test_that("simulateData errors when N < R", {
 	p_expected <- compute_p_int(T_val, R_val, d_val)
 	beta <- rnorm(p_expected)
 
-	obj <- list(beta = beta, R = R_val, T = T_val, d = d_val, seed = 123)
+	obj <- list(beta = beta, G = R_val, T = T_val, d = d_val, seed = 123)
 	class(obj) <- "FETWFE_coefs"
 
 	expect_error(
 		simulateData(coefs_obj = obj, N = N, sig_eps_sq = 5, sig_eps_c_sq = 2),
-		regexp = "N >= R" # Expect an error message indicating N must be at least R
+		regexp = "N >= G" # Expect an error message indicating N must be at least G
 	)
 })
 

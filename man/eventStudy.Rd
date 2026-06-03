@@ -31,7 +31,7 @@ carry \code{NA} bounds and \code{NA} \code{p_value} under both settings.}
 A data frame with class \code{c("eventStudy", "data.frame")} and
 columns:
 \describe{
-\item{event_time}{Integer; event time \code{e = t - r}, ranging from 0
+\item{event_time}{Integer; event time \code{e = t - g}, ranging from 0
 to \code{T - 2}.}
 \item{n_cohorts}{Integer; number of cohorts contributing to the
 pooled estimate at event time \code{e}.}
@@ -54,8 +54,8 @@ are out of scope for this initial release.
 For a fitted object from \code{fetwfe()}, \code{etwfe()}, or \code{betwfe()}, computes the
 pooled event-time treatment-effect estimates \code{tau_E(e)}, defined as
 cohort-weighted averages of the cell-level treatment-effect estimates at
-each post-treatment event time \code{e = t - r} (where \code{t} is calendar time and
-\code{r} is the cohort's first-treated calendar time). Weights are
+each post-treatment event time \code{e = t - g} (where \code{t} is calendar time and
+\code{g} is the cohort's first-treated calendar time). Weights are
 sample-cohort-size weights (matching \code{did::aggte(type = "dynamic")}
 convention).
 

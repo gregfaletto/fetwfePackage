@@ -20,7 +20,7 @@
 # this via `do.call(fetwfe:::.build_selected_out_result, ...)` and override
 # specific fields per test.
 .make_helper_args <- function() {
-	R <- 2L
+	G <- 2L
 	N <- 10L
 	T <- 3L
 	d <- 0L
@@ -28,7 +28,7 @@
 	list(
 		message_text = "test message",
 		verbose = FALSE,
-		R = R,
+		G = G,
 		c_names = c("2", "3"),
 		q = 0.5,
 		beta_hat = rep(0, p),
@@ -95,7 +95,7 @@
 	"y_final",
 	"N",
 	"T",
-	"R",
+	"G",
 	"d",
 	"p",
 	"calc_ses",
@@ -140,7 +140,7 @@
 	"y_final",
 	"N",
 	"T",
-	"R",
+	"G",
 	"d",
 	"p",
 	"calc_ses",
@@ -186,15 +186,15 @@ test_that("BETWFE intercept-only block (Block 1) shape: 37 fields, expected orde
 			"selected"
 		)
 	)
-	expect_equal(nrow(res$catt_df), args$R)
+	expect_equal(nrow(res$catt_df), args$G)
 	expect_identical(res$catt_df$cohort, args$c_names)
-	expect_identical(res$catt_df$selected, rep(FALSE, args$R))
-	expect_identical(res$catt_df$p_value, rep(NA_real_, args$R))
+	expect_identical(res$catt_df$selected, rep(FALSE, args$G))
+	expect_identical(res$catt_df$p_value, rep(NA_real_, args$G))
 
 	expect_identical(res$beta_hat, rep(0, args$p))
 	expect_identical(res$N, args$N)
 	expect_identical(res$T, args$T)
-	expect_identical(res$R, args$R)
+	expect_identical(res$G, args$G)
 	expect_identical(res$d, args$d)
 	expect_identical(res$p, args$p)
 })

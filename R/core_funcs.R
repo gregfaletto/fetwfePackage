@@ -20,12 +20,12 @@
 #' @param X_mod Numeric matrix.  Same dimensions as \code{X_ints}.  In the
 #'   ETWFE path this is usually a transformed version, but for OLS it is
 #'   often identical to \code{X_ints}.
-#' @param N,T,R,d,p,num_treats Integers giving key problem dimensions:
+#' @param N,T,G,d,p,num_treats Integers giving key problem dimensions:
 #'   number of units, time periods, treated cohorts, covariates,
 #'   total parameters, and base treatment-effect parameters, respectively.
 #' @param add_ridge Logical.  Whether to append rows that implement a small
 #'   L2 penalty on the \emph{untransformed} coefficients.  Default \code{FALSE}.
-#' @param first_inds Integer vector (length \(R\)).  Column indices of the
+#' @param first_inds Integer vector (length \(G\)).  Column indices of the
 #'   first base treatment-effect for each cohort within the block of
 #'   \code{num_treats} columns.
 #' @param in_sample_counts Integer vector of cohort sizes in the estimation
@@ -63,7 +63,7 @@
 #'     premultiplied by the inverse fusion transformation so the penalty
 #'     applies on the original coefficient scale.
 #'   \item \strong{Cohort Probability Estimation}\newline
-#'     Computes \eqn{\hat\pi_r = n_r / \sum_{s=1}^R n_s} from the in-sample
+#'     Computes \eqn{\hat\pi_g = n_g / \sum_{s=1}^G n_s} from the in-sample
 #'     counts; when an independent split is available the same is done for
 #'     \code{indep_counts}.
 #' }
@@ -76,10 +76,10 @@
 #'     \item{\code{y_final}}{Response after GLS transform (and augmentation).}
 #'     \item{\code{scale_center}, \code{scale_scale}}{Vectors used to undo
 #'       column scaling.}
-#'     \item{\code{cohort_probs}}{Vector of \(\hat\pi_r \mid \text{treated}\)
+#'     \item{\code{cohort_probs}}{Vector of \(\hat\pi_g \mid \text{treated}\)
 #'       from the estimation sample.}
 #'     \item{\code{cohort_probs_overall}}{Vector of unconditional
-#'       probabilities \(P(W=r)\).}
+#'       probabilities \(P(W=g)\).}
 #'     \item{\code{indep_cohort_probs}, \code{indep_cohort_probs_overall}}{Same
 #'       probabilities if an independent split was provided; otherwise \code{NA}.}
 #'     \item{\code{sig_eps_sq}, \code{sig_eps_c_sq}}{Possibly estimated
@@ -98,7 +98,7 @@ prep_for_etwfe_regression <- function(
 	X_mod,
 	N,
 	T,
-	R,
+	G,
 	d,
 	p,
 	num_treats,
@@ -131,7 +131,7 @@ prep_for_etwfe_regression <- function(
 			X_gls = X_final,
 			N = N,
 			T = T,
-			R = R,
+			G = G,
 			d = d,
 			num_treats = num_treats,
 			first_inds = first_inds
@@ -153,7 +153,7 @@ prep_for_etwfe_regression <- function(
 		is_fetwfe = is_fetwfe,
 		first_inds = first_inds,
 		T = T,
-		R = R,
+		G = G,
 		d = d,
 		num_treats = num_treats,
 		sig_eps_sq = sig_eps_sq,
@@ -168,7 +168,7 @@ prep_for_etwfe_regression <- function(
 		in_sample_counts = in_sample_counts,
 		indep_counts = indep_counts,
 		N = N,
-		R = R,
+		G = G,
 		indep_count_data_available = indep_count_data_available
 	)
 
@@ -212,7 +212,7 @@ prep_for_etwfe_regression <- function(
 #' @param indep_count_data_available Logical; `TRUE` when *independent* cohort
 #'   counts are supplied in `indep_counts` and should be validated.
 #' @param indep_counts Optional integer vector with length
-#'   `1 + R` (never-treated plus `R` treated cohorts) giving cohort sizes in an
+#'   `1 + G` (never-treated plus `G` treated cohorts) giving cohort sizes in an
 #'   independent sample.  Only used when
 #'   `indep_count_data_available = TRUE`.
 #'
@@ -229,13 +229,13 @@ prep_for_etwfe_regression <- function(
 #'   \item{N, T}{Integers - number of unique units and time periods.}
 #'   \item{d}{Integer - number of *raw* covariates after processing.}
 #'   \item{p}{Integer - total number of columns in `X_ints`.}
-#'   \item{in_sample_counts}{Named integer vector of length `1 + R` with cohort
+#'   \item{in_sample_counts}{Named integer vector of length `1 + G` with cohort
 #'     sizes in the estimation sample (first entry = never-treated).}
 #'   \item{num_treats}{Integer - total number of base treatment-effect
 #'     parameters in `X_ints`.}
-#'   \item{first_inds}{Integer vector (length `R`) giving the first column
+#'   \item{first_inds}{Integer vector (length `G`) giving the first column
 #'     index of each cohort's treatment-effect block inside `X_ints`.}
-#'   \item{R}{Integer - number of treated cohorts detected.}
+#'   \item{G}{Integer - number of treated cohorts detected.}
 #' }
 #'
 #' @details
@@ -247,7 +247,7 @@ prep_for_etwfe_regression <- function(
 #'   \item **Design-matrix construction** - hands the cleaned data to
 #'     `prepXints()`, which adds unit and time dummies, interactions, etc.
 #'   \item **Cohort diagnostics** - verifies that
-#'     \eqn{R \ge 2}, at least one never-treated unit exists, cohort names are
+#'     \eqn{G \ge 2}, at least one never-treated unit exists, cohort names are
 #'     unique, and (if provided) `indep_counts` are dimensionally consistent.
 #' }
 #'
@@ -302,14 +302,14 @@ prep_for_etwfe_core <- function(
 
 	rm(res)
 
-	R <- length(in_sample_counts) - 1
-	stopifnot(R <= T - 1)
-	if (R < 2) {
+	G <- length(in_sample_counts) - 1
+	stopifnot(G <= T - 1)
+	if (G < 2) {
 		stop(
 			"Only one treated cohort detected in data. Currently fetwfe and etwfe only support data sets with at least two treated cohorts."
 		)
 	}
-	stopifnot(N >= R + 1)
+	stopifnot(N >= G + 1)
 	stopifnot(sum(in_sample_counts) == N)
 	stopifnot(all(in_sample_counts >= 0))
 	stopifnot(is.integer(in_sample_counts))
@@ -358,7 +358,7 @@ prep_for_etwfe_core <- function(
 		num_treats = num_treats,
 		first_inds = first_inds,
 		first_year = first_year,
-		R = R
+		G = G
 	))
 }
 
@@ -491,46 +491,46 @@ prep_for_etwfe_core <- function(
 #'   cohort. Called from the orchestrator only when
 #'   `is_twfe_covs = TRUE`.
 #' @param X_gls Numeric matrix; GLS-transformed design.
-#' @param N,T,R,d Integers; units, time periods, treated cohorts,
+#' @param N,T,G,d Integers; units, time periods, treated cohorts,
 #'   covariates.
 #' @param num_treats Integer; treatment-column count in the pre-collapse
 #'   design.
 #' @param first_inds Integer vector; first-index-within-cohort offsets.
 #' @return List with `X_collapsed` (post-collapse design) and `p_short`
-#'   (column count `= R + T - 1 + d + R`).
+#'   (column count `= G + T - 1 + d + G`).
 #' @keywords internal
 #' @noRd
 .collapse_design_for_twfe_covs <- function(
 	X_gls,
 	N,
 	T,
-	R,
+	G,
 	d,
 	num_treats,
 	first_inds
 ) {
 	stopifnot(nrow(X_gls) == N * T)
 
-	X <- X_gls[, 1:(R + T - 1 + d * (1 + R + T - 1) + num_treats)]
+	X <- X_gls[, 1:(G + T - 1 + d * (1 + G + T - 1) + num_treats)]
 
-	first_treat_ind <- R + T - 1 + d * (1 + R + T - 1)
+	first_treat_ind <- G + T - 1 + d * (1 + G + T - 1)
 	treat_inds <- first_treat_ind:(first_treat_ind + num_treats - 1)
 	stopifnot(length(treat_inds) == num_treats)
 
-	X <- X[, c(1:(R + T - 1 + d), treat_inds)]
+	X <- X[, c(1:(G + T - 1 + d), treat_inds)]
 	stopifnot(nrow(X) == N * T)
 
-	treat_inds_mat <- matrix(as.numeric(NA), nrow = N * T, ncol = R)
-	for (r in 1:R) {
-		inds_r <- .cohort_block_inds(r, R, first_inds, num_treats)
-		cols_r <- R + T - 1 + d + inds_r
-		treat_inds_mat[, r] <- rowSums(X[, cols_r, drop = FALSE])
+	treat_inds_mat <- matrix(as.numeric(NA), nrow = N * T, ncol = G)
+	for (g in 1:G) {
+		inds_g <- .cohort_block_inds(g, G, first_inds, num_treats)
+		cols_g <- G + T - 1 + d + inds_g
+		treat_inds_mat[, g] <- rowSums(X[, cols_g, drop = FALSE])
 	}
 	stopifnot(all(!is.na(treat_inds_mat)))
 
-	X_collapsed <- cbind(X[, 1:(R + T - 1 + d)], treat_inds_mat)
+	X_collapsed <- cbind(X[, 1:(G + T - 1 + d)], treat_inds_mat)
 
-	p_short <- R + T - 1 + d + R
+	p_short <- G + T - 1 + d + G
 	stopifnot(ncol(X_collapsed) == p_short)
 
 	list(X_collapsed = X_collapsed, p_short = p_short)
@@ -544,14 +544,14 @@ prep_for_etwfe_core <- function(
 #'   When `add_ridge = FALSE`, returns inputs unchanged with
 #'   `lambda_ridge = NA`. The long arg list reflects two semantic
 #'   groups: `(N, T, p, sig_eps_sq, sig_eps_c_sq)` feed the
-#'   `lambda_ridge` formula; `(is_fetwfe, first_inds, T, R, d,
+#'   `lambda_ridge` formula; `(is_fetwfe, first_inds, T, G, d,
 #'   num_treats)` feed the `D_inverse` construction.
 #' @param X_scaled Numeric matrix; the scaled, GLS-transformed design.
 #' @param y_gls Numeric vector; the GLS-transformed response.
 #' @param p Integer; column count of `X_scaled`.
 #' @param add_ridge Logical.
 #' @param is_fetwfe Logical; selects fusion-inverse vs identity.
-#' @param first_inds,T,R,d,num_treats Args for
+#' @param first_inds,T,G,d,num_treats Args for
 #'   `genFullInvFusionTransformMat()` (only used when
 #'   `is_fetwfe = TRUE`).
 #' @param sig_eps_sq,sig_eps_c_sq,N Numeric / integer; inputs to the
@@ -569,7 +569,7 @@ prep_for_etwfe_core <- function(
 	is_fetwfe,
 	first_inds,
 	T,
-	R,
+	G,
 	d,
 	num_treats,
 	sig_eps_sq,
@@ -590,7 +590,7 @@ prep_for_etwfe_core <- function(
 		D_inverse <- genFullInvFusionTransformMat(
 			first_inds = first_inds,
 			T = T,
-			R = R,
+			G = G,
 			d = d,
 			num_treats = num_treats
 		)
@@ -624,15 +624,15 @@ prep_for_etwfe_core <- function(
 #' @title Compute in-sample (and optionally independent) cohort probabilities
 #' @description Convert raw cohort counts into two normalizations:
 #'   within-treated (`cohort_probs`, sums to 1) and overall
-#'   (`cohort_probs_overall`, equals `count_r / N`). If
+#'   (`cohort_probs_overall`, equals `count_g / N`). If
 #'   `indep_count_data_available = TRUE`, do the same for `indep_counts`;
 #'   otherwise the indep-side outputs are NA.
-#' @param in_sample_counts Integer vector of length `R + 1`; counts of
+#' @param in_sample_counts Integer vector of length `G + 1`; counts of
 #'   never-treated + treated cohorts in the working panel.
-#' @param indep_counts Integer vector of length `R + 1` or NA;
+#' @param indep_counts Integer vector of length `G + 1` or NA;
 #'   independent-sample counts.
 #' @param N Integer; total units.
-#' @param R Integer; treated cohorts.
+#' @param G Integer; treated cohorts.
 #' @param indep_count_data_available Logical.
 #' @return List with `cohort_probs`, `cohort_probs_overall`,
 #'   `indep_cohort_probs`, `indep_cohort_probs_overall`.
@@ -642,35 +642,35 @@ prep_for_etwfe_core <- function(
 	in_sample_counts,
 	indep_counts,
 	N,
-	R,
+	G,
 	indep_count_data_available
 ) {
-	cohort_probs <- in_sample_counts[2:(R + 1)] /
-		sum(in_sample_counts[2:(R + 1)])
+	cohort_probs <- in_sample_counts[2:(G + 1)] /
+		sum(in_sample_counts[2:(G + 1)])
 
 	stopifnot(all(!is.na(cohort_probs)))
 	stopifnot(all(cohort_probs >= 0))
 	stopifnot(all(cohort_probs <= 1))
-	stopifnot(length(cohort_probs) == R)
+	stopifnot(length(cohort_probs) == G)
 	stopifnot(abs(sum(cohort_probs) - 1) < 1e-6)
 
-	cohort_probs_overall <- in_sample_counts[2:(R + 1)] / N
+	cohort_probs_overall <- in_sample_counts[2:(G + 1)] / N
 
 	stopifnot(
 		abs(1 - sum(cohort_probs_overall) - in_sample_counts[1] / N) < 1e-6
 	)
 
 	if (indep_count_data_available) {
-		indep_cohort_probs <- indep_counts[2:(R + 1)] /
-			sum(indep_counts[2:(R + 1)])
+		indep_cohort_probs <- indep_counts[2:(G + 1)] /
+			sum(indep_counts[2:(G + 1)])
 
 		stopifnot(all(!is.na(indep_cohort_probs)))
 		stopifnot(all(indep_cohort_probs >= 0))
 		stopifnot(all(indep_cohort_probs <= 1))
-		stopifnot(length(indep_cohort_probs) == R)
+		stopifnot(length(indep_cohort_probs) == G)
 		stopifnot(abs(sum(indep_cohort_probs) - 1) < 1e-6)
 
-		indep_cohort_probs_overall <- indep_counts[2:(R + 1)] / N
+		indep_cohort_probs_overall <- indep_counts[2:(G + 1)] / N
 
 		stopifnot(
 			abs(
@@ -945,9 +945,9 @@ estOmegaSqrtInv <- function(y, X_ints, N, T, p) {
 #' When all checks pass it returns a compact list of derived quantities
 #' used downstream by the core estimator.
 #'
-#' @param in_sample_counts Integer named vector. Length `R+1`.
+#' @param in_sample_counts Integer named vector. Length `G+1`.
 #'   The first element must be the number of never-treated units; the
-#'   remaining `R` elements give the number of units in each treated
+#'   remaining `G` elements give the number of units in each treated
 #'   cohort.  Names must be unique and correspond to cohort identifiers.
 #' @param N Integer. Total number of unique units in the (filtered) data.
 #' @param T Integer. Total number of time periods.
@@ -973,15 +973,15 @@ estOmegaSqrtInv <- function(y, X_ints, N, T, p) {
 #'   \item Ensuring the total of \code{in_sample_counts} equals \code{N}.
 #'   \item Checking that at least one never-treated unit is present.
 #'   \item Verifying that cohort names are unique and counts non-negative.
-#'   \item Confirming that \eqn{1 \le R \le T-1}.
+#'   \item Confirming that \eqn{1 \le G \le T-1}.
 #'   \item Basic sanity checks for all numeric scalars (\code{alpha} inside \eqn{(0,1)}, non-negative variances, etc.).
 #'   \item All structural requirements on \code{indep_counts} when supplied.
 #' }
 #'
 #' @return A list with three elements:
 #'   \describe{
-#'     \item{\code{R}}{Integer. The number of treated cohorts `=length(in_sample_counts)-1`).}
-#'     \item{\code{c_names}}{Character vector of cohort names (length `R`).}
+#'     \item{\code{G}}{Integer. The number of treated cohorts `=length(in_sample_counts)-1`).}
+#'     \item{\code{c_names}}{Character vector of cohort names (length `G`).}
 #'     \item{\code{indep_count_data_available}}{Logical. \code{TRUE} if
 #'       valid \code{indep_counts} were supplied, \code{FALSE} otherwise.}
 #'   }
@@ -998,9 +998,9 @@ check_etwfe_core_inputs <- function(
 	alpha,
 	add_ridge
 ) {
-	R <- length(in_sample_counts) - 1
+	G <- length(in_sample_counts) - 1
 
-	c_names <- names(in_sample_counts)[2:(R + 1)]
+	c_names <- names(in_sample_counts)[2:(G + 1)]
 
 	stopifnot(N >= 2) # bare minimum, 2 units at 2 times
 
@@ -1043,12 +1043,12 @@ check_etwfe_core_inputs <- function(
 	# Mirror prep_for_etwfe_core()'s friendly message (#208) so that whichever
 	# validator fires first, the user sees the same actionable text rather than
 	# an opaque `stopifnot` failure.
-	if (R < 2) {
+	if (G < 2) {
 		stop(
 			"Only one treated cohort detected in data. Currently fetwfe and etwfe only support data sets with at least two treated cohorts."
 		)
 	}
-	stopifnot(R <= T - 1)
+	stopifnot(G <= T - 1)
 
 	indep_count_data_available <- FALSE
 	if (any(!is.na(indep_counts))) {
@@ -1082,7 +1082,7 @@ check_etwfe_core_inputs <- function(
 	stopifnot(length(add_ridge) == 1)
 
 	return(list(
-		R = R,
+		G = G,
 		c_names = c_names,
 		indep_count_data_available = indep_count_data_available
 	))
@@ -1110,8 +1110,8 @@ check_etwfe_core_inputs <- function(
 #' @param message_text Character scalar; emitted via `message()` when
 #'   `verbose` is `TRUE`. Per-block string (see callers).
 #' @param verbose Logical; whether to emit `message_text`.
-#' @param R,N,T,d,p Integers; problem dimensions.
-#' @param c_names Character vector of length `R`; cohort labels for the
+#' @param G,N,T,d,p Integers; problem dimensions.
+#' @param c_names Character vector of length `G`; cohort labels for the
 #'   `catt_df_to_ret` rows.
 #' @param q Numeric; bridge regression exponent. Drives the
 #'   `ret_se <- if (q < 1) 0 else NA` SE-shape gate.
@@ -1157,7 +1157,7 @@ check_etwfe_core_inputs <- function(
 .build_selected_out_result <- function(
 	message_text,
 	verbose,
-	R,
+	G,
 	c_names,
 	q,
 	beta_hat,
@@ -1199,12 +1199,12 @@ check_etwfe_core_inputs <- function(
 
 	catt_df_to_ret <- data.frame(
 		cohort = c_names,
-		estimate = rep(0, R),
-		se = rep(ret_se, R),
-		ci_low = rep(ret_se, R),
-		ci_high = rep(ret_se, R),
-		p_value = rep(NA_real_, R),
-		selected = rep(FALSE, R),
+		estimate = rep(0, G),
+		se = rep(ret_se, G),
+		ci_low = rep(ret_se, G),
+		ci_high = rep(ret_se, G),
+		p_value = rep(NA_real_, G),
+		selected = rep(FALSE, G),
 		stringsAsFactors = FALSE
 	)
 	# Attach the `catt_df` S3 class so [[ / $ / [ accessors fire the
@@ -1234,8 +1234,8 @@ check_etwfe_core_inputs <- function(
 		indep_att_se = ret_se,
 		indep_att_var_1 = ret_var,
 		indep_att_var_2 = ret_var,
-		catt_hats = setNames(rep(0, R), c_names),
-		catt_ses = setNames(rep(ret_se, R), c_names),
+		catt_hats = setNames(rep(0, G), c_names),
+		catt_ses = setNames(rep(ret_se, G), c_names),
 		catt_df = catt_df_to_ret,
 		theta_hat = theta_hat,
 		beta_hat = beta_hat,
@@ -1259,7 +1259,7 @@ check_etwfe_core_inputs <- function(
 		y_final = y_final,
 		N = N,
 		T = T,
-		R = R,
+		G = G,
 		d = d,
 		p = p,
 		calc_ses = q < 1,
@@ -1303,7 +1303,7 @@ check_etwfe_core_inputs <- function(
 		"y_final",
 		"N",
 		"T",
-		"R",
+		"G",
 		"d",
 		"p",
 		"calc_ses",

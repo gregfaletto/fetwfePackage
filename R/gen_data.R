@@ -124,7 +124,7 @@ simulateData <- function(
 	}
 
 	# Extract parameters from the coefs object
-	R <- coefs_obj$R
+	G <- coefs_obj$G
 	T <- coefs_obj$T
 	d <- coefs_obj$d
 	beta <- coefs_obj$beta
@@ -142,7 +142,7 @@ simulateData <- function(
 	sim_data <- simulateDataCore(
 		N = N,
 		T = T,
-		G = R,
+		G = G,
 		d = d,
 		sig_eps_sq = sig_eps_sq,
 		sig_eps_c_sq = sig_eps_c_sq,
@@ -199,7 +199,7 @@ simulateData <- function(
 #' @description
 #' Generates a random panel data set for simulation studies of the fused extended two-way fixed
 #' effects (FETWFE) estimator. The function creates a balanced panel with \eqn{N} units over \eqn{T}
-#' time periods, assigns treatment status across \eqn{R} treated cohorts (with equal marginal
+#' time periods, assigns treatment status across \eqn{G} treated cohorts (with equal marginal
 #' probabilities for treatment and non-treatment), and constructs a design matrix along with the
 #' corresponding outcome. When \code{gen_ints = TRUE} the full design matrix is returned (including
 #' interactions between covariates and fixed effects and treatment indicators). When
@@ -359,10 +359,9 @@ simulateDataCore <- function(
 	R = NULL
 ) {
 	# Resolve the canonical cohort count (G), mapping the deprecated `R`
-	# alias and warning if it is supplied (#41). The body below keeps using
-	# `R` internally via the `R <- G` line, so it is otherwise unchanged.
+	# alias and warning if it is supplied (#41). The body below uses `G`
+	# directly.
 	G <- .resolve_cohort_count_arg(G, R, "simulateDataCore")
-	R <- G
 
 	if (!is.null(seed)) {
 		set.seed(seed)
@@ -386,7 +385,7 @@ simulateDataCore <- function(
 
 	res <- testGenRandomDataInputs(
 		beta = beta,
-		R = R,
+		G = G,
 		T = T,
 		d = d,
 		N = N,
@@ -408,7 +407,7 @@ simulateDataCore <- function(
 			N = N,
 			d = d,
 			T = T,
-			R = R,
+			G = G,
 			distribution = distribution,
 			guarantee_rank_condition = guarantee_rank_condition
 		)
@@ -417,7 +416,7 @@ simulateDataCore <- function(
 			N = N,
 			d = d,
 			T = T,
-			R = R,
+			G = G,
 			distribution = distribution,
 			guarantee_rank_condition = guarantee_rank_condition,
 			assignment_coefs = assignment_coefs
@@ -429,7 +428,7 @@ simulateDataCore <- function(
 	assignments <- res_base$assignments
 	cohort_inds <- res_base$cohort_inds
 
-	stopifnot(ncol(cohort_fe) == R)
+	stopifnot(ncol(cohort_fe) == G)
 	stopifnot(is.matrix(X_long))
 
 	# Base matrix: cohort FE, time FE, and covariates (if any)
@@ -447,7 +446,7 @@ simulateDataCore <- function(
 	if (assignment_type == "marginal") {
 		indep_assignments <- genAssignments(
 			N = N,
-			R = R,
+			G = G,
 			guarantee_rank_condition = guarantee_rank_condition,
 			d = d
 		)
@@ -456,7 +455,7 @@ simulateDataCore <- function(
 			N = N,
 			d = d,
 			T = T,
-			R = R,
+			G = G,
 			distribution = distribution,
 			guarantee_rank_condition = guarantee_rank_condition,
 			assignment_coefs = assignment_coefs
@@ -464,18 +463,18 @@ simulateDataCore <- function(
 	}
 
 	if (d > 0) {
-		res_ints <- generateFEInts(X_long, cohort_fe, time_fe, N, T, R, d)
+		res_ints <- generateFEInts(X_long, cohort_fe, time_fe, N, T, G, d)
 		X_ints1 <- cbind(X_base, res_ints$X_long_cohort, res_ints$X_long_time)
 	} else {
 		X_ints1 <- X_base
 	}
 
-	first_inds_test <- getFirstInds(R = R, T = T)
+	first_inds_test <- getFirstInds(G = G, T = T)
 	res_treat <- genTreatVarsSim(
 		num_treats,
 		N,
 		T,
-		R,
+		G,
 		assignments,
 		cohort_inds,
 		N_UNTREATED = assignments[1],
@@ -487,7 +486,7 @@ simulateDataCore <- function(
 	X_ints2 <- cbind(X_ints1, treat_mat_long)
 
 	if (d > 0) {
-		stopifnot(ncol(cohort_fe) == R)
+		stopifnot(ncol(cohort_fe) == G)
 		X_long_treat <- genTreatInts(
 			treat_mat_long = treat_mat_long,
 			X_long = X_long,
@@ -495,7 +494,7 @@ simulateDataCore <- function(
 			cohort_fe = cohort_fe,
 			N = N,
 			T = T,
-			R = R,
+			G = G,
 			d = d,
 			N_UNTREATED = assignments[1]
 		)
@@ -522,8 +521,8 @@ simulateDataCore <- function(
 		X_ret <- X_final
 	} else {
 		# Return X with no interactions
-		# Expected number of columns: p = R + (T - 1) + d + num_treats
-		p_expected <- R + (T - 1) + d + num_treats
+		# Expected number of columns: p = G + (T - 1) + d + num_treats
+		p_expected <- G + (T - 1) + d + num_treats
 
 		X_ret <- cbind(X_base, treat_mat_long)
 		if (ncol(X_ret) != p_expected) {
@@ -537,8 +536,8 @@ simulateDataCore <- function(
 
 	# We know that when gen_ints = FALSE, the design matrix X is:
 	# X = [cohort_fe, time_fe, X_long, treat_mat_long]
-	# The base part (cohort_fe, time_fe, X_long) has (R + (T-1) + d) columns.
-	base_cols <- R + (T - 1) + d
+	# The base part (cohort_fe, time_fe, X_long) has (G + (T-1) + d) columns.
+	base_cols <- G + (T - 1) + d
 
 	# The treatment dummy block is in columns (base_cols + 1) : (base_cols + num_treats)
 	treat_dummy <- cbind(X_base, treat_mat_long)[,
@@ -552,7 +551,7 @@ simulateDataCore <- function(
 
 	# Extract the covariate columns from the base part: they are the last d columns of the base part.
 	if (d > 0) {
-		cov_cols <- seq(from = (R + (T - 1) + 1), to = (R + (T - 1) + d))
+		cov_cols <- seq(from = (G + (T - 1) + 1), to = (G + (T - 1) + d))
 		covariates <- cbind(X_base, treat_mat_long)[, cov_cols, drop = FALSE]
 	}
 
@@ -619,8 +618,8 @@ simulateDataCore <- function(
 		p = p_expected,
 		N = N,
 		T = T,
-		G = R,
-		R = R,
+		G = G,
+		R = G,
 		d = d,
 		sig_eps_sq = sig_eps_sq,
 		sig_eps_c_sq = sig_eps_c_sq

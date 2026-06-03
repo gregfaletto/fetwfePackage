@@ -438,7 +438,7 @@ betwfe <- function(
 	num_treats <- prep$num_treats
 	first_inds <- prep$first_inds
 	first_year <- prep$first_year
-	R <- prep$R
+	G <- prep$G
 	indep_count_data_available <- prep$indep_count_data_available
 
 	rm(prep)
@@ -528,8 +528,8 @@ betwfe <- function(
 		y_final = res$y_final,
 		N = res$N,
 		T = res$T,
-		G = res$R,
-		R = res$R,
+		G = res$G,
+		R = res$G,
 		d = res$d,
 		p = res$p,
 		calc_ses = res$calc_ses,
@@ -915,7 +915,7 @@ betwfeWithSimulatedData <- function(
 #' @param first_inds A numeric vector indicating the starting column index for
 #'   each cohort's first treatment effect within the treatment effect block.
 #' @param indep_counts (Optional) An integer vector of counts for how many units
-#'   appear in the untreated cohort plus each of the other `R` cohorts, derived
+#'   appear in the untreated cohort plus each of the other `G` cohorts, derived
 #'   from an independent dataset. Used for asymptotically exact standard errors for
 #'   the ATT. Default is `NA`.
 #' @param sig_eps_sq (Optional) Numeric; the known variance of the observation-level
@@ -1019,7 +1019,7 @@ betwfeWithSimulatedData <- function(
 #'   \item{y}{The original input centered response vector from `prepXints`.}
 #'   \item{X_final}{The design matrix after GLS weighting.}
 #'   \item{y_final}{The response vector after GLS weighting.}
-#'   \item{N, T, R, d, p}{Dimensions used in estimation.}
+#'   \item{N, T, G, d, p}{Dimensions used in estimation.}
 #' @keywords internal
 #' @noRd
 betwfe_core <- function(
@@ -1064,7 +1064,7 @@ betwfe_core <- function(
 		add_ridge = add_ridge
 	)
 
-	R <- ret$R
+	G <- ret$G
 	c_names <- ret$c_names
 	indep_count_data_available <- ret$indep_count_data_available
 
@@ -1079,7 +1079,7 @@ betwfe_core <- function(
 		X_mod = X_ints, # Don't transform matrix
 		N = N,
 		T = T,
-		R = R,
+		G = G,
 		d = d,
 		p = p,
 		num_treats = num_treats,
@@ -1146,12 +1146,12 @@ betwfe_core <- function(
 
 	lambda_star <- fit$lambda[lambda_star_ind]
 
-	# c_names <- names(in_sample_counts)[2:(R + 1)] # Moved definition up
-	stopifnot(length(c_names) == R)
+	# c_names <- names(in_sample_counts)[2:(G + 1)] # Moved definition up
+	stopifnot(length(c_names) == G)
 
 	# Indices corresponding to base treatment effects
 	ti <- .compute_treat_inds(
-		R = R,
+		G = G,
 		T = T,
 		d = d,
 		num_treats = num_treats,
@@ -1169,7 +1169,7 @@ betwfe_core <- function(
 		return(.build_selected_out_result(
 			message_text = "No features selected (or only intercept); all treatment effects estimated to be 0.",
 			verbose = verbose,
-			R = R,
+			G = G,
 			c_names = c_names,
 			q = q,
 			beta_hat = beta_hat[2:(p + 1)], # Slopes are all zero
@@ -1238,7 +1238,7 @@ betwfe_core <- function(
 		return(.build_selected_out_result(
 			message_text = "No treatment features selected; all treatment effects estimated to be 0.",
 			verbose = verbose,
-			R = R,
+			G = G,
 			c_names = c_names,
 			q = q,
 			beta_hat = beta_hat_slopes, # Untransformed slopes
@@ -1292,7 +1292,7 @@ betwfe_core <- function(
 			0
 	))
 
-	stopifnot(length(first_inds) == R)
+	stopifnot(length(first_inds) == G)
 	stopifnot(max(first_inds) <= num_treats)
 
 	stopifnot(length(sel_feat_inds) > 0) # sel_feat_inds are indices in beta_hat_slopes
@@ -1315,7 +1315,7 @@ betwfe_core <- function(
 		c_names = c_names,
 		tes = tes, # Treatment effect estimates (beta_hat[treat_inds])
 		sig_eps_sq = sig_eps_sq,
-		R = R,
+		G = G,
 		N = N,
 		T = T,
 		fused = FALSE,
@@ -1348,14 +1348,14 @@ betwfe_core <- function(
 		sig_eps_sq = sig_eps_sq,
 		N = N,
 		T = T,
-		R = R,
+		G = G,
 		num_treats = num_treats,
 		cohort_tes = cohort_tes, # CATTs (point estimates)
-		cohort_probs = cohort_probs, # In-sample pi_r | treated
+		cohort_probs = cohort_probs, # In-sample pi_g | treated
 		psi_mat = psi_mat,
 		gram_inv = gram_inv,
 		tes = tes[sel_treat_inds_shifted], # Untransformed treatment effect estimates beta_hat[treat_inds]
-		cohort_probs_overall = cohort_probs_overall, # In-sample pi_r (unconditional on treated)
+		cohort_probs_overall = cohort_probs_overall, # In-sample pi_g (unconditional on treated)
 		calc_ses = calc_ses,
 		indep_probs = FALSE,
 		se_type = se_type,
@@ -1380,14 +1380,14 @@ betwfe_core <- function(
 			sig_eps_sq = sig_eps_sq,
 			N = N,
 			T = T,
-			R = R,
+			G = G,
 			num_treats = num_treats,
 			cohort_tes = cohort_tes,
-			cohort_probs = indep_cohort_probs, # indep pi_r | treated
+			cohort_probs = indep_cohort_probs, # indep pi_g | treated
 			psi_mat = psi_mat,
 			gram_inv = gram_inv,
 			tes = tes[sel_treat_inds_shifted],
-			cohort_probs_overall = indep_cohort_probs_overall, # indep pi_r (unconditional)
+			cohort_probs_overall = indep_cohort_probs_overall, # indep pi_g (unconditional)
 			calc_ses = calc_ses,
 			indep_probs = TRUE,
 			se_type = se_type,
@@ -1440,7 +1440,7 @@ betwfe_core <- function(
 		y_final = y_final,
 		N = N,
 		T = T,
-		R = R,
+		G = G,
 		d = d,
 		p = p,
 		calc_ses = calc_ses,

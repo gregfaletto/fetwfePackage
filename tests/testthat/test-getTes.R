@@ -85,10 +85,10 @@ test_that("actual_cohort_tes matches expected output", {
 	treat_inds <- seq(from = base_cols + 1, length.out = num_treats)
 
 	# Use getFirstInds() to get the starting indices.
-	first_inds <- getFirstInds(R = R_val, T = T_val)
+	first_inds <- getFirstInds(G = R_val, T = T_val)
 
 	actual_cohort_tes_expected <- getActualCohortTes(
-		R = R_val,
+		G = R_val,
 		first_inds = first_inds,
 		treat_inds = treat_inds,
 		coefs = beta,

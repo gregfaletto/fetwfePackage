@@ -280,7 +280,7 @@ checkFetwfeInputs <- function(
 #' @param first_inds A numeric vector indicating the starting column index for
 #'   each cohort's first treatment effect within the treatment effect block.
 #' @param indep_counts (Optional) An integer vector of counts for how many units
-#'   appear in the untreated cohort plus each of the other `R` cohorts, derived
+#'   appear in the untreated cohort plus each of the other `G` cohorts, derived
 #'   from an independent dataset. Used for asymptotically exact standard errors for
 #'   the ATT. Default is `NA`.
 #' @param sig_eps_sq (Optional) Numeric; the known variance of the observation-level
@@ -391,7 +391,7 @@ checkFetwfeInputs <- function(
 #'   \item{y}{The original input centered response vector from `prepXints`.}
 #'   \item{X_final}{The design matrix after fusion transformation and GLS weighting.}
 #'   \item{y_final}{The response vector after GLS weighting.}
-#'   \item{N, T, R, d, p}{Dimensions used in estimation.}
+#'   \item{N, T, G, d, p}{Dimensions used in estimation.}
 #' @keywords internal
 #' @noRd
 fetwfe_core <- function(
@@ -436,7 +436,7 @@ fetwfe_core <- function(
 		add_ridge = add_ridge
 	)
 
-	R <- ret$R
+	G <- ret$G
 	c_names <- ret$c_names
 	indep_count_data_available <- ret$indep_count_data_available
 
@@ -460,7 +460,7 @@ fetwfe_core <- function(
 		X_int = X_ints,
 		N = N,
 		T = T,
-		R = R,
+		G = G,
 		d = d,
 		num_treats = num_treats,
 		first_inds = first_inds
@@ -475,7 +475,7 @@ fetwfe_core <- function(
 		X_mod = X_mod,
 		N = N,
 		T = T,
-		R = R,
+		G = G,
 		d = d,
 		p = p,
 		num_treats = num_treats,
@@ -542,12 +542,12 @@ fetwfe_core <- function(
 
 	lambda_star <- fit$lambda[lambda_star_ind]
 
-	# c_names <- names(in_sample_counts)[2:(R + 1)] # Moved definition up
-	stopifnot(length(c_names) == R)
+	# c_names <- names(in_sample_counts)[2:(G + 1)] # Moved definition up
+	stopifnot(length(c_names) == G)
 
 	# Indices corresponding to base treatment effects
 	ti <- .compute_treat_inds(
-		R = R,
+		G = G,
 		T = T,
 		d = d,
 		num_treats = num_treats,
@@ -567,7 +567,7 @@ fetwfe_core <- function(
 		return(.build_selected_out_result(
 			message_text = "No features selected (or only intercept); all treatment effects estimated to be 0.",
 			verbose = verbose,
-			R = R,
+			G = G,
 			c_names = c_names,
 			q = q,
 			beta_hat = rep(0, p), # Slopes are all zero
@@ -634,7 +634,7 @@ fetwfe_core <- function(
 			beta_hat_mod = theta_hat_slopes, # Pass slopes only
 			first_inds = first_inds,
 			T = T,
-			R = R,
+			G = G,
 			p = p,
 			d = d,
 			num_treats = num_treats
@@ -651,7 +651,7 @@ fetwfe_core <- function(
 		return(.build_selected_out_result(
 			message_text = "No treatment features selected; all treatment effects estimated to be 0.",
 			verbose = verbose,
-			R = R,
+			G = G,
 			c_names = c_names,
 			q = q,
 			beta_hat = beta_hat_early_exit, # Untransformed slopes
@@ -694,7 +694,7 @@ fetwfe_core <- function(
 		beta_hat_mod = theta_hat_slopes, # Pass slopes only
 		first_inds = first_inds,
 		T = T,
-		R = R,
+		G = G,
 		p = p,
 		d = d,
 		num_treats = num_treats
@@ -721,7 +721,7 @@ fetwfe_core <- function(
 			0
 	))
 
-	stopifnot(length(first_inds) == R)
+	stopifnot(length(first_inds) == G)
 	stopifnot(max(first_inds) <= num_treats)
 
 	stopifnot(length(sel_feat_inds) > 0) # sel_feat_inds are indices in theta_hat_slopes
@@ -744,7 +744,7 @@ fetwfe_core <- function(
 		c_names = c_names,
 		tes = tes, # Untransformed treatment effect estimates (beta_hat[treat_inds])
 		sig_eps_sq = sig_eps_sq,
-		R = R,
+		G = G,
 		N = N,
 		T = T,
 		fused = TRUE,
@@ -787,15 +787,15 @@ fetwfe_core <- function(
 		sig_eps_sq = sig_eps_sq,
 		N = N,
 		T = T,
-		R = R,
+		G = G,
 		num_treats = num_treats,
 		cohort_tes = cohort_tes, # CATTs (point estimates)
-		cohort_probs = cohort_probs, # In-sample pi_r | treated
+		cohort_probs = cohort_probs, # In-sample pi_g | treated
 		psi_mat = psi_mat,
 		gram_inv = gram_inv,
 		sel_treat_inds_shifted = sel_treat_inds_shifted,
 		d_inv_treat_sel = d_inv_treat_sel,
-		cohort_probs_overall = cohort_probs_overall, # In-sample pi_r (unconditional on treated)
+		cohort_probs_overall = cohort_probs_overall, # In-sample pi_g (unconditional on treated)
 		first_inds = first_inds,
 		theta_hat_treat_sel = theta_hat_treat_sel_for_att, # Selected non-zero transformed treat coefs
 		calc_ses = calc_ses,
@@ -820,15 +820,15 @@ fetwfe_core <- function(
 			sig_eps_sq = sig_eps_sq,
 			N = N,
 			T = T,
-			R = R,
+			G = G,
 			num_treats = num_treats,
 			cohort_tes = cohort_tes,
-			cohort_probs = indep_cohort_probs, # indep pi_r | treated
+			cohort_probs = indep_cohort_probs, # indep pi_g | treated
 			psi_mat = psi_mat,
 			gram_inv = gram_inv,
 			sel_treat_inds_shifted = sel_treat_inds_shifted,
 			d_inv_treat_sel = d_inv_treat_sel,
-			cohort_probs_overall = indep_cohort_probs_overall, # indep pi_r (unconditional)
+			cohort_probs_overall = indep_cohort_probs_overall, # indep pi_g (unconditional)
 			first_inds = first_inds,
 			theta_hat_treat_sel = theta_hat_treat_sel_for_att,
 			calc_ses = calc_ses,
@@ -883,7 +883,7 @@ fetwfe_core <- function(
 		y_final = y_final,
 		N = N,
 		T = T,
-		R = R,
+		G = G,
 		d = d,
 		p = p,
 		calc_ses = calc_ses,

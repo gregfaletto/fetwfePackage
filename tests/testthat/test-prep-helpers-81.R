@@ -57,7 +57,7 @@ test_that(".collapse_design_for_twfe_covs returns expected shape (#81)", {
 		X_gls = X_gls,
 		N = N,
 		T = T,
-		R = R,
+		G = R,
 		d = d,
 		num_treats = num_treats,
 		first_inds = first_inds
@@ -88,7 +88,7 @@ test_that(".append_ridge_rows is a no-op when add_ridge = FALSE (#81)", {
 		is_fetwfe = FALSE,
 		first_inds = 1L, # unused
 		T = T,
-		R = 1L,
+		G = 1L,
 		d = 0L,
 		num_treats = 1L,
 		sig_eps_sq = 1.0,
@@ -113,7 +113,7 @@ test_that(".compute_cohort_probs returns expected shape and values (#81)", {
 		in_sample_counts = in_sample_counts,
 		indep_counts = NA,
 		N = 100L,
-		R = 2L,
+		G = 2L,
 		indep_count_data_available = FALSE
 	)
 
