@@ -1171,35 +1171,46 @@ getFirstIndsFromOffsets <- function(cohort_offsets_int, T) {
 }
 
 # sse_bridge
-#' @title Calculate Sum of Squared Errors for Bridge Regression
-#' @description Computes the sum of squared errors (SSE) for a given set of
+#' @title Calculate Mean Squared Errors for Bridge Regression
+#' @description Computes the mean squared error (MSE) for one or more sets of
 #'   intercept and slope coefficients from a bridge regression model, relative
 #'   to the observed responses and the (potentially transformed) design matrix.
-#'   The result is then averaged by dividing by the total number of observations (N*T).
-#' @param eta_hat Numeric scalar; the estimated intercept term.
-#' @param beta_hat Numeric vector; the estimated slope coefficients. Its length
-#'   should match the number of columns in `X_mod`.
+#'   All coefficient sets (one per penalty value in the regularization path) are
+#'   evaluated together in a single BLAS-3 matrix multiply rather than one
+#'   matrix-vector product apiece.
+#' @param eta_hat Numeric vector; the estimated intercept term for each
+#'   coefficient set (length `L`, the number of columns of `beta_hat`).
+#' @param beta_hat Numeric matrix; the estimated slope coefficients, with
+#'   `ncol(X_mod)` rows and one column per coefficient set (`L` columns total).
+#'   A plain vector is accepted and treated as a single column.
 #' @param y Numeric vector; the observed response variable, of length `N*T`.
 #' @param X_mod Numeric matrix; the design matrix (possibly transformed, e.g.,
 #'   for FETWFE) used in the regression. It has `N*T` rows.
 #' @param N Integer; the total number of unique units.
 #' @param T Integer; the total number of time periods.
-#' @return A numeric scalar representing the mean squared error (MSE), i.e.,
-#'   SSE / (N*T).
+#' @return A numeric vector of length `L`: the mean squared error (MSE),
+#'   `SSE / (N*T)`, for each column of `beta_hat`.
 #' @keywords internal
 #' @noRd
 sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
-	stopifnot(length(eta_hat) == 1)
-	stopifnot(length(beta_hat) == ncol(X_mod))
+	beta_hat <- as.matrix(beta_hat)
+	stopifnot(nrow(beta_hat) == ncol(X_mod))
+	stopifnot(length(eta_hat) == ncol(beta_hat))
 
-	y_hat <- X_mod %*% beta_hat + eta_hat
-	stopifnot(length(y_hat) == N * T)
-	stopifnot(all(!is.na(y_hat)))
+	# One (N*T x L) fitted-value block: column j holds X_mod %*% beta_hat[, j]
+	# plus its intercept eta_hat[j]. A single matrix-matrix product (dgemm)
+	# replaces the L separate matrix-vector products the per-lambda loop used
+	# (#169).
+	y_hat <- sweep(X_mod %*% beta_hat, 2, eta_hat, "+")
+	stopifnot(nrow(y_hat) == N * T)
 
-	ret <- sum((y - y_hat)^2) / (N * T)
+	ret <- colSums((y - y_hat)^2) / (N * T)
 
-	stopifnot(!is.na(ret))
-	stopifnot(ret >= 0)
+	# A non-finite fitted value surfaces here as NA/NaN. The per-element scan of
+	# `y_hat` the scalar version used (O(N*T) work per lambda) was redundant with
+	# this O(L) check on the result, so it is dropped (#168).
+	stopifnot(!anyNA(ret))
+	stopifnot(all(ret >= 0))
 
 	return(ret)
 }

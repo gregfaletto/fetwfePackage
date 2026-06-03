@@ -76,12 +76,14 @@
 #'     that resulted in the best BIC.}
 #'   \item{lambda_star_model_size}{Integer; the number of non-zero coefficients
 #'     (excluding intercept) in the selected model.}
-#' @details The function iterates through each lambda in `fit$lambda`. For each:
-#'   1. It extracts the intercept (`eta_s`) and slopes (`beta_s`) on the scaled data.
+#' @details For every lambda in `fit$lambda` (all evaluated together rather than
+#'   in a per-lambda loop):
+#'   1. It extracts the intercepts (`eta_s`) and slopes (`beta_s`) on the scaled data.
 #'   2. It converts these coefficients back to the original data scale using
 #'      `scale_center` and `scale_scale`.
-#'   3. It calculates the Sum of Squared Errors (SSE) using `sse_bridge()` with
-#'      the original-scale coefficients, original `y`, and `X_mod`.
+#'   3. It calculates the mean squared error using `sse_bridge()` with the
+#'      original-scale coefficients, original `y`, and `X_mod` -- a single BLAS-3
+#'      matrix multiply across all lambdas.
 #'   4. It computes the BIC value: `N*T*log(SSE/(N*T)) + s*log(N*T)`, where `s`
 #'      is the number of non-zero coefficients (including intercept).
 #'   The set of coefficients corresponding to the minimum BIC is chosen. If multiple
@@ -92,49 +94,42 @@
 #' @noRd
 getBetaBIC <- function(fit, N, T, p, X_mod, y, scale_center, scale_scale) {
 	stopifnot(length(y) == N * T)
-	n_lambda <- ncol(fit$beta)
-	BICs <- rep(as.numeric(NA), n_lambda)
-	model_sizes <- rep(as.integer(NA), n_lambda)
-
 	stopifnot(nrow(fit$beta) == p + 1)
 
-	for (k in 1:n_lambda) {
-		## --- extract coefficients on the scaled data -------------
-		eta_s <- fit$beta[1, k] # intercept (scaled space)
-		beta_s <- fit$beta[2:(p + 1), k] # slopes    (scaled space)
+	## --- extract coefficients on the scaled data (all lambdas) -------
+	eta_s <- fit$beta[1, ] # intercepts (scaled space), one per lambda
+	beta_s <- fit$beta[2:(p + 1), , drop = FALSE] # slopes (scaled), p x n_lambda
 
-		## --- convert to original scale ---------------------------
-		beta_hat_k <- beta_s / scale_scale
-		eta_hat_k <- eta_s - sum(scale_center * beta_hat_k)
+	## --- convert to original scale -----------------------------------
+	beta_hat <- beta_s / scale_scale # row i divided by scale_scale[i]
+	eta_hat <- eta_s - colSums(scale_center * beta_hat)
 
-		# Residual sum of squares
-		mse_hat <- sse_bridge(
-			eta_hat_k,
-			beta_hat_k,
-			y = y,
-			X_mod = X_mod,
-			N = N,
-			T = T
-		)
-		# Number of fitted coefficients
-		s <- sum(fit$beta[, k] != 0)
-		model_sizes[k] <- s
+	## --- residual MSE for every lambda in a single matmul ------------
+	mse_hat <- sse_bridge(
+		eta_hat,
+		beta_hat,
+		y = y,
+		X_mod = X_mod,
+		N = N,
+		T = T
+	)
 
-		stopifnot(is.na(BICs[k]))
-		# Coerce N * T to numeric before multiplying. `N * T` is integer
-		# arithmetic and overflows at .Machine$integer.max ≈ 2.15e9
-		# (panels with N * T > ~2.15e9, e.g. 50,000 x 50,000). On
-		# overflow, R returns NA_integer_ and downstream
-		# `which(BICs == min(BICs))` is empty, tripping the
-		# `stopifnot(length(lambda_star_final_ind) == 1)` at line ~378
-		# with an unhelpful message. The CV path already handles this
-		# safely at lines ~460-471 (clip to integer.max with a warning);
-		# mirror the same as.numeric() coercion here. No regression test:
-		# the bug fires only at panel sizes too large to construct in CI
-		# (#178).
-		nt_double <- as.numeric(N) * as.numeric(T)
-		BICs[k] <- nt_double * log(mse_hat) + s * log(nt_double)
-	}
+	## --- model sizes and BIC for every lambda ------------------------
+	# Number of fitted coefficients (including intercept), one per lambda.
+	model_sizes <- as.integer(colSums(fit$beta != 0))
+
+	# Coerce N * T to numeric before multiplying. `N * T` is integer
+	# arithmetic and overflows at .Machine$integer.max ≈ 2.15e9
+	# (panels with N * T > ~2.15e9, e.g. 50,000 x 50,000). On
+	# overflow, R returns NA_integer_ and downstream
+	# `which(BICs == min(BICs))` is empty, tripping the
+	# `stopifnot(length(lambda_star_final_ind) == 1)` below with an
+	# unhelpful message. The CV path already handles this safely (clip
+	# to integer.max with a warning); mirror the same as.numeric()
+	# coercion here. No regression test: the bug fires only at panel
+	# sizes too large to construct in CI (#178).
+	nt_double <- as.numeric(N) * as.numeric(T)
+	BICs <- nt_double * log(mse_hat) + model_sizes * log(nt_double)
 
 	lambda_star_ind <- which(BICs == min(BICs))
 	if (length(lambda_star_ind) == 1) {

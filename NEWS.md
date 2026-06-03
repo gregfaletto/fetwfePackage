@@ -1,5 +1,17 @@
 # NEWS
 
+## Version 1.17.5
+
+### Performance
+
+- Vectorized `getBetaBIC()`'s BIC-path coefficient selection (#168, #169):
+  the per-`lambda` loop's separate matrix-vector products are now a single
+  BLAS-3 matrix multiply, and the redundant per-`lambda` `O(N*T)` scan for
+  non-finite fitted values in `sse_bridge()` was dropped, giving roughly a
+  1.4x speedup of the selection step when `lambda_selection = "bic"`. The
+  selected coefficients and all downstream estimates are byte-identical to
+  the previous implementation.
+
 ## Version 1.17.4
 
 ### Documentation and messages
