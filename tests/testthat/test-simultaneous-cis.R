@@ -18,14 +18,14 @@ library(fetwfe)
 # ------------------------------------------------------------------------------
 make_simul_cis_panel <- function(
 	seed = 7,
-	R = 3,
+	G = 3,
 	T = 6,
 	d = 2,
 	N = 200,
 	eff_size = 2
 ) {
 	coefs <- genCoefs(
-		G = R,
+		G = G,
 		T = T,
 		d = d,
 		density = 0.5,
@@ -43,7 +43,7 @@ make_simul_cis_panel <- function(
 # Fails before the change (function does not exist); passes after.
 # ------------------------------------------------------------------------------
 test_that("simultaneousCIs resolves K correctly for each family", {
-	fixture <- make_simul_cis_panel(R = 5, T = 6, d = 2, N = 200)
+	fixture <- make_simul_cis_panel(G = 5, T = 6, d = 2, N = 200)
 	fit <- fetwfeWithSimulatedData(fixture$sim)
 
 	# cohort: K = R
@@ -88,7 +88,7 @@ test_that("simultaneousCIs resolves K correctly for each family", {
 # between the pointwise and Bonferroni values.
 # ------------------------------------------------------------------------------
 test_that("simultaneousCIs critical value: pointwise < simultaneous < Bonferroni", {
-	fixture <- make_simul_cis_panel(R = 5, T = 6, d = 2, N = 200)
+	fixture <- make_simul_cis_panel(G = 5, T = 6, d = 2, N = 200)
 	fit <- fetwfeWithSimulatedData(fixture$sim)
 
 	sci <- simultaneousCIs(fit, family = "event_study", alpha = 0.05)
@@ -142,15 +142,15 @@ test_that("simultaneousCIs achieves ~nominal simultaneous coverage", {
 		eff_size = 2,
 		seed = 1
 	)
-	num_treats <- fetwfe:::getNumTreats(R = R_, T = T_)
+	num_treats <- fetwfe:::getNumTreats(G = R_, T = T_)
 	treat_inds_truth <- fetwfe:::getTreatInds(
-		R = R_,
+		G = R_,
 		T = T_,
 		d = d_,
 		num_treats = num_treats
 	)
 	tes_truth <- coefs_master$beta[treat_inds_truth]
-	first_inds_truth <- fetwfe:::getFirstInds(R = R_, T = T_)
+	first_inds_truth <- fetwfe:::getFirstInds(G = R_, T = T_)
 	event_times <- 0:(T_ - 2L)
 
 	seeds <- seq(101L, 600L) # 500 reps
@@ -171,7 +171,7 @@ test_that("simultaneousCIs achieves ~nominal simultaneous coverage", {
 		cpo_i <- fit_i$cohort_probs_overall
 		offs_i <- fetwfe:::.resolve_event_study_offsets_and_first_inds(
 			fit_i,
-			R = R_,
+			G = R_,
 			T = T_
 		)
 		coh_off_i <- offs_i$cohort_offsets_int
@@ -213,7 +213,7 @@ test_that("simultaneousCIs achieves ~nominal simultaneous coverage", {
 # set.seed(1L) wrapping mvtnorm::qmvnorm() (matches getBetaCV() / PR #181).
 # ------------------------------------------------------------------------------
 test_that("simultaneousCIs is deterministic and does not perturb caller RNG", {
-	fixture <- make_simul_cis_panel(R = 5, T = 6, d = 2, N = 200)
+	fixture <- make_simul_cis_panel(G = 5, T = 6, d = 2, N = 200)
 	fit <- fetwfeWithSimulatedData(fixture$sim)
 
 	# Contract (a): byte-identical across consecutive calls.
@@ -235,7 +235,7 @@ test_that("simultaneousCIs is deterministic and does not perturb caller RNG", {
 # Test 5: family = "custom" with explicit contrasts + validation.
 # ------------------------------------------------------------------------------
 test_that("simultaneousCIs handles custom contrasts and validates them", {
-	fixture <- make_simul_cis_panel(R = 3, T = 6, d = 2, N = 200)
+	fixture <- make_simul_cis_panel(G = 3, T = 6, d = 2, N = 200)
 	fit <- fetwfeWithSimulatedData(fixture$sim)
 	num_treats <- length(fit$treat_inds)
 
@@ -296,7 +296,7 @@ test_that("simultaneousCIs handles custom contrasts and validates them", {
 # per-cell families must error. The cohort family must reproduce catt_df.
 # ------------------------------------------------------------------------------
 test_that("simultaneousCIs dispatches across all four estimator classes", {
-	fixture <- make_simul_cis_panel(R = 3, T = 6, d = 2, N = 200)
+	fixture <- make_simul_cis_panel(G = 3, T = 6, d = 2, N = 200)
 
 	# etwfe + betwfe: event_study sqrt(diag(Sigma)) == eventStudy() SE.
 	for (fit in list(
@@ -314,7 +314,7 @@ test_that("simultaneousCIs dispatches across all four estimator classes", {
 	# error with a clear message.
 	ft <- twfeCovsWithSimulatedData(fixture$sim)
 	sci_c <- simultaneousCIs(ft, family = "cohort")
-	expect_identical(sci_c$K, as.integer(ft$R))
+	expect_identical(sci_c$K, as.integer(ft$G))
 	expect_equal(
 		sci_c$ci$estimate,
 		unname(ft$catt_df$estimate)
@@ -345,7 +345,7 @@ test_that("simultaneousCIs errors with a clear message when mvtnorm is absent", 
 		"with_mocked_bindings() requires testthat >= 3.2.0"
 	)
 
-	fixture <- make_simul_cis_panel(R = 5, T = 6, d = 2, N = 200)
+	fixture <- make_simul_cis_panel(G = 5, T = 6, d = 2, N = 200)
 	fit <- fetwfeWithSimulatedData(fixture$sim)
 	expect_gt(length(fit$treat_inds), 1L) # ensure K > 1 reachable
 

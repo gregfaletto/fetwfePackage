@@ -20,7 +20,7 @@ test_that(".cohort_block_inds returns the correct range for an interior cohort",
 	expect_equal(
 		fetwfe:::.cohort_block_inds(
 			g = 2L,
-			R = 4L,
+			G = 4L,
 			first_inds = c(1L, 4L, 6L, 9L),
 			num_treats = 10L
 		),
@@ -34,7 +34,7 @@ test_that(".cohort_block_inds returns the correct range for the last cohort", {
 	expect_equal(
 		fetwfe:::.cohort_block_inds(
 			g = 4L,
-			R = 4L,
+			G = 4L,
 			first_inds = c(1L, 4L, 6L, 9L),
 			num_treats = 10L
 		),
@@ -48,7 +48,7 @@ test_that(".cohort_block_inds returns the correct range for the singleton R = 1 
 	expect_equal(
 		fetwfe:::.cohort_block_inds(
 			g = 1L,
-			R = 1L,
+			G = 1L,
 			first_inds = 1L,
 			num_treats = 7L
 		),

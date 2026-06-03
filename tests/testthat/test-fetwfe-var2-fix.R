@@ -33,7 +33,7 @@ library(fetwfe)
 	sim <- simulateData(coefs, N = 300, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
 	res <- fetwfeWithSimulatedData(sim, q = 0.5)
 
-	R_val <- res$R
+	R_val <- res$G
 	T_val <- res$T
 	N_val <- res$N
 	num_treats <- length(res$treat_inds)
@@ -64,7 +64,7 @@ library(fetwfe)
 
 	list(
 		res = res,
-		R = R_val,
+		G = R_val,
 		T = T_val,
 		N = N_val,
 		num_treats = num_treats,
@@ -80,7 +80,7 @@ library(fetwfe)
 # Hand-built overall-ATT var_2 quadratic form. `off_use_outer` selects the buggy
 # (outer-loop) or correct (column-index) off-diagonal Jacobian construction.
 .overall_var_2 <- function(fit, off_use_outer) {
-	R_val <- fit$R
+	R_val <- fit$G
 	T_val <- fit$T
 	N_val <- fit$N
 	cp <- fit$cohort_probs_overall
@@ -131,7 +131,7 @@ test_that("FETWFE att_var_2 helper matches paper Theorem 6.3 Jacobian by hand", 
 		num_treats = fit$num_treats,
 		N = fit$N,
 		T = fit$T,
-		R = fit$R,
+		G = fit$G,
 		d_inv_treat_sel = fit$d_inv_treat_sel
 	)
 
@@ -171,7 +171,7 @@ test_that("FETWFE corrected var_2 matches a multinomial-resampling MC", {
 	g_draws <- numeric(n_mc)
 	for (i in seq_len(n_mc)) {
 		pi_hat_full <- rmultinom(1, fit$N, p_full)[, 1] / fit$N
-		g_draws[i] <- g_fn(pi_hat_full[1:fit$R])
+		g_draws[i] <- g_fn(pi_hat_full[1:fit$G])
 	}
 	mc_var <- var(g_draws)
 
@@ -185,7 +185,7 @@ test_that("FETWFE corrected var_2 matches a multinomial-resampling MC", {
 		num_treats = fit$num_treats,
 		N = fit$N,
 		T = fit$T,
-		R = fit$R,
+		G = fit$G,
 		d_inv_treat_sel = fit$d_inv_treat_sel
 	)
 	# Buggy formula is reconstructed in-test (the helper after the fix no

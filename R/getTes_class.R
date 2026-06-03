@@ -30,14 +30,14 @@ print.FETWFE_tes <- function(x, ...) {
 #' @export
 summary.FETWFE_tes <- function(object, ...) {
 	tes <- object$actual_cohort_tes
-	# Defensive: genCoefs() currently enforces R >= 2, so length(tes) >= 2 is
+	# Defensive: genCoefs() currently enforces G >= 2, so length(tes) >= 2 is
 	# always true in practice. Guard is retained in case that validation ever
 	# changes upstream (sd() of a length-1 vector is NA).
 	out <- list(
 		att_true = object$att_true,
 		actual_cohort_tes = tes,
-		G = object$R,
-		R = object$R,
+		G = object$G,
+		R = object$G,
 		T = object$T,
 		d = object$d,
 		seed = object$seed,

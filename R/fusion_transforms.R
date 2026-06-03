@@ -12,19 +12,19 @@
 #'
 #' @description
 #' Takes the *raw* stacked panel design matrix
-#' \eqn{\tilde{\boldsymbol Z}\in\mathbb R^{NT\times p}}
+#' \eqn{\tilde{\boldsymbol Z}\in\mathbb G^{NT\times p}}
 #' and post-multiplies it by the block-diagonal inverse fusion matrix
 #' \(\boldsymbol D_N^{-1}\) from Lemma 3:
 #' \deqn{
 #'   \boldsymbol D_N^{-1}
 #'   = \operatorname{diag}\!\bigl(
-#'       (D^{(1)}(R))^{-1},\;
+#'       (D^{(1)}(G))^{-1},\;
 #'       (D^{(1)}(T-1))^{-1},\;
 #'       I_{d},\;
-#'       I_{d}\otimes(D^{(1)}(R))^{-1},\;
+#'       I_{d}\otimes(D^{(1)}(G))^{-1},\;
 #'       I_{d}\otimes(D^{(1)}(T-1))^{-1},\;
-#'       (D^{(2)}(\mathcal R))^{-1},\;
-#'       I_{d}\otimes(D^{(2)}(\mathcal R))^{-1}
+#'       (D^{(2)}(\mathcal G))^{-1},\;
+#'       I_{d}\otimes(D^{(2)}(\mathcal G))^{-1}
 #'     \bigr).
 #' }
 #' The result is a matrix ready for vanilla bridge regression (Lasso,
@@ -34,7 +34,7 @@
 #' @details
 #' The columns of `X_int` **must** appear in the order:
 #' \enumerate{
-#'   \item Cohort fixed-effects (length \eqn{R})
+#'   \item Cohort fixed-effects (length \eqn{G})
 #'   \item Time fixed-effects (length \eqn{T-1})
 #'   \item Main covariates (length \eqn{d})
 #'   \item Covariate \(\times\) cohort interactions (length \eqn{dR})
@@ -51,11 +51,11 @@
 #' the absence of `NA`s after transformation.
 #'
 #' @param X_int Numeric matrix \eqn{NT\times p}.  Original design matrix.
-#' @param N,T,R Integers. Panel dimensions and number of treated cohorts.
+#' @param N,T,G Integers. Panel dimensions and number of treated cohorts.
 #' @param d Integer. Number of time-invariant covariates.
 #' @param num_treats Integer. Total number of base treatment-effect dummies
 #'   \eqn{\mathfrak W}.
-#' @param first_inds Optional integer vector of length \eqn{R}.
+#' @param first_inds Optional integer vector of length \eqn{G}.
 #'   Starting column indices of the first treatment dummy of each cohort inside
 #'   the treatment block.  If `NA` (default) they are computed by
 #'   `getFirstInds()`.
@@ -71,12 +71,12 @@
 #'
 #' @examples
 #' set.seed(1)
-#' R <- 2; T <- 5; d <- 1; N <- 10
-#' num_treats  <- getNumTreats(R, T)
-#' p <- R + (T-1) + d + d*R + d*(T-1) + num_treats + d*num_treats
+#' G <- 2; T <- 5; d <- 1; N <- 10
+#' num_treats  <- getNumTreats(G, T)
+#' p <- G + (T-1) + d + d*G + d*(T-1) + num_treats + d*num_treats
 #' X_int <- matrix(rnorm(N*T*p), N*T, p)
 #' X_mod <- transformXintImproved(
-#'   X_int, N=N, T=T, R=R, d=d, num_treats=num_treats
+#'   X_int, N=N, T=T, G=G, d=d, num_treats=num_treats
 #' )
 #' # The two matrices have identical dimensions:
 #' dim(X_mod)  # NT x p
@@ -86,58 +86,58 @@ transformXintImproved <- function(
 	X_int,
 	N,
 	T,
-	R,
+	G,
 	d,
 	num_treats,
 	first_inds = NA
 ) {
-	p <- getP(R = R, T = T, d = d, num_treats = num_treats)
+	p <- getP(G = G, T = T, d = d, num_treats = num_treats)
 	stopifnot(p == ncol(X_int))
 	X_mod <- matrix(as.numeric(NA), nrow = N * T, ncol = p)
 	stopifnot(nrow(X_int) == N * T)
 
 	# Transform cohort fixed effects
-	X_mod[, 1:R] <- X_int[, 1:R] %*% genBackwardsInvFusionTransformMat(R)
+	X_mod[, 1:G] <- X_int[, 1:G] %*% genBackwardsInvFusionTransformMat(G)
 
 	# Transform time fixed effects
-	X_mod[, (R + 1):(R + T - 1)] <- X_int[, (R + 1):(R + T - 1)] %*%
+	X_mod[, (G + 1):(G + T - 1)] <- X_int[, (G + 1):(G + T - 1)] %*%
 		genBackwardsInvFusionTransformMat(T - 1)
 
 	# Copy X (the main covariate block; may be empty when d==0)
 	if (d > 0) {
-		stopifnot(all(is.na(X_mod[, (R + T - 1 + 1):(R + T - 1 + d)])))
-		X_mod[, (R + T - 1 + 1):(R + T - 1 + d)] <- X_int[,
-			(R + T - 1 + 1):(R + T - 1 + d)
+		stopifnot(all(is.na(X_mod[, (G + T - 1 + 1):(G + T - 1 + d)])))
+		X_mod[, (G + T - 1 + 1):(G + T - 1 + d)] <- X_int[,
+			(G + T - 1 + 1):(G + T - 1 + d)
 		]
 
-		stopifnot(all(!is.na(X_mod[, 1:(R + T - 1 + d)])))
-		stopifnot(all(is.na(X_mod[, (R + T - 1 + d + 1):p])))
+		stopifnot(all(!is.na(X_mod[, 1:(G + T - 1 + d)])))
+		stopifnot(all(is.na(X_mod[, (G + T - 1 + d + 1):p])))
 	}
 
-	# For cohort effects interacted with X: we have d*R columns to deal with.
+	# For cohort effects interacted with X: we have d*G columns to deal with.
 	# For each individual feature, this will be handled using
 	# genTransformedMatFusion.
 	if (any(is.na(first_inds))) {
-		first_inds <- getFirstInds(R = R, T = T)
+		first_inds <- getFirstInds(G = G, T = T)
 	}
 
 	if (d > 0) {
 		for (j in 1:d) {
 			# Get indices corresponding to interactions between feature j and cohort
 			# fixed effects--these are the first feature, the (1 + d)th feature, and
-			# so on R times
-			feat_1 <- R + T - 1 + d + j
-			feat_R <- R + T - 1 + d + (R - 1) * d + j
+			# so on G times
+			feat_1 <- G + T - 1 + d + j
+			feat_R <- G + T - 1 + d + (G - 1) * d + j
 			feat_inds_j <- seq(feat_1, feat_R, by = d)
-			stopifnot(length(feat_inds_j) == R)
+			stopifnot(length(feat_inds_j) == G)
 
 			stopifnot(all(is.na(X_mod[, feat_inds_j])))
 
 			X_mod[, feat_inds_j] <- X_int[, feat_inds_j] %*%
-				genBackwardsInvFusionTransformMat(R)
+				genBackwardsInvFusionTransformMat(G)
 		}
-		stopifnot(all(!is.na(X_mod[, 1:(R + T - 1 + d + R * d)])))
-		stopifnot(all(is.na(X_mod[, (R + T - 1 + d + R * d + 1):p])))
+		stopifnot(all(!is.na(X_mod[, 1:(G + T - 1 + d + G * d)])))
+		stopifnot(all(is.na(X_mod[, (G + T - 1 + d + G * d + 1):p])))
 
 		# Similar for time effects interacted with X
 
@@ -145,8 +145,8 @@ transformXintImproved <- function(
 			# Get indices corresponding to interactions between feature j and time
 			# fixed effects--these are the first feature, the (1 + d)th feature, and
 			# so on T - 1 times
-			feat_1 <- R + T - 1 + d + R * d + j
-			feat_T_minus_1 <- R + T - 1 + d + R * d + (T - 2) * d + j
+			feat_1 <- G + T - 1 + d + G * d + j
+			feat_T_minus_1 <- G + T - 1 + d + G * d + (T - 2) * d + j
 			feat_inds_j <- seq(feat_1, feat_T_minus_1, by = d)
 			stopifnot(length(feat_inds_j) == T - 1)
 
@@ -154,9 +154,9 @@ transformXintImproved <- function(
 			X_mod[, feat_inds_j] <- X_int[, feat_inds_j] %*%
 				genBackwardsInvFusionTransformMat(T - 1)
 		}
-		stopifnot(all(!is.na(X_mod[, 1:(R + T - 1 + d + R * d + (T - 1) * d)])))
+		stopifnot(all(!is.na(X_mod[, 1:(G + T - 1 + d + G * d + (T - 1) * d)])))
 		stopifnot(all(is.na(X_mod[,
-			(R + T - 1 + d + R * d + (T - 1) * d + 1):p
+			(G + T - 1 + d + G * d + (T - 1) * d + 1):p
 		])))
 	}
 
@@ -165,11 +165,11 @@ transformXintImproved <- function(
 	# treatment effect of this cohort to base of previous cohort. New function
 	# genTransformedMatTwoWayFusion does this.
 
-	feat_inds <- (R + T - 1 + d + R * d + (T - 1) * d + 1):(R +
+	feat_inds <- (G + T - 1 + d + G * d + (T - 1) * d + 1):(G +
 		T -
 		1 +
 		d +
-		R * d +
+		G * d +
 		(T - 1) * d +
 		num_treats)
 
@@ -177,7 +177,7 @@ transformXintImproved <- function(
 	stopifnot(all(is.na(X_mod[, feat_inds])))
 
 	X_mod[, feat_inds] <- X_int[, feat_inds] %*%
-		genInvTwoWayFusionTransformMat(num_treats, first_inds, R)
+		genInvTwoWayFusionTransformMat(num_treats, first_inds, G)
 
 	if (d > 0) {
 		# Lastly, penalize interactions between each treatment effect and each feature.
@@ -191,13 +191,13 @@ transformXintImproved <- function(
 			# j + 2*d, ..., j + (num_treats - 1)*d.
 			inds_j <- seq(j, j + (num_treats - 1) * d, by = d)
 			stopifnot(length(inds_j) == num_treats)
-			inds_j <- inds_j + R + T - 1 + d + R * d + (T - 1) * d + num_treats
+			inds_j <- inds_j + G + T - 1 + d + G * d + (T - 1) * d + num_treats
 
 			# Now ready to generate the appropriate transformed matrix
 			stopifnot(all(is.na(X_mod[, inds_j])))
 
 			X_mod[, inds_j] <- X_int[, inds_j] %*%
-				genInvTwoWayFusionTransformMat(num_treats, first_inds, R)
+				genInvTwoWayFusionTransformMat(num_treats, first_inds, G)
 
 			stopifnot(all(!is.na(X_mod[, inds_j])))
 		}
@@ -231,19 +231,19 @@ transformXintImproved <- function(
 #' \deqn{
 #' \boldsymbol D_N^{-1}
 #'  = \operatorname{diag}\Bigl(
-#'        (D^{(1)}(R))^{-1},\;
+#'        (D^{(1)}(G))^{-1},\;
 #'        (D^{(1)}(T\!-\!1))^{-1},\;
 #'        I_d,\;
-#'        I_d\!\otimes\!(D^{(1)}(R))^{-1},\;
+#'        I_d\!\otimes\!(D^{(1)}(G))^{-1},\;
 #'        I_d\!\otimes\!(D^{(1)}(T\!-\!1))^{-1},\;
-#'        (D^{(2)}(\mathcal R))^{-1},\;
-#'        I_d\!\otimes\!(D^{(2)}(\mathcal R))^{-1}
+#'        (D^{(2)}(\mathcal G))^{-1},\;
+#'        I_d\!\otimes\!(D^{(2)}(\mathcal G))^{-1}
 #'     \Bigr)
 #' }
 #' corresponds to seven consecutive blocks in the column ordering used by
 #' `transformXintImproved()`:
 #' \enumerate{
-#'   \item Cohort fixed-effect coefficients (length \eqn{R})
+#'   \item Cohort fixed-effect coefficients (length \eqn{G})
 #'   \item Time fixed-effects (length \eqn{T-1})
 #'   \item Main covariates (length \eqn{d})
 #'   \item Covariate x cohort interactions (\eqn{dR})
@@ -258,25 +258,25 @@ transformXintImproved <- function(
 #'
 #' | block | helper used | mathematical symbol |
 #' |-------|-------------|---------------------|
-#' | cohort FE | `genBackwardsInvFusionTransformMat(R)` | \((D^{(1)}(R))^{-1}\) |
+#' | cohort FE | `genBackwardsInvFusionTransformMat(G)` | \((D^{(1)}(G))^{-1}\) |
 #' | time FE | `genBackwardsInvFusionTransformMat(T-1)` | \((D^{(1)}(T-1))^{-1}\) |
 #' | covariate blocks | identity copy | \(I_d\) |
-#' | covariate x cohort | same helper, repeated for each feature | \(I_d\otimes(D^{(1)}(R))^{-1}\) |
+#' | covariate x cohort | same helper, repeated for each feature | \(I_d\otimes(D^{(1)}(G))^{-1}\) |
 #' | covariate x time | idem with \(T-1\) | \(I_d\otimes(D^{(1)}(T-1))^{-1}\) |
-#' | base treatment | `genInvTwoWayFusionTransformMat()` | \((D^{(2)}(\mathcal R))^{-1}\) |
-#' | covariate x treatment | same two-way helper for each feature | \(I_d\otimes(D^{(2)}(\mathcal R))^{-1}\) |
+#' | base treatment | `genInvTwoWayFusionTransformMat()` | \((D^{(2)}(\mathcal G))^{-1}\) |
+#' | covariate x treatment | same two-way helper for each feature | \(I_d\otimes(D^{(2)}(\mathcal G))^{-1}\) |
 #'
 #' @param beta_hat_mod Numeric vector (length \eqn{p}).
 #'   Estimated coefficients returned by a penalised fit on the transformed
 #'   design matrix.
 #' @param T Integer. Total time periods.
-#' @param R Integer. Number of treated cohorts.
+#' @param G Integer. Number of treated cohorts.
 #' @param p Integer. Total number of columns in the **original** design matrix
 #'   \eqn{p = p_N}.
 #' @param d Integer. Number of time-invariant covariates.
 #' @param num_treats Integer. Count of base treatment-effect dummies
 #'   \eqn{\mathfrak W}.
-#' @param first_inds Optional integer vector of length \eqn{R}.
+#' @param first_inds Optional integer vector of length \eqn{G}.
 #'   Starting indices (1-based, inside the treatment-dummy block) of the first
 #'   effect for each cohort.  If `NA` they are reconstructed with
 #'   **`getFirstInds()`**.
@@ -303,16 +303,16 @@ transformXintImproved <- function(
 #'
 #' @examples
 #' ## toy example: one covariate, two treated cohorts, T = 5
-#' R <- 2; T <- 5; d <- 1
-#' num_treats <- getNumTreats(R, T)
-#' p <- R + (T-1) + d + d*R + d*(T-1) + num_treats + d*num_treats
+#' G <- 2; T <- 5; d <- 1
+#' num_treats <- getNumTreats(G, T)
+#' p <- G + (T-1) + d + d*G + d*(T-1) + num_treats + d*num_treats
 #'
 #' ## pretend we ran a penalised regression in the transformed space
 #' beta_hat_mod <- rnorm(p)
 #'
 #' ## back-transform:
 #' beta_hat <- untransformCoefImproved(
-#'   beta_hat_mod, T=T, R=R, p=p, d=d,
+#'   beta_hat_mod, T=T, G=G, p=p, d=d,
 #'   num_treats=num_treats
 #' )
 #' length(beta_hat)  # == p
@@ -321,7 +321,7 @@ transformXintImproved <- function(
 untransformCoefImproved <- function(
 	beta_hat_mod,
 	T,
-	R,
+	G,
 	p,
 	d,
 	num_treats,
@@ -331,52 +331,52 @@ untransformCoefImproved <- function(
 	beta_hat <- rep(as.numeric(NA), p)
 
 	if (any(is.na(first_inds))) {
-		first_inds <- getFirstInds(R = R, T = T)
+		first_inds <- getFirstInds(G = G, T = T)
 	}
 
-	# First handle R cohort fixed effects effects
-	beta_hat[1:R] <- genBackwardsInvFusionTransformMat(R) %*% beta_hat_mod[1:R]
+	# First handle G cohort fixed effects effects
+	beta_hat[1:G] <- genBackwardsInvFusionTransformMat(G) %*% beta_hat_mod[1:G]
 
-	stopifnot(all(!is.na(beta_hat[1:R])))
-	stopifnot(all(is.na(beta_hat[(R + 1):p])))
+	stopifnot(all(!is.na(beta_hat[1:G])))
+	stopifnot(all(is.na(beta_hat[(G + 1):p])))
 
 	# Next, T - 1 time fixed effects
-	beta_hat[(R + 1):(R + T - 1)] <- genBackwardsInvFusionTransformMat(
+	beta_hat[(G + 1):(G + T - 1)] <- genBackwardsInvFusionTransformMat(
 		T - 1
 	) %*%
-		beta_hat_mod[(R + 1):(R + T - 1)]
+		beta_hat_mod[(G + 1):(G + T - 1)]
 
-	stopifnot(all(!is.na(beta_hat[1:(R + T - 1)])))
-	stopifnot(all(is.na(beta_hat[(R + T):p])))
+	stopifnot(all(!is.na(beta_hat[1:(G + T - 1)])))
+	stopifnot(all(is.na(beta_hat[(G + T):p])))
 
 	# Coefficients for X (if any)
 	if (d > 0) {
-		beta_hat[(R + T):(R + T - 1 + d)] <- beta_hat_mod[
-			(R + T):(R + T - 1 + d)
+		beta_hat[(G + T):(G + T - 1 + d)] <- beta_hat_mod[
+			(G + T):(G + T - 1 + d)
 		]
 
-		stopifnot(all(!is.na(beta_hat[1:(R + T - 1 + d)])))
-		stopifnot(all(is.na(beta_hat[(R + T + d):p])))
+		stopifnot(all(!is.na(beta_hat[1:(G + T - 1 + d)])))
+		stopifnot(all(is.na(beta_hat[(G + T + d):p])))
 
 		# Next, coefficients for cohort effects interacted with X. For each individual
 		# feature, this will be handled using untransformVecFusion.
 		for (j in 1:d) {
 			# Get indices corresponding to interactions between feature j and cohort
 			# fixed effects--these are the first feature, the (1 + d)th feature, and
-			# so on R times
-			feat_1 <- R + T - 1 + d + j
-			feat_R <- R + T - 1 + d + (R - 1) * d + j
+			# so on G times
+			feat_1 <- G + T - 1 + d + j
+			feat_R <- G + T - 1 + d + (G - 1) * d + j
 			feat_inds_j <- seq(feat_1, feat_R, by = d)
-			stopifnot(length(feat_inds_j) == R)
+			stopifnot(length(feat_inds_j) == G)
 
 			stopifnot(all(is.na(beta_hat[feat_inds_j])))
 
-			beta_hat[feat_inds_j] <- genBackwardsInvFusionTransformMat(R) %*%
+			beta_hat[feat_inds_j] <- genBackwardsInvFusionTransformMat(G) %*%
 				beta_hat_mod[feat_inds_j]
 			stopifnot(all(!is.na(beta_hat[feat_inds_j])))
 		}
-		stopifnot(all(!is.na(beta_hat[1:(R + T - 1 + d + R * d)])))
-		stopifnot(all(is.na(beta_hat[(R + T - 1 + d + R * d + 1):p])))
+		stopifnot(all(!is.na(beta_hat[1:(G + T - 1 + d + G * d)])))
+		stopifnot(all(is.na(beta_hat[(G + T - 1 + d + G * d + 1):p])))
 
 		# Similar for time effects interacted with X
 
@@ -384,8 +384,8 @@ untransformCoefImproved <- function(
 			# Get indices corresponding to interactions between feature j and time
 			# fixed effects--these are the first feature, the (1 + d)th feature, and
 			# so on T - 1 times
-			feat_1 <- R + T - 1 + d + R * d + j
-			feat_T_minus_1 <- R + T - 1 + d + R * d + (T - 2) * d + j
+			feat_1 <- G + T - 1 + d + G * d + j
+			feat_T_minus_1 <- G + T - 1 + d + G * d + (T - 2) * d + j
 			feat_inds_j <- seq(feat_1, feat_T_minus_1, by = d)
 			stopifnot(length(feat_inds_j) == T - 1)
 
@@ -398,20 +398,20 @@ untransformCoefImproved <- function(
 			stopifnot(all(!is.na(beta_hat[feat_inds_j])))
 		}
 		stopifnot(all(
-			!is.na(beta_hat[1:(R + T - 1 + d + R * d + (T - 1) * d)])
+			!is.na(beta_hat[1:(G + T - 1 + d + G * d + (T - 1) * d)])
 		))
 		stopifnot(all(is.na(beta_hat[
-			(R + T - 1 + d + R * d + (T - 1) * d + 1):p
+			(G + T - 1 + d + G * d + (T - 1) * d + 1):p
 		])))
 	}
 
 	# Now base treatment effects.
 
-	feat_inds <- (R + T - 1 + d + R * d + (T - 1) * d + 1):(R +
+	feat_inds <- (G + T - 1 + d + G * d + (T - 1) * d + 1):(G +
 		T -
 		1 +
 		d +
-		R * d +
+		G * d +
 		(T - 1) * d +
 		num_treats)
 
@@ -420,18 +420,18 @@ untransformCoefImproved <- function(
 	beta_hat[feat_inds] <- genInvTwoWayFusionTransformMat(
 		num_treats,
 		first_inds,
-		R
+		G
 	) %*%
 		beta_hat_mod[feat_inds]
 
 	if (d > 0) {
 		stopifnot(all(
 			!is.na(beta_hat[
-				1:(R + T - 1 + d + R * d + (T - 1) * d + num_treats)
+				1:(G + T - 1 + d + G * d + (T - 1) * d + num_treats)
 			])
 		))
 		stopifnot(all(is.na(beta_hat[
-			(R + T - 1 + d + R * d + (T - 1) * d + num_treats + 1):p
+			(G + T - 1 + d + G * d + (T - 1) * d + num_treats + 1):p
 		])))
 		# Lastly, interactions between each treatment effect and each feature.
 		# Feature-wise, we can do this with untransformTwoWayFusionCoefs, in the same
@@ -444,7 +444,7 @@ untransformCoefImproved <- function(
 			# j + 2*d, ..., j + (num_treats - 1)*d.
 			inds_j <- seq(j, j + (num_treats - 1) * d, by = d)
 			stopifnot(length(inds_j) == num_treats)
-			inds_j <- inds_j + R + T - 1 + d + R * d + (T - 1) * d + num_treats
+			inds_j <- inds_j + G + T - 1 + d + G * d + (T - 1) * d + num_treats
 
 			# Now ready to untransform the estimated coefficients
 			stopifnot(all(is.na(beta_hat[inds_j])))
@@ -452,7 +452,7 @@ untransformCoefImproved <- function(
 			beta_hat[inds_j] <- genInvTwoWayFusionTransformMat(
 				num_treats,
 				first_inds,
-				R
+				G
 			) %*%
 				beta_hat_mod[inds_j]
 
@@ -578,11 +578,11 @@ genBackwardsInvFusionTransformMat <- function(n_vars) {
 }
 
 
-#' Inverse Two-Way-Fusion Transformation Matrix  \( \bigl(D^{(2)}(\mathcal R)\bigr)^{-1} \)
+#' Inverse Two-Way-Fusion Transformation Matrix  \( \bigl(D^{(2)}(\mathcal G)\bigr)^{-1} \)
 #'
 #' @description
 #' Constructs the **inverse** of the block-lower-triangular matrix
-#' \eqn{D^{(2)}(\mathcal R)} that appears in Lemma \eqn{3} of the paper.
+#' \eqn{D^{(2)}(\mathcal G)} that appears in Lemma \eqn{3} of the paper.
 #' Each treated cohort \(g\) has a "first" post-treatment coefficient
 #' \(\tau_{g,0}\) and a string of subsequent coefficients
 #' \(\tau_{g,1},\dots,\tau_{g,T-g}\).
@@ -593,7 +593,7 @@ genBackwardsInvFusionTransformMat <- function(n_vars) {
 #' Multiplying the raw design sub-matrix by the output of
 #' `genInvTwoWayFusionTransformMat()` therefore changes coordinates from
 #' \eqn{\boldsymbol\beta} to
-#' \eqn{\boldsymbol\theta = D^{(2)}(\mathcal R)\,\boldsymbol\beta},
+#' \eqn{\boldsymbol\theta = D^{(2)}(\mathcal G)\,\boldsymbol\beta},
 #' so that an \eqn{\ell_q} penalty on \eqn{\theta} is exactly the desired
 #' two-level fusion penalty on \eqn{\beta}.
 #'
@@ -606,13 +606,13 @@ genBackwardsInvFusionTransformMat <- function(n_vars) {
 #'
 #' @param n_vars Integer. Total number of base treatment-effect coefficients
 #'   ( \eqn{\mathfrak W}  in the paper).
-#' @param first_inds Integer vector of length \eqn{R}.
+#' @param first_inds Integer vector of length \eqn{G}.
 #'   `first_inds[g]` is the **1-based** column index of \(\tau_{g,0}\)
 #'   inside the block of the \eqn{n\_vars} treatment columns.
-#' @param R Integer. Number of treated cohorts.
+#' @param G Integer. Number of treated cohorts.
 #'
 #' @return A numeric matrix of size \eqn{n\_vars \times n\_vars} that is
-#'   exactly \(\bigl(D^{(2)}(\mathcal R)\bigr)^{-1}\).
+#'   exactly \(\bigl(D^{(2)}(\mathcal G)\bigr)^{-1}\).
 #'
 #' @references
 #' Faletto, G (2025). Fused Extended Two-Way Fixed Effects for
@@ -621,51 +621,51 @@ genBackwardsInvFusionTransformMat <- function(n_vars) {
 #' \url{https://arxiv.org/abs/2312.05985}.
 #'
 #' @examples
-#' R  <- 3;  T <- 6
-#' num_treats <- getNumTreats(R, T)
-#' first <- getFirstInds(R, T)
-#' Dinv <- genInvTwoWayFusionTransformMat(num_treats, first, R)
+#' G  <- 3;  T <- 6
+#' num_treats <- getNumTreats(G, T)
+#' first <- getFirstInds(G, T)
+#' Dinv <- genInvTwoWayFusionTransformMat(num_treats, first, G)
 #' # verify Dinv %*% solve(Dinv) = I
 #' all.equal(Dinv %*% solve(Dinv), diag(num_treats))
 #' @keywords internal
 #' @noRd
-genInvTwoWayFusionTransformMat <- function(n_vars, first_inds, R) {
+genInvTwoWayFusionTransformMat <- function(n_vars, first_inds, G) {
 	stopifnot(length(n_vars) == 1, n_vars >= 0)
-	stopifnot(is.numeric(R), length(R) == 1, R >= 0)
-	if (R > 0) {
-		stopifnot(is.numeric(first_inds), length(first_inds) == R)
+	stopifnot(is.numeric(G), length(G) == 1, G >= 0)
+	if (G > 0) {
+		stopifnot(is.numeric(first_inds), length(first_inds) == G)
 		# Add checks for consistency of first_inds if n_vars > 0
 		if (n_vars > 0) {
 			stopifnot(first_inds[1] == 1)
-			if (R > 1) {
+			if (G > 1) {
 				stopifnot(all(diff(first_inds) > 0)) # Must be strictly increasing
 			}
 			# Check that the last effect of the last cohort aligns with n_vars
-			# M_R = n_vars - first_inds[R] + 1. This M_R must be > 0 if first_inds[R] <= n_vars.
-			stopifnot(first_inds[R] <= n_vars)
+			# M_R = n_vars - first_inds[G] + 1. This M_R must be > 0 if first_inds[G] <= n_vars.
+			stopifnot(first_inds[G] <= n_vars)
 		} else {
 			# n_vars == 0
-			stopifnot(R == 0) # If n_vars is 0, R must be 0. first_inds should be empty.
+			stopifnot(G == 0) # If n_vars is 0, G must be 0. first_inds should be empty.
 		}
 	} else {
-		# R == 0
+		# G == 0
 		stopifnot(length(first_inds) == 0, n_vars == 0)
 	}
 
 	D_inv <- matrix(0, nrow = n_vars, ncol = n_vars)
 
 	if (n_vars == 0) {
-		# Handles R=0 correctly
+		# Handles G=0 correctly
 		return(D_inv)
 	}
 
 	# Part 1: Set up the column structure for \tilde{U} blocks and
 	# the first column of each diagonal block.
-	# For each cohort `c` (from 1 to R), the column in D_inv corresponding to its
+	# For each cohort `c` (from 1 to G), the column in D_inv corresponding to its
 	# first treatment effect (i.e., absolute column index `first_inds[c]`)
 	# should have 1s from its own row (`first_inds[c]`) down to `n_vars`.
-	if (R > 0) {
-		for (cohort_idx in 1:R) {
+	if (G > 0) {
+		for (cohort_idx in 1:G) {
 			col_to_fill <- first_inds[cohort_idx]
 			D_inv[col_to_fill:n_vars, col_to_fill] <- 1
 		}
@@ -675,11 +675,11 @@ genInvTwoWayFusionTransformMat <- function(n_vars, first_inds, R) {
 	# Each diagonal block is (D^{(1)}(M_c)^{-1})^T, which is a fully
 	# lower triangular matrix of 1s (all elements on and below diagonal are 1).
 	# This will correctly overwrite the 1s placed in Part 1 for these diagonal parts.
-	if (R > 0) {
-		for (cohort_idx in 1:R) {
+	if (G > 0) {
+		for (cohort_idx in 1:G) {
 			block_start_idx <- first_inds[cohort_idx]
 
-			if (cohort_idx < R) {
+			if (cohort_idx < G) {
 				block_end_idx <- first_inds[cohort_idx + 1] - 1
 			} else {
 				# This is the last cohort
@@ -692,7 +692,7 @@ genInvTwoWayFusionTransformMat <- function(n_vars, first_inds, R) {
 				# This should ideally not happen if first_inds and n_vars are consistent
 				# with cohorts having at least one effect.
 				# If it can happen, 'continue' or 'next' might be appropriate.
-				# For now, assume M_x >= 1 for all cohorts included in R.
+				# For now, assume M_x >= 1 for all cohorts included in G.
 				next
 			}
 
@@ -706,9 +706,9 @@ genInvTwoWayFusionTransformMat <- function(n_vars, first_inds, R) {
 		}
 	}
 
-	# The original code had a stop for R < 2.
-	# This revised logic handles R=0 and R=1 correctly without a special stop.
-	# If R=1, Part 1 sets D_inv[1:n_vars, 1] <- 1.
+	# The original code had a stop for G < 2.
+	# This revised logic handles G=0 and G=1 correctly without a special stop.
+	# If G=1, Part 1 sets D_inv[1:n_vars, 1] <- 1.
 	# Part 2 (with cohort_idx=1, block_start_idx=1, block_end_idx=n_vars) then correctly
 	# forms the full (D^{(1)}(n_vars)^{-1})^T matrix.
 
@@ -729,18 +729,18 @@ genInvTwoWayFusionTransformMat <- function(n_vars, first_inds, R) {
 #'
 #' \preformatted{
 #'       D_N^{-1} = diag(
-#'         (D^{(1)}(R))^{-1},                          # 1. cohort FEs
+#'         (D^{(1)}(G))^{-1},                          # 1. cohort FEs
 #'         (D^{(1)}(T-1))^{-1},                        # 2. time  FEs
 #'         I_d,                                        # 3. X main effects
-#'         I_d ⊗ (D^{(1)}(R))^{-1},                   # 4. cohort × X
+#'         I_d ⊗ (D^{(1)}(G))^{-1},                   # 4. cohort × X
 #'         I_d ⊗ (D^{(1)}(T-1))^{-1},                 # 5. time   × X
-#'         (D^{(2)}(𝓡))^{-1},                         # 6. base τ_{g,t}
-#'         I_d ⊗ (D^{(2)}(𝓡))^{-1} )                  # 7. τ_{g,t} × X
+#'         (D^{(2)}(G))^{-1},                         # 6. base τ_{g,t}
+#'         I_d ⊗ (D^{(2)}(G))^{-1} )                  # 7. τ_{g,t} × X
 #' }
 #'
 #' @section Block dimensions:
 #' \itemize{
-#'   \item Cohort FEs: \(R\times R\)
+#'   \item Cohort FEs: \(G\times G\)
 #'   \item Time-period FEs: \((T-1)\times(T-1)\)
 #'   \item Identitites: \(d\), \(dR\), \(d(T-1)\)
 #'   \item Treatment blocks: \( \mathfrak W \times \mathfrak W\) with
@@ -749,37 +749,37 @@ genInvTwoWayFusionTransformMat <- function(n_vars, first_inds, R) {
 #' All non-identity blocks contain only 0/1 entries, so the determinant of
 #' the whole matrix is 1 (volume-preserving transform).
 #'
-#' @param first_inds Integer vector (length \code{R}).
+#' @param first_inds Integer vector (length \code{G}).
 #'   `first_inds[g]` is the 1-based column index of the first base
 #'   treatment-effect parameter \(\tau_{g,0}\) for cohort \code{g}.
 #' @param T Integer. Total number of time periods \(\ge 3\).
-#' @param R Integer. Number of treated cohorts (\(\ge 1\)).
-#'   The function stops if you accidentally pass \code{R = 0}.
+#' @param G Integer. Number of treated cohorts (\(\ge 1\)).
+#'   The function stops if you accidentally pass \code{G = 0}.
 #' @param d Integer. Number of time-invariant covariates (can be 0).
 #' @param num_treats Integer.  Total number of base treatment-effect
-#'   coefficients \(\mathfrak W = T R - R(R+1)/2\).
+#'   coefficients \(\mathfrak W = T G - G(G+1)/2\).
 #'
 #' @return A dense base-R matrix of size
 #'   \eqn{p \times p} with
-#'   \eqn{p = R + (T-1) + d + dR + d(T-1) + \mathfrak W + d\mathfrak W}.
+#'   \eqn{p = G + (T-1) + d + dR + d(T-1) + \mathfrak W + d\mathfrak W}.
 #'
 #' @examples
-#' R  <- 3; T <- 6; d <- 2
-#' nt <- getNumTreats(R, T)
-#' Dinv <- genFullInvFusionTransformMat(getFirstInds(R,T), T, R, d, nt)
+#' G  <- 3; T <- 6; d <- 2
+#' nt <- getNumTreats(G, T)
+#' Dinv <- genFullInvFusionTransformMat(getFirstInds(G,T), T, G, d, nt)
 #' dim(Dinv)   # should be p x p
 #'
 #' @keywords internal
 #' @noRd
-genFullInvFusionTransformMat <- function(first_inds, T, R, d, num_treats) {
+genFullInvFusionTransformMat <- function(first_inds, T, G, d, num_treats) {
 	##———— Safety checks ————————————————————————————————————————————
-	stopifnot(is.numeric(R), length(R) == 1L, R >= 2L)
-	stopifnot(is.numeric(T), length(T) == 1L, T >= 3L, R <= T - 1)
+	stopifnot(is.numeric(G), length(G) == 1L, G >= 2L)
+	stopifnot(is.numeric(T), length(T) == 1L, T >= 3L, G <= T - 1)
 	stopifnot(is.numeric(d), length(d) == 1L, d >= 0L)
-	stopifnot(length(first_inds) == R)
+	stopifnot(length(first_inds) == G)
 
-	##———— 1. Cohort fixed-effects block:  (D^{(1)}(R))^{-1} ————————
-	block1 <- genBackwardsInvFusionTransformMat(R)
+	##———— 1. Cohort fixed-effects block:  (D^{(1)}(G))^{-1} ————————
+	block1 <- genBackwardsInvFusionTransformMat(G)
 
 	##———— 2. Time fixed-effects block:    (D^{(1)}(T-1))^{-1} ———————
 	block2 <- genBackwardsInvFusionTransformMat(T - 1)
@@ -787,9 +787,9 @@ genFullInvFusionTransformMat <- function(first_inds, T, R, d, num_treats) {
 	##———— 3. Covariate main effects:      I_d ————————————————
 	block3 <- if (d > 0) diag(d) else NULL
 
-	##———— 4. Cohort × X interactions:     I_d ⊗ (D^{(1)}(R))^{-1} ——
+	##———— 4. Cohort × X interactions:     I_d ⊗ (D^{(1)}(G))^{-1} ——
 	block4 <- if (d > 0) {
-		kronecker(diag(d), genBackwardsInvFusionTransformMat(R))
+		kronecker(diag(d), genBackwardsInvFusionTransformMat(G))
 	} else {
 		NULL
 	}
@@ -801,21 +801,21 @@ genFullInvFusionTransformMat <- function(first_inds, T, R, d, num_treats) {
 		NULL
 	}
 
-	##———— 6. Base treatment effects:      (D^{(2)}(𝓡))^{-1} ————————
+	##———— 6. Base treatment effects:      (D^{(2)}(G))^{-1} ————————
 	block6 <- genInvTwoWayFusionTransformMat(
 		n_vars = num_treats,
 		first_inds = first_inds,
-		R = R
+		G = G
 	)
 
-	##———— 7. Treatment × X interactions:  I_d ⊗ (D^{(2)}(𝓡))^{-1} ——
+	##———— 7. Treatment × X interactions:  I_d ⊗ (D^{(2)}(G))^{-1} ——
 	block7 <- if (d > 0) {
 		kronecker(
 			diag(d),
 			genInvTwoWayFusionTransformMat(
 				n_vars = num_treats,
 				first_inds = first_inds,
-				R = R
+				G = G
 			)
 		)
 	} else {
@@ -833,7 +833,7 @@ genFullInvFusionTransformMat <- function(first_inds, T, R, d, num_treats) {
 	full_D_inv <- as.matrix(Matrix::bdiag(blocks))
 
 	##———— Dimension cross-check ————————————————————————————
-	p <- getP(R = R, T = T, d = d, num_treats = num_treats)
+	p <- getP(G = G, T = T, d = d, num_treats = num_treats)
 	stopifnot(nrow(full_D_inv) == p, ncol(full_D_inv) == p)
 
 	return(full_D_inv)

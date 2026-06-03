@@ -144,7 +144,7 @@ test_that("eventStudy BETWFE: estimate is 0 when all cells at e are selected out
 	es <- eventStudy(res)
 
 	tes <- res$beta_hat[res$treat_inds]
-	first_inds <- getFirstInds(R = res$R, T = res$T)
+	first_inds <- getFirstInds(G = res$G, T = res$T)
 	for (k in seq_len(nrow(es))) {
 		e <- es$event_time[k]
 		V_e <- which(seq_len(res$R) <= res$T - 1L - e)

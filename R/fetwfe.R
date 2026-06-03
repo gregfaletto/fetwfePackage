@@ -380,7 +380,7 @@ fetwfe <- function(
 	num_treats <- prep$num_treats
 	first_inds <- prep$first_inds
 	first_year <- prep$first_year
-	R <- prep$R
+	G <- prep$G
 	indep_count_data_available <- prep$indep_count_data_available
 
 	rm(prep)
@@ -469,8 +469,8 @@ fetwfe <- function(
 		cv_seed = res$cv_seed_used,
 		N = res$N,
 		T = res$T,
-		G = res$R,
-		R = res$R,
+		G = res$G,
+		R = res$G,
 		d = res$d,
 		p = res$p,
 		alpha = alpha,
@@ -1118,14 +1118,14 @@ etwfe <- function(
 	num_treats <- prep$num_treats
 	first_inds <- prep$first_inds
 	first_year <- prep$first_year
-	R <- prep$R
+	G <- prep$G
 	indep_count_data_available <- prep$indep_count_data_available
 
 	rm(prep)
 
 	.check_cohort_rank_for_ols(
 		in_sample_counts = in_sample_counts,
-		R = R,
+		G = G,
 		d = d,
 		add_ridge = add_ridge
 	)
@@ -1190,8 +1190,8 @@ etwfe <- function(
 		y_final = res$y_final,
 		N = res$N,
 		T = res$T,
-		G = res$R,
-		R = res$R,
+		G = res$G,
+		R = res$G,
 		d = res$d,
 		p = res$p,
 		alpha = alpha,

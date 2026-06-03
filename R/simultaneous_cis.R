@@ -59,7 +59,7 @@ utils::globalVariables(c(
 #' @param contrasts For `family = "custom"`, a `K x num_treats` matrix whose
 #'   rows give the `K` linear combinations of the underlying per-`(g, t)`
 #'   treatment-effect vector (the `multcomp::glht()` convention; `num_treats`
-#'   is the number of estimated effects, equal to `R` for `twfeCovs`). Ignored
+#'   is the number of estimated effects, equal to `G` for `twfeCovs`). Ignored
 #'   for the other families. Note that the `"custom"` family omits the
 #'   cohort-probability variance term (`Sigma_2 = 0`), so a custom contrast
 #'   that pools across cohorts in a probability-weighted way is
@@ -90,7 +90,7 @@ utils::globalVariables(c(
 #' @details
 #' **Family resolution and `K`.** `"event_study"` resolves to one effect per
 #' post-treatment event time `e = 0, ..., T - 2` (`K = T - 1`); `"cohort"` to
-#' one effect per treated cohort (`K = R`); `"all_post_treatment"` to one
+#' one effect per treated cohort (`K = G`); `"all_post_treatment"` to one
 #' effect per `(g, t)` cell (`K = num_treats`); `"custom"` to the
 #' `K = nrow(contrasts)` user-supplied contrasts.
 #'
@@ -294,7 +294,7 @@ simultaneousCIs.twfeCovs <- function(
 	sig_eps_sq <- x$sig_eps_sq
 	N <- x$N
 	T_ <- x$T
-	R <- x$R
+	G <- x$G
 	p <- x$p
 	se_type <- if (is.null(x$se_type)) "default" else x$se_type
 	is_indep <- isTRUE(x$indep_counts_used)
@@ -302,12 +302,12 @@ simultaneousCIs.twfeCovs <- function(
 
 	# --- 3. Resolve cohort-time offsets + first_inds (same helper eventStudy
 	#        uses; preserves scattered-cohort support). ---
-	offs <- .resolve_event_study_offsets_and_first_inds(x, R = R, T = T_)
+	offs <- .resolve_event_study_offsets_and_first_inds(x, G = G, T = T_)
 	cohort_offsets_int <- offs$cohort_offsets_int
 	first_inds <- offs$first_inds
 
 	# twfeCovs estimates a single pooled treatment effect PER COHORT (so
-	# `treat_inds` has length R = num_treats, and each effect is already a
+	# `treat_inds` has length G = num_treats, and each effect is already a
 	# cohort ATT), not one effect per (g, t) cell. There is therefore no
 	# event-time or per-cell structure to expand: only the `cohort` and
 	# `custom` families are well-defined (this is why eventStudy() excludes
@@ -325,7 +325,7 @@ simultaneousCIs.twfeCovs <- function(
 				call. = FALSE
 			)
 		}
-		first_inds <- seq_len(R)
+		first_inds <- seq_len(G)
 	}
 
 	# --- 4. Build the K x num_treats psi_tes matrix (row k = the contrast
@@ -333,7 +333,7 @@ simultaneousCIs.twfeCovs <- function(
 	psi_tes_mat <- .build_psi_tes_for_family(
 		family = family,
 		contrasts = contrasts,
-		R = R,
+		G = G,
 		T = T_,
 		num_treats = num_treats,
 		cohort_offsets_int = cohort_offsets_int,
@@ -348,7 +348,7 @@ simultaneousCIs.twfeCovs <- function(
 	effect_labels <- .effect_labels_for_family(
 		family = family,
 		K = K,
-		R = R,
+		G = G,
 		T = T_,
 		cohort_offsets_int = cohort_offsets_int
 	)
@@ -373,7 +373,7 @@ simultaneousCIs.twfeCovs <- function(
 		d_inv_treat <- genInvTwoWayFusionTransformMat(
 			n_vars = num_treats,
 			first_inds = first_inds,
-			R = R
+			G = G
 		)
 		d_inv_treat_sel <- if (length(sel_treat_inds_shifted) > 0) {
 			d_inv_treat[, sel_treat_inds_shifted, drop = FALSE]
@@ -498,7 +498,7 @@ simultaneousCIs.twfeCovs <- function(
 	J_list <- .build_j_list_for_family(
 		family = family,
 		K = K,
-		R = R,
+		G = G,
 		T = T_,
 		num_treats = num_treats,
 		cohort_offsets_int = cohort_offsets_int,
@@ -506,7 +506,7 @@ simultaneousCIs.twfeCovs <- function(
 		cohort_probs_overall = cohort_probs_overall,
 		d_inv_treat_sel = d_inv_treat_sel
 	)
-	Sigma_pi_hat <- .multinomial_cov(cohort_probs_overall[1:R])
+	Sigma_pi_hat <- .multinomial_cov(cohort_probs_overall[1:G])
 	Sigma_2 <- .assemble_joint_cov_var2(
 		J_list = J_list,
 		theta_sel = theta_sel,
@@ -716,7 +716,7 @@ simultaneousCIs.twfeCovs <- function(
 #' @param has_valid_ses Logical; `res$calc_ses` from the core (read off the
 #'   classed object by the caller).
 #' @return A list with elements `ci_low`, `ci_high`, and `adjusted_p_values`
-#'   (numeric vectors of length `R`, aligned to `x$catt_df` cohort order), or
+#'   (numeric vectors of length `G`, aligned to `x$catt_df` cohort order), or
 #'   `NULL` to signal "leave `catt_df` unchanged".
 #' @keywords internal
 #' @noRd
@@ -748,7 +748,7 @@ simultaneousCIs.twfeCovs <- function(
 		return(NULL)
 	}
 	# Positional alignment: `.build_psi_tes_for_family(family = "cohort")`
-	# iterates g = 1:R in cohort-block order, the SAME order
+	# iterates g = 1:G in cohort-block order, the SAME order
 	# `getCohortATTsFinal()` builds `catt_df`. So `sci$ci` is already
 	# row-aligned to `catt_df`. The `effect` labels differ
 	# ("Cohort <offset>" vs `catt_df$cohort` = `c_names`), so rely on
@@ -811,7 +811,7 @@ simultaneousCIs.twfeCovs <- function(
 #'   `(g, t)` treatment-effect vector (`beta_hat[treat_inds]`) that defines
 #'   effect `k`. The point estimate for effect `k` is
 #'   `psi_tes_mat[k, ] %*% tes`.
-#' @param family,contrasts,R,T,num_treats,cohort_offsets_int,first_inds,cohort_probs_overall
+#' @param family,contrasts,G,T,num_treats,cohort_offsets_int,first_inds,cohort_probs_overall
 #'   See `.simultaneous_cis_impl()`.
 #' @return A numeric `K x num_treats` matrix.
 #' @keywords internal
@@ -819,7 +819,7 @@ simultaneousCIs.twfeCovs <- function(
 .build_psi_tes_for_family <- function(
 	family,
 	contrasts,
-	R,
+	G,
 	T,
 	num_treats,
 	cohort_offsets_int,
@@ -854,9 +854,9 @@ simultaneousCIs.twfeCovs <- function(
 
 	if (family == "cohort") {
 		# Effect g = cohort g's ATT = mean(tes over cohort g's block).
-		psi_tes <- matrix(0, nrow = R, ncol = num_treats)
-		for (g in 1:R) {
-			block <- .cohort_block_inds(g, R, first_inds, num_treats)
+		psi_tes <- matrix(0, nrow = G, ncol = num_treats)
+		for (g in 1:G) {
+			block <- .cohort_block_inds(g, G, first_inds, num_treats)
 			psi_tes[g, block] <- 1 / length(block)
 		}
 		return(psi_tes)
@@ -903,15 +903,15 @@ simultaneousCIs.twfeCovs <- function(
 #'   is anti-conservative (not conservative) for a contrast that pools across
 #'   cohorts in a probability-weighted way, which does carry cohort-probability
 #'   variance.
-#' @param family,K,R,T,num_treats,cohort_offsets_int,first_inds,cohort_probs_overall,d_inv_treat_sel
+#' @param family,K,G,T,num_treats,cohort_offsets_int,first_inds,cohort_probs_overall,d_inv_treat_sel
 #'   See `.simultaneous_cis_impl()`.
-#' @return A length-K list of numeric matrices (each `R x ncol(d_inv_treat_sel)`).
+#' @return A length-K list of numeric matrices (each `G x ncol(d_inv_treat_sel)`).
 #' @keywords internal
 #' @noRd
 .build_j_list_for_family <- function(
 	family,
 	K,
-	R,
+	G,
 	T,
 	num_treats,
 	cohort_offsets_int,
@@ -920,7 +920,7 @@ simultaneousCIs.twfeCovs <- function(
 	d_inv_treat_sel
 ) {
 	p_sel <- ncol(d_inv_treat_sel)
-	zero_jac <- matrix(0, nrow = R, ncol = p_sel)
+	zero_jac <- matrix(0, nrow = G, ncol = p_sel)
 
 	if (family == "event_study") {
 		event_times <- 0:(T - 2L)
@@ -929,7 +929,7 @@ simultaneousCIs.twfeCovs <- function(
 			V_e <- which(cohort_offsets_int <= T - e)
 			.build_jacobian(
 				cohort_probs_overall = cohort_probs_overall,
-				R = R,
+				G = G,
 				d_inv_treat_sel = d_inv_treat_sel,
 				mode = "per_effect_masked",
 				V_e = V_e,
@@ -949,14 +949,14 @@ simultaneousCIs.twfeCovs <- function(
 }
 
 #' @title Build the `effect` column labels for a family
-#' @param family,K,R,T,cohort_offsets_int See `.simultaneous_cis_impl()`.
+#' @param family,K,G,T,cohort_offsets_int See `.simultaneous_cis_impl()`.
 #' @return A character vector of length `K`.
 #' @keywords internal
 #' @noRd
 .effect_labels_for_family <- function(
 	family,
 	K,
-	R,
+	G,
 	T,
 	cohort_offsets_int
 ) {
@@ -964,7 +964,7 @@ simultaneousCIs.twfeCovs <- function(
 		return(paste0("e", 0:(T - 2L)))
 	}
 	if (family == "cohort") {
-		return(paste0("Cohort ", cohort_offsets_int[seq_len(R)]))
+		return(paste0("Cohort ", cohort_offsets_int[seq_len(G)]))
 	}
 	if (family == "all_post_treatment") {
 		return(paste0("cell_", seq_len(K)))

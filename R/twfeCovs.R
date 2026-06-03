@@ -325,14 +325,14 @@ twfeCovs <- function(
 	num_treats <- prep$num_treats
 	first_inds <- prep$first_inds
 	first_year <- prep$first_year
-	R <- prep$R
+	G <- prep$G
 	indep_count_data_available <- prep$indep_count_data_available
 
 	rm(prep)
 
 	.check_cohort_rank_for_ols(
 		in_sample_counts = in_sample_counts,
-		R = R,
+		G = G,
 		d = d,
 		add_ridge = add_ridge
 	)
@@ -396,8 +396,8 @@ twfeCovs <- function(
 		y_final = res$y_final,
 		N = res$N,
 		T = res$T,
-		G = res$R,
-		R = res$R,
+		G = res$G,
+		R = res$G,
 		d = res$d,
 		p = res$p,
 		calc_ses = res$calc_ses,
@@ -690,7 +690,7 @@ twfeCovsWithSimulatedData <- function(
 #' @param first_inds A numeric vector indicating the starting column index for
 #'   each cohort's first treatment effect within the treatment effect block.
 #' @param indep_counts (Optional) An integer vector of counts for how many units
-#'   appear in the untreated cohort plus each of the other `R` cohorts, derived
+#'   appear in the untreated cohort plus each of the other `G` cohorts, derived
 #'   from an independent dataset. Used for asymptotically exact standard errors for
 #'   the ATT. Default is `NA`.
 #' @param sig_eps_sq (Optional) Numeric; the known variance of the observation-level
@@ -723,8 +723,8 @@ twfeCovsWithSimulatedData <- function(
 #'     GLS-weights the design and response by
 #'     `sqrt(sig_eps_sq) * Omega_sqrt_inv` via a Kronecker product. The
 #'     `is_twfe_covs = TRUE` flag collapses the per-period treatment columns
-#'     into one column per cohort (so the design has `p_short = R + T - 1 + d
-#'     + R` columns instead of FETWFE's `p`). No fusion transformation is
+#'     into one column per cohort (so the design has `p_short = G + T - 1 + d
+#'     + G` columns instead of FETWFE's `p`). No fusion transformation is
 #'     applied. Also computes cohort membership probabilities from
 #'     `in_sample_counts` and (if provided) `indep_counts`.
 #'   \item **Optional ridge penalty:** If `add_ridge = TRUE`, `X_final_scaled`
@@ -769,7 +769,7 @@ twfeCovsWithSimulatedData <- function(
 #'   \item{X_final}{The design matrix after GLS weighting (no fusion
 #'     transformation for `twfeCovs_core`).}
 #'   \item{y_final}{The response vector after GLS weighting.}
-#'   \item{N, T, R, d, p}{Dimensions used in estimation.}
+#'   \item{N, T, G, d, p}{Dimensions used in estimation.}
 #' @keywords internal
 #' @noRd
 twfeCovs_core <- function(
@@ -806,13 +806,13 @@ twfeCovs_core <- function(
 		add_ridge = add_ridge
 	)
 
-	R <- ret$R
+	G <- ret$G
 	c_names <- ret$c_names
 	indep_count_data_available <- ret$indep_count_data_available
 
 	rm(ret)
 
-	stopifnot(length(c_names) == R)
+	stopifnot(length(c_names) == G)
 
 	res <- prep_for_etwfe_regression(
 		verbose = verbose,
@@ -823,7 +823,7 @@ twfeCovs_core <- function(
 		X_mod = X_ints, # Don't transform matrix
 		N = N,
 		T = T,
-		R = R,
+		G = G,
 		d = d,
 		p = p,
 		num_treats = num_treats,
@@ -857,9 +857,9 @@ twfeCovs_core <- function(
 	#
 	#
 
-	p_short <- R + T - 1 + d + R
-	treat_inds_short <- (R + T - 1 + d + 1):p_short
-	first_inds <- 1:R
+	p_short <- G + T - 1 + d + G
+	treat_inds_short <- (G + T - 1 + d + 1):p_short
+	first_inds <- 1:G
 
 	df <- data.frame(y = y_final, X_final_scaled)
 
@@ -887,17 +887,17 @@ twfeCovs_core <- function(
 
 	treat_int_inds <- c()
 
-	stopifnot(length(treat_inds_short) == R)
+	stopifnot(length(treat_inds_short) == G)
 
 	# Get actual estimated treatment effects (in original, untransformed space)
 	tes <- beta_hat_slopes[treat_inds_short]
 
 	stopifnot(all(!is.na(tes)))
 
-	stopifnot(length(tes) == R)
+	stopifnot(length(tes) == G)
 
-	stopifnot(length(first_inds) == R)
-	stopifnot(max(first_inds) <= R)
+	stopifnot(length(first_inds) == G)
+	stopifnot(max(first_inds) <= G)
 
 	#
 	#
@@ -910,13 +910,13 @@ twfeCovs_core <- function(
 		X_final = X_final, # This is X_mod * GLS_transform_matrix
 		sel_feat_inds = NULL, # OLS path: no penalty selection occurred
 		treat_inds = treat_inds_short, # Global indices for treatment effects
-		num_treats = R,
+		num_treats = G,
 		first_inds = first_inds,
-		sel_treat_inds_shifted = seq_len(R),
+		sel_treat_inds_shifted = seq_len(G),
 		c_names = c_names,
 		tes = tes, # Treatment effect estimates (beta_hat_slopes[treat_inds])
 		sig_eps_sq = sig_eps_sq,
-		R = R,
+		G = G,
 		N = N,
 		T = T,
 		fused = FALSE,
@@ -938,8 +938,8 @@ twfeCovs_core <- function(
 
 	rm(res)
 
-	stopifnot(nrow(psi_mat) == R)
-	stopifnot(ncol(psi_mat) == R)
+	stopifnot(nrow(psi_mat) == G)
+	stopifnot(ncol(psi_mat) == G)
 
 	#
 	#
@@ -948,15 +948,15 @@ twfeCovs_core <- function(
 	#
 
 	# Get overal estimated ATT!
-	stopifnot(length(tes) == R)
+	stopifnot(length(tes) == G)
 	stopifnot(nrow(psi_mat) == length(tes))
 
 	in_sample_te_results <- getTeResultsOLS(
 		sig_eps_sq = sig_eps_sq,
 		N = N,
 		T = T,
-		R = R,
-		num_treats = R,
+		G = G,
+		num_treats = G,
 		cohort_tes = cohort_tes, # CATTs (point estimates)
 		cohort_probs = cohort_probs, # In-sample pi_g | treated
 		psi_mat = psi_mat,
@@ -981,8 +981,8 @@ twfeCovs_core <- function(
 			sig_eps_sq = sig_eps_sq,
 			N = N,
 			T = T,
-			R = R,
-			num_treats = R,
+			G = G,
+			num_treats = G,
 			cohort_tes = cohort_tes,
 			cohort_probs = indep_cohort_probs, # indep pi_g | treated
 			psi_mat = psi_mat,
@@ -1034,7 +1034,7 @@ twfeCovs_core <- function(
 		y_final = y_final,
 		N = N,
 		T = T,
-		R = R,
+		G = G,
 		d = d,
 		p = p_short,
 		calc_ses = calc_ses

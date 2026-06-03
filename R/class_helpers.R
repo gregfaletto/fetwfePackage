@@ -257,14 +257,14 @@
 		cls
 	)
 	.assert_contract(
-		nrow(x$catt_df) == x$R,
-		"C4 catt_df: nrow == R",
+		nrow(x$catt_df) == x$G,
+		"C4 catt_df: nrow == G",
 		cls,
 		detail = paste0(
 			"nrow(catt_df) = ",
 			nrow(x$catt_df),
-			", R = ",
-			x$R
+			", G = ",
+			x$G
 		)
 	)
 	.assert_contract(
@@ -330,19 +330,19 @@
 #' @noRd
 .check_cohort_probs <- function(x, cls) {
 	.assert_contract(
-		length(x$cohort_probs) == x$R,
-		"C5 cohort_probs length == R",
+		length(x$cohort_probs) == x$G,
+		"C5 cohort_probs length == G",
 		cls,
 		detail = paste0(
 			"length(cohort_probs) = ",
 			length(x$cohort_probs),
-			", R = ",
-			x$R
+			", G = ",
+			x$G
 		)
 	)
 	.assert_contract(
-		length(x$cohort_probs_overall) == x$R,
-		"C5 cohort_probs_overall length == R",
+		length(x$cohort_probs_overall) == x$G,
+		"C5 cohort_probs_overall length == G",
 		cls
 	)
 	.assert_contract(
@@ -428,7 +428,7 @@
 	has_alpha = TRUE,
 	has_att_selected = FALSE
 ) {
-	for (slot in c("N", "T", "R", "p")) {
+	for (slot in c("N", "T", "G", "p")) {
 		val <- x[[slot]]
 		.assert_contract(
 			is.numeric(val) &&
@@ -912,8 +912,8 @@
 		model_info = list(
 			N = object$N,
 			T = object$T,
-			G = object$R,
-			R = object$R,
+			G = object$G,
+			R = object$G,
 			d = object$d,
 			p = object$p,
 			lambda_star = object$lambda_star,
@@ -1048,7 +1048,7 @@
 
 	## Event-study preview (#174 / #138). Reads from the cached field set
 	## by `.summary_estimator_output()`; no recompute. NULL means
-	## `eventStudy()` returned an empty data frame (e.g., R = 0); a true
+	## `eventStudy()` returned an empty data frame (e.g., G = 0); a true
 	## eventStudy() failure now propagates rather than being silently
 	## swallowed (strict policy, #174).
 	if (!is.null(x$event_study)) {

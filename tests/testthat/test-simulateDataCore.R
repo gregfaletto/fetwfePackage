@@ -450,7 +450,7 @@ test_that("simulateDataCore errors when R >= T", {
 			gen_ints = FALSE,
 			distribution = "gaussian"
 		),
-		regexp = "R <= T - 1" # Expect an error message indicating R must be <= T-1
+		regexp = "G <= T - 1" # Expect an error message indicating G must be <= T-1
 	)
 })
 
@@ -510,7 +510,7 @@ test_that("simulateDataCore errors when N < R", {
 			gen_ints = FALSE,
 			distribution = "gaussian"
 		),
-		regexp = "N >= R" # Expect an error message indicating N must be at least R
+		regexp = "N >= G" # Expect an error message indicating N must be at least G
 	)
 })
 

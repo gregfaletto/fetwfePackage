@@ -46,7 +46,7 @@
 #' @param N Integer. Number of units in the panel.
 #' @param d Integer. Number of time-invariant covariates.
 #' @param T Integer. Number of time periods.
-#' @param R Integer. Number of treated cohorts.
+#' @param G Integer. Number of treated cohorts.
 #' @param distribution Character. Distribution to generate covariates.
 #'   Defaults to \code{"gaussian"}. If set to \code{"uniform"}, covariates are drawn uniformly
 #'   from \eqn{[-\sqrt{3}, \sqrt{3}]}.
@@ -60,7 +60,7 @@
 #'   \item{time_fe}{A matrix of time fixed effects (dummy variables for periods 2 to T).}
 #'   \item{X_long}{A long-format matrix of covariates, repeated for each time period.}
 #'   \item{assignments}{A vector of counts indicating how many units fall into
-#'         the never-treated group and each of the R treated cohorts.}
+#'         the never-treated group and each of the G treated cohorts.}
 #'   \item{cohort_inds}{A list where each element contains the row indices in the
 #'         long-format matrices corresponding to the units in a specific treated cohort.}
 #' @keywords internal
@@ -69,14 +69,14 @@ generateBaseEffects <- function(
 	N,
 	d,
 	T,
-	R,
+	G,
 	distribution = "gaussian",
 	guarantee_rank_condition = FALSE
 ) {
 	ret <- genCohortTimeFE(
 		N = N,
 		T = T,
-		R = R,
+		G = G,
 		d = d,
 		guarantee_rank_condition = guarantee_rank_condition
 	)
@@ -84,7 +84,7 @@ generateBaseEffects <- function(
 	cov <- .drawCovariates(N = N, d = d, T = T, distribution = distribution)
 	X_long <- cov$X_long
 
-	stopifnot(ncol(ret$cohort_fe) == R)
+	stopifnot(ncol(ret$cohort_fe) == G)
 
 	return(list(
 		cohort_fe = ret$cohort_fe,
@@ -110,7 +110,7 @@ generateBaseEffects <- function(
 #' @param N Integer. Number of units.
 #' @param d Integer >= 1. Number of covariates.
 #' @param T Integer. Number of time periods.
-#' @param R Integer. Number of treated cohorts.
+#' @param G Integer. Number of treated cohorts.
 #' @param distribution Character. Covariate distribution
 #'   (\code{"gaussian"} / \code{"uniform"}).
 #' @param guarantee_rank_condition Logical. If TRUE, retry the joint
@@ -131,7 +131,7 @@ generateBaseEffects <- function(
 	N,
 	d,
 	T,
-	R,
+	G,
 	distribution,
 	guarantee_rank_condition,
 	assignment_coefs,
@@ -139,9 +139,9 @@ generateBaseEffects <- function(
 ) {
 	stopifnot(!is.null(assignment_coefs))
 	stopifnot(d >= 1)
-	stopifnot(N >= (R + 1))
+	stopifnot(N >= (G + 1))
 	if (guarantee_rank_condition) {
-		stopifnot(N >= (R + 1) * (d + 1))
+		stopifnot(N >= (G + 1) * (d + 1))
 	}
 
 	# Draw (X, W) jointly with rank-condition retries via the shared
@@ -152,7 +152,7 @@ generateBaseEffects <- function(
 		N = N,
 		d = d,
 		T = T,
-		R = R,
+		G = G,
 		distribution = distribution,
 		guarantee_rank_condition = guarantee_rank_condition,
 		assignment_coefs = assignment_coefs,
@@ -176,12 +176,12 @@ generateBaseEffects <- function(
 	# same way genCohortTimeFE() does.
 	assignments <- counts
 	stopifnot(sum(assignments) == N)
-	stopifnot(length(assignments) == R + 1L)
+	stopifnot(length(assignments) == G + 1L)
 
-	cohort_fe <- matrix(0, N * T, R)
+	cohort_fe <- matrix(0, N * T, G)
 	inds <- list()
 	first_ind_g <- assignments[1] * T + 1
-	for (g in seq_len(R)) {
+	for (g in seq_len(G)) {
 		last_ind_g <- first_ind_g + assignments[g + 1] * T - 1
 		cohort_fe[first_ind_g:last_ind_g, g] <- rep(1, assignments[g + 1] * T)
 		inds[[g]] <- first_ind_g:last_ind_g
@@ -212,7 +212,7 @@ generateBaseEffects <- function(
 #'
 #' @param N Integer. Number of units.
 #' @param T Integer. Number of time periods.
-#' @param R Integer. Number of treated cohorts.
+#' @param G Integer. Number of treated cohorts.
 #' @param d Integer. Number of covariates (used to ensure minimum units per cohort).
 #' @param guarantee_rank_condition (Optional). Logical. If TRUE, the returned
 #' data set is guaranteed to have at least `d + 1` units per cohort, which is
@@ -220,19 +220,19 @@ generateBaseEffects <- function(
 #' FALSE, in which case no such condition is enforced.
 #'
 #' @return A list containing:
-#'   \item{cohort_fe}{An NT x R matrix of cohort dummy variables. The g-th column is 1
+#'   \item{cohort_fe}{An NT x G matrix of cohort dummy variables. The g-th column is 1
 #'     if an observation belongs to the g-th treated cohort, 0 otherwise.}
 #'   \item{time_fe}{An NT x (T-1) matrix of time dummy variables. The t-th column
 #'     (for t from 1 to T-1) corresponds to time period (t+1), and is 1 if an
 #'     observation is from that time period, 0 otherwise. Period 1 is the baseline.}
-#'   \item{assignments}{An integer vector of length R+1. The first element is the
+#'   \item{assignments}{An integer vector of length G+1. The first element is the
 #'     count of never-treated units. Subsequent elements are counts of units in each
-#'     of the R treated cohorts.}
-#'   \item{inds}{A list of length R. Each element `inds[[g]]` contains the row indices
+#'     of the G treated cohorts.}
+#'   \item{inds}{A list of length G. Each element `inds[[g]]` contains the row indices
 #'     in the NT-row matrices that correspond to units in the g-th treated cohort.}
 #' @keywords internal
 #' @noRd
-genCohortTimeFE <- function(N, T, R, d, guarantee_rank_condition = FALSE) {
+genCohortTimeFE <- function(N, T, G, d, guarantee_rank_condition = FALSE) {
 	# The observations will be arranged row-wise as blocks of T, one unit at
 	# a time. So the first T rows correspond to all observations from the first
 	# unit, and so on. Therefore the first N_UNTREATED*T rows contain all of
@@ -240,25 +240,25 @@ genCohortTimeFE <- function(N, T, R, d, guarantee_rank_condition = FALSE) {
 	# rows contain the observations from the first cohort, and so on.
 
 	# Each cohort, as well as the untreated group, will have at least d + 1
-	# units. The remaining units will be allocated to each of these R + 1
+	# units. The remaining units will be allocated to each of these G + 1
 	# groups uniformly at random.
-	stopifnot(N >= (R + 1) * (d + 1))
+	stopifnot(N >= (G + 1) * (d + 1))
 
 	# Generate cohort assignments
 	assignments <- genAssignments(
 		N = N,
-		R = R,
+		G = G,
 		guarantee_rank_condition = guarantee_rank_condition,
 		d = d
 	)
 
 	# Cohort fixed effects
-	cohort_fe <- matrix(0, N * T, R)
+	cohort_fe <- matrix(0, N * T, G)
 	first_ind_g <- assignments[1] * T + 1
 
 	inds <- list()
 
-	for (g in 1:R) {
+	for (g in 1:G) {
 		stopifnot(all(cohort_fe[, g] == 0))
 
 		last_ind_g <- first_ind_g + assignments[g + 1] * T - 1
@@ -303,11 +303,11 @@ genCohortTimeFE <- function(N, T, R, d, guarantee_rank_condition = FALSE) {
 
 #' Generate Random Cohort Assignments
 #'
-#' Assigns N units to R+1 groups (R treated cohorts + 1 never-treated group)
+#' Assigns N units to G+1 groups (G treated cohorts + 1 never-treated group)
 #' ensuring each group has at least one unit.
 #'
 #' @param N Integer. Total number of units to assign.
-#' @param R Integer. Number of treated cohorts.
+#' @param G Integer. Number of treated cohorts.
 #' @param guarantee_rank_condition (Optional). Logical. If TRUE, `d` must be
 #' provided, and this function will ensure that the returned data set has at
 #' least `d + 1` units per cohort, which is necessary for the final design
@@ -316,21 +316,21 @@ genCohortTimeFE <- function(N, T, R, d, guarantee_rank_condition = FALSE) {
 #' @param d (Optional). Integer. The total number of covariates in the data.
 #' Only needs to be provied if guarantee_rank_condition is TRUE.
 #'
-#' @return An integer vector of length R+1, where the first element is the count
+#' @return An integer vector of length G+1, where the first element is the count
 #'   of never-treated units, and subsequent elements are counts for each treated cohort.
 #'   The sum of elements equals N.
 #' @importFrom stats rmultinom
 #' @keywords internal
 #' @noRd
-genAssignments <- function(N, R, guarantee_rank_condition = FALSE, d = NA) {
+genAssignments <- function(N, G, guarantee_rank_condition = FALSE, d = NA) {
 	# Make sure at least one observation in each cohort
-	stopifnot(N >= R + 1)
+	stopifnot(N >= G + 1)
 	pass_condition <- FALSE
 	while (!pass_condition) {
 		assignments <- rmultinom(
 			n = 1,
 			size = N,
-			prob = rep(1 / (R + 1), R + 1)
+			prob = rep(1 / (G + 1), G + 1)
 		)[,
 			1
 		]
@@ -347,7 +347,7 @@ genAssignments <- function(N, R, guarantee_rank_condition = FALSE, d = NA) {
 	if (guarantee_rank_condition) {
 		stopifnot(all(assignments >= d + 1))
 	}
-	stopifnot(length(assignments) == R + 1)
+	stopifnot(length(assignments) == G + 1)
 	return(assignments)
 }
 
@@ -358,10 +358,10 @@ genAssignments <- function(N, R, guarantee_rank_condition = FALSE, d = NA) {
 #' Treatment starts at period g+1 for cohort g.
 #'
 #' @param n_treats Integer. Total number of unique treatment (cohort x time) effects.
-#'   Calculated as \eqn{T \times R - R(R+1)/2}.
+#'   Calculated as \eqn{T \times G - G(G+1)/2}.
 #' @param N Integer. Number of units.
 #' @param T Integer. Number of time periods.
-#' @param R Integer. Number of treated cohorts.
+#' @param G Integer. Number of treated cohorts.
 #' @param assignments Integer vector from \code{genAssignments}, indicating unit counts
 #'   per cohort (including never-treated).
 #' @param cohort_inds List from \code{genCohortTimeFE}, containing row indices for each cohort.
@@ -372,7 +372,7 @@ genAssignments <- function(N, R, guarantee_rank_condition = FALSE, d = NA) {
 #' @return A list containing:
 #'   \item{treat_mat_long}{An NT x n_treats matrix of treatment dummy variables.
 #'     Each column corresponds to a specific cohort-time treatment indicator.}
-#'   \item{first_inds}{An integer vector of length R, where `first_inds[g]` is the
+#'   \item{first_inds}{An integer vector of length G, where `first_inds[g]` is the
 #'     column index in `treat_mat_long` corresponding to the first treatment period
 #'     for cohort g.}
 #' @keywords internal
@@ -381,7 +381,7 @@ genTreatVarsSim <- function(
 	n_treats,
 	N,
 	T,
-	R,
+	G,
 	assignments,
 	cohort_inds,
 	N_UNTREATED,
@@ -391,15 +391,15 @@ genTreatVarsSim <- function(
 	treat_mat_long <- matrix(0, N * T, n_treats)
 	treat_ind <- 0
 	total_feats_added <- 0
-	first_inds <- rep(as.integer(NA), R)
+	first_inds <- rep(as.integer(NA), G)
 
-	stopifnot(length(cohort_inds) == R)
-	stopifnot(length(assignments) == R + 1)
+	stopifnot(length(cohort_inds) == G)
+	stopifnot(length(assignments) == G + 1)
 	stopifnot(min(cohort_inds[[1]]) == N_UNTREATED * T + 1)
 
 	all_inds_so_far <- integer()
 
-	for (g in 1:R) {
+	for (g in 1:G) {
 		n_treats_g <- T - g
 
 		stopifnot(length(cohort_inds[[g]]) == assignments[g + 1] * T)
@@ -453,7 +453,7 @@ genTreatVarsSim <- function(
 				assignments[g + 1]
 		))
 
-		if (g < R) {
+		if (g < G) {
 			stopifnot(last_ind_g == min(cohort_inds[[g + 1]]) - 1)
 			stopifnot(last_ind_g == max(cohort_inds[[g]]))
 		}
@@ -501,7 +501,7 @@ rfunc <- function(n, prob) {
 #' TODO: This function assumes `gen_ints = TRUE` (i.e., full design matrix with all interactions).
 #'
 #' @param beta Numeric vector. The true coefficient vector used for data generation.
-#' @param R Integer. Number of treated cohorts.
+#' @param G Integer. Number of treated cohorts.
 #' @param T Integer. Number of time periods.
 #' @param d Integer. Number of time-invariant covariates.
 #' @param N Integer. Number of units.
@@ -510,35 +510,35 @@ rfunc <- function(n, prob) {
 #'
 #' @return A list containing:
 #'   \item{num_treats}{Integer. The calculated number of base treatment effects.}
-#'   \item{p_expected}{Integer. The expected length of the `beta` vector given R, T, d,
+#'   \item{p_expected}{Integer. The expected length of the `beta` vector given G, T, d,
 #'     assuming a full design matrix with all interactions.}
 #' @seealso \code{\link{getNumTreats}}, \code{\link{getP}}
 #' @keywords internal
 #' @noRd
 testGenRandomDataInputs <- function(
 	beta,
-	R,
+	G,
 	T,
 	d,
 	N,
 	sig_eps_sq,
 	sig_eps_c_sq
 ) {
-	stopifnot(R <= T - 1)
+	stopifnot(G <= T - 1)
 	stopifnot(T >= 3)
-	stopifnot(R >= 2)
-	stopifnot(N >= R + 1)
+	stopifnot(G >= 2)
+	stopifnot(N >= G + 1)
 	stopifnot(sig_eps_sq > 0)
 	stopifnot(sig_eps_c_sq >= 0)
 
 	# Compute the number of treatment effects (common to both cases)
-	num_treats <- getNumTreats(R = R, T = T)
+	num_treats <- getNumTreats(G = G, T = T)
 
 	# --- Full design matrix with interactions ---
 	# Expected number of columns:
-	# If d > 0: p = R + (T - 1) + d + d*R + d*(T - 1) + num_treats + num_treats*d
-	# If d == 0: p = R + (T - 1) + num_treats
-	p_expected <- getP(R = R, T = T, d = d, num_treats = num_treats)
+	# If d > 0: p = G + (T - 1) + d + d*G + d*(T - 1) + num_treats + num_treats*d
+	# If d == 0: p = G + (T - 1) + num_treats
+	p_expected <- getP(G = G, T = T, d = d, num_treats = num_treats)
 
 	if (length(beta) != p_expected) {
 		stop(sprintf(

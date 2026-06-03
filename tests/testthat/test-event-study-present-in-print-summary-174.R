@@ -124,7 +124,7 @@ test_that("getFirstIndsFromOffsets reduces to getFirstInds on consecutive offset
 	for (rc in cases) {
 		R_v <- as.integer(rc[["R"]])
 		T_v <- as.integer(rc[["T"]])
-		old <- fetwfe:::getFirstInds(R = R_v, T = T_v)
+		old <- fetwfe:::getFirstInds(G = R_v, T = T_v)
 		new <- fetwfe:::getFirstIndsFromOffsets(
 			cohort_offsets_int = seq.int(2L, R_v + 1L),
 			T = T_v

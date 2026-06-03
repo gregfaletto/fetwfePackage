@@ -24,13 +24,13 @@ library(fetwfe)
 	set.seed(seed)
 	N <- 8L
 	T <- 4L
-	R <- 2L
+	G <- 2L
 	d <- 2L
 	num_treats <- 3L + 2L
-	p <- (R + T - 1L + d) + num_treats + 4L
+	p <- (G + T - 1L + d) + num_treats + 4L
 	X_final <- matrix(rnorm(N * T * p), nrow = N * T, ncol = p)
 	y_final <- rnorm(N * T)
-	treat_inds <- seq.int(R + T - 1L + d + 1L, R + T - 1L + d + num_treats)
+	treat_inds <- seq.int(G + T - 1L + d + 1L, G + T - 1L + d + num_treats)
 	first_inds <- c(1L, 4L)
 	c_names <- c("Cohort1", "Cohort2")
 	tes <- rnorm(num_treats)
@@ -39,7 +39,7 @@ library(fetwfe)
 		y_final = y_final,
 		N = N,
 		T = T,
-		R = R,
+		G = G,
 		p = p,
 		num_treats = num_treats,
 		treat_inds = treat_inds,
@@ -62,7 +62,7 @@ library(fetwfe)
 	c_names,
 	tes,
 	sig_eps_sq,
-	R,
+	G,
 	N,
 	T,
 	p,
@@ -107,12 +107,12 @@ library(fetwfe)
 		treat_block_mask <- res$treat_block_mask
 	}
 
-	cohort_tes <- rep(as.numeric(NA), R)
-	cohort_te_ses <- rep(as.numeric(NA), R)
-	psi_mat <- matrix(0, num_treats, R)
+	cohort_tes <- rep(as.numeric(NA), G)
+	cohort_te_ses <- rep(as.numeric(NA), G)
+	psi_mat <- matrix(0, num_treats, G)
 
-	for (g in 1:R) {
-		inds_g <- fetwfe:::.cohort_block_inds(g, R, first_inds, num_treats)
+	for (g in 1:G) {
+		inds_g <- fetwfe:::.cohort_block_inds(g, G, first_inds, num_treats)
 		first_ind_g <- inds_g[1]
 		last_ind_g <- inds_g[length(inds_g)]
 
@@ -121,7 +121,7 @@ library(fetwfe)
 
 		cohort_tes[g] <- mean(tes[first_ind_g:last_ind_g])
 
-		psi_g <- fetwfe:::getPsiRUnfused(
+		psi_g <- fetwfe:::getPsiGUnfused(
 			first_ind_g,
 			last_ind_g,
 			sel_treat_inds_shifted = 1:num_treats
@@ -151,11 +151,11 @@ library(fetwfe)
 		}
 	}
 
-	stopifnot(length(c_names) == R)
-	stopifnot(length(cohort_tes) == R)
+	stopifnot(length(c_names) == G)
+	stopifnot(length(cohort_tes) == G)
 
 	if (all(!is.na(gram_inv))) {
-		stopifnot(length(cohort_te_ses) == R)
+		stopifnot(length(cohort_te_ses) == G)
 		cohort_te_df <- data.frame(
 			c_names,
 			cohort_tes,
@@ -170,10 +170,10 @@ library(fetwfe)
 		cohort_te_df <- data.frame(
 			c_names,
 			cohort_tes,
-			rep(NA, R),
-			rep(NA, R),
-			rep(NA, R),
-			rep(NA_real_, R)
+			rep(NA, G),
+			rep(NA, G),
+			rep(NA, G),
+			rep(NA_real_, G)
 		)
 	}
 
@@ -213,7 +213,7 @@ test_that("unified getCohortATTsFinal(fused=FALSE, include_selected=FALSE) match
 		c_names = fx$c_names,
 		tes = fx$tes,
 		sig_eps_sq = fx$sig_eps_sq,
-		R = fx$R,
+		G = fx$G,
 		N = fx$N,
 		T = fx$T,
 		p = fx$p
@@ -230,7 +230,7 @@ test_that("unified getCohortATTsFinal(fused=FALSE, include_selected=FALSE) match
 		c_names = fx$c_names,
 		tes = fx$tes,
 		sig_eps_sq = fx$sig_eps_sq,
-		R = fx$R,
+		G = fx$G,
 		N = fx$N,
 		T = fx$T,
 		fused = FALSE,
@@ -265,7 +265,7 @@ test_that("unified getCohortATTsFinal(fused=FALSE, include_selected=FALSE) match
 		c_names = fx$c_names,
 		tes = fx$tes,
 		sig_eps_sq = fx$sig_eps_sq,
-		R = fx$R,
+		G = fx$G,
 		N = fx$N,
 		T = fx$T,
 		p = fx$p,
@@ -283,7 +283,7 @@ test_that("unified getCohortATTsFinal(fused=FALSE, include_selected=FALSE) match
 		c_names = fx$c_names,
 		tes = fx$tes,
 		sig_eps_sq = fx$sig_eps_sq,
-		R = fx$R,
+		G = fx$G,
 		N = fx$N,
 		T = fx$T,
 		fused = FALSE,
@@ -316,7 +316,7 @@ test_that("getCohortATTsFinal(fused=TRUE, include_selected=TRUE) attaches a `sel
 		c_names = fx$c_names,
 		tes = fx$tes,
 		sig_eps_sq = fx$sig_eps_sq,
-		R = fx$R,
+		G = fx$G,
 		N = fx$N,
 		T = fx$T,
 		fused = TRUE,
@@ -333,7 +333,7 @@ test_that("getCohortATTsFinal(fused=TRUE, include_selected=TRUE) attaches a `sel
 	expect_true(is.matrix(out$d_inv_treat_sel))
 	# psi_mat dimensions track sel_treat_inds_shifted, not num_treats.
 	expect_equal(nrow(out$psi_mat), fx$num_treats)
-	expect_equal(ncol(out$psi_mat), fx$R)
+	expect_equal(ncol(out$psi_mat), fx$G)
 })
 
 test_that("getCohortATTsFinal(fused=FALSE, include_selected=TRUE) attaches a `selected` column (BETWFE) but no d_inv_treat_sel", {
@@ -348,7 +348,7 @@ test_that("getCohortATTsFinal(fused=FALSE, include_selected=TRUE) attaches a `se
 		c_names = fx$c_names,
 		tes = fx$tes,
 		sig_eps_sq = fx$sig_eps_sq,
-		R = fx$R,
+		G = fx$G,
 		N = fx$N,
 		T = fx$T,
 		fused = FALSE,
@@ -384,7 +384,7 @@ test_that("getCohortATTsFinal(fused=TRUE, include_selected=FALSE) omits the `sel
 		c_names = fx$c_names,
 		tes = fx$tes,
 		sig_eps_sq = fx$sig_eps_sq,
-		R = fx$R,
+		G = fx$G,
 		N = fx$N,
 		T = fx$T,
 		fused = TRUE,
@@ -424,7 +424,7 @@ test_that("getCohortATTsFinal psi_mat row count tracks the calling convention (O
 		c_names = fx$c_names,
 		tes = fx$tes,
 		sig_eps_sq = fx$sig_eps_sq,
-		R = fx$R,
+		G = fx$G,
 		N = fx$N,
 		T = fx$T,
 		fused = FALSE,
@@ -432,7 +432,7 @@ test_that("getCohortATTsFinal psi_mat row count tracks the calling convention (O
 		include_selected = FALSE
 	)
 	expect_equal(nrow(out_ols$psi_mat), fx$num_treats)
-	expect_equal(ncol(out_ols$psi_mat), fx$R)
+	expect_equal(ncol(out_ols$psi_mat), fx$G)
 
 	# --- Bridge convention: strict-subset sel_treat_inds_shifted.
 	# getGramInv() enforces sum(sel_feat_inds %in% treat_inds) ==
@@ -455,7 +455,7 @@ test_that("getCohortATTsFinal psi_mat row count tracks the calling convention (O
 		c_names = fx$c_names,
 		tes = fx$tes,
 		sig_eps_sq = fx$sig_eps_sq,
-		R = fx$R,
+		G = fx$G,
 		N = fx$N,
 		T = fx$T,
 		fused = TRUE,
@@ -466,5 +466,5 @@ test_that("getCohortATTsFinal psi_mat row count tracks the calling convention (O
 	# strictly below num_treats -- the contract a convention swap would break.
 	expect_equal(nrow(out_bridge$psi_mat), length(sel_subset))
 	expect_lt(nrow(out_bridge$psi_mat), fx$num_treats)
-	expect_equal(ncol(out_bridge$psi_mat), fx$R)
+	expect_equal(ncol(out_bridge$psi_mat), fx$G)
 })

@@ -571,7 +571,7 @@ test_that("v1.14.0 FETWFE_coefs round-trips through simulateData + getTes (#191)
 	mock <- list(
 		beta = template$beta,
 		theta = template$theta,
-		R = R,
+		G = R,
 		T = T,
 		d = d,
 		seed = 42L,

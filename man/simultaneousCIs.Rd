@@ -25,7 +25,7 @@ resolution.}
 \item{contrasts}{For \code{family = "custom"}, a \verb{K x num_treats} matrix whose
 rows give the \code{K} linear combinations of the underlying per-\verb{(g, t)}
 treatment-effect vector (the \code{multcomp::glht()} convention; \code{num_treats}
-is the number of estimated effects, equal to \code{R} for \code{twfeCovs}). Ignored
+is the number of estimated effects, equal to \code{G} for \code{twfeCovs}). Ignored
 for the other families. Note that the \code{"custom"} family omits the
 cohort-probability variance term (\code{Sigma_2 = 0}), so a custom contrast
 that pools across cohorts in a probability-weighted way is
@@ -78,7 +78,7 @@ differences, where effects share the regression-coefficient variance piece).
 \details{
 \strong{Family resolution and \code{K}.} \code{"event_study"} resolves to one effect per
 post-treatment event time \verb{e = 0, ..., T - 2} (\code{K = T - 1}); \code{"cohort"} to
-one effect per treated cohort (\code{K = R}); \code{"all_post_treatment"} to one
+one effect per treated cohort (\code{K = G}); \code{"all_post_treatment"} to one
 effect per \verb{(g, t)} cell (\code{K = num_treats}); \code{"custom"} to the
 \code{K = nrow(contrasts)} user-supplied contrasts.
 

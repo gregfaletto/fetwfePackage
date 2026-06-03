@@ -1,6 +1,6 @@
 # Tests for the BETWFE partial-selection SE fix.
 #
-# Background: prior to v1.9.2, getPsiRUnfused() normalized psi_g by k_sel
+# Background: prior to v1.9.2, getPsiGUnfused() normalized psi_g by k_sel
 # (count of *selected* coefficients in cohort g's treatment block) rather
 # than k_full (the full block size). The cohort point estimate
 # cohort_tes[g] = mean(tes[first_ind_g:last_ind_g]) averages over the full
@@ -11,12 +11,12 @@
 # depends on cohort-dispersion structure). See
 # .plans/follow-ups/issue-draft-betwfe-se-partial-selection.md.
 
-test_that("getPsiRUnfused invariant: t(psi_g) %*% theta_sel == cohort_tes[g]", {
+test_that("getPsiGUnfused invariant: t(psi_g) %*% theta_sel == cohort_tes[g]", {
 	# Constructed scenario: cohort 1 occupies indices 1..4 (k_full = 4); the
 	# bridge selected positions 1, 2, 5 across all cohorts, so within cohort
 	# 1 only positions 1 and 2 are selected (k_sel = 2). theta_hat_treat_sel
 	# has 3 entries (length of sel_treat_inds_shifted).
-	psi_g <- fetwfe:::getPsiRUnfused(
+	psi_g <- fetwfe:::getPsiGUnfused(
 		first_ind_g = 1,
 		last_ind_g = 4,
 		sel_treat_inds_shifted = c(1L, 2L, 5L)
@@ -33,13 +33,13 @@ test_that("getPsiRUnfused invariant: t(psi_g) %*% theta_sel == cohort_tes[g]", {
 	expect_equal(as.numeric(psi_g %*% theta_sel), cohort_te_expected)
 })
 
-test_that("getPsiRUnfused is bit-identical to pre-fix on full-selection (ETWFE/twfeCovs path)", {
+test_that("getPsiGUnfused is bit-identical to pre-fix on full-selection (ETWFE/twfeCovs path)", {
 	# When sel_treat_inds_shifted = 1:num_treats (the ETWFE / twfeCovs call
 	# shape), every index is "selected", so k_sel = k_full. The post-fix
 	# psi_g[inds_g] <- 1 / k_full equals the pre-fix
 	# psi_g[inds_g] <- 1; psi_g <- psi_g / sum(psi_g) = 1 / k_full.
 	num_treats <- 7L
-	psi_g <- fetwfe:::getPsiRUnfused(
+	psi_g <- fetwfe:::getPsiGUnfused(
 		first_ind_g = 1,
 		last_ind_g = 4,
 		sel_treat_inds_shifted = seq_len(num_treats)

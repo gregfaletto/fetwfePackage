@@ -61,7 +61,7 @@ test_that(".assemble_event_study_df masks zero and negative SEs to NA p-value", 
 		num_treats = 3L,
 		N = 100L,
 		T = 3L,
-		R = 2L
+		G = 2L
 	)
 }
 
@@ -99,7 +99,7 @@ test_that("getSecondVarTermOLS does NOT fire on sums inside the old (loose) band
 	d_inv <- fetwfe:::genInvTwoWayFusionTransformMat(
 		n_vars = 3L,
 		first_inds = c(1L, 3L),
-		R = 2L
+		G = 2L
 	)
 	fetwfe:::getSecondVarTermDataApp(
 		sel_treat_inds_shifted = 1:3,
@@ -109,7 +109,7 @@ test_that("getSecondVarTermOLS does NOT fire on sums inside the old (loose) band
 		num_treats = 3L,
 		N = 100L,
 		T = 3L,
-		R = 2L,
+		G = 2L,
 		d_inv_treat_sel = d_inv
 	)
 }

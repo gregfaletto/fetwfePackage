@@ -201,26 +201,25 @@ genCoefs <- function(
 	R = NULL
 ) {
 	# Resolve the canonical cohort count (G), mapping the deprecated `R`
-	# alias and warning if it is supplied (#41). The body below keeps using
-	# `R` internally via the `R <- G` line, so it is otherwise unchanged.
+	# alias and warning if it is supplied (#41). The body below uses `G`
+	# directly.
 	G <- .resolve_cohort_count_arg(G, R, "genCoefs")
-	R <- G
 
 	# Check that T is a numeric scalar and at least 3.
 	if (!is.numeric(T) || length(T) != 1 || T < 3) {
 		stop("T must be a numeric value greater than or equal to 3")
 	}
 
-	# Check that R is a numeric scalar and at least 2.
-	if (!is.numeric(R) || length(R) != 1 || R < 2) {
+	# Check that G is a numeric scalar and at least 2.
+	if (!is.numeric(G) || length(G) != 1 || G < 2) {
 		stop(
-			"R must be a numeric value greater than or equal to 2 (currently there is only support for data sets with staggered adoptions, so at least two treated cohorts)"
+			"G must be a numeric value greater than or equal to 2 (currently there is only support for data sets with staggered adoptions, so at least two treated cohorts)"
 		)
 	}
 
-	# Check that R does not exceed T - 1.
-	if (R > T - 1) {
-		stop("R must be less than or equal to T - 1")
+	# Check that G does not exceed T - 1.
+	if (G > T - 1) {
+		stop("G must be less than or equal to T - 1")
 	}
 
 	# Check that d is a numeric scalar and is non-negative.
@@ -333,12 +332,12 @@ genCoefs <- function(
 		allow_null = TRUE
 	)
 
-	stopifnot(R >= 2)
+	stopifnot(G >= 2)
 	stopifnot(T >= 3)
-	stopifnot(R <= T - 1)
+	stopifnot(G <= T - 1)
 
 	core_obj <- genCoefsCore(
-		G = R,
+		G = G,
 		T = T,
 		d = d,
 		density = density,
@@ -359,7 +358,7 @@ genCoefs <- function(
 	} else {
 		assignment_seed <- if (is.null(seed)) NULL else seed + 1L
 		assignment_coefs <- .gen_assignment_coefs(
-			R = R,
+			G = G,
 			d = d,
 			type = assignment_type,
 			strength = assignment_strength,
@@ -373,8 +372,8 @@ genCoefs <- function(
 	obj <- list(
 		beta = core_obj$beta,
 		theta = core_obj$theta,
-		G = R,
-		R = R,
+		G = G,
+		R = G,
 		T = T,
 		d = d,
 		seed = seed,
@@ -490,7 +489,7 @@ getTes <- function(coefs_obj) {
 
 	# Unpack components from the coefs object
 	beta <- coefs_obj$beta
-	R <- coefs_obj$R
+	G <- coefs_obj$G
 	T <- coefs_obj$T
 	d <- coefs_obj$d
 
@@ -503,17 +502,17 @@ getTes <- function(coefs_obj) {
 		coefs_obj$assignment_type
 	}
 
-	num_treats <- getNumTreats(R = R, T = T)
+	num_treats <- getNumTreats(G = G, T = T)
 
-	p <- getP(R = R, T = T, d = d, num_treats = num_treats)
+	p <- getP(G = G, T = T, d = d, num_treats = num_treats)
 
 	stopifnot(length(beta) == p)
 
-	first_inds <- getFirstInds(R = R, T = T)
-	treat_inds <- getTreatInds(R = R, T = T, d = d, num_treats = num_treats)
+	first_inds <- getFirstInds(G = G, T = T)
+	treat_inds <- getTreatInds(G = G, T = T, d = d, num_treats = num_treats)
 
 	actual_cohort_tes <- getActualCohortTes(
-		R = R,
+		G = G,
 		first_inds = first_inds,
 		treat_inds = treat_inds,
 		coefs = beta,
@@ -522,7 +521,7 @@ getTes <- function(coefs_obj) {
 
 	if (assignment_type == "marginal") {
 		att_true <- as.numeric(mean(actual_cohort_tes))
-		cohort_weights <- rep(1 / R, R)
+		cohort_weights <- rep(1 / G, G)
 	} else {
 		# Compute E[pi_g(X)] under the propensity-score DGP via MC
 		# integration. Reserved-offset seed convention: +2L from main seed.
@@ -542,9 +541,9 @@ getTes <- function(coefs_obj) {
 			M = 10000L,
 			seed = mc_seed
 		)
-		# expected_probs is length (R + 1); index 1 is never-treated,
+		# expected_probs is length (G + 1); index 1 is never-treated,
 		# indices 2..R+1 are treated cohorts.
-		treated_probs <- expected_probs[2:(R + 1)]
+		treated_probs <- expected_probs[2:(G + 1)]
 		cohort_weights <- as.numeric(treated_probs / sum(treated_probs))
 		att_true <- as.numeric(sum(cohort_weights * actual_cohort_tes))
 	}
@@ -554,13 +553,13 @@ getTes <- function(coefs_obj) {
 	# encoded in the panel's `time` integer values 1..T). Stored so
 	# downstream tooling (e.g., `tidy.FETWFE_tes`) can label rows with the
 	# same scheme that `tidy.<estimator>` uses on a fitted panel.
-	cohort_times <- as.integer(seq_len(R) + 1L)
+	cohort_times <- as.integer(seq_len(G) + 1L)
 
 	out <- list(
 		att_true = att_true,
 		actual_cohort_tes = actual_cohort_tes,
-		G = R,
-		R = R,
+		G = G,
+		R = G,
 		T = T,
 		d = d,
 		seed = coefs_obj$seed,
@@ -666,10 +665,9 @@ genCoefsCore <- function(
 	R = NULL
 ) {
 	# Resolve the canonical cohort count (G), mapping the deprecated `R`
-	# alias and warning if it is supplied (#41). The body below keeps using
-	# `R` internally via the `R <- G` line, so it is otherwise unchanged.
+	# alias and warning if it is supplied (#41). The body below uses `G`
+	# directly.
 	G <- .resolve_cohort_count_arg(G, R, "genCoefsCore")
-	R <- G
 
 	if (!is.null(seed)) {
 		set.seed(seed)
@@ -680,16 +678,16 @@ genCoefsCore <- function(
 		stop("T must be a numeric value greater than or equal to 3")
 	}
 
-	# Check that R is a numeric scalar and at least 2.
-	if (!is.numeric(R) || length(R) != 1 || R < 2) {
+	# Check that G is a numeric scalar and at least 2.
+	if (!is.numeric(G) || length(G) != 1 || G < 2) {
 		stop(
-			"R must be a numeric value greater than or equal to 2 (currently there is only support for data sets with staggered adoptions, so at least two treated cohorts)"
+			"G must be a numeric value greater than or equal to 2 (currently there is only support for data sets with staggered adoptions, so at least two treated cohorts)"
 		)
 	}
 
-	# Check that R does not exceed T - 1.
-	if (R > T - 1) {
-		stop("R must be less than or equal to T - 1")
+	# Check that G does not exceed T - 1.
+	if (G > T - 1) {
+		stop("G must be less than or equal to T - 1")
 	}
 
 	# Check that d is a numeric scalar and is non-negative.
@@ -712,13 +710,13 @@ genCoefsCore <- function(
 		stop("eff_size must be a numeric value")
 	}
 
-	stopifnot(R >= 2)
+	stopifnot(G >= 2)
 	stopifnot(T >= 3)
-	stopifnot(R <= T - 1)
+	stopifnot(G <= T - 1)
 
-	num_treats <- getNumTreats(R = R, T = T)
+	num_treats <- getNumTreats(G = G, T = T)
 
-	p <- getP(R = R, T = T, d = d, num_treats = num_treats)
+	p <- getP(G = G, T = T, d = d, num_treats = num_treats)
 
 	theta <- rep(0, p)
 
@@ -741,42 +739,42 @@ genCoefsCore <- function(
 	# theta = D %*% beta, beta = solve(D) %*% theta.
 	beta <- rep(as.numeric(NA), p)
 
-	beta[1:R] <- genBackwardsInvFusionTransformMat(R) %*% theta[1:R]
+	beta[1:G] <- genBackwardsInvFusionTransformMat(G) %*% theta[1:G]
 
-	stopifnot(all(is.na(beta[(R + 1):(R + T - 1)])))
-	beta[(R + 1):(R + T - 1)] <- genBackwardsInvFusionTransformMat(T - 1) %*%
-		theta[(R + 1):(R + T - 1)]
+	stopifnot(all(is.na(beta[(G + 1):(G + T - 1)])))
+	beta[(G + 1):(G + T - 1)] <- genBackwardsInvFusionTransformMat(T - 1) %*%
+		theta[(G + 1):(G + T - 1)]
 
 	if (d > 0) {
 		# Coefficients corresponding to X don't need to be transformed
-		stopifnot(all(is.na(beta[(R + T - 1 + 1):(R + T - 1 + d)])))
-		beta[(R + T - 1 + 1):(R + T - 1 + d)] <- theta[
-			(R + T - 1 + 1):(R + T - 1 + d)
+		stopifnot(all(is.na(beta[(G + T - 1 + 1):(G + T - 1 + d)])))
+		beta[(G + T - 1 + 1):(G + T - 1 + d)] <- theta[
+			(G + T - 1 + 1):(G + T - 1 + d)
 		]
 
 		# Cohort-X interactions (one cohort at a time, with all interactions for
-		# X. So R blocks of size d.)
+		# X. So G blocks of size d.)
 
 		for (j in 1:d) {
-			first_ind_j <- R + T - 1 + d + j
-			last_ind_j <- R + T - 1 + d + (R - 1) * d + j
+			first_ind_j <- G + T - 1 + d + j
+			last_ind_j <- G + T - 1 + d + (G - 1) * d + j
 
 			inds_j <- seq(first_ind_j, last_ind_j, by = d)
 
-			stopifnot(length(inds_j) == R)
+			stopifnot(length(inds_j) == G)
 			stopifnot(all(is.na(beta[inds_j])))
 
-			beta[inds_j] <- genBackwardsInvFusionTransformMat(R) %*%
+			beta[inds_j] <- genBackwardsInvFusionTransformMat(G) %*%
 				theta[inds_j]
 		}
 
-		stopifnot(all(!is.na(beta[1:(R + T - 1 + d + R * d)])))
-		stopifnot(all(is.na(beta[(R + T - 1 + d + R * d + 1):p])))
+		stopifnot(all(!is.na(beta[1:(G + T - 1 + d + G * d)])))
+		stopifnot(all(is.na(beta[(G + T - 1 + d + G * d + 1):p])))
 
 		# Time-X interactions
 		for (j in 1:d) {
-			first_ind_j <- R + T - 1 + d + R * d + j
-			last_ind_j <- R + T - 1 + d + R * d + (T - 2) * d + j
+			first_ind_j <- G + T - 1 + d + G * d + j
+			last_ind_j <- G + T - 1 + d + G * d + (T - 2) * d + j
 
 			inds_j <- seq(first_ind_j, last_ind_j, by = d)
 			stopifnot(length(inds_j) == T - 1)
@@ -786,42 +784,42 @@ genCoefsCore <- function(
 				theta[inds_j]
 		}
 
-		stopifnot(all(!is.na(beta[1:(R + T - 1 + d + R * d + (T - 1) * d)])))
-		stopifnot(all(is.na(beta[(R + T - 1 + d + R * d + (T - 1) * d + 1):p])))
+		stopifnot(all(!is.na(beta[1:(G + T - 1 + d + G * d + (T - 1) * d)])))
+		stopifnot(all(is.na(beta[(G + T - 1 + d + G * d + (T - 1) * d + 1):p])))
 	}
 
 	# Base treatment effects: need to identify indices of first treatment
 	# effect for each cohort
-	first_inds <- getFirstInds(R = R, T = T)
+	first_inds <- getFirstInds(G = G, T = T)
 
-	treat_inds <- getTreatInds(R = R, T = T, d = d, num_treats = num_treats)
+	treat_inds <- getTreatInds(G = G, T = T, d = d, num_treats = num_treats)
 
 	stopifnot(all(is.na(beta[treat_inds])))
 
 	beta[treat_inds] <- genInvTwoWayFusionTransformMat(
 		num_treats,
 		first_inds,
-		R
+		G
 	) %*%
 		theta[treat_inds]
 
 	stopifnot(all(
-		!is.na(beta[1:(R + T - 1 + d + R * d + (T - 1) * d + num_treats)])
+		!is.na(beta[1:(G + T - 1 + d + G * d + (T - 1) * d + num_treats)])
 	))
 
 	if (d > 0) {
 		stopifnot(all(is.na(beta[
-			(R + T - 1 + d + R * d + (T - 1) * d + num_treats + 1):p
+			(G + T - 1 + d + G * d + (T - 1) * d + num_treats + 1):p
 		])))
 
 		# Treatment effect-X interactions
 		for (j in 1:d) {
-			first_ind_j <- R + T - 1 + d + R * d + (T - 1) * d + num_treats + j
-			last_ind_j <- R +
+			first_ind_j <- G + T - 1 + d + G * d + (T - 1) * d + num_treats + j
+			last_ind_j <- G +
 				T -
 				1 +
 				d +
-				R * d +
+				G * d +
 				(T - 1) * d +
 				num_treats +
 				(num_treats - 1) * d +
@@ -835,7 +833,7 @@ genCoefsCore <- function(
 			beta[inds_j] <- genInvTwoWayFusionTransformMat(
 				num_treats,
 				first_inds,
-				R
+				G
 			) %*%
 				theta[inds_j]
 		}
@@ -848,10 +846,10 @@ genCoefsCore <- function(
 
 	testGenRandomDataInputs(
 		beta = beta,
-		R = R,
+		G = G,
 		T = T,
 		d = d,
-		N = R + 1,
+		N = G + 1,
 		sig_eps_sq = 1,
 		sig_eps_c_sq = 1
 	)
@@ -866,7 +864,7 @@ genCoefsCore <- function(
 #' this function calculates the true average treatment effect for each cohort by
 #' averaging the relevant treatment effect coefficients.
 #'
-#' @param R Integer. Number of treated cohorts.
+#' @param G Integer. Number of treated cohorts.
 #' @param first_inds Integer vector. `first_inds[g]` is the index (within the
 #'   block of treatment effect coefficients) of the first treatment effect for cohort `g`.
 #' @param treat_inds Integer vector. Indices in the full `coefs` vector that
@@ -874,15 +872,15 @@ genCoefsCore <- function(
 #' @param coefs Numeric vector. The full true coefficient vector \eqn{\beta}.
 #' @param num_treats Integer. Total number of treatment effect parameters.
 #'
-#' @return A numeric vector of length R, where the g-th element is the true
+#' @return A numeric vector of length G, where the g-th element is the true
 #'   average treatment effect for cohort g.
 #' @keywords internal
 #' @noRd
-getActualCohortTes <- function(R, first_inds, treat_inds, coefs, num_treats) {
-	actual_cohort_tes <- rep(as.numeric(NA), R)
+getActualCohortTes <- function(G, first_inds, treat_inds, coefs, num_treats) {
+	actual_cohort_tes <- rep(as.numeric(NA), G)
 
-	for (g in 1:R) {
-		inds_g <- .cohort_block_inds(g, R, first_inds, num_treats)
+	for (g in 1:G) {
+		inds_g <- .cohort_block_inds(g, G, first_inds, num_treats)
 		actual_cohort_tes[g] <- mean(coefs[treat_inds][inds_g])
 	}
 

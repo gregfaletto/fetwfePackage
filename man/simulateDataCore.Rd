@@ -112,7 +112,7 @@ removed in a future release.}
 \description{
 Generates a random panel data set for simulation studies of the fused extended two-way fixed
 effects (FETWFE) estimator. The function creates a balanced panel with \eqn{N} units over \eqn{T}
-time periods, assigns treatment status across \eqn{R} treated cohorts (with equal marginal
+time periods, assigns treatment status across \eqn{G} treated cohorts (with equal marginal
 probabilities for treatment and non-treatment), and constructs a design matrix along with the
 corresponding outcome. When \code{gen_ints = TRUE} the full design matrix is returned (including
 interactions between covariates and fixed effects and treatment indicators). When
