@@ -641,8 +641,8 @@ simultaneousCIs.twfeCovs <- function(
 #'   unchanged).
 #' @param x A fully-classed `fetwfe`/`etwfe`/`betwfe`/`twfeCovs` object.
 #' @param alpha Numeric; the alpha the fit's `catt_df` was built at (`x$alpha`
-#'   for fetwfe/etwfe/betwfe, `0.05` for twfeCovs, which has no `alpha` slot).
-#'   Passed explicitly so all four callers agree.
+#'   for all four classes; twfeCovs gained an `alpha` slot in #204). Passed
+#'   explicitly so all four callers agree.
 #' @param has_valid_ses Logical; `res$calc_ses` from the core (read off the
 #'   classed object by the caller).
 #' @return A list with elements `ci_low` and `ci_high` (numeric vectors of
@@ -701,7 +701,7 @@ simultaneousCIs.twfeCovs <- function(
 #'   band degrades to `NULL`) it is a no-op pass-through. Hoisted out of the
 #'   four entry-point tails to avoid a 4-site copy (WORKFLOW_LESSONS §14).
 #' @param out A fully-classed `fetwfe`/`etwfe`/`betwfe`/`twfeCovs` object.
-#' @param alpha Numeric; the alpha the fit used (`0.05` for twfeCovs).
+#' @param alpha Numeric; the alpha the fit used (read from the fit's `alpha` slot).
 #' @return `out` with `catt_df` bounds overwritten when simultaneous, else
 #'   `out` unchanged.
 #' @keywords internal

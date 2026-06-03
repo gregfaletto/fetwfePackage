@@ -216,10 +216,9 @@ test_that("cross-class slot inventory matches the documented divergence table", 
 	# Each entry's `classes` is the exact set the slot should appear in;
 	# `rationale` documents why.
 	DIVERGENT_SLOTS <- list(
-		"alpha" = list(
-			classes = c("fetwfe", "etwfe", "betwfe"),
-			rationale = "twfeCovs has no inference output (no SEs, p-values, or CIs), so no alpha."
-		),
+		# `alpha` was divergent until #204; twfeCovs now carries it too (it
+		# threads the user's alpha into the default simultaneous catt_df band),
+		# so `alpha` is a universal slot (no DIVERGENT_SLOTS entry).
 		"att_selected" = list(
 			classes = c("fetwfe", "betwfe"),
 			rationale = "Only the selection-based (bridge-penalty) estimators perform selection."

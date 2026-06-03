@@ -1,5 +1,14 @@
 # NEWS
 
+## Version 1.17.1
+
+### Bug fixes
+
+- Fixed: `twfeCovs()` now honors its `alpha` argument when building the default
+  simultaneous confidence band (previously the band was always computed at
+  `alpha = 0.05` regardless of the requested level). The class gains an `alpha`
+  slot. (#204)
+
 ## Version 1.17.0 (2026-06-01)
 
 ### Deprecations

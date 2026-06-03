@@ -280,17 +280,13 @@
 }
 
 #' @title Resolve the alpha a fit's catt_df was built at
-#' @description `x$alpha` for fetwfe/etwfe/betwfe; `0.05` for twfeCovs
-#'   (which omits the `alpha` slot but builds its catt_df at the entry
-#'   point's `alpha = 0.05` default).
+#' @description Returns `x$alpha` for all four classes
+#'   (fetwfe/etwfe/betwfe/twfeCovs); every fit now carries an `alpha`
+#'   slot recording the level its catt_df band was built at (#204).
 #' @keywords internal
 #' @noRd
 .alpha_of <- function(x) {
-	if (inherits(x, "twfeCovs")) {
-		0.05
-	} else {
-		x$alpha
-	}
+	x$alpha
 }
 
 #' @title C10 -- Simultaneous band is never narrower than the pointwise band
@@ -421,9 +417,9 @@
 
 #' @title C8 -- Type sanity (universal across all 4 classes)
 #' @description
-#' `has_alpha` is TRUE for fetwfe/etwfe/betwfe (which all carry an `alpha`
-#' slot); FALSE for twfeCovs (which omits alpha because it has no inference
-#' output). `has_att_selected` is TRUE for fetwfe/betwfe.
+#' `has_alpha` is TRUE for all four classes (fetwfe/etwfe/betwfe/twfeCovs all
+#' carry an `alpha` slot; twfeCovs gained one in #204). `has_att_selected` is
+#' TRUE for fetwfe/betwfe.
 #' @keywords internal
 #' @noRd
 .check_type_sanity <- function(

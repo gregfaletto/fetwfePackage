@@ -214,6 +214,7 @@ argument was provided and used for asymptotically-exact ATT inference,
 \code{FALSE} otherwise.}
 \item{se_type}{Character scalar; the \code{se_type} argument the user passed
 (\code{"default"}, \code{"conservative"}, or \code{"cluster"}).}
+\item{alpha}{The alpha level used for confidence intervals.}
 \item{ci_type}{Character scalar; the \code{ci_type} argument the user passed (\code{"simultaneous"} or \code{"pointwise"}), controlling whether the reported \code{catt_df} confidence-interval bounds are simultaneous (family-wise) or pointwise.}
 \item{internal}{A list containing internal outputs that are typically
 not needed for interpretation, packaged here for parity with

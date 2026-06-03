@@ -734,3 +734,68 @@ test_that("ci_type x allow_no_never_treated = TRUE: finalizer handles the auto-t
 	# Validator accepts the simultaneous (degenerate) object.
 	expect_silent(fetwfe:::.validate_fetwfe(fit_s))
 })
+
+# ------------------------------------------------------------------------------
+# Test 19: REGRESSION (#204) -- twfeCovs() honors a non-default `alpha` when
+# building the default simultaneous catt_df band. Before the fix, twfeCovs had
+# no `alpha` slot and the entry-point hardcoded `.finalize_ci_type(out, alpha =
+# 0.05)`, so the simultaneous band was ALWAYS the 0.05 band regardless of the
+# requested level (and C10's `.alpha_of` returned the same wrong 0.05, so the
+# band-width validator was blind). This test FAILS on the old code: it asserts
+# (i) the new `alpha` slot is set; (ii) the catt_df bounds match
+# `simultaneousCIs(fit, "cohort", alpha = 0.10)` (not the 0.05 band); (iii) the
+# 0.10 band is strictly NARROWER than the 0.05 band on >= 2 finite-SE cohorts;
+# (iv) `.validate_twfeCovs(fit)` is silent. Both the *WithSimulatedData wrapper
+# and a DIRECT twfeCovs() call are exercised.
+# ------------------------------------------------------------------------------
+test_that("twfeCovs() honors a non-default alpha for the simultaneous band (#204)", {
+	sim <- make_ci_panel()
+
+	check_alpha_honored <- function(fit, label) {
+		# (i) the new alpha slot carries the requested level.
+		expect_equal(fit$alpha, 0.1, info = label)
+		# (ii) catt_df bounds are the alpha = 0.10 simultaneous band, NOT 0.05.
+		sci10 <- simultaneousCIs(fit, family = "cohort", alpha = 0.1)
+		expect_equal(
+			fit$catt_df$ci_low,
+			sci10$ci$simultaneous_ci_low,
+			info = label
+		)
+		expect_equal(
+			fit$catt_df$ci_high,
+			sci10$ci$simultaneous_ci_high,
+			info = label
+		)
+		# (iii) the 0.10 band is strictly narrower than the 0.05 band (the bug:
+		# it was wrongly EQUAL to the 0.05 band). Gated on >= 2 finite-SE cohorts.
+		cd <- fit$catt_df
+		fin <- is.finite(cd$se) & cd$se > 0
+		skip_if_not(sum(fin) >= 2L)
+		sci05 <- simultaneousCIs(fit, family = "cohort", alpha = 0.05)
+		w10 <- (cd$ci_high - cd$ci_low)[fin]
+		w05 <- (sci05$ci$simultaneous_ci_high -
+			sci05$ci$simultaneous_ci_low)[fin]
+		expect_true(all(w10 < w05), info = label)
+		# (iv) the constructed object validates silently with alpha = 0.10.
+		expect_silent(fetwfe:::.validate_twfeCovs(fit))
+	}
+
+	# Wrapper path.
+	fit_w <- twfeCovsWithSimulatedData(sim, alpha = 0.1)
+	check_alpha_honored(fit_w, "twfeCovsWithSimulatedData")
+
+	# Direct twfeCovs() path (mirrors Test 13's direct-call construction).
+	fit_d <- twfeCovs(
+		pdata = sim$pdata,
+		time_var = sim$time_var,
+		unit_var = sim$unit_var,
+		treatment = sim$treatment,
+		response = sim$response,
+		covs = sim$covs,
+		sig_eps_sq = sim$sig_eps_sq,
+		sig_eps_c_sq = sim$sig_eps_c_sq,
+		alpha = 0.1,
+		verbose = FALSE
+	)
+	check_alpha_honored(fit_d, "twfeCovs")
+})

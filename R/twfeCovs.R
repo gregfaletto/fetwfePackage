@@ -185,6 +185,7 @@
 #' `FALSE` otherwise.}
 #' \item{se_type}{Character scalar; the `se_type` argument the user passed
 #' (`"default"`, `"conservative"`, or `"cluster"`).}
+#' \item{alpha}{The alpha level used for confidence intervals.}
 #' \item{ci_type}{Character scalar; the `ci_type` argument the user passed (`"simultaneous"` or `"pointwise"`), controlling whether the reported `catt_df` confidence-interval bounds are simultaneous (family-wise) or pointwise.}
 #' \item{internal}{A list containing internal outputs that are typically
 #'   not needed for interpretation, packaged here for parity with
@@ -399,6 +400,7 @@ twfeCovs <- function(
 		p = res$p,
 		calc_ses = res$calc_ses,
 		se_type = se_type,
+		alpha = alpha,
 		indep_counts_used = indep_count_data_available,
 		y_mean = y_mean,
 		response_col_name = response,
@@ -427,11 +429,12 @@ twfeCovs <- function(
 	# on the list shape regardless of class, then class is assigned.
 	.validate_twfeCovs(out)
 	class(out) <- "twfeCovs"
-	# Apply ci_type to the cohort-family bounds (#197). twfeCovs has no
-	# `alpha` slot; its catt_df is built at alpha = 0.05 (the entry-point
-	# default), so the finalizer must be passed alpha = 0.05 explicitly.
-	# No-op unless ci_type == "simultaneous". Re-validates internally.
-	out <- .finalize_ci_type(out, alpha = 0.05)
+	# Apply ci_type to the cohort-family bounds (#197). twfeCovs now carries
+	# its own `alpha` slot (#204), so the finalizer builds the simultaneous
+	# band at the user's requested alpha (previously it was hardcoded to
+	# 0.05, ignoring `alpha`). No-op unless ci_type == "simultaneous".
+	# Re-validates internally.
+	out <- .finalize_ci_type(out, alpha = alpha)
 	return(out)
 }
 
@@ -555,6 +558,7 @@ twfeCovs <- function(
 #' `FALSE` otherwise.}
 #' \item{se_type}{Character scalar; the `se_type` argument the user passed
 #' (`"default"`, `"conservative"`, or `"cluster"`).}
+#' \item{alpha}{The alpha level used for confidence intervals.}
 #' \item{ci_type}{Character scalar; the `ci_type` argument the user passed (`"simultaneous"` or `"pointwise"`), controlling whether the reported `catt_df` confidence-interval bounds are simultaneous (family-wise) or pointwise.}
 #' \item{y_mean}{Numeric scalar; mean of the original (pre-centering) response.
 #' Stored so downstream methods (`augment()`, `predict()`) can return fitted
