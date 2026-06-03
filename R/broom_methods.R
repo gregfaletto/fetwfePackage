@@ -27,6 +27,11 @@ NULL
 #' is appended carrying the per-row selection status. The cohort-row CI
 #' columns pass through the fit's `catt_df` bounds (reflecting `ci_type`,
 #' #197); the overall-ATT row's CI is the scalar Wald interval at `conf.level`.
+#' The cohort-row `p.value` likewise follows `ci_type` (the single-step max-T
+#' multiplicity-adjusted p under `"simultaneous"`, the Wald p under
+#' `"pointwise"`; #200), while `statistic` stays the raw Wald z
+#' (`estimate / std.error`) --- so under the simultaneous default `p.value`
+#' is the adjusted dual of the band rather than `2 * pnorm(-|statistic|)`.
 #'
 #' @param x A fitted object of class `"fetwfe"`, `"etwfe"`, or `"betwfe"`.
 #' @param conf.int Logical; include `conf.low` / `conf.high` columns.

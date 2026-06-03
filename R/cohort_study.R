@@ -39,8 +39,12 @@
 #'       simultaneous (family-wise) by default, or pointwise `1 - alpha`
 #'       Wald bounds when the fit used `ci_type = "pointwise"` (`alpha` is
 #'       the value passed at fit time).}
-#'     \item{p_value}{Numeric; two-sided Wald p-value
-#'       (`2 * pnorm(-|estimate / se|)`), `NA` when `se` is `0` or `NA`.}
+#'     \item{p_value}{Numeric; follows the fit's `ci_type`. Under
+#'       `"pointwise"`, the two-sided Wald p-value
+#'       (`2 * pnorm(-|estimate / se|)`); under `"simultaneous"` (the
+#'       default), the single-step max-T multiplicity-adjusted (family-wise)
+#'       p-value matching the simultaneous band (#200). `NA` when `se` is `0`
+#'       or `NA`.}
 #'     \item{selected}{(`fetwfe()` / `betwfe()` only.) Logical; `TRUE` when
 #'       the bridge penalty left the cohort's ATT nonzero. Absent for
 #'       `etwfe()` and `twfeCovs()`, which do not perform selection.}

@@ -150,10 +150,13 @@
 #'   `1 - alpha`, matching the default presentation of
 #'   `did::aggte(cband = TRUE)`. `"pointwise"` reports per-effect Wald intervals
 #'   (each covers its own effect with probability `1 - alpha`, no joint
-#'   guarantee --- the behavior of versions <= 1.15.1). Only the interval
-#'   bounds change; the standard errors (`se`), per-cohort p-values
-#'   (`p_value`), and selection flags (`selected`) are identical under both
-#'   settings, and the overall-ATT confidence interval (a single scalar) is
+#'   guarantee --- the behavior of versions <= 1.15.1). Both the interval
+#'   bounds and the per-cohort p-values (`p_value`) follow `ci_type`: under
+#'   `"simultaneous"` the `p_value` is the single-step max-T multiplicity-
+#'   adjusted p-value matching the band, under `"pointwise"` the per-cohort
+#'   Wald p-value (#200). The standard errors (`se`) and selection flags
+#'   (`selected`) are identical under both settings, and the overall-ATT
+#'   confidence interval (a single scalar) is
 #'   unaffected. When standard errors are unavailable (`q >= 1`, or a
 #'   rank-deficient design) the bounds are `NA` under both settings. Default
 #'   is `"simultaneous"`.
@@ -660,10 +663,13 @@ betwfe <- function(
 #'   `1 - alpha`, matching the default presentation of
 #'   `did::aggte(cband = TRUE)`. `"pointwise"` reports per-effect Wald intervals
 #'   (each covers its own effect with probability `1 - alpha`, no joint
-#'   guarantee --- the behavior of versions <= 1.15.1). Only the interval
-#'   bounds change; the standard errors (`se`), per-cohort p-values
-#'   (`p_value`), and selection flags (`selected`) are identical under both
-#'   settings, and the overall-ATT confidence interval (a single scalar) is
+#'   guarantee --- the behavior of versions <= 1.15.1). Both the interval
+#'   bounds and the per-cohort p-values (`p_value`) follow `ci_type`: under
+#'   `"simultaneous"` the `p_value` is the single-step max-T multiplicity-
+#'   adjusted p-value matching the band, under `"pointwise"` the per-cohort
+#'   Wald p-value (#200). The standard errors (`se`) and selection flags
+#'   (`selected`) are identical under both settings, and the overall-ATT
+#'   confidence interval (a single scalar) is
 #'   unaffected. When standard errors are unavailable (`q >= 1`, or a
 #'   rank-deficient design) the bounds are `NA` under both settings. Default
 #'   is `"simultaneous"`.

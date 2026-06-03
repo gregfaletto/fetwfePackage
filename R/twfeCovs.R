@@ -108,8 +108,10 @@
 #'   matching the default presentation of `did::aggte(cband = TRUE)`.
 #'   `"pointwise"` reports per-effect Wald intervals (each covers its own
 #'   effect with probability `1 - alpha`, no joint guarantee --- the behavior
-#'   of versions <= 1.15.1). Only the interval bounds change; the standard
-#'   errors (`se`) and per-cohort p-values (`p_value`) are identical under both
+#'   of versions <= 1.15.1). Both the interval bounds and the
+#'   per-cohort p-values (`p_value`) follow `ci_type` (single-step max-T
+#'   multiplicity-adjusted under `"simultaneous"`, per-cohort Wald under
+#'   `"pointwise"`; #200); the standard errors (`se`) are identical under both
 #'   settings. `twfeCovs` estimates a single pooled effect per cohort, so only
 #'   the cohort family is affected (it has no event-study surface). When
 #'   standard errors are unavailable (e.g., a rank-deficient design) the bounds
@@ -486,8 +488,10 @@ twfeCovs <- function(
 #'   matching the default presentation of `did::aggte(cband = TRUE)`.
 #'   `"pointwise"` reports per-effect Wald intervals (each covers its own
 #'   effect with probability `1 - alpha`, no joint guarantee --- the behavior
-#'   of versions <= 1.15.1). Only the interval bounds change; the standard
-#'   errors (`se`) and per-cohort p-values (`p_value`) are identical under both
+#'   of versions <= 1.15.1). Both the interval bounds and the
+#'   per-cohort p-values (`p_value`) follow `ci_type` (single-step max-T
+#'   multiplicity-adjusted under `"simultaneous"`, per-cohort Wald under
+#'   `"pointwise"`; #200); the standard errors (`se`) are identical under both
 #'   settings. `twfeCovs` estimates a single pooled effect per cohort, so only
 #'   the cohort family is affected (it has no event-study surface). When
 #'   standard errors are unavailable (e.g., a rank-deficient design) the bounds

@@ -210,10 +210,13 @@ family's band covers all of its effects jointly with probability
 \code{1 - alpha}, matching the default presentation of
 \code{did::aggte(cband = TRUE)}. \code{"pointwise"} reports per-effect Wald intervals
 (each covers its own effect with probability \code{1 - alpha}, no joint
-guarantee --- the behavior of versions <= 1.15.1). Only the interval
-bounds change; the standard errors (\code{se}), per-cohort p-values
-(\code{p_value}), and selection flags (\code{selected}) are identical under both
-settings, and the overall-ATT confidence interval (a single scalar) is
+guarantee --- the behavior of versions <= 1.15.1). Both the interval
+bounds and the per-cohort p-values (\code{p_value}) follow \code{ci_type}: under
+\code{"simultaneous"} the \code{p_value} is the single-step max-T multiplicity-
+adjusted p-value matching the band, under \code{"pointwise"} the per-cohort
+Wald p-value (#200). The standard errors (\code{se}) and selection flags
+(\code{selected}) are identical under both settings, and the overall-ATT
+confidence interval (a single scalar) is
 unaffected. When standard errors are unavailable (\code{q >= 1}, or a
 rank-deficient design) the bounds are \code{NA} under both settings. Default
 is \code{"simultaneous"}.}

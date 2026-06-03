@@ -38,6 +38,14 @@ An object of S3 class \code{"simultaneous_cis"}: a list with
 \item{ci}{A data frame with columns \code{effect}, \code{estimate},
 \code{simultaneous_ci_low}, \code{simultaneous_ci_high}, \code{pointwise_ci_low},
 \code{pointwise_ci_high} (one row per effect in the family).}
+\item{adjusted_p_values}{Numeric vector of length \code{K}: the single-step
+max-T multiplicity-adjusted (family-wise) p-value for each effect, the
+exact dual of the simultaneous band (a coefficient lies outside the
+\code{(1 - alpha)} band iff its adjusted p-value is \verb{< alpha}). Computed via
+\code{mvtnorm::pmvnorm()} over the same correlation matrix the band uses
+(or, under \code{se_type = "conservative"}, the Bonferroni adjustment
+\code{min(1, K * pointwise_p)}). \code{NA} for degenerate (zero-variance)
+effects. (#200)}
 \item{critical_value}{The simultaneous critical value \verb{c_\{1 - alpha\}}
 (or, when the fit used \code{se_type = "conservative"}, the Bonferroni critical value
 \verb{qnorm(1 - alpha/(2K))} -- see Details).}
