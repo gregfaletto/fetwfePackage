@@ -1243,6 +1243,47 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 	)
 }
 
+# .with_preserved_rng
+#' @title Evaluate RNG-consuming code under a fixed seed, preserving caller state
+#' @description Runs `expr` after `set.seed(seed)` so the result is deterministic
+#'   in its inputs, while saving and restoring the caller's `.Random.seed` (via
+#'   `on.exit()`) so the call does not perturb the caller's random stream. Both
+#'   the "caller had a seed at entry" and "caller had none" cases are handled.
+#'   Consolidates the idiom shared by `getBetaCV()` (#181, the CV-fold
+#'   assignment) and `.simultaneous_cis_impl()` (#192 / #200, the `mvtnorm`
+#'   Genz-Bretz quasi-Monte-Carlo integration). (#195)
+#' @param seed Integer seed passed to `set.seed()` immediately before `expr`.
+#' @param expr Expression to evaluate (lazily -- it runs after the caller's seed
+#'   is saved and `set.seed(seed)` is applied). Its value is returned.
+#' @return The value of `expr`.
+#' @keywords internal
+#' @noRd
+.with_preserved_rng <- function(seed, expr) {
+	old_rng <- if (
+		exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+	) {
+		.GlobalEnv$.Random.seed
+	} else {
+		NULL
+	}
+	on.exit(
+		{
+			if (is.null(old_rng)) {
+				if (
+					exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+				) {
+					rm(".Random.seed", envir = .GlobalEnv)
+				}
+			} else {
+				assign(".Random.seed", old_rng, envir = .GlobalEnv)
+			}
+		},
+		add = TRUE
+	)
+	set.seed(seed)
+	force(expr)
+}
+
 #' @title Auto-truncate a panel that has no never-treated units
 #'
 #' @description
