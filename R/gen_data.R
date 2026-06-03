@@ -173,7 +173,7 @@ simulateData <- function(
 		"N",
 		"T",
 		"G",
-		"G",
+		"R",
 		"d",
 		"sig_eps_sq",
 		"sig_eps_c_sq"

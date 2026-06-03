@@ -133,7 +133,7 @@ processFactors <- function(pdata, covs) {
 #'     (including "Never_treated"), indicating the number of units in each cohort
 #'     within the provided `data`.}
 #'   \item{num_treats}{The total number of unique treatment effect parameters
-#'     (e.g., \eqn{\tau_{rt}} from the paper).}
+#'     (e.g., \eqn{\tau_{gt}} from the paper).}
 #'   \item{first_inds}{A numeric vector indicating the starting column index within
 #'     the block of treatment effect parameters in `X_ints` (and subsequently in
 #'     `beta_hat`) for each respective cohort's first treatment period.}

@@ -37,7 +37,7 @@
 #'   \item Cohort fixed-effects (length \eqn{G})
 #'   \item Time fixed-effects (length \eqn{T-1})
 #'   \item Main covariates (length \eqn{d})
-#'   \item Covariate \(\times\) cohort interactions (length \eqn{dR})
+#'   \item Covariate \(\times\) cohort interactions (length \eqn{dG})
 #'   \item Covariate \(\times\) time interactions (length \eqn{d(T-1)})
 #'   \item Base treatment effects (length `num_treats`)
 #'   \item Covariate \(\times\) treatment interactions (length `d*num_treats`)
@@ -246,7 +246,7 @@ transformXintImproved <- function(
 #'   \item Cohort fixed-effect coefficients (length \eqn{G})
 #'   \item Time fixed-effects (length \eqn{T-1})
 #'   \item Main covariates (length \eqn{d})
-#'   \item Covariate x cohort interactions (\eqn{dR})
+#'   \item Covariate x cohort interactions (\eqn{dG})
 #'   \item Covariate x time interactions \eqn{d(T-1)}
 #'   \item Base treatment effects (\eqn{\mathfrak W =} `num_treats`)
 #'   \item Covariate x treatment interactions (\eqn{d\mathfrak W})
@@ -742,7 +742,7 @@ genInvTwoWayFusionTransformMat <- function(n_vars, first_inds, G) {
 #' \itemize{
 #'   \item Cohort FEs: \(G\times G\)
 #'   \item Time-period FEs: \((T-1)\times(T-1)\)
-#'   \item Identitites: \(d\), \(dR\), \(d(T-1)\)
+#'   \item Identitites: \(d\), \(dG\), \(d(T-1)\)
 #'   \item Treatment blocks: \( \mathfrak W \times \mathfrak W\) with
 #'         \(\mathfrak W = \texttt{num_treats}\)
 #' }
@@ -761,7 +761,7 @@ genInvTwoWayFusionTransformMat <- function(n_vars, first_inds, G) {
 #'
 #' @return A dense base-R matrix of size
 #'   \eqn{p \times p} with
-#'   \eqn{p = G + (T-1) + d + dR + d(T-1) + \mathfrak W + d\mathfrak W}.
+#'   \eqn{p = G + (T-1) + d + dG + d(T-1) + \mathfrak W + d\mathfrak W}.
 #'
 #' @examples
 #' G  <- 3; T <- 6; d <- 2
