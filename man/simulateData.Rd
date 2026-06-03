@@ -84,6 +84,13 @@ along with additional simulation parameters, to the internal function \code{simu
 It validates that all necessary components are returned and assigns the S3 class
 \code{"FETWFE_simulated"} to the output.
 
+The simulated panel is fully determined by \code{coefs_obj$seed} (the seed
+passed to \code{genCoefs()}): \code{simulateData()} re-seeds from it on every
+call, so re-calling \code{simulateData()} on the same \code{coefs_obj}
+returns the identical panel. To vary the panel across Monte Carlo
+replications, vary the \code{seed} passed to \code{genCoefs()} (re-calling
+\code{simulateData()} alone does not).
+
 The argument \code{distribution} controls the generation of covariates. For
 \code{"gaussian"}, covariates are drawn from \code{rnorm}; for \code{"uniform"},
 they are drawn from \code{runif} on the interval \eqn{[-\sqrt{3}, \sqrt{3}]} (which ensures that

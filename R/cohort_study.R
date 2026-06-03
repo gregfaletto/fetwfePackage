@@ -34,9 +34,11 @@
 #'     \item{se}{Numeric; standard error for the per-cohort ATT (`NA` when
 #'       the Gram matrix is singular or, for `fetwfe()` / `betwfe()`, the
 #'       bridge penalty zeroed out the cohort).}
-#'     \item{ci_low, ci_high}{Numeric; lower and upper bounds of the
-#'       `1 - alpha` Wald CI (where `alpha` is the value passed at fit
-#'       time).}
+#'     \item{ci_low, ci_high}{Numeric; the stored lower and upper
+#'       confidence-interval bounds, reflecting the fit's `ci_type` --
+#'       simultaneous (family-wise) by default, or pointwise `1 - alpha`
+#'       Wald bounds when the fit used `ci_type = "pointwise"` (`alpha` is
+#'       the value passed at fit time).}
 #'     \item{p_value}{Numeric; two-sided Wald p-value
 #'       (`2 * pnorm(-|estimate / se|)`), `NA` when `se` is `0` or `NA`.}
 #'     \item{selected}{(`fetwfe()` / `betwfe()` only.) Logical; `TRUE` when

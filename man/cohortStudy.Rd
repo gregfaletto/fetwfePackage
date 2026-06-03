@@ -21,9 +21,11 @@ the cohort first received treatment).}
 \item{se}{Numeric; standard error for the per-cohort ATT (\code{NA} when
 the Gram matrix is singular or, for \code{fetwfe()} / \code{betwfe()}, the
 bridge penalty zeroed out the cohort).}
-\item{ci_low, ci_high}{Numeric; lower and upper bounds of the
-\code{1 - alpha} Wald CI (where \code{alpha} is the value passed at fit
-time).}
+\item{ci_low, ci_high}{Numeric; the stored lower and upper
+confidence-interval bounds, reflecting the fit's \code{ci_type} --
+simultaneous (family-wise) by default, or pointwise \code{1 - alpha}
+Wald bounds when the fit used \code{ci_type = "pointwise"} (\code{alpha} is
+the value passed at fit time).}
 \item{p_value}{Numeric; two-sided Wald p-value
 (\verb{2 * pnorm(-|estimate / se|)}), \code{NA} when \code{se} is \code{0} or \code{NA}.}
 \item{selected}{(\code{fetwfe()} / \code{betwfe()} only.) Logical; \code{TRUE} when
