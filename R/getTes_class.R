@@ -3,6 +3,30 @@
 #' @name FETWFE_tes-class
 NULL
 
+# Render the "Cohort assignment DGP" section shared by print.FETWFE_tes and
+# print.summary.FETWFE_tes (#189). Gated on a non-marginal assignment_type, so
+# marginal objects -- and pre-1.14.0 objects that predate the slot -- render
+# nothing and their output is unchanged.
+#' @keywords internal
+#' @noRd
+.cat_tes_assignment_dgp <- function(x) {
+	if (is.null(x$assignment_type) || x$assignment_type == "marginal") {
+		return(invisible(NULL))
+	}
+	cat("Cohort assignment DGP:\n")
+	cat(sprintf("  %-16s: %s\n", "Type", x$assignment_type))
+	if (!is.null(x$assignment_strength)) {
+		cat(sprintf("  %-16s: %.4f\n", "Strength", x$assignment_strength))
+	}
+	cat(sprintf(
+		"  %-16s: %s\n",
+		"Cohort weights",
+		paste(sprintf("%.4f", x$cohort_weights), collapse = ", ")
+	))
+	cat("\n")
+	invisible(NULL)
+}
+
 #' @export
 print.FETWFE_tes <- function(x, ...) {
 	cat(
@@ -16,6 +40,7 @@ print.FETWFE_tes <- function(x, ...) {
 		cat(sprintf("  Cohort %d: %.4f\n", g, x$actual_cohort_tes[g]))
 	}
 	cat("\n")
+	.cat_tes_assignment_dgp(x)
 	cat("Generated from:\n")
 	cat(sprintf("  Cohorts (G)      : %d\n", x$G))
 	cat(sprintf("  Time periods (T) : %d\n", x$T))
@@ -41,6 +66,9 @@ summary.FETWFE_tes <- function(object, ...) {
 		T = object$T,
 		d = object$d,
 		seed = object$seed,
+		cohort_weights = object$cohort_weights,
+		assignment_type = object$assignment_type,
+		assignment_strength = object$assignment_strength,
 		cohort_te_stats = c(
 			min = min(tes),
 			max = max(tes),
@@ -77,6 +105,7 @@ print.summary.FETWFE_tes <- function(x, ...) {
 		}
 	))
 	cat("\n")
+	.cat_tes_assignment_dgp(x)
 	cat("Generated from:\n")
 	cat(sprintf("  Cohorts (G)      : %d\n", x$G))
 	cat(sprintf("  Time periods (T) : %d\n", x$T))
