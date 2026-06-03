@@ -1350,7 +1350,6 @@ betwfe_core <- function(
 		gram_inv = gram_inv,
 		tes = tes[sel_treat_inds_shifted], # Untransformed treatment effect estimates beta_hat[treat_inds]
 		cohort_probs_overall = cohort_probs_overall, # In-sample pi_r (unconditional on treated)
-		first_inds = first_inds,
 		calc_ses = calc_ses,
 		indep_probs = FALSE,
 		se_type = se_type,
@@ -1383,7 +1382,6 @@ betwfe_core <- function(
 			gram_inv = gram_inv,
 			tes = tes[sel_treat_inds_shifted],
 			cohort_probs_overall = indep_cohort_probs_overall, # indep pi_r (unconditional)
-			first_inds = first_inds,
 			calc_ses = calc_ses,
 			indep_probs = TRUE,
 			se_type = se_type,

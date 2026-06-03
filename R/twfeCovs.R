@@ -959,7 +959,6 @@ twfeCovs_core <- function(
 		gram_inv = gram_inv,
 		tes = tes, # Untransformed treatment effect estimates beta_hat[treat_inds]
 		cohort_probs_overall = cohort_probs_overall, # In-sample pi_r (unconditional on treated)
-		first_inds = first_inds,
 		calc_ses = calc_ses,
 		indep_probs = FALSE,
 		se_type = se_type,
@@ -986,7 +985,6 @@ twfeCovs_core <- function(
 			gram_inv = gram_inv,
 			tes = tes,
 			cohort_probs_overall = indep_cohort_probs_overall, # indep pi_r (unconditional)
-			first_inds = first_inds,
 			calc_ses = calc_ses,
 			indep_probs = TRUE,
 			se_type = se_type,
