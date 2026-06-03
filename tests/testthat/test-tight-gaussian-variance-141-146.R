@@ -542,3 +542,53 @@ test_that("tight Gaussian default delivers near-nominal 95% CI coverage on simul
 		)
 	)
 })
+
+# ------------------------------------------------------------------------------
+# (#185 G2): the REML variance-component estimator path under the tight-Gaussian
+# default. Every other test in this file SUPPLIES sig_eps_sq / sig_eps_c_sq,
+# bypassing estOmegaSqrtInv(); here we pass NA so the components are estimated
+# by REML (lme4) and the default tight formula consumes the estimates.
+# ------------------------------------------------------------------------------
+test_that("tight-Gaussian default works when variance components are REML-estimated", {
+	skip_if_not_installed("lme4")
+	set.seed(141)
+	sim_coefs <- genCoefs(
+		G = 3,
+		T = 6,
+		d = 2,
+		density = 0.5,
+		eff_size = 2,
+		seed = 141
+	)
+	sim <- simulateData(sim_coefs, N = 80, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+
+	res <- suppressWarnings(fetwfe(
+		pdata = sim$pdata,
+		time_var = sim$time_var,
+		unit_var = sim$unit_var,
+		treatment = sim$treatment,
+		covs = sim$covs,
+		response = sim$response,
+		sig_eps_sq = NA, # force REML estimation via estOmegaSqrtInv()
+		sig_eps_c_sq = NA,
+		q = 0.5,
+		se_type = "default"
+	))
+
+	expect_identical(res$se_type, "default")
+	# REML produced finite variance-component estimates (the path under test);
+	# the row-level noise is strictly positive, the unit-level may hit 0.
+	expect_true(is.finite(res$sig_eps_sq))
+	expect_true(is.finite(res$sig_eps_c_sq))
+	expect_gt(res$sig_eps_sq, 0)
+	# The tight formula consumed them: att_se = sqrt(V1 + V2), finite and > 0.
+	vc <- res$internal$variance_components
+	expect_true(is.finite(vc$att_var_1) && is.finite(vc$att_var_2))
+	expect_true(is.finite(res$att_se))
+	expect_gt(res$att_se, 0)
+	expect_equal(
+		res$att_se,
+		sqrt(vc$att_var_1 + vc$att_var_2),
+		tolerance = 1e-10
+	)
+})
