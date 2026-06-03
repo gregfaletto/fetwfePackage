@@ -582,7 +582,8 @@ getTes <- function(coefs_obj) {
 #' scaled by \code{eff_size}. See the simulation studies section of Faletto (2025) for details.
 #'
 #' @param G Integer. The number of treated cohorts (treatment is assumed to start in periods 2 to
-#' \code{G + 1}).
+#' \code{G + 1}). Defaults to \code{NULL}; supply either \code{G} or the
+#' deprecated alias \code{R} (described below).
 #' @param T Integer. The total number of time periods.
 #' @param d Integer. The number of time-invariant covariates. If \code{d > 0}, additional terms
 #' corresponding to covariate main effects and interactions are included in \code{beta}.

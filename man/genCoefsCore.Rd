@@ -8,7 +8,8 @@ genCoefsCore(G = NULL, T, d, density, eff_size, seed = NULL, R = NULL)
 }
 \arguments{
 \item{G}{Integer. The number of treated cohorts (treatment is assumed to start in periods 2 to
-\code{G + 1}).}
+\code{G + 1}). Defaults to \code{NULL}; supply either \code{G} or the
+deprecated alias \code{R} (described below).}
 
 \item{T}{Integer. The total number of time periods.}
 
