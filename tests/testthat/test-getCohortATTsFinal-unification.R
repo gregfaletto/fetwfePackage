@@ -111,40 +111,40 @@ library(fetwfe)
 	cohort_te_ses <- rep(as.numeric(NA), R)
 	psi_mat <- matrix(0, num_treats, R)
 
-	for (r in 1:R) {
-		inds_r <- fetwfe:::.cohort_block_inds(r, R, first_inds, num_treats)
-		first_ind_r <- inds_r[1]
-		last_ind_r <- inds_r[length(inds_r)]
+	for (g in 1:R) {
+		inds_g <- fetwfe:::.cohort_block_inds(g, R, first_inds, num_treats)
+		first_ind_g <- inds_g[1]
+		last_ind_g <- inds_g[length(inds_g)]
 
-		stopifnot(last_ind_r >= first_ind_r)
-		stopifnot(all(first_ind_r:last_ind_r %in% 1:num_treats))
+		stopifnot(last_ind_g >= first_ind_g)
+		stopifnot(all(first_ind_g:last_ind_g %in% 1:num_treats))
 
-		cohort_tes[r] <- mean(tes[first_ind_r:last_ind_r])
+		cohort_tes[g] <- mean(tes[first_ind_g:last_ind_g])
 
-		psi_r <- fetwfe:::getPsiRUnfused(
-			first_ind_r,
-			last_ind_r,
+		psi_g <- fetwfe:::getPsiRUnfused(
+			first_ind_g,
+			last_ind_g,
 			sel_treat_inds_shifted = 1:num_treats
 		)
-		stopifnot(length(psi_r) == num_treats)
-		psi_mat[, r] <- psi_r
+		stopifnot(length(psi_g) == num_treats)
+		psi_mat[, g] <- psi_g
 
 		if (calc_ses) {
 			if (identical(se_type, "cluster")) {
-				psi_r_full <- numeric(length(treat_block_mask))
-				psi_r_full[treat_block_mask] <- psi_r
-				cohort_te_ses[r] <- sqrt(max(
+				psi_g_full <- numeric(length(treat_block_mask))
+				psi_g_full[treat_block_mask] <- psi_g
+				cohort_te_ses[g] <- sqrt(max(
 					as.numeric(
-						t(psi_r_full) %*%
+						t(psi_g_full) %*%
 							sandwich_full %*%
-							psi_r_full
+							psi_g_full
 					),
 					0
 				))
 			} else {
-				cohort_te_ses[r] <- sqrt(
+				cohort_te_ses[g] <- sqrt(
 					sig_eps_sq *
-						as.numeric(t(psi_r) %*% gram_inv %*% psi_r) /
+						as.numeric(t(psi_g) %*% gram_inv %*% psi_g) /
 						(N * T)
 				)
 			}

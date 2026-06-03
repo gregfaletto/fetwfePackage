@@ -2,8 +2,8 @@ library(testthat)
 library(fetwfe)
 
 # Tests for the two micro-helpers added by issue #83 to R/utility.R:
-#   - .cohort_block_inds(r, R, first_inds, num_treats) replaces 6 inline
-#     `first_ind_r <- first_inds[r]; last_ind_r <- if (r < R) ... else
+#   - .cohort_block_inds(g, R, first_inds, num_treats) replaces 6 inline
+#     `first_ind_g <- first_inds[g]; last_ind_g <- if (g < R) ... else
 #     num_treats` patterns across core_funcs / fetwfe_core / sim_helpers
 #     / variance_machinery.
 #   - .multinomial_cov(probs) replaces 3 inline `Sigma_pi_hat <-
@@ -16,10 +16,10 @@ library(fetwfe)
 
 test_that(".cohort_block_inds returns the correct range for an interior cohort", {
 	# R = 4, first_inds = c(1, 4, 6, 9), num_treats = 10.
-	# r = 2 → block is first_inds[2]:first_inds[3]-1 = 4:5.
+	# g = 2 → block is first_inds[2]:first_inds[3]-1 = 4:5.
 	expect_equal(
 		fetwfe:::.cohort_block_inds(
-			r = 2L,
+			g = 2L,
 			R = 4L,
 			first_inds = c(1L, 4L, 6L, 9L),
 			num_treats = 10L
@@ -30,10 +30,10 @@ test_that(".cohort_block_inds returns the correct range for an interior cohort",
 
 test_that(".cohort_block_inds returns the correct range for the last cohort", {
 	# R = 4, first_inds = c(1, 4, 6, 9), num_treats = 10.
-	# r = R = 4 → block is first_inds[4]:num_treats = 9:10.
+	# g = R = 4 → block is first_inds[4]:num_treats = 9:10.
 	expect_equal(
 		fetwfe:::.cohort_block_inds(
-			r = 4L,
+			g = 4L,
 			R = 4L,
 			first_inds = c(1L, 4L, 6L, 9L),
 			num_treats = 10L
@@ -44,10 +44,10 @@ test_that(".cohort_block_inds returns the correct range for the last cohort", {
 
 test_that(".cohort_block_inds returns the correct range for the singleton R = 1 case", {
 	# R = 1, first_inds = c(1), num_treats = 7.
-	# r = 1 = R → block is 1:7.
+	# g = 1 = R → block is 1:7.
 	expect_equal(
 		fetwfe:::.cohort_block_inds(
-			r = 1L,
+			g = 1L,
 			R = 1L,
 			first_inds = 1L,
 			num_treats = 7L
@@ -62,12 +62,12 @@ test_that(".cohort_block_inds matches the prior inline construction for all coho
 	first_inds <- c(1L, 3L, 6L, 10L)
 	R <- 4L
 	num_treats <- 12L
-	for (r in seq_len(R)) {
-		first_ind_r <- first_inds[r]
-		last_ind_r <- if (r < R) first_inds[r + 1] - 1L else num_treats
-		expected <- first_ind_r:last_ind_r
+	for (g in seq_len(R)) {
+		first_ind_g <- first_inds[g]
+		last_ind_g <- if (g < R) first_inds[g + 1] - 1L else num_treats
+		expected <- first_ind_g:last_ind_g
 		expect_identical(
-			fetwfe:::.cohort_block_inds(r, R, first_inds, num_treats),
+			fetwfe:::.cohort_block_inds(g, R, first_inds, num_treats),
 			expected
 		)
 	}

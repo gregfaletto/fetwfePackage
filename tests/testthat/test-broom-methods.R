@@ -592,7 +592,7 @@ test_that("FETWFE_tes carries cohort_times slot (simulator convention)", {
 	setup <- .simulated_setup()
 	tes <- getTes(setup$coefs)
 	expect_true(!is.null(tes$cohort_times))
-	# Simulator convention: cohort r adopts at calendar time r + 1.
+	# Simulator convention: cohort g adopts at calendar time g + 1.
 	expect_equal(tes$cohort_times, as.integer(seq_len(tes$R) + 1L))
 })
 

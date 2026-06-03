@@ -993,31 +993,31 @@ getP <- function(R, T, d, num_treats) {
 #' @param T Integer; the total number of time periods.
 #'
 #' @details
-#' Assumes treatment for cohort `r` (where `r` is 1-indexed for calculation,
-#' corresponding to actual adoption times `times[r+1]`) starts at `times[r+1]`
+#' Assumes treatment for cohort `g` (where `g` is 1-indexed for calculation,
+#' corresponding to actual adoption times `times[g+1]`) starts at `times[g+1]`
 #' and continues until `times[T]`.
-#' The number of treatment effects for cohort `r` is `T - (r+1) + 1 = T - r`.
+#' The number of treatment effects for cohort `g` is `T - (g+1) + 1 = T - g`.
 #' The `num_treats` is the sum of these counts.
-#' The formula for the starting index of the `r`-th cohort's treatment effects
-#' (1-indexed `r` from 1 to `R`):
-#' `f_inds[r] = 1 + sum_{k=1}^{r-1} (T - k) = 1 + (r-1)T - (r-1)r/2`.
-#' Equivalently, `1 + (r - 1)*(2*T - r)/2` (algebraic restatement).
+#' The formula for the starting index of the `g`-th cohort's treatment effects
+#' (1-indexed `g` from 1 to `R`):
+#' `f_inds[g] = 1 + sum_{k=1}^{g-1} (T - k) = 1 + (g-1)T - (g-1)g/2`.
+#' Equivalently, `1 + (g - 1)*(2*T - g)/2` (algebraic restatement).
 #'
-#' @return An integer vector of length `R`, where `f_inds[r]` is the 1-based
-#'   starting index of the `r`-th cohort's treatment effects in the combined block.
+#' @return An integer vector of length `R`, where `f_inds[g]` is the 1-based
+#'   starting index of the `g`-th cohort's treatment effects in the combined block.
 #' @keywords internal
 #' @noRd
 getFirstInds <- function(R, T) {
 	# Let's identify the indices of the first treatment effects for each cohort.
 	# The first one is index 1, then the second one is index (T - 1) + 1 = T,
 	# then the third one is (T - 1) + (T - 2) + 1 = 2*T - 2. In general, for
-	# r > 1 the rth one will occur at index
+	# g > 1 the rth one will occur at index
 	#
-	# (T - 1) + (T - 2) + ... + (T - (r - 1)) + 1
-	# = 1 + (r - 1)*(T - 1 + T - r + 1)/2
-	# = 1 + (r - 1)*(2*T - r)/2.
+	# (T - 1) + (T - 2) + ... + (T - (g - 1)) + 1
+	# = 1 + (g - 1)*(T - 1 + T - g + 1)/2
+	# = 1 + (g - 1)*(2*T - g)/2.
 	#
-	# (Looks like the formula works for r = 1 too.)
+	# (Looks like the formula works for g = 1 too.)
 
 	n_treats <- getNumTreats(R = R, T = T)
 
@@ -1026,8 +1026,8 @@ getFirstInds <- function(R, T) {
 		return(f_inds)
 	} # No cohorts, no first_inds
 
-	for (r in 1:R) {
-		f_inds[r] <- 1 + (r - 1) * (2 * T - r) / 2
+	for (g in 1:R) {
+		f_inds[g] <- 1 + (g - 1) * (2 * T - g) / 2
 	}
 	stopifnot(all(f_inds <= n_treats))
 	stopifnot(f_inds[1] == 1)
@@ -1052,13 +1052,13 @@ getFirstInds <- function(R, T) {
 #' is `T - o + 1`. Concatenating per-cohort effects in cohort order then gives:
 #'
 #' \preformatted{
-#' first_inds[r] = 1 + sum_{k = 1}^{r - 1} (T - offsets[k] + 1)
+#' first_inds[g] = 1 + sum_{k = 1}^{g - 1} (T - offsets[k] + 1)
 #' }
 #'
-#' Equivalently `1 + (r - 1) * T - sum_{k = 1}^{r - 1} (offsets[k] - 1)`.
+#' Equivalently `1 + (g - 1) * T - sum_{k = 1}^{g - 1} (offsets[k] - 1)`.
 #' When `offsets = c(2, 3, ..., R + 1)` (the consecutive-cohort case) this
 #' reduces exactly to the existing `getFirstInds(R, T)` formula
-#' `1 + (r - 1) * (2 * T - r) / 2` (verifiable algebraically).
+#' `1 + (g - 1) * (2 * T - g) / 2` (verifiable algebraically).
 #'
 #' @param cohort_offsets_int Integer vector of length `R`, strictly
 #'   increasing, with each entry in `2:T`. Each entry is the 1-based
@@ -1067,7 +1067,7 @@ getFirstInds <- function(R, T) {
 #' @param T Integer; the total number of time periods.
 #'
 #' @return An integer vector of length `length(cohort_offsets_int)`; element
-#'   `r` is the 1-based starting index of cohort `r`'s treatment-effect
+#'   `g` is the 1-based starting index of cohort `g`'s treatment-effect
 #'   block in the concatenated treatment vector. The total number of
 #'   treatment-effect parameters across cohorts equals
 #'   `sum(T - cohort_offsets_int + 1)`; the assertion
@@ -1092,7 +1092,7 @@ getFirstIndsFromOffsets <- function(cohort_offsets_int, T) {
 	n_per_cohort <- as.integer(T - cohort_offsets_int + 1L)
 	stopifnot(all(n_per_cohort >= 1L))
 
-	# first_inds[1] = 1; first_inds[r] = 1 + cumsum(n_per_cohort[1:(r-1)]).
+	# first_inds[1] = 1; first_inds[g] = 1 + cumsum(n_per_cohort[1:(g-1)]).
 	f_inds <- integer(R)
 	f_inds[1] <- 1L
 	if (R > 1L) {
@@ -1114,7 +1114,7 @@ getFirstIndsFromOffsets <- function(cohort_offsets_int, T) {
 #' `"1969"`, `"1970"`). If interpretation succeeds and the panel's first year
 #' is available on the fit (`x$internal$first_year`), returns the 1-based
 #' panel-time-index offsets at which each cohort first adopts treatment:
-#' `offsets[r] = (year_r - first_panel_year + 1L)`.
+#' `offsets[g] = (year_g - first_panel_year + 1L)`.
 #'
 #' Returns `NULL` when offsets cannot be derived from the fit's cohort labels
 #' (e.g., names are absent, non-integer-coercible, or the fit was produced by
@@ -1420,31 +1420,31 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 	truncated
 }
 
-#' @title Cohort-r treatment-coefficient index range
+#' @title Cohort-g treatment-coefficient index range
 #' @description
-#' For cohort `r` (one of `1:R`), returns the integer range
-#' `first_ind_r:last_ind_r` indexing into a length-`num_treats`
+#' For cohort `g` (one of `1:R`), returns the integer range
+#' `first_ind_g:last_ind_g` indexing into a length-`num_treats`
 #' treatment-coefficient vector. The closed-form is
-#' `first_ind_r = first_inds[r]` and
-#' `last_ind_r = if (r < R) first_inds[r + 1] - 1 else num_treats`.
-#' Used inside `for (r in 1:R)` cohort loops in `getCohortATTsFinal`,
+#' `first_ind_g = first_inds[g]` and
+#' `last_ind_g = if (g < R) first_inds[g + 1] - 1 else num_treats`.
+#' Used inside `for (g in 1:R)` cohort loops in `getCohortATTsFinal`,
 #' `getSecondVarTermDataApp`, `getSecondVarTermOLS`,
 #' `prep_for_etwfe_regression`, and `getActualCohortTes`. Consolidated by
 #' GitHub #83.
-#' @param r Integer; the cohort index, `1 <= r <= R`.
+#' @param g Integer; the cohort index, `1 <= g <= R`.
 #' @param R Integer; total number of treated cohorts.
 #' @param first_inds Integer vector; the per-cohort starting indices
 #'   (length `R`), as returned by `getFirstInds()`.
 #' @param num_treats Integer; the total number of treatment coefficients
 #'   (one per (cohort, time) pair), as returned by `getNumTreats()`.
-#' @return Integer vector; the range `first_ind_r:last_ind_r`.
+#' @return Integer vector; the range `first_ind_g:last_ind_g`.
 #' @seealso `getFirstInds()`, `getNumTreats()`.
 #' @keywords internal
 #' @noRd
-.cohort_block_inds <- function(r, R, first_inds, num_treats) {
-	first_ind_r <- first_inds[r]
-	last_ind_r <- if (r < R) first_inds[r + 1] - 1 else num_treats
-	first_ind_r:last_ind_r
+.cohort_block_inds <- function(g, R, first_inds, num_treats) {
+	first_ind_g <- first_inds[g]
+	last_ind_g <- if (g < R) first_inds[g + 1] - 1 else num_treats
+	first_ind_g:last_ind_g
 }
 
 #' @title Multinomial covariance matrix from cohort-membership probabilities
@@ -1459,7 +1459,7 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #' and `.event_study_var2_fetwfe` (R/event_study.R). Consolidated by
 #' GitHub #83.
 #' @param probs Numeric vector of length `R`; cohort-membership
-#'   probabilities P(W = r) for r in 1:R. Should sum to less than 1
+#'   probabilities P(W = g) for g in 1:R. Should sum to less than 1
 #'   (the residual mass is the never-treated probability).
 #' @return Numeric matrix of dimensions `length(probs) x length(probs)`;
 #'   the symmetric covariance matrix.
@@ -2138,8 +2138,8 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #' @noRd
 .check_cohort_rank_for_ols <- function(in_sample_counts, R, d, add_ridge) {
 	warning_flag <- FALSE
-	for (r in 1:(R + 1)) {
-		if (in_sample_counts[r] < d + 1) {
+	for (g in 1:(R + 1)) {
+		if (in_sample_counts[g] < d + 1) {
 			if (add_ridge) {
 				warning_flag <- TRUE
 			} else {

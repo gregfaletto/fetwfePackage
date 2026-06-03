@@ -524,12 +524,12 @@ getTes <- function(coefs_obj) {
 		att_true <- as.numeric(mean(actual_cohort_tes))
 		cohort_weights <- rep(1 / R, R)
 	} else {
-		# Compute E[pi_r(X)] under the propensity-score DGP via MC
+		# Compute E[pi_g(X)] under the propensity-score DGP via MC
 		# integration. Reserved-offset seed convention: +2L from main seed.
 		# This matches paper Eq. att.estimator.weighted (line 837):
-		#   tau_ATT = sum_{r in treated} (N_r / N_tau) * tau_ATT(r)
-		# at the population level, where N_r / N_tau converges to
-		#   E[pi_r(X)] / sum_{r' treated} E[pi_r'(X)].
+		#   tau_ATT = sum_{g in treated} (N_g / N_tau) * tau_ATT(g)
+		# at the population level, where N_g / N_tau converges to
+		#   E[pi_g(X)] / sum_{g' treated} E[pi_g'(X)].
 		mc_seed <- if (is.null(coefs_obj$seed)) {
 			NULL
 		} else {
@@ -549,8 +549,8 @@ getTes <- function(coefs_obj) {
 		att_true <- as.numeric(sum(cohort_weights * actual_cohort_tes))
 	}
 
-	# Cohort adoption times in the simulator's convention: cohort r adopts
-	# at calendar time r + 1 (cohort 0 = never-treated, by convention
+	# Cohort adoption times in the simulator's convention: cohort g adopts
+	# at calendar time g + 1 (cohort 0 = never-treated, by convention
 	# encoded in the panel's `time` integer values 1..T). Stored so
 	# downstream tooling (e.g., `tidy.FETWFE_tes`) can label rows with the
 	# same scheme that `tidy.<estimator>` uses on a fitted panel.
@@ -867,23 +867,23 @@ genCoefsCore <- function(
 #' averaging the relevant treatment effect coefficients.
 #'
 #' @param R Integer. Number of treated cohorts.
-#' @param first_inds Integer vector. `first_inds[r]` is the index (within the
-#'   block of treatment effect coefficients) of the first treatment effect for cohort `r`.
+#' @param first_inds Integer vector. `first_inds[g]` is the index (within the
+#'   block of treatment effect coefficients) of the first treatment effect for cohort `g`.
 #' @param treat_inds Integer vector. Indices in the full `coefs` vector that
 #'   correspond to the block of all treatment effect coefficients.
 #' @param coefs Numeric vector. The full true coefficient vector \eqn{\beta}.
 #' @param num_treats Integer. Total number of treatment effect parameters.
 #'
-#' @return A numeric vector of length R, where the r-th element is the true
-#'   average treatment effect for cohort r.
+#' @return A numeric vector of length R, where the g-th element is the true
+#'   average treatment effect for cohort g.
 #' @keywords internal
 #' @noRd
 getActualCohortTes <- function(R, first_inds, treat_inds, coefs, num_treats) {
 	actual_cohort_tes <- rep(as.numeric(NA), R)
 
-	for (r in 1:R) {
-		inds_r <- .cohort_block_inds(r, R, first_inds, num_treats)
-		actual_cohort_tes[r] <- mean(coefs[treat_inds][inds_r])
+	for (g in 1:R) {
+		inds_g <- .cohort_block_inds(g, R, first_inds, num_treats)
+		actual_cohort_tes[g] <- mean(coefs[treat_inds][inds_g])
 	}
 
 	return(actual_cohort_tes)

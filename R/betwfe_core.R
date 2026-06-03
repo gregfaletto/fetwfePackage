@@ -1351,11 +1351,11 @@ betwfe_core <- function(
 		R = R,
 		num_treats = num_treats,
 		cohort_tes = cohort_tes, # CATTs (point estimates)
-		cohort_probs = cohort_probs, # In-sample pi_r | treated
+		cohort_probs = cohort_probs, # In-sample pi_g | treated
 		psi_mat = psi_mat,
 		gram_inv = gram_inv,
 		tes = tes[sel_treat_inds_shifted], # Untransformed treatment effect estimates beta_hat[treat_inds]
-		cohort_probs_overall = cohort_probs_overall, # In-sample pi_r (unconditional on treated)
+		cohort_probs_overall = cohort_probs_overall, # In-sample pi_g (unconditional on treated)
 		calc_ses = calc_ses,
 		indep_probs = FALSE,
 		se_type = se_type,
@@ -1383,11 +1383,11 @@ betwfe_core <- function(
 			R = R,
 			num_treats = num_treats,
 			cohort_tes = cohort_tes,
-			cohort_probs = indep_cohort_probs, # indep pi_r | treated
+			cohort_probs = indep_cohort_probs, # indep pi_g | treated
 			psi_mat = psi_mat,
 			gram_inv = gram_inv,
 			tes = tes[sel_treat_inds_shifted],
-			cohort_probs_overall = indep_cohort_probs_overall, # indep pi_r (unconditional)
+			cohort_probs_overall = indep_cohort_probs_overall, # indep pi_g (unconditional)
 			calc_ses = calc_ses,
 			indep_probs = TRUE,
 			se_type = se_type,

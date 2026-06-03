@@ -179,7 +179,7 @@ test_that("getTes returns propensity-weighted att_true under multinomial DGP", {
 	# load-bearing check for the propensity-weighting code path; it
 	# verifies the production code does compute
 	#   att_true = sum(cohort_weights * actual_cohort_tes)
-	# with cohort_weights = E[pi_r(X)] / sum E[pi_r(X)] (treated only).
+	# with cohort_weights = E[pi_g(X)] / sum E[pi_g(X)] (treated only).
 	coefs <- genCoefs(
 		G = 3,
 		T = 5,
@@ -308,17 +308,17 @@ test_that("interactions-augmented multinomial DGP injects propensity nonlinearit
 	augmented_dev <- 0
 	cohort_levels <- unique(cohort_aligned)
 	treated_levels <- sort(cohort_levels[cohort_levels > 0L])
-	for (r in treated_levels) {
-		y <- as.integer(cohort_aligned == r)
-		df_r <- data.frame(y = y, cov1 = X1, cov2 = X2)
+	for (g in treated_levels) {
+		y <- as.integer(cohort_aligned == g)
+		df_g <- data.frame(y = y, cov1 = X1, cov2 = X2)
 		fit_lin <- suppressWarnings(stats::glm(
 			y ~ cov1 + cov2,
-			data = df_r,
+			data = df_g,
 			family = stats::binomial()
 		))
 		fit_aug <- suppressWarnings(stats::glm(
 			y ~ cov1 + cov2 + I(cov1 * cov2),
-			data = df_r,
+			data = df_g,
 			family = stats::binomial()
 		))
 		linear_dev <- linear_dev + fit_lin$deviance

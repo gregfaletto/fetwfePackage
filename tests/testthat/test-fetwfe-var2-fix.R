@@ -52,14 +52,14 @@ library(fetwfe)
 	)
 	d_inv_treat_sel <- d_inv_full[, sel_treat_inds_shifted, drop = FALSE]
 
-	# sel_inds[[r]] matches getSecondVarTermDataApp's internal convention:
-	# the FULL cohort-r block in 1:num_treats indexing (rows of d_inv_treat_sel),
+	# sel_inds[[g]] matches getSecondVarTermDataApp's internal convention:
+	# the FULL cohort-g block in 1:num_treats indexing (rows of d_inv_treat_sel),
 	# NOT the restriction to the selected-theta support.
 	sel_inds <- list()
-	for (r in 1:R_val) {
-		first_ind_r <- first_inds[r]
-		last_ind_r <- if (r < R_val) first_inds[r + 1] - 1 else num_treats
-		sel_inds[[r]] <- first_ind_r:last_ind_r
+	for (g in 1:R_val) {
+		first_ind_g <- first_inds[g]
+		last_ind_g <- if (g < R_val) first_inds[g + 1] - 1 else num_treats
+		sel_inds[[g]] <- first_ind_g:last_ind_g
 	}
 
 	list(
@@ -92,14 +92,14 @@ library(fetwfe)
 	diag(Sigma_pi_hat) <- cp * (1 - cp)
 
 	J <- matrix(0, nrow = R_val, ncol = ncol(d_inv))
-	for (r in 1:R_val) {
-		cons_r <- (S - cp[r]) / S^2
-		J[r, ] <- cons_r * colMeans(d_inv[sel_inds[[r]], , drop = FALSE])
-		for (r2 in setdiff(1:R_val, r)) {
-			idx_pi <- if (off_use_outer) r else r2
+	for (g in 1:R_val) {
+		cons_g <- (S - cp[g]) / S^2
+		J[g, ] <- cons_g * colMeans(d_inv[sel_inds[[g]], , drop = FALSE])
+		for (g2 in setdiff(1:R_val, g)) {
+			idx_pi <- if (off_use_outer) g else g2
 			cons_off <- cp[idx_pi] / S^2
-			J[r, ] <- J[r, ] -
-				cons_off * colMeans(d_inv[sel_inds[[r2]], , drop = FALSE])
+			J[g, ] <- J[g, ] -
+				cons_off * colMeans(d_inv[sel_inds[[g2]], , drop = FALSE])
 		}
 	}
 

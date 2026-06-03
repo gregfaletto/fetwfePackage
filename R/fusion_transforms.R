@@ -583,13 +583,13 @@ genBackwardsInvFusionTransformMat <- function(n_vars) {
 #' @description
 #' Constructs the **inverse** of the block-lower-triangular matrix
 #' \eqn{D^{(2)}(\mathcal R)} that appears in Lemma \eqn{3} of the paper.
-#' Each treated cohort \(r\) has a "first" post-treatment coefficient
-#' \(\tau_{r,0}\) and a string of subsequent coefficients
-#' \(\tau_{r,1},\dots,\tau_{r,T-r}\).
-#' The fusion penalty (1) pulls every \(\tau_{r,k}\;(k>0)\) toward its
-#' predecessor \(\tau_{r,k-1}\) *within* the same cohort **and**
-#' (2) pulls the first effect of cohort \(r\) toward the first effect of cohort
-#' \(r-1\).
+#' Each treated cohort \(g\) has a "first" post-treatment coefficient
+#' \(\tau_{g,0}\) and a string of subsequent coefficients
+#' \(\tau_{g,1},\dots,\tau_{g,T-g}\).
+#' The fusion penalty (1) pulls every \(\tau_{g,k}\;(k>0)\) toward its
+#' predecessor \(\tau_{g,k-1}\) *within* the same cohort **and**
+#' (2) pulls the first effect of cohort \(g\) toward the first effect of cohort
+#' \(g-1\).
 #' Multiplying the raw design sub-matrix by the output of
 #' `genInvTwoWayFusionTransformMat()` therefore changes coordinates from
 #' \eqn{\boldsymbol\beta} to
@@ -607,7 +607,7 @@ genBackwardsInvFusionTransformMat <- function(n_vars) {
 #' @param n_vars Integer. Total number of base treatment-effect coefficients
 #'   ( \eqn{\mathfrak W}  in the paper).
 #' @param first_inds Integer vector of length \eqn{R}.
-#'   `first_inds[r]` is the **1-based** column index of \(\tau_{r,0}\)
+#'   `first_inds[g]` is the **1-based** column index of \(\tau_{g,0}\)
 #'   inside the block of the \eqn{n\_vars} treatment columns.
 #' @param R Integer. Number of treated cohorts.
 #'
@@ -734,8 +734,8 @@ genInvTwoWayFusionTransformMat <- function(n_vars, first_inds, R) {
 #'         I_d,                                        # 3. X main effects
 #'         I_d ⊗ (D^{(1)}(R))^{-1},                   # 4. cohort × X
 #'         I_d ⊗ (D^{(1)}(T-1))^{-1},                 # 5. time   × X
-#'         (D^{(2)}(𝓡))^{-1},                         # 6. base τ_{r,t}
-#'         I_d ⊗ (D^{(2)}(𝓡))^{-1} )                  # 7. τ_{r,t} × X
+#'         (D^{(2)}(𝓡))^{-1},                         # 6. base τ_{g,t}
+#'         I_d ⊗ (D^{(2)}(𝓡))^{-1} )                  # 7. τ_{g,t} × X
 #' }
 #'
 #' @section Block dimensions:
@@ -750,8 +750,8 @@ genInvTwoWayFusionTransformMat <- function(n_vars, first_inds, R) {
 #' the whole matrix is 1 (volume-preserving transform).
 #'
 #' @param first_inds Integer vector (length \code{R}).
-#'   `first_inds[r]` is the 1-based column index of the first base
-#'   treatment-effect parameter \(\tau_{r,0}\) for cohort \code{r}.
+#'   `first_inds[g]` is the 1-based column index of the first base
+#'   treatment-effect parameter \(\tau_{g,0}\) for cohort \code{g}.
 #' @param T Integer. Total number of time periods \(\ge 3\).
 #' @param R Integer. Number of treated cohorts (\(\ge 1\)).
 #'   The function stops if you accidentally pass \code{R = 0}.

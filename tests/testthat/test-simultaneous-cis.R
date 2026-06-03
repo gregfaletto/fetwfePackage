@@ -239,7 +239,7 @@ test_that("simultaneousCIs handles custom contrasts and validates them", {
 	fit <- fetwfeWithSimulatedData(fixture$sim)
 	num_treats <- length(fit$treat_inds)
 
-	# A K = 2 contrast matrix picking out two specific (r, t) cells.
+	# A K = 2 contrast matrix picking out two specific (g, t) cells.
 	C <- matrix(0, nrow = 2, ncol = num_treats)
 	C[1, 1] <- 1
 	C[2, num_treats] <- 1

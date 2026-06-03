@@ -308,7 +308,7 @@ simultaneousCIs.twfeCovs <- function(
 
 	# twfeCovs estimates a single pooled treatment effect PER COHORT (so
 	# `treat_inds` has length R = num_treats, and each effect is already a
-	# cohort ATT), not one effect per (r, t) cell. There is therefore no
+	# cohort ATT), not one effect per (g, t) cell. There is therefore no
 	# event-time or per-cell structure to expand: only the `cohort` and
 	# `custom` families are well-defined (this is why eventStudy() excludes
 	# twfeCovs, R/event_study.R:73-75). Override first_inds to the per-cohort
@@ -329,7 +329,7 @@ simultaneousCIs.twfeCovs <- function(
 	}
 
 	# --- 4. Build the K x num_treats psi_tes matrix (row k = the contrast
-	#        that picks effect k out of the (r, t) treatment-effect vector). ---
+	#        that picks effect k out of the (g, t) treatment-effect vector). ---
 	psi_tes_mat <- .build_psi_tes_for_family(
 		family = family,
 		contrasts = contrasts,
@@ -748,7 +748,7 @@ simultaneousCIs.twfeCovs <- function(
 		return(NULL)
 	}
 	# Positional alignment: `.build_psi_tes_for_family(family = "cohort")`
-	# iterates r = 1:R in cohort-block order, the SAME order
+	# iterates g = 1:R in cohort-block order, the SAME order
 	# `getCohortATTsFinal()` builds `catt_df`. So `sci$ci` is already
 	# row-aligned to `catt_df`. The `effect` labels differ
 	# ("Cohort <offset>" vs `catt_df$cohort` = `c_names`), so rely on
@@ -808,7 +808,7 @@ simultaneousCIs.twfeCovs <- function(
 
 #' @title Build the K x num_treats psi_tes contrast matrix for a family
 #' @description Row `k` of the returned matrix is the contrast on the per-
-#'   `(r, t)` treatment-effect vector (`beta_hat[treat_inds]`) that defines
+#'   `(g, t)` treatment-effect vector (`beta_hat[treat_inds]`) that defines
 #'   effect `k`. The point estimate for effect `k` is
 #'   `psi_tes_mat[k, ] %*% tes`.
 #' @param family,contrasts,R,T,num_treats,cohort_offsets_int,first_inds,cohort_probs_overall
@@ -853,22 +853,22 @@ simultaneousCIs.twfeCovs <- function(
 	}
 
 	if (family == "cohort") {
-		# Effect r = cohort r's ATT = mean(tes over cohort r's block).
+		# Effect g = cohort g's ATT = mean(tes over cohort g's block).
 		psi_tes <- matrix(0, nrow = R, ncol = num_treats)
-		for (r in 1:R) {
-			block <- .cohort_block_inds(r, R, first_inds, num_treats)
-			psi_tes[r, block] <- 1 / length(block)
+		for (g in 1:R) {
+			block <- .cohort_block_inds(g, R, first_inds, num_treats)
+			psi_tes[g, block] <- 1 / length(block)
 		}
 		return(psi_tes)
 	}
 
 	if (family == "all_post_treatment") {
-		# One effect per (r, t) cell: the identity contrast.
+		# One effect per (g, t) cell: the identity contrast.
 		return(diag(num_treats))
 	}
 
 	# family == "event_study": one effect per post-treatment event time
-	# e = 0, ..., T - 2. Effect e pools the cells (r, e) over the valid cohort
+	# e = 0, ..., T - 2. Effect e pools the cells (g, e) over the valid cohort
 	# set V_e, with sample-cohort-size weights.
 	event_times <- 0:(T - 2L)
 	K <- length(event_times)
@@ -941,7 +941,7 @@ simultaneousCIs.twfeCovs <- function(
 
 	# cohort / all_post_treatment / custom: no per-effect cohort-probability
 	# weighting -> Sigma_2 = 0. A single cohort's own ATT (cohort family) and a
-	# single (r, t) cell (all_post_treatment) do not depend on the estimated
+	# single (g, t) cell (all_post_treatment) do not depend on the estimated
 	# cohort probabilities; custom contrasts operate on the fixed per-cell
 	# effects. (Mirrors getCohortATTsFinal(), whose per-cohort SEs carry no
 	# var_2 term.)

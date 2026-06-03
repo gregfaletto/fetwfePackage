@@ -61,7 +61,7 @@ test_that("eventStudy returns expected structure", {
 # Event time 0 cells: cohort 1 at t=2, cohort 2 at t=3.
 # Pooled estimate = (n_1 / (n_1 + n_2)) * tes[idx(1, 0)] +
 #                   (n_2 / (n_1 + n_2)) * tes[idx(2, 0)]
-# where idx(r_idx, e) = first_inds[r_idx] + e.
+# where idx(g_idx, e) = first_inds[g_idx] + e.
 # ------------------------------------------------------------------------------
 test_that("eventStudy ETWFE point estimates match hand-computed weights x tes", {
 	sim <- make_es_panel(R = 2, T = 4, d = 0, N = 500)
@@ -83,7 +83,7 @@ test_that("eventStudy ETWFE point estimates match hand-computed weights x tes", 
 	expected_e1 <- w1 * tes[first_inds[1] + 1] + w2 * tes[first_inds[2] + 1]
 	expect_equal(es$estimate[2], expected_e1, tolerance = 1e-10)
 
-	# Event time 2: V_2 = {1} only (cohort 2 needs r+1+e = 3+2 = 5 > T = 4)
+	# Event time 2: V_2 = {1} only (cohort 2 needs g+1+e = 3+2 = 5 > T = 4)
 	expected_e2 <- tes[first_inds[1] + 2]
 	expect_equal(es$estimate[3], expected_e2, tolerance = 1e-10)
 	expect_equal(es$n_cohorts, c(2L, 2L, 1L))

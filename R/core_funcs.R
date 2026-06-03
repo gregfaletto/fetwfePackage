@@ -63,7 +63,7 @@
 #'     premultiplied by the inverse fusion transformation so the penalty
 #'     applies on the original coefficient scale.
 #'   \item \strong{Cohort Probability Estimation}\newline
-#'     Computes \eqn{\hat\pi_r = n_r / \sum_{s=1}^R n_s} from the in-sample
+#'     Computes \eqn{\hat\pi_g = n_g / \sum_{s=1}^R n_s} from the in-sample
 #'     counts; when an independent split is available the same is done for
 #'     \code{indep_counts}.
 #' }
@@ -76,10 +76,10 @@
 #'     \item{\code{y_final}}{Response after GLS transform (and augmentation).}
 #'     \item{\code{scale_center}, \code{scale_scale}}{Vectors used to undo
 #'       column scaling.}
-#'     \item{\code{cohort_probs}}{Vector of \(\hat\pi_r \mid \text{treated}\)
+#'     \item{\code{cohort_probs}}{Vector of \(\hat\pi_g \mid \text{treated}\)
 #'       from the estimation sample.}
 #'     \item{\code{cohort_probs_overall}}{Vector of unconditional
-#'       probabilities \(P(W=r)\).}
+#'       probabilities \(P(W=g)\).}
 #'     \item{\code{indep_cohort_probs}, \code{indep_cohort_probs_overall}}{Same
 #'       probabilities if an independent split was provided; otherwise \code{NA}.}
 #'     \item{\code{sig_eps_sq}, \code{sig_eps_c_sq}}{Possibly estimated
@@ -521,10 +521,10 @@ prep_for_etwfe_core <- function(
 	stopifnot(nrow(X) == N * T)
 
 	treat_inds_mat <- matrix(as.numeric(NA), nrow = N * T, ncol = R)
-	for (r in 1:R) {
-		inds_r <- .cohort_block_inds(r, R, first_inds, num_treats)
-		cols_r <- R + T - 1 + d + inds_r
-		treat_inds_mat[, r] <- rowSums(X[, cols_r, drop = FALSE])
+	for (g in 1:R) {
+		inds_g <- .cohort_block_inds(g, R, first_inds, num_treats)
+		cols_g <- R + T - 1 + d + inds_g
+		treat_inds_mat[, g] <- rowSums(X[, cols_g, drop = FALSE])
 	}
 	stopifnot(all(!is.na(treat_inds_mat)))
 
@@ -624,7 +624,7 @@ prep_for_etwfe_core <- function(
 #' @title Compute in-sample (and optionally independent) cohort probabilities
 #' @description Convert raw cohort counts into two normalizations:
 #'   within-treated (`cohort_probs`, sums to 1) and overall
-#'   (`cohort_probs_overall`, equals `count_r / N`). If
+#'   (`cohort_probs_overall`, equals `count_g / N`). If
 #'   `indep_count_data_available = TRUE`, do the same for `indep_counts`;
 #'   otherwise the indep-side outputs are NA.
 #' @param in_sample_counts Integer vector of length `R + 1`; counts of

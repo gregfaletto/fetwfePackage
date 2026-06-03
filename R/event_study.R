@@ -13,8 +13,8 @@ utils::globalVariables(c("event_time", "estimate", "ci_low", "ci_high"))
 #' For a fitted object from `fetwfe()`, `etwfe()`, or `betwfe()`, computes the
 #' pooled event-time treatment-effect estimates `tau_E(e)`, defined as
 #' cohort-weighted averages of the cell-level treatment-effect estimates at
-#' each post-treatment event time `e = t - r` (where `t` is calendar time and
-#' `r` is the cohort's first-treated calendar time). Weights are
+#' each post-treatment event time `e = t - g` (where `t` is calendar time and
+#' `g` is the cohort's first-treated calendar time). Weights are
 #' sample-cohort-size weights (matching `did::aggte(type = "dynamic")`
 #' convention).
 #'
@@ -54,7 +54,7 @@ utils::globalVariables(c("event_time", "estimate", "ci_low", "ci_high"))
 #' @return A data frame with class `c("eventStudy", "data.frame")` and
 #'   columns:
 #'   \describe{
-#'     \item{event_time}{Integer; event time `e = t - r`, ranging from 0
+#'     \item{event_time}{Integer; event time `e = t - g`, ranging from 0
 #'       to `T - 2`.}
 #'     \item{n_cohorts}{Integer; number of cohorts contributing to the
 #'       pooled estimate at event time `e`.}
@@ -257,9 +257,9 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	for (k in seq_along(event_times)) {
 		e <- event_times[k]
 		# v1.13.3 (#174): use the actual cohort offsets to determine
-		# which cohorts contribute at event time `e` (cohort `r` has a
-		# treatment-effect cell at `(r, e)` iff `cohort_offsets[r] + e
-		# <= T`, equivalently `cohort_offsets[r] <= T - e`). For
+		# which cohorts contribute at event time `e` (cohort `g` has a
+		# treatment-effect cell at `(g, e)` iff `cohort_offsets[g] + e
+		# <= T`, equivalently `cohort_offsets[g] <= T - e`). For
 		# consecutive offsets this reduces to the pre-#174
 		# `seq_len(R) <= T - 1L - e`.
 		V_e <- which(cohort_offsets_int <= T - e)
@@ -280,7 +280,7 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 		}
 		weights_Ve <- probs_Ve / S_V
 
-		# psi_e_tes (length num_treats): weight at idx(r, e) for r in V_e, 0 elsewhere
+		# psi_e_tes (length num_treats): weight at idx(g, e) for g in V_e, 0 elsewhere
 		psi_e_tes <- numeric(num_treats)
 		for (j in seq_along(V_e)) {
 			psi_e_tes[first_inds[V_e[j]] + e] <- weights_Ve[j]
@@ -326,8 +326,8 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 		# var_2(e) via existing getSecondVarTermOLS with single-cell psi_mat and
 		# masked cohort_probs_overall (zeros outside V_e).
 		psi_e_mat <- matrix(0, nrow = num_treats, ncol = R)
-		for (r in V_e) {
-			psi_e_mat[first_inds[r] + e, r] <- 1
+		for (g in V_e) {
+			psi_e_mat[first_inds[g] + e, g] <- 1
 		}
 		masked_probs <- numeric(R)
 		masked_probs[V_e] <- cohort_probs_overall[V_e]
@@ -527,12 +527,12 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 		}
 
 		# psi_e_theta on the selected theta-space treatment support:
-		# psi_e_theta[col] = sum_{r in V_e} weights_Ve[r] * d_inv_treat_sel[idx(r,e), col]
+		# psi_e_theta[col] = sum_{g in V_e} weights_Ve[g] * d_inv_treat_sel[idx(g,e), col]
 		psi_e_theta <- numeric(length(sel_treat_inds_shifted))
 		for (j in seq_along(V_e)) {
-			r <- V_e[j]
+			g <- V_e[j]
 			psi_e_theta <- psi_e_theta +
-				weights_Ve[j] * d_inv_treat_sel[first_inds[r] + e, ]
+				weights_Ve[j] * d_inv_treat_sel[first_inds[g] + e, ]
 		}
 
 		# var_1(e)
@@ -607,13 +607,13 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #'
 #' Structurally parallel to `getSecondVarTermDataApp` but with the
 #' cohort-block time-averaging Jacobian replaced by a single-row
-#' selection at `idx(r, e)`, and `cohort_probs_overall` masked to zero
+#' selection at `idx(g, e)`, and `cohort_probs_overall` masked to zero
 #' outside `V_e`. When `|V_e| = 1` the Jacobian rows vanish exactly and
 #' `var_2(e) = 0`.
 #'
 #' Design choice: this helper is structurally parallel to
 #' `getSecondVarTermDataApp` in `R/variance_machinery.R` (the cohort-block time-
-#' averaging is replaced by a single-row selection at `idx(r, e)`, and
+#' averaging is replaced by a single-row selection at `idx(g, e)`, and
 #' `cohort_probs_overall` is masked to zero outside `V_e`). Both helpers
 #' implement paper Theorem 6.3's Jacobian formula (`paper_arxiv.tex:2577-
 #' 2592`) where the off-diagonal coefficient `J_{rs} = -pi_s / S^2` uses the
@@ -646,11 +646,11 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	Sigma_pi_hat <- .multinomial_cov(masked)
 
 	# Per-event-time Jacobian: R rows, length(sel_treat_inds_shifted) cols.
-	# Rows for r not in V_e are zero (and are zero-killed by Sigma_pi_hat).
-	# Diagonal: (S_V - pi_r)/S_V^2 * d_inv_treat_sel[idx(r, e), ]
-	# Off-diagonal: subtract pi_{r'}/S_V^2 * d_inv_treat_sel[idx(r', e), ]
-	# for r' in V_e \ {r}. Off-diagonal coefficient uses the COLUMN-index
-	# pi_{r'}, matching paper Theorem 6.3. Consolidated into `.build_jacobian()`
+	# Rows for g not in V_e are zero (and are zero-killed by Sigma_pi_hat).
+	# Diagonal: (S_V - pi_g)/S_V^2 * d_inv_treat_sel[idx(g, e), ]
+	# Off-diagonal: subtract pi_{g'}/S_V^2 * d_inv_treat_sel[idx(g', e), ]
+	# for g' in V_e \ {g}. Off-diagonal coefficient uses the COLUMN-index
+	# pi_{g'}, matching paper Theorem 6.3. Consolidated into `.build_jacobian()`
 	# (#192, WORKFLOW_LESSONS §14 Class A); the per-effect-masked path returns
 	# this construction byte-identically.
 	jacobian_e <- .build_jacobian(

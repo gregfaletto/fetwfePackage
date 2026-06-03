@@ -12,8 +12,8 @@ print.FETWFE_tes <- function(x, ...) {
 	)
 	cat(sprintf("Overall true ATT: %.4f\n\n", x$att_true))
 	cat("Cohort effects:\n")
-	for (r in seq_along(x$actual_cohort_tes)) {
-		cat(sprintf("  Cohort %d: %.4f\n", r, x$actual_cohort_tes[r]))
+	for (g in seq_along(x$actual_cohort_tes)) {
+		cat(sprintf("  Cohort %d: %.4f\n", g, x$actual_cohort_tes[g]))
 	}
 	cat("\n")
 	cat("Generated from:\n")
@@ -60,8 +60,8 @@ print.summary.FETWFE_tes <- function(x, ...) {
 	)
 	cat(sprintf("Overall true ATT: %.4f\n\n", x$att_true))
 	cat("Cohort effects:\n")
-	for (r in seq_along(x$actual_cohort_tes)) {
-		cat(sprintf("  Cohort %d: %.4f\n", r, x$actual_cohort_tes[r]))
+	for (g in seq_along(x$actual_cohort_tes)) {
+		cat(sprintf("  Cohort %d: %.4f\n", g, x$actual_cohort_tes[g]))
 	}
 	cat("\n")
 	cat("Cohort effect dispersion:\n")

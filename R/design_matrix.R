@@ -217,8 +217,8 @@ prepXints <- function(
 	# Get in-sample counts of units in each cohort
 	in_sample_counts <- rep(as.numeric(NA), R + 1)
 
-	for (r in 1:R) {
-		in_sample_counts[r + 1] <- length(cohorts[[r]])
+	for (g in 1:R) {
+		in_sample_counts[g + 1] <- length(cohorts[[g]])
 	}
 
 	in_sample_counts[1] <- N - N_treated
@@ -979,22 +979,22 @@ generateFEInts <- function(X_long, cohort_fe, time_fe, N, T, R, d) {
 	stopifnot(is.matrix(X_long))
 	stopifnot(!is.data.frame(X_long))
 
-	for (r_idx in 1:R) {
+	for (g_idx in 1:R) {
 		# iterate R times for R cohorts
 		# Notice that these are arranged one cohort at a time, interacted with
 		# all covariates
-		first_col_r <- (r_idx - 1) * d + 1
-		last_col_r <- r_idx * d
+		first_col_g <- (g_idx - 1) * d + 1
+		last_col_g <- g_idx * d
 
-		stopifnot(last_col_r - first_col_r + 1 == d)
-		stopifnot(all(is.na(X_long_cohort[, first_col_r:last_col_r])))
+		stopifnot(last_col_g - first_col_g + 1 == d)
+		stopifnot(all(is.na(X_long_cohort[, first_col_g:last_col_g])))
 
-		# Element-wise multiplication of cohort_fe[,r_idx] (a vector) with each column of X_long
-		# This creates d columns for the r_idx-th cohort
-		interaction_block_r <- cohort_fe[, r_idx] * X_long
-		stopifnot(ncol(interaction_block_r) == d)
+		# Element-wise multiplication of cohort_fe[,g_idx] (a vector) with each column of X_long
+		# This creates d columns for the g_idx-th cohort
+		interaction_block_g <- cohort_fe[, g_idx] * X_long
+		stopifnot(ncol(interaction_block_g) == d)
 
-		X_long_cohort[, first_col_r:last_col_r] <- interaction_block_r
+		X_long_cohort[, first_col_g:last_col_g] <- interaction_block_g
 	}
 
 	stopifnot(all(!is.na(X_long_cohort)))
@@ -1118,22 +1118,22 @@ genTreatInts <- function(
 		scale = FALSE
 	)
 
-	for (r in 1:R) {
+	for (g in 1:R) {
 		# Notice that these are arranged column-wise one cohort at a time,
 		# interacted with all treatment effects
 
-		cohort_r_inds <- which(cohort_fe[, r] == 1)
+		cohort_g_inds <- which(cohort_fe[, g] == 1)
 
 		new_mat <- scale(
-			X_long[cohort_r_inds, , drop = FALSE],
+			X_long[cohort_g_inds, , drop = FALSE],
 			center = TRUE,
 			scale = FALSE
 		)
 
 		stopifnot(all(!is.na(new_mat)))
-		stopifnot(all(is.na(X_long_centered[cohort_r_inds, ])))
+		stopifnot(all(is.na(X_long_centered[cohort_g_inds, ])))
 
-		X_long_centered[cohort_r_inds, ] <- new_mat
+		X_long_centered[cohort_g_inds, ] <- new_mat
 	}
 	# Final index should correspond to last row
 	stopifnot(all(!is.na(X_long_centered)))

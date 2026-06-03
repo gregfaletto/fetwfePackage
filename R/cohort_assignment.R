@@ -4,7 +4,7 @@
 #   .gen_assignment_coefs()    draws gamma (and cutpoints) given type/strength.
 #   .compute_cohort_prob_matrix()    N x (R+1) per-unit propensity matrix.
 #   .sample_cohort_assignments() per-unit categorical draws of W_i in 0..R.
-#   .expected_cohort_probs()   length-(R+1) MC estimate of E[pi_r(X)].
+#   .expected_cohort_probs()   length-(R+1) MC estimate of E[pi_g(X)].
 #
 # All four are @keywords internal @noRd. The factoring of
 # .compute_cohort_prob_matrix() avoids duplicating the multinomial-softmax
@@ -65,7 +65,7 @@
 #'   - `seed`      -> main coefficient vector / theta draw (`genCoefsCore`).
 #'   - `seed + 1L` -> assignment coefficients (this function).
 #'   - `seed + 2L` -> Monte Carlo integration in `getTes()` for
-#'                    `E[pi_r(X)]`.
+#'                    `E[pi_g(X)]`.
 #'
 #' @param R Integer >= 2. Number of treated cohorts.
 #' @param d Integer >= 1. Number of covariates. Only called when
@@ -92,8 +92,8 @@
 #'
 #' @return A list with elements `type`, `strength`, `coefs`, `interactions`,
 #'   `delta`, `interaction_strength`, and (for `"ordered"`) `cutpoints`.
-#'   For multinomial, `coefs` is a `d x R` matrix; column `r` is
-#'   `gamma_r` (the never-treated reference cohort has `gamma_0 = 0`
+#'   For multinomial, `coefs` is a `d x R` matrix; column `g` is
+#'   `gamma_g` (the never-treated reference cohort has `gamma_0 = 0`
 #'   implicitly), and `delta` is a `K x R` matrix of per-cohort
 #'   interaction coefficients (or `NULL` when no interactions). For
 #'   ordered, `coefs` is a length-`d` vector (one shared `gamma`),
@@ -105,8 +105,8 @@
 #'
 #' @details
 #' The ordered cutpoints are chosen by root-finding on the
-#' marginal-uniform condition: for each `r` in `1..R`, solve
-#' `E_X[plogis(alpha_r - gamma^T X - delta^T X_int)] = r / (R + 1)` via
+#' marginal-uniform condition: for each `g` in `1..R`, solve
+#' `E_X[plogis(alpha_g - gamma^T X - delta^T X_int)] = g / (R + 1)` via
 #' `uniroot()` over a Monte Carlo reference sample of the augmented
 #' linear predictor (standard McCullagh proportional-odds parameterization
 #' with the subtraction convention: high augmented linpred shifts mass UP
@@ -193,8 +193,8 @@
 	} else {
 		NULL
 	}
-	# Root-find on the marginal-uniform condition: solve for alpha_r such
-	# that mean(plogis(alpha_r - linpred_mc)) = r / (R + 1). At strength = 0
+	# Root-find on the marginal-uniform condition: solve for alpha_g such
+	# that mean(plogis(alpha_g - linpred_mc)) = g / (R + 1). At strength = 0
 	# and no interactions, linpred_mc is identically 0 and the cutpoints
 	# reduce to qlogis((1:R) / (R + 1)) by construction. With interactions,
 	# the MC sample integrates over the augmented covariate distribution so
@@ -222,7 +222,7 @@
 	}
 	cutpoints <- vapply(
 		seq_len(R),
-		function(r) solve_cutpoint(r / (R + 1)),
+		function(g) solve_cutpoint(g / (R + 1)),
 		numeric(1)
 	)
 	list(
@@ -338,7 +338,7 @@
 		# Standard McCullagh proportional-odds parameterization with the
 		# subtraction convention:
 		#
-		#   P(W' <= r | X) = plogis(alpha_r - gamma^T X)   for r = 1..R.
+		#   P(W' <= g | X) = plogis(alpha_g - gamma^T X)   for g = 1..R.
 		#
 		# Low gamma^T x makes the cumulative prob LARGE -> mass concentrates
 		# on LOW W' (earliest-adopting cohorts). High gamma^T x makes the
@@ -418,7 +418,7 @@
 }
 
 
-#' Monte Carlo estimate of `E[pi_r(X)]` for `r` in `0..R`
+#' Monte Carlo estimate of `E[pi_g(X)]` for `g` in `0..R`
 #'
 #' Used by `getTes()` to compute the propensity-weighted population ATT
 #' truth under non-marginal DGPs. Returns a length-`(R + 1)` numeric

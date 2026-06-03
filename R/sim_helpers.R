@@ -180,14 +180,14 @@ generateBaseEffects <- function(
 
 	cohort_fe <- matrix(0, N * T, R)
 	inds <- list()
-	first_ind_r <- assignments[1] * T + 1
-	for (r in seq_len(R)) {
-		last_ind_r <- first_ind_r + assignments[r + 1] * T - 1
-		cohort_fe[first_ind_r:last_ind_r, r] <- rep(1, assignments[r + 1] * T)
-		inds[[r]] <- first_ind_r:last_ind_r
-		first_ind_r <- last_ind_r + 1
+	first_ind_g <- assignments[1] * T + 1
+	for (g in seq_len(R)) {
+		last_ind_g <- first_ind_g + assignments[g + 1] * T - 1
+		cohort_fe[first_ind_g:last_ind_g, g] <- rep(1, assignments[g + 1] * T)
+		inds[[g]] <- first_ind_g:last_ind_g
+		first_ind_g <- last_ind_g + 1
 	}
-	stopifnot(last_ind_r == N * T)
+	stopifnot(last_ind_g == N * T)
 
 	time_fe <- matrix(0, N * T, T - 1)
 	for (t in seq_len(T - 1)) {
@@ -220,16 +220,16 @@ generateBaseEffects <- function(
 #' FALSE, in which case no such condition is enforced.
 #'
 #' @return A list containing:
-#'   \item{cohort_fe}{An NT x R matrix of cohort dummy variables. The r-th column is 1
-#'     if an observation belongs to the r-th treated cohort, 0 otherwise.}
+#'   \item{cohort_fe}{An NT x R matrix of cohort dummy variables. The g-th column is 1
+#'     if an observation belongs to the g-th treated cohort, 0 otherwise.}
 #'   \item{time_fe}{An NT x (T-1) matrix of time dummy variables. The t-th column
 #'     (for t from 1 to T-1) corresponds to time period (t+1), and is 1 if an
 #'     observation is from that time period, 0 otherwise. Period 1 is the baseline.}
 #'   \item{assignments}{An integer vector of length R+1. The first element is the
 #'     count of never-treated units. Subsequent elements are counts of units in each
 #'     of the R treated cohorts.}
-#'   \item{inds}{A list of length R. Each element `inds[[r]]` contains the row indices
-#'     in the NT-row matrices that correspond to units in the r-th treated cohort.}
+#'   \item{inds}{A list of length R. Each element `inds[[g]]` contains the row indices
+#'     in the NT-row matrices that correspond to units in the g-th treated cohort.}
 #' @keywords internal
 #' @noRd
 genCohortTimeFE <- function(N, T, R, d, guarantee_rank_condition = FALSE) {
@@ -254,28 +254,28 @@ genCohortTimeFE <- function(N, T, R, d, guarantee_rank_condition = FALSE) {
 
 	# Cohort fixed effects
 	cohort_fe <- matrix(0, N * T, R)
-	first_ind_r <- assignments[1] * T + 1
+	first_ind_g <- assignments[1] * T + 1
 
 	inds <- list()
 
-	for (r in 1:R) {
-		stopifnot(all(cohort_fe[, r] == 0))
+	for (g in 1:R) {
+		stopifnot(all(cohort_fe[, g] == 0))
 
-		last_ind_r <- first_ind_r + assignments[r + 1] * T - 1
+		last_ind_g <- first_ind_g + assignments[g + 1] * T - 1
 
-		stopifnot(last_ind_r <= N * T)
-		stopifnot(length(first_ind_r:last_ind_r) == assignments[r + 1] * T)
-		stopifnot(all(cohort_fe[first_ind_r:last_ind_r, ] == 0))
+		stopifnot(last_ind_g <= N * T)
+		stopifnot(length(first_ind_g:last_ind_g) == assignments[g + 1] * T)
+		stopifnot(all(cohort_fe[first_ind_g:last_ind_g, ] == 0))
 
 		# Now add cohort fixed effects in the rth column for these rows
-		cohort_fe[first_ind_r:last_ind_r, r] <- rep(1, assignments[r + 1] * T)
-		inds[[r]] <- first_ind_r:last_ind_r
-		first_ind_r <- last_ind_r + 1
+		cohort_fe[first_ind_g:last_ind_g, g] <- rep(1, assignments[g + 1] * T)
+		inds[[g]] <- first_ind_g:last_ind_g
+		first_ind_g <- last_ind_g + 1
 
-		stopifnot(length(inds[[r]]) == assignments[r + 1] * T)
+		stopifnot(length(inds[[g]]) == assignments[g + 1] * T)
 	}
 
-	stopifnot(last_ind_r == N * T)
+	stopifnot(last_ind_g == N * T)
 
 	# Time fixed effects: only do 2 through T.
 	time_fe <- matrix(0, N * T, T - 1)
@@ -355,7 +355,7 @@ genAssignments <- function(N, R, guarantee_rank_condition = FALSE, d = NA) {
 #' Generate Treatment Variable Matrix for Simulations
 #'
 #' Creates a matrix of treatment dummy variables for simulated panel data.
-#' Treatment starts at period r+1 for cohort r.
+#' Treatment starts at period g+1 for cohort g.
 #'
 #' @param n_treats Integer. Total number of unique treatment (cohort x time) effects.
 #'   Calculated as \eqn{T \times R - R(R+1)/2}.
@@ -372,9 +372,9 @@ genAssignments <- function(N, R, guarantee_rank_condition = FALSE, d = NA) {
 #' @return A list containing:
 #'   \item{treat_mat_long}{An NT x n_treats matrix of treatment dummy variables.
 #'     Each column corresponds to a specific cohort-time treatment indicator.}
-#'   \item{first_inds}{An integer vector of length R, where `first_inds[r]` is the
+#'   \item{first_inds}{An integer vector of length R, where `first_inds[g]` is the
 #'     column index in `treat_mat_long` corresponding to the first treatment period
-#'     for cohort r.}
+#'     for cohort g.}
 #' @keywords internal
 #' @noRd
 genTreatVarsSim <- function(
@@ -399,67 +399,67 @@ genTreatVarsSim <- function(
 
 	all_inds_so_far <- integer()
 
-	for (r in 1:R) {
-		n_treats_r <- T - r
+	for (g in 1:R) {
+		n_treats_g <- T - g
 
-		stopifnot(length(cohort_inds[[r]]) == assignments[r + 1] * T)
+		stopifnot(length(cohort_inds[[g]]) == assignments[g + 1] * T)
 
 		counter <- 0L
 
-		for (t in (r + 1):T) {
+		for (t in (g + 1):T) {
 			treat_ind <- treat_ind + 1
 
 			stopifnot(treat_ind <= n_treats)
 
-			if (t == r + 1) {
-				first_inds[r] <- treat_ind
+			if (t == g + 1) {
+				first_inds[g] <- treat_ind
 
-				stopifnot(treat_ind == first_inds_test[r])
+				stopifnot(treat_ind == first_inds_test[g])
 			}
 
-			first_ind_r <- min(cohort_inds[[r]]) + t - (r + 1) + r
+			first_ind_g <- min(cohort_inds[[g]]) + t - (g + 1) + g
 
-			stopifnot(first_ind_r >= min(cohort_inds[[r]]))
+			stopifnot(first_ind_g >= min(cohort_inds[[g]]))
 
-			last_ind_r <- first_ind_r + (assignments[r + 1] - 1) * T
+			last_ind_g <- first_ind_g + (assignments[g + 1] - 1) * T
 
-			stopifnot(last_ind_r <= max(cohort_inds[[r]]))
+			stopifnot(last_ind_g <= max(cohort_inds[[g]]))
 			stopifnot(
-				(last_ind_r - first_ind_r) / T ==
-					round((last_ind_r - first_ind_r) / T)
+				(last_ind_g - first_ind_g) / T ==
+					round((last_ind_g - first_ind_g) / T)
 			)
-			stopifnot((last_ind_r - first_ind_r) / T == assignments[r + 1] - 1)
+			stopifnot((last_ind_g - first_ind_g) / T == assignments[g + 1] - 1)
 
-			r_inds <- seq(first_ind_r, last_ind_r, by = T)
+			g_inds <- seq(first_ind_g, last_ind_g, by = T)
 
-			all_inds_so_far <- c(all_inds_so_far, r_inds)
+			all_inds_so_far <- c(all_inds_so_far, g_inds)
 
-			stopifnot(length(r_inds) == assignments[r + 1])
+			stopifnot(length(g_inds) == assignments[g + 1])
 			stopifnot(all(treat_mat_long[, treat_ind] == 0))
 
-			treat_mat_long[r_inds, treat_ind] <- 1
+			treat_mat_long[g_inds, treat_ind] <- 1
 			total_feats_added <- total_feats_added + 1
 			counter <- counter + 1
 		}
 
-		stopifnot(counter == n_treats_r)
+		stopifnot(counter == n_treats_g)
 
-		treat_inds_r <- first_inds[r]:(first_inds[r] + length((r + 1):T) - 1)
+		treat_inds_g <- first_inds[g]:(first_inds[g] + length((g + 1):T) - 1)
 
-		stopifnot(all(treat_inds_r <= n_treats))
-		stopifnot(length(treat_inds_r) == n_treats_r)
+		stopifnot(all(treat_inds_g <= n_treats))
+		stopifnot(length(treat_inds_g) == n_treats_g)
 		stopifnot(all(
-			colSums(treat_mat_long[, treat_inds_r, drop = FALSE]) ==
-				assignments[r + 1]
+			colSums(treat_mat_long[, treat_inds_g, drop = FALSE]) ==
+				assignments[g + 1]
 		))
 
-		if (r < R) {
-			stopifnot(last_ind_r == min(cohort_inds[[r + 1]]) - 1)
-			stopifnot(last_ind_r == max(cohort_inds[[r]]))
+		if (g < R) {
+			stopifnot(last_ind_g == min(cohort_inds[[g + 1]]) - 1)
+			stopifnot(last_ind_g == max(cohort_inds[[g]]))
 		}
 	}
 
-	stopifnot(max(r_inds) == N * T)
+	stopifnot(max(g_inds) == N * T)
 
 	stopifnot(all(colSums(treat_mat_long) >= 1))
 	stopifnot(total_feats_added == n_treats)

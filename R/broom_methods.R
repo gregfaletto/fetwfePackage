@@ -619,7 +619,7 @@ tidy.cohortStudy <- function(x, ...) {
 #' object returned by [getTes()]. Row 1 is the overall true ATT
 #' (`term = "ATT_true"`); subsequent rows are the true cohort ATTs
 #' (`term = "Cohort <adoption-time>"`, using the simulator's
-#' convention that cohort `r` adopts at calendar time `r + 1`, so
+#' convention that cohort `g` adopts at calendar time `g + 1`, so
 #' the labels match what `tidy.<estimator>` uses on a fitted panel
 #' generated from the same `FETWFE_coefs`). Standard error /
 #' statistic / p-value columns are always `NA_real_` --- there is no
@@ -656,7 +656,7 @@ tidy.FETWFE_tes <- function(x, conf.int = TRUE, conf.level = 0.95, ...) {
 		x$cohort_times
 	} else {
 		# Fallback for pre-1.9.0 dev objects without the slot: use the
-		# simulator's convention that cohort r adopts at calendar time r + 1.
+		# simulator's convention that cohort g adopts at calendar time g + 1.
 		as.integer(seq_len(R) + 1L)
 	}
 	terms <- c("ATT_true", paste0("Cohort ", cohort_times))
