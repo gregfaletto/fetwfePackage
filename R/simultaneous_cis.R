@@ -96,6 +96,17 @@ utils::globalVariables(c(
 #' for the corresponding effects. The `Sigma` blocks are not persisted on the
 #' fit; re-derivation is sub-second.
 #'
+#' **Degenerate (zero-variance) effects.** An effect whose entire contribution
+#' to the selected support is zeroed by the bridge penalty -- or, in
+#' scattered-cohort panels, an event time with an empty valid-cohort set -- has
+#' a standard error of exactly 0 by construction, so its simultaneous and
+#' pointwise CIs collapse to a point at the estimate and it is excluded from the
+#' joint correlation matrix (it adds no family-wise risk; the critical value is
+#' computed over the non-degenerate sub-family). This `se = 0` convention is the
+#' simultaneous-CI analog of the `NA` standard error `eventStudy()` reports for
+#' the same structurally-degenerate event times; both assign the effect an
+#' estimate of 0.
+#'
 #' **Paper grounding.** Theorem (c') tight Gaussianity (Faletto 2025,
 #' `paper_arxiv.tex:1233`) guarantees the joint asymptotic normality; Assumption
 #' (Psi-IF) (assumption equation `paper_arxiv.tex:2013`; in-prose discussion at
