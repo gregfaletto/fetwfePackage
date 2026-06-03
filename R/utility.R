@@ -409,10 +409,10 @@ idCohorts <- function(df, time_var, unit_var, treat_var) {
 #'     `indep_counts` argument was provided, `FALSE` otherwise.
 #' @details Within a single argument's check chain (e.g., `time_var`
 #'   must be character, length 1, present in `pdata`, integer column),
-#'   the first failure short-circuits — downstream checks for that arg
+#'   the first failure short-circuits --- downstream checks for that arg
 #'   are unsafe to run (e.g., `time_var %in% colnames(pdata)` cannot
 #'   sensibly be evaluated if `time_var` is not a length-1 character).
-#'   Across DIFFERENT arguments, violations collect independently — if
+#'   Across DIFFERENT arguments, violations collect independently --- if
 #'   both `time_var` and `unit_var` are malformed, BOTH violations
 #'   appear in the final list. This is "cascade within arg, collect
 #'   across args".
@@ -800,7 +800,7 @@ idCohorts <- function(df, time_var, unit_var, treat_var) {
 #'   lines as a multi-line `stop()` body. Centralising the header /
 #'   prefix here means both validators speak with one voice, and the
 #'   four entry points (`fetwfe`, `etwfe`, `betwfe`, `twfeCovs`)
-#'   continue to produce byte-identical messages — a property the
+#'   continue to produce byte-identical messages --- a property the
 #'   PR #103 snapshot guardrail asserts.
 #' @keywords internal
 #' @noRd

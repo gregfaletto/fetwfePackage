@@ -770,7 +770,7 @@ simultaneousCIs.twfeCovs <- function(
 #'   simultaneous band (via `.apply_simultaneous_catt_band()`), re-validates,
 #'   and returns the updated object. For `ci_type == "pointwise"` (or when the
 #'   band degrades to `NULL`) it is a no-op pass-through. Hoisted out of the
-#'   four entry-point tails to avoid a 4-site copy (WORKFLOW_LESSONS §14).
+#'   four entry-point tails to avoid a 4-site copy (WORKFLOW_LESSONS section 14).
 #' @param out A fully-classed `fetwfe`/`etwfe`/`betwfe`/`twfeCovs` object.
 #' @param alpha Numeric; the alpha the fit used (read from the fit's `alpha` slot).
 #' @return `out` with `catt_df` bounds overwritten when simultaneous, else

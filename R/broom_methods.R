@@ -199,7 +199,7 @@ NULL
 #' stashed at fit time, which drops units treated in the first time
 #' period (their treatment effect is unidentifiable). The returned data
 #' frame therefore corresponds to the panel the estimator actually fit
-#' on — broom's `augment.lm` convention of returning the model frame
+#' on --- broom's `augment.lm` convention of returning the model frame
 #' rather than the user's input.
 #' @keywords internal
 #' @noRd
@@ -622,7 +622,7 @@ tidy.cohortStudy <- function(x, ...) {
 #' convention that cohort `r` adopts at calendar time `r + 1`, so
 #' the labels match what `tidy.<estimator>` uses on a fitted panel
 #' generated from the same `FETWFE_coefs`). Standard error /
-#' statistic / p-value columns are always `NA_real_` — there is no
+#' statistic / p-value columns are always `NA_real_` --- there is no
 #' sampling distribution for a population truth. When
 #' `conf.int = TRUE` (default, matching the sibling tidy methods),
 #' `conf.low` / `conf.high` columns are included and also set to
@@ -708,7 +708,7 @@ glance.fetwfe <- function(x, ...) {
 #' Glance an `etwfe` fitted object
 #'
 #' Like [glance.fetwfe()] but omits the `lambda_star` /
-#' `lambda_star_model_size` columns — ETWFE has no regularization.
+#' `lambda_star_model_size` columns --- ETWFE has no regularization.
 #'
 #' @param x An object of class `"etwfe"`.
 #' @param ... Unused.
@@ -763,13 +763,13 @@ glance.betwfe <- function(x, ...) {
 #' by `(unit, time)`, and any first-period-treated units (whose treatment
 #' effect cannot be identified by the estimator) are auto-trimmed via
 #' `idCohorts()`. So you can pass the same raw `pdata` you handed to
-#' `fetwfe()` — the method takes care of alignment. The only hard
+#' `fetwfe()` --- the method takes care of alignment. The only hard
 #' requirement is that `data` contains the response column under its
 #' original name.
 #'
 #' @param x An object of class `"fetwfe"`.
 #' @param data A panel `data.frame` with one row per unit-period (any
-#'   sort order — augment auto-sorts), containing the response column
+#'   sort order --- augment auto-sorts), containing the response column
 #'   under the same name used at fit time (see `x$response_col_name`).
 #'   First-period-treated units, if present, are auto-trimmed.
 #' @param ... Unused.

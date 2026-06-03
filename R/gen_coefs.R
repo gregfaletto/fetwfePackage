@@ -13,7 +13,7 @@
 #' Optional arguments \code{assignment_type} and \code{assignment_strength}
 #' control whether cohort membership in the simulated panel is drawn
 #' marginally (independent of the covariates, the original behavior) or from
-#' a covariate-dependent propensity-score model — either a multinomial-logit
+#' a covariate-dependent propensity-score model --- either a multinomial-logit
 #' or an ordered-logit (proportional-odds) model. The default
 #' \code{assignment_type = "marginal"} preserves the pre-1.14.0 behavior
 #' byte-identically. See \code{vignette("simulation_vignette", package = "fetwfe")}
@@ -64,9 +64,9 @@
 #'   \code{coefs$assignment_coefs$interactions} on the returned object to
 #'   verify the retained list). The interaction columns enter the
 #'   propensity model only; the outcome model continues to use the
-#'   original covariates. Defaults to \code{NULL} (no interactions —
+#'   original covariates. Defaults to \code{NULL} (no interactions ---
 #'   v1.14.0 behavior is preserved byte-identically). Passing \code{list()}
-#'   (empty list) is treated as equivalent to \code{NULL} — no interactions
+#'   (empty list) is treated as equivalent to \code{NULL} --- no interactions
 #'   specified, behavior is identical to the v1.14.0 marginal-cohort path
 #'   within \code{multinomial} / \code{ordered} DGPs. Errors when
 #'   \code{assignment_type = "marginal"} (the marginal DGP has no
@@ -86,7 +86,7 @@
 #' @param verbose Logical. If \code{TRUE}, emit a \code{message()} when
 #'   \code{assignment_interactions} canonicalization removes duplicate or
 #'   unordered pairs (e.g., when the user passes both \code{c(1, 2)} and
-#'   \code{c(2, 1)}). Default \code{FALSE} (silent — users can verify the
+#'   \code{c(2, 1)}). Default \code{FALSE} (silent --- users can verify the
 #'   final canonical list via \code{coefs$assignment_coefs$interactions}).
 #' @param R Deprecated. The former name for \code{G}; still accepted with a
 #'   deprecation warning, and will be removed in a future release. Use

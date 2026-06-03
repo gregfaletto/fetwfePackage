@@ -241,13 +241,13 @@
 #'
 #' Returns the `N x K` matrix whose column `k` is the elementwise product
 #' `X[, j_k] * X[, k_k]` for the `k`-th pair `c(j_k, k_k)` in
-#' `interactions`. Used only inside the propensity model — the outcome
+#' `interactions`. Used only inside the propensity model --- the outcome
 #' design matrix never sees `X_int`.
 #'
 #' Centralized to one helper so the live propensity computation in
 #' `.compute_cohort_prob_matrix()` and the ordered cutpoint root-finder's
 #' Monte Carlo sample in `.gen_assignment_coefs()` use byte-identical
-#' construction logic. See `.workflow/WORKFLOW_LESSONS.md` §14 (Class A
+#' construction logic. See `.workflow/WORKFLOW_LESSONS.md` section 14 (Class A
 #' drift discipline).
 #'
 #' @param X Numeric matrix, `N x d`.
@@ -528,7 +528,7 @@
 #' user-actionable error).
 #'
 #' Each iteration draws a fresh (X, W) pair via `.drawCovariates()` +
-#' `.sample_cohort_assignments()`. The RNG state advances per iteration —
+#' `.sample_cohort_assignments()`. The RNG state advances per iteration ---
 #' retries are deterministic given the initial seed but use fresh random
 #' draws each time.
 #'
@@ -545,7 +545,7 @@
 #'   the indep_assignments path). Lets the same loop emit a contextually
 #'   accurate message at each call site.
 #'
-#' @return List with `X` (N × d matrix), `X_long` (N*T × d matrix),
+#' @return List with `X` (N x d matrix), `X_long` (N*T x d matrix),
 #'   `W` (length-N integer vector, values 0..R), and `counts` (length-(R+1)
 #'   integer vector).
 #' @keywords internal

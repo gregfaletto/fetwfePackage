@@ -4,7 +4,7 @@
 #' formatted for `did::att_gt()` (Callaway and Sant'Anna 2021) so that it can be
 #' passed directly to `fetwfe()` or `etwfe()` from the `fetwfe` package. In
 #' particular, it
-#'   * creates an *absorbing‑state* treatment dummy that equals 1 from the
+#'   * creates an *absorbing-state* treatment dummy that equals 1 from the
 #'     first treated period onward* and 0 otherwise,
 #'   * (optionally) drops units that are already treated in the very first
 #'     period of the sample (because `fetwfe()` removes them internally), and
@@ -13,15 +13,15 @@
 #'
 #' @param data A `data.frame` in **long** format containing at least the four
 #'   columns used by `did::att_gt()`: outcome `yname`, time `tname`, unit id
-#'   `idname`, and the first‑treatment period `gname` (which is 0 for the
-#'   never‑treated group).
+#'   `idname`, and the first-treatment period `gname` (which is 0 for the
+#'   never-treated group).
 #' @param yname  Character scalar. Name of the outcome column.
 #' @param tname  Character scalar. Name of the time variable (numeric or
 #'   integer). This becomes `time_var` in the returned dataframe.
 #' @param idname Character scalar. Name of the unit identifier. Converted to
 #'   character and returned as `unit_var`.
 #' @param gname  Character scalar. Name of the *group* variable holding the
-#'   first period of treatment. Values must be 0 for never‑treated, or a
+#'   first period of treatment. Values must be 0 for never-treated, or a
 #'   positive integer representing the first treated period.
 #' @param covars Character vector of additional covariate column names to carry
 #'   through (default `character(0)`). These columns are left untouched and
@@ -112,7 +112,7 @@ attgtToFetwfeDf <- function(
 #' formatted for `etwfe::etwfe()` (McDermott 2024) so that it can be
 #' passed directly to `fetwfe()` or `etwfe()` from the `fetwfe` package. In
 #' particular, it
-#'   * creates an *absorbing‑state* treatment dummy that equals 1 from the
+#'   * creates an *absorbing-state* treatment dummy that equals 1 from the
 #'     first treated period onward* and 0 otherwise,
 #'   * (optionally) drops units that are already treated in the very first
 #'     period of the sample (because `fetwfe()` removes them internally), and
@@ -124,7 +124,7 @@ attgtToFetwfeDf <- function(
 #' @param tvar Character. Column name of the time variable that you pass to `etwfe()` as `tvar`.
 #' @param idvar Character. Column name of the unit identifier (the variable you would
 #'   cluster on, or pass to `etwfe(..., ivar = idvar)` if you were using unit FEs).
-#' @param gvar Character. Column name of the “first treated” cohort variable passed to `etwfe()` as `gvar`.
+#' @param gvar Character. Column name of the "first treated" cohort variable passed to `etwfe()` as `gvar`.
 #'   Must be `0` for never-treated units, or the (strictly positive) first treated period.
 #' @param covars Character vector of *additional* covariate columns to keep (default `character(0)`).
 #' @param drop_first_period_treated Logical. Should units already treated in the very first
@@ -132,7 +132,7 @@ attgtToFetwfeDf <- function(
 #'   here keeps the returned dataframe clean.)  Default `TRUE`.
 #' @param out_names Named list giving the column names that the returned dataframe should have.
 #'   The default (`time_var`, `unit_var`, `treatment`, `response`) matches the arguments usually supplied to
-#'   `fetwfe()`. **Do not change the *names* of this list** – only the *values* – and keep all four.
+#'   `fetwfe()`. **Do not change the *names* of this list** -- only the *values* -- and keep all four.
 #' @param verbose Logical. If `TRUE`, a `message()` reports the count of
 #'   first-period-treated unit-period rows dropped when
 #'   `drop_first_period_treated = TRUE`. Default `FALSE` (silent).

@@ -117,7 +117,7 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #'
 #' Wraps `.derive_cohort_offsets_from_fit(x)` and the conditional dispatch
 #' between `getFirstInds(R, T)` (the consecutive-cohort assumption, used as
-#' a fall-back when `cohort_probs` carry no integer-coercible names — true
+#' a fall-back when `cohort_probs` carry no integer-coercible names --- true
 #' of synthetic genCoefs-based fixtures) and `getFirstIndsFromOffsets(...)`
 #' (the scattered-cohort path used on real panels like `bacondecomp::divorce`).
 #'
@@ -681,7 +681,7 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #'   `estimate +/- z * se`. When `ci_low` / `ci_high` are supplied (the
 #'   `ci_type = "simultaneous"` path, #197), those override the pointwise
 #'   computation --- the single-function-with-optional-args form keeps the two
-#'   bound-construction paths in ONE place (WORKFLOW_LESSONS §14, avoiding a
+#'   bound-construction paths in ONE place (WORKFLOW_LESSONS section 14, avoiding a
 #'   sibling `_with_bounds()` copy). `se` is always the same pointwise quantity;
 #'   `p_value` defaults to the pointwise Wald p but is overridden when the
 #'   `p_value` argument is supplied --- the `ci_type = "simultaneous"`

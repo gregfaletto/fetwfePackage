@@ -846,8 +846,8 @@ getGramInv <- function(
 #'   restricted maximum likelihood. Requires `lme4` to be installed
 #'   (`Suggests:` dependency, gated by `requireNamespace`); errors with a
 #'   clear message if not. lme4's "different scales" warning and
-#'   "rank deficient" message — expected on FETWFE-scale designs where
-#'   cohort dummies are 0/1 and covariates are arbitrary — are suppressed.
+#'   "rank deficient" message --- expected on FETWFE-scale designs where
+#'   cohort dummies are 0/1 and covariates are arbitrary --- are suppressed.
 #'
 #'   Prior versions of this package implemented the within-estimator
 #'   procedure of Pesaran (2015, Section 26.5.1). That implementation

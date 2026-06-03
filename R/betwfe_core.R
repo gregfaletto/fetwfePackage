@@ -963,7 +963,7 @@ betwfeWithSimulatedData <- function(
 #'     (scaled version of `X_final`) and `y_final` are augmented to add an L2
 #'     penalty. The augmentation uses the identity basis (via
 #'     `prep_for_etwfe_regression(..., is_fetwfe = FALSE)`) because BETWFE's
-#'     design is untransformed — same as ETWFE and `twfeCovs`, and unlike FETWFE
+#'     design is untransformed --- same as ETWFE and `twfeCovs`, and unlike FETWFE
 #'     which uses the inverse fusion-transform basis.
 #'   \item **Cohort Probabilities:** Calculates cohort membership probabilities
 #'     conditional on being treated, using `in_sample_counts` and `indep_counts`

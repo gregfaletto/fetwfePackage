@@ -16,7 +16,7 @@ A one-row data frame with 11 columns.
 }
 \description{
 Like \code{\link[=glance.fetwfe]{glance.fetwfe()}} but omits the \code{lambda_star} /
-\code{lambda_star_model_size} columns — ETWFE has no regularization.
+\code{lambda_star_model_size} columns --- ETWFE has no regularization.
 }
 \examples{
 \dontrun{

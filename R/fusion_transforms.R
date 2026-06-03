@@ -718,13 +718,13 @@ genInvTwoWayFusionTransformMat <- function(n_vars, first_inds, R) {
 
 #' Build the **entire** inverse-fusion matrix \(D_N^{-1}\)
 #'
-#' Constructs the \eqn{p\times p} block–diagonal matrix that sends the sparse
+#' Constructs the \eqn{p\times p} block-diagonal matrix that sends the sparse
 #' coefficient vector \(\theta\) used in the bridge loss back to the original
 #' coefficient scale \(\beta\), and is also used to multiply \(Z\) on the right
 #' to transform the features into a transformed feature space:
 #' \deqn{\beta \;=\;D_N^{-1}\,\theta.}
 #' The block layout follows the factorisation proved in the
-#' paper – repeated here using the helper generators already available in the
+#' paper -- repeated here using the helper generators already available in the
 #' package.
 #'
 #' \preformatted{
@@ -746,8 +746,8 @@ genInvTwoWayFusionTransformMat <- function(n_vars, first_inds, R) {
 #'   \item Treatment blocks: \( \mathfrak W \times \mathfrak W\) with
 #'         \(\mathfrak W = \texttt{num_treats}\)
 #' }
-#' All non–identity blocks contain only 0/1 entries, so the determinant of
-#' the whole matrix is 1 (volume–preserving transform).
+#' All non-identity blocks contain only 0/1 entries, so the determinant of
+#' the whole matrix is 1 (volume-preserving transform).
 #'
 #' @param first_inds Integer vector (length \code{R}).
 #'   `first_inds[r]` is the 1-based column index of the first base
@@ -767,7 +767,7 @@ genInvTwoWayFusionTransformMat <- function(n_vars, first_inds, R) {
 #' R  <- 3; T <- 6; d <- 2
 #' nt <- getNumTreats(R, T)
 #' Dinv <- genFullInvFusionTransformMat(getFirstInds(R,T), T, R, d, nt)
-#' dim(Dinv)   # should be p × p
+#' dim(Dinv)   # should be p x p
 #'
 #' @keywords internal
 #' @noRd
