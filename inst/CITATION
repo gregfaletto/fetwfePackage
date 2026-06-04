@@ -1,15 +1,4 @@
 bibentry(
-  bibtype = "Manual",
-  title   = "fetwfe: Fused Extended Two-Way Fixed Effects",
-  author  = person("Gregory", "Faletto"),
-  year    = "2025",
-  note    = "R package version 1.18.1",
-  url     = "https://cran.r-project.org/package=fetwfe",
-  doi      = "10.32614/CRAN.package.fetwfe"
-)
-
-
-bibentry(
   bibtype  = "Article",
   title    = "Fused Extended Two-Way Fixed Effects for Difference-in-Differences With Staggered Adoptions",
   author   = person("Gregory", "Faletto"),
