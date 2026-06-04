@@ -398,3 +398,35 @@ test_that("BIC path preserves caller's .Random.seed (#177)", {
 	after <- runif(3L)
 	expect_identical(before, after)
 })
+
+# ------------------------------------------------------------------------------
+# (#185 IC1): lambda.max / lambda.min / nlambda are silently ignored under the
+# default lambda_selection = "cv" (cross-validation builds its own grid). Warn
+# so the user isn't surprised; stay silent on the BIC path and on cv with the
+# default grid.
+# ------------------------------------------------------------------------------
+test_that("cv path warns when lambda.max / lambda.min / nlambda are supplied", {
+	sim <- .lambda_sel_fixture()
+	expect_warning(
+		fetwfeWithSimulatedData(sim, lambda.max = 5),
+		"ignored under lambda_selection = 'cv'",
+		fixed = TRUE
+	)
+	expect_warning(
+		fetwfeWithSimulatedData(sim, nlambda = 50L),
+		"ignored under lambda_selection = 'cv'",
+		fixed = TRUE
+	)
+	# betwfe() shares the same dispatch.
+	expect_warning(
+		betwfeWithSimulatedData(sim, lambda.min = 0.01),
+		"ignored under lambda_selection = 'cv'",
+		fixed = TRUE
+	)
+	# BIC path uses the supplied grid -> no IC1 warning.
+	expect_no_warning(
+		fetwfeWithSimulatedData(sim, lambda_selection = "bic", lambda.max = 5)
+	)
+	# CV with the default grid -> no warning.
+	expect_no_warning(fetwfeWithSimulatedData(sim))
+})

@@ -315,6 +315,9 @@ test_that("betwfe returns expected output when lambda parameters are supplied", 
 		treatment = "treatment",
 		covs = c("cov1", "cov2"),
 		response = "y",
+		# Custom lambda grid only applies on the BIC path (CV builds its own;
+		# #185 IC1). Set bic so the supplied grid is actually exercised.
+		lambda_selection = "bic",
 		lambda.max = 5,
 		lambda.min = 0.5,
 		nlambda = 50,

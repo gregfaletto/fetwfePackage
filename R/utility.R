@@ -2029,7 +2029,17 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 
 	# CV path. cv.grpreg builds its own lambda grid (we don't forward the
 	# user-facing lambda.max/lambda.min/nlambda knobs — those are BIC-path
-	# only).
+	# only). Warn rather than silently ignore a non-default value so the user
+	# isn't surprised that a supplied lambda grid had no effect (#185 IC1).
+	if (!is.na(lambda.max) || !is.na(lambda.min) || nlambda != 100) {
+		warning(
+			"lambda.max, lambda.min, and nlambda are ignored under ",
+			"lambda_selection = 'cv' (cross-validation builds its own lambda ",
+			"grid). Set lambda_selection = 'bic' to use a custom lambda grid, ",
+			"or omit these arguments to silence this warning.",
+			call. = FALSE
+		)
+	}
 	if (verbose) {
 		message("Estimating bridge regression with 10-fold CV...")
 		t0 <- Sys.time()
