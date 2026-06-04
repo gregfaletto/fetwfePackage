@@ -4,7 +4,16 @@
 \alias{genCoefsCore}
 \title{Generate Coefficient Vector for Data Generation (core)}
 \usage{
-genCoefsCore(G = NULL, T, d, density, eff_size, seed = NULL, R = NULL)
+genCoefsCore(
+  G = NULL,
+  T,
+  d,
+  density,
+  eff_size,
+  fusion_structure = c("cohort", "event_study"),
+  seed = NULL,
+  R = NULL
+)
 }
 \arguments{
 \item{G}{Integer. The number of treated cohorts (treatment is assumed to start in periods 2 to
@@ -22,6 +31,13 @@ coefficient vector \code{theta} is nonzero.}
 \item{eff_size}{Numeric. The magnitude used to scale nonzero entries in \code{theta}. Each
 nonzero entry is set to \code{eff_size} or \code{-eff_size} (with a 60 percent chance for a
 positive value).}
+
+\item{fusion_structure}{Character. One of \code{"cohort"} (default) or
+\code{"event_study"}. Selects the inverse fusion transform applied to the
+treatment-effect block, controlling the basis in which the true treatment
+effects are sparse. \code{"cohort"} is byte-identical to previous behavior;
+\code{"event_study"} fuses effects at the same time since treatment across
+cohorts. See \code{genCoefs()} for details.}
 
 \item{seed}{(Optional) Integer. Seed for reproducibility.}
 
@@ -60,8 +76,11 @@ occurring
 with probability \code{density}. Nonzero entries are set to \code{eff_size} or \code{-eff_size}
 (with a 60\\% chance for a positive value).
 \item The full coefficient vector \code{beta} is then computed by applying an inverse fusion
-transform to \code{theta} using internal routines (e.g.,
-\code{genBackwardsInvFusionTransformMat()} and \code{genInvTwoWayFusionTransformMat()}).
+transform to \code{theta} using internal routines:
+\code{genBackwardsInvFusionTransformMat()} for the fixed-effect blocks and,
+for the treatment-effect block, \code{genInvTwoWayFusionTransformMat()} when
+\code{fusion_structure = "cohort"} or \code{genInvEventStudyFusionTransformMat()}
+when \code{fusion_structure = "event_study"}.
 }
 }
 \examples{

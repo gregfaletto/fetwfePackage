@@ -1,5 +1,20 @@
 # NEWS
 
+## Version 1.20.0
+
+### Features
+
+- `genCoefs()` and `genCoefsCore()` gain a `fusion_structure` argument
+  (`"cohort"` or `"event_study"`), the simulation-side companion to the
+  `fetwfe()` argument added in 1.19.0. Under `"event_study"` the generated true
+  coefficients are sparse in the event-study basis (treatment effects that share
+  the same time since treatment are fused across cohorts), letting simulation
+  studies generate truth matched to the event-study penalty. `"cohort"` (the
+  default) is byte-identical to prior behavior. The returned `FETWFE_coefs`
+  object carries (and prints) a `fusion_structure` slot, and the
+  "Choosing a fusion structure" vignette now generates its event-study example
+  natively via this argument (#237).
+
 ## Version 1.19.1
 
 ### Documentation

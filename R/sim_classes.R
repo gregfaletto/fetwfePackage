@@ -69,5 +69,9 @@ print.FETWFE_coefs <- function(x, ...) {
 		"  seed: %s\n",
 		if (is.null(x$seed)) "<none>" else as.character(x$seed)
 	))
+	cat(sprintf(
+		"  fusion structure: %s\n",
+		if (is.null(x$fusion_structure)) "<unknown>" else x$fusion_structure
+	))
 	invisible(x)
 }
