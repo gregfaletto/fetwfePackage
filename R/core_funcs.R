@@ -108,7 +108,8 @@ prep_for_etwfe_regression <- function(
 	indep_count_data_available,
 	indep_counts = NA,
 	is_fetwfe,
-	is_twfe_covs = FALSE
+	is_twfe_covs = FALSE,
+	fusion_structure = "cohort"
 ) {
 	gls <- .estimate_variance_and_gls(
 		y = y,
@@ -158,7 +159,8 @@ prep_for_etwfe_regression <- function(
 		num_treats = num_treats,
 		sig_eps_sq = sig_eps_sq,
 		sig_eps_c_sq = sig_eps_c_sq,
-		N = N
+		N = N,
+		fusion_structure = fusion_structure
 	)
 	X_final_scaled <- ridge$X_scaled
 	y_final <- ridge$y_final
@@ -574,7 +576,8 @@ prep_for_etwfe_core <- function(
 	num_treats,
 	sig_eps_sq,
 	sig_eps_c_sq,
-	N
+	N,
+	fusion_structure = "cohort"
 ) {
 	if (!add_ridge) {
 		return(list(
@@ -592,7 +595,8 @@ prep_for_etwfe_core <- function(
 			T = T,
 			G = G,
 			d = d,
-			num_treats = num_treats
+			num_treats = num_treats,
+			fusion_structure = fusion_structure
 		)
 
 		stopifnot(ncol(D_inverse) == p)

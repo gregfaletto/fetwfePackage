@@ -89,7 +89,8 @@ transformXintImproved <- function(
 	G,
 	d,
 	num_treats,
-	first_inds = NA
+	first_inds = NA,
+	fusion_structure = "cohort"
 ) {
 	p <- getP(G = G, T = T, d = d, num_treats = num_treats)
 	stopifnot(p == ncol(X_int))
@@ -177,7 +178,7 @@ transformXintImproved <- function(
 	stopifnot(all(is.na(X_mod[, feat_inds])))
 
 	X_mod[, feat_inds] <- X_int[, feat_inds] %*%
-		genInvTwoWayFusionTransformMat(num_treats, first_inds, G)
+		.gen_inv_treat_block(num_treats, first_inds, G, fusion_structure)
 
 	if (d > 0) {
 		# Lastly, penalize interactions between each treatment effect and each feature.
@@ -197,7 +198,12 @@ transformXintImproved <- function(
 			stopifnot(all(is.na(X_mod[, inds_j])))
 
 			X_mod[, inds_j] <- X_int[, inds_j] %*%
-				genInvTwoWayFusionTransformMat(num_treats, first_inds, G)
+				.gen_inv_treat_block(
+					num_treats,
+					first_inds,
+					G,
+					fusion_structure
+				)
 
 			stopifnot(all(!is.na(X_mod[, inds_j])))
 		}
@@ -325,7 +331,8 @@ untransformCoefImproved <- function(
 	p,
 	d,
 	num_treats,
-	first_inds = NA
+	first_inds = NA,
+	fusion_structure = "cohort"
 ) {
 	stopifnot(length(beta_hat_mod) == p)
 	beta_hat <- rep(as.numeric(NA), p)
@@ -417,10 +424,11 @@ untransformCoefImproved <- function(
 
 	stopifnot(all(is.na(beta_hat[feat_inds])))
 
-	beta_hat[feat_inds] <- genInvTwoWayFusionTransformMat(
+	beta_hat[feat_inds] <- .gen_inv_treat_block(
 		num_treats,
 		first_inds,
-		G
+		G,
+		fusion_structure
 	) %*%
 		beta_hat_mod[feat_inds]
 
@@ -449,10 +457,11 @@ untransformCoefImproved <- function(
 			# Now ready to untransform the estimated coefficients
 			stopifnot(all(is.na(beta_hat[inds_j])))
 
-			beta_hat[inds_j] <- genInvTwoWayFusionTransformMat(
+			beta_hat[inds_j] <- .gen_inv_treat_block(
 				num_treats,
 				first_inds,
-				G
+				G,
+				fusion_structure
 			) %*%
 				beta_hat_mod[inds_j]
 
@@ -716,6 +725,117 @@ genInvTwoWayFusionTransformMat <- function(n_vars, first_inds, G) {
 }
 
 
+#' Build the inverse event-study fusion transform matrix \((D^{(2)}_{ES})^{-1}\)
+#'
+#' Constructs the inverse of the event-study treatment-effect differences matrix
+#' \eqn{\boldsymbol{D}^{(2)}_{\mathrm{ES}}(\mathcal G)} of Faletto (2025) Lemma
+#' \code{event.study.sing.val.lem} (closed form \code{es.2.inv.exp}). The
+#' event-study penalty fuses treatment effects at the same time since treatment
+#' (event time \eqn{e = t - g}) across cohorts, in place of the default
+#' within-cohort / between-cohort two-way fusion built by
+#' \code{genInvTwoWayFusionTransformMat()}.
+#'
+#' With treatment effects ordered by cohort --- cohort \eqn{g_k} occupies
+#' \code{first_inds[k]:(first_inds[k + 1] - 1)}, of size \eqn{n_k = T - g_k + 1}
+#' --- the inverse is block lower-triangular: its first column-block is the
+#' first \eqn{n_k} rows of the all-ones lower-triangular matrix (the "spine" of
+#' the earliest cohort \eqn{g_1}); its strictly-lower off-diagonal blocks are
+#' same-event-time selectors \eqn{S(g_j, g_k) = [\boldsymbol I_{n_k}\ \boldsymbol
+#' 0]}; and its diagonal blocks are \eqn{\boldsymbol I_{n_k}} for \eqn{k \ge 2}
+#' (or the all-ones lower-triangular spine for \eqn{k = 1}).
+#'
+#' @param n_vars Integer; the number of treatment effects \eqn{\mathfrak W}.
+#' @param first_inds Integer vector of length \code{G}; the index, within the
+#'   treatment-effect block, of each cohort's first treatment effect.
+#' @param G Integer; the number of treated cohorts.
+#' @return The \code{n_vars x n_vars} matrix \eqn{(D^{(2)}_{ES})^{-1}}.
+#' @keywords internal
+#' @noRd
+genInvEventStudyFusionTransformMat <- function(n_vars, first_inds, G) {
+	stopifnot(length(n_vars) == 1, n_vars >= 0)
+	stopifnot(is.numeric(G), length(G) == 1, G >= 0)
+	if (G > 0) {
+		stopifnot(is.numeric(first_inds), length(first_inds) == G)
+		if (n_vars > 0) {
+			stopifnot(first_inds[1] == 1)
+			if (G > 1) {
+				stopifnot(all(diff(first_inds) > 0))
+			}
+			stopifnot(first_inds[G] <= n_vars)
+		} else {
+			stopifnot(G == 0)
+		}
+	} else {
+		stopifnot(length(first_inds) == 0, n_vars == 0)
+	}
+
+	D_inv <- matrix(0, nrow = n_vars, ncol = n_vars)
+	if (n_vars == 0) {
+		return(D_inv)
+	}
+
+	# Cohort block boundaries and sizes n_k = T - g_k + 1.
+	block_starts <- first_inds
+	block_ends <- c(first_inds[-1] - 1L, n_vars)
+	n_k <- block_ends - block_starts + 1L
+	n1 <- n_k[1]
+	cols1 <- block_starts[1]:block_ends[1]
+
+	# (tilde D^{(1)}(1)^{-1})^T is the n1 x n1 all-ones lower-triangular matrix.
+	LT1 <- matrix(0, n1, n1)
+	LT1[lower.tri(LT1, diag = TRUE)] <- 1
+
+	for (k in 1:G) {
+		rows_k <- block_starts[k]:block_ends[k]
+		# Block (k, 1): first n_k rows of LT1, at the earliest cohort's columns.
+		# For k = 1 this is the full spine block (the only directly penalized
+		# base term plus its adjacent-event-time differences).
+		D_inv[rows_k, cols1] <- LT1[seq_len(n_k[k]), , drop = FALSE]
+		if (k >= 2) {
+			# Strictly-lower off-diagonal same-event-time selectors
+			# S(g_j, g_k) = [I_{n_k} | 0].
+			if (k >= 3) {
+				for (j in 2:(k - 1)) {
+					cols_j <- block_starts[j]:block_ends[j]
+					D_inv[rows_k, cols_j[seq_len(n_k[k])]] <- diag(n_k[k])
+				}
+			}
+			# Diagonal block I_{n_k}.
+			D_inv[rows_k, rows_k] <- diag(n_k[k])
+		}
+	}
+
+	D_inv
+}
+
+
+# .gen_inv_treat_block
+#' @title Dispatch the inverse treatment-effect fusion block by structure
+#' @description Returns the inverse of the treatment-effect fusion difference
+#'   matrix for the requested `fusion_structure`: the default cohort two-way
+#'   fusion (`genInvTwoWayFusionTransformMat()`) or the event-study fusion
+#'   (`genInvEventStudyFusionTransformMat()`, #40). A single dispatch point so
+#'   every consumer (transform / untransform / variance / accessors) stays in
+#'   sync, and the `"cohort"` (default) branch is the exact pre-existing call.
+#' @param num_treats,first_inds,G As in `genInvTwoWayFusionTransformMat()`.
+#' @param fusion_structure One of `"cohort"` or `"event_study"`.
+#' @return The `num_treats x num_treats` inverse treatment-effect fusion block.
+#' @keywords internal
+#' @noRd
+.gen_inv_treat_block <- function(
+	num_treats,
+	first_inds,
+	G,
+	fusion_structure = "cohort"
+) {
+	if (identical(fusion_structure, "event_study")) {
+		genInvEventStudyFusionTransformMat(num_treats, first_inds, G)
+	} else {
+		genInvTwoWayFusionTransformMat(num_treats, first_inds, G)
+	}
+}
+
+
 #' Build the **entire** inverse-fusion matrix \(D_N^{-1}\)
 #'
 #' Constructs the \eqn{p\times p} block-diagonal matrix that sends the sparse
@@ -771,7 +891,14 @@ genInvTwoWayFusionTransformMat <- function(n_vars, first_inds, G) {
 #'
 #' @keywords internal
 #' @noRd
-genFullInvFusionTransformMat <- function(first_inds, T, G, d, num_treats) {
+genFullInvFusionTransformMat <- function(
+	first_inds,
+	T,
+	G,
+	d,
+	num_treats,
+	fusion_structure = "cohort"
+) {
 	##———— Safety checks ————————————————————————————————————————————
 	stopifnot(is.numeric(G), length(G) == 1L, G >= 2L)
 	stopifnot(is.numeric(T), length(T) == 1L, T >= 3L, G <= T - 1)
@@ -802,20 +929,22 @@ genFullInvFusionTransformMat <- function(first_inds, T, G, d, num_treats) {
 	}
 
 	##———— 6. Base treatment effects:      (D^{(2)}(G))^{-1} ————————
-	block6 <- genInvTwoWayFusionTransformMat(
-		n_vars = num_treats,
+	block6 <- .gen_inv_treat_block(
+		num_treats = num_treats,
 		first_inds = first_inds,
-		G = G
+		G = G,
+		fusion_structure = fusion_structure
 	)
 
 	##———— 7. Treatment × X interactions:  I_d ⊗ (D^{(2)}(G))^{-1} ——
 	block7 <- if (d > 0) {
 		kronecker(
 			diag(d),
-			genInvTwoWayFusionTransformMat(
-				n_vars = num_treats,
+			.gen_inv_treat_block(
+				num_treats = num_treats,
 				first_inds = first_inds,
-				G = G
+				G = G,
+				fusion_structure = fusion_structure
 			)
 		)
 	} else {

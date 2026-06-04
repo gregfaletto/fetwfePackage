@@ -1,5 +1,26 @@
 # NEWS
 
+## Version 1.19.0
+
+### Features
+
+- `fetwfe()` gains a `fusion_structure` argument (`"cohort"` or
+  `"event_study"`). Under `"event_study"` the treatment-effect fusion penalty
+  fuses effects at the same time since treatment (event time `e = t - g`)
+  across cohorts, instead of the default within-cohort / between-cohort two-way
+  fusion --- the event-study identifying restriction common in applied DiD.
+  This shrinks toward an event-study structure when the data support it,
+  recovering event-time-structured effects with smaller error than the default.
+  The event-study penalty satisfies the same theoretical guarantees as the
+  default (Faletto 2025, event-study singular-value lemma): same singular-value
+  constants, so every consistency / selection / asymptotic-normality result
+  transfers verbatim. `"cohort"` (the default) is byte-identical to prior
+  behavior (#40).
+- Note: `fetwfe()` objects now carry a `fusion_structure` slot. Saved fits from
+  prior versions lack it and will fail validation when passed to `eventStudy()`,
+  `simultaneousCIs()`, or `cohortStudy()`; re-fit under 1.19.0 to restore
+  compatibility.
+
 ## Version 1.18.1
 
 ### User-facing

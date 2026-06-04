@@ -417,13 +417,18 @@ fetwfe_core <- function(
 	se_type = "default",
 	lambda_selection = "cv",
 	cv_folds = 10L,
-	cv_seed = NULL
+	cv_seed = NULL,
+	fusion_structure = "cohort"
 ) {
 	se_type <- match.arg(
 		se_type,
 		c("default", "conservative", "cluster")
 	)
 	lambda_selection <- match.arg(lambda_selection, c("cv", "bic"))
+	fusion_structure <- match.arg(
+		fusion_structure,
+		c("cohort", "event_study")
+	)
 	ret <- check_etwfe_core_inputs(
 		in_sample_counts = in_sample_counts,
 		N = N,
@@ -463,7 +468,8 @@ fetwfe_core <- function(
 		G = G,
 		d = d,
 		num_treats = num_treats,
-		first_inds = first_inds
+		first_inds = first_inds,
+		fusion_structure = fusion_structure
 	)
 
 	res <- prep_for_etwfe_regression(
@@ -484,7 +490,8 @@ fetwfe_core <- function(
 		in_sample_counts = in_sample_counts,
 		indep_count_data_available = indep_count_data_available,
 		indep_counts = indep_counts,
-		is_fetwfe = TRUE
+		is_fetwfe = TRUE,
+		fusion_structure = fusion_structure
 	)
 
 	X_final_scaled <- res$X_final_scaled
@@ -637,7 +644,8 @@ fetwfe_core <- function(
 			G = G,
 			p = p,
 			d = d,
-			num_treats = num_treats
+			num_treats = num_treats,
+			fusion_structure = fusion_structure
 		)
 		# Apply ridge adjustment locally before early-exit return; doesn't
 		# affect later code paths (they re-compute `beta_hat` separately
@@ -697,7 +705,8 @@ fetwfe_core <- function(
 		G = G,
 		p = p,
 		d = d,
-		num_treats = num_treats
+		num_treats = num_treats,
+		fusion_structure = fusion_structure
 	)
 
 	# If using ridge regularization, multiply the "naive" estimated coefficients
@@ -752,7 +761,8 @@ fetwfe_core <- function(
 		include_selected = TRUE,
 		alpha = alpha,
 		se_type = se_type,
-		y_final = y_final
+		y_final = y_final,
+		fusion_structure = fusion_structure
 	)
 
 	cohort_te_df <- res$cohort_te_df

@@ -155,6 +155,12 @@
 #'   reproducible without the user having to specify a seed. The seed
 #'   actually used is stored on the returned object as `cv_seed`.
 #'   Ignored when `lambda_selection = "bic"`.
+#' @param fusion_structure Character; one of `"cohort"` or `"event_study"`.
+#'   `"cohort"` (the default) uses the within-cohort / between-cohort two-way
+#'   fusion penalty. `"event_study"` instead fuses treatment effects at the same
+#'   time since treatment (event time `e = t - g`) across cohorts. The
+#'   event-study penalty carries the same theoretical guarantees as the default
+#'   (Faletto 2025); only the treatment-effect fusion structure changes.
 #' @param ci_type Character; one of `"simultaneous"` (default) or
 #'   `"pointwise"`. Controls the confidence-interval bounds reported for the
 #'   cohort-specific ATTs (in `catt_df`) and the event-study effects (from
@@ -199,6 +205,7 @@
 #' \item{lambda_selection}{Character scalar; either `"cv"` (10-fold cross-validation on `cv.grpreg`; v1.13.0+ default) or `"bic"` (BIC over the `grpreg` lambda grid; the prior default). Mirrors the `lambda_selection` argument the user passed.}
 #' \item{cv_folds}{Integer scalar; the `cv_folds` value used when `lambda_selection = "cv"`, `NA_integer_` when `lambda_selection = "bic"`.}
 #' \item{cv_seed}{Integer scalar; the seed actually fed to `set.seed()` immediately before `cv.grpreg()` was called. Defaults to `as.integer(N * T)` when the user did not pass a seed. `NA_integer_` when `lambda_selection = "bic"`.}
+#' \item{fusion_structure}{Character scalar; the `fusion_structure` argument the user passed (`"cohort"` or `"event_study"`), recording which fusion-penalty differences matrix was used for the treatment effects.}
 #' \item{N}{The final number of units that were in the data set used for estimation (after any units may have been removed because they were treated in the first time period).}
 #' \item{T}{The number of time periods in the final data set.}
 #' \item{G}{The final number of treated cohorts that appear in the final data set.}
@@ -320,13 +327,15 @@ fetwfe <- function(
 	lambda_selection = "cv",
 	cv_folds = 10L,
 	cv_seed = NULL,
-	ci_type = c("simultaneous", "pointwise")
+	ci_type = c("simultaneous", "pointwise"),
+	fusion_structure = c("cohort", "event_study")
 ) {
 	se_type <- match.arg(
 		se_type,
 		c("default", "conservative", "cluster")
 	)
 	ci_type <- match.arg(ci_type)
+	fusion_structure <- match.arg(fusion_structure)
 	# `lambda_selection` is validated downstream by
 	# `checkFetwfeInputs()` as part of the collect-all-violations
 	# pattern, so a user passing both a bad `lambda_selection` and a
@@ -408,7 +417,8 @@ fetwfe <- function(
 		se_type = se_type,
 		lambda_selection = lambda_selection,
 		cv_folds = cv_folds,
-		cv_seed = cv_seed
+		cv_seed = cv_seed,
+		fusion_structure = fusion_structure
 	)
 
 	att_branch <- .select_att_branch(
@@ -467,6 +477,7 @@ fetwfe <- function(
 			NA_integer_
 		},
 		cv_seed = res$cv_seed_used,
+		fusion_structure = fusion_structure,
 		N = res$N,
 		T = res$T,
 		G = res$G,
@@ -616,6 +627,12 @@ fetwfe <- function(
 #'   reproducible without the user having to specify a seed. The seed
 #'   actually used is stored on the returned object as `cv_seed`.
 #'   Ignored when `lambda_selection = "bic"`.
+#' @param fusion_structure Character; one of `"cohort"` or `"event_study"`.
+#'   `"cohort"` (the default) uses the within-cohort / between-cohort two-way
+#'   fusion penalty. `"event_study"` instead fuses treatment effects at the same
+#'   time since treatment (event time `e = t - g`) across cohorts. The
+#'   event-study penalty carries the same theoretical guarantees as the default
+#'   (Faletto 2025); only the treatment-effect fusion structure changes.
 #' @param ci_type Character; one of `"simultaneous"` (default) or
 #'   `"pointwise"`. Controls the confidence-interval bounds reported for the
 #'   cohort-specific ATTs (in `catt_df`) and the event-study effects (from
@@ -660,6 +677,7 @@ fetwfe <- function(
 #' \item{lambda_selection}{Character scalar; either `"cv"` (10-fold cross-validation on `cv.grpreg`; v1.13.0+ default) or `"bic"` (BIC over the `grpreg` lambda grid; the prior default). Mirrors the `lambda_selection` argument the user passed.}
 #' \item{cv_folds}{Integer scalar; the `cv_folds` value used when `lambda_selection = "cv"`, `NA_integer_` when `lambda_selection = "bic"`.}
 #' \item{cv_seed}{Integer scalar; the seed actually fed to `set.seed()` immediately before `cv.grpreg()` was called. Defaults to `as.integer(N * T)` when the user did not pass a seed. `NA_integer_` when `lambda_selection = "bic"`.}
+#' \item{fusion_structure}{Character scalar; the `fusion_structure` argument the user passed (`"cohort"` or `"event_study"`), recording which fusion-penalty differences matrix was used for the treatment effects.}
 #' \item{N}{The final number of units that were in the data set used for estimation (after any units may have been removed because they were treated in the first time period).}
 #' \item{T}{The number of time periods in the final data set.}
 #' \item{G}{The final number of treated cohorts that appear in the final data set.}
@@ -732,13 +750,15 @@ fetwfeWithSimulatedData <- function(
 	lambda_selection = "cv",
 	cv_folds = 10L,
 	cv_seed = NULL,
-	ci_type = c("simultaneous", "pointwise")
+	ci_type = c("simultaneous", "pointwise"),
+	fusion_structure = c("cohort", "event_study")
 ) {
 	se_type <- match.arg(
 		se_type,
 		c("default", "conservative", "cluster")
 	)
 	ci_type <- match.arg(ci_type)
+	fusion_structure <- match.arg(fusion_structure)
 	# `lambda_selection` validated downstream by `checkFetwfeInputs()`
 	# (collect-all-violations pattern).
 
@@ -778,7 +798,8 @@ fetwfeWithSimulatedData <- function(
 		lambda_selection = lambda_selection,
 		cv_folds = cv_folds,
 		cv_seed = cv_seed,
-		ci_type = ci_type
+		ci_type = ci_type,
+		fusion_structure = fusion_structure
 	)
 
 	return(res)
