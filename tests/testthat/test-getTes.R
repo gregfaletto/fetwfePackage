@@ -214,3 +214,52 @@ test_that("summary.FETWFE_tes returns expected fields and dispersion stats", {
 	joined <- paste(out, collapse = "\n")
 	expect_match(joined, "Cohort effect dispersion")
 })
+
+# ------------------------------------------------------------------------------
+# Test 8 (#189): the "Cohort assignment DGP" section renders only for
+# non-marginal objects, and getTes() carries assignment_type /
+# assignment_strength so print()/summary() can describe the DGP.
+# ------------------------------------------------------------------------------
+test_that("print/summary.FETWFE_tes show the assignment-DGP section only when non-marginal", {
+	# Marginal: slots present, but the new section is NOT rendered, so the
+	# common-case output is unchanged.
+	tm <- getTes(genCoefs(
+		G = 3,
+		T = 5,
+		d = 2,
+		density = 0.5,
+		eff_size = 1,
+		seed = 1
+	))
+	expect_identical(tm$assignment_type, "marginal")
+	pm <- paste(capture.output(print(tm)), collapse = "\n")
+	sm <- paste(capture.output(print(summary(tm))), collapse = "\n")
+	expect_no_match(pm, "Cohort assignment DGP", fixed = TRUE)
+	expect_no_match(sm, "Cohort assignment DGP", fixed = TRUE)
+
+	# Non-marginal: getTes() carries the slots, and both print() and summary()
+	# render the type, strength, and cohort weights.
+	cn <- genCoefs(
+		G = 3,
+		T = 5,
+		d = 2,
+		density = 0.5,
+		eff_size = 1,
+		assignment_type = "multinomial",
+		assignment_strength = 1.0,
+		seed = 42
+	)
+	tn <- getTes(cn)
+	expect_identical(tn$assignment_type, "multinomial")
+	expect_equal(tn$assignment_strength, 1.0)
+	expect_length(tn$cohort_weights, 3L)
+
+	pn <- paste(capture.output(print(tn)), collapse = "\n")
+	expect_match(pn, "Cohort assignment DGP", fixed = TRUE)
+	expect_match(pn, "multinomial", fixed = TRUE)
+	expect_match(pn, "Cohort weights", fixed = TRUE)
+
+	sn <- paste(capture.output(print(summary(tn))), collapse = "\n")
+	expect_match(sn, "Cohort assignment DGP", fixed = TRUE)
+	expect_match(sn, "multinomial", fixed = TRUE)
+})

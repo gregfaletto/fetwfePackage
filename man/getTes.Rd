@@ -33,6 +33,15 @@ the marginal DGP this is uniform \code{1/G}. Under
 \code{assignment_type = "multinomial"} or \code{"ordered"} it is
 \eqn{E[\pi_g(X)] / \sum_{g' \text{ treated}} E[\pi_{g'}(X)]}{E[pi_g(X)] / sum_{g' treated} E[pi_g'(X)]}.
 New in 1.14.0.}
+\item{assignment_type}{Character; the cohort-assignment DGP carried over
+from \code{coefs_obj} (one of \code{"marginal"},
+\code{"multinomial"}, or \code{"ordered"}). Determines whether
+\code{cohort_weights} is uniform (marginal) or propensity-weighted.
+New in 1.18.1.}
+\item{assignment_strength}{Numeric; the assignment-strength scaling carried
+over from \code{coefs_obj} (meaningful only when
+\code{assignment_type != "marginal"}). \code{NULL} for
+\code{FETWFE_coefs} objects saved before 1.14.0. New in 1.18.1.}
 \item{G, T, d, seed}{The generating parameters carried over from
 \code{coefs_obj} so that \code{print()} and \code{summary()} on the
 returned object are self-describing.}

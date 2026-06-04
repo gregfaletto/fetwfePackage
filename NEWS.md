@@ -1,5 +1,17 @@
 # NEWS
 
+## Version 1.18.1
+
+### User-facing
+
+- `print()` and `summary()` on a `getTes()` (`FETWFE_tes`) object now display a
+  "Cohort assignment DGP" section -- the assignment type, strength, and
+  propensity-derived cohort weights -- for objects generated under a
+  covariate-dependent DGP (`assignment_type = "multinomial"` or `"ordered"`).
+  Marginal-DGP objects print exactly as before. To support this, `getTes()`
+  output additionally carries the `assignment_type` and `assignment_strength`
+  slots, copied from the source `FETWFE_coefs` (#189).
+
 ## Version 1.18.0
 
 ### Inference

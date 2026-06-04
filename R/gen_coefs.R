@@ -426,6 +426,15 @@ genCoefs <- function(
 #'         \code{assignment_type = "multinomial"} or \code{"ordered"} it is
 #'         \eqn{E[\pi_g(X)] / \sum_{g' \text{ treated}} E[\pi_{g'}(X)]}{E[pi_g(X)] / sum_{g' treated} E[pi_g'(X)]}.
 #'         New in 1.14.0.}
+#'   \item{assignment_type}{Character; the cohort-assignment DGP carried over
+#'         from \code{coefs_obj} (one of \code{"marginal"},
+#'         \code{"multinomial"}, or \code{"ordered"}). Determines whether
+#'         \code{cohort_weights} is uniform (marginal) or propensity-weighted.
+#'         New in 1.18.1.}
+#'   \item{assignment_strength}{Numeric; the assignment-strength scaling carried
+#'         over from \code{coefs_obj} (meaningful only when
+#'         \code{assignment_type != "marginal"}). \code{NULL} for
+#'         \code{FETWFE_coefs} objects saved before 1.14.0. New in 1.18.1.}
 #'   \item{G, T, d, seed}{The generating parameters carried over from
 #'         \code{coefs_obj} so that \code{print()} and \code{summary()} on the
 #'         returned object are self-describing.}
@@ -501,6 +510,10 @@ getTes <- function(coefs_obj) {
 	} else {
 		coefs_obj$assignment_type
 	}
+	# Assignment-strength scaling, carried onto the FETWFE_tes object so
+	# print()/summary() can describe the DGP (#189). NULL for FETWFE_coefs
+	# objects saved before 1.14.0; only displayed for non-marginal DGPs.
+	assignment_strength <- coefs_obj$assignment_strength
 
 	num_treats <- getNumTreats(G = G, T = T)
 
@@ -564,7 +577,9 @@ getTes <- function(coefs_obj) {
 		d = d,
 		seed = coefs_obj$seed,
 		cohort_times = cohort_times,
-		cohort_weights = cohort_weights
+		cohort_weights = cohort_weights,
+		assignment_type = assignment_type,
+		assignment_strength = assignment_strength
 	)
 	class(out) <- "FETWFE_tes"
 	return(out)
