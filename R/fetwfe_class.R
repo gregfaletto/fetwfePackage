@@ -117,6 +117,7 @@ print.summary.fetwfe <- function(x, ...) {
 	"treatment",
 	"covs",
 	"ci_type",
+	"fusion_structure",
 	"internal"
 )
 

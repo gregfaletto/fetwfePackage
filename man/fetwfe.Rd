@@ -26,7 +26,8 @@ fetwfe(
   lambda_selection = "cv",
   cv_folds = 10L,
   cv_seed = NULL,
-  ci_type = c("simultaneous", "pointwise")
+  ci_type = c("simultaneous", "pointwise"),
+  fusion_structure = c("cohort", "event_study")
 )
 }
 \arguments{
@@ -220,6 +221,13 @@ confidence interval (a single scalar) is
 unaffected. When standard errors are unavailable (\code{q >= 1}, or a
 rank-deficient design) the bounds are \code{NA} under both settings. Default
 is \code{"simultaneous"}.}
+
+\item{fusion_structure}{Character; one of \code{"cohort"} or \code{"event_study"}.
+\code{"cohort"} (the default) uses the within-cohort / between-cohort two-way
+fusion penalty. \code{"event_study"} instead fuses treatment effects at the same
+time since treatment (event time \code{e = t - g}) across cohorts. The
+event-study penalty carries the same theoretical guarantees as the default
+(Faletto 2025); only the treatment-effect fusion structure changes.}
 }
 \value{
 An object of class \code{fetwfe} containing the following elements:
@@ -245,6 +253,7 @@ An object of class \code{fetwfe} containing the following elements:
 \item{lambda_selection}{Character scalar; either \code{"cv"} (10-fold cross-validation on \code{cv.grpreg}; v1.13.0+ default) or \code{"bic"} (BIC over the \code{grpreg} lambda grid; the prior default). Mirrors the \code{lambda_selection} argument the user passed.}
 \item{cv_folds}{Integer scalar; the \code{cv_folds} value used when \code{lambda_selection = "cv"}, \code{NA_integer_} when \code{lambda_selection = "bic"}.}
 \item{cv_seed}{Integer scalar; the seed actually fed to \code{set.seed()} immediately before \code{cv.grpreg()} was called. Defaults to \code{as.integer(N * T)} when the user did not pass a seed. \code{NA_integer_} when \code{lambda_selection = "bic"}.}
+\item{fusion_structure}{Character scalar; the \code{fusion_structure} argument the user passed (\code{"cohort"} or \code{"event_study"}), recording which fusion-penalty differences matrix was used for the treatment effects.}
 \item{N}{The final number of units that were in the data set used for estimation (after any units may have been removed because they were treated in the first time period).}
 \item{T}{The number of time periods in the final data set.}
 \item{G}{The final number of treated cohorts that appear in the final data set.}

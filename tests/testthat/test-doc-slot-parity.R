@@ -329,6 +329,12 @@ test_that("cross-class slot inventory matches the documented divergence table", 
 		"cv_seed" = list(
 			classes = c("fetwfe", "betwfe"),
 			rationale = "Only bridge-penalty estimators have a lambda penalty to tune."
+		),
+		# #40: the event-study fusion option lives only on fetwfe -- the sole
+		# estimator that applies the bridge fusion transform.
+		"fusion_structure" = list(
+			classes = c("fetwfe"),
+			rationale = "Only fetwfe applies the bridge fusion transform; fusion_structure selects which inverse-fusion differences matrix (cohort two-way vs. event-study) is used for the treatment-effect block."
 		)
 	)
 

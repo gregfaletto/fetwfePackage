@@ -370,10 +370,11 @@ simultaneousCIs.twfeCovs <- function(
 		sel_feat_inds <- which(theta_hat_slopes != 0)
 		sel_treat_inds_shifted <- which(theta_hat_slopes[treat_inds] != 0)
 		theta_sel <- theta_hat_slopes[treat_inds][sel_treat_inds_shifted]
-		d_inv_treat <- genInvTwoWayFusionTransformMat(
-			n_vars = num_treats,
+		d_inv_treat <- .gen_inv_treat_block(
+			num_treats = num_treats,
 			first_inds = first_inds,
-			G = G
+			G = G,
+			fusion_structure = x$fusion_structure
 		)
 		d_inv_treat_sel <- if (length(sel_treat_inds_shifted) > 0) {
 			d_inv_treat[, sel_treat_inds_shifted, drop = FALSE]

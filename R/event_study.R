@@ -437,10 +437,11 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	theta_hat_treat_sel <- theta_hat_slopes[treat_inds][sel_treat_inds_shifted]
 
 	# d_inv_treat: the treatment-block of D^{-1}, then restrict columns to selected
-	d_inv_treat <- genInvTwoWayFusionTransformMat(
-		n_vars = num_treats,
+	d_inv_treat <- .gen_inv_treat_block(
+		num_treats = num_treats,
 		first_inds = first_inds,
-		G = G
+		G = G,
+		fusion_structure = x$fusion_structure
 	)
 	if (length(sel_treat_inds_shifted) > 0) {
 		d_inv_treat_sel <- d_inv_treat[,

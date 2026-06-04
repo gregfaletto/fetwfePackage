@@ -1428,7 +1428,8 @@ getCohortATTsFinal <- function(
 	include_selected,
 	alpha = 0.05,
 	se_type = "default",
-	y_final = NULL
+	y_final = NULL,
+	fusion_structure = "cohort"
 ) {
 	se_type <- match.arg(
 		se_type,
@@ -1502,7 +1503,12 @@ getCohortATTsFinal <- function(
 	## We need the tau sub-matrix of D^{-1} ONLY if we are in fused workflow
 	if (fused) {
 		# Get the parts of D_inv that have to do with treatment effects
-		d_inv_treat <- genInvTwoWayFusionTransformMat(num_treats, first_inds, G)
+		d_inv_treat <- .gen_inv_treat_block(
+			num_treats,
+			first_inds,
+			G,
+			fusion_structure
+		)
 
 		## we will progressively rbind() the selected-column rows of this matrix
 		d_inv_treat_sel <- matrix(

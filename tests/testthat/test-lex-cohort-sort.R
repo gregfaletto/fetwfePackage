@@ -123,6 +123,8 @@ test_that("tidy.<class> sorts cohorts numerically when labels include >= 10", {
 		# is skipped on this hand-built catt_df, preserving this test's
 		# intent (cohort SORTING, not band type).
 		ci_type = "pointwise",
+		# #40: fusion_structure is a required fetwfe slot.
+		fusion_structure = "cohort",
 		internal = list(
 			X_ints = matrix(0, 100L * T_test, p_test),
 			y = rep(0, 100L * T_test),
