@@ -173,9 +173,9 @@ migration message pointing to the new name. See \code{NEWS.md} for the
 rename table.}
 \item{beta_hat}{The full vector of estimated coefficients.}
 \item{treat_inds}{The indices of \code{beta_hat} corresponding to
-the treatment effects for each cohort at each time.}
+the treatment effects for each cohort.}
 \item{treat_int_inds}{The indices of \code{beta_hat} corresponding to the
-interactions between the treatment effects for each cohort at each time and
+interactions between the treatment effects for each cohort and
 the covariates.} \item{sig_eps_sq}{Either the provided \code{sig_eps_sq} or
 the estimated one, if a value wasn't provided.} \item{sig_eps_c_sq}{Either
 the provided \code{sig_eps_c_sq} or the estimated one, if a value wasn't
