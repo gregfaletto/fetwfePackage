@@ -157,7 +157,10 @@ test_that("eventStudy p_value is adjusted under simultaneous, Wald under pointwi
 
 # ---------------------------------------------------------------------------
 # 6. Conservative se_type: the Bonferroni dual, min(1, K * pointwise_p) on the
-#    band's Cauchy-Schwarz ses.
+#    band's Cauchy-Schwarz ses. NOTE: this pins the adjusted-p / band-se DUAL,
+#    not the Cauchy-Schwarz SE formula itself (it recovers se_band from the
+#    band's own CI, a round-trip, and uses family = "cohort" where Sigma_2 = 0).
+#    The SE formula is pinned in test-conservative-band-se-225.R (#225).
 # ---------------------------------------------------------------------------
 test_that("conservative se_type yields the Bonferroni-dual adjusted p-value", {
 	skip_if_not_installed("mvtnorm")
