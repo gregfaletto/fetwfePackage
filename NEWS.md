@@ -11,6 +11,10 @@
   Marginal-DGP objects print exactly as before. To support this, `getTes()`
   output additionally carries the `assignment_type` and `assignment_strength`
   slots, copied from the source `FETWFE_coefs` (#189).
+- `fetwfe()` and `betwfe()` now warn when `lambda.max`, `lambda.min`, or
+  `nlambda` are supplied under the default `lambda_selection = "cv"`, which
+  builds its own cross-validation grid and ignores them. Set
+  `lambda_selection = "bic"` to use a custom lambda grid (#185).
 
 ## Version 1.18.0
 
