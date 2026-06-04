@@ -3,8 +3,9 @@
 # Three sections:
 #   (a) well-formed objects pass the validator (covers q in {0.5, 1, 2}
 #       and the all-zero-theta fallback);
-#   (b) each contract C1-C8 catches its target malformation with a clear
-#       error message naming the failed contract;
+#   (b) each contract C1-C8 (and the FETWFE-only C11 calc_ses parity)
+#       catches its target malformation with a clear error message naming
+#       the failed contract;
 #   (c) cross-class consistency: the validator's expected-slots list
 #       matches `names(<live fit>)` via expect_setequal (set membership;
 #       order doesn't matter);
@@ -208,6 +209,21 @@ test_that("C8 type sanity: validator catches malformed se_type", {
 	expect_error(
 		fetwfe:::.validate_fetwfe(res),
 		"C8 se_type",
+		fixed = TRUE
+	)
+})
+
+test_that("C11 calc_ses parity: validator catches top-level calc_ses != internal$calc_ses", {
+	fx <- .validator_fixture(q = 0.5)
+	res <- fx$fetwfe
+	# A well-formed fit mirrors calc_ses at the top level and under $internal.
+	stopifnot(identical(res$calc_ses, res$internal$calc_ses))
+	# Mutate: diverge the top-level mirror from the canonical internal value
+	# (C1 reads internal$calc_ses, which stays valid, so C11 is what fires).
+	res$calc_ses <- !res$internal$calc_ses
+	expect_error(
+		fetwfe:::.validate_fetwfe(res),
+		"C11 calc_ses == internal$calc_ses",
 		fixed = TRUE
 	)
 })

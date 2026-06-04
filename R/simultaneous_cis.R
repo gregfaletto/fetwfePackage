@@ -614,7 +614,7 @@ simultaneousCIs.twfeCovs <- function(
 		# pointwise CIs on the conservative scalar SEs.
 		v1 <- pmax(diag(Sigma_1), 0)
 		v2 <- pmax(diag(Sigma_2), 0)
-		ses <- sqrt(v1 + v2 + 2 * sqrt(v1 * v2))
+		ses <- .cauchy_schwarz_se(v1, v2)
 		crit <- if (K == 1L) pointwise_crit else bonferroni_crit
 		# Bonferroni-adjusted p-values -- the dual of the Bonferroni band --
 		# computed from the same Cauchy-Schwarz ses; degenerate (se = 0)
@@ -698,6 +698,29 @@ simultaneousCIs.twfeCovs <- function(
 		adj[nd_idx[j]] <- min(1, max(0, 1 - as.numeric(prob)))
 	}
 	adj
+}
+
+# .cauchy_schwarz_se
+#' @title Conservative (Cauchy-Schwarz) combined standard error
+#' @description Combines the two per-effect variance components into the
+#'   conservative standard error used by the `se_type = "conservative"` band:
+#'   `v1` is the first-order / OLS-sandwich term (`diag(Sigma_1)`) and `v2` is
+#'   the cohort-probability term (`diag(Sigma_2)`). With the cross-covariance
+#'   left unrestricted, the Cauchy-Schwarz upper bound on
+#'   `Var(component_1 + component_2)` is `v1 + v2 + 2 * sqrt(v1 * v2)`, whose
+#'   square root equals `sqrt(v1) + sqrt(v2)` (the sum of the two component
+#'   SEs). This is the per-effect band analogue of the conservative overall-ATT
+#'   SE assembled in `getTeResults*()`.
+#' @param v1 Numeric vector (length `K`, entries `>= 0`); the first variance
+#'   component per effect (`diag(Sigma_1)`).
+#' @param v2 Numeric vector (length `K`, entries `>= 0`); the second variance
+#'   component per effect (`diag(Sigma_2)`).
+#' @return Numeric vector (length `K`): the conservative combined SE per effect,
+#'   `sqrt(v1 + v2 + 2 * sqrt(v1 * v2))` (equivalently `sqrt(v1) + sqrt(v2)`).
+#' @keywords internal
+#' @noRd
+.cauchy_schwarz_se <- function(v1, v2) {
+	sqrt(v1 + v2 + 2 * sqrt(v1 * v2))
 }
 
 #' @title Recompute a fit's cohort-family CIs as simultaneous bands (fit-time)

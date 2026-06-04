@@ -175,5 +175,23 @@ print.summary.fetwfe <- function(x, ...) {
 		"C6 nrow(internal$X_ints) == N * T",
 		cls
 	)
+	# C11 calc_ses parity: FETWFE mirrors `calc_ses` at the top level (#180) in
+	# addition to the canonical `$internal$calc_ses`. Lock the two together so a
+	# future refactor cannot drift them apart (the #180 post-implementation
+	# sentinel's future-divergence NOTE; #187). Production sets both from the
+	# same `res$calc_ses` (R/fetwfe.R), so this only ever fires on a malformed
+	# hand-built object.
+	.assert_contract(
+		identical(x$calc_ses, x$internal$calc_ses),
+		"C11 calc_ses == internal$calc_ses",
+		cls,
+		detail = paste0(
+			"top-level calc_ses = ",
+			format(x$calc_ses),
+			"; internal$calc_ses = ",
+			format(x$internal$calc_ses),
+			"."
+		)
+	)
 	invisible(x)
 }

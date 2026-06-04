@@ -788,3 +788,32 @@ test_that("augment.fetwfe dispatches when indep_counts was supplied", {
 	expect_true(is.numeric(aug$.fitted))
 	expect_true(all(is.finite(aug$.fitted)))
 })
+
+# ------------------------------------------------------------------------------
+# (#185 G5): tidy.eventStudy()'s own required-columns guard. The validator path
+# (missing fit slots at eventStudy() construction) is covered in
+# test-event-study-no-silent-swallow-174.R; this exercises the guard at the
+# tidy layer, on an eventStudy frame that is missing a required column.
+# ------------------------------------------------------------------------------
+test_that("tidy.eventStudy errors clearly when a required column is missing (#185 G5)", {
+	skip_if_not_installed("broom")
+	es <- data.frame(
+		event_time = 0:1,
+		n_cohorts = c(2L, 2L),
+		estimate = c(0.10, 0.20),
+		se = c(0.05, 0.06),
+		ci_low = c(0.00, 0.08),
+		ci_high = c(0.20, 0.32),
+		p_value = c(0.045, 0.030)
+	)
+	class(es) <- c("eventStudy", "data.frame")
+	# Positive control: the complete frame tidies without error.
+	expect_no_error(broom::tidy(es))
+	# Drop a required column -> the tidy-layer guard fires with a clear message.
+	es$se <- NULL
+	expect_error(
+		broom::tidy(es),
+		"tidy.eventStudy(): input is missing required columns: se",
+		fixed = TRUE
+	)
+})

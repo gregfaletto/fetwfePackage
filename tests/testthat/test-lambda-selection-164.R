@@ -400,6 +400,28 @@ test_that("BIC path preserves caller's .Random.seed (#177)", {
 })
 
 # ------------------------------------------------------------------------------
+# (#185 G1): the default CV path composes with se_type = "cluster" and with
+# add_ridge = TRUE -- cross-paths the other CV tests above leave unexercised.
+# Both work empirically; this locks the cross-path behavior so a regression on
+# either the cluster sandwich or the ridge augmentation under CV is caught.
+# ------------------------------------------------------------------------------
+test_that("CV path composes with se_type = 'cluster' and with add_ridge", {
+	sim <- .lambda_sel_fixture()
+
+	res_cl <- fetwfeWithSimulatedData(sim, se_type = "cluster")
+	expect_identical(res_cl$lambda_selection, "cv")
+	expect_identical(res_cl$se_type, "cluster")
+	expect_true(is.finite(res_cl$att_hat))
+	expect_true(is.finite(res_cl$att_se))
+	expect_gt(res_cl$att_se, 0)
+
+	res_ridge <- fetwfeWithSimulatedData(sim, add_ridge = TRUE)
+	expect_identical(res_ridge$lambda_selection, "cv")
+	expect_true(is.finite(res_ridge$att_hat))
+	expect_true(is.finite(res_ridge$att_se))
+})
+
+# ------------------------------------------------------------------------------
 # (#185 IC1): lambda.max / lambda.min / nlambda are silently ignored under the
 # default lambda_selection = "cv" (cross-validation builds its own grid). Warn
 # so the user isn't surprised; stay silent on the BIC path and on cv with the
