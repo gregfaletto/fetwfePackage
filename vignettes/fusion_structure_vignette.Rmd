@@ -1,0 +1,254 @@
+---
+title: "Choosing a fusion structure: cohort vs. event-study penalties"
+author: "Gregory Faletto"
+date: "`r Sys.Date()`"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    math_method: "mathml"
+    output_file: "FETWFE_Fusion_Structure_Vignette.html"
+vignette: >
+  %\VignetteIndexEntry{Choosing a fusion structure: cohort vs. event-study penalties}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteDepends{ggplot2, dplyr}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+```{r setup}
+library(fetwfe)
+```
+
+# What a "fusion structure" is
+
+FETWFE estimates a separate treatment effect for every treated cohort `g` in
+every post-treatment period `t` --- written `tau_{g, t}` --- and then shrinks
+those effects toward each other with a *fusion penalty*. "Fusion" means the
+penalty acts on the *differences* between selected pairs of treatment-effect
+coefficients: pushing a difference toward zero pools the two effects, so the
+estimator borrows strength across cells instead of estimating each `tau_{g, t}`
+in isolation. Which differences the penalty acts on is the *fusion structure*,
+and it encodes the kind of similarity you expect the treatment effects to have.
+
+Since version 1.19.0 `fetwfe()` exposes this choice through a single argument,
+`fusion_structure`, with two options:
+
+```{r, eval = FALSE}
+fetwfe(..., fusion_structure = "cohort")       # the default
+fetwfe(..., fusion_structure = "event_study")  # the alternative added for issue #40
+```
+
+Both penalties are *data-driven*, not hard restrictions. The estimator pools
+toward the chosen structure but is free to deviate from it when the data demand
+it. So choosing a fusion structure does **not** compromise the asymptotic
+validity of the estimator (a lemma in the paper's extensions section shows the
+event-study penalty satisfies the same conditions, with the same singular-value
+constants `sigma_max <= sqrt(6)` and `sigma_min >= 1 / (T * sqrt(2 * T))`, as the
+default; every consistency, restriction-selection, and inference guarantee in the
+paper therefore holds verbatim for it). The cost of guessing "wrong" is
+*finite-sample efficiency* --- noisier estimates --- not bias or invalid
+confidence intervals.
+
+## `fusion_structure = "cohort"` (the default)
+
+The default penalty fuses **adjacent cohorts at the same calendar time** and
+**adjacent time periods within the same cohort**. It pools toward the assumption
+that treatment effects vary *smoothly* across neighboring cohorts and smoothly
+over calendar time within a cohort. This is a sensible, agnostic default: it does
+not privilege any single summary of the effects.
+
+## `fusion_structure = "event_study"`
+
+The event-study penalty instead fuses, for each *event time*
+`e = 0, 1, 2, ...` (time since treatment), the effect `tau_{r, r + e}` across all
+cohorts `r`. It pools toward the assumption that treatment effects depend only on
+**time since treatment**, not on the calendar period or the cohort --- the
+identifying restriction behind the standard event-study aggregation used
+throughout applied difference-in-differences (e.g.,
+`did::aggte(type = "dynamic")`). When the data really are driven by event time
+(gradual onset, a dose-response that accumulates with exposure), this pools
+strength across cohorts at each event time and estimates the dynamic path more
+efficiently.
+
+# Two meanings of "event study" --- read this first
+
+The word "event study" appears in `fetwfe` in **two distinct, independent
+places**, and conflating them is the most common source of confusion:
+
+- **`fusion_structure = "event_study"`** is an *estimation-time penalty*. It
+  changes the **fit** --- the coefficients you get out of `fetwfe()`.
+- **`family = "event_study"`** in `eventStudy()` and
+  `simultaneousCIs(fit, family = "event_study")` is a *reporting-time
+  aggregation*. It changes how an already-fitted set of effects is
+  **summarized** (one number per event time), and does nothing to the fit.
+
+These two choices are **orthogonal**: you can report an event-study aggregation
+of a *cohort*-penalized fit, or a cohort aggregation of an *event-study*-penalized
+fit. Every combination is valid:
+
+```{r, eval = FALSE}
+# event-time SUMMARY of a default (cohort-penalized) fit:
+eventStudy(fetwfe(..., fusion_structure = "cohort"))
+
+# cohort SUMMARY of an event-study-penalized fit:
+simultaneousCIs(fetwfe(..., fusion_structure = "event_study"), family = "cohort")
+```
+
+The rest of this vignette uses `eventStudy()` (the reporting aggregation) to
+*display* fits made under both penalties --- a concrete illustration of the
+orthogonality.
+
+# A side-by-side demo
+
+We simulate a panel whose treatment effects depend **only on event time**
+(`tau_{g, g + e} = 1 + 0.5 * e`, identical across cohorts at each event time `e`),
+then fit it with both fusion structures and see which recovers the truth better.
+Because we know the data-generating effects exactly, we can measure recovery
+error directly.
+
+We use the package's simulation utilities (`genCoefs()` / `simulateData()` /
+`fetwfeWithSimulatedData()`; see the *Simulation* vignette for a full tour). The
+only twist is that we overwrite the randomly generated treatment effects with a
+pure event-time profile. The treatment-effect coefficients occupy a known block
+of the coefficient vector; `fetwfe()` reports their positions in its `treat_inds`
+slot (see `?fetwfe`), and those positions depend only on the panel shape
+(`G` cohorts, `T` periods, `d` covariates):
+
+```{r}
+G <- 6L
+T <- 9L
+d <- 1L
+N <- 400L
+
+coefs <- genCoefs(G = G, T = T, d = d, density = 0.5, eff_size = 2, seed = 3)
+
+# Locate the treatment-effect block tau_{g, t} (cohort-major order).
+cohort_times <- getTes(coefs)$cohort_times # each cohort's first treated period
+n_k <- T - cohort_times + 1 # number of post-treatment effects per cohort
+num_treats <- sum(n_k)
+base_cols <- G + (T - 1) + d + d * G + d * (T - 1) # fixed effects + covariate terms
+treat_inds <- base_cols + seq_len(num_treats) # the tau block
+
+# Event time (time since treatment) of each tau, in the same order.
+event_time <- unlist(lapply(n_k, function(nk) 0:(nk - 1)))
+
+# Overwrite with a PURE event-time profile: tau = 1 + 0.5 * e.
+coefs$beta[treat_inds] <- 1 + 0.5 * event_time
+true_te <- coefs$beta[treat_inds]
+
+sim <- simulateData(coefs, N = N, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+```
+
+Now fit the same simulated panel under each fusion structure:
+
+```{r, message = FALSE, warning = FALSE}
+fit_cohort <- fetwfeWithSimulatedData(sim, lambda_selection = "bic")
+fit_event <- fetwfeWithSimulatedData(
+  sim,
+  lambda_selection = "bic",
+  fusion_structure = "event_study"
+)
+
+# The positions we wrote the truth to are exactly the ones fetwfe() reports as
+# the treatment effects, so we can compare estimates to the truth cell by cell.
+stopifnot(identical(treat_inds, fit_cohort$treat_inds))
+```
+
+How well does each fit recover the true per-cell effects? Compare the estimated
+treatment-effect coefficients to the known truth (mean squared error over all
+`r length(true_te)` cells):
+
+```{r}
+mse <- function(fit) mean((fit$beta_hat[treat_inds] - true_te)^2)
+errs <- c(cohort = mse(fit_cohort), event_study = mse(fit_event))
+round(errs, 3)
+```
+
+```{r, echo = FALSE}
+pct <- round(100 * (1 - errs[["event_study"]] / errs[["cohort"]]))
+```
+
+On this panel the event-study penalty cuts the per-cell recovery error by about
+`r pct`%. The advantage is exactly what we should expect: the truth *is* an
+event-study structure, so pooling effects across cohorts at each event time pools
+the right things, while the default penalty spends effort smoothing across
+cohorts and calendar time that the truth does not actually share.
+
+The same story is visible at the reporting level. Below we aggregate **both**
+fits to one effect per event time with `eventStudy()` (the reporting family ---
+applied here on top of both penalties) and overlay the true profile:
+
+```{r, eval = requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("dplyr", quietly = TRUE), fig.width = 7, fig.height = 4.5}
+library(ggplot2)
+library(dplyr)
+
+profiles <- dplyr::bind_rows(
+  as.data.frame(eventStudy(fit_cohort)) |>
+    dplyr::mutate(structure = "cohort (default)"),
+  as.data.frame(eventStudy(fit_event)) |>
+    dplyr::mutate(structure = "event_study")
+)
+truth <- data.frame(
+  event_time = sort(unique(profiles$event_time))
+)
+truth$estimate <- 1 + 0.5 * truth$event_time
+
+ggplot(profiles, aes(event_time, estimate, color = structure, fill = structure)) +
+  geom_ribbon(aes(ymin = ci_low, ymax = ci_high), alpha = 0.15, color = NA) +
+  geom_line(linewidth = 0.8) +
+  geom_point(size = 1.6) +
+  geom_line(
+    data = truth, aes(event_time, estimate),
+    color = "black", linetype = "dashed", inherit.aes = FALSE
+  ) +
+  labs(
+    title = "Recovering an event-time treatment-effect profile",
+    subtitle = "dashed black = true profile (tau = 1 + 0.5 * e)",
+    x = "event time (periods since treatment)",
+    y = "treatment effect",
+    color = "fusion_structure", fill = "fusion_structure"
+  ) +
+  theme_minimal()
+```
+
+The event-study-penalized profile tracks the dashed truth closely at every event
+time; the default profile lags, because its calendar-and-cohort smoothing pulls
+the later, larger effects toward the smaller early ones. (The exact magnitude of
+the gap depends on the simulated data; the *direction* --- event-study wins when
+the truth is event-time-structured --- is the robust signal, and it is the
+per-cell coefficient recovery above, not the aggregated profile, that captures it
+most reliably.)
+
+# When to prefer each
+
+- **Prefer `fusion_structure = "event_study"`** when you believe treatment
+  effects are driven mainly by **time since treatment** --- a gradual onset, a
+  build-up or decay of the effect over exposure --- and you want to pool strength
+  across cohorts at each event time. This matches the default null of the applied
+  event-study literature, so the estimator's "shrink toward an event-study
+  structure" behavior is a familiar story to report.
+
+- **Prefer `fusion_structure = "cohort"` (the default)** when treatment effects
+  plausibly **differ by cohort** --- cohort-specific responsiveness, or
+  calendar-time shocks that hit all cohorts in a given year --- and you want
+  smoothness across neighboring cohorts and within-cohort time without
+  privileging an event-time summary. It is the right agnostic choice when you do
+  not have a strong prior that event time is the only thing that matters.
+
+Either way, the penalty is data-driven and the paper's guarantees hold for both,
+so the decision affects efficiency, not validity. If you are unsure, the default
+is a safe starting point; switch to `"event_study"` when the dynamic, time-since-
+treatment path is the object of interest and you expect it to be shared across
+cohorts.
+
+# References
+
+- Faletto, G. (2025). *Fused Extended Two-Way Fixed Effects for
+  Difference-in-Differences With Staggered Adoptions.* arXiv preprint.
+  <https://arxiv.org/abs/2312.05985>
+- Callaway, B., & Sant'Anna, P. H. C. (2021). Difference-in-Differences with
+  multiple time periods. *Journal of Econometrics*, 225(2), 200--230.
+  <https://doi.org/10.1016/j.jeconom.2020.12.001>
