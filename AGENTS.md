@@ -112,19 +112,45 @@ by hand).
 ## Repo layout
 
 ```
-R/                  Package source. One file per logical unit:
-  fetwfe.R            User-facing fetwfe() + roxygen.
-  fetwfe_core.R       Internal numerical core for fetwfe().
-  fetwfe_class.R      S3 methods (print/summary/coef) for class "fetwfe".
-  etwfe_core.R        Core for etwfe() (and shared with betwfe()).
-  etwfe_class.R       S3 methods for class "etwfe".
-  betwfe_core.R       Bridge-penalized ETWFE core.
-  twfeCovs.R          twfeCovs() and its core.
-  core_funcs.R        Shared design-matrix / GLS / Omega^{-1/2} machinery.
-  ols_calcs.R         Cohort-ATT and overall-ATT variance formulas.
-  gen_funcs.R         genCoefs / simulateData family.
-  convert_dfs.R       attgtToFetwfeDf, etwfeToFetwfeDf.
-  utility.R           Misc helpers (cohort id, input checks).
+R/                  Package source, grouped by role (one file per unit):
+  # Entry points + estimator cores
+    fetwfe.R              fetwfe()/etwfe() user API + wrappers; @import block.
+    fetwfe_core.R         Input checks + numerical core for fetwfe().
+    etwfe_core.R          Input checks + core for etwfe/betwfe/twfeCovs.
+    betwfe_core.R         betwfe() API + bridge-penalized ETWFE core.
+    twfeCovs.R            twfeCovs() API + core (biased; simulation only).
+  # Shared numerical machinery
+    input_prep.R          Input validation, design prep, cohort-probability prep.
+    gls_machinery.R       Variance/GLS whitening, ridge rows, Gram inverse, Omega^-1/2.
+    result_assembly.R     Assemble the final selected-coefficient output object.
+    design_matrix.R       Build ETWFE design: covariate/FE/treatment terms.
+    fusion_transforms.R   Fusion transforms D_N^-1 (cohort & event-study).
+    bridge_selection.R    Bridge back-transform + BIC/CV lambda selection.
+    variance_machinery.R  Cohort/overall-ATT variance; cluster-robust SEs.
+    cluster_floor.R       PSD floor for the cluster-robust quadratic form.
+    process_covs.R        Normalize the covs argument to a character vector.
+    utility.R             Misc helpers: idCohorts, input checks, my_scale, etc.
+  # S3 classes (methods + validators)
+    fetwfe_class.R        print/summary/coef + .validate_fetwfe (class fetwfe).
+    etwfe_class.R         print/summary/coef + .validate_etwfe (class etwfe).
+    betwfe_class.R        print/summary/coef + .validate_betwfe (betwfe).
+    twfeCovs_class.R      print/coef + .validate_twfeCovs (class twfeCovs).
+    getTes_class.R        print/summary for FETWFE_tes (true effects).
+    sim_classes.R         print for FETWFE_simulated / FETWFE_coefs.
+    catt_df_class.R       catt_df column-rename map + helpful errors.
+    class_helpers.R       .check_for_* preconditions, validators, printers.
+  # Inference + reporting accessors
+    event_study.R         eventStudy(): pooled event-time estimates.
+    cohort_study.R        cohortStudy(): per-cohort ATTs.
+    simultaneous_cis.R    simultaneousCIs() generic + methods (max-t bands).
+    plot.R                plot() methods for CATT / event-study estimates.
+    broom_methods.R       tidy/glance/augment for all estimator classes.
+  # Simulation, data generation + conversion
+    gen_coefs.R           genCoefs/genCoefsCore/getTes: coefs + true effects.
+    gen_data.R            simulateData/simulateDataCore: panel generation.
+    sim_helpers.R         Internal simulation draws (covariates, FE, etc.).
+    cohort_assignment.R   Covariate-dependent cohort-assignment DGP.
+    convert_dfs.R         attgtToFetwfeDf / etwfeToFetwfeDf converters.
 
 man/                roxygen2-generated .Rd files. NEVER edit directly.
 NAMESPACE           roxygen2-generated. NEVER edit directly.
@@ -149,7 +175,7 @@ paper_arxiv.tex     Source for the methodology paper (R-build-ignored).
   functions additionally get `@export` and `@examples`. Internal helpers
   additionally get `@keywords internal` and `@noRd` (so they're documented
   for code readers but don't produce a user-facing man page). See
-  `R/core_funcs.R::idCohorts`, `R/gen_funcs.R::getActualCohortTes`, and
+  `R/utility.R::idCohorts`, `R/gen_coefs.R::getActualCohortTes`, and
   `R/variance_machinery.R::getCohortATTsFinal` for the internal-helper pattern
   in practice.
   **Exception: S3 methods registered for a generic in another package**
@@ -158,7 +184,7 @@ paper_arxiv.tex     Source for the methodology paper (R-build-ignored).
   `@return` contract, and a per-method block would only restate it. See
   `R/fetwfe_class.R` and `R/etwfe_class.R` for the existing pattern;
   match it.
-- **Imports are declared at the top of `R/fetwfe.R` and `R/core_funcs.R`** via
+- **Imports are declared at the top of `R/fetwfe.R`** via
   `@import` / `@importFrom`. If you add a new dependency, also update
   `Imports:` in DESCRIPTION.
 - **S3 classes**: outputs of `fetwfe()` and `etwfe()` carry classes
@@ -180,7 +206,7 @@ paper_arxiv.tex     Source for the methodology paper (R-build-ignored).
   final period.
 - **Absorbing-state treatment**: once treated, always treated. Units treated
   in the first period are dropped automatically with a warning (see
-  `idCohorts()` in `core_funcs.R`).
+  `idCohorts()` in `utility.R`).
 - **`q`**: bridge penalty exponent. `q < 1` gives sparsity and valid standard
   errors; `q = 1` is lasso; `q = 2` is ridge. Default is `0.5`.
 - **`indep_counts`**: optional independent-sample cohort counts. When supplied,
