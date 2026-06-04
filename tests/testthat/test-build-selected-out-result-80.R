@@ -1,4 +1,4 @@
-# Tests for `.build_selected_out_result()` in R/core_funcs.R (issue #80).
+# Tests for `.build_selected_out_result()` in R/result_assembly.R (issue #80).
 #
 # The helper consolidates the four pre-1.9.14 inline "no features selected"
 # early-exit blocks that lived in `R/betwfe_core.R` (betwfe_core(), two
