@@ -1,5 +1,15 @@
 # NEWS
 
+## Version 1.19.1
+
+### Documentation
+
+- Added a vignette ("Choosing a fusion structure: cohort vs. event-study
+  penalties") demonstrating the two `fetwfe()` `fusion_structure` options
+  side-by-side on a simulated panel, with guidance on when to prefer each and a
+  note distinguishing the estimation-time `fusion_structure = "event_study"`
+  penalty from the reporting-time `family = "event_study"` aggregation (#40).
+
 ## Version 1.19.0
 
 ### Features
