@@ -238,8 +238,8 @@ test_that("print.FETWFE_coefs summarizes instead of dumping (#84 item 13)", {
 
 	out <- capture.output(print(coefs))
 
-	# Brief: 3 cat() calls => 3 lines.
-	expect_lt(length(out), 5)
+	# Brief: 4 cat() calls => 4 lines (added fusion_structure line in #237).
+	expect_lt(length(out), 6)
 
 	# Names the dimensions.
 	expect_true(any(grepl("G = 2", out)))

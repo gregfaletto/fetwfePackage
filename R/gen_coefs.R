@@ -30,6 +30,17 @@
 #' @param eff_size Numeric. The magnitude used to scale nonzero entries in \code{theta}. Each
 #'   nonzero entry is set to \code{eff_size} or \code{-eff_size} (with a 60 percent chance for a
 #'   positive value).
+#' @param fusion_structure Character. One of \code{"cohort"} (default) or
+#'   \code{"event_study"}. Controls the basis in which the true treatment-effect
+#'   coefficients are sparse. Under \code{"cohort"} the sparse transformed
+#'   coefficients \code{theta} are mapped back through the default two-way
+#'   (cohort) inverse fusion transform (byte-identical to previous behavior);
+#'   under \code{"event_study"} they are mapped through the event-study inverse
+#'   fusion transform, so the true treatment effects are sparse in the
+#'   event-study basis (effects sharing the same time since treatment,
+#'   \eqn{e = t - g}, tend to be equal across cohorts). This is the
+#'   simulation-side companion to the \code{fusion_structure} argument of
+#'   \code{fetwfe()}.
 #' @param assignment_type Character. One of \code{"marginal"} (default),
 #'   \code{"multinomial"}, or \code{"ordered"}. Selects the data-generating
 #'   process for cohort assignment in \code{simulateData()}.
@@ -100,6 +111,8 @@
 #'		space. \code{theta} is a sparse vector, which aligns with an assumption that deviations from the
 #'		restrictions encoded in the FETWFE model are sparse. \code{beta} is derived from
 #'		\code{theta}.}
+#'   \item{fusion_structure}{The fusion structure (\code{"cohort"} or
+#'      \code{"event_study"}) used to build the treatment-effect coefficients.}
 #'   \item{G}{The provided number of treated cohorts.}
 #'   \item{R}{Deprecated alias for \code{G}, retained for backward
 #'      compatibility; populated with the same value. Use \code{G}. Will be
@@ -142,8 +155,11 @@
 #'   occurring with probability \code{density}. Nonzero entries are set to \code{eff_size} or
 #'   \code{-eff_size} (with a 60\% chance for a positive value).
 #'   \item The full coefficient vector \code{beta} is then computed by applying an inverse fusion
-#'   transform to \code{theta} using internal routines (e.g.,
-#'   \code{genBackwardsInvFusionTransformMat()} and \code{genInvTwoWayFusionTransformMat()}).
+#'   transform to \code{theta} using internal routines:
+#'   \code{genBackwardsInvFusionTransformMat()} for the fixed-effect blocks and,
+#'   for the treatment-effect block, \code{genInvTwoWayFusionTransformMat()} when
+#'   \code{fusion_structure = "cohort"} or \code{genInvEventStudyFusionTransformMat()}
+#'   when \code{fusion_structure = "event_study"}.
 #' }
 #'
 #' The multinomial-logit and proportional-odds reference DGPs are the
@@ -164,6 +180,14 @@
 #'
 #'   # Simulate data using the coefficients
 #'   sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5)
+#'
+#'   # Event-study-sparse truth: treatment effects that share the same time
+#'   # since treatment are fused across cohorts (the simulation-side companion
+#'   # to fetwfe()'s fusion_structure = "event_study").
+#'   coefs_es <- genCoefs(
+#'     G = 5, T = 30, d = 12, density = 0.1, eff_size = 2,
+#'     fusion_structure = "event_study", seed = 123
+#'   )
 #'
 #'   # Covariate-dependent cohort assignment: multinomial-logit DGP
 #'   coefs_mn <- genCoefs(
@@ -192,6 +216,7 @@ genCoefs <- function(
 	d,
 	density,
 	eff_size,
+	fusion_structure = c("cohort", "event_study"),
 	assignment_type = c("marginal", "multinomial", "ordered"),
 	assignment_strength = 1.0,
 	assignment_interactions = NULL,
@@ -242,6 +267,7 @@ genCoefs <- function(
 		stop("eff_size must be a numeric value")
 	}
 
+	fusion_structure <- match.arg(fusion_structure)
 	assignment_type <- match.arg(assignment_type)
 	.validate_strength_arg(assignment_strength, "assignment_strength")
 	if (assignment_type != "marginal" && d < 1) {
@@ -342,6 +368,7 @@ genCoefs <- function(
 		d = d,
 		density = density,
 		eff_size = eff_size,
+		fusion_structure = fusion_structure,
 		seed = seed
 	)
 	if (is.null(core_obj$beta)) {
@@ -376,6 +403,7 @@ genCoefs <- function(
 		R = G,
 		T = T,
 		d = d,
+		fusion_structure = fusion_structure,
 		seed = seed,
 		assignment_type = assignment_type,
 		assignment_strength = assignment_strength,
@@ -606,6 +634,12 @@ getTes <- function(coefs_obj) {
 #' @param eff_size Numeric. The magnitude used to scale nonzero entries in \code{theta}. Each
 #' nonzero entry is set to \code{eff_size} or \code{-eff_size} (with a 60 percent chance for a
 #' positive value).
+#' @param fusion_structure Character. One of \code{"cohort"} (default) or
+#' \code{"event_study"}. Selects the inverse fusion transform applied to the
+#' treatment-effect block, controlling the basis in which the true treatment
+#' effects are sparse. \code{"cohort"} is byte-identical to previous behavior;
+#' \code{"event_study"} fuses effects at the same time since treatment across
+#' cohorts. See \code{genCoefs()} for details.
 #' @param seed (Optional) Integer. Seed for reproducibility.
 #' @param R Deprecated. The former name for \code{G}; still accepted with a
 #' deprecation warning, and will be removed in a future release. Use \code{G}.
@@ -633,8 +667,11 @@ getTes <- function(coefs_obj) {
 #'   with probability \code{density}. Nonzero entries are set to \code{eff_size} or \code{-eff_size}
 #'   (with a 60\% chance for a positive value).
 #'   \item The full coefficient vector \code{beta} is then computed by applying an inverse fusion
-#'   transform to \code{theta} using internal routines (e.g.,
-#'   \code{genBackwardsInvFusionTransformMat()} and \code{genInvTwoWayFusionTransformMat()}).
+#'   transform to \code{theta} using internal routines:
+#'   \code{genBackwardsInvFusionTransformMat()} for the fixed-effect blocks and,
+#'   for the treatment-effect block, \code{genInvTwoWayFusionTransformMat()} when
+#'   \code{fusion_structure = "cohort"} or \code{genInvEventStudyFusionTransformMat()}
+#'   when \code{fusion_structure = "event_study"}.
 #' }
 #'
 #' @references
@@ -676,6 +713,7 @@ genCoefsCore <- function(
 	d,
 	density,
 	eff_size,
+	fusion_structure = c("cohort", "event_study"),
 	seed = NULL,
 	R = NULL
 ) {
@@ -683,6 +721,8 @@ genCoefsCore <- function(
 	# alias and warning if it is supplied (#41). The body below uses `G`
 	# directly.
 	G <- .resolve_cohort_count_arg(G, R, "genCoefsCore")
+
+	fusion_structure <- match.arg(fusion_structure)
 
 	if (!is.null(seed)) {
 		set.seed(seed)
@@ -811,10 +851,11 @@ genCoefsCore <- function(
 
 	stopifnot(all(is.na(beta[treat_inds])))
 
-	beta[treat_inds] <- genInvTwoWayFusionTransformMat(
+	beta[treat_inds] <- .gen_inv_treat_block(
 		num_treats,
 		first_inds,
-		G
+		G,
+		fusion_structure
 	) %*%
 		theta[treat_inds]
 
@@ -845,10 +886,11 @@ genCoefsCore <- function(
 			stopifnot(length(inds_j) == num_treats)
 			stopifnot(all(is.na(beta[inds_j])))
 
-			beta[inds_j] <- genInvTwoWayFusionTransformMat(
+			beta[inds_j] <- .gen_inv_treat_block(
 				num_treats,
 				first_inds,
-				G
+				G,
+				fusion_structure
 			) %*%
 				theta[inds_j]
 		}
