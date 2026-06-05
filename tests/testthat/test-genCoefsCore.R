@@ -199,10 +199,15 @@ test_that("genCoefsCore errors when T < 3", {
 	)
 })
 
-test_that("genCoefsCore errors when R < 2", {
-	expect_error(
-		genCoefsCore(G = 1, T = 30, density = 0.1, eff_size = 2, d = 12),
-		regexp = "G must be a numeric value greater than or equal to 2"
+test_that("genCoefsCore generates a single-cohort (G = 1) coefficient vector", {
+	core <- genCoefsCore(G = 1, T = 30, density = 0.1, eff_size = 2, d = 12)
+	expect_type(core, "list")
+	expect_true(all(c("beta", "theta") %in% names(core)))
+	# beta has length p = getP(G, T, d, num_treats) for the single cohort.
+	num_treats <- getNumTreats(G = 1, T = 30)
+	expect_length(
+		core$beta,
+		getP(G = 1, T = 30, d = 12, num_treats = num_treats)
 	)
 })
 

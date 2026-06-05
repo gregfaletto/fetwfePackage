@@ -476,24 +476,26 @@ test_that("betwfe works on only two cohorts", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 20: Test that at least 2 treated cohorts requires
+# Test 20: A single treated cohort (G = 1) is now supported (#112).
 # ------------------------------------------------------------------------------
-test_that("at least two treated cohorts required", {
-	# Create a balanced panel with N = 3 units and T = 3 time periods.
+test_that("single treated cohort (G = 1) is supported", {
+	# A balanced panel with N = 30 units and T = 10 periods. With R = 1 the
+	# helper produces a single treated cohort (adopting at t = 2) plus
+	# never-treated units.
 	df <- generate_panel_data(N = 30, T = 10, R = 1, seed = 202)
 
-	expect_error(
-		betwfe(
-			pdata = df,
-			time_var = "time",
-			unit_var = "unit",
-			treatment = "treatment",
-			covs = c("cov1", "cov2"),
-			response = "y",
-			verbose = FALSE
-		),
-		"Only one treated cohort detected in data. Currently fetwfe and etwfe only support data sets with at least two treated cohorts."
+	res <- betwfe(
+		pdata = df,
+		time_var = "time",
+		unit_var = "unit",
+		treatment = "treatment",
+		covs = c("cov1", "cov2"),
+		response = "y",
+		verbose = FALSE
 	)
+	expect_s3_class(res, "betwfe")
+	expect_equal(res$G, 1)
+	expect_true(is.finite(res$att_hat))
 })
 
 
