@@ -365,10 +365,13 @@ fetwfe <- function(
 	# supplied (the matrix wins for the treatment block; #236).
 	fusion_structure_supplied <- !missing(fusion_structure)
 	fusion_structure <- match.arg(fusion_structure)
-	# `lambda_selection` is validated downstream by
-	# `checkFetwfeInputs()` as part of the collect-all-violations
-	# pattern, so a user passing both a bad `lambda_selection` and a
-	# bad `cv_folds` / `cv_seed` sees all the violations at once.
+	# #185 A2: `se_type` (validated immediately via match.arg above) and
+	# `lambda_selection` (validated downstream) intentionally use different
+	# timing -- match.arg gives a precise, abbreviation-aware error at the call
+	# site, whereas `lambda_selection` is validated downstream by
+	# `checkFetwfeInputs()` as part of the collect-all-violations pattern, so a
+	# user passing both a bad `lambda_selection` and a bad `cv_folds` /
+	# `cv_seed` sees all the violations at once.
 
 	# Normalize `covs` to a character vector if a one-sided formula was
 	# supplied (#28). All downstream code assumes the character-vector

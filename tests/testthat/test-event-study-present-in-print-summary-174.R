@@ -102,6 +102,91 @@ test_that("print(res) and summary(res) render an Event Study section on divorce 
 })
 
 # ----------------------------------------------------------------------
+# 2b) Event-study-present on a SYNTHETIC scattered-cohort fixture
+#     (#185 G4). Locks the same non-consecutive-offset path as the
+#     divorce case above, but with a hand-built panel so the coverage
+#     does not depend on the optional `bacondecomp` Suggests dependency
+#     (the divorce test skips when it is absent). Cohorts adopt at
+#     offsets 3, 5, 6 in a T = 7 panel (gaps at 2 and 4), plus a
+#     never-treated group.
+# ----------------------------------------------------------------------
+
+test_that("print(res) and summary(res) render an Event Study section on a synthetic scattered-cohort fit", {
+	set.seed(174)
+	T_panel <- 7L
+	make_cohort <- function(ids, adopt) {
+		do.call(
+			rbind,
+			lapply(ids, function(uid) {
+				x1 <- rnorm(1)
+				unit_fe <- rnorm(1, sd = 0.5)
+				treated <- if (is.na(adopt)) {
+					integer(T_panel)
+				} else {
+					as.integer(seq_len(T_panel) >= adopt)
+				}
+				y <- unit_fe +
+					0.1 * seq_len(T_panel) +
+					0.6 * x1 +
+					1.5 * treated +
+					rnorm(T_panel, sd = 0.3)
+				data.frame(
+					unit = as.character(uid),
+					year = seq_len(T_panel),
+					x1 = x1,
+					treated = treated,
+					y = y,
+					stringsAsFactors = FALSE
+				)
+			})
+		)
+	}
+	pdata <- rbind(
+		make_cohort(1:30, 3L), # cohort offset 3
+		make_cohort(31:60, 5L), # cohort offset 5
+		make_cohort(61:90, 6L), # cohort offset 6
+		make_cohort(91:120, NA) # never-treated
+	)
+
+	res <- suppressWarnings(fetwfe(
+		pdata = pdata,
+		time_var = "year",
+		unit_var = "unit",
+		treatment = "treated",
+		response = "y",
+		covs = "x1",
+		sig_eps_sq = 0.09,
+		sig_eps_c_sq = 0.25,
+		add_ridge = TRUE,
+		verbose = FALSE
+	))
+
+	# Confirm we are exercising the scattered-cohort path: three cohorts at
+	# non-consecutive offsets (not seq(2, R + 1)).
+	expect_identical(as.integer(res$R), 3L)
+	expect_identical(as.integer(res$T), 7L)
+	offsets <- fetwfe:::.derive_cohort_offsets_from_fit(res)
+	expect_false(
+		identical(as.integer(offsets), seq.int(2L, as.integer(res$R) + 1L))
+	)
+
+	# eventStudy() returns a non-empty data frame (pre-#174 it errored
+	# before reaching this line on scattered cohorts).
+	es <- eventStudy(res)
+	expect_s3_class(es, "eventStudy")
+	expect_true(nrow(es) > 0L)
+
+	# Print / summary render the section.
+	out_print <- paste(capture.output(print(res)), collapse = "\n")
+	expect_match(out_print, .es_header_pattern)
+	out_summary <- paste(
+		capture.output(print(summary(res))),
+		collapse = "\n"
+	)
+	expect_match(out_summary, .es_header_pattern)
+})
+
+# ----------------------------------------------------------------------
 # 3) Helper-parity. `getFirstIndsFromOffsets(2:(R+1), T)` must match
 #    `getFirstInds(R, T)` byte-identically across a battery of
 #    (R, T) pairs covering the existing synthetic fixtures. Without

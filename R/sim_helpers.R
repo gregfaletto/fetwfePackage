@@ -412,7 +412,12 @@ genTreatVarsSim <- function(
 			stopifnot(treat_ind <= n_treats)
 
 			if (t == g + 1) {
-				first_inds[g] <- treat_ind
+				# #185 SB6: keep `first_inds` an integer vector (its documented
+				# type and `as.integer(NA)` allocation). `treat_ind` is promoted
+				# to double by `treat_ind + 1`; coerce so the `identical()`
+				# assertion against `first_inds_test = getFirstInds()` (now
+				# integer) holds.
+				first_inds[g] <- as.integer(treat_ind)
 
 				stopifnot(treat_ind == first_inds_test[g])
 			}

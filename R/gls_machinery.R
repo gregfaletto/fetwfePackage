@@ -201,9 +201,16 @@
 		mat_to_multiply <- D_inverse
 	}
 
+	# #185 SB5: sig_eps_sq > 0 here (validated for user-supplied input per SB2;
+	# REML-estimated otherwise) and sig_eps_c_sq >= 0, so `lambda_ridge` is
+	# strictly positive -- the former silent no-op (lambda_ridge = 0 when both
+	# variance components were 0) is unreachable. Assert it so a future change
+	# to the variance handling cannot silently reintroduce a no-op ridge under
+	# add_ridge = TRUE.
 	lambda_ridge <- 0.00001 *
 		(sig_eps_sq + sig_eps_c_sq) *
 		sqrt(p / (N * T))
+	stopifnot(is.finite(lambda_ridge), lambda_ridge > 0)
 
 	X_scaled <- rbind(
 		X_scaled,
