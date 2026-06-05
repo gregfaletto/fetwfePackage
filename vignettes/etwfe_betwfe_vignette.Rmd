@@ -158,7 +158,7 @@ Two qualitative differences to note in the no-covariate regime:
 - **Smaller design matrix.** Without covariates and their cohort/time/treatment interactions, the underlying regression has many fewer columns, so both estimators converge faster and `etwfe()` becomes rank-stable at smaller cohort sizes (the `(d + 1)`-units-per-cohort floor that `etwfe()` enforces drops to just one unit per cohort).
 - **Standard errors typically widen.** Covariates that explain residual variance are absent, so the idiosyncratic-noise variance `sig_eps_sq` enters the SEs without that explanatory cushion. The signal-to-noise ratio on the treatment-effect coefficients drops, which is the trade-off for the simpler model.
 
-The package handles `covs = c()` end-to-end without any special-casing on the user's side: the data-prep pipeline (`prep_for_etwfe_core` in `R/core_funcs.R`) dispatches on `d == 0` and skips the covariate-interaction columns automatically. The same applies to `betwfe()` and `twfeCovs()`.
+The package handles `covs = c()` end-to-end without any special-casing on the user's side: the data-prep pipeline (`prep_for_etwfe_core` in `R/input_prep.R`) dispatches on `d == 0` and skips the covariate-interaction columns automatically. The same applies to `betwfe()` and `twfeCovs()`.
 
 # Visualizing event-time effects
 

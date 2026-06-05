@@ -1,5 +1,5 @@
 # Regression tests for #165 / hardened in #178: the GLS whitening step in
-# `.estimate_variance_and_gls()` (R/core_funcs.R) uses the block-apply
+# `.estimate_variance_and_gls()` (R/gls_machinery.R) uses the block-apply
 # identity (I_N kron A) %*% vec_{T,N}(M) = vec_{T,N}(A %*% M) instead of
 # materialising the (N*T) x (N*T) Kronecker matrix.
 #
@@ -80,8 +80,8 @@ test_that(".estimate_variance_and_gls() matches explicit Kronecker GLS form (loa
 		verbose = FALSE
 	)
 
-	# Explicit-Kronecker reference. Mirrors `R/core_funcs.R:437-440`'s
-	# closed form for `Omega_sqrt_inv` and `R/core_funcs.R:463`'s scaling
+	# Explicit-Kronecker reference. Mirrors `.estimate_variance_and_gls()`'s
+	# closed form for `Omega_sqrt_inv` (in `R/gls_machinery.R`) and its scaling
 	# `A <- sqrt(sig_eps_sq) * Omega_sqrt_inv`.
 	J_over_T <- matrix(1 / T, nrow = T, ncol = T)
 	Omega_sqrt_inv <- (1 / sqrt(sig_eps_sq)) *
@@ -92,7 +92,7 @@ test_that(".estimate_variance_and_gls() matches explicit Kronecker GLS form (loa
 	y_gls_ref <- big_kron %*% y # (N*T) x 1 matrix
 	X_gls_ref <- big_kron %*% X_mod # (N*T) x p matrix
 
-	# Production return shapes per `R/core_funcs.R:464-475`: `y_gls` is
+	# Production return shapes per `.estimate_variance_and_gls()`: `y_gls` is
 	# (N*T) x 1 matrix (NOT a length-N*T vector); `X_gls` is (N*T) x p
 	# matrix. `ignore_attr = TRUE` because `kronecker(...)` returns
 	# matrices without dimnames whereas the production return may carry
@@ -106,7 +106,7 @@ test_that(".estimate_variance_and_gls() matches explicit Kronecker GLS form (loa
 test_that(".estimate_variance_and_gls() handles sig_eps_c_sq = 0 (edge case)", {
 	# Degenerate-covariance branch: when `sig_eps_c_sq = 0`, the closed
 	# form for `Omega_sqrt_inv` reduces to `(1/sqrt(sig_eps_sq)) * I_T`
-	# (per the comment at R/core_funcs.R:434-436). Verify the production
+	# (per the comment in `.estimate_variance_and_gls()`). Verify the production
 	# function still matches the explicit Kronecker form on this branch.
 	set.seed(7L)
 	N <- 30L

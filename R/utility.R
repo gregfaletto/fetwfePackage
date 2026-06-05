@@ -1388,7 +1388,7 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 
 	# After truncation, retained cohorts are those with r_i < r_max.
 	# FETWFE / ETWFE / BETWFE / twfeCovs each require G >= 2 (enforced
-	# inside `prep_for_etwfe_core()` in R/core_funcs.R with a user-facing
+	# inside `prep_for_etwfe_core()` in R/input_prep.R with a user-facing
 	# error); the guard here matches that constraint so the user gets a
 	# clear truncation-specific message rather than the deeper G >= 2
 	# error after auto-truncation.

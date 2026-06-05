@@ -5,7 +5,7 @@ library(fetwfe)
 #
 # Background: before this fix, `R/betwfe_core.R:840`'s call to
 # `prep_for_etwfe_regression()` did not pass `is_fetwfe`, so it picked up
-# the default `is_fetwfe = TRUE` (at `R/core_funcs.R:106`). With `add_ridge
+# the default `is_fetwfe = TRUE` (in `prep_for_etwfe_regression()`, `R/input_prep.R`). With `add_ridge
 # = TRUE`, this caused BETWFE's ridge augmentation rows to be built as
 # `sqrt(lambda_ridge) * D_inverse` (the inverse FETWFE fusion-transform
 # matrix) instead of the correct `sqrt(lambda_ridge) * diag(p)` (identity
@@ -252,7 +252,7 @@ test_that("betwfe(add_ridge = TRUE) numerical regression: att_hat matches post-f
 
 	# Numerical regression catch. The post-fix value on this fixture
 	# is 3.4764564039 (recorded after applying the bug fix at
-	# R/betwfe_core.R:840 + the defensive cleanup in R/core_funcs.R).
+	# R/betwfe_core.R:840 + the defensive cleanup in R/input_prep.R).
 	# The pre-fix buggy value is ~3.4764078169 (a 4.9e-5 shift).
 	# Tolerance 1e-5 catches the shift while comfortably exceeding
 	# expected cross-platform float drift on grpreg+BLAS.

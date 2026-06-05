@@ -566,7 +566,7 @@ fetwfe_core <- function(
 	# Handle edge case where no features are selected (model_size includes intercept)
 	if (lambda_star_model_size <= 1 && all(theta_hat[2:(p + 1)] == 0)) {
 		# Only the intercept might be non-zero. Delegate to the shared
-		# helper (`.build_selected_out_result()` in `R/core_funcs.R`) that
+		# helper (`.build_selected_out_result()` in `R/result_assembly.R`) that
 		# also serves the no-treatment branch below and the two BETWFE
 		# early-exits. FETWFE blocks pass `theta_hat` (with intercept)
 		# and set `include_theta = TRUE` to insert it between `catt_df`

@@ -105,7 +105,7 @@ test_that("estOmegaSqrtInv error path mentions lme4 in the message body", {
 
 # ------------------------------------------------------------------------------
 # Item 16: closed-form Omega^(-1/2) matches expm::sqrtm(solve(Omega)) to
-# machine epsilon. Validates the perf rewrite at R/core_funcs.R that replaces
+# machine epsilon. Validates the perf rewrite in R/gls_machinery.R that replaces
 # the matrix-square-root call with the closed form derived from
 # Omega's two-eigenvalue spectral decomposition (eigenvalues
 # sig_eps_sq + T * sig_eps_c_sq on span(1_T) and sig_eps_sq on its
@@ -152,7 +152,7 @@ test_that("closed-form Omega^(-1/2) matches expm::sqrtm(solve(Omega))", {
 # ------------------------------------------------------------------------------
 # Item 16: end-to-end estimator outputs unchanged after closed-form
 # Omega^(-1/2) replaces expm::sqrtm(solve(Omega)) at the single use site
-# (`.estimate_variance_and_gls()` in R/core_funcs.R). Frozen-seed regression
+# (`.estimate_variance_and_gls()` in R/gls_machinery.R). Frozen-seed regression
 # against numerical-equivalence references captured from a single
 # `fetwfeWithSimulatedData()` run on the standard small test fixture.
 # Tolerance 1e-10: the only floating-point divergence between the two
