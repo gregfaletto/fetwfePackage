@@ -1,5 +1,22 @@
 # NEWS
 
+## Version 1.21.0
+
+### Features
+
+- `fetwfe()` (and `fetwfeWithSimulatedData()`) gain a `fusion_matrix` argument:
+  an optional user-supplied `num_treats x num_treats` forward-differences matrix
+  `D_N` for the treatment-effect block. When supplied it overrides
+  `fusion_structure` for that block (the estimator uses `solve(fusion_matrix)`
+  internally), letting advanced users encode arbitrary identifying-restriction
+  structures beyond the two built-ins. The rows/columns follow the cohort-major
+  `(g, t)` order of `getFirstInds()` / `getTreatInds()`. Under the paper's
+  fixed-dimension scoping any finite, invertible `D_N` inherits the inferential
+  guarantees (Assumption (D) of Faletto 2025), so `fetwfe()` validates only that
+  `fusion_matrix` is finite and invertible (else it stops); a numerically
+  near-singular `D_N` still fits but triggers a `warning()`. `fusion_matrix =
+  NULL` (the default) is byte-identical to prior behavior (#236).
+
 ## Version 1.20.0
 
 ### Features

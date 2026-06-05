@@ -1357,6 +1357,15 @@ getSecondVarTermDataApp <- function(
 #'   length `N*T` (or `N*T + p` if a ridge augmentation was applied upstream).
 #'   Required when `se_type = "cluster"` and `calc_ses = TRUE`; ignored
 #'   otherwise.
+#' @param fusion_structure Character; one of `"cohort"` (default) or
+#'   `"event_study"`. Selects which built-in inverse treatment-effect fusion
+#'   block is rebuilt for the variance slices (ignored when `d_inv_treat` is
+#'   supplied).
+#' @param d_inv_treat Optional `num_treats x num_treats` numeric matrix; the
+#'   user-supplied already-inverted treatment-effect fusion block
+#'   (`solve(fusion_matrix)`, #236). When non-`NULL` it overrides
+#'   `fusion_structure` for the treatment block used in the variance path.
+#'   Default `NULL`.
 #' @return A list containing:
 #'   \item{cohort_te_df}{Data frame (with S3 class `c("catt_df", "data.frame")`)
 #'     with columns `cohort`, `estimate`, `se`, `ci_low`, `ci_high`, and a
@@ -1429,7 +1438,8 @@ getCohortATTsFinal <- function(
 	alpha = 0.05,
 	se_type = "default",
 	y_final = NULL,
-	fusion_structure = "cohort"
+	fusion_structure = "cohort",
+	d_inv_treat = NULL
 ) {
 	se_type <- match.arg(
 		se_type,
@@ -1502,12 +1512,16 @@ getCohortATTsFinal <- function(
 
 	## We need the tau sub-matrix of D^{-1} ONLY if we are in fused workflow
 	if (fused) {
-		# Get the parts of D_inv that have to do with treatment effects
+		# Get the parts of D_inv that have to do with treatment effects.
+		# `d_inv_treat` (the parameter) carries a user-supplied custom block
+		# (#236) when non-NULL; otherwise the choke point dispatches on
+		# `fusion_structure`. The result reuses the same local name.
 		d_inv_treat <- .gen_inv_treat_block(
 			num_treats,
 			first_inds,
 			G,
-			fusion_structure
+			fusion_structure,
+			d_inv_treat = d_inv_treat
 		)
 
 		## we will progressively rbind() the selected-column rows of this matrix

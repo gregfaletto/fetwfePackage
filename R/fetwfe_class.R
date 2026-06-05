@@ -118,6 +118,10 @@ print.summary.fetwfe <- function(x, ...) {
 	"covs",
 	"ci_type",
 	"fusion_structure",
+	# #236: the user-supplied forward fusion matrix D_N (NULL when not
+	# supplied). Always present on freshly built fits (kept inside the
+	# `out <- list(...)` literal so the name survives a NULL value).
+	"fusion_matrix",
 	"internal"
 )
 
@@ -129,7 +133,10 @@ print.summary.fetwfe <- function(x, ...) {
 	"theta_hat",
 	"calc_ses",
 	"variance_components",
-	"first_year"
+	"first_year",
+	# #236: the inverted custom fusion block solve(fusion_matrix) (NULL when
+	# not supplied). Consumed by eventStudy() / simultaneousCIs().
+	"d_inv_treat"
 )
 
 #' @title Validate a `fetwfe`-classed object's contracts
