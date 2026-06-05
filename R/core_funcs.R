@@ -45,6 +45,13 @@
 #'   \code{twfeCovs_core}) must pass this argument explicitly.
 #' @param is_twfe_covs Logical.  If \code{TRUE}, columns will be removed and
 #'   consolidated as required for `twfeCovs()`.  Default \code{FALSE}.
+#' @param fusion_structure Character; one of `"cohort"` (default) or
+#'   `"event_study"`. Forwarded to `.append_ridge_rows()` (and thence the
+#'   full inverse-fusion matrix) when `add_ridge = TRUE && is_fetwfe`.
+#' @param d_inv_treat Optional `num_treats x num_treats` numeric matrix; the
+#'   user-supplied already-inverted treatment-effect fusion block
+#'   (`solve(fusion_matrix)`, #236), forwarded to `.append_ridge_rows()`.
+#'   Default `NULL`.
 #'
 #' @details
 #' The routine carries out the following steps in order:
@@ -109,7 +116,8 @@ prep_for_etwfe_regression <- function(
 	indep_counts = NA,
 	is_fetwfe,
 	is_twfe_covs = FALSE,
-	fusion_structure = "cohort"
+	fusion_structure = "cohort",
+	d_inv_treat = NULL
 ) {
 	gls <- .estimate_variance_and_gls(
 		y = y,
@@ -160,7 +168,8 @@ prep_for_etwfe_regression <- function(
 		sig_eps_sq = sig_eps_sq,
 		sig_eps_c_sq = sig_eps_c_sq,
 		N = N,
-		fusion_structure = fusion_structure
+		fusion_structure = fusion_structure,
+		d_inv_treat = d_inv_treat
 	)
 	X_final_scaled <- ridge$X_scaled
 	y_final <- ridge$y_final
@@ -559,6 +568,14 @@ prep_for_etwfe_core <- function(
 #' @param sig_eps_sq,sig_eps_c_sq,N Numeric / integer; inputs to the
 #'   `lambda_ridge = 1e-5 * (sig_eps_sq + sig_eps_c_sq) * sqrt(p/(N*T))`
 #'   formula.
+#' @param fusion_structure Character; one of `"cohort"` (default) or
+#'   `"event_study"`. Forwarded to `genFullInvFusionTransformMat()`
+#'   (only used when `add_ridge = TRUE && is_fetwfe`).
+#' @param d_inv_treat Optional `num_treats x num_treats` numeric matrix; the
+#'   user-supplied already-inverted treatment-effect fusion block
+#'   (`solve(fusion_matrix)`, #236), forwarded to
+#'   `genFullInvFusionTransformMat()` so the custom block reaches the ridge
+#'   penalty rows. Default `NULL`.
 #' @return List with the (possibly-augmented) `X_scaled`, `y_final`,
 #'   and `lambda_ridge`.
 #' @keywords internal
@@ -577,7 +594,8 @@ prep_for_etwfe_core <- function(
 	sig_eps_sq,
 	sig_eps_c_sq,
 	N,
-	fusion_structure = "cohort"
+	fusion_structure = "cohort",
+	d_inv_treat = NULL
 ) {
 	if (!add_ridge) {
 		return(list(
@@ -596,7 +614,8 @@ prep_for_etwfe_core <- function(
 			G = G,
 			d = d,
 			num_treats = num_treats,
-			fusion_structure = fusion_structure
+			fusion_structure = fusion_structure,
+			d_inv_treat = d_inv_treat
 		)
 
 		stopifnot(ncol(D_inverse) == p)

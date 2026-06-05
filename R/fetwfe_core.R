@@ -308,6 +308,19 @@ checkFetwfeInputs <- function(
 #'   unit-clustered Liang-Zeger sandwich SE on the bridge-selected
 #'   support). See the exported wrapper `fetwfe()` for details. Default
 #'   is `"default"`.
+#' @param lambda_selection Character; one of `"cv"` (default) or `"bic"`.
+#'   Selects the bridge penalty via cross-validation or BIC. See `fetwfe()`.
+#' @param cv_folds Integer; number of CV folds when `lambda_selection = "cv"`.
+#'   Default `10L`.
+#' @param cv_seed Integer or `NULL`; seed for CV fold assignment. Default `NULL`.
+#' @param fusion_structure Character; one of `"cohort"` (default) or
+#'   `"event_study"`. Selects which built-in inverse treatment-effect fusion
+#'   block is used (ignored when `d_inv_treat` is supplied).
+#' @param d_inv_treat Optional `num_treats x num_treats` numeric matrix; the
+#'   user-supplied already-inverted treatment-effect fusion block
+#'   (`solve(fusion_matrix)`, #236). When non-`NULL` it overrides
+#'   `fusion_structure` for the treatment block throughout the fit (transform,
+#'   ridge, untransform, variance). Default `NULL`.
 #'
 #' @details
 #' The function executes the following main steps:
@@ -418,7 +431,8 @@ fetwfe_core <- function(
 	lambda_selection = "cv",
 	cv_folds = 10L,
 	cv_seed = NULL,
-	fusion_structure = "cohort"
+	fusion_structure = "cohort",
+	d_inv_treat = NULL
 ) {
 	se_type <- match.arg(
 		se_type,
@@ -469,7 +483,8 @@ fetwfe_core <- function(
 		d = d,
 		num_treats = num_treats,
 		first_inds = first_inds,
-		fusion_structure = fusion_structure
+		fusion_structure = fusion_structure,
+		d_inv_treat = d_inv_treat
 	)
 
 	res <- prep_for_etwfe_regression(
@@ -491,7 +506,8 @@ fetwfe_core <- function(
 		indep_count_data_available = indep_count_data_available,
 		indep_counts = indep_counts,
 		is_fetwfe = TRUE,
-		fusion_structure = fusion_structure
+		fusion_structure = fusion_structure,
+		d_inv_treat = d_inv_treat
 	)
 
 	X_final_scaled <- res$X_final_scaled
@@ -645,7 +661,8 @@ fetwfe_core <- function(
 			p = p,
 			d = d,
 			num_treats = num_treats,
-			fusion_structure = fusion_structure
+			fusion_structure = fusion_structure,
+			d_inv_treat = d_inv_treat
 		)
 		# Apply ridge adjustment locally before early-exit return; doesn't
 		# affect later code paths (they re-compute `beta_hat` separately
@@ -706,7 +723,8 @@ fetwfe_core <- function(
 		p = p,
 		d = d,
 		num_treats = num_treats,
-		fusion_structure = fusion_structure
+		fusion_structure = fusion_structure,
+		d_inv_treat = d_inv_treat
 	)
 
 	# If using ridge regularization, multiply the "naive" estimated coefficients
@@ -762,7 +780,8 @@ fetwfe_core <- function(
 		alpha = alpha,
 		se_type = se_type,
 		y_final = y_final,
-		fusion_structure = fusion_structure
+		fusion_structure = fusion_structure,
+		d_inv_treat = d_inv_treat
 	)
 
 	cohort_te_df <- res$cohort_te_df

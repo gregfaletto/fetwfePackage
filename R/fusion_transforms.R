@@ -59,6 +59,13 @@
 #'   Starting column indices of the first treatment dummy of each cohort inside
 #'   the treatment block.  If `NA` (default) they are computed by
 #'   `getFirstInds()`.
+#' @param fusion_structure Character; one of `"cohort"` (default) or
+#'   `"event_study"`. Selects which built-in inverse treatment-effect fusion
+#'   block is used (ignored when `d_inv_treat` is supplied).
+#' @param d_inv_treat Optional `num_treats x num_treats` numeric matrix; the
+#'   user-supplied already-inverted treatment-effect fusion block
+#'   (`solve(fusion_matrix)`, #236). When non-`NULL` it overrides
+#'   `fusion_structure` for the treatment block. Default `NULL`.
 #'
 #' @return
 #' A numeric matrix `X_mod` with the **same dimensions** as `X_int` but whose
@@ -90,7 +97,8 @@ transformXintImproved <- function(
 	d,
 	num_treats,
 	first_inds = NA,
-	fusion_structure = "cohort"
+	fusion_structure = "cohort",
+	d_inv_treat = NULL
 ) {
 	p <- getP(G = G, T = T, d = d, num_treats = num_treats)
 	stopifnot(p == ncol(X_int))
@@ -178,7 +186,13 @@ transformXintImproved <- function(
 	stopifnot(all(is.na(X_mod[, feat_inds])))
 
 	X_mod[, feat_inds] <- X_int[, feat_inds] %*%
-		.gen_inv_treat_block(num_treats, first_inds, G, fusion_structure)
+		.gen_inv_treat_block(
+			num_treats,
+			first_inds,
+			G,
+			fusion_structure,
+			d_inv_treat = d_inv_treat
+		)
 
 	if (d > 0) {
 		# Lastly, penalize interactions between each treatment effect and each feature.
@@ -202,7 +216,8 @@ transformXintImproved <- function(
 					num_treats,
 					first_inds,
 					G,
-					fusion_structure
+					fusion_structure,
+					d_inv_treat = d_inv_treat
 				)
 
 			stopifnot(all(!is.na(X_mod[, inds_j])))
@@ -286,6 +301,13 @@ transformXintImproved <- function(
 #'   Starting indices (1-based, inside the treatment-dummy block) of the first
 #'   effect for each cohort.  If `NA` they are reconstructed with
 #'   **`getFirstInds()`**.
+#' @param fusion_structure Character; one of `"cohort"` (default) or
+#'   `"event_study"`. Selects which built-in inverse treatment-effect fusion
+#'   block is used (ignored when `d_inv_treat` is supplied).
+#' @param d_inv_treat Optional `num_treats x num_treats` numeric matrix; the
+#'   user-supplied already-inverted treatment-effect fusion block
+#'   (`solve(fusion_matrix)`, #236). When non-`NULL` it overrides
+#'   `fusion_structure` for the treatment block. Default `NULL`.
 #'
 #' @return Numeric vector \code{beta_hat} (length \eqn{p}) equal to
 #'   \eqn{\boldsymbol D_N^{-1}\,\widehat{\boldsymbol\theta}}.
@@ -332,7 +354,8 @@ untransformCoefImproved <- function(
 	d,
 	num_treats,
 	first_inds = NA,
-	fusion_structure = "cohort"
+	fusion_structure = "cohort",
+	d_inv_treat = NULL
 ) {
 	stopifnot(length(beta_hat_mod) == p)
 	beta_hat <- rep(as.numeric(NA), p)
@@ -428,7 +451,8 @@ untransformCoefImproved <- function(
 		num_treats,
 		first_inds,
 		G,
-		fusion_structure
+		fusion_structure,
+		d_inv_treat = d_inv_treat
 	) %*%
 		beta_hat_mod[feat_inds]
 
@@ -461,7 +485,8 @@ untransformCoefImproved <- function(
 				num_treats,
 				first_inds,
 				G,
-				fusion_structure
+				fusion_structure,
+				d_inv_treat = d_inv_treat
 			) %*%
 				beta_hat_mod[inds_j]
 
@@ -817,8 +842,20 @@ genInvEventStudyFusionTransformMat <- function(n_vars, first_inds, G) {
 #'   (`genInvEventStudyFusionTransformMat()`, #40). A single dispatch point so
 #'   every consumer (transform / untransform / variance / accessors) stays in
 #'   sync, and the `"cohort"` (default) branch is the exact pre-existing call.
+#'
+#'   When `d_inv_treat` is supplied (a user `fusion_matrix`'s already-inverted
+#'   `num_treats x num_treats` block; #236), it is returned verbatim, overriding
+#'   `fusion_structure`. This is the single override choke point: every consumer
+#'   reaches it, so threading `d_inv_treat` here makes the user's custom block
+#'   reach the transform / untransform / variance / ridge / accessor paths at
+#'   once. With `d_inv_treat = NULL` (the default) the call is byte-identical to
+#'   the prior `fusion_structure` dispatch.
 #' @param num_treats,first_inds,G As in `genInvTwoWayFusionTransformMat()`.
 #' @param fusion_structure One of `"cohort"` or `"event_study"`.
+#' @param d_inv_treat Optional `num_treats x num_treats` numeric matrix; the
+#'   already-inverted user-supplied treatment-effect fusion block
+#'   (`solve(fusion_matrix)`). If non-`NULL`, overrides `fusion_structure` and is
+#'   returned as-is. Default `NULL`.
 #' @return The `num_treats x num_treats` inverse treatment-effect fusion block.
 #' @keywords internal
 #' @noRd
@@ -826,13 +863,174 @@ genInvEventStudyFusionTransformMat <- function(n_vars, first_inds, G) {
 	num_treats,
 	first_inds,
 	G,
-	fusion_structure = "cohort"
+	fusion_structure = "cohort",
+	d_inv_treat = NULL
 ) {
+	if (!is.null(d_inv_treat)) {
+		stopifnot(identical(
+			dim(d_inv_treat),
+			c(as.integer(num_treats), as.integer(num_treats))
+		))
+		return(d_inv_treat)
+	}
 	if (identical(fusion_structure, "event_study")) {
 		genInvEventStudyFusionTransformMat(num_treats, first_inds, G)
 	} else {
 		genInvTwoWayFusionTransformMat(num_treats, first_inds, G)
 	}
+}
+
+
+# .validate_fusion_matrix
+#' @title Validate a user-supplied `fusion_matrix` and return its inverse block
+#' @description Validates the optional user `fusion_matrix` argument of
+#'   `fetwfe()` (#236) and returns the already-inverted treatment-effect block
+#'   `solve(fusion_matrix)` (a `num_treats x num_treats` matrix) that the
+#'   estimator threads through the `.gen_inv_treat_block()` choke point. When
+#'   `fusion_matrix` is `NULL` (the default) it returns `NULL` unchanged, so the
+#'   built-in `fusion_structure` dispatch is used and the fit is byte-identical
+#'   to omitting the argument.
+#'
+#'   Checks (in order), all referencing the cohort-major `(g, t)` row order of
+#'   `getFirstInds()` / `getTreatInds()`:
+#'   \enumerate{
+#'     \item type/shape: a finite numeric matrix with
+#'       `nrow == ncol == num_treats` (else `stop()`, naming the expected
+#'       `num_treats` derived from `G` and `T`);
+#'     \item invertibility: `solve(fusion_matrix)` must succeed (else `stop()`);
+#'     \item singular-value bounds (Faletto 2025 event-study singular-value
+#'       lemma): `warning()` (not error) when `sigma_max > sqrt(6)` or
+#'       `sigma_min < 1 / (T * sqrt(2 * T))` -- the fit stays a valid point
+#'       estimator but the paper's inferential guarantees may not hold.
+#'   }
+#'   When a non-default `fusion_structure` was also supplied, a `message()`
+#'   (gated on `verbose`) notes that `fusion_matrix` overrides it for the
+#'   treatment block.
+#' @param fusion_matrix The user-supplied forward difference matrix `D_N`, or
+#'   `NULL`.
+#' @param num_treats Integer; the number of base treatment effects (the required
+#'   matrix dimension).
+#' @param G Integer; number of treated cohorts (for the error message).
+#' @param T Integer; number of time periods (for the error message and the
+#'   `sigma_min` bound).
+#' @param fusion_structure_supplied Logical; `TRUE` if the user explicitly
+#'   passed `fusion_structure` (drives the override-notice message). Default
+#'   `FALSE`.
+#' @param verbose Logical; gates the override-notice `message()`. Default
+#'   `FALSE`.
+#' @return `NULL` when `fusion_matrix` is `NULL`; otherwise the
+#'   `num_treats x num_treats` numeric matrix `solve(fusion_matrix)`.
+#' @references
+#' Faletto, G (2025). Fused Extended Two-Way Fixed Effects for
+#' Difference-in-Differences with Staggered Adoptions.
+#' \emph{arXiv preprint arXiv:2312.05985}.
+#' \url{https://arxiv.org/abs/2312.05985}.
+#' @keywords internal
+#' @noRd
+.validate_fusion_matrix <- function(
+	fusion_matrix,
+	num_treats,
+	G,
+	T,
+	fusion_structure_supplied = FALSE,
+	verbose = FALSE
+) {
+	if (is.null(fusion_matrix)) {
+		return(NULL)
+	}
+
+	# --- 1. type / shape -------------------------------------------------
+	if (
+		!is.matrix(fusion_matrix) ||
+			!is.numeric(fusion_matrix) ||
+			!all(is.finite(fusion_matrix))
+	) {
+		stop(
+			"fusion_matrix must be a finite numeric matrix (it is the ",
+			"num_treats x num_treats forward-differences matrix D_N). Got an ",
+			"object of class ",
+			paste(class(fusion_matrix), collapse = "/"),
+			if (is.matrix(fusion_matrix) && !all(is.finite(fusion_matrix))) {
+				" containing non-finite (NA/NaN/Inf) entries."
+			} else {
+				"."
+			},
+			call. = FALSE
+		)
+	}
+	if (
+		nrow(fusion_matrix) != num_treats || ncol(fusion_matrix) != num_treats
+	) {
+		stop(
+			"fusion_matrix must be a num_treats x num_treats numeric matrix; ",
+			"got ",
+			nrow(fusion_matrix),
+			" x ",
+			ncol(fusion_matrix),
+			", expected num_treats = ",
+			num_treats,
+			" (from G = ",
+			G,
+			", T = ",
+			T,
+			"). The rows/columns follow the cohort-major (g, t) order of ",
+			"getFirstInds() / getTreatInds().",
+			call. = FALSE
+		)
+	}
+
+	# --- 2. invertibility ------------------------------------------------
+	d_inv_treat <- tryCatch(
+		solve(fusion_matrix),
+		error = function(e) {
+			stop(
+				"fusion_matrix is singular (or numerically non-invertible) and ",
+				"cannot be inverted: ",
+				conditionMessage(e),
+				". It must be an invertible forward-differences matrix D_N.",
+				call. = FALSE
+			)
+		}
+	)
+
+	# --- 3. singular-value bounds (warning, not error) -------------------
+	# Faletto (2025) event-study singular-value lemma: a D_N within
+	# sigma_max <= sqrt(6) and sigma_min >= 1 / (T * sqrt(2 * T)) inherits the
+	# paper's guarantees. A small absolute tolerance avoids float-edge false
+	# positives at the bound.
+	sv <- svd(fusion_matrix)$d
+	sigma_max <- max(sv)
+	sigma_min <- min(sv)
+	upper_bound <- sqrt(6)
+	lower_bound <- 1 / (T * sqrt(2 * T))
+	tol <- 1e-8
+	if (sigma_max > upper_bound + tol || sigma_min < lower_bound - tol) {
+		warning(
+			"fusion_matrix falls outside the event-study singular-value lemma's ",
+			"bounds (sigma_max = ",
+			format(sigma_max, digits = 6),
+			" vs. sqrt(6) = ",
+			format(upper_bound, digits = 6),
+			"; sigma_min = ",
+			format(sigma_min, digits = 6),
+			" vs. 1 / (T * sqrt(2 * T)) = ",
+			format(lower_bound, digits = 6),
+			"). The estimate remains a valid point estimator, but the paper's ",
+			"inferential guarantees (standard errors / confidence intervals) ",
+			"may not hold.",
+			call. = FALSE
+		)
+	}
+
+	# --- 4. override notice ----------------------------------------------
+	if (isTRUE(fusion_structure_supplied) && isTRUE(verbose)) {
+		message(
+			"fusion_matrix was supplied, so it overrides fusion_structure for ",
+			"the treatment-effect block."
+		)
+	}
+
+	d_inv_treat
 }
 
 
@@ -878,6 +1076,14 @@ genInvEventStudyFusionTransformMat <- function(n_vars, first_inds, G) {
 #' @param d Integer. Number of time-invariant covariates (can be 0).
 #' @param num_treats Integer.  Total number of base treatment-effect
 #'   coefficients \(\mathfrak W = T G - G(G+1)/2\).
+#' @param fusion_structure Character; one of `"cohort"` (default) or
+#'   `"event_study"`. Selects which built-in inverse treatment-effect fusion
+#'   block is embedded (ignored when `d_inv_treat` is supplied).
+#' @param d_inv_treat Optional `num_treats x num_treats` numeric matrix; the
+#'   user-supplied already-inverted treatment-effect fusion block
+#'   (`solve(fusion_matrix)`, #236). When non-`NULL` it overrides
+#'   `fusion_structure` for the treatment block embedded in the full
+#'   block-diagonal. Default `NULL`.
 #'
 #' @return A dense base-R matrix of size
 #'   \eqn{p \times p} with
@@ -897,7 +1103,8 @@ genFullInvFusionTransformMat <- function(
 	G,
 	d,
 	num_treats,
-	fusion_structure = "cohort"
+	fusion_structure = "cohort",
+	d_inv_treat = NULL
 ) {
 	##———— Safety checks ————————————————————————————————————————————
 	stopifnot(is.numeric(G), length(G) == 1L, G >= 2L)
@@ -933,7 +1140,8 @@ genFullInvFusionTransformMat <- function(
 		num_treats = num_treats,
 		first_inds = first_inds,
 		G = G,
-		fusion_structure = fusion_structure
+		fusion_structure = fusion_structure,
+		d_inv_treat = d_inv_treat
 	)
 
 	##———— 7. Treatment × X interactions:  I_d ⊗ (D^{(2)}(G))^{-1} ——
@@ -944,7 +1152,8 @@ genFullInvFusionTransformMat <- function(
 				num_treats = num_treats,
 				first_inds = first_inds,
 				G = G,
-				fusion_structure = fusion_structure
+				fusion_structure = fusion_structure,
+				d_inv_treat = d_inv_treat
 			)
 		)
 	} else {

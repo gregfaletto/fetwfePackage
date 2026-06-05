@@ -27,7 +27,8 @@ fetwfe(
   cv_folds = 10L,
   cv_seed = NULL,
   ci_type = c("simultaneous", "pointwise"),
-  fusion_structure = c("cohort", "event_study")
+  fusion_structure = c("cohort", "event_study"),
+  fusion_matrix = NULL
 )
 }
 \arguments{
@@ -228,6 +229,25 @@ fusion penalty. \code{"event_study"} instead fuses treatment effects at the same
 time since treatment (event time \code{e = t - g}) across cohorts. The
 event-study penalty carries the same theoretical guarantees as the default
 (Faletto 2025); only the treatment-effect fusion structure changes.}
+
+\item{fusion_matrix}{(Optional.) Numeric matrix or \code{NULL} (the default). An
+advanced-use override: a user-supplied \verb{num_treats x num_treats} forward
+differences matrix \code{D_N} for the treatment-effect block, encoding an
+arbitrary fusion structure beyond the two built-ins. When non-\code{NULL} it
+overrides \code{fusion_structure} for the treatment-effect block only (the
+fixed-effect blocks are unchanged); the estimator uses \code{solve(fusion_matrix)}
+internally. The rows/columns are interpreted in the cohort-major \verb{(g, t)}
+order used internally for the treatment effects (the order \code{getFirstInds()}
+/ \code{getTreatInds()} encode): row/column \code{i} corresponds to
+base treatment effect \code{i}, with cohort \code{g} occupying rows
+\code{first_inds[g]:(first_inds[g + 1] - 1)} ordered by event time. \code{num_treats}
+equals \code{T * G - G * (G + 1) / 2}. \code{fusion_matrix} must be a finite,
+invertible numeric matrix of that exact dimension (otherwise \code{fetwfe()}
+stops). A \code{D_N} whose singular values satisfy \code{sigma_max <= sqrt(6)} and
+\code{sigma_min >= 1 / (T * sqrt(2 * T))} inherits the paper's inferential
+guarantees (Faletto 2025, event-study singular-value lemma); outside those
+bounds the fit stays a valid point estimator but \code{fetwfe()} emits a
+\code{warning()}. Default is \code{NULL} (use the built-in \code{fusion_structure}).}
 }
 \value{
 An object of class \code{fetwfe} containing the following elements:
@@ -254,6 +274,7 @@ An object of class \code{fetwfe} containing the following elements:
 \item{cv_folds}{Integer scalar; the \code{cv_folds} value used when \code{lambda_selection = "cv"}, \code{NA_integer_} when \code{lambda_selection = "bic"}.}
 \item{cv_seed}{Integer scalar; the seed actually fed to \code{set.seed()} immediately before \code{cv.grpreg()} was called. Defaults to \code{as.integer(N * T)} when the user did not pass a seed. \code{NA_integer_} when \code{lambda_selection = "bic"}.}
 \item{fusion_structure}{Character scalar; the \code{fusion_structure} argument the user passed (\code{"cohort"} or \code{"event_study"}), recording which fusion-penalty differences matrix was used for the treatment effects.}
+\item{fusion_matrix}{The user-supplied custom forward differences matrix \code{D_N} (a \verb{num_treats x num_treats} numeric matrix), or \code{NULL} if none was supplied. When non-\code{NULL} it overrode \code{fusion_structure} for the treatment-effect block; the estimator used \code{solve(fusion_matrix)} internally. See the \code{fusion_matrix} argument.}
 \item{N}{The final number of units that were in the data set used for estimation (after any units may have been removed because they were treated in the first time period).}
 \item{T}{The number of time periods in the final data set.}
 \item{G}{The final number of treated cohorts that appear in the final data set.}
@@ -295,6 +316,7 @@ internally). Consumed by \verb{augment.<class>()}.}
 \item{calc_ses}{Logical indicating whether standard errors were calculated.}
 \item{variance_components}{A list exposing the two variance pieces (\code{att_var_1}, \code{att_var_2}) plus their paper-notation counterparts (\code{V_1}, \code{V_2}) and the unit-scaled variance estimators (\code{tilde_v_N}, \code{hat_v_N}, \code{tilde_v_N_C}, \code{tilde_v_N_C_pi_hat}, \code{tilde_v_N_C_pi_hat_cons}, \code{tilde_v_N_cons}) catalogued at paper line 2006. The Wald CI is \verb{[hat_T_N +- qnorm(1-alpha/2) * sqrt(tilde_v_N / N)]} (paper Eq. \code{conf.int.form}). New in v1.12.0 (issue #141 + #146).}
 \item{first_year}{Integer or numeric scalar; the first (earliest) \code{time_var} value in the panel after \code{idCohorts()} processing. Consumed by \code{eventStudy()} to map \code{cohort_probs}' cohort labels (treatment-start years) to 1-based panel-time-index offsets when the labels are integer-coercible. New in v1.13.3 (issue #174).}
+\item{d_inv_treat}{The inverted custom treatment-effect fusion block \code{solve(fusion_matrix)} (a \verb{num_treats x num_treats} numeric matrix), or \code{NULL} if no \code{fusion_matrix} was supplied. Consumed by \code{eventStudy()} and \code{simultaneousCIs()} so the access-time bands reuse the same fusion block the fit used (#236).}
 }
 }
 
