@@ -436,12 +436,17 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	sel_treat_inds_shifted <- which(theta_hat_slopes[treat_inds] != 0)
 	theta_hat_treat_sel <- theta_hat_slopes[treat_inds][sel_treat_inds_shifted]
 
-	# d_inv_treat: the treatment-block of D^{-1}, then restrict columns to selected
+	# d_inv_treat: the treatment-block of D^{-1}, then restrict columns to selected.
+	# A user-supplied custom fusion matrix (#236), if any, is stored inverted on
+	# `x$internal$d_inv_treat`; pass it through so this accessor uses the SAME
+	# transform as the fit (otherwise it would fall back to the built-in dispatch
+	# and silently disagree with the fitted effects).
 	d_inv_treat <- .gen_inv_treat_block(
 		num_treats = num_treats,
 		first_inds = first_inds,
 		G = G,
-		fusion_structure = x$fusion_structure
+		fusion_structure = x$fusion_structure,
+		d_inv_treat = x$internal$d_inv_treat
 	)
 	if (length(sel_treat_inds_shifted) > 0) {
 		d_inv_treat_sel <- d_inv_treat[,

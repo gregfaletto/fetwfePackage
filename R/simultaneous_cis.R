@@ -370,11 +370,14 @@ simultaneousCIs.twfeCovs <- function(
 		sel_feat_inds <- which(theta_hat_slopes != 0)
 		sel_treat_inds_shifted <- which(theta_hat_slopes[treat_inds] != 0)
 		theta_sel <- theta_hat_slopes[treat_inds][sel_treat_inds_shifted]
+		# #236: reuse the custom inverted block stored on the fit (NULL for
+		# non-custom fits -> byte-identical `fusion_structure` dispatch).
 		d_inv_treat <- .gen_inv_treat_block(
 			num_treats = num_treats,
 			first_inds = first_inds,
 			G = G,
-			fusion_structure = x$fusion_structure
+			fusion_structure = x$fusion_structure,
+			d_inv_treat = x$internal$d_inv_treat
 		)
 		d_inv_treat_sel <- if (length(sel_treat_inds_shifted) > 0) {
 			d_inv_treat[, sel_treat_inds_shifted, drop = FALSE]

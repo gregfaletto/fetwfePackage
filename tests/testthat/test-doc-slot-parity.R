@@ -335,6 +335,17 @@ test_that("cross-class slot inventory matches the documented divergence table", 
 		"fusion_structure" = list(
 			classes = c("fetwfe"),
 			rationale = "Only fetwfe applies the bridge fusion transform; fusion_structure selects which inverse-fusion differences matrix (cohort two-way vs. event-study) is used for the treatment-effect block."
+		),
+		# #236: the user-supplied custom fusion matrix D_N (and its inverted
+		# block d_inv_treat) live only on fetwfe -- the sole estimator that
+		# applies the bridge fusion transform.
+		"fusion_matrix" = list(
+			classes = c("fetwfe"),
+			rationale = "Only fetwfe applies the bridge fusion transform; fusion_matrix is the optional user-supplied forward differences matrix D_N that overrides fusion_structure for the treatment-effect block."
+		),
+		"d_inv_treat" = list(
+			classes = c("fetwfe"),
+			rationale = "Only fetwfe applies the bridge fusion transform; internal$d_inv_treat is solve(fusion_matrix), the inverted custom treatment-effect block consumed by eventStudy() / simultaneousCIs()."
 		)
 	)
 

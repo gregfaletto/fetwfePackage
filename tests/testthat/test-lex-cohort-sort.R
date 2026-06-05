@@ -125,6 +125,10 @@ test_that("tidy.<class> sorts cohorts numerically when labels include >= 10", {
 		ci_type = "pointwise",
 		# #40: fusion_structure is a required fetwfe slot.
 		fusion_structure = "cohort",
+		# #236: fusion_matrix is a required fetwfe slot (NULL when no custom
+		# matrix was supplied). Inside this list() literal so the name
+		# survives a NULL value.
+		fusion_matrix = NULL,
 		internal = list(
 			X_ints = matrix(0, 100L * T_test, p_test),
 			y = rep(0, 100L * T_test),
@@ -152,7 +156,10 @@ test_that("tidy.<class> sorts cohorts numerically when labels include >= 10", {
 			# `.EXPECTED_INTERNAL_SLOTS_FETWFE`. Not actually used by
 			# `tidy.fetwfe()` (the function under test); set to a benign
 			# placeholder to keep this mock minimal.
-			first_year = 1L
+			first_year = 1L,
+			# #236: internal$d_inv_treat is a required fetwfe internal slot
+			# (NULL when no custom fusion_matrix was supplied).
+			d_inv_treat = NULL
 		)
 	)
 	class(obj) <- "fetwfe"

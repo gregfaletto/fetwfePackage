@@ -145,6 +145,14 @@
 #' @param sig_eps_sq,sig_eps_c_sq,N Numeric / integer; inputs to the
 #'   `lambda_ridge = 1e-5 * (sig_eps_sq + sig_eps_c_sq) * sqrt(p/(N*T))`
 #'   formula.
+#' @param fusion_structure Character; one of `"cohort"` (default) or
+#'   `"event_study"`. Forwarded to `genFullInvFusionTransformMat()`
+#'   (only used when `add_ridge = TRUE && is_fetwfe`).
+#' @param d_inv_treat Optional `num_treats x num_treats` numeric matrix; the
+#'   user-supplied already-inverted treatment-effect fusion block
+#'   (`solve(fusion_matrix)`, #236), forwarded to
+#'   `genFullInvFusionTransformMat()` so the custom block reaches the ridge
+#'   penalty rows. Default `NULL`.
 #' @return List with the (possibly-augmented) `X_scaled`, `y_final`,
 #'   and `lambda_ridge`.
 #' @keywords internal
@@ -163,7 +171,8 @@
 	sig_eps_sq,
 	sig_eps_c_sq,
 	N,
-	fusion_structure = "cohort"
+	fusion_structure = "cohort",
+	d_inv_treat = NULL
 ) {
 	if (!add_ridge) {
 		return(list(
@@ -182,7 +191,8 @@
 			G = G,
 			d = d,
 			num_treats = num_treats,
-			fusion_structure = fusion_structure
+			fusion_structure = fusion_structure,
+			d_inv_treat = d_inv_treat
 		)
 
 		stopifnot(ncol(D_inverse) == p)

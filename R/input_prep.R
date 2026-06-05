@@ -50,6 +50,13 @@
 #'   \code{twfeCovs_core}) must pass this argument explicitly.
 #' @param is_twfe_covs Logical.  If \code{TRUE}, columns will be removed and
 #'   consolidated as required for `twfeCovs()`.  Default \code{FALSE}.
+#' @param fusion_structure Character; one of `"cohort"` (default) or
+#'   `"event_study"`. Forwarded to `.append_ridge_rows()` (and thence the
+#'   full inverse-fusion matrix) when `add_ridge = TRUE && is_fetwfe`.
+#' @param d_inv_treat Optional `num_treats x num_treats` numeric matrix; the
+#'   user-supplied already-inverted treatment-effect fusion block
+#'   (`solve(fusion_matrix)`, #236), forwarded to `.append_ridge_rows()`.
+#'   Default `NULL`.
 #'
 #' @details
 #' The routine carries out the following steps in order:
@@ -114,7 +121,8 @@ prep_for_etwfe_regression <- function(
 	indep_counts = NA,
 	is_fetwfe,
 	is_twfe_covs = FALSE,
-	fusion_structure = "cohort"
+	fusion_structure = "cohort",
+	d_inv_treat = NULL
 ) {
 	gls <- .estimate_variance_and_gls(
 		y = y,
@@ -165,7 +173,8 @@ prep_for_etwfe_regression <- function(
 		sig_eps_sq = sig_eps_sq,
 		sig_eps_c_sq = sig_eps_c_sq,
 		N = N,
-		fusion_structure = fusion_structure
+		fusion_structure = fusion_structure,
+		d_inv_treat = d_inv_treat
 	)
 	X_final_scaled <- ridge$X_scaled
 	y_final <- ridge$y_final

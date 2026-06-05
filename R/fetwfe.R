@@ -161,6 +161,28 @@
 #'   time since treatment (event time `e = t - g`) across cohorts. The
 #'   event-study penalty carries the same theoretical guarantees as the default
 #'   (Faletto 2025); only the treatment-effect fusion structure changes.
+#' @param fusion_matrix (Optional.) Numeric matrix or `NULL` (the default). An
+#'   advanced-use override: a user-supplied `num_treats x num_treats` forward
+#'   differences matrix `D_N` for the treatment-effect block, encoding an
+#'   arbitrary fusion structure beyond the two built-ins. When non-`NULL` it
+#'   overrides `fusion_structure` for the treatment-effect block only (the
+#'   fixed-effect blocks are unchanged); the estimator uses `solve(fusion_matrix)`
+#'   internally. The rows/columns are interpreted in the cohort-major `(g, t)`
+#'   order used internally for the treatment effects (the order `getFirstInds()`
+#'   / `getTreatInds()` encode): row/column `i` corresponds to
+#'   base treatment effect `i`, with cohort `g` occupying rows
+#'   `first_inds[g]:(first_inds[g + 1] - 1)` ordered by event time. `num_treats`
+#'   equals `T * G - G * (G + 1) / 2`. `fusion_matrix` must be a finite,
+#'   invertible numeric matrix of that exact dimension (otherwise `fetwfe()`
+#'   stops). Under the paper's fixed-dimension scoping, *any* finite invertible
+#'   `D_N` of that dimension inherits the paper's inferential guarantees: the
+#'   theory depends on `D_N` only through its invertibility and singular-value
+#'   bounds (Assumption (D) of Faletto 2025), which a fixed invertible matrix
+#'   automatically satisfies, and swapping in a different `D_N` from this class
+#'   changes only constant factors. A numerically near-singular (ill-conditioned)
+#'   `D_N` still yields a valid point estimator but emits a `warning()` that its
+#'   inverse may be unreliable. Default is `NULL` (use the built-in
+#'   `fusion_structure`).
 #' @param ci_type Character; one of `"simultaneous"` (default) or
 #'   `"pointwise"`. Controls the confidence-interval bounds reported for the
 #'   cohort-specific ATTs (in `catt_df`) and the event-study effects (from
@@ -206,6 +228,7 @@
 #' \item{cv_folds}{Integer scalar; the `cv_folds` value used when `lambda_selection = "cv"`, `NA_integer_` when `lambda_selection = "bic"`.}
 #' \item{cv_seed}{Integer scalar; the seed actually fed to `set.seed()` immediately before `cv.grpreg()` was called. Defaults to `as.integer(N * T)` when the user did not pass a seed. `NA_integer_` when `lambda_selection = "bic"`.}
 #' \item{fusion_structure}{Character scalar; the `fusion_structure` argument the user passed (`"cohort"` or `"event_study"`), recording which fusion-penalty differences matrix was used for the treatment effects.}
+#' \item{fusion_matrix}{The user-supplied custom forward differences matrix `D_N` (a `num_treats x num_treats` numeric matrix), or `NULL` if none was supplied. When non-`NULL` it overrode `fusion_structure` for the treatment-effect block; the estimator used `solve(fusion_matrix)` internally. See the `fusion_matrix` argument.}
 #' \item{N}{The final number of units that were in the data set used for estimation (after any units may have been removed because they were treated in the first time period).}
 #' \item{T}{The number of time periods in the final data set.}
 #' \item{G}{The final number of treated cohorts that appear in the final data set.}
@@ -247,6 +270,7 @@
 #'     \item{calc_ses}{Logical indicating whether standard errors were calculated.}
 #'     \item{variance_components}{A list exposing the two variance pieces (`att_var_1`, `att_var_2`) plus their paper-notation counterparts (`V_1`, `V_2`) and the unit-scaled variance estimators (`tilde_v_N`, `hat_v_N`, `tilde_v_N_C`, `tilde_v_N_C_pi_hat`, `tilde_v_N_C_pi_hat_cons`, `tilde_v_N_cons`) catalogued at paper line 2006. The Wald CI is `[hat_T_N +- qnorm(1-alpha/2) * sqrt(tilde_v_N / N)]` (paper Eq. `conf.int.form`). New in v1.12.0 (issue #141 + #146).}
 #'     \item{first_year}{Integer or numeric scalar; the first (earliest) `time_var` value in the panel after `idCohorts()` processing. Consumed by `eventStudy()` to map `cohort_probs`' cohort labels (treatment-start years) to 1-based panel-time-index offsets when the labels are integer-coercible. New in v1.13.3 (issue #174).}
+#'     \item{d_inv_treat}{The inverted custom treatment-effect fusion block `solve(fusion_matrix)` (a `num_treats x num_treats` numeric matrix), or `NULL` if no `fusion_matrix` was supplied. Consumed by `eventStudy()` and `simultaneousCIs()` so the access-time bands reuse the same fusion block the fit used (#236).}
 #'   }
 #' }
 #'
@@ -328,13 +352,18 @@ fetwfe <- function(
 	cv_folds = 10L,
 	cv_seed = NULL,
 	ci_type = c("simultaneous", "pointwise"),
-	fusion_structure = c("cohort", "event_study")
+	fusion_structure = c("cohort", "event_study"),
+	fusion_matrix = NULL
 ) {
 	se_type <- match.arg(
 		se_type,
 		c("default", "conservative", "cluster")
 	)
 	ci_type <- match.arg(ci_type)
+	# Record whether the user explicitly passed `fusion_structure` so we can
+	# emit a one-line override notice when a custom `fusion_matrix` is also
+	# supplied (the matrix wins for the treatment block; #236).
+	fusion_structure_supplied <- !missing(fusion_structure)
 	fusion_structure <- match.arg(fusion_structure)
 	# `lambda_selection` is validated downstream by
 	# `checkFetwfeInputs()` as part of the collect-all-violations
@@ -394,6 +423,21 @@ fetwfe <- function(
 
 	rm(prep)
 
+	# User-supplied custom fusion matrix (#236). Validated here -- after prep
+	# (so `num_treats`, `G`, `T` are known) and before `fetwfe_core()`. When
+	# supplied, `d_inv_treat <- solve(fusion_matrix)` overrides
+	# `fusion_structure` for the treatment-effect block throughout the fit and
+	# is stored on the object for the access-time accessors (eventStudy(),
+	# simultaneousCIs()). NULL (the default) is byte-identical to omitting it.
+	d_inv_treat <- .validate_fusion_matrix(
+		fusion_matrix = fusion_matrix,
+		num_treats = num_treats,
+		G = G,
+		T = T,
+		fusion_structure_supplied = fusion_structure_supplied,
+		verbose = verbose
+	)
+
 	res <- fetwfe_core(
 		X_ints = X_ints,
 		y = y,
@@ -418,7 +462,8 @@ fetwfe <- function(
 		lambda_selection = lambda_selection,
 		cv_folds = cv_folds,
 		cv_seed = cv_seed,
-		fusion_structure = fusion_structure
+		fusion_structure = fusion_structure,
+		d_inv_treat = d_inv_treat
 	)
 
 	att_branch <- .select_att_branch(
@@ -478,6 +523,12 @@ fetwfe <- function(
 		},
 		cv_seed = res$cv_seed_used,
 		fusion_structure = fusion_structure,
+		# #236: the user-supplied forward difference matrix D_N (NULL when not
+		# supplied). Kept inside this list() literal so the slot name survives
+		# even when NULL (a post-construction `out$fusion_matrix <- NULL` would
+		# silently drop the name, breaking doc-slot parity). The inverted block
+		# `solve(fusion_matrix)` lives in `internal$d_inv_treat` below.
+		fusion_matrix = fusion_matrix,
 		N = res$N,
 		T = res$T,
 		G = res$G,
@@ -510,7 +561,14 @@ fetwfe <- function(
 		# `eventStudy()` can map `cohort_probs`' cohort labels back to
 		# panel-time offsets. See `R/event_study.R` and
 		# `R/utility.R::getFirstIndsFromOffsets`.
-		first_year = first_year
+		first_year = first_year,
+		# #236: the inverted user fusion block `solve(fusion_matrix)` (NULL when
+		# not supplied). Consumed by the access-time accessors `eventStudy()`
+		# (R/event_study.R) and `simultaneousCIs()` (R/simultaneous_cis.R), and
+		# by `.finalize_ci_type()` below (which rebuilds the simultaneous catt_df
+		# band at construction). Kept inside this list() literal so the name
+		# survives when NULL.
+		d_inv_treat = d_inv_treat
 	)
 
 	# Validate constructed object's contracts (#85). Catches malformed
@@ -633,6 +691,28 @@ fetwfe <- function(
 #'   time since treatment (event time `e = t - g`) across cohorts. The
 #'   event-study penalty carries the same theoretical guarantees as the default
 #'   (Faletto 2025); only the treatment-effect fusion structure changes.
+#' @param fusion_matrix (Optional.) Numeric matrix or `NULL` (the default). An
+#'   advanced-use override: a user-supplied `num_treats x num_treats` forward
+#'   differences matrix `D_N` for the treatment-effect block, encoding an
+#'   arbitrary fusion structure beyond the two built-ins. When non-`NULL` it
+#'   overrides `fusion_structure` for the treatment-effect block only (the
+#'   fixed-effect blocks are unchanged); the estimator uses `solve(fusion_matrix)`
+#'   internally. The rows/columns are interpreted in the cohort-major `(g, t)`
+#'   order used internally for the treatment effects (the order `getFirstInds()`
+#'   / `getTreatInds()` encode): row/column `i` corresponds to
+#'   base treatment effect `i`, with cohort `g` occupying rows
+#'   `first_inds[g]:(first_inds[g + 1] - 1)` ordered by event time. `num_treats`
+#'   equals `T * G - G * (G + 1) / 2`. `fusion_matrix` must be a finite,
+#'   invertible numeric matrix of that exact dimension (otherwise `fetwfe()`
+#'   stops). Under the paper's fixed-dimension scoping, *any* finite invertible
+#'   `D_N` of that dimension inherits the paper's inferential guarantees: the
+#'   theory depends on `D_N` only through its invertibility and singular-value
+#'   bounds (Assumption (D) of Faletto 2025), which a fixed invertible matrix
+#'   automatically satisfies, and swapping in a different `D_N` from this class
+#'   changes only constant factors. A numerically near-singular (ill-conditioned)
+#'   `D_N` still yields a valid point estimator but emits a `warning()` that its
+#'   inverse may be unreliable. Default is `NULL` (use the built-in
+#'   `fusion_structure`).
 #' @param ci_type Character; one of `"simultaneous"` (default) or
 #'   `"pointwise"`. Controls the confidence-interval bounds reported for the
 #'   cohort-specific ATTs (in `catt_df`) and the event-study effects (from
@@ -678,6 +758,7 @@ fetwfe <- function(
 #' \item{cv_folds}{Integer scalar; the `cv_folds` value used when `lambda_selection = "cv"`, `NA_integer_` when `lambda_selection = "bic"`.}
 #' \item{cv_seed}{Integer scalar; the seed actually fed to `set.seed()` immediately before `cv.grpreg()` was called. Defaults to `as.integer(N * T)` when the user did not pass a seed. `NA_integer_` when `lambda_selection = "bic"`.}
 #' \item{fusion_structure}{Character scalar; the `fusion_structure` argument the user passed (`"cohort"` or `"event_study"`), recording which fusion-penalty differences matrix was used for the treatment effects.}
+#' \item{fusion_matrix}{The user-supplied custom forward differences matrix `D_N` (a `num_treats x num_treats` numeric matrix), or `NULL` if none was supplied. When non-`NULL` it overrode `fusion_structure` for the treatment-effect block; the estimator used `solve(fusion_matrix)` internally. See the `fusion_matrix` argument.}
 #' \item{N}{The final number of units that were in the data set used for estimation (after any units may have been removed because they were treated in the first time period).}
 #' \item{T}{The number of time periods in the final data set.}
 #' \item{G}{The final number of treated cohorts that appear in the final data set.}
@@ -719,6 +800,7 @@ fetwfe <- function(
 #'     \item{calc_ses}{Logical indicating whether standard errors were calculated.}
 #'     \item{variance_components}{A list exposing the two variance pieces (`att_var_1`, `att_var_2`) plus their paper-notation counterparts (`V_1`, `V_2`) and the unit-scaled variance estimators (`tilde_v_N`, `hat_v_N`, `tilde_v_N_C`, `tilde_v_N_C_pi_hat`, `tilde_v_N_C_pi_hat_cons`, `tilde_v_N_cons`) catalogued at paper line 2006. The Wald CI is `[hat_T_N +- qnorm(1-alpha/2) * sqrt(tilde_v_N / N)]` (paper Eq. `conf.int.form`). New in v1.12.0 (issue #141 + #146).}
 #'     \item{first_year}{Integer or numeric scalar; the first (earliest) `time_var` value in the panel after `idCohorts()` processing. Consumed by `eventStudy()` to map `cohort_probs`' cohort labels (treatment-start years) to 1-based panel-time-index offsets when the labels are integer-coercible. New in v1.13.3 (issue #174).}
+#'     \item{d_inv_treat}{The inverted custom treatment-effect fusion block `solve(fusion_matrix)` (a `num_treats x num_treats` numeric matrix), or `NULL` if no `fusion_matrix` was supplied. Consumed by `eventStudy()` and `simultaneousCIs()` so the access-time bands reuse the same fusion block the fit used (#236).}
 #'   }
 #' }
 #'
@@ -751,7 +833,8 @@ fetwfeWithSimulatedData <- function(
 	cv_folds = 10L,
 	cv_seed = NULL,
 	ci_type = c("simultaneous", "pointwise"),
-	fusion_structure = c("cohort", "event_study")
+	fusion_structure = c("cohort", "event_study"),
+	fusion_matrix = NULL
 ) {
 	se_type <- match.arg(
 		se_type,
@@ -799,7 +882,8 @@ fetwfeWithSimulatedData <- function(
 		cv_folds = cv_folds,
 		cv_seed = cv_seed,
 		ci_type = ci_type,
-		fusion_structure = fusion_structure
+		fusion_structure = fusion_structure,
+		fusion_matrix = fusion_matrix
 	)
 
 	return(res)

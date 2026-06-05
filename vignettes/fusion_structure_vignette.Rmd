@@ -255,6 +255,116 @@ is a safe starting point; switch to `"event_study"` when the dynamic, time-since
 treatment path is the object of interest and you expect it to be shared across
 cohorts.
 
+# Supplying your own fusion matrix `D_N` (advanced)
+
+The two built-in structures are special cases of a more general mechanism: under
+the hood, `fetwfe()` applies a **forward-differences matrix** `D_N` to the
+treatment-effect block, penalizes the differenced coordinates, and maps back via
+`solve(D_N)`. The `fusion_matrix` argument lets you supply your own
+`num_treats x num_treats` `D_N` directly --- encoding an arbitrary
+identifying-restriction structure (for example, "fuse cohorts that share an
+industry") that neither built-in expresses. When supplied, `fusion_matrix`
+**overrides** `fusion_structure` for the treatment-effect block (the fixed-effect
+blocks are unchanged).
+
+## The row/column ordering
+
+`D_N` is indexed by position, so its rows and columns must follow the same
+**cohort-major `(g, t)` order** the estimator uses for the treatment effects.
+Row/column `i` corresponds to base treatment effect `i`:
+
+- `num_treats = T * G - G * (G + 1) / 2` is the total number of base treatment
+  effects.
+- `getFirstInds(G, T)` returns, for each cohort `g`, the 1-based row of its
+  **first** effect `tau_{g, 0}`. Cohort `g` then occupies rows
+  `first_inds[g]:(first_inds[g + 1] - 1)` (the last cohort runs through
+  `num_treats`), ordered by event time within the cohort
+  (`tau_{g, 0}, tau_{g, 1}, ...`).
+- `getTreatInds(G, T, d, num_treats)` maps this block into the full
+  design-matrix columns; `fit$treat_inds` reports the same positions on a fitted
+  object.
+
+Interpreting `D_N` as forward differences: `theta = D_N %*% beta` is the
+penalized (sparse) parameterization and `beta = solve(D_N) %*% theta` recovers
+the original-scale effects. You supply `D_N`; the code uses `solve(D_N)`.
+
+## Worked example
+
+We build `first_inds` from the per-cohort effect counts `n_k` (already computed
+above; no internal helper needed) so the matrix's cohort-major layout is
+explicit, then supply a custom `D_N` and refit. (This reuses the `sim` panel from
+the side-by-side demo above.)
+
+```{r, message = FALSE, warning = FALSE}
+# first_inds in the same cohort-major order the matrix must follow: cohort 1
+# starts at row 1, and each later cohort starts after the previous cohort's
+# block (of size n_k).
+first_inds <- cumsum(c(1, head(n_k, -1)))
+first_inds # the 1-based starting row of each cohort's first effect
+
+# A within-cohort backward-differences D_N: penalize each cohort's first effect
+# directly (toward zero) and every later effect toward its within-cohort
+# predecessor. (theta_i = beta_i - beta_{i-1} within a cohort; theta = beta at
+# each cohort's first effect.) This is one transparent, hand-built example; any
+# invertible num_treats x num_treats matrix in this row order is accepted.
+D_N <- diag(num_treats)
+for (k in seq_along(first_inds)) {
+  start <- first_inds[k]
+  end <- if (k < length(first_inds)) first_inds[k + 1] - 1 else num_treats
+  if (end > start) {
+    for (i in (start + 1):end) {
+      D_N[i, i - 1] <- -1
+    }
+  }
+}
+
+fit_custom <- fetwfeWithSimulatedData(
+  sim,
+  lambda_selection = "bic",
+  fusion_matrix = D_N
+)
+
+# A finite, well-formed fit; the custom block was used throughout.
+fit_custom$att_hat
+```
+
+A genuinely bespoke `D_N` --- one that fuses your own set of effects (for example,
+the event-study structure, or "fuse cohorts that share an industry") --- is built
+the same way: choose which differences to penalize, assemble the corresponding
+forward-differences matrix in this cohort-major order, and pass it as
+`fusion_matrix`.
+
+## Staying inside the theoretical guarantees
+
+Under the paper's fixed-dimension scoping, the inferential guarantees (valid
+standard errors and confidence intervals) hold for **any** finite, invertible
+`D_N`: the theory depends on `D_N` only through its invertibility and the size of
+its singular values (Assumption (D) of Faletto 2025), and a fixed invertible
+matrix automatically has its singular values in a fixed positive range. Swapping
+one valid `D_N` for another changes only constant factors, not the guarantees
+themselves --- so you do not need to engineer your `D_N` to hit particular
+singular-value targets. Finite and invertible is enough.
+
+`fetwfe()` enforces exactly that, and nothing stricter. It **stops** when
+`fusion_matrix` is not a finite, invertible numeric matrix of the exact
+`num_treats x num_treats` dimension --- a malformed restriction matrix is a usage
+error, not a modeling choice. As a numerical courtesy it also emits a `warning()`
+(not an error) when the supplied `D_N` is *near-singular*: still invertible, so
+estimation proceeds, but its inverse may be numerically unreliable, which usually
+means a better-conditioned `D_N` would serve you better.
+
+```{r, warning = TRUE}
+# A near-singular (but invertible) D_N: estimation proceeds, with a heads-up.
+near_singular <- diag(num_treats)
+near_singular[1, 1] <- 1e-12
+fit_warned <- tryCatch(
+  fetwfeWithSimulatedData(sim, lambda_selection = "bic", fusion_matrix = near_singular),
+  warning = function(w) conditionMessage(w)
+)
+# The warning message (estimation still succeeds if you allow the warning):
+cat(fit_warned)
+```
+
 # References
 
 - Faletto, G. (2025). *Fused Extended Two-Way Fixed Effects for
