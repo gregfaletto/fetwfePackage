@@ -310,10 +310,11 @@ test_that("simulateData errors when R >= T", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 9: Error when T < 3
+# Test 9: T = 2 is supported (2x2); only T < 2 errors (#251)
 # ------------------------------------------------------------------------------
-test_that("simulateData errors when T < 3", {
-	# For instance, T = 2 should trigger an error (we require at least T = 3).
+test_that("simulateData accepts T = 2 (2x2) and errors only when T < 2", {
+	# T = 2 is now supported down to the 2x2 case (#251); it produces a valid
+	# single-cohort panel rather than erroring. Only T < 2 is rejected.
 	N <- 30
 	T_val <- 2
 	R_val <- 1
@@ -325,9 +326,21 @@ test_that("simulateData errors when T < 3", {
 	obj <- list(beta = beta, G = R_val, T = T_val, d = d_val, seed = 123)
 	class(obj) <- "FETWFE_coefs"
 
+	sim <- simulateData(
+		coefs_obj = obj,
+		N = N,
+		sig_eps_sq = 5,
+		sig_eps_c_sq = 2
+	)
+	expect_equal(sim$T, 2)
+	expect_equal(sim$G, 1)
+	expect_s3_class(sim$pdata, "data.frame")
+
+	# T < 2 still errors (on the genCoefs/simulateData T floor).
+	obj1 <- obj
+	obj1$T <- 1
 	expect_error(
-		simulateData(coefs_obj = obj, N = N, sig_eps_sq = 5, sig_eps_c_sq = 2),
-		regexp = "T >= 3" # Expect an error message indicating T must be at least 3
+		simulateData(coefs_obj = obj1, N = N, sig_eps_sq = 5, sig_eps_c_sq = 2)
 	)
 })
 

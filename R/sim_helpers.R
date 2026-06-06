@@ -530,7 +530,7 @@ testGenRandomDataInputs <- function(
 	sig_eps_c_sq
 ) {
 	stopifnot(G <= T - 1)
-	stopifnot(T >= 3)
+	stopifnot(T >= 2)
 	stopifnot(G >= 1)
 	stopifnot(N >= G + 1)
 	stopifnot(sig_eps_sq > 0)

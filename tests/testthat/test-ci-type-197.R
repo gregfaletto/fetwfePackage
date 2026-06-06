@@ -306,9 +306,9 @@ test_that("ci_type = 'simultaneous' degrades gracefully when calc_ses = FALSE (q
 
 # ------------------------------------------------------------------------------
 # Test 8: K = 1 bypass via a DIRECT unit test of .apply_simultaneous_catt_band()
-# on a hand-built 1-row catt_df. genCoefs(G = 1) errors (R >= 2 required) and
-# genCoefs(T = 2) errors (T >= 3 required), so a K = 1 family is NOT
-# simulator-constructible -- the direct unit test is the only viable route.
+# on a hand-built 1-row catt_df. (Since #112/#251 a K = 1 family is also
+# simulator-constructible -- e.g. genCoefs(G = 1, T = 2) -- but the direct unit
+# test remains the most surgical way to exercise the K = 1 branch in isolation.)
 # The worker's K = 1 branch (R/simultaneous_cis.R: sum(nondeg) <= 1 ->
 # crit = pointwise_crit) makes simultaneous == pointwise.
 # ------------------------------------------------------------------------------

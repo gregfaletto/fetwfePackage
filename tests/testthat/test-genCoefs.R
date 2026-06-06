@@ -174,11 +174,28 @@ test_that("simulateData and fetwfe work when d = 0", {
 })
 
 
-test_that("genCoefs errors when T < 3", {
+# T = 2 is now supported (down to the 2x2 case, #251); only T < 2 is rejected.
+# The historical (G = 5, T = 2) case still errors, but on the `G <= T - 1`
+# check (G = 5 > 1), not the T floor.
+test_that("genCoefs errors when T < 2", {
 	expect_error(
-		genCoefs(G = 5, T = 2, density = 0.1, eff_size = 2, d = 12),
-		regexp = "T must be a numeric value greater than or equal to 3"
+		genCoefs(G = 1, T = 1, density = 0.1, eff_size = 2, d = 12),
+		regexp = "T must be a numeric value greater than or equal to 2"
 	)
+})
+
+test_that("genCoefs accepts T = 2 (2x2) at G = 1", {
+	coefs <- genCoefs(
+		G = 1,
+		T = 2,
+		density = 0.5,
+		eff_size = 2,
+		d = 2,
+		seed = 1
+	)
+	expect_s3_class(coefs, "FETWFE_coefs")
+	expect_equal(coefs$G, 1)
+	expect_equal(coefs$T, 2)
 })
 
 test_that("genCoefs generates a single-cohort (G = 1) coefficient vector", {
