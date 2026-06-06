@@ -21,7 +21,7 @@ make_es_panel <- function(
 		eff_size = eff_size,
 		seed = seed
 	)
-	simulateData(coefs, N = N, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+	simulateData(coefs, N = N, sig_eps_sq = 1, sig_eps_c_sq = 0.5, seed = seed)
 }
 
 # ------------------------------------------------------------------------------

@@ -161,7 +161,7 @@ utils::globalVariables(c(
 #' @examples
 #' \donttest{
 #'   coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
-#'   sim <- simulateData(coefs, N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+#'   sim <- simulateData(coefs, N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5, seed = 123)
 #'   fit <- fetwfeWithSimulatedData(sim)
 #'   sci <- simultaneousCIs(fit, family = "event_study", alpha = 0.05)
 #'   print(sci)

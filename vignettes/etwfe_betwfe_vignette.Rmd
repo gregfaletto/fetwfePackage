@@ -55,7 +55,8 @@ sim_data <- simulateData(
   sim_coefs,
   N            = 120,
   sig_eps_sq   = 1,
-  sig_eps_c_sq = 1
+  sig_eps_c_sq = 1,
+  seed         = 20260510
 )
 
 # True treatment effects (we'll compare estimator output to these):
@@ -122,7 +123,8 @@ sim_data_d0 <- simulateData(
   sim_coefs_d0,
   N            = 120,
   sig_eps_sq   = 1,
-  sig_eps_c_sq = 1
+  sig_eps_c_sq = 1,
+  seed         = 20260510
 )
 
 true_tes_d0 <- getTes(sim_coefs_d0)

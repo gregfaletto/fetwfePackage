@@ -38,7 +38,8 @@ test_that("simulateData (with interactions) returns expected output", {
 		simulateData(
 			N = N,
 			sig_eps_sq = sig_eps_sq,
-			sig_eps_c_sq = sig_eps_c_sq
+			sig_eps_c_sq = sig_eps_c_sq,
+			seed = 843
 		)
 
 	# Check list names (X now instead of X_int)
@@ -98,13 +99,15 @@ test_that("simulateData is reproducible with same seed", {
 		simulateData(
 			N = N,
 			sig_eps_sq = sig_eps_sq,
-			sig_eps_c_sq = sig_eps_c_sq
+			sig_eps_c_sq = sig_eps_c_sq,
+			seed = 456
 		)
 	res2 <- coefs_obj |>
 		simulateData(
 			N = N,
 			sig_eps_sq = sig_eps_sq,
-			sig_eps_c_sq = sig_eps_c_sq
+			sig_eps_c_sq = sig_eps_c_sq,
+			seed = 456
 		)
 
 	expect_equal(res1$X, res2$X)
@@ -143,7 +146,8 @@ test_that("simulateData errors when beta has wrong length", {
 			coefs_obj = bad_coefs,
 			N = N,
 			sig_eps_sq = sig_eps_sq,
-			sig_eps_c_sq = sig_eps_c_sq
+			sig_eps_c_sq = sig_eps_c_sq,
+			seed = 123
 		),
 		"length\\(beta\\)"
 	)
@@ -163,7 +167,7 @@ test_that("Output from simulateData can be piped into fetwfeWithSimulatedData", 
 		seed = 123
 	)
 	sim_data <- coefs_obj |>
-		simulateData(N = 30, sig_eps_sq = 5, sig_eps_c_sq = 5)
+		simulateData(N = 30, sig_eps_sq = 5, sig_eps_c_sq = 5, seed = 123)
 	result <- sim_data |> fetwfeWithSimulatedData()
 	expect_type(result, "list")
 	expect_true("att_hat" %in% names(result))
@@ -183,7 +187,7 @@ test_that("Output from simulateData can be piped into fetwfeWithSimulatedData", 
 		seed = 123
 	)
 	sim_data <- coefs_obj |>
-		simulateData(N = 30, sig_eps_sq = 5, sig_eps_c_sq = 5)
+		simulateData(N = 30, sig_eps_sq = 5, sig_eps_c_sq = 5, seed = 123)
 	result <- sim_data |> fetwfeWithSimulatedData()
 	expect_type(result, "list")
 	expect_true("att_hat" %in% names(result))
@@ -217,7 +221,8 @@ test_that("Covariates are uniformly bounded when distribution = 'uniform'", {
 			N = N,
 			sig_eps_sq = sig_eps_sq,
 			sig_eps_c_sq = sig_eps_c_sq,
-			distribution = "uniform"
+			distribution = "uniform",
+			seed = 123
 		)
 
 	# In the no-interactions case, the design matrix X is built as:
@@ -259,7 +264,8 @@ test_that("Covariates are constant over time within each unit", {
 			N = N,
 			sig_eps_sq = sig_eps_sq,
 			sig_eps_c_sq = sig_eps_c_sq,
-			distribution = "gaussian"
+			distribution = "gaussian",
+			seed = 456
 		)
 
 	# The design matrix X = [cohort_fe, time_fe, X_long, treat_mat_long].
@@ -304,7 +310,13 @@ test_that("simulateData errors when R >= T", {
 	class(obj) <- "FETWFE_coefs"
 
 	expect_error(
-		simulateData(coefs_obj = obj, N = N, sig_eps_sq = 5, sig_eps_c_sq = 2),
+		simulateData(
+			coefs_obj = obj,
+			N = N,
+			sig_eps_sq = 5,
+			sig_eps_c_sq = 2,
+			seed = 123
+		),
 		regexp = "G <= T - 1" # Expect an error message indicating G must be <= T-1
 	)
 })
@@ -330,7 +342,8 @@ test_that("simulateData accepts T = 2 (2x2) and errors only when T < 2", {
 		coefs_obj = obj,
 		N = N,
 		sig_eps_sq = 5,
-		sig_eps_c_sq = 2
+		sig_eps_c_sq = 2,
+		seed = 123
 	)
 	expect_equal(sim$T, 2)
 	expect_equal(sim$G, 1)
@@ -340,7 +353,13 @@ test_that("simulateData accepts T = 2 (2x2) and errors only when T < 2", {
 	obj1 <- obj
 	obj1$T <- 1
 	expect_error(
-		simulateData(coefs_obj = obj1, N = N, sig_eps_sq = 5, sig_eps_c_sq = 2)
+		simulateData(
+			coefs_obj = obj1,
+			N = N,
+			sig_eps_sq = 5,
+			sig_eps_c_sq = 2,
+			seed = 123
+		)
 	)
 })
 
@@ -361,7 +380,13 @@ test_that("simulateData errors when N < R", {
 	class(obj) <- "FETWFE_coefs"
 
 	expect_error(
-		simulateData(coefs_obj = obj, N = N, sig_eps_sq = 5, sig_eps_c_sq = 2),
+		simulateData(
+			coefs_obj = obj,
+			N = N,
+			sig_eps_sq = 5,
+			sig_eps_c_sq = 2,
+			seed = 123
+		),
 		regexp = "N >= G" # Expect an error message indicating N must be at least G
 	)
 })
@@ -380,7 +405,13 @@ test_that("print.FETWFE_simulated summarizes instead of dumping (#84 item 13)", 
 		eff_size = 4,
 		seed = 42
 	)
-	sim <- simulateData(coefs, N = 20, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+	sim <- simulateData(
+		coefs,
+		N = 20,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = 42
+	)
 	expect_s3_class(sim, "FETWFE_simulated")
 
 	out <- capture.output(print(sim))
@@ -423,7 +454,13 @@ test_that("simulateData accepts sig_eps_c_sq = 0 (#109 Case 2)", {
 		seed = 109
 	)
 	# Pre-fix: this call errored with "sig_eps_c_sq must be a positive numeric value".
-	sim <- simulateData(coefs, N = 40, sig_eps_sq = 1, sig_eps_c_sq = 0)
+	sim <- simulateData(
+		coefs,
+		N = 40,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0,
+		seed = 109
+	)
 	expect_s3_class(sim, "FETWFE_simulated")
 	expect_equal(sim$sig_eps_c_sq, 0)
 	# rnorm(N, sd = 0) returns rep(0, N) — unit residuals are exactly zero.
@@ -441,7 +478,13 @@ test_that("simulateData still rejects negative sig_eps_c_sq (#109 Case 2)", {
 		seed = 109
 	)
 	expect_error(
-		simulateData(coefs, N = 40, sig_eps_sq = 1, sig_eps_c_sq = -0.1),
+		simulateData(
+			coefs,
+			N = 40,
+			sig_eps_sq = 1,
+			sig_eps_c_sq = -0.1,
+			seed = 109
+		),
 		"non-negative"
 	)
 })

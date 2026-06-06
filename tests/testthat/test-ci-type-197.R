@@ -26,7 +26,7 @@ make_ci_panel <- function(
 		eff_size = eff_size,
 		seed = seed
 	)
-	simulateData(coefs, N = N, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+	simulateData(coefs, N = N, sig_eps_sq = 1, sig_eps_c_sq = 0.5, seed = seed)
 }
 
 # Scattered / short-overlap panel whose LAST event time is degenerate
@@ -65,7 +65,14 @@ make_scattered_degenerate_panel <- function(n_per = 40, T = 7, seed = 909) {
 make_ci_ar1_panel <- function(seed = 7, N = 150, rho = 0.85, sd_e = 1) {
 	set.seed(seed)
 	sim_coefs <- genCoefs(G = 4, T = 6, d = 2, density = 0.5, eff_size = 2)
-	sim <- simulateData(sim_coefs, N = N, sig_eps_sq = 0.5, sig_eps_c_sq = 0.5)
+	# coefs built without a seed: continue the ambient RNG (seed = NA, #250).
+	sim <- simulateData(
+		sim_coefs,
+		N = N,
+		sig_eps_sq = 0.5,
+		sig_eps_c_sq = 0.5,
+		seed = NA
+	)
 	pdata <- sim$pdata
 	pdata <- pdata[order(pdata$unit, pdata$time), ]
 	units <- unique(pdata$unit)

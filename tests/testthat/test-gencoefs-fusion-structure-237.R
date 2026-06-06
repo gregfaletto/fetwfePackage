@@ -285,7 +285,13 @@ test_that("event_study recovers native event-study truth better than cohort (#23
 	true_te <- co$beta[treat_inds]
 	expect_true(any(true_te != 0)) # non-degenerate treatment block
 
-	sim <- simulateData(co, N = N, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+	sim <- simulateData(
+		co,
+		N = N,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = 10
+	)
 	fit_cohort <- suppressWarnings(fetwfeWithSimulatedData(
 		sim,
 		lambda_selection = "bic"

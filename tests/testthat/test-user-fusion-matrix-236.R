@@ -33,7 +33,10 @@ library(fetwfe)
 		seed = 1
 	)
 	set.seed(101)
-	simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5)
+	# Byte-exact pin (#250): the previous simulateData() reused coefs$seed,
+	# i.e. drew with set.seed(1), so the preceding set.seed(101) never
+	# governed this panel. Pin seed = 1 to reproduce the original draw.
+	simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5, seed = 1)
 }
 
 .fm236_fit <- function(sim, ...) {

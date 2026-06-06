@@ -44,7 +44,13 @@ library(fetwfe)
 		eff_size = 2,
 		seed = seed
 	)
-	simulateData(sim_coefs, N = N, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+	simulateData(
+		sim_coefs,
+		N = N,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = seed
+	)
 }
 
 # ------------------------------------------------------------------------------
@@ -345,14 +351,16 @@ test_that("CV path has |bias| < 0.10 on a representative DGP (smoke test)", {
 
 	n_reps <- 10L
 	biases <- numeric(n_reps)
+	# As of #250 the panel RNG is controlled by the `seed` argument to
+	# simulateData() (it no longer reuses coefs$seed); pass a distinct
+	# `seed = 13000L + i` per rep to vary the noise across replications.
 	for (i in seq_len(n_reps)) {
-		coefs <- template
-		coefs$seed <- 13000L + i
 		sim <- simulateData(
-			coefs,
+			template,
 			N = 200,
 			sig_eps_sq = 1,
-			sig_eps_c_sq = 0.5
+			sig_eps_c_sq = 0.5,
+			seed = 13000L + i
 		)
 		# True ATT = sum(actual_cohort_tes * pi_cond) where pi_cond is
 		# the in-sample treated proportions (excluding never-treated).

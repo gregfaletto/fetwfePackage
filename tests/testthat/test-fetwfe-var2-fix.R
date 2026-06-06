@@ -30,7 +30,13 @@ library(fetwfe)
 		eff_size = 2,
 		seed = 31
 	)
-	sim <- simulateData(coefs, N = 300, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+	sim <- simulateData(
+		coefs,
+		N = 300,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = 31
+	)
 	res <- fetwfeWithSimulatedData(sim, q = 0.5)
 
 	R_val <- res$G

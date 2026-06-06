@@ -166,7 +166,8 @@ test_that(".assemble_cluster_robust_sandwich integration parity: betwfe cluster-
 		coefs,
 		N = 60,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = 42
 	)
 	fit <- betwfeWithSimulatedData(sim, se_type = "cluster")
 

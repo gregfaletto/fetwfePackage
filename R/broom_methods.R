@@ -360,7 +360,7 @@ NULL
 #' \dontrun{
 #'   res <- fetwfeWithSimulatedData(
 #'     simulateData(genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
-#'                  N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+#'                  N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5, seed = 123)
 #'   )
 #'   broom::tidy(res)
 #' }
@@ -391,7 +391,7 @@ tidy.fetwfe <- function(
 #' \dontrun{
 #'   res <- etwfeWithSimulatedData(
 #'     simulateData(genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
-#'                  N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+#'                  N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5, seed = 123)
 #'   )
 #'   broom::tidy(res)
 #' }
@@ -422,7 +422,7 @@ tidy.etwfe <- function(
 #' \dontrun{
 #'   res <- betwfeWithSimulatedData(
 #'     simulateData(genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
-#'                  N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+#'                  N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5, seed = 123)
 #'   )
 #'   broom::tidy(res)
 #' }
@@ -472,7 +472,7 @@ tidy.betwfe <- function(
 #' \dontrun{
 #'   res <- fetwfeWithSimulatedData(
 #'     simulateData(genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
-#'                  N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+#'                  N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5, seed = 123)
 #'   )
 #'   broom::tidy(eventStudy(res))
 #' }
@@ -565,7 +565,7 @@ tidy.eventStudy <- function(
 #' \dontrun{
 #'   res <- fetwfeWithSimulatedData(
 #'     simulateData(genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
-#'                  N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+#'                  N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5, seed = 123)
 #'   )
 #'   broom::tidy(cohortStudy(res))
 #' }
@@ -696,7 +696,7 @@ tidy.FETWFE_tes <- function(x, conf.int = TRUE, conf.level = 0.95, ...) {
 #' \dontrun{
 #'   res <- fetwfeWithSimulatedData(
 #'     simulateData(genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
-#'                  N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+#'                  N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5, seed = 123)
 #'   )
 #'   broom::glance(res)
 #' }
@@ -717,7 +717,7 @@ glance.fetwfe <- function(x, ...) {
 #' \dontrun{
 #'   res <- etwfeWithSimulatedData(
 #'     simulateData(genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
-#'                  N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+#'                  N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5, seed = 123)
 #'   )
 #'   broom::glance(res)
 #' }
@@ -737,7 +737,7 @@ glance.etwfe <- function(x, ...) {
 #' \dontrun{
 #'   res <- betwfeWithSimulatedData(
 #'     simulateData(genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
-#'                  N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+#'                  N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5, seed = 123)
 #'   )
 #'   broom::glance(res)
 #' }
@@ -779,7 +779,7 @@ glance.betwfe <- function(x, ...) {
 #' \dontrun{
 #'   sim <- simulateData(genCoefs(G = 3, T = 6, d = 2, density = 0.5,
 #'                                eff_size = 2),
-#'                       N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+#'                       N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5, seed = 123)
 #'   res <- fetwfeWithSimulatedData(sim)
 #'   broom::augment(res, data = sim$pdata)
 #' }
@@ -804,7 +804,7 @@ augment.fetwfe <- function(x, data, ...) {
 #' \dontrun{
 #'   sim <- simulateData(genCoefs(G = 3, T = 6, d = 2, density = 0.5,
 #'                                eff_size = 2),
-#'                       N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+#'                       N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5, seed = 123)
 #'   res <- etwfeWithSimulatedData(sim)
 #'   broom::augment(res, data = sim$pdata)
 #' }
@@ -829,7 +829,7 @@ augment.etwfe <- function(x, data, ...) {
 #' \dontrun{
 #'   sim <- simulateData(genCoefs(G = 3, T = 6, d = 2, density = 0.5,
 #'                                eff_size = 2),
-#'                       N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+#'                       N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5, seed = 123)
 #'   res <- betwfeWithSimulatedData(sim)
 #'   broom::augment(res, data = sim$pdata)
 #' }

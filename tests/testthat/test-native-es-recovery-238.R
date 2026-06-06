@@ -44,7 +44,13 @@ library(fetwfe)
 			if (all(tb == 0)) {
 				return(NA_real_)
 			}
-			sim <- simulateData(co, N = N, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+			sim <- simulateData(
+				co,
+				N = N,
+				sig_eps_sq = 1,
+				sig_eps_c_sq = 0.5,
+				seed = sd
+			)
 			fd <- suppressWarnings(fetwfeWithSimulatedData(
 				sim,
 				lambda_selection = "bic"
@@ -94,7 +100,13 @@ test_that("event_study fit recovers native ES truth on both transform paths (#23
 			seed = sd,
 			fusion_structure = "event_study"
 		)
-		sim <- simulateData(co, N = N, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+		sim <- simulateData(
+			co,
+			N = N,
+			sig_eps_sq = 1,
+			sig_eps_c_sq = 0.5,
+			seed = sd
+		)
 		fe <- suppressWarnings(fetwfeWithSimulatedData(
 			sim,
 			lambda_selection = "bic",
@@ -152,7 +164,13 @@ test_that("accessors recover and cover native ES truth (#238)", {
 		numeric(1)
 	)
 
-	sim <- simulateData(co, N = N, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+	sim <- simulateData(
+		co,
+		N = N,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = 10
+	)
 	fit <- suppressWarnings(fetwfeWithSimulatedData(
 		sim,
 		lambda_selection = "bic",

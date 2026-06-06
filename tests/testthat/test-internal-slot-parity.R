@@ -11,11 +11,13 @@ library(fetwfe)
 .parity_setup <- function() {
 	set.seed(2026)
 	coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+	# coefs built without a seed: continue the ambient RNG (seed = NA, #250).
 	dat <- simulateData(
 		coefs,
 		N = 60,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = NA
 	)
 	dat
 }

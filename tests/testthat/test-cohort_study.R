@@ -28,7 +28,8 @@ library(fetwfe)
 		coefs,
 		N = 120,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = seed
 	)
 	list(coefs = coefs, sim = sim)
 }

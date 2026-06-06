@@ -8,9 +8,9 @@ library(fetwfe)
 # returned by `make_es_panel()` in test-event_study.R. The divergence is
 # intentional and load-bearing: Test 3 needs the `coefs` object for two
 # purposes:
-#   (1) per-rep seed override (`coefs_i <- coefs_master; coefs_i$seed <- s`)
-#       because `simulateData()` reads `coefs$seed`, ignoring the global RNG
-#       state;
+#   (1) per-rep panel variation: each replication passes a distinct
+#       `seed = seeds[i]` to `simulateData()` (as of #250 the panel RNG is
+#       controlled by the `seed` argument, not by `coefs$seed`);
 #   (2) truth-extraction via `coefs$beta[getTreatInds(...)]` for the event-time
 #       truth vector (`getTes()` returns no `tes_actual` slot; per-cell TEs come
 #       from `coefs$beta` directly).
@@ -34,7 +34,13 @@ make_simul_cis_panel <- function(
 	)
 	list(
 		coefs = coefs,
-		sim = simulateData(coefs, N = N, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+		sim = simulateData(
+			coefs,
+			N = N,
+			sig_eps_sq = 1,
+			sig_eps_c_sq = 0.5,
+			seed = seed
+		)
 	)
 }
 
@@ -114,8 +120,9 @@ test_that("simultaneousCIs critical value: pointwise < simultaneous < Bonferroni
 # ------------------------------------------------------------------------------
 # Test 3: simultaneous coverage ~ nominal at 500 MC reps (skip_on_cran).
 # Recalibrated to 500 reps (from 200) for 3.1-sigma headroom around 0.95.
-# Pinned seed sequence; per-rep variation via coefs$seed override (simulateData
-# ignores the global RNG state). Truth extracted from coefs$beta directly.
+# Pinned seed sequence; per-rep variation via the `seed` argument to
+# simulateData() (as of #250 the panel RNG is controlled by that argument).
+# Truth extracted from coefs$beta directly.
 # load-bearing: matches PLANS.md #5 ("test fails before, passes after");
 # calibrated to 3-sigma per round-1 B3.
 #
@@ -157,13 +164,12 @@ test_that("simultaneousCIs achieves ~nominal simultaneous coverage", {
 	covered <- logical(length(seeds))
 
 	for (i in seq_along(seeds)) {
-		coefs_i <- coefs_master
-		coefs_i$seed <- seeds[i]
 		sim_i <- simulateData(
-			coefs_i,
+			coefs_master,
 			N = N_,
 			sig_eps_sq = 1,
-			sig_eps_c_sq = 0.5
+			sig_eps_c_sq = 0.5,
+			seed = seeds[i]
 		)
 		fit_i <- fetwfeWithSimulatedData(sim_i)
 		sci_i <- simultaneousCIs(fit_i, family = "event_study", alpha = 0.05)

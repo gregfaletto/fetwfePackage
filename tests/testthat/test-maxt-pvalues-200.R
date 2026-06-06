@@ -94,7 +94,7 @@ test_that(".maxt_adjusted_p_nd scatters NA into degenerate slots", {
 # ---------------------------------------------------------------------------
 make_maxt_fit <- function(se_type = "default") {
 	sc <- genCoefs(G = 4, T = 6, d = 2, density = 0.5, eff_size = 1.5, seed = 7)
-	sim <- simulateData(sc, N = 120, sig_eps_sq = 2, sig_eps_c_sq = 1)
+	sim <- simulateData(sc, N = 120, sig_eps_sq = 2, sig_eps_c_sq = 1, seed = 7)
 	fetwfe(
 		pdata = sim$pdata,
 		time_var = sim$time_var,

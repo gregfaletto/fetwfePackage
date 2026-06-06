@@ -316,7 +316,14 @@ test_that("print(catt_df) dispatches to print.data.frame and includes the snake_
 test_that("fetwfe()$catt_df carries class catt_df and the snake_case columns", {
 	set.seed(2026)
 	coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
-	sim <- simulateData(coefs, N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+	# coefs built without a seed: continue the ambient RNG (seed = NA, #250).
+	sim <- simulateData(
+		coefs,
+		N = 120,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = NA
+	)
 	res <- fetwfeWithSimulatedData(sim, verbose = FALSE)
 	expect_s3_class(res$catt_df, "catt_df")
 	expect_s3_class(res$catt_df, "data.frame")
@@ -337,7 +344,14 @@ test_that("fetwfe()$catt_df carries class catt_df and the snake_case columns", {
 test_that("etwfe()$catt_df carries class catt_df and the snake_case columns (no `selected`)", {
 	set.seed(2026)
 	coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
-	sim <- simulateData(coefs, N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+	# coefs built without a seed: continue the ambient RNG (seed = NA, #250).
+	sim <- simulateData(
+		coefs,
+		N = 120,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = NA
+	)
 	res <- etwfeWithSimulatedData(sim, verbose = FALSE)
 	expect_s3_class(res$catt_df, "catt_df")
 	expect_s3_class(res$catt_df, "data.frame")

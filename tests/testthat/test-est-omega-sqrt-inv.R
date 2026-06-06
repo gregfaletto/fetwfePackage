@@ -32,7 +32,8 @@ test_that("estOmegaSqrtInv recovers sig_eps_sq and sig_eps_c_sq via REML", {
 		coefs,
 		N = 200,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 2
+		sig_eps_c_sq = 2,
+		seed = 20260515
 	)
 
 	# Call estOmegaSqrtInv() directly on the simulator's design matrix.
@@ -71,7 +72,8 @@ test_that("fetwfe() invokes the REML estimator when sig values are NA", {
 		coefs,
 		N = 200,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 2
+		sig_eps_c_sq = 2,
+		seed = 20260516
 	)
 	res <- fetwfe(
 		pdata = sim$pdata,
@@ -181,7 +183,8 @@ test_that("end-to-end fetwfe outputs unchanged with closed-form Omega^(-1/2)", {
 		coefs,
 		N = 60,
 		sig_eps_sq = 1.0,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = 20260519
 	)
 
 	# Call .estimate_variance_and_gls() with known sig values to exercise

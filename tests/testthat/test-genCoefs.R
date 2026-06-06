@@ -100,11 +100,14 @@ test_that("beta from genCoefs is a valid input for simulateData", {
 	sig_eps_c_sq <- 5
 
 	# Use res_coefs$beta as the beta argument for simulateData().
+	# coefs built without a seed: draw from the ambient RNG (seed = NA, #250);
+	# this test only checks structure/dimensions, not values.
 	sim_data <- res_coefs |>
 		simulateData(
 			N = N,
 			sig_eps_sq = sig_eps_sq,
-			sig_eps_c_sq = sig_eps_c_sq
+			sig_eps_c_sq = sig_eps_c_sq,
+			seed = NA
 		)
 
 	expect_type(sim_data, "list")
@@ -151,6 +154,7 @@ test_that("simulateData and fetwfe work when d = 0", {
 			N = N,
 			sig_eps_sq = sig_eps_sq,
 			sig_eps_c_sq = sig_eps_c_sq,
+			seed = 123
 		)
 
 	# Check that cov_names is empty since d = 0.

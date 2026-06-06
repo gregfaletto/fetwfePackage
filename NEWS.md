@@ -1,5 +1,22 @@
 # NEWS
 
+## Version 1.24.0
+
+### Breaking changes
+
+- `simulateData()` now draws from the ambient random-number generator by
+  default and **no longer reuses `coefs_obj$seed`** (the seed `genCoefs()` used
+  to build the coefficients). Previously `simulateData()` silently called
+  `set.seed(coefs_obj$seed)` internally, so repeated calls on one coefficients
+  object returned byte-identical panels and a preceding `set.seed()` was
+  ignored. The new `seed` argument controls the panel RNG: the default
+  (`seed = NULL`) draws from the ambient generator (respecting any preceding
+  `set.seed()`) and emits a warning that this default changed; pass
+  `seed = <integer>` to restore reproducibility (the same integer always yields
+  the same panel), or `seed = NA` to use the ambient generator silently. To
+  vary the panel across Monte Carlo replications, pass a different `seed` each
+  replication instead of mutating `coefs_obj$seed` (#250).
+
 ## Version 1.23.0
 
 ### Features

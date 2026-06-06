@@ -133,7 +133,13 @@ test_that("$G equals $R on genCoefs / simulateData / getTes objects", {
 	expect_equal(cf$G, cf$R)
 	expect_equal(cf$G, 3)
 
-	sim <- simulateData(cf, N = 80, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+	sim <- simulateData(
+		cf,
+		N = 80,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = 1
+	)
 	expect_equal(sim$G, sim$R)
 	expect_equal(sim$G, 3)
 
@@ -144,7 +150,13 @@ test_that("$G equals $R on genCoefs / simulateData / getTes objects", {
 
 test_that("$G equals $R on a fit from each of the four estimators", {
 	cf <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 1, seed = 1)
-	sim <- simulateData(cf, N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+	sim <- simulateData(
+		cf,
+		N = 120,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = 1
+	)
 
 	fit_fetwfe <- fetwfeWithSimulatedData(sim)
 	expect_equal(fit_fetwfe$G, fit_fetwfe$R)
@@ -161,7 +173,13 @@ test_that("$G equals $R on a fit from each of the four estimators", {
 
 test_that("ci_type = 'simultaneous' fit exposes $G == $R (cross-feature with #199)", {
 	cf <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 1, seed = 1)
-	sim <- simulateData(cf, N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+	sim <- simulateData(
+		cf,
+		N = 120,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = 1
+	)
 	fit <- fetwfeWithSimulatedData(sim, ci_type = "simultaneous")
 	expect_equal(fit$G, fit$R)
 	expect_equal(fit$ci_type, "simultaneous")
@@ -187,7 +205,13 @@ test_that("a representative pipeline emits no deprecation warning", {
 				eff_size = 1,
 				seed = 1
 			)
-			sim <- simulateData(cf, N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+			sim <- simulateData(
+				cf,
+				N = 120,
+				sig_eps_sq = 1,
+				sig_eps_c_sq = 0.5,
+				seed = 1
+			)
 			fit <- fetwfeWithSimulatedData(sim)
 			invisible(capture.output({
 				print(fit)

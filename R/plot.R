@@ -79,7 +79,7 @@ utils::globalVariables(c(
 #' @examples
 #' \dontrun{
 #'   coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
-#'   dat <- simulateData(coefs, N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+#'   dat <- simulateData(coefs, N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5, seed = 123)
 #'   res <- fetwfeWithSimulatedData(dat)
 #'   if (requireNamespace("ggplot2", quietly = TRUE)) {
 #'     plot(res)                          # default: event-study coefficients
@@ -118,7 +118,7 @@ plot.fetwfe <- function(
 #' @examples
 #' \dontrun{
 #'   coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
-#'   dat <- simulateData(coefs, N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+#'   dat <- simulateData(coefs, N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5, seed = 123)
 #'   res <- etwfeWithSimulatedData(dat)
 #'   if (requireNamespace("ggplot2", quietly = TRUE)) {
 #'     plot(res)
@@ -154,7 +154,7 @@ plot.etwfe <- function(
 #' @examples
 #' \dontrun{
 #'   coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
-#'   dat <- simulateData(coefs, N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+#'   dat <- simulateData(coefs, N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5, seed = 123)
 #'   res <- betwfeWithSimulatedData(dat)
 #'   if (requireNamespace("ggplot2", quietly = TRUE)) {
 #'     plot(res)

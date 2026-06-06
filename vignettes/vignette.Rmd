@@ -246,7 +246,9 @@ For `fetwfe()`, the `selected` flag carries something stronger than the usual CI
 ```{r zero-effect-demo, message = FALSE}
 set.seed(2026)
 sim <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
-dat <- simulateData(sim, N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+# sim was built without a seed, so draw from the ambient generator (seeded
+# just above); seed = NA selects the ambient generator silently.
+dat <- simulateData(sim, N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5, seed = NA)
 res_demo <- fetwfeWithSimulatedData(dat, verbose = FALSE)
 res_demo$catt_df
 ```

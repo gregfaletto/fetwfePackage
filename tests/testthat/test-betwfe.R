@@ -921,7 +921,8 @@ test_that("tibbles work as input to fewtfe", {
 		coefs,
 		N = 120,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 1
+		sig_eps_c_sq = 1,
+		seed = 20260510
 	)
 	betwfeWithSimulatedData(sim)
 }
@@ -999,11 +1000,13 @@ test_that("print.betwfe show_internal = TRUE reads top-level fields", {
 test_that("betwfe surfaces p_value and selected in catt_df", {
 	set.seed(2026)
 	sim <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+	# coefs built without a seed: continue the ambient RNG (seed = NA, #250).
 	dat <- simulateData(
 		sim,
 		N = 120,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = NA
 	)
 	res <- betwfeWithSimulatedData(dat, verbose = FALSE)
 
@@ -1036,11 +1039,13 @@ test_that("betwfe surfaces p_value and selected in catt_df", {
 test_that("betwfe produces at least one selected-out cohort in a sparse simulation", {
 	set.seed(2026)
 	sim <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+	# coefs built without a seed: continue the ambient RNG (seed = NA, #250).
 	dat <- simulateData(
 		sim,
 		N = 120,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = NA
 	)
 	# Pin to BIC: this test asserts a stronger-selection property of the
 	# BIC path. The v1.13.0+ CV default is less likely to select out, by
@@ -1060,11 +1065,13 @@ test_that("betwfe produces at least one selected-out cohort in a sparse simulati
 test_that("order_by = 'pvalue' sorts CATT by ascending p_value with NAs last", {
 	set.seed(2026)
 	sim <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+	# coefs built without a seed: continue the ambient RNG (seed = NA, #250).
 	dat <- simulateData(
 		sim,
 		N = 120,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = NA
 	)
 	res <- betwfeWithSimulatedData(dat, verbose = FALSE)
 
@@ -1164,17 +1171,26 @@ test_that("betwfe errors cleanly when no-never-treated truncation would yield < 
 make_se_type_panel <- function(seed = 2026, N = 120) {
 	set.seed(seed)
 	sim_coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
-	simulateData(sim_coefs, N = N, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+	# coefs built without a seed: continue the ambient RNG (seed = NA, #250).
+	simulateData(
+		sim_coefs,
+		N = N,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = NA
+	)
 }
 
 make_ar1_panel <- function(seed = 7, N = 150, rho = 0.85, sd_e = 1) {
 	set.seed(seed)
 	sim_coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+	# coefs built without a seed: continue the ambient RNG (seed = NA, #250).
 	sim <- simulateData(
 		sim_coefs,
 		N = N,
 		sig_eps_sq = 0.5,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = NA
 	)
 	pdata <- sim$pdata
 	pdata <- pdata[order(pdata$unit, pdata$time), ]
