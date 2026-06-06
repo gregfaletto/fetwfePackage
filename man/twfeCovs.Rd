@@ -2,8 +2,8 @@
 % Please edit documentation in R/twfeCovs.R
 \name{twfeCovs}
 \alias{twfeCovs}
-\title{Two-way fixed effects with covariates and separate treatment effects
-for each cohort}
+\title{Two-way fixed effects with covariates and a single pooled treatment
+effect per cohort}
 \usage{
 twfeCovs(
   pdata,
@@ -254,7 +254,7 @@ the labels are integer-coercible. New in v1.13.3 (issue #174).}
 \description{
 \strong{WARNING: This function should NOT be used for estimation. It
 is a biased estimator of treatment effects.} Implementation of two-way fixed
-effects with covariates and separate treatment effects for each cohort.
+effects with covariates and a single pooled treatment effect per cohort.
 Estimates overall ATT as well as CATT (cohort average treatment effects on
 the treated units). It is implemented only for the sake of the simulation
 studies in Faletto (2025). This estimator is only unbiased under the
