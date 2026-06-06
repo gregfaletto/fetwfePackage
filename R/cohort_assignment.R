@@ -88,7 +88,9 @@
 #'   Scales the Gaussian draws of the interaction coefficients
 #'   independently of `strength`. Defaults to `NULL`, which falls
 #'   through to `strength`. New in 1.14.1.
-#' @param seed Optional integer for reproducibility.
+#' @param seed Optional integer for reproducibility. `NA` (or `NULL`) means
+#'   "draw from the ambient random-number generator" --- no `set.seed()` is
+#'   called.
 #'
 #' @return A list with elements `type`, `strength`, `coefs`, `interactions`,
 #'   `delta`, `interaction_strength`, and (for `"ordered"`) `cutpoints`.
@@ -141,9 +143,7 @@
 	interaction_strength = NULL,
 	seed = NULL
 ) {
-	if (!is.null(seed)) {
-		set.seed(seed)
-	}
+	.apply_seed(seed)
 	.validate_strength_arg(strength, "assignment_strength")
 	if (!(type %in% c("multinomial", "ordered"))) {
 		stop(sprintf(
@@ -434,7 +434,8 @@
 #'   ~0.5% standard error on each component.
 #' @param seed Optional integer for reproducibility. Per the
 #'   seed-offset convention in `.gen_assignment_coefs()`, this is
-#'   typically `coefs_obj$seed + 2L`.
+#'   typically `coefs_obj$seed + 2L`. `NA` (or `NULL`) means "draw from the
+#'   ambient random-number generator" --- no `set.seed()` is called.
 #'
 #' @return Numeric vector of length `G + 1`, sums to 1.
 #'
@@ -447,9 +448,7 @@
 	M = 10000L,
 	seed = NULL
 ) {
-	if (!is.null(seed)) {
-		set.seed(seed)
-	}
+	.apply_seed(seed)
 	X_mc <- if (distribution == "gaussian") {
 		matrix(rnorm(M * d), nrow = M, ncol = d)
 	} else if (distribution == "uniform") {

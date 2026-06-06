@@ -39,7 +39,9 @@ effects are sparse. \code{"cohort"} is byte-identical to previous behavior;
 \code{"event_study"} fuses effects at the same time since treatment across
 cohorts. See \code{genCoefs()} for details.}
 
-\item{seed}{(Optional) Integer. Seed for reproducibility.}
+\item{seed}{(Optional) Integer. Seed for reproducibility. \code{NA} (or
+\code{NULL}) means "draw from the ambient random-number generator" --- no
+\code{set.seed()} is called.}
 
 \item{R}{Deprecated. The former name for \code{G}; still accepted with a
 deprecation warning, and will be removed in a future release. Use \code{G}.}

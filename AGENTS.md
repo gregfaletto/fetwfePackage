@@ -197,6 +197,34 @@ paper_arxiv.tex     Source for the methodology paper (R-build-ignored).
 - **No compiled code.** The package is pure R. Don't add C/C++ unless the user
   explicitly asks — it would change the CRAN submission profile.
 
+## RNG / random-seed conventions
+
+The package has two seed conventions, split by a function's role. Pick the one
+that matches the role; do not mix them.
+
+- **Convention A — estimator nuisance (fixed seed, restore the caller's RNG).**
+  A function that consumes randomness as an internal nuisance of an analysis
+  (so its output should be deterministic given its inputs, but it must not
+  perturb the caller's random stream) seeds a fixed value and wraps the draw in
+  `.with_preserved_rng(seed, expr)`, which saves and restores the caller's
+  `.Random.seed` via `on.exit()`. This covers the cross-validation fold
+  assignment in `getBetaCV()`, the `mvtnorm` quasi-Monte-Carlo integration in
+  `.simultaneous_cis_impl()`, and the expected-cohort-probability truth
+  integration in `getTes()`. **Rule: analysis and truth functions (anything
+  that computes an estimate, a standard error, or a population truth such as
+  `getTes()`) follow Convention A** — they never advance the caller's RNG.
+- **Convention B — data generation (ambient; advance the caller's stream).**
+  A data-generating function treats randomness as its product. An explicit
+  numeric `seed` calls `set.seed()` and deliberately leaves the global RNG
+  advanced (reproducible-yet-varying simulation); `seed = NA` (or `NULL`) draws
+  from the ambient stream without calling `set.seed()`. This covers
+  `simulateData()` / `simulateDataCore()` and `genCoefs()` / `genCoefsCore()`.
+
+The shared seed primitive is `.apply_seed(seed)` in `R/utility.R`: `NULL` or a
+scalar `NA` mean "ambient" (no `set.seed()`), a single numeric value is passed
+to `set.seed()`, and anything else errors. Both the data-generation functions
+and `.with_preserved_rng()` route through it.
+
 ## Domain terminology cheat sheet
 
 - **N, T, R, d, p**: units, time periods, treated cohorts, covariates,
