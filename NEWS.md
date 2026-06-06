@@ -1,5 +1,18 @@
 # NEWS
 
+## Version 1.26.1
+
+### Documentation
+
+- `fetwfe()` and `betwfe()` runnable `@examples` now guard their
+  `library(bacondecomp)` / `data(castle)` usage behind
+  `if (requireNamespace("bacondecomp", quietly = TRUE)) { ... }`. `bacondecomp`
+  is a Suggests-only dependency, so previously `example(fetwfe)` / `example(betwfe)`
+  errored for users without it installed (#260).
+- Clarified `twfeCovs()`'s title/description: it estimates a single pooled
+  treatment effect per cohort (not per-(cohort, time)), matching the body text;
+  added the "Optional" qualifier to `genCoefs()`'s `@param G` (#257).
+
 ## Version 1.26.0
 
 ### New features

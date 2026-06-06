@@ -294,39 +294,43 @@
 #' Pinheiro, J. C., & Bates, D. M. (2000). \emph{Mixed-Effects Models in
 #' S and S-PLUS}. Springer.
 #' @examples
-#' library(bacondecomp)
+#' # `bacondecomp` (which supplies the `castle` data) is a Suggests-only
+#' # dependency, so guard the example on its availability.
+#' if (requireNamespace("bacondecomp", quietly = TRUE)) {
+#'   library(bacondecomp)
 #'
-#' data(castle)
+#'   data(castle)
 #'
-#' # Response: the log homicide rate. Treatment: `cdl` records the share of
-#' # the year the castle-doctrine law was in effect, so `cdl > 0` gives the
-#' # absorbing 0/1 treatment indicator `fetwfe()` requires.
-#' castle$l_homicide <- log(castle$homicide)
-#' castle$treated <- as.integer(castle$cdl > 0)
+#'   # Response: the log homicide rate. Treatment: `cdl` records the share of
+#'   # the year the castle-doctrine law was in effect, so `cdl > 0` gives the
+#'   # absorbing 0/1 treatment indicator `fetwfe()` requires.
+#'   castle$l_homicide <- log(castle$homicide)
+#'   castle$treated <- as.integer(castle$cdl > 0)
 #'
-#' # No `covs` here: castle's smallest adoption cohorts contain a single
-#' # state, so the design is rank-deficient once any covariate is added.
-#' # The v1.13.0+ default lambda_selection is "cv" (10-fold CV).
-#' res <- fetwfe(
-#'     pdata = castle,
-#'     time_var = "year",
-#'     unit_var = "state",
-#'     treatment = "treated",
-#'     response = "l_homicide",
-#'     verbose = TRUE)
+#'   # No `covs` here: castle's smallest adoption cohorts contain a single
+#'   # state, so the design is rank-deficient once any covariate is added.
+#'   # The v1.13.0+ default lambda_selection is "cv" (10-fold CV).
+#'   res <- fetwfe(
+#'       pdata = castle,
+#'       time_var = "year",
+#'       unit_var = "state",
+#'       treatment = "treated",
+#'       response = "l_homicide",
+#'       verbose = TRUE)
 #'
-#' # Print results with internal details
-#' print(res, max_cohorts = Inf)
+#'   # Print results with internal details
+#'   print(res, max_cohorts = Inf)
 #'
-#' # To recover the prior BIC behavior (e.g., for reproducing analyses
-#' # run against v1.12.0 or earlier), pass lambda_selection = "bic":
-#' res_bic <- fetwfe(
-#'     pdata = castle,
-#'     time_var = "year",
-#'     unit_var = "state",
-#'     treatment = "treated",
-#'     response = "l_homicide",
-#'     lambda_selection = "bic")
+#'   # To recover the prior BIC behavior (e.g., for reproducing analyses
+#'   # run against v1.12.0 or earlier), pass lambda_selection = "bic":
+#'   res_bic <- fetwfe(
+#'       pdata = castle,
+#'       time_var = "year",
+#'       unit_var = "state",
+#'       treatment = "treated",
+#'       response = "l_homicide",
+#'       lambda_selection = "bic")
+#' }
 #'
 #' @export
 fetwfe <- function(
