@@ -691,11 +691,15 @@ idCohorts <- function(df, time_var, unit_var, treat_var) {
 					length(sig_eps_sq)
 				)
 			)
-		} else if (sig_eps_sq < 0) {
+		} else if (sig_eps_sq <= 0) {
 			violations <- c(
 				violations,
 				sprintf(
-					"sig_eps_sq must be non-negative; got %s",
+					paste0(
+						"sig_eps_sq must be positive (strictly greater than 0); ",
+						"got %s. A value of 0 makes the GLS transform ",
+						"1 / sqrt(sig_eps_sq) non-finite (#185 SB2)."
+					),
 					format(sig_eps_sq)
 				)
 			)
@@ -905,7 +909,9 @@ my_scale <- function(x) {
 #' @keywords internal
 #' @noRd
 getNumTreats <- function(G, T) {
-	return(T * G - (G * (G + 1)) / 2)
+	# #185 SB6: coerce to integer to honor the @return contract. The formula is
+	# exact (G * (G + 1) is always even), but `/ 2` yields a double.
+	return(as.integer(T * G - (G * (G + 1)) / 2))
 }
 
 # getTreatInds
@@ -939,7 +945,9 @@ getTreatInds <- function(G, T, d, num_treats) {
 		G + (T - 1)
 	}
 
-	treat_inds <- seq(from = base_cols + 1, length.out = num_treats)
+	# #185 SB6: as.integer() so the indices honor the @return contract
+	# (`seq()` returns a double vector here).
+	treat_inds <- as.integer(seq(from = base_cols + 1, length.out = num_treats))
 
 	stopifnot(length(treat_inds) == num_treats)
 	if (d > 0) {
@@ -1027,7 +1035,10 @@ getFirstInds <- function(G, T) {
 	} # No cohorts, no first_inds
 
 	for (g in 1:G) {
-		f_inds[g] <- 1 + (g - 1) * (2 * T - g) / 2
+		# #185 SB6: as.integer() keeps `f_inds` integer (the `/ 2` would
+		# otherwise promote the preallocated integer vector to double). The
+		# value is exact -- (g - 1) * (2 * T - g) is always even.
+		f_inds[g] <- as.integer(1 + (g - 1) * (2 * T - g) / 2)
 	}
 	stopifnot(all(f_inds <= n_treats))
 	stopifnot(f_inds[1] == 1)

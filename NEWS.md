@@ -1,5 +1,16 @@
 # NEWS
 
+## Version 1.21.1
+
+### Minor improvements
+
+- The estimator input validation now rejects `sig_eps_sq = 0` with a clear
+  "must be positive" error. Previously only negative values were rejected, and
+  a zero noise variance produced an opaque downstream failure (the GLS
+  transform `1 / sqrt(sig_eps_sq)` is non-finite). Part of a small internal
+  cleanup batch (#185) that also hardens several internal invariants and the
+  integer return types of internal index helpers.
+
 ## Version 1.21.0
 
 ### Features
