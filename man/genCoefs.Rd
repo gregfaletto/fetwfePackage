@@ -105,7 +105,10 @@ angle). Ignored when \code{assignment_interactions = NULL}. New in
 \item{seed}{(Optional) Integer. Seed for reproducibility. Three
 deterministic offsets share this seed: the main coefficient draw uses
 \code{seed}; the assignment coefficients use \code{seed + 1L}; the
-Monte Carlo integration in \code{getTes()} uses \code{seed + 2L}.}
+Monte Carlo integration in \code{getTes()} uses \code{seed + 2L}.
+\code{NA} (or \code{NULL}) means "draw from the ambient random-number
+generator" --- no \code{set.seed()} is called, so any preceding
+\code{set.seed()} is respected and the result varies across calls.}
 
 \item{verbose}{Logical. If \code{TRUE}, emit a \code{message()} when
 \code{assignment_interactions} canonicalization removes duplicate or
@@ -196,6 +199,15 @@ The multinomial-logit and proportional-odds reference DGPs are the
 canonical parametric propensity-score models named in Faletto (2025)
 line 1016; the propensity-weighted population-truth aggregation matches
 Eq. \code{att.estimator.weighted} (line 837).
+
+Note on the random-number generator: passing an explicit numeric
+\code{seed} calls \code{set.seed(seed)} internally and \strong{leaves the
+global RNG advanced} after the call returns. This is deliberate --- it
+makes a simulation both reproducible (the same \code{seed} always yields
+the same coefficients) and varying (drawing data afterwards consumes the
+advanced stream). To draw from / preserve the ambient random stream
+instead --- without calling \code{set.seed()} --- pass \code{seed = NA}
+(or \code{seed = NULL}).
 }
 \examples{
 \dontrun{

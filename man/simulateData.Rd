@@ -103,6 +103,14 @@ the same panel), or \code{seed = NA} to use the ambient generator without the
 warning. To vary the panel across Monte Carlo replications, pass a different
 \code{seed} each replication.
 
+Passing an explicit numeric \code{seed} calls \code{set.seed(seed)}
+internally and \strong{leaves the global RNG advanced} after the call
+returns. This is deliberate --- it makes a simulation both reproducible
+(the same \code{seed} always yields the same panel) and varying (subsequent
+draws consume the advanced stream). Use \code{seed = NA} (or the default
+\code{seed = NULL}) to draw from / preserve the ambient stream without
+calling \code{set.seed()}.
+
 The argument \code{distribution} controls the generation of covariates. For
 \code{"gaussian"}, covariates are drawn from \code{rnorm}; for \code{"uniform"},
 they are drawn from \code{runif} on the interval \eqn{[-\sqrt{3}, \sqrt{3}]} (which ensures that

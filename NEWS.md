@@ -1,5 +1,27 @@
 # NEWS
 
+## Version 1.25.0
+
+### Bug fixes
+
+- `getTes()` no longer perturbs the caller's random-number generator. Under a
+  covariate-dependent (`"multinomial"` / `"ordered"`) assignment DGP it
+  integrates the expected cohort propensities by Monte Carlo, and that draw
+  previously advanced the caller's `.Random.seed` as a side effect. `getTes()`
+  is an analysis/truth function, so the integration now runs under a restored
+  RNG (the per-cohort truth is unchanged): the caller's `.Random.seed` is saved
+  and restored, leaving the user's stream untouched (#254).
+
+### New features
+
+- `genCoefs()`, `genCoefsCore()`, and `simulateDataCore()` now accept
+  `seed = NA` to draw from the ambient random-number generator silently (no
+  `set.seed()` call), matching the behavior already available on
+  `simulateData()`. As before, an explicit numeric `seed` calls `set.seed()`
+  (reproducible draw, global RNG left advanced) and `seed = NULL` draws from the
+  ambient stream; an invalid `seed` now reports a single canonical message
+  (`"seed must be NULL, NA, or a single numeric value"`) (#254).
+
 ## Version 1.24.0
 
 ### Breaking changes

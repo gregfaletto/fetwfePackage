@@ -94,6 +94,9 @@
 #'   deterministic offsets share this seed: the main coefficient draw uses
 #'   \code{seed}; the assignment coefficients use \code{seed + 1L}; the
 #'   Monte Carlo integration in \code{getTes()} uses \code{seed + 2L}.
+#'   \code{NA} (or \code{NULL}) means "draw from the ambient random-number
+#'   generator" --- no \code{set.seed()} is called, so any preceding
+#'   \code{set.seed()} is respected and the result varies across calls.
 #' @param verbose Logical. If \code{TRUE}, emit a \code{message()} when
 #'   \code{assignment_interactions} canonicalization removes duplicate or
 #'   unordered pairs (e.g., when the user passes both \code{c(1, 2)} and
@@ -166,6 +169,15 @@
 #' canonical parametric propensity-score models named in Faletto (2025)
 #' line 1016; the propensity-weighted population-truth aggregation matches
 #' Eq. \code{att.estimator.weighted} (line 837).
+#'
+#' Note on the random-number generator: passing an explicit numeric
+#' \code{seed} calls \code{set.seed(seed)} internally and \strong{leaves the
+#' global RNG advanced} after the call returns. This is deliberate --- it
+#' makes a simulation both reproducible (the same \code{seed} always yields
+#' the same coefficients) and varying (drawing data afterwards consumes the
+#' advanced stream). To draw from / preserve the ambient random stream
+#' instead --- without calling \code{set.seed()} --- pass \code{seed = NA}
+#' (or \code{seed = NULL}).
 #'
 #' @references
 #' Faletto, G (2025). Fused Extended Two-Way Fixed Effects for
@@ -575,12 +587,21 @@ getTes <- function(coefs_obj) {
 		} else {
 			coefs_obj$seed + 2L
 		}
-		expected_probs <- .expected_cohort_probs(
-			assignment_coefs = coefs_obj$assignment_coefs,
-			d = d,
-			distribution = "gaussian",
-			M = 10000L,
-			seed = mc_seed
+		# Convention A (#254): getTes() is an analysis/truth function, so compute
+		# the expected cohort probabilities under the fixed seed `mc_seed` but
+		# RESTORE the caller's RNG -- it must not perturb the user's stream. When
+		# `mc_seed` is NULL/NA (coefs built without a seed, or with seed = NA) the
+		# draw is from the ambient RNG (non-deterministic truth, as before) and is
+		# still restored.
+		expected_probs <- .with_preserved_rng(
+			mc_seed,
+			.expected_cohort_probs(
+				assignment_coefs = coefs_obj$assignment_coefs,
+				d = d,
+				distribution = "gaussian",
+				M = 10000L,
+				seed = NULL
+			)
 		)
 		# expected_probs is length (G + 1); index 1 is never-treated,
 		# indices 2..R+1 are treated cohorts.
@@ -640,7 +661,9 @@ getTes <- function(coefs_obj) {
 #' effects are sparse. \code{"cohort"} is byte-identical to previous behavior;
 #' \code{"event_study"} fuses effects at the same time since treatment across
 #' cohorts. See \code{genCoefs()} for details.
-#' @param seed (Optional) Integer. Seed for reproducibility.
+#' @param seed (Optional) Integer. Seed for reproducibility. \code{NA} (or
+#' \code{NULL}) means "draw from the ambient random-number generator" --- no
+#' \code{set.seed()} is called.
 #' @param R Deprecated. The former name for \code{G}; still accepted with a
 #' deprecation warning, and will be removed in a future release. Use \code{G}.
 #'
@@ -724,9 +747,7 @@ genCoefsCore <- function(
 
 	fusion_structure <- match.arg(fusion_structure)
 
-	if (!is.null(seed)) {
-		set.seed(seed)
-	}
+	.apply_seed(seed)
 
 	# Check that T is a numeric scalar and at least 2.
 	if (!is.numeric(T) || length(T) != 1 || T < 2) {

@@ -1254,16 +1254,44 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 	)
 }
 
+# .apply_seed
+#' @title Apply a seed argument: `set.seed()`, draw from the ambient RNG, or error
+#' @description The canonical seed-to-RNG mapping shared by the data-generation
+#'   functions and `.with_preserved_rng()`. `NULL` or a scalar `NA` mean "use the
+#'   ambient random-number generator" (no `set.seed()`); a single numeric value is
+#'   passed to `set.seed()`; anything else is an error. (#254)
+#' @param seed `NULL`, a scalar `NA`, or a single numeric value.
+#' @return Invisibly `NULL`; called for its `set.seed()` side effect (or none).
+#' @keywords internal
+#' @noRd
+.apply_seed <- function(seed) {
+	if (is.null(seed)) {
+		return(invisible(NULL))
+	}
+	if (length(seed) == 1L && is.na(seed)) {
+		return(invisible(NULL))
+	}
+	if (is.numeric(seed) && length(seed) == 1L) {
+		set.seed(seed)
+		return(invisible(NULL))
+	}
+	stop("seed must be NULL, NA, or a single numeric value")
+}
+
 # .with_preserved_rng
 #' @title Evaluate RNG-consuming code under a fixed seed, preserving caller state
-#' @description Runs `expr` after `set.seed(seed)` so the result is deterministic
-#'   in its inputs, while saving and restoring the caller's `.Random.seed` (via
-#'   `on.exit()`) so the call does not perturb the caller's random stream. Both
-#'   the "caller had a seed at entry" and "caller had none" cases are handled.
+#' @description Runs `expr` after applying `seed` via `.apply_seed()` (a single
+#'   numeric `seed` reseeds for determinism; `NULL` or `NA` draw from the ambient
+#'   stream), while saving and restoring the caller's `.Random.seed` (via
+#'   `on.exit()`) so the call never perturbs the caller's random stream. Both the
+#'   "caller had a seed at entry" and "caller had none" cases are handled.
 #'   Consolidates the idiom shared by `getBetaCV()` (#181, the CV-fold
-#'   assignment) and `.simultaneous_cis_impl()` (#192 / #200, the `mvtnorm`
-#'   Genz-Bretz quasi-Monte-Carlo integration). (#195)
-#' @param seed Integer seed passed to `set.seed()` immediately before `expr`.
+#'   assignment), `.simultaneous_cis_impl()` (#192 / #200, the `mvtnorm`
+#'   Genz-Bretz quasi-Monte-Carlo integration), and `getTes()` (#254, the
+#'   expected-cohort-probability truth computation). (#195)
+#' @param seed A single numeric seed (passed to `set.seed()` before `expr`), or
+#'   `NULL` / `NA` to draw from the ambient RNG without reseeding. Either way the
+#'   caller's `.Random.seed` is saved and restored.
 #' @param expr Expression to evaluate (lazily -- it runs after the caller's seed
 #'   is saved and `set.seed(seed)` is applied). Its value is returned.
 #' @return The value of `expr`.
@@ -1291,7 +1319,7 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 		},
 		add = TRUE
 	)
-	set.seed(seed)
+	.apply_seed(seed)
 	force(expr)
 }
 
