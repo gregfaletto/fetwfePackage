@@ -405,6 +405,40 @@ tidy.etwfe <- function(
 	.tidy_estimator_output(x, conf.int, conf.level, include_selected = FALSE)
 }
 
+#' Tidy a `twfeCovs` fitted object
+#'
+#' Like [tidy.etwfe()] but for a TWFE-with-covariates fit. Has no `selected`
+#' column (`twfeCovs` is pure OLS and does no regularized selection).
+#' `twfeCovs` estimates one pooled effect per cohort, so the returned frame
+#' has the same `G + 1` rows (overall ATT in row 1, then one row per cohort)
+#' as the sibling estimators.
+#'
+#' @param x An object of class `"twfeCovs"` returned by [twfeCovs()].
+#' @param conf.int Logical; include CI columns.
+#' @param conf.level Numeric in (0, 1); defaults to `1 - x$alpha`. Applies only
+#'   to the overall-ATT row; the cohort rows pass through the fit-time
+#'   `catt_df` bounds (reflecting the fit's `ci_type`) and are not recomputed
+#'   at `conf.level` (#197). See [tidy.fetwfe()].
+#' @param ... Unused.
+#' @return A data frame with `G + 1` rows.
+#' @examples
+#' \dontrun{
+#'   res <- twfeCovsWithSimulatedData(
+#'     simulateData(genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
+#'                  N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5, seed = 123)
+#'   )
+#'   broom::tidy(res)
+#' }
+#' @export
+tidy.twfeCovs <- function(
+	x,
+	conf.int = TRUE,
+	conf.level = 1 - x$alpha,
+	...
+) {
+	.tidy_estimator_output(x, conf.int, conf.level, include_selected = FALSE)
+}
+
 #' Tidy a `betwfe` fitted object
 #'
 #' Like [tidy.fetwfe()] but for a BETWFE fit. Includes the `selected`
@@ -726,6 +760,28 @@ glance.etwfe <- function(x, ...) {
 	.glance_etwfe(x)
 }
 
+#' Glance a `twfeCovs` fitted object
+#'
+#' Like [glance.etwfe()] (and with the same schema): omits the `lambda_star` /
+#' `lambda_star_model_size` columns, since `twfeCovs` performs no
+#' regularization.
+#'
+#' @param x An object of class `"twfeCovs"`.
+#' @param ... Unused.
+#' @return A one-row data frame with 11 columns.
+#' @examples
+#' \dontrun{
+#'   res <- twfeCovsWithSimulatedData(
+#'     simulateData(genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
+#'                  N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5, seed = 123)
+#'   )
+#'   broom::glance(res)
+#' }
+#' @export
+glance.twfeCovs <- function(x, ...) {
+	.glance_etwfe(x)
+}
+
 #' Glance a `betwfe` fitted object
 #'
 #' Same schema as [glance.fetwfe()] (BETWFE also has regularization).
@@ -811,6 +867,29 @@ augment.fetwfe <- function(x, data, ...) {
 #' @export
 augment.etwfe <- function(x, data, ...) {
 	.augment_estimator_output(x, data, ...)
+}
+
+#' Augment is not defined for a twfeCovs fit (documented omission)
+#'
+#' `augment()` is intentionally not provided for `twfeCovs()` objects (#58):
+#' the fit's coefficient vector lives in a reduced cohort-level basis that the
+#' shared fitted-value path (`X %*% beta_hat`) does not match, so a meaningful
+#' `.fitted` / `.resid` cannot be reconstructed. Use [tidy.twfeCovs()],
+#' [glance.twfeCovs()], or `summary()` instead. Calling this method always
+#' raises an error.
+#'
+#' @param x An object of class `"twfeCovs"`.
+#' @param data Ignored.
+#' @param ... Ignored.
+#' @return (none; raises an error).
+#' @export
+augment.twfeCovs <- function(x, data, ...) {
+	stop(
+		"augment() is not defined for twfeCovs(): its coefficient vector is ",
+		"in a reduced cohort-level basis that augment()'s fitted-value path ",
+		"does not match. Use tidy(), glance(), or summary() instead.",
+		call. = FALSE
+	)
 }
 
 #' Augment user-supplied data with fitted values and residuals from a betwfe fit

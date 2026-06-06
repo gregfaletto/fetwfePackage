@@ -711,6 +711,7 @@
 	order_by,
 	show_internal,
 	max_event_times,
+	include_event_study = TRUE,
 	...
 ) {
 	cat(header)
@@ -785,7 +786,10 @@
 	## defensively for hypothetical future twfeCovs reuse, #138) masked
 	## the scattered-cohort bug on `bacondecomp::divorce` for two
 	## releases; #174 is the cure.
-	es <- eventStudy(x)
+	# `include_event_study = FALSE` (twfeCovs, #58) skips the event-study
+	# section: twfeCovs estimates one pooled effect per cohort, so there is no
+	# per-(cohort,time) / event-study basis and `eventStudy()` rejects it.
+	es <- if (isTRUE(include_event_study)) eventStudy(x) else NULL
 	if (!is.null(es) && nrow(es) > 0L) {
 		es_preview <- .truncate_event_study(es, max_event_times)
 		cat(sprintf(
@@ -873,7 +877,8 @@
 	include_att_selected,
 	include_lambda,
 	full_catt,
-	max_event_times = 20L
+	max_event_times = 20L,
+	include_event_study = TRUE
 ) {
 	# Build the FULL union list with every possible field, then drop
 	# the fields that don't belong to this class via name-vector
@@ -889,7 +894,9 @@
 	# matching block in `.print_estimator_output()` for rationale. Any
 	# `eventStudy()` failure on a valid fit is a bug and surfaces here
 	# rather than being swallowed.
-	es <- eventStudy(object)
+	# `include_event_study = FALSE` (twfeCovs, #58): skip the event-study
+	# preview (twfeCovs has no per-(cohort,time) basis; see .print_estimator_output).
+	es <- if (isTRUE(include_event_study)) eventStudy(object) else NULL
 	event_study <- if (is.null(es) || nrow(es) == 0L) {
 		NULL
 	} else {

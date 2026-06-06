@@ -177,6 +177,16 @@ Consumed by \code{eventStudy()} to map \code{cohort_probs}' cohort labels
 the labels are integer-coercible. New in v1.13.3 (issue #174).}
 }
 }
+
+The returned object is an S3-classed \code{"twfeCovs"} list with
+\code{print()}, \code{summary()}, \code{coef()}, \code{tidy()},
+\code{glance()}, and \code{simultaneousCIs()} methods, matching the three
+sibling estimators. \code{plot()} is intentionally not defined --- \code{twfeCovs()}
+estimates one pooled effect per cohort, so there is no per-(cohort, time) /
+event-study structure to plot. \code{augment()} is intentionally not defined ---
+the coefficient vector lives in a reduced cohort-level basis that
+\code{augment()}'s fitted-value path does not match. Both raise an
+informative error (#58).
 }
 \description{
 This function runs the bridge-penalized extended two-way fixed effects estimator (\code{twfeCovs()}) on
