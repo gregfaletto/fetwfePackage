@@ -455,10 +455,11 @@ test_that("simulateDataCore errors when R >= T", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 12: Error when T < 3
+# Test 12: T = 2 is supported (2x2); only T < 2 errors (#251)
 # ------------------------------------------------------------------------------
-test_that("simulateDataCore errors when T < 3", {
-	# For instance, T = 2 should trigger an error (we require at least T = 3).
+test_that("simulateDataCore accepts T = 2 (2x2) and errors only when T < 2", {
+	# T = 2 is now supported down to the 2x2 case (#251); it produces a valid
+	# single-cohort panel rather than erroring. Only T < 2 is rejected.
 	N <- 30
 	T_val <- 2
 	R_val <- 1
@@ -467,10 +468,27 @@ test_that("simulateDataCore errors when T < 3", {
 	p_expected <- compute_p_int(T_val, R_val, d_val)
 	beta <- rnorm(p_expected)
 
+	sim <- simulateDataCore(
+		N,
+		T_val,
+		R_val,
+		d_val,
+		1,
+		1,
+		beta,
+		seed = 123,
+		gen_ints = FALSE,
+		distribution = "gaussian"
+	)
+	expect_equal(sim$T, 2)
+	expect_equal(sim$G, 1)
+	expect_s3_class(sim$pdata, "data.frame")
+
+	# T < 2 still errors (the simulateDataCore T floor).
 	expect_error(
 		simulateDataCore(
 			N,
-			T_val,
+			1,
 			R_val,
 			d_val,
 			1,
@@ -479,8 +497,7 @@ test_that("simulateDataCore errors when T < 3", {
 			seed = 123,
 			gen_ints = FALSE,
 			distribution = "gaussian"
-		),
-		regexp = "T >= 3" # Expect an error message indicating T must be at least 3
+		)
 	)
 })
 

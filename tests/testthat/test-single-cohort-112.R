@@ -4,10 +4,14 @@
 # Re-relaxes the historical `G >= 2` floor (re-tightened in #109) so that
 # fetwfe / etwfe / betwfe / twfeCovs and genCoefs / simulateData accept panels
 # with a SINGLE treated cohort (one cohort that adopts treatment, plus
-# never-treated units). The post-treatment side still binds: at least two
-# treatment effects (two post-treatment periods) are required so the
-# dynamic-effect fusion has something to fuse -- a new `num_treats >= 2` guard
-# in prep_for_etwfe_core() enforces that.
+# never-treated units).
+#
+# NOTE (#251): #112 originally also required at least two treatment effects
+# (a `num_treats >= 2` guard in prep_for_etwfe_core()), rejecting num_treats = 1
+# panels (T = 2 and late-adopting single cohorts). #251 removed that guard so
+# those panels now FIT. The num_treats = 1 tests below (section 4) were
+# converted from rejection assertions to fits accordingly; the T == 2 warning
+# behavior is covered in detail in test-2x2-support-251.R.
 #
 # Coverage:
 #   1. All four estimators recover a known ATT at G = 1 (numerical, not just
@@ -19,8 +23,10 @@
 #   3. A hand-built SCATTERED-offset (offset 3, num_treats = 4) single-cohort
 #      panel fits -- genCoefs / simulateData force offset 2, so the scattered
 #      and late-adopting fixtures are built by hand.
-#   4. num_treats = 1 is rejected: T = 2 (any G) AND a late-adopting single
-#      cohort (offset = T) both stop with the new `num_treats >= 2` message.
+#   4. num_treats = 1 now FITS (#251 removed the #112 guard): T = 2 (fetwfe
+#      warns "no fusion") AND a late-adopting single cohort (offset = T) both
+#      produce a valid fit. (Warning asymmetries are asserted in
+#      test-2x2-support-251.R.)
 #   5. No-never-treated single-cohort panels fail via TWO distinct guards:
 #      adopting at t = 2 trips the time-period check (truncation leaves 1
 #      period); adopting at t >= 3 trips the cohort check in
@@ -271,50 +277,57 @@ test_that("a scattered-offset (offset 3) single cohort fits and recovers ATT", {
 })
 
 # ------------------------------------------------------------------------------
-# 4. num_treats = 1 rejection (the new `num_treats >= 2` guard).
+# 4. num_treats = 1 now FITS (#251 removed the #112 `num_treats >= 2` guard).
 #
-# Mutation target for the new guard: re-tighten is N/A (the guard is added, not
-# relaxed) -- instead, DELETING the `num_treats < 2` block makes both of these
-# tests FAIL (T = 2 fits silently; the late-adopting cohort fits silently).
-# The offset-aware `num_treats` is what distinguishes the late-adopting case
-# from getNumTreats(G, T) = T - 1, which would miscount it as non-degenerate.
+# Both panels previously stopped with "at least two treatment effects"; they now
+# produce a valid single-cohort fit. The T = 2 case is the unique no-fusion
+# configuration, so fetwfe warns there (asserted in test-2x2-support-251.R; here
+# we just suppress it and confirm the fit). The late-adopting case (offset = T,
+# T >= 3) still fuses the time fixed effects, so it does NOT warn.
 # ------------------------------------------------------------------------------
 
-test_that("T = 2 (num_treats = 1) is rejected at G = 1", {
+test_that("T = 2 (num_treats = 1) now fits at G = 1", {
 	# T = 2, single cohort adopting at t = 2 -> exactly one post-treatment
 	# period -> num_treats = 1.
 	pdata <- .sc112_make_panel(N = 60, T = 2, adopt = 2, tau = 0, seed = 12)
-	expect_error(
-		fetwfe(
-			pdata = pdata,
-			time_var = "time",
-			unit_var = "unit",
-			treatment = "treatment",
-			covs = c("cov1", "cov2"),
-			response = "y",
-			verbose = FALSE
-		),
-		"at least two treatment effects"
-	)
+	res <- suppressWarnings(fetwfe(
+		pdata = pdata,
+		time_var = "time",
+		unit_var = "unit",
+		treatment = "treatment",
+		covs = c("cov1", "cov2"),
+		response = "y",
+		verbose = FALSE
+	))
+	expect_s3_class(res, "fetwfe")
+	expect_equal(res$G, 1)
+	expect_equal(res$T, 2)
+	# Single post-treatment period -> a single treatment effect (one catt row).
+	expect_equal(nrow(res$catt_df), 1L)
+	expect_true(is.finite(res$att_hat))
 })
 
-test_that("a late-adopting single cohort (offset = T, num_treats = 1) is rejected", {
+test_that("a late-adopting single cohort (offset = T, num_treats = 1) now fits", {
 	# T = 5, single cohort adopts at the FINAL period t = 5 -> one
 	# post-treatment period -> num_treats = 1, despite T >= 3. getNumTreats(G, T)
-	# would report T - 1 = 4 here; the offset-aware count correctly catches it.
+	# would report T - 1 = 4 here; the offset-aware count produces a single
+	# treatment effect.
 	pdata <- .sc112_make_panel(N = 80, T = 5, adopt = 5, tau = 0, seed = 13)
-	expect_error(
-		fetwfe(
-			pdata = pdata,
-			time_var = "time",
-			unit_var = "unit",
-			treatment = "treatment",
-			covs = c("cov1", "cov2"),
-			response = "y",
-			verbose = FALSE
-		),
-		"at least two treatment effects"
+	res <- fetwfe(
+		pdata = pdata,
+		time_var = "time",
+		unit_var = "unit",
+		treatment = "treatment",
+		covs = c("cov1", "cov2"),
+		response = "y",
+		verbose = FALSE
 	)
+	expect_s3_class(res, "fetwfe")
+	expect_equal(res$G, 1)
+	expect_equal(res$T, 5)
+	# Adopting in the final period -> exactly one post-treatment period.
+	expect_equal(nrow(res$catt_df), 1L)
+	expect_true(is.finite(res$att_hat))
 })
 
 # ------------------------------------------------------------------------------
@@ -450,9 +463,10 @@ test_that("add_ridge and REML (sig_eps_sq = NA) paths work at G = 1", {
 	skip_on_cran()
 	fx <- .sc112_sim()
 
-	# add_ridge previously hit a cryptic `T >= 3L is not TRUE` stopifnot when a
-	# degenerate single post-period leaked through; with num_treats >= 2 enforced
-	# up front, the happy path fits.
+	# add_ridge at the standard multi-period single-cohort fixture (T = 6,
+	# num_treats = 5). The 2x2 add_ridge path (where the old `T >= 3L` stopifnot
+	# in genFullInvFusionTransformMat used to bite) is covered in
+	# test-2x2-support-251.R.
 	res_ridge <- .sc112_fit(fx$sim, fetwfe, add_ridge = TRUE)
 	expect_equal(res_ridge$G, 1)
 	expect_true(is.finite(res_ridge$att_hat))

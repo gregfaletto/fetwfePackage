@@ -426,6 +426,21 @@ fetwfe <- function(
 
 	rm(prep)
 
+	# T == 2 is the unique no-fusion configuration: it forces G = 1,
+	# num_treats = 1, and a degenerate time-FE block, so every fused block is
+	# trivial and no fusion penalty applies. The bridge penalty then reduces to
+	# individual shrinkage of the (single) treatment effect rather than fusing
+	# anything. This is fetwfe-specific (etwfe/twfeCovs are unpenalized; betwfe
+	# applies the bridge to the raw coefficients and never fuses), so the warning
+	# lives here in fetwfe() rather than in the shared input prep. A late-adopting
+	# single cohort with T >= 3 still fuses the time fixed effects, so it does NOT
+	# warn (T is known here, after prep).
+	if (T == 2) {
+		warning(
+			"No fusion penalty applies at T = 2 (a single treatment effect and a single time difference leave nothing to fuse); the bridge penalty reduces to individual shrinkage."
+		)
+	}
+
 	# User-supplied custom fusion matrix (#236). Validated here -- after prep
 	# (so `num_treats`, `G`, `T` are known) and before `fetwfe_core()`. When
 	# supplied, `d_inv_treat <- solve(fusion_matrix)` overrides

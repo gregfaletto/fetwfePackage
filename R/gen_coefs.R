@@ -230,9 +230,9 @@ genCoefs <- function(
 	# directly.
 	G <- .resolve_cohort_count_arg(G, R, "genCoefs")
 
-	# Check that T is a numeric scalar and at least 3.
-	if (!is.numeric(T) || length(T) != 1 || T < 3) {
-		stop("T must be a numeric value greater than or equal to 3")
+	# Check that T is a numeric scalar and at least 2.
+	if (!is.numeric(T) || length(T) != 1 || T < 2) {
+		stop("T must be a numeric value greater than or equal to 2")
 	}
 
 	# Check that G is a numeric scalar and at least 1.
@@ -359,7 +359,7 @@ genCoefs <- function(
 	)
 
 	stopifnot(G >= 1)
-	stopifnot(T >= 3)
+	stopifnot(T >= 2)
 	stopifnot(G <= T - 1)
 
 	core_obj <- genCoefsCore(
@@ -728,9 +728,9 @@ genCoefsCore <- function(
 		set.seed(seed)
 	}
 
-	# Check that T is a numeric scalar and at least 3.
-	if (!is.numeric(T) || length(T) != 1 || T < 3) {
-		stop("T must be a numeric value greater than or equal to 3")
+	# Check that T is a numeric scalar and at least 2.
+	if (!is.numeric(T) || length(T) != 1 || T < 2) {
+		stop("T must be a numeric value greater than or equal to 2")
 	}
 
 	# Check that G is a numeric scalar and at least 1.
@@ -766,7 +766,7 @@ genCoefsCore <- function(
 	}
 
 	stopifnot(G >= 1)
-	stopifnot(T >= 3)
+	stopifnot(T >= 2)
 	stopifnot(G <= T - 1)
 
 	num_treats <- getNumTreats(G = G, T = T)

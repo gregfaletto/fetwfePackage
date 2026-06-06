@@ -1,5 +1,20 @@
 # NEWS
 
+## Version 1.23.0
+
+### Features
+
+- `fetwfe()`, `etwfe()`, `betwfe()`, and `twfeCovs()` (and the
+  `*WithSimulatedData()` wrappers), along with `genCoefs()` and `simulateData()`,
+  now support a single treatment effect (one post-treatment period for the
+  treated cohort), down to the true 2x2 case (`T = 2`, `G = 1`) and a
+  late-adopting single cohort (`G = 1`, `T >= 3`, adopting in the final period).
+  This removes the `num_treats >= 2` requirement added in #112, giving continuity
+  for simulation sweeps over `T` (#251). At `T = 2` -- the unique configuration
+  with nothing to fuse -- `fetwfe()` now warns that no fusion penalty applies and
+  the bridge penalty reduces to individual shrinkage; the other estimators and
+  the late-adopting case (which still fuses the time fixed effects) do not warn.
+
 ## Version 1.22.0
 
 ### Features

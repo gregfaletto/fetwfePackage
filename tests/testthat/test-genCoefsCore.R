@@ -192,11 +192,18 @@ test_that("simulateDataCore and fetwfe work when d = 0", {
 })
 
 
-test_that("genCoefsCore errors when T < 3", {
+# T = 2 is now supported (down to the 2x2 case, #251); only T < 2 is rejected.
+test_that("genCoefsCore errors when T < 2", {
 	expect_error(
-		genCoefsCore(G = 5, T = 2, density = 0.1, eff_size = 2, d = 12),
-		regexp = "T must be a numeric value greater than or equal to 3"
+		genCoefsCore(G = 1, T = 1, density = 0.1, eff_size = 2, d = 12),
+		regexp = "T must be a numeric value greater than or equal to 2"
 	)
+})
+
+test_that("genCoefsCore accepts T = 2 (2x2) at G = 1", {
+	core <- genCoefsCore(G = 1, T = 2, density = 0.5, eff_size = 2, d = 2)
+	expect_type(core, "list")
+	expect_true(all(c("beta", "theta") %in% names(core)))
 })
 
 test_that("genCoefsCore generates a single-cohort (G = 1) coefficient vector", {
