@@ -319,49 +319,51 @@
 #' Pinheiro, J. C., & Bates, D. M. (2000). \emph{Mixed-Effects Models in
 #' S and S-PLUS}. Springer.
 #' @examples
-#' library(bacondecomp)
+#' if (requireNamespace("bacondecomp", quietly = TRUE)) {
+#'   library(bacondecomp)
 #'
-#' data(castle)
+#'   data(castle)
 #'
-#' # Response: the log homicide rate. Treatment: `cdl` records the share of
-#' # the year the castle-doctrine law was in effect, so `cdl > 0` gives the
-#' # absorbing 0/1 treatment indicator. No `covs`: castle's smallest
-#' # adoption cohorts contain a single state, so the design is
-#' # rank-deficient once any covariate is added.
-#' castle$l_homicide <- log(castle$homicide)
-#' castle$treated <- as.integer(castle$cdl > 0)
+#'   # Response: the log homicide rate. Treatment: `cdl` records the share of
+#'   # the year the castle-doctrine law was in effect, so `cdl > 0` gives the
+#'   # absorbing 0/1 treatment indicator. No `covs`: castle's smallest
+#'   # adoption cohorts contain a single state, so the design is
+#'   # rank-deficient once any covariate is added.
+#'   castle$l_homicide <- log(castle$homicide)
+#'   castle$treated <- as.integer(castle$cdl > 0)
 #'
-#' # On this panel betwfe's bridge penalty selects every cohort out, so the
-#' # estimated ATT and cohort effects below are all zero.
-#' res <- betwfe(
-#'     pdata = castle,
-#'     time_var = "year",
-#'     unit_var = "state",
-#'     treatment = "treated",
-#'     response = "l_homicide",
-#'     verbose = TRUE)
+#'   # On this panel betwfe's bridge penalty selects every cohort out, so the
+#'   # estimated ATT and cohort effects below are all zero.
+#'   res <- betwfe(
+#'       pdata = castle,
+#'       time_var = "year",
+#'       unit_var = "state",
+#'       treatment = "treated",
+#'       response = "l_homicide",
+#'       verbose = TRUE)
 #'
-#' # Average treatment effect on the treated units (in percentage point
-#' # units)
-#' 100 * res$att_hat
+#'   # Average treatment effect on the treated units (in percentage point
+#'   # units)
+#'   100 * res$att_hat
 #'
-#' # Conservative 95% confidence interval for ATT (in percentage point units)
+#'   # Conservative 95% confidence interval for ATT (in percentage point units)
 #'
-#' low_att <- 100 * (res$att_hat - qnorm(1 - 0.05 / 2) * res$att_se)
-#' high_att <- 100 * (res$att_hat + qnorm(1 - 0.05 / 2) * res$att_se)
+#'   low_att <- 100 * (res$att_hat - qnorm(1 - 0.05 / 2) * res$att_se)
+#'   high_att <- 100 * (res$att_hat + qnorm(1 - 0.05 / 2) * res$att_se)
 #'
-#' c(low_att, high_att)
+#'   c(low_att, high_att)
 #'
-#' # Cohort average treatment effects and confidence intervals (in percentage
-#' # point units)
+#'   # Cohort average treatment effects and confidence intervals (in percentage
+#'   # point units)
 #'
-#' catt_df_pct <- res$catt_df
-#' catt_df_pct[["estimate"]] <- 100 * catt_df_pct[["estimate"]]
-#' catt_df_pct[["se"]] <- 100 * catt_df_pct[["se"]]
-#' catt_df_pct[["ci_low"]] <- 100 * catt_df_pct[["ci_low"]]
-#' catt_df_pct[["ci_high"]] <- 100 * catt_df_pct[["ci_high"]]
+#'   catt_df_pct <- res$catt_df
+#'   catt_df_pct[["estimate"]] <- 100 * catt_df_pct[["estimate"]]
+#'   catt_df_pct[["se"]] <- 100 * catt_df_pct[["se"]]
+#'   catt_df_pct[["ci_low"]] <- 100 * catt_df_pct[["ci_low"]]
+#'   catt_df_pct[["ci_high"]] <- 100 * catt_df_pct[["ci_high"]]
 #'
-#' catt_df_pct
+#'   catt_df_pct
+#' }
 #' @export
 betwfe <- function(
 	pdata,
@@ -815,16 +817,18 @@ betwfe <- function(
 #' }
 #'
 #' @examples
-#' \dontrun{
-#'   # Generate coefficients
-#'   coefs <- genCoefs(G = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
+#' if (requireNamespace("bacondecomp", quietly = TRUE)) {
+#'   \dontrun{
+#'     # Generate coefficients
+#'     coefs <- genCoefs(G = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
 #'
-#'   # Simulate data using the coefficients
-#'   sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5, seed = 123)
+#'     # Simulate data using the coefficients
+#'     sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5, seed = 123)
 #'
-#'   result <- betwfeWithSimulatedData(sim_data)
+#'     result <- betwfeWithSimulatedData(sim_data)
+#'   }
+#'
 #' }
-#'
 #' @export
 betwfeWithSimulatedData <- function(
 	simulated_obj,

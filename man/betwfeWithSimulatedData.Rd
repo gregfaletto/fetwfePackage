@@ -114,7 +114,7 @@ the seed defaults internally to \code{as.integer(N * T)}. Ignored when
 \code{"pointwise"}. Controls the confidence-interval bounds reported for the
 cohort-specific ATTs (in \code{catt_df}) and the event-study effects (from
 \code{\link[=eventStudy]{eventStudy()}}, shown by \code{print} / \code{summary} / \code{plot}, and surfaced by
-\code{\link[broom:reexports]{broom::tidy()}} on the fitted object and on the \code{\link[=eventStudy]{eventStudy()}} /
+\code{\link[broom:tidy]{broom::tidy()}} on the fitted object and on the \code{\link[=eventStudy]{eventStudy()}} /
 \code{\link[=cohortStudy]{cohortStudy()}} outputs). \code{"simultaneous"} reports parametric simultaneous
 (family-wise, uniform) bands computed via \code{\link[=simultaneousCIs]{simultaneousCIs()}}: each
 family's band covers all of its effects jointly with probability
@@ -282,14 +282,16 @@ components to pass to \code{betwfe()}. So the outputs match \code{betwfe()}, and
 match their counterparts in \code{betwfe()}.
 }
 \examples{
-\dontrun{
-  # Generate coefficients
-  coefs <- genCoefs(G = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
+if (requireNamespace("bacondecomp", quietly = TRUE)) {
+  \dontrun{
+    # Generate coefficients
+    coefs <- genCoefs(G = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
 
-  # Simulate data using the coefficients
-  sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5, seed = 123)
+    # Simulate data using the coefficients
+    sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5, seed = 123)
 
-  result <- betwfeWithSimulatedData(sim_data)
+    result <- betwfeWithSimulatedData(sim_data)
+  }
+
 }
-
 }
