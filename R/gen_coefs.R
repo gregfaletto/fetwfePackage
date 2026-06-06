@@ -235,10 +235,10 @@ genCoefs <- function(
 		stop("T must be a numeric value greater than or equal to 3")
 	}
 
-	# Check that G is a numeric scalar and at least 2.
-	if (!is.numeric(G) || length(G) != 1 || G < 2) {
+	# Check that G is a numeric scalar and at least 1.
+	if (!is.numeric(G) || length(G) != 1 || G < 1) {
 		stop(
-			"G must be a numeric value greater than or equal to 2 (currently there is only support for data sets with staggered adoptions, so at least two treated cohorts)"
+			"G must be a numeric value greater than or equal to 1 (at least one treated cohort)"
 		)
 	}
 
@@ -358,7 +358,7 @@ genCoefs <- function(
 		allow_null = TRUE
 	)
 
-	stopifnot(G >= 2)
+	stopifnot(G >= 1)
 	stopifnot(T >= 3)
 	stopifnot(G <= T - 1)
 
@@ -733,10 +733,10 @@ genCoefsCore <- function(
 		stop("T must be a numeric value greater than or equal to 3")
 	}
 
-	# Check that G is a numeric scalar and at least 2.
-	if (!is.numeric(G) || length(G) != 1 || G < 2) {
+	# Check that G is a numeric scalar and at least 1.
+	if (!is.numeric(G) || length(G) != 1 || G < 1) {
 		stop(
-			"G must be a numeric value greater than or equal to 2 (currently there is only support for data sets with staggered adoptions, so at least two treated cohorts)"
+			"G must be a numeric value greater than or equal to 1 (at least one treated cohort)"
 		)
 	}
 
@@ -765,7 +765,7 @@ genCoefsCore <- function(
 		stop("eff_size must be a numeric value")
 	}
 
-	stopifnot(G >= 2)
+	stopifnot(G >= 1)
 	stopifnot(T >= 3)
 	stopifnot(G <= T - 1)
 

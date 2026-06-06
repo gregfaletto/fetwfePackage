@@ -55,9 +55,9 @@ print.FETWFE_tes <- function(x, ...) {
 #' @export
 summary.FETWFE_tes <- function(object, ...) {
 	tes <- object$actual_cohort_tes
-	# Defensive: genCoefs() currently enforces G >= 2, so length(tes) >= 2 is
-	# always true in practice. Guard is retained in case that validation ever
-	# changes upstream (sd() of a length-1 vector is NA).
+	# genCoefs() supports a single treated cohort (G = 1), in which case
+	# length(tes) == 1 and sd() of a length-1 vector is NA; the length(tes) >= 2
+	# guard below keeps the spread statistics well defined in that case.
 	out <- list(
 		att_true = object$att_true,
 		actual_cohort_tes = tes,

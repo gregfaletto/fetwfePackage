@@ -181,11 +181,15 @@ test_that("genCoefs errors when T < 3", {
 	)
 })
 
-test_that("genCoefs errors when R < 2", {
-	expect_error(
-		genCoefs(G = 1, T = 30, density = 0.1, eff_size = 2, d = 12),
-		regexp = "G must be a numeric value greater than or equal to 2"
-	)
+test_that("genCoefs generates a single-cohort (G = 1) coefficient vector", {
+	coefs <- genCoefs(G = 1, T = 30, density = 0.1, eff_size = 2, d = 12)
+	expect_s3_class(coefs, "FETWFE_coefs")
+	expect_equal(coefs$G, 1)
+	# With a single treated cohort getTes() returns exactly one cohort effect,
+	# and the overall ATT equals that lone cohort's effect.
+	tes <- getTes(coefs)
+	expect_length(tes$actual_cohort_tes, 1L)
+	expect_equal(tes$att_true, tes$actual_cohort_tes[1])
 })
 
 test_that("genCoefs errors when R > T - 1", {

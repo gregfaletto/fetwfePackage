@@ -1106,7 +1106,7 @@ genFullInvFusionTransformMat <- function(
 	d_inv_treat = NULL
 ) {
 	##———— Safety checks ————————————————————————————————————————————
-	stopifnot(is.numeric(G), length(G) == 1L, G >= 2L)
+	stopifnot(is.numeric(G), length(G) == 1L, G >= 1L)
 	stopifnot(is.numeric(T), length(T) == 1L, T >= 3L, G <= T - 1)
 	stopifnot(is.numeric(d), length(d) == 1L, d >= 0L)
 	stopifnot(length(first_inds) == G)

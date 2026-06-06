@@ -263,7 +263,7 @@ prep_for_etwfe_regression <- function(
 #'   \item **Design-matrix construction** - hands the cleaned data to
 #'     `prepXints()`, which adds unit and time dummies, interactions, etc.
 #'   \item **Cohort diagnostics** - verifies that
-#'     \eqn{G \ge 2}, at least one never-treated unit exists, cohort names are
+#'     \eqn{G \ge 1}, at least one never-treated unit exists, cohort names are
 #'     unique, and (if provided) `indep_counts` are dimensionally consistent.
 #' }
 #'
@@ -320,9 +320,24 @@ prep_for_etwfe_core <- function(
 
 	G <- length(in_sample_counts) - 1
 	stopifnot(G <= T - 1)
-	if (G < 2) {
+	if (G < 1) {
 		stop(
-			"Only one treated cohort detected in data. Currently fetwfe and etwfe only support data sets with at least two treated cohorts."
+			"No treated cohorts detected in data. fetwfe, etwfe, betwfe, and twfeCovs require at least one treated cohort (one cohort of units that adopt treatment, plus never-treated units)."
+		)
+	}
+	# Require at least two treatment effects (i.e., at least two post-treatment
+	# periods for the treated cohort) so the dynamic-effect fusion has something
+	# to fuse; with num_treats = 1 FETWFE degenerates to ordinary
+	# difference-in-differences. For G >= 2 this is implied by G <= T - 1 (which
+	# forces T >= 3 and hence num_treats >= 2), so this is a no-op there; it only
+	# binds at G = 1, where a single post-treatment period (num_treats = 1) is
+	# reachable -- either T = 2, or a late-adopting single cohort (e.g. adopting
+	# in the final period). `num_treats` here is the offset-aware count (computed
+	# in prepXints() above), so it correctly rejects a late-adopting single
+	# cohort that getNumTreats(G, T) would miscount as T - 1.
+	if (num_treats < 2) {
+		stop(
+			"Only one treatment effect (one post-treatment period) detected for the treated cohort. fetwfe, etwfe, betwfe, and twfeCovs require at least two treatment effects (at least two post-treatment periods) so that the dynamic treatment effects can be fused; with a single post-treatment period the model degenerates to ordinary difference-in-differences."
 		)
 	}
 	stopifnot(N >= G + 1)
@@ -611,9 +626,9 @@ check_etwfe_core_inputs <- function(
 	# Mirror prep_for_etwfe_core()'s friendly message (#208) so that whichever
 	# validator fires first, the user sees the same actionable text rather than
 	# an opaque `stopifnot` failure.
-	if (G < 2) {
+	if (G < 1) {
 		stop(
-			"Only one treated cohort detected in data. Currently fetwfe and etwfe only support data sets with at least two treated cohorts."
+			"No treated cohorts detected in data. fetwfe, etwfe, betwfe, and twfeCovs require at least one treated cohort (one cohort of units that adopt treatment, plus never-treated units)."
 		)
 	}
 	stopifnot(G <= T - 1)

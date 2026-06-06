@@ -1,5 +1,19 @@
 # NEWS
 
+## Version 1.22.0
+
+### Features
+
+- `fetwfe()`, `etwfe()`, `betwfe()`, and `twfeCovs()` (and the
+  `*WithSimulatedData()` wrappers), along with `genCoefs()` and
+  `simulateData()`, now support a single treated cohort (`G = 1`): one cohort of
+  units that adopt treatment plus never-treated units, rather than requiring at
+  least two treated cohorts (#112). At least two treatment effects (two
+  post-treatment periods for the treated cohort) are still required so the
+  dynamic-effect fusion has something to fuse; a panel with a single
+  post-treatment period (e.g. `T = 2`, or a cohort adopting in the final period)
+  is rejected with a clear message.
+
 ## Version 1.21.1
 
 ### Minor improvements

@@ -1398,19 +1398,21 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 	}
 
 	# After truncation, retained cohorts are those with r_i < r_max.
-	# FETWFE / ETWFE / BETWFE / twfeCovs each require G >= 2 (enforced
+	# FETWFE / ETWFE / BETWFE / twfeCovs each require G >= 1 (enforced
 	# inside `prep_for_etwfe_core()` in R/input_prep.R with a user-facing
 	# error); the guard here matches that constraint so the user gets a
-	# clear truncation-specific message rather than the deeper G >= 2
-	# error after auto-truncation.
+	# clear truncation-specific message rather than the deeper G >= 1
+	# error after auto-truncation. An R >= 2 panel that truncates to a single
+	# retained cohort is a valid R = 1 sub-panel and proceeds; only a
+	# truncation to zero retained cohorts is rejected here.
 	retained_cohorts <- setdiff(unique(unit_first_treat), r_max)
-	if (length(retained_cohorts) < 2) {
+	if (length(retained_cohorts) < 1) {
 		stop(
 			"Cannot estimate treatment effects: panel has no never-treated ",
 			"units, and the truncated panel would have only ",
 			length(retained_cohorts),
 			" treated cohort(s). FETWFE/ETWFE/BETWFE/twfeCovs each require ",
-			"at least 2 treated cohorts."
+			"at least 1 treated cohort."
 		)
 	}
 
