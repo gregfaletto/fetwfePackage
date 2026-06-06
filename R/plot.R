@@ -176,6 +176,28 @@ plot.betwfe <- function(
 	)
 }
 
+#' Plot is not defined for a twfeCovs fit (documented omission)
+#'
+#' @description
+#' `plot()` is intentionally not provided for `twfeCovs()` objects (#58):
+#' `twfeCovs()` estimates one pooled effect per cohort, so there is no
+#' per-(cohort, time) / event-study structure to plot. Use `summary()` or
+#' [tidy.twfeCovs()] for the cohort effects. Calling this method always raises
+#' an error.
+#'
+#' @param x An object of class `"twfeCovs"`.
+#' @param ... Ignored.
+#' @return (none; raises an error).
+#' @export
+plot.twfeCovs <- function(x, ...) {
+	stop(
+		"plot() is not defined for twfeCovs(): it estimates one pooled effect ",
+		"per cohort, so there is no per-(cohort, time) / event-study structure ",
+		"to plot. Use summary() or tidy() for the cohort effects.",
+		call. = FALSE
+	)
+}
+
 # ----------------------------------------------------------------------
 # Shared helpers
 # ----------------------------------------------------------------------

@@ -1,5 +1,18 @@
 # NEWS
 
+## Version 1.26.0
+
+### New features
+
+- `twfeCovs()` now returns a fully-featured S3 object: a styled `print()` /
+  `summary()` plus `tidy()` / `glance()` (broom), matching the three sibling
+  estimators (`fetwfe()`, `etwfe()`, `betwfe()`). `plot()` and `augment()` are
+  intentionally not defined --- `twfeCovs()` estimates one pooled effect per
+  cohort (so there is no per-(cohort, time) / event-study structure to plot)
+  and its coefficient vector lives in a reduced cohort-level basis (so
+  `augment()`'s fitted-value path does not match); both raise an informative
+  error (#58).
+
 ## Version 1.25.0
 
 ### Bug fixes

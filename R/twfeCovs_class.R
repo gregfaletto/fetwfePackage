@@ -1,8 +1,12 @@
 #' @title TWFE-With-Covariates Output Class
-#' @description S3 class for the output of \code{twfeCovs()}. Minimal
-#'   surface (coef + a bare print that preserves the pre-#76 behavior
-#'   of just dumping the list); a full styled \code{print} / \code{summary}
-#'   like the three sibling estimators is a separate follow-up.
+#' @description S3 class for the output of \code{twfeCovs()}. Carries the same
+#'   styled \code{print} / \code{summary} / \code{coef} surface as the three
+#'   sibling estimators, plus \code{tidy} / \code{glance} (broom) and
+#'   \code{simultaneousCIs}. \code{plot} and \code{augment} are intentionally
+#'   not provided: \code{twfeCovs()} estimates one pooled effect per cohort, so
+#'   it has no per-(cohort, time) / event-study basis to plot, and its
+#'   coefficient vector is in a reduced basis that \code{augment()}'s
+#'   fitted-value path does not match (#58). Both raise an informative error.
 #' @name twfeCovs-class
 NULL
 
@@ -16,17 +20,57 @@ coef.twfeCovs <- function(object, ...) {
 }
 
 #----------------------------------------------------------------------
-# print() method
-#
-# Minimum-viable per #76 Item 1: `print(unclass(x))` preserves today's
-# behavior (a bare list dump) so the class addition is a pure additive
-# contract change. A full styled print is queued as a separate follow-up
-# (#76 explicitly framed this as "a full S3 class is a separate
-# follow-up").
+# print() / summary() / print.summary() methods. Thin wrappers over the
+# shared helpers in R/class_helpers.R (parallel to R/etwfe_class.R), with
+# `include_event_study = FALSE`: twfeCovs has one pooled effect per cohort,
+# so there is no event-study section (#58; upgrades the pre-#76 bare list
+# dump to the styled sibling-estimator output).
 #----------------------------------------------------------------------
 #' @export
-print.twfeCovs <- function(x, ...) {
-	print(unclass(x))
+print.twfeCovs <- function(
+	x,
+	max_cohorts = getOption("twfeCovs.max_cohorts", 10),
+	order_by = c("cohort", "estimate", "abs_estimate", "pvalue", "none"),
+	show_internal = FALSE,
+	...
+) {
+	.print_estimator_output(
+		x,
+		header = "TWFE (with covariates) Results\n==============================\n\n",
+		show_att_selected = FALSE,
+		show_lambda = FALSE,
+		X_ints_path = function(x) x$X_ints,
+		y_path = function(x) x$y,
+		calc_ses_path = function(x) x$calc_ses,
+		max_cohorts = max_cohorts,
+		order_by = match.arg(order_by),
+		show_internal = show_internal,
+		max_event_times = 10L,
+		include_event_study = FALSE,
+		...
+	)
+}
+
+#' @export
+summary.twfeCovs <- function(object, full_catt = FALSE, ...) {
+	.summary_estimator_output(
+		object,
+		output_class = "summary.twfeCovs",
+		include_att_selected = FALSE,
+		include_lambda = FALSE,
+		full_catt = full_catt,
+		include_event_study = FALSE
+	)
+}
+
+#' @export
+print.summary.twfeCovs <- function(x, ...) {
+	.print_summary_estimator_output(
+		x,
+		header = "Summary of TWFE (with covariates)\n=================================\n\n",
+		show_att_selected = FALSE,
+		show_lambda = FALSE
+	)
 }
 
 #-------------------------------------------------------------------------------

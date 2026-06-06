@@ -1099,3 +1099,114 @@ test_that("twfeCovs returns a classed object with working print + coef methods (
 	expect_no_error(capture.output(print(fit)))
 	expect_equal(coef(fit), fit$beta_hat)
 })
+
+# ------------------------------------------------------------------------------
+# Full S3 method parity for twfeCovs (#58): styled print/summary, tidy/glance
+# (broom), and the two documented-omission stubs (plot/augment). The shared
+# print/summary helpers gained an `include_event_study` gate; twfeCovs passes
+# FALSE (one pooled effect per cohort -> no event-study surface). A regression
+# guard at the bottom asserts etwfe and betwfe STILL show the event-study
+# section (fetwfe shares the same gate default), proving the gate default
+# stayed TRUE for the sibling estimators.
+# ------------------------------------------------------------------------------
+
+# Shared simulated regime for the #58 method-parity tests. The simulator's
+# default cohorts adopt at times >= 2, so no unit is treated in period 1.
+.twfeCovs_method_sim <- function() {
+	simulateData(
+		genCoefs(G = 3, T = 5, d = 2, density = 0.5, eff_size = 2, seed = 1),
+		N = 120,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = 1
+	)
+}
+
+test_that("print.twfeCovs emits the styled header with no event-study section", {
+	tw <- twfeCovsWithSimulatedData(.twfeCovs_method_sim())
+	out <- capture.output(print(tw))
+	blob <- paste(out, collapse = "\n")
+
+	# Styled header present.
+	expect_match(blob, "TWFE (with covariates) Results", fixed = TRUE)
+	# No event-study section (twfeCovs has one pooled effect per cohort).
+	expect_false(any(grepl("Event-Study", out, fixed = TRUE)))
+	# Not a bare `unclass()` list dump: no lines like `$att_hat`.
+	expect_false(any(grepl("^\\$", out)))
+})
+
+test_that("summary.twfeCovs has class summary.twfeCovs and styled print, no event study", {
+	tw <- twfeCovsWithSimulatedData(.twfeCovs_method_sim())
+	sm <- summary(tw)
+	expect_s3_class(sm, "summary.twfeCovs")
+
+	out <- capture.output(print(sm))
+	blob <- paste(out, collapse = "\n")
+	expect_match(blob, "Summary of TWFE (with covariates)", fixed = TRUE)
+	expect_false(any(grepl("Event Study", out, fixed = TRUE)))
+})
+
+test_that("tidy.twfeCovs returns the broom schema with G + 1 rows", {
+	skip_if_not_installed("broom")
+	tw <- twfeCovsWithSimulatedData(.twfeCovs_method_sim())
+	td <- broom::tidy(tw)
+	expect_s3_class(td, "data.frame")
+	expect_equal(nrow(td), tw$G + 1L)
+	expect_true(all(
+		c(
+			"term",
+			"estimate",
+			"std.error",
+			"statistic",
+			"p.value",
+			"conf.low",
+			"conf.high"
+		) %in%
+			colnames(td)
+	))
+	expect_equal(td$term[1], "ATT")
+	# No `selected` column (twfeCovs performs no regularized selection).
+	expect_false("selected" %in% colnames(td))
+})
+
+test_that("glance.twfeCovs returns a one-row frame with the etwfe-parity columns", {
+	skip_if_not_installed("broom")
+	tw <- twfeCovsWithSimulatedData(.twfeCovs_method_sim())
+	gl <- broom::glance(tw)
+	expect_s3_class(gl, "data.frame")
+	expect_equal(nrow(gl), 1L)
+	expect_true(all(
+		c("nobs", "n_units", "n_periods", "n_cohorts", "alpha") %in%
+			colnames(gl)
+	))
+})
+
+test_that("plot.twfeCovs and augment.twfeCovs are documented-omission stubs", {
+	skip_if_not_installed("broom")
+	sim <- .twfeCovs_method_sim()
+	tw <- twfeCovsWithSimulatedData(sim)
+	expect_error(plot(tw), "not defined for twfeCovs")
+	expect_error(
+		broom::augment(tw, data = sim$pdata),
+		"not defined for twfeCovs"
+	)
+})
+
+# Regression guard: the three sibling estimators must STILL render the
+# event-study section in print() and print(summary()) -- proving the
+# `include_event_study` default stayed TRUE for them (#58).
+test_that("etwfe and betwfe still show the event-study section (gate default TRUE)", {
+	sim <- .twfeCovs_method_sim()
+
+	et <- etwfeWithSimulatedData(sim)
+	et_print <- paste(capture.output(print(et)), collapse = "\n")
+	et_summary <- paste(capture.output(print(summary(et))), collapse = "\n")
+	expect_match(et_print, "Event-Study", fixed = TRUE)
+	expect_match(et_summary, "Event Study", fixed = TRUE)
+
+	bt <- betwfeWithSimulatedData(sim)
+	bt_print <- paste(capture.output(print(bt)), collapse = "\n")
+	bt_summary <- paste(capture.output(print(summary(bt))), collapse = "\n")
+	expect_match(bt_print, "Event-Study", fixed = TRUE)
+	expect_match(bt_summary, "Event Study", fixed = TRUE)
+})

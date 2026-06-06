@@ -4,8 +4,12 @@
 \alias{twfeCovs-class}
 \title{TWFE-With-Covariates Output Class}
 \description{
-S3 class for the output of \code{twfeCovs()}. Minimal
-surface (coef + a bare print that preserves the pre-#76 behavior
-of just dumping the list); a full styled \code{print} / \code{summary}
-like the three sibling estimators is a separate follow-up.
+S3 class for the output of \code{twfeCovs()}. Carries the same
+styled \code{print} / \code{summary} / \code{coef} surface as the three
+sibling estimators, plus \code{tidy} / \code{glance} (broom) and
+\code{simultaneousCIs}. \code{plot} and \code{augment} are intentionally
+not provided: \code{twfeCovs()} estimates one pooled effect per cohort, so
+it has no per-(cohort, time) / event-study basis to plot, and its
+coefficient vector is in a reduced basis that \code{augment()}'s
+fitted-value path does not match (#58). Both raise an informative error.
 }
