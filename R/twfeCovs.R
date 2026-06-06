@@ -612,7 +612,7 @@ twfeCovs <- function(
 #'   coefs <- genCoefs(G = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
 #'
 #'   # Simulate data using the coefficients
-#'   sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5)
+#'   sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5, seed = 123)
 #'
 #'   result <- twfeCovsWithSimulatedData(sim_data)
 #' }

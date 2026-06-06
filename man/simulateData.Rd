@@ -10,7 +10,8 @@ simulateData(
   sig_eps_sq,
   sig_eps_c_sq,
   distribution = "gaussian",
-  guarantee_rank_condition = FALSE
+  guarantee_rank_condition = FALSE,
+  seed = NULL
 )
 }
 \arguments{
@@ -33,6 +34,14 @@ from \eqn{[-\sqrt{3}, \sqrt{3}]}.}
 data set is guaranteed to have at least \code{d + 1} units per cohort, which is
 necessary for the final design matrix to have full column rank. Default is
 FALSE, in which case no such condition is enforced.}
+
+\item{seed}{(Optional) Controls the random-number generator for the simulated
+panel. As of fetwfe 1.24.0 the default is \code{NULL}, which draws from the
+ambient random-number generator (respecting any preceding \code{set.seed()})
+and emits a warning; pass an integer for a reproducible panel, or \code{NA}
+to draw from the ambient generator silently. \code{simulateData()} no longer
+reuses \code{coefs_obj$seed} (the seed \code{genCoefs()} used to build the
+coefficients). Default \code{NULL}.}
 }
 \value{
 An object of class \code{"FETWFE_simulated"}, which is a list containing:
@@ -84,12 +93,15 @@ along with additional simulation parameters, to the internal function \code{simu
 It validates that all necessary components are returned and assigns the S3 class
 \code{"FETWFE_simulated"} to the output.
 
-The simulated panel is fully determined by \code{coefs_obj$seed} (the seed
-passed to \code{genCoefs()}): \code{simulateData()} re-seeds from it on every
-call, so re-calling \code{simulateData()} on the same \code{coefs_obj}
-returns the identical panel. To vary the panel across Monte Carlo
-replications, vary the \code{seed} passed to \code{genCoefs()} (re-calling
-\code{simulateData()} alone does not).
+The random draw is controlled by the \code{seed} argument, not by
+\code{coefs_obj$seed}. By default (\code{seed = NULL}) \code{simulateData()}
+draws from the ambient random-number generator (so a preceding
+\code{set.seed()} is respected and repeated calls return different panels) and
+emits a warning noting that this default changed in fetwfe 1.24.0. Pass an
+integer \code{seed} for a reproducible panel (the same integer always yields
+the same panel), or \code{seed = NA} to use the ambient generator without the
+warning. To vary the panel across Monte Carlo replications, pass a different
+\code{seed} each replication.
 
 The argument \code{distribution} controls the generation of covariates. For
 \code{"gaussian"}, covariates are drawn from \code{rnorm}; for \code{"uniform"},

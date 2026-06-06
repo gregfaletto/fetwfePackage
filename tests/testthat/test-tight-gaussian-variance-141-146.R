@@ -41,7 +41,8 @@ test_that("default `att_se` is the tight Gaussian variance sqrt(V1 + V2)", {
 		sim_coefs,
 		N = 80,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = 141
 	)
 
 	res <- fetwfe(
@@ -84,7 +85,8 @@ test_that("se_type = 'conservative' recovers the Cauchy-Schwarz bound (pre-v1.12
 		sim_coefs,
 		N = 80,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = 141
 	)
 
 	common_args <- list(
@@ -138,7 +140,8 @@ test_that("variance_components block exposes paper-notation V_1, V_2, and tilde_
 		sim_coefs,
 		N = 80,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = 141
 	)
 
 	res <- fetwfe(
@@ -221,7 +224,8 @@ test_that("variance_components block: conservative se_type swaps the headline ti
 		sim_coefs,
 		N = 80,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = 141
 	)
 
 	res_def <- fetwfe(
@@ -288,7 +292,8 @@ test_that("variance_components block: indep_counts path uses tight formula regar
 		sim_coefs,
 		N = 80,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = 141
 	)
 
 	# fetwfeWithSimulatedData passes indep_counts (from the simulator).
@@ -331,7 +336,8 @@ test_that("variance_components block: q >= 1 path returns NA-filled slots", {
 		sim_coefs,
 		N = 80,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = 141
 	)
 
 	res <- fetwfeWithSimulatedData(sim, q = 2)
@@ -367,7 +373,8 @@ test_that("etwfe, betwfe, twfeCovs all expose the variance_components block", {
 		sim_coefs,
 		N = 80,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = 141
 	)
 
 	fits <- list(
@@ -451,7 +458,8 @@ test_that("tight Gaussian default delivers near-nominal 95% CI coverage on simul
 			coefs,
 			N = N_per,
 			sig_eps_sq = 1,
-			sig_eps_c_sq = 0.5
+			sig_eps_c_sq = 0.5,
+			seed = seed_i
 		)
 
 		# Population ATT is `cohort_tes %*% pi_cond`, with `pi_cond` the
@@ -560,7 +568,13 @@ test_that("tight-Gaussian default works when variance components are REML-estima
 		eff_size = 2,
 		seed = 141
 	)
-	sim <- simulateData(sim_coefs, N = 80, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+	sim <- simulateData(
+		sim_coefs,
+		N = 80,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = 141
+	)
 
 	res <- suppressWarnings(fetwfe(
 		pdata = sim$pdata,

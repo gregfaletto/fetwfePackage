@@ -171,7 +171,8 @@ test_that("event_study recovers event-time-structured truth better than default 
 				coefs,
 				N = 300,
 				sig_eps_sq = 1,
-				sig_eps_c_sq = 0.5
+				sig_eps_c_sq = 0.5,
+				seed = sd
 			)
 			fit_d <- suppressWarnings(fetwfeWithSimulatedData(
 				sim,
@@ -204,7 +205,8 @@ test_that("event_study composes with d=0 / cluster / add_ridge; default is byte-
 		genCoefs(G = 3, T = 5, d = 2, density = 0.5, eff_size = 2, seed = 11),
 		N = 150,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = 11
 	)
 	# Byte-identity guard: fusion_structure = "cohort" == omitting it.
 	f_omit <- suppressWarnings(fetwfeWithSimulatedData(
@@ -224,7 +226,8 @@ test_that("event_study composes with d=0 / cluster / add_ridge; default is byte-
 		genCoefs(G = 3, T = 5, d = 0, density = 0.5, eff_size = 2, seed = 12),
 		N = 150,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = 12
 	)
 	f0 <- suppressWarnings(fetwfeWithSimulatedData(
 		sim0,
@@ -263,7 +266,8 @@ test_that("event_study fit produces well-formed accessor output (#40)", {
 		genCoefs(G = 2L, T = 4L, d = 1L, density = 0.5, eff_size = 2, seed = 7),
 		N = 150,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = 7
 	)
 	fit <- suppressWarnings(fetwfeWithSimulatedData(
 		sim,

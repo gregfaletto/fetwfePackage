@@ -30,6 +30,13 @@
 #' data set is guaranteed to have at least `d + 1` units per cohort, which is
 #' necessary for the final design matrix to have full column rank. Default is
 #' FALSE, in which case no such condition is enforced.
+#' @param seed (Optional) Controls the random-number generator for the simulated
+#'   panel. As of fetwfe 1.24.0 the default is \code{NULL}, which draws from the
+#'   ambient random-number generator (respecting any preceding \code{set.seed()})
+#'   and emits a warning; pass an integer for a reproducible panel, or \code{NA}
+#'   to draw from the ambient generator silently. \code{simulateData()} no longer
+#'   reuses \code{coefs_obj$seed} (the seed \code{genCoefs()} used to build the
+#'   coefficients). Default \code{NULL}.
 #'
 #' @return An object of class \code{"FETWFE_simulated"}, which is a list containing:
 #' \describe{
@@ -67,12 +74,15 @@
 #' It validates that all necessary components are returned and assigns the S3 class
 #' \code{"FETWFE_simulated"} to the output.
 #'
-#' The simulated panel is fully determined by \code{coefs_obj$seed} (the seed
-#' passed to \code{genCoefs()}): \code{simulateData()} re-seeds from it on every
-#' call, so re-calling \code{simulateData()} on the same \code{coefs_obj}
-#' returns the identical panel. To vary the panel across Monte Carlo
-#' replications, vary the \code{seed} passed to \code{genCoefs()} (re-calling
-#' \code{simulateData()} alone does not).
+#' The random draw is controlled by the \code{seed} argument, not by
+#' \code{coefs_obj$seed}. By default (\code{seed = NULL}) \code{simulateData()}
+#' draws from the ambient random-number generator (so a preceding
+#' \code{set.seed()} is respected and repeated calls return different panels) and
+#' emits a warning noting that this default changed in fetwfe 1.24.0. Pass an
+#' integer \code{seed} for a reproducible panel (the same integer always yields
+#' the same panel), or \code{seed = NA} to use the ambient generator without the
+#' warning. To vary the panel across Monte Carlo replications, pass a different
+#' \code{seed} each replication.
 #'
 #' The argument \code{distribution} controls the generation of covariates. For
 #' \code{"gaussian"}, covariates are drawn from \code{rnorm}; for \code{"uniform"},
@@ -104,7 +114,8 @@ simulateData <- function(
 	sig_eps_sq,
 	sig_eps_c_sq,
 	distribution = "gaussian",
-	guarantee_rank_condition = FALSE
+	guarantee_rank_condition = FALSE,
+	seed = NULL
 ) {
 	if (!inherits(coefs_obj, "FETWFE_coefs")) {
 		stop("coefs_obj must be an object of class 'FETWFE_coefs'")
@@ -128,7 +139,23 @@ simulateData <- function(
 	T <- coefs_obj$T
 	d <- coefs_obj$d
 	beta <- coefs_obj$beta
-	seed <- coefs_obj$seed
+	# Resolve the noise-draw seed (#250). As of 1.24.0 simulateData() no longer
+	# reuses coefs_obj$seed: the default (NULL) draws from the ambient RNG with a
+	# warning, `seed = NA` draws from the ambient RNG silently, and a numeric seed
+	# re-seeds for a reproducible panel. NA must map to NULL here because
+	# set.seed(NA) errors; simulateDataCore() skips set.seed() when seed is NULL.
+	if (is.null(seed)) {
+		warning(
+			"As of fetwfe 1.24.0, simulateData() draws from the ambient random-number generator by default and no longer reuses coefs_obj$seed. Pass an integer to `seed` for a reproducible panel, or seed = NA to use the ambient generator without this warning."
+		)
+		effective_seed <- NULL
+	} else if (length(seed) == 1 && is.na(seed)) {
+		effective_seed <- NULL
+	} else if (is.numeric(seed) && length(seed) == 1) {
+		effective_seed <- seed
+	} else {
+		stop("seed must be NULL, NA, or a single numeric value")
+	}
 	# Backward-compat: saved-from-v1.13.x FETWFE_coefs objects don't have
 	# these slots; coerce a missing $assignment_type to "marginal" so the
 	# upgrade path doesn't crash on match.arg(NULL, c(...)) downstream.
@@ -147,7 +174,7 @@ simulateData <- function(
 		sig_eps_sq = sig_eps_sq,
 		sig_eps_c_sq = sig_eps_c_sq,
 		beta = beta,
-		seed = seed,
+		seed = effective_seed,
 		gen_ints = TRUE,
 		distribution = distribution,
 		guarantee_rank_condition = guarantee_rank_condition,

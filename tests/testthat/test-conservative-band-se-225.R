@@ -21,7 +21,7 @@ library(fetwfe)
 # second variance component Sigma_2 (hence v2) is strictly positive there.
 .cs_sim_225 <- local({
 	sc <- genCoefs(G = 4, T = 6, d = 2, density = 0.5, eff_size = 1.5, seed = 7)
-	simulateData(sc, N = 120, sig_eps_sq = 2, sig_eps_c_sq = 1)
+	simulateData(sc, N = 120, sig_eps_sq = 2, sig_eps_c_sq = 1, seed = 7)
 })
 
 .cs_fit_225 <- function(se_type) {

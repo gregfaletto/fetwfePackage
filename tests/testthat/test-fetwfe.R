@@ -921,11 +921,13 @@ test_that("tibbles work as input to fewtfe", {
 test_that("fetwfe surfaces p_value and selected in catt_df", {
 	set.seed(2026)
 	sim <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+	# coefs built without a seed: continue the ambient RNG (seed = NA, #250).
 	dat <- simulateData(
 		sim,
 		N = 120,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = NA
 	)
 	res <- fetwfeWithSimulatedData(dat, verbose = FALSE)
 
@@ -961,11 +963,13 @@ test_that("fetwfe surfaces p_value and selected in catt_df", {
 test_that("fetwfe produces at least one selected-out cohort in a sparse simulation", {
 	set.seed(2026)
 	sim <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+	# coefs built without a seed: continue the ambient RNG (seed = NA, #250).
 	dat <- simulateData(
 		sim,
 		N = 120,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = NA
 	)
 	res <- fetwfeWithSimulatedData(dat, verbose = FALSE)
 
@@ -981,11 +985,13 @@ test_that("order_by = 'pvalue' sorts CATT by ascending p_value with NAs last", {
 	# ascending sort AND the NA-last placement, not just one or the other.
 	set.seed(2026)
 	sim <- genCoefs(G = 4, T = 6, d = 2, density = 0.3, eff_size = 2)
+	# coefs built without a seed: continue the ambient RNG (seed = NA, #250).
 	dat <- simulateData(
 		sim,
 		N = 120,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = NA
 	)
 	res <- fetwfeWithSimulatedData(dat, verbose = FALSE)
 
@@ -1117,17 +1123,26 @@ test_that("fetwfe errors cleanly when no-never-treated truncation would yield 0 
 make_se_type_panel <- function(seed = 2026, N = 120) {
 	set.seed(seed)
 	sim_coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
-	simulateData(sim_coefs, N = N, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+	# coefs built without a seed: continue the ambient RNG (seed = NA, #250).
+	simulateData(
+		sim_coefs,
+		N = N,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = NA
+	)
 }
 
 make_ar1_panel <- function(seed = 7, N = 150, rho = 0.85, sd_e = 1) {
 	set.seed(seed)
 	sim_coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+	# coefs built without a seed: continue the ambient RNG (seed = NA, #250).
 	sim <- simulateData(
 		sim_coefs,
 		N = N,
 		sig_eps_sq = 0.5,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = NA
 	)
 	pdata <- sim$pdata
 	pdata <- pdata[order(pdata$unit, pdata$time), ]
@@ -1211,7 +1226,8 @@ test_that("fetwfe runs end-to-end with REML estimation + cluster SE", {
 		sim_coefs,
 		N = 150,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = 20260519
 	)
 
 	# Crucially: leave sig_eps_sq / sig_eps_c_sq at NA so REML runs.
@@ -1283,7 +1299,8 @@ test_that("fetwfe runs and gives sensible output with zero covariates", {
 		sim_coefs,
 		N = 120,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = 2026
 	)
 
 	res <- fetwfeWithSimulatedData(sim_data)

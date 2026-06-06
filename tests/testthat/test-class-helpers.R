@@ -39,7 +39,14 @@
 .make_minimal_obj <- function(klass) {
 	set.seed(2026)
 	coefs <- genCoefs(G = 5, T = 7, d = 0, density = 0.5, eff_size = 1)
-	sim <- simulateData(coefs, N = 80, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+	# coefs built without a seed: continue the ambient RNG (seed = NA, #250).
+	sim <- simulateData(
+		coefs,
+		N = 80,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = NA
+	)
 	obj <- switch(
 		klass,
 		fetwfe = fetwfeWithSimulatedData(sim, q = 0.5),

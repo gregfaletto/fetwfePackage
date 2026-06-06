@@ -824,7 +824,8 @@ test_that("etwfeWithSimulatedData end-to-end unchanged after processCovs rewrite
 		coefs,
 		N = 60,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = 20260519
 	)
 	res <- etwfeWithSimulatedData(sim)
 	# Smoke check: the rewrite doesn't introduce NaN/Inf on the standard
@@ -1169,11 +1170,13 @@ test_that("etwfe throws error when a cohort contains fewer than d + 1 units", {
 test_that("etwfe surfaces p_value but not selected in catt_df", {
 	set.seed(2026)
 	sim <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+	# coefs built without a seed: continue the ambient RNG (seed = NA, #250).
 	dat <- simulateData(
 		sim,
 		N = 120,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = NA
 	)
 	res <- etwfeWithSimulatedData(dat, verbose = FALSE)
 
@@ -1286,17 +1289,26 @@ test_that("etwfe errors cleanly when no-never-treated truncation would yield < 2
 make_se_type_panel <- function(seed = 2026, N = 120) {
 	set.seed(seed)
 	sim_coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
-	simulateData(sim_coefs, N = N, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+	# coefs built without a seed: continue the ambient RNG (seed = NA, #250).
+	simulateData(
+		sim_coefs,
+		N = N,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = NA
+	)
 }
 
 make_ar1_panel <- function(seed = 7, N = 150, rho = 0.85, sd_e = 1) {
 	set.seed(seed)
 	sim_coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
+	# coefs built without a seed: continue the ambient RNG (seed = NA, #250).
 	sim <- simulateData(
 		sim_coefs,
 		N = N,
 		sig_eps_sq = 0.5,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = NA
 	)
 	pdata <- sim$pdata
 	pdata <- pdata[order(pdata$unit, pdata$time), ]

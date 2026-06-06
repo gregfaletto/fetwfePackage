@@ -16,7 +16,8 @@
 		genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2, seed = seed),
 		N = 120,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = seed
 	)
 	list(
 		sim = sim,
@@ -165,7 +166,8 @@ test_that("eventStudy respects calc_ses under se_type='cluster' × q=1", {
 		genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2, seed = 1),
 		N = 200,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = 1
 	)
 	res <- suppressWarnings(
 		fetwfeWithSimulatedData(sim, q = 1, se_type = "cluster")

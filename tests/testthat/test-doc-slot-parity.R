@@ -119,7 +119,8 @@ test_that("public estimator @return blocks match live names()", {
 		coefs,
 		N = 120,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = 20260517
 	)
 
 	cases <- list(
@@ -437,7 +438,8 @@ test_that("eventStudy() @return matches live names() across estimator classes (#
 		coefs,
 		N = 120,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = 20260517
 	)
 
 	fits <- list(
@@ -500,7 +502,8 @@ test_that("tidy.eventStudy() schema is locked across conf.int branches (#84 item
 		coefs,
 		N = 120,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = 20260517
 	)
 
 	fits <- list(

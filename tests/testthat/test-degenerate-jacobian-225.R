@@ -32,7 +32,7 @@ library(fetwfe)
 # ---------------------------------------------------------------------------
 .deg_sim_225 <- local({
 	sc <- genCoefs(G = 3, T = 5, d = 2, density = 0.5, eff_size = 0, seed = 1)
-	simulateData(sc, N = 60, sig_eps_sq = 5, sig_eps_c_sq = 1)
+	simulateData(sc, N = 60, sig_eps_sq = 5, sig_eps_c_sq = 1, seed = 1)
 })
 
 .deg_fit_225 <- suppressMessages(fetwfe(
@@ -106,7 +106,7 @@ test_that("simultaneousCIs() K=0 degenerate branch returns collapsed point bands
 # ---------------------------------------------------------------------------
 .var2_sim_225 <- local({
 	sc <- genCoefs(G = 3, T = 5, d = 2, density = 0.6, eff_size = 2, seed = 11)
-	simulateData(sc, N = 150, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+	simulateData(sc, N = 150, sig_eps_sq = 1, sig_eps_c_sq = 0.5, seed = 11)
 })
 
 .var2_fit_225 <- suppressMessages(etwfe(

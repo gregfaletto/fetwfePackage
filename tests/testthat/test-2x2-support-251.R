@@ -330,7 +330,13 @@ test_that("genCoefs and simulateData round-trip at T = 2", {
 	# Overall ATT equals the lone cohort's single-period effect.
 	expect_equal(tes$att_true, tes$actual_cohort_tes[1])
 
-	sim <- simulateData(coefs, N = 400, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+	sim <- simulateData(
+		coefs,
+		N = 400,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = 251
+	)
 	expect_equal(sim$G, 1)
 	expect_equal(sim$T, 2)
 	expect_s3_class(sim$pdata, "data.frame")

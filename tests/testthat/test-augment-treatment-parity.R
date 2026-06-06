@@ -33,7 +33,8 @@ if (!requireNamespace("broom", quietly = TRUE)) {
 		coefs,
 		N = 120,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = seed
 	)
 	pdata <- sim$pdata
 

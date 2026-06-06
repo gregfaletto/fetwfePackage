@@ -53,7 +53,13 @@ test_that("marginal DGP: byte-identical to v1.13.x at default assignment_type", 
 	expect_identical(coefs$assignment_type, "marginal")
 	expect_null(coefs$assignment_coefs)
 
-	sim <- simulateData(coefs, N = 100, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+	sim <- simulateData(
+		coefs,
+		N = 100,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = 42
+	)
 	expect_equal(nrow(sim$pdata), 100 * 5)
 	expect_identical(sim$assignments, c(31L, 29L, 18L, 22L))
 	expect_identical(sim$indep_counts, c(24L, 30L, 19L, 27L))
@@ -81,7 +87,13 @@ test_that("multinomial DGP: empirical cohort proportions converge to MC expectat
 		assignment_strength = 1.0,
 		seed = 42
 	)
-	sim <- simulateData(coefs, N = 10000, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+	sim <- simulateData(
+		coefs,
+		N = 10000,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = 42
+	)
 	empirical_probs <- sim$assignments / sum(sim$assignments)
 	expected_probs <- fetwfe:::.expected_cohort_probs(
 		coefs$assignment_coefs,
@@ -116,7 +128,13 @@ test_that("ordered DGP: empirical cohort proportions match cutpoint structure", 
 		assignment_strength = 1.0,
 		seed = 42
 	)
-	sim <- simulateData(coefs, N = 10000, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+	sim <- simulateData(
+		coefs,
+		N = 10000,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = 42
+	)
 	empirical_probs <- sim$assignments / sum(sim$assignments)
 	expect_equal(
 		as.numeric(empirical_probs),
@@ -147,7 +165,8 @@ test_that("FETWFE smoke test: fits run cleanly on multinomial and ordered DGPs",
 			coefs,
 			N = 200,
 			sig_eps_sq = 1,
-			sig_eps_c_sq = 0.5
+			sig_eps_c_sq = 0.5,
+			seed = 42
 		)
 		fit <- suppressWarnings(fetwfe(
 			pdata = sim$pdata,
@@ -275,7 +294,8 @@ test_that("interactions-augmented multinomial DGP injects propensity nonlinearit
 		coefs,
 		N = 5000,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = 42
 	))
 	# Per-unit cohort labels (first observation per unit; treatment is an
 	# absorbing state, so the unit's cohort is encoded in the panel's
@@ -409,7 +429,8 @@ test_that("ordered DGP with interactions preserves marginal uniformity + baselin
 		coefs,
 		N = 10000,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = 42
 	))
 	empirical_probs <- sim_ord$assignments / sum(sim_ord$assignments)
 	max_dev <- max(abs(as.numeric(empirical_probs) - 1 / 4))
@@ -432,7 +453,8 @@ test_that("ordered DGP with interactions preserves marginal uniformity + baselin
 		coefs_baseline,
 		N = 10000,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = 42
 	))
 	diff_means <- mean(abs(
 		as.numeric(sim_ord$assignments) -
@@ -594,7 +616,8 @@ test_that("v1.14.0 FETWFE_coefs round-trips through simulateData + getTes (#191)
 			mock,
 			N = 100,
 			sig_eps_sq = 1,
-			sig_eps_c_sq = 0.5
+			sig_eps_c_sq = 0.5,
+			seed = 42L
 		))
 	)
 	tes <- expect_no_error(getTes(mock))

@@ -57,9 +57,9 @@ test_that("BETWFE SE/SD ratio is ~1 under partial selection (MC)", {
 	# `density = 0.5` controls the sparsity in genCoefs internally; the
 	# `eff_size = 4` and `sig_eps_sq = 1` combination gives a clear SNR.
 	#
-	# Critical: simulateData(coefs_obj) reads coefs_obj$seed and calls
-	# set.seed() internally. Wrapping the loop in set.seed(i) does NOT
-	# vary noise across reps. Must mutate coefs_obj$seed.
+	# Critical: as of #250 the panel RNG is controlled by the `seed`
+	# argument to simulateData(), not by coefs_obj$seed. Pass a distinct
+	# `seed = 8000L + i` per rep to vary the noise across replications.
 	coefs_template <- genCoefs(
 		G = 2,
 		T = 5,
@@ -76,13 +76,12 @@ test_that("BETWFE SE/SD ratio is ~1 under partial selection (MC)", {
 	att_se <- numeric(n_reps)
 
 	for (i in seq_len(n_reps)) {
-		coefs_i <- coefs_template
-		coefs_i$seed <- 8000L + i
 		sim <- simulateData(
-			coefs_i,
+			coefs_template,
 			N = 300,
 			sig_eps_sq = 1,
-			sig_eps_c_sq = 1
+			sig_eps_c_sq = 1,
+			seed = 8000L + i
 		)
 		res <- betwfeWithSimulatedData(sim)
 		catt_hat_1[i] <- res$catt_df[["estimate"]][1]

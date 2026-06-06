@@ -179,7 +179,7 @@
 #'   coefs <- genCoefs(G = 5, T = 30, d = 12, density = 0.1, eff_size = 2, seed = 123)
 #'
 #'   # Simulate data using the coefficients
-#'   sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5)
+#'   sim_data <- simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5, seed = 123)
 #'
 #'   # Event-study-sparse truth: treatment effects that share the same time
 #'   # since treatment are fused across cohorts (the simulation-side companion
@@ -195,7 +195,7 @@
 #'     assignment_type = "multinomial", assignment_strength = 1.0,
 #'     seed = 123
 #'   )
-#'   sim_mn <- simulateData(coefs_mn, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5)
+#'   sim_mn <- simulateData(coefs_mn, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5, seed = 123)
 #'
 #'   # Covariate-dependent cohort assignment with nonlinear propensity
 #'   # (multinomial-logit + a single x1*x2 interaction term in the propensity

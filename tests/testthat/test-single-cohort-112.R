@@ -68,7 +68,13 @@
 		seed = seed
 	)
 	tes <- getTes(coefs)
-	sim <- simulateData(coefs, N = N, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+	sim <- simulateData(
+		coefs,
+		N = N,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = seed
+	)
 	list(sim = sim, att_true = tes$att_true)
 }
 
@@ -504,7 +510,13 @@ test_that("genCoefs and simulateData round-trip at G = 1", {
 	# Overall ATT equals the lone cohort's effect.
 	expect_equal(tes$att_true, tes$actual_cohort_tes[1])
 
-	sim <- simulateData(coefs, N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+	sim <- simulateData(
+		coefs,
+		N = 120,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = 4242
+	)
 	expect_equal(sim$G, 1)
 	expect_s3_class(sim$pdata, "data.frame")
 	# One treated cohort -> exactly one unique post-adoption start time among

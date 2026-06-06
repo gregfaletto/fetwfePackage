@@ -234,7 +234,8 @@ test_that("cluster-SE fit on well-conditioned data does not trigger the diagnost
 		coefs,
 		N = 80,
 		sig_eps_sq = 0.5,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = 2026
 	)
 	# Run the fit; assert no warning at all surfaces with the message
 	# pattern from `.floor_cluster_quad()`. (Other unrelated warnings are

@@ -23,7 +23,8 @@
 		genCoefs(G = 2, T = 3, d = 2, density = 0.5, eff_size = 1, seed = seed),
 		N = 80,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = seed
 	)
 	list(
 		sim = sim,
@@ -76,7 +77,8 @@ test_that("validators accept well-formed all-zero-theta fallback objects", {
 		),
 		N = 30,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		seed = 42
 	)
 	res <- suppressWarnings(fetwfeWithSimulatedData(sim_small, q = 0.5))
 	# Confirm this IS the all-zero-theta path (skip if seed picked a

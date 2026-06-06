@@ -146,7 +146,7 @@ event_time <- unlist(lapply(n_k, function(nk) 0:(nk - 1)))
 # The true per-cell treatment effects, generated natively (not hand-built).
 true_te <- coefs$beta[treat_inds]
 
-sim <- simulateData(coefs, N = N, sig_eps_sq = 1, sig_eps_c_sq = 0.5)
+sim <- simulateData(coefs, N = N, sig_eps_sq = 1, sig_eps_c_sq = 0.5, seed = 10)
 ```
 
 Now fit the same simulated panel under each fusion structure:

@@ -232,7 +232,8 @@ test_that("betwfe(add_ridge = TRUE) numerical regression: att_hat matches post-f
 		coefs,
 		N = 60,
 		sig_eps_sq = 16,
-		sig_eps_c_sq = 8
+		sig_eps_c_sq = 8,
+		seed = 42
 	)
 	# Pin to BIC because the recorded reference value below was generated
 	# under the BIC selection path (v1.12.0 and earlier). The v1.13.0+
