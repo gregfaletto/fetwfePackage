@@ -182,12 +182,12 @@ that was used, if a value wasn't provided. (This is returned to help with
 getting a reasonable range of \code{lambda} values for grid search.)}
 \item{lambda.max_model_size}{The size of the selected model corresponding
 \code{lambda.max} (for \code{q <= 1}, this will be the smallest model size). As
-mentioned above, for \code{q <= 1} ideally this value is close to 0.}
+mentioned above, for \code{q <= 1} ideally this value is close to 1 (the intercept-only model, as the reported size counts the intercept).}
 \item{lambda.min}{Either the provided \code{lambda.min} or the one
 that was used, if a value wasn't provided.} \item{lambda.min_model_size}{The
 size of the selected model corresponding to \code{lambda.min} (for \code{q <= 1}, this
 will be the largest model size). As mentioned above, for \code{q <= 1} ideally
-this value is close to \code{p}.}\item{lambda_star}{The value of \code{lambda} chosen
+this value is close to \code{p + 1} (all \code{p} features plus the intercept).}\item{lambda_star}{The value of \code{lambda} chosen
 by the method recorded in \code{lambda_selection}. If this value is close to
 \code{lambda.min} or \code{lambda.max}, that could suggest that the range of
 \code{lambda} values should be expanded.}

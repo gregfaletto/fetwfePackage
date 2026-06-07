@@ -209,12 +209,12 @@
 #' getting a reasonable range of `lambda` values for grid search.)}
 #' \item{lambda.max_model_size}{The size of the selected model corresponding
 #' `lambda.max` (for `q <= 1`, this will be the smallest model size). As
-#' mentioned above, for `q <= 1` ideally this value is close to 0.}
+#' mentioned above, for `q <= 1` ideally this value is close to 1 (the intercept-only model, as the reported size counts the intercept).}
 #' \item{lambda.min}{Either the provided `lambda.min` or the one
 #' that was used, if a value wasn't provided.} \item{lambda.min_model_size}{The
 #' size of the selected model corresponding to `lambda.min` (for `q <= 1`, this
 #' will be the largest model size). As mentioned above, for `q <= 1` ideally
-#' this value is close to `p`.}\item{lambda_star}{The value of `lambda` chosen
+#' this value is close to `p + 1` (all `p` features plus the intercept).}\item{lambda_star}{The value of `lambda` chosen
 #' by the method recorded in `lambda_selection`. If this value is close to
 #' `lambda.min` or `lambda.max`, that could suggest that the range of
 #' `lambda` values should be expanded.}
@@ -726,12 +726,12 @@ betwfe <- function(
 #' getting a reasonable range of `lambda` values for grid search.)}
 #' \item{lambda.max_model_size}{The size of the selected model corresponding
 #' `lambda.max` (for `q <= 1`, this will be the smallest model size). As
-#' mentioned above, for `q <= 1` ideally this value is close to 0.}
+#' mentioned above, for `q <= 1` ideally this value is close to 1 (the intercept-only model, as the reported size counts the intercept).}
 #' \item{lambda.min}{Either the provided `lambda.min` or the one
 #' that was used, if a value wasn't provided.} \item{lambda.min_model_size}{The
 #' size of the selected model corresponding to `lambda.min` (for `q <= 1`, this
 #' will be the largest model size). As mentioned above, for `q <= 1` ideally
-#' this value is close to `p`.}\item{lambda_star}{The value of `lambda` chosen
+#' this value is close to `p + 1` (all `p` features plus the intercept).}\item{lambda_star}{The value of `lambda` chosen
 #' by the method recorded in `lambda_selection`. If this value is close to
 #' `lambda.min` or `lambda.max`, that could suggest that the range of
 #' `lambda` values should be expanded.}

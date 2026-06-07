@@ -219,9 +219,9 @@
 #' \item{sig_eps_sq}{Either the provided `sig_eps_sq` or the estimated one, if a value wasn't provided.}
 #' \item{sig_eps_c_sq}{Either the provided `sig_eps_c_sq` or the estimated one, if a value wasn't provided.}
 #' \item{lambda.max}{Either the provided `lambda.max` or the one that was used, if a value wasn't provided. (This is returned to help with getting a reasonable range of `lambda` values for grid search.)}
-#' \item{lambda.max_model_size}{The size of the selected model corresponding to `lambda.max` (for `q <= 1`, this will be the smallest model size). As mentioned above, for `q <= 1` ideally this value is close to 0.}
+#' \item{lambda.max_model_size}{The size of the selected model corresponding to `lambda.max` (for `q <= 1`, this will be the smallest model size). As mentioned above, for `q <= 1` ideally this value is close to 1 (the intercept-only model, as the reported size counts the intercept).}
 #' \item{lambda.min}{Either the provided `lambda.min` or the one that was used, if a value wasn't provided.}
-#' \item{lambda.min_model_size}{The size of the selected model corresponding to `lambda.min` (for `q <= 1`, this will be the largest model size). As mentioned above, for `q <= 1` ideally this value is close to `p`.}
+#' \item{lambda.min_model_size}{The size of the selected model corresponding to `lambda.min` (for `q <= 1`, this will be the largest model size). As mentioned above, for `q <= 1` ideally this value is close to `p + 1` (all `p` features plus the intercept).}
 #' \item{lambda_star}{The value of `lambda` chosen by the selection method recorded in `lambda_selection`. If this value is close to `lambda.min` or `lambda.max`, that could suggest that the range of `lambda` values should be expanded.}
 #' \item{lambda_star_model_size}{The size of the model that was selected. If this value is close to `lambda.max_model_size` or `lambda.min_model_size`, that could suggest that the range of `lambda` values should be expanded.}
 #' \item{lambda_selection}{Character scalar; either `"cv"` (10-fold cross-validation on `cv.grpreg`; v1.13.0+ default) or `"bic"` (BIC over the `grpreg` lambda grid; the prior default). Mirrors the `lambda_selection` argument the user passed.}
@@ -771,9 +771,9 @@ fetwfe <- function(
 #' \item{sig_eps_sq}{Either the provided `sig_eps_sq` or the estimated one, if a value wasn't provided.}
 #' \item{sig_eps_c_sq}{Either the provided `sig_eps_c_sq` or the estimated one, if a value wasn't provided.}
 #' \item{lambda.max}{Either the provided `lambda.max` or the one that was used, if a value wasn't provided. (This is returned to help with getting a reasonable range of `lambda` values for grid search.)}
-#' \item{lambda.max_model_size}{The size of the selected model corresponding to `lambda.max` (for `q <= 1`, this will be the smallest model size). As mentioned above, for `q <= 1` ideally this value is close to 0.}
+#' \item{lambda.max_model_size}{The size of the selected model corresponding to `lambda.max` (for `q <= 1`, this will be the smallest model size). As mentioned above, for `q <= 1` ideally this value is close to 1 (the intercept-only model, as the reported size counts the intercept).}
 #' \item{lambda.min}{Either the provided `lambda.min` or the one that was used, if a value wasn't provided.}
-#' \item{lambda.min_model_size}{The size of the selected model corresponding to `lambda.min` (for `q <= 1`, this will be the largest model size). As mentioned above, for `q <= 1` ideally this value is close to `p`.}
+#' \item{lambda.min_model_size}{The size of the selected model corresponding to `lambda.min` (for `q <= 1`, this will be the largest model size). As mentioned above, for `q <= 1` ideally this value is close to `p + 1` (all `p` features plus the intercept).}
 #' \item{lambda_star}{The value of `lambda` chosen by the selection method recorded in `lambda_selection`. If this value is close to `lambda.min` or `lambda.max`, that could suggest that the range of `lambda` values should be expanded.}
 #' \item{lambda_star_model_size}{The size of the model that was selected. If this value is close to `lambda.max_model_size` or `lambda.min_model_size`, that could suggest that the range of `lambda` values should be expanded.}
 #' \item{lambda_selection}{Character scalar; either `"cv"` (10-fold cross-validation on `cv.grpreg`; v1.13.0+ default) or `"bic"` (BIC over the `grpreg` lambda grid; the prior default). Mirrors the `lambda_selection` argument the user passed.}

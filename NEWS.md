@@ -1,5 +1,16 @@
 # NEWS
 
+## Version 1.26.4
+
+### Documentation
+
+- Corrected the `lambda.max_model_size` / `lambda.min_model_size` return-value
+  documentation for `fetwfe()` and `betwfe()` (and their `*WithSimulatedData`
+  wrappers). The reported model size counts the (always-present) intercept, so for
+  `q <= 1` the smallest model size is 1 (the intercept-only model) and the largest
+  is `p + 1` (all `p` features plus the intercept). The help previously stated 0 and
+  `p`, omitting the intercept (#269).
+
 ## Version 1.26.3
 
 ### Bug fixes
