@@ -1,5 +1,19 @@
 # NEWS
 
+## Version 1.26.5
+
+### Bug fixes
+
+- `print.twfeCovs()` now accepts a `max_event_times` argument, for parity with the
+  other estimators' print methods, instead of erroring with "argument matched by
+  multiple actual arguments" when one was supplied. The argument is a no-op for
+  `twfeCovs` (its output has no event-study section) (#267).
+- `attgtToFetwfeDf()` / `etwfeToFetwfeDf()` now validate the `out_names` argument
+  (it must be a list containing the four keys `time`, `unit`, `treatment`, and
+  `response`) and raise a clear error naming that contract, instead of failing later
+  with a cryptic internal message — including the case of a named character vector,
+  which carries the right names but is indexed with `$` downstream (#268).
+
 ## Version 1.26.4
 
 ### Improvements
