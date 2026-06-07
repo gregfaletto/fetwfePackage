@@ -138,7 +138,11 @@ cohort_times <- getTes(coefs)$cohort_times # each cohort's first treated period
 n_k <- T - cohort_times + 1 # number of post-treatment effects per cohort
 num_treats <- sum(n_k)
 base_cols <- G + (T - 1) + d + d * G + d * (T - 1) # fixed effects + covariate terms
-treat_inds <- base_cols + seq_len(num_treats) # the tau block
+# `fetwfe()` reports these positions as an integer vector, so build `treat_inds`
+# as an integer too (the `base_cols` arithmetic above is double-typed) -- this
+# keeps the `identical()` cross-check below exact rather than tripping on storage
+# mode.
+treat_inds <- as.integer(base_cols + seq_len(num_treats)) # the tau block
 
 # Event time (time since treatment) of each tau, in the same order.
 event_time <- unlist(lapply(n_k, function(nk) 0:(nk - 1)))
