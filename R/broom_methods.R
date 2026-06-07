@@ -686,13 +686,9 @@ tidy.cohortStudy <- function(x, ...) {
 tidy.FETWFE_tes <- function(x, conf.int = TRUE, conf.level = 0.95, ...) {
 	stopifnot(conf.level > 0, conf.level < 1)
 	G <- length(x$actual_cohort_tes)
-	cohort_times <- if (!is.null(x$cohort_times)) {
-		x$cohort_times
-	} else {
-		# Fallback for pre-1.9.0 dev objects without the slot: use the
-		# simulator's convention that cohort g adopts at calendar time g + 1.
-		as.integer(seq_len(G) + 1L)
-	}
+	# Cohorts are labeled by calendar adoption time (#261), shared with
+	# print/summary.FETWFE_tes via .resolve_tes_cohort_times().
+	cohort_times <- .resolve_tes_cohort_times(x)
 	terms <- c("ATT_true", paste0("Cohort ", cohort_times))
 	estimates <- c(x$att_true, x$actual_cohort_tes)
 	out <- data.frame(

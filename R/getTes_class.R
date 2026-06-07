@@ -27,6 +27,18 @@ NULL
 	invisible(NULL)
 }
 
+# Resolve cohort labels for a FETWFE_tes (or summary.FETWFE_tes) object by
+# calendar adoption time (cohort g adopts at time g + 1), matching
+# tidy.FETWFE_tes() and the fitted estimators' catt_df$cohort (#261). Falls back
+# to the simulator convention for pre-1.9.0 objects lacking the slot.
+.resolve_tes_cohort_times <- function(x) {
+	if (!is.null(x$cohort_times)) {
+		x$cohort_times
+	} else {
+		as.integer(seq_along(x$actual_cohort_tes) + 1L)
+	}
+}
+
 #' @export
 print.FETWFE_tes <- function(x, ...) {
 	cat(
@@ -35,9 +47,14 @@ print.FETWFE_tes <- function(x, ...) {
 		sep = ""
 	)
 	cat(sprintf("Overall true ATT: %.4f\n\n", x$att_true))
+	cohort_times <- .resolve_tes_cohort_times(x)
 	cat("Cohort effects:\n")
 	for (g in seq_along(x$actual_cohort_tes)) {
-		cat(sprintf("  Cohort %d: %.4f\n", g, x$actual_cohort_tes[g]))
+		cat(sprintf(
+			"  Cohort %d: %.4f\n",
+			cohort_times[g],
+			x$actual_cohort_tes[g]
+		))
 	}
 	cat("\n")
 	.cat_tes_assignment_dgp(x)
@@ -67,6 +84,7 @@ summary.FETWFE_tes <- function(object, ...) {
 		d = object$d,
 		seed = object$seed,
 		cohort_weights = object$cohort_weights,
+		cohort_times = object$cohort_times,
 		assignment_type = object$assignment_type,
 		assignment_strength = object$assignment_strength,
 		cohort_te_stats = c(
@@ -87,9 +105,14 @@ print.summary.FETWFE_tes <- function(x, ...) {
 		sep = ""
 	)
 	cat(sprintf("Overall true ATT: %.4f\n\n", x$att_true))
+	cohort_times <- .resolve_tes_cohort_times(x)
 	cat("Cohort effects:\n")
 	for (g in seq_along(x$actual_cohort_tes)) {
-		cat(sprintf("  Cohort %d: %.4f\n", g, x$actual_cohort_tes[g]))
+		cat(sprintf(
+			"  Cohort %d: %.4f\n",
+			cohort_times[g],
+			x$actual_cohort_tes[g]
+		))
 	}
 	cat("\n")
 	cat("Cohort effect dispersion:\n")

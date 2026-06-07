@@ -1,5 +1,16 @@
 # NEWS
 
+## Version 1.26.2
+
+### Bug fixes
+
+- `print()` and `summary()` for the `FETWFE_tes` object returned by `getTes()`
+  now label cohorts by calendar adoption time (cohort `g` adopts at time `g + 1`),
+  matching `tidy.FETWFE_tes()` and the fitted estimators' `catt_df$cohort`.
+  Previously they used the 1-based loop index, so the same cohort showed as e.g.
+  "Cohort 1" under `print()` / `summary()` but "Cohort 2" under `tidy()`. The
+  convention now lives in one shared helper (#261).
+
 ## Version 1.26.1
 
 ### Documentation
