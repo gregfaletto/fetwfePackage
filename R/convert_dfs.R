@@ -281,6 +281,20 @@ etwfeToFetwfeDf <- function(
 	verbose = FALSE
 ) {
 	stopifnot(is.data.frame(data))
+	# Validate the `out_names` contract (#268): it must be a *list* (the assembly
+	# below uses `out_names$time` etc., so a named character vector would crash at
+	# `$` with "$ operator is invalid for atomic vectors") containing the four
+	# required keys. Without this, a missing or mistyped key surfaces only as a
+	# cryptic internal error ("select less than one element") that never mentions
+	# `out_names`.
+	out_names_required <- c("time", "unit", "treatment", "response")
+	if (!is.list(out_names) || !all(out_names_required %in% names(out_names))) {
+		stop(
+			"`out_names` must be a list containing the four names `time`, `unit`, ",
+			"`treatment`, and `response`.",
+			call. = FALSE
+		)
+	}
 	required <- unlist(vars, use.names = FALSE)
 	missing <- setdiff(c(required, covars), names(data))
 	if (length(missing)) {
