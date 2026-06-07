@@ -114,8 +114,9 @@ by hand).
 ```
 R/                  Package source, grouped by role (one file per unit):
   # Entry points + estimator cores
-    fetwfe.R              fetwfe()/etwfe() user API + wrappers; @import block.
+    fetwfe.R              fetwfe() user API + wrapper; @import block.
     fetwfe_core.R         Input checks + numerical core for fetwfe().
+    etwfe.R               etwfe() user API + wrapper.
     etwfe_core.R          Input checks + core for etwfe/betwfe/twfeCovs.
     betwfe_core.R         betwfe() API + bridge-penalized ETWFE core.
     twfeCovs.R            twfeCovs() API + core (biased; simulation only).

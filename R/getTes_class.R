@@ -39,14 +39,12 @@ NULL
 	}
 }
 
-#' @export
-print.FETWFE_tes <- function(x, ...) {
-	cat(
-		"True Treatment Effects (from FETWFE_coefs)\n",
-		"==========================================\n",
-		sep = ""
-	)
-	cat(sprintf("Overall true ATT: %.4f\n\n", x$att_true))
+# Render the "Cohort effects:" block shared by print.FETWFE_tes and
+# print.summary.FETWFE_tes (#270). Cohorts are labelled by adoption time via
+# .resolve_tes_cohort_times().
+#' @keywords internal
+#' @noRd
+.cat_tes_cohort_effects <- function(x) {
 	cohort_times <- .resolve_tes_cohort_times(x)
 	cat("Cohort effects:\n")
 	for (g in seq_along(x$actual_cohort_tes)) {
@@ -57,7 +55,14 @@ print.FETWFE_tes <- function(x, ...) {
 		))
 	}
 	cat("\n")
-	.cat_tes_assignment_dgp(x)
+	invisible(NULL)
+}
+
+# Render the "Generated from:" footer shared by print.FETWFE_tes and
+# print.summary.FETWFE_tes (#270).
+#' @keywords internal
+#' @noRd
+.cat_tes_generated_from <- function(x) {
 	cat("Generated from:\n")
 	cat(sprintf("  Cohorts (G)      : %d\n", x$G))
 	cat(sprintf("  Time periods (T) : %d\n", x$T))
@@ -66,6 +71,20 @@ print.FETWFE_tes <- function(x, ...) {
 		"  Seed             : %s\n",
 		if (is.null(x$seed)) "<none>" else as.character(x$seed)
 	))
+	invisible(NULL)
+}
+
+#' @export
+print.FETWFE_tes <- function(x, ...) {
+	cat(
+		"True Treatment Effects (from FETWFE_coefs)\n",
+		"==========================================\n",
+		sep = ""
+	)
+	cat(sprintf("Overall true ATT: %.4f\n\n", x$att_true))
+	.cat_tes_cohort_effects(x)
+	.cat_tes_assignment_dgp(x)
+	.cat_tes_generated_from(x)
 	invisible(x)
 }
 
@@ -105,16 +124,7 @@ print.summary.FETWFE_tes <- function(x, ...) {
 		sep = ""
 	)
 	cat(sprintf("Overall true ATT: %.4f\n\n", x$att_true))
-	cohort_times <- .resolve_tes_cohort_times(x)
-	cat("Cohort effects:\n")
-	for (g in seq_along(x$actual_cohort_tes)) {
-		cat(sprintf(
-			"  Cohort %d: %.4f\n",
-			cohort_times[g],
-			x$actual_cohort_tes[g]
-		))
-	}
-	cat("\n")
+	.cat_tes_cohort_effects(x)
 	cat("Cohort effect dispersion:\n")
 	cat(sprintf("  min    : %.4f\n", x$cohort_te_stats["min"]))
 	cat(sprintf("  max    : %.4f\n", x$cohort_te_stats["max"]))
@@ -129,13 +139,6 @@ print.summary.FETWFE_tes <- function(x, ...) {
 	))
 	cat("\n")
 	.cat_tes_assignment_dgp(x)
-	cat("Generated from:\n")
-	cat(sprintf("  Cohorts (G)      : %d\n", x$G))
-	cat(sprintf("  Time periods (T) : %d\n", x$T))
-	cat(sprintf("  Covariates (d)   : %d\n", x$d))
-	cat(sprintf(
-		"  Seed             : %s\n",
-		if (is.null(x$seed)) "<none>" else as.character(x$seed)
-	))
+	.cat_tes_generated_from(x)
 	invisible(x)
 }
