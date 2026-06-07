@@ -8,7 +8,7 @@ output:
     math_method: "mathml"
     output_file: "FETWFE_Simulation_Vignette.html"
 vignette: >
-  %\VignetteIndexEntry{FETWFE Simulation Vignette}
+  %\VignetteIndexEntry{Simulation Vignette for FETWFE: From Coefficients to True Treatment Effects}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
