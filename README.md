@@ -21,28 +21,36 @@ You can also install the latest development version by using
 remotes::install_github("gregfaletto/fetwfePackage")
 ```
 
-The primary function in the `{fetwfe}` is `fetwfe()`, which implements fused extended two-way fixed effects. Here's some example code applying `fetwfe()` to the `castle` data set from the `bacondecomp` package:
+The primary function in the `{fetwfe}` is `fetwfe()`, which implements fused extended two-way fixed effects. Here's some example code applying `fetwfe()` to the `divorce` data set from the `bacondecomp` package -- the unilateral ("no-fault") divorce / female-suicide panel of Stevenson and Wolfers (2006):
 
 ```R
 library(fetwfe)
 library(bacondecomp)
 
-data(castle)
+data(divorce)
 
-# Response: the log homicide rate. Treatment: `cdl` records the share of
-# the year the castle-doctrine law was in effect, so `cdl > 0` gives the
-# absorbing 0/1 treatment indicator `fetwfe()` requires.
-castle$l_homicide <- log(castle$homicide)
-castle$treated <- as.integer(castle$cdl > 0)
+# Restrict to the female subset (`sex == 2`). `changed` is already the absorbing
+# 0/1 divorce-reform indicator, and the response is the elasticity-scaled female
+# suicide rate. This reproduces the empirical application in Faletto (2025,
+# Sec. 8.2): the three covariates are passed as controls (one, `murderrate`, is
+# auto-dropped because it is missing in 1964, leaving two), and the noise
+# variances are supplied (precomputed by REML) to keep the call fast.
+divorce_f <- divorce[divorce$sex == 2, ]
 
 res <- fetwfe(
-    pdata = castle,
+    pdata = divorce_f,
     time_var = "year",
-    unit_var = "state",
-    treatment = "treated",
-    response = "l_homicide",
-    verbose = TRUE)
+    unit_var = "st",
+    treatment = "changed",
+    covs = c("murderrate", "lnpersinc", "afdcrolls"),
+    response = "suiciderate_elast_jag",
+    sig_eps_sq = 0.0344,
+    sig_eps_c_sq = 0.1507,
+    add_ridge = TRUE,
+    q = 0.5)
 
+# Overall ATT is about -6% on the elasticity-scaled female suicide rate, with a
+# 95% CI that excludes zero; FETWFE retains heterogeneous cohort effects here.
 summary(res)
 ```
 

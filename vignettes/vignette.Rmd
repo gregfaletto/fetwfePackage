@@ -178,43 +178,43 @@ When you run this code, the function internally performs all the necessary data 
 
 ## A "Real Data" Example
 
-Next I illustrate FETWFE in an empirical context. I'll use the `castle` data set from the `bacondecomp` package, which comes from the study by Cheng and Hoekstra (2013) of castle-doctrine ("stand-your-ground") laws and homicide. It is a balanced state-year panel covering all 50 states over 2000-2010, with the laws adopted in a staggered fashion across states from 2005 to 2009.
+Next I illustrate FETWFE in an empirical context. I'll use the `divorce` data set from the `bacondecomp` package, which comes from the study by Stevenson and Wolfers (2006) of unilateral ("no-fault") divorce laws and female suicide rates. It is a balanced state-year panel covering 51 states over 1964-1996, with the reforms adopted in a staggered, scattered fashion across states. This is the empirical application in Section 8.2 of Faletto (2025).
 
 ```{r}
 library(bacondecomp)  # for the example data
 
-# Load the example data
-data(castle)
+# Load the data and restrict to the female subset (`sex == 2`), the sample
+# analyzed by Stevenson and Wolfers (2006).
+data(divorce)
+divorce_f <- divorce[divorce$sex == 2, ]
 
-# Response: the log homicide rate, so the ATT reads roughly as a
-# percentage change in the homicide rate.
-castle$l_homicide <- log(castle$homicide)
-
-# Treatment indicator. `cdl` records the share of the year the
-# castle-doctrine law was in effect; a state is treated from the year its
-# law took effect, so we binarize with `cdl > 0`. `fetwfe()` requires the
-# treatment column to be an integer 0/1 absorbing indicator.
-castle$treated <- as.integer(castle$cdl > 0)
-
-# Call the estimator. Here
-# - 'year' is the time period variable (an integer),
-# - 'state' is the unit identifier,
-# - 'treated' is the absorbing treatment indicator.
-res <- fetwfe(
-    pdata = castle,
+# - 'year' is the time period, 'st' is the unit (state) identifier;
+# - 'changed' is already an absorbing 0/1 divorce-reform indicator;
+# - 'suiciderate_elast_jag' is the elasticity-scaled female suicide rate.
+# Three covariates enter as controls. fetwfe() automatically drops the 9 states
+# already treated by 1964 (first-period-treated) and `murderrate` (missing in
+# 1964 for one state); both are reported as warnings, suppressed here for
+# brevity. The noise variances are supplied (precomputed by REML) to keep the
+# call fast.
+res <- suppressWarnings(fetwfe(
+    pdata = divorce_f,
     time_var = "year",
-    unit_var = "state",
-    treatment = "treated",
-    response = "l_homicide"
-    )
+    unit_var = "st",
+    treatment = "changed",
+    covs = c("murderrate", "lnpersinc", "afdcrolls"),
+    response = "suiciderate_elast_jag",
+    sig_eps_sq = 0.0344,
+    sig_eps_c_sq = 0.1507,
+    add_ridge = TRUE,
+    q = 0.5
+    ))
 
 summary(res)
 
-# Average treatment effect on the treated units (in percentage point
-# units)
+# Average treatment effect on the treated units (in percentage point units)
 100 * res$att_hat
 
-# Conservative 95% confidence interval for ATT (in percentage point units)
+# 95% confidence interval for ATT (in percentage point units)
 
 low_att <- 100 * (res$att_hat - qnorm(1 - 0.05 / 2) * res$att_se)
 high_att <- 100 * (res$att_hat + qnorm(1 - 0.05 / 2) * res$att_se)
@@ -222,7 +222,7 @@ high_att <- 100 * (res$att_hat + qnorm(1 - 0.05 / 2) * res$att_se)
 c(low_att, high_att)
 
 # Cohort average treatment effects and confidence intervals (in percentage
-# point units)
+# point units). Several cohorts are pruned to exactly zero by the selection.
 
 catt_df_pct <- res$catt_df
 catt_df_pct[["estimate"]] <- 100 * catt_df_pct[["estimate"]]
@@ -233,9 +233,9 @@ catt_df_pct[["ci_high"]] <- 100 * catt_df_pct[["ci_high"]]
 catt_df_pct
 ```
 
-FETWFE estimates that adopting a castle-doctrine law is associated with roughly a +5.5% change in the homicide rate. The sign and rough magnitude are consistent with Cheng and Hoekstra (2013), who found that these laws increased homicide. FETWFE fused all five adoption cohorts (those adopting in 2005 through 2009) to a single common effect, so each row of `res$catt_df` reports the same estimate.
+FETWFE estimates that adopting a unilateral divorce law is associated with roughly a -6% change in the elasticity-scaled female suicide rate, with a 95% confidence interval that excludes zero. The sign and order of magnitude match Stevenson and Wolfers (2006), who found that these reforms reduced female suicide. Unlike a fully fused fit, FETWFE's selection step retains *heterogeneous* cohort effects here: several adoption cohorts are pruned to exactly zero while the rest carry nonzero, varying estimates, so the rows of `res$catt_df` are no longer all identical.
 
-This example is covariate-free; `castle`'s smallest cohorts contain a single state, so the design cannot support additional covariates. Covariate handling is illustrated in the simulated example above — the `covs` argument is optional.
+Unlike the simulated example above, this fit includes covariates (the `covs` argument). Because FETWFE regularizes the cohort-interacted design through its bridge penalty, it accommodates covariates even on this panel's scattered, single-state adoption cohorts -- a setting in which an unregularized two-way fixed effects fit would be rank-deficient.
 
 ## Testing the zero-effect null
 

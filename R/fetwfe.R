@@ -294,42 +294,45 @@
 #' Pinheiro, J. C., & Bates, D. M. (2000). \emph{Mixed-Effects Models in
 #' S and S-PLUS}. Springer.
 #' @examples
-#' # `bacondecomp` (which supplies the `castle` data) is a Suggests-only
-#' # dependency, so guard the example on its availability.
+#' # `bacondecomp` (which supplies the `divorce` data) is a Suggests-only
+#' # dependency, so guard the example on its availability. The fit is wrapped in
+#' # \donttest{} because it is slower than a toy example.
+#' \donttest{
 #' if (requireNamespace("bacondecomp", quietly = TRUE)) {
 #'   library(bacondecomp)
 #'
-#'   data(castle)
+#'   data(divorce)
 #'
-#'   # Response: the log homicide rate. Treatment: `cdl` records the share of
-#'   # the year the castle-doctrine law was in effect, so `cdl > 0` gives the
-#'   # absorbing 0/1 treatment indicator `fetwfe()` requires.
-#'   castle$l_homicide <- log(castle$homicide)
-#'   castle$treated <- as.integer(castle$cdl > 0)
+#'   # Stevenson & Wolfers (2006): the effect of unilateral ("no-fault") divorce
+#'   # reforms on female suicide rates. Restrict to the female subset
+#'   # (`sex == 2`); `changed` is already the absorbing 0/1 reform indicator, and
+#'   # the elasticity-scaled female suicide rate is the response.
+#'   divorce_f <- divorce[divorce$sex == 2, ]
 #'
-#'   # No `covs` here: castle's smallest adoption cohorts contain a single
-#'   # state, so the design is rank-deficient once any covariate is added.
-#'   # The v1.13.0+ default lambda_selection is "cv" (10-fold CV).
+#'   # Reproduces the empirical application in Faletto (2025, Sec. 8.2). The 9
+#'   # states already treated by 1964 are auto-dropped as first-period-treated,
+#'   # and `murderrate` is auto-dropped (missing in 1964 for one state); both are
+#'   # reported as (expected) warnings. The noise variances are supplied
+#'   # (precomputed by REML) to keep the example fast and reproducible; the
+#'   # default lambda_selection is "cv" (10-fold cross-validation).
 #'   res <- fetwfe(
-#'       pdata = castle,
+#'       pdata = divorce_f,
 #'       time_var = "year",
-#'       unit_var = "state",
-#'       treatment = "treated",
-#'       response = "l_homicide",
-#'       verbose = TRUE)
+#'       unit_var = "st",
+#'       treatment = "changed",
+#'       covs = c("murderrate", "lnpersinc", "afdcrolls"),
+#'       response = "suiciderate_elast_jag",
+#'       sig_eps_sq = 0.0344,
+#'       sig_eps_c_sq = 0.1507,
+#'       add_ridge = TRUE,
+#'       q = 0.5)
 #'
-#'   # Print results with internal details
+#'   # FETWFE estimates an overall ATT of roughly -6% on the elasticity-scaled
+#'   # female suicide rate, with a 95% confidence interval that excludes zero.
+#'   # The selection step retains heterogeneous cohort effects (several cohorts
+#'   # are pruned to exactly zero), rather than fusing to a single common effect.
 #'   print(res, max_cohorts = Inf)
-#'
-#'   # To recover the prior BIC behavior (e.g., for reproducing analyses
-#'   # run against v1.12.0 or earlier), pass lambda_selection = "bic":
-#'   res_bic <- fetwfe(
-#'       pdata = castle,
-#'       time_var = "year",
-#'       unit_var = "state",
-#'       treatment = "treated",
-#'       response = "l_homicide",
-#'       lambda_selection = "bic")
+#' }
 #' }
 #'
 #' @export
