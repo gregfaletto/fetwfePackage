@@ -31,7 +31,7 @@
         Treated cohorts (G) : 2
         Covariates (d)      : 2
         Features (p)        : 41
-        Selected size       : 1
+        Selected size       : 0
         Lambda*             : 0.0299
 
 # print.summary.fetwfe output is stable
@@ -63,7 +63,7 @@
         Treated cohorts (G) : 2
         Covariates (d)      : 2
         Features (p)        : 41
-        Selected size       : 1
+        Selected size       : 0
         Lambda*             : 0.0299
 
 # print.etwfe output is stable
@@ -161,7 +161,7 @@
         Treated cohorts (G) : 2
         Covariates (d)      : 2
         Features (p)        : 41
-        Selected size       : 1
+        Selected size       : 0
         Lambda*             : 0.0265
 
 # print.summary.betwfe output is stable
@@ -193,6 +193,6 @@
         Treated cohorts (G) : 2
         Covariates (d)      : 2
         Features (p)        : 41
-        Selected size       : 1
+        Selected size       : 0
         Lambda*             : 0.0265
 

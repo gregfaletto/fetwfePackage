@@ -85,7 +85,8 @@
 #'      original-scale coefficients, original `y`, and `X_mod` -- a single BLAS-3
 #'      matrix multiply across all lambdas.
 #'   4. It computes the BIC value: `N*T*log(SSE/(N*T)) + s*log(N*T)`, where `s`
-#'      is the number of non-zero coefficients (including intercept).
+#'      is the number of non-zero coefficients (excluding the always-present
+#'      intercept; a constant offset that does not affect which lambda minimizes BIC).
 #'   The set of coefficients corresponding to the minimum BIC is chosen. If multiple
 #'   lambdas yield the same minimum BIC, the one resulting in the smallest model
 #'   size (fewest non-zero coefficients) is selected.
@@ -115,8 +116,11 @@ getBetaBIC <- function(fit, N, T, p, X_mod, y, scale_center, scale_scale) {
 	)
 
 	## --- model sizes and BIC for every lambda ------------------------
-	# Number of fitted coefficients (including intercept), one per lambda.
-	model_sizes <- as.integer(colSums(fit$beta != 0))
+	# Number of selected *features* per lambda, excluding the always-present
+	# (unpenalized) intercept in row 1 (#269). This feeds the BIC penalty below;
+	# dropping the constant intercept shifts every BIC by the same amount, so the
+	# argmin (the selected lambda) and the smallest-model tie-break are unchanged.
+	model_sizes <- as.integer(colSums(fit$beta[-1, , drop = FALSE] != 0))
 
 	# Coerce N * T to numeric before multiplying. `N * T` is integer
 	# arithmetic and overflows at .Machine$integer.max ≈ 2.15e9
@@ -279,7 +283,8 @@ getBetaCV <- function(
 	list(
 		theta_hat = adjusted_theta_hat,
 		lambda_star_ind = lam_idx,
-		lambda_star_model_size = sum(theta_hat_full != 0),
+		# Exclude the intercept (row 1) to report selected-feature count (#269).
+		lambda_star_model_size = sum(theta_hat_full[-1] != 0),
 		# Carry the cv.grpreg fit object out — fetwfe_core() / betwfe_core()
 		# need access to `fit$lambda`, `fit$beta`, and the four
 		# lambda.max/min diagnostics that .fit_bridge_with_lambda_path()

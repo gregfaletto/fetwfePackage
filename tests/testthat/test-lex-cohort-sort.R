@@ -92,7 +92,9 @@ test_that("tidy.<class> sorts cohorts numerically when labels include >= 10", {
 		lambda.max = 1,
 		lambda.max_model_size = 1L,
 		lambda.min = 0.01,
-		lambda.min_model_size = p_test + 1L,
+		# #269: model size now counts selected features (excludes the intercept),
+		# so the largest possible size is p, not p + 1.
+		lambda.min_model_size = p_test,
 		lambda_star = 0.1,
 		lambda_star_model_size = 5L,
 		# v1.13.0 (#164): lambda-selection method provenance slots.
