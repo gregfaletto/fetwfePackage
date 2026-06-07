@@ -169,13 +169,49 @@ test_that("print.FETWFE_tes writes the expected sections", {
 	out <- capture.output(print(getTes(coefs)))
 	joined <- paste(out, collapse = "\n")
 	expect_match(joined, "Overall true ATT")
-	expect_match(joined, "Cohort 1")
+	# Cohorts are labeled by calendar adoption time (g + 1), so for G = 3 the
+	# labels are Cohort 2/3/4, not the 1-based index (#261).
 	expect_match(joined, "Cohort 2")
 	expect_match(joined, "Cohort 3")
+	expect_match(joined, "Cohort 4")
 	expect_match(joined, "Cohorts \\(G\\)")
 	expect_match(joined, "Time periods \\(T\\)")
 	expect_match(joined, "Covariates \\(d\\)")
 	expect_match(joined, "Seed")
+})
+
+# ------------------------------------------------------------------------------
+# #261: print / summary / tidy.FETWFE_tes must label cohorts identically, by
+# calendar adoption time (cohort g adopts at time g + 1), matching the fitted
+# estimators' catt_df$cohort -- never the 1-based loop index.
+# ------------------------------------------------------------------------------
+test_that("FETWFE_tes cohort labels agree across print/summary/tidy (adoption time, #261)", {
+	coefs <- genCoefs(
+		G = 3,
+		T = 5,
+		d = 2,
+		density = 0.5,
+		eff_size = 1,
+		seed = 1
+	)
+	tes <- getTes(coefs)
+	expect_equal(tes$cohort_times, as.integer(c(2, 3, 4)))
+
+	p <- paste(capture.output(print(tes)), collapse = "\n")
+	s <- paste(capture.output(print(summary(tes))), collapse = "\n")
+	td <- broom::tidy(tes)
+
+	# All three label cohorts by adoption time (2, 3, 4).
+	for (lab in c("Cohort 2:", "Cohort 3:", "Cohort 4:")) {
+		expect_match(p, lab, fixed = TRUE)
+		expect_match(s, lab, fixed = TRUE)
+	}
+	expect_setequal(td$term, c("ATT_true", "Cohort 2", "Cohort 3", "Cohort 4"))
+
+	# The old 1-based index labeling is gone (cohort 1 is now "Cohort 2").
+	expect_no_match(p, "Cohort 1:", fixed = TRUE)
+	expect_no_match(s, "Cohort 1:", fixed = TRUE)
+	expect_false("Cohort 1" %in% td$term)
 })
 
 # ------------------------------------------------------------------------------
