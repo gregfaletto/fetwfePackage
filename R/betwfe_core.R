@@ -856,30 +856,18 @@ betwfeWithSimulatedData <- function(
 	# `lambda_selection` validated downstream by `checkFetwfeInputs()`
 	# (collect-all-violations pattern).
 
-	if (!inherits(simulated_obj, "FETWFE_simulated")) {
-		stop("simulated_obj must be an object of class 'FETWFE_simulated'")
-	}
-
-	pdata <- simulated_obj$pdata
-	time_var <- simulated_obj$time_var
-	unit_var <- simulated_obj$unit_var
-	treatment <- simulated_obj$treatment
-	response <- simulated_obj$response
-	covs <- simulated_obj$covs
-	sig_eps_sq <- simulated_obj$sig_eps_sq
-	sig_eps_c_sq <- simulated_obj$sig_eps_c_sq
-	indep_counts <- simulated_obj$indep_counts
+	sim <- .unpack_simulated_obj(simulated_obj)
 
 	res <- betwfe(
-		pdata = pdata,
-		time_var = time_var,
-		unit_var = unit_var,
-		treatment = treatment,
-		response = response,
-		covs = covs,
-		indep_counts = indep_counts,
-		sig_eps_sq = sig_eps_sq,
-		sig_eps_c_sq = sig_eps_c_sq,
+		pdata = sim$pdata,
+		time_var = sim$time_var,
+		unit_var = sim$unit_var,
+		treatment = sim$treatment,
+		response = sim$response,
+		covs = sim$covs,
+		indep_counts = sim$indep_counts,
+		sig_eps_sq = sim$sig_eps_sq,
+		sig_eps_c_sq = sim$sig_eps_c_sq,
 		lambda.max = lambda.max,
 		lambda.min = lambda.min,
 		nlambda = nlambda,
