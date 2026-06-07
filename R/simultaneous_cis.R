@@ -881,6 +881,10 @@ simultaneousCIs.twfeCovs <- function(
 
 	if (family == "cohort") {
 		# Effect g = cohort g's ATT = mean(tes over cohort g's block).
+		# ORDER-INVARIANT (#258): rows are built in g = 1:G order, matching
+		# getCohortATTsFinal()'s catt_df row order, so
+		# .apply_simultaneous_catt_band() can positionally row-bind the resulting
+		# band to catt_df. Do NOT reorder without making that binding label-based.
 		psi_tes <- matrix(0, nrow = G, ncol = num_treats)
 		for (g in 1:G) {
 			block <- .cohort_block_inds(g, G, first_inds, num_treats)
