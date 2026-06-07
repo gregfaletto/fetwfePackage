@@ -253,10 +253,14 @@ root:
 # In R, with devtools / usethis available:
 devtools::document()      # regenerate man/*.Rd and NAMESPACE from roxygen
 devtools::test()          # run testthat suite
-devtools::check()         # full R CMD check
+devtools::check()         # full R CMD check (rebuilds all 5 vignettes)
 devtools::check(args = "--as-cran")   # CRAN-strict check
 devtools::build_vignettes()
 ```
+
+Always let `check()` build the vignettes -- do **not** gate on `--no-vignettes`.
+The five vignettes run real fits and CRAN rebuilds them on submission, so a vignette
+that fails to build is a blocker that a vignette-less check silently hides.
 
 Or from the shell:
 
@@ -281,6 +285,9 @@ generated files will fail `R CMD check`.
 - Uncommitted CRAN-only artifacts (`fetwfe.Rcheck/`, `..Rcheck/`, `Meta/`,
   `doc/`, `paper_arxiv.tex`) leaking into the build — they're already in
   `.Rbuildignore`; keep it that way.
+- A vignette that fails to rebuild — `check()` and CRAN rebuild all five
+  (`vignette`, `etwfe_betwfe`, `fusion_structure`, `inference`, `simulation`),
+  so build with vignettes on, not `--no-vignettes`.
 
 ## Tests
 
