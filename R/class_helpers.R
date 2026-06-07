@@ -373,7 +373,8 @@
 #' Larger lambda -> smaller model, so model-size direction is REVERSED from
 #' lambda direction: `lambda.max_model_size <= lambda_star_model_size <=
 #' lambda.min_model_size`. The upper bound for `lambda.min_model_size` is
-#' `p + 1` (intercept counted in grpreg's beta-path).
+#' `p`, since the reported sizes count selected features and exclude the
+#' always-present intercept (#269).
 #' @keywords internal
 #' @noRd
 .check_lambda_monotonicity <- function(x, cls) {
@@ -409,8 +410,8 @@
 		cls
 	)
 	.assert_contract(
-		x$lambda.min_model_size <= x$p + 1L,
-		"C7 lambda.min_model_size <= p + 1",
+		x$lambda.min_model_size <= x$p,
+		"C7 lambda.min_model_size <= p",
 		cls
 	)
 }

@@ -1908,10 +1908,12 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #'   \item{lambda.max}{`max(fit$lambda)` -- the realised maximum of the
 #'     lambda grid.}
 #'   \item{lambda.min}{`min(fit$lambda)` -- the realised minimum.}
-#'   \item{lambda.max_model_size}{Number of nonzero `fit$beta` columns at
-#'     `lambda.max` (largest lambda, smallest model).}
-#'   \item{lambda.min_model_size}{Number of nonzero `fit$beta` columns at
-#'     `lambda.min` (smallest lambda, largest model).}
+#'   \item{lambda.max_model_size}{Number of selected features (nonzero `fit$beta`
+#'     entries excluding the intercept) at `lambda.max` (largest lambda, smallest
+#'     model).}
+#'   \item{lambda.min_model_size}{Number of selected features (nonzero `fit$beta`
+#'     entries excluding the intercept) at `lambda.min` (smallest lambda, largest
+#'     model).}
 #' @keywords internal
 #' @noRd
 .fit_bridge_with_lambda_path <- function(
@@ -1983,8 +1985,11 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 	list(
 		lambda.max = max(fit$lambda),
 		lambda.min = min(fit$lambda),
-		lambda.max_model_size = sum(fit$beta[, ncol(fit$beta)] != 0),
-		lambda.min_model_size = sum(fit$beta[, 1] != 0)
+		# Drop the always-present (unpenalized) intercept in row 1: report the
+		# number of selected *features* (0..p), matching the @param wording and
+		# glmnet's `df` convention (#269).
+		lambda.max_model_size = sum(fit$beta[-1, ncol(fit$beta)] != 0),
+		lambda.min_model_size = sum(fit$beta[-1, 1] != 0)
 	)
 }
 
@@ -2010,7 +2015,7 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #' @return A list:
 #'   \item{theta_hat}{Selected coefficients on the original-data scale.}
 #'   \item{lambda_star_ind}{Index of the selected lambda in `fit$lambda`.}
-#'   \item{lambda_star_model_size}{Number of nonzero selected coefs (incl. intercept).}
+#'   \item{lambda_star_model_size}{Number of selected features (nonzero coefficients, excluding the intercept).}
 #'   \item{fit}{The underlying `grpreg`/`cv.grpreg` `fit` object.}
 #'   \item{lambda.max,lambda.min,lambda.max_model_size,lambda.min_model_size}{Lambda-path diagnostics.}
 #'   \item{cv_seed_used}{Integer seed used by the CV path; `NA_integer_` under BIC.}
@@ -2206,4 +2211,178 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 		)
 	}
 	invisible(NULL)
+}
+
+# Unpack the 9 fields the *WithSimulatedData wrappers read from a FETWFE_simulated
+# object, after guarding its class. Shared by the fetwfe/etwfe/betwfe/twfeCovs
+# wrappers (#270); each then forwards its own estimator-specific arg set.
+#' @keywords internal
+#' @noRd
+.unpack_simulated_obj <- function(simulated_obj) {
+	if (!inherits(simulated_obj, "FETWFE_simulated")) {
+		# Raise the error at the calling *WithSimulatedData wrapper (sys.call(-1)),
+		# not this internal helper, so the printed `Error in <call>:` prefix is the
+		# pre-#270 one and doesn't leak the helper name (message unchanged).
+		stop(simpleError(
+			"simulated_obj must be an object of class 'FETWFE_simulated'",
+			call = sys.call(-1)
+		))
+	}
+	list(
+		pdata = simulated_obj$pdata,
+		time_var = simulated_obj$time_var,
+		unit_var = simulated_obj$unit_var,
+		treatment = simulated_obj$treatment,
+		response = simulated_obj$response,
+		covs = simulated_obj$covs,
+		sig_eps_sq = simulated_obj$sig_eps_sq,
+		sig_eps_c_sq = simulated_obj$sig_eps_c_sq,
+		indep_counts = simulated_obj$indep_counts
+	)
+}
+
+# Shared post-prep assembly for the OLS estimator pair etwfe()/twfeCovs() (#270) --
+# the symmetric counterpart to .run_estimator_input_prep(). Runs the sequence the two
+# entry bodies share verbatim: rank check -> core fit -> ATT branch -> p-values ->
+# variance components -> 35-field out-list -> $internal -> validator -> class<- ->
+# .finalize_ci_type(). The boundary deliberately STARTS at .check_cohort_rank_for_ols:
+# the prep call and arg-normalization (where #208/#266 warnings originate) stay in each
+# entry, so condition emission is unchanged.
+#
+# `prep` is the materialized list from .run_estimator_input_prep(). `core_fn`,
+# `validator_fn` are function objects; `class_name` a string; `field_order` selects the
+# historical top-level field order ("etwfe" vs "twfeCovs"), which differ ONLY in the
+# position of `alpha` relative to calc_ses/se_type -- identical() pins are order-
+# sensitive, so this is preserved exactly rather than unified.
+#' @keywords internal
+#' @noRd
+.assemble_ols_estimator <- function(
+	prep,
+	core_fn,
+	validator_fn,
+	class_name,
+	field_order,
+	indep_counts,
+	sig_eps_sq,
+	sig_eps_c_sq,
+	verbose,
+	alpha,
+	add_ridge,
+	se_type,
+	ci_type,
+	response,
+	time_var,
+	unit_var,
+	treatment,
+	covs_orig
+) {
+	.check_cohort_rank_for_ols(
+		in_sample_counts = prep$in_sample_counts,
+		G = prep$G,
+		d = prep$d,
+		add_ridge = add_ridge
+	)
+
+	res <- core_fn(
+		X_ints = prep$X_ints,
+		y = prep$y,
+		in_sample_counts = prep$in_sample_counts,
+		N = prep$N,
+		T = prep$T,
+		d = prep$d,
+		p = prep$p,
+		num_treats = prep$num_treats,
+		first_inds = prep$first_inds,
+		indep_counts = indep_counts,
+		sig_eps_sq = sig_eps_sq,
+		sig_eps_c_sq = sig_eps_c_sq,
+		verbose = verbose,
+		alpha = alpha,
+		add_ridge = add_ridge,
+		se_type = se_type
+	)
+
+	att_branch <- .select_att_branch(
+		res,
+		indep_count_data_available = prep$indep_count_data_available
+	)
+	att_hat <- att_branch$att_hat
+	att_se <- att_branch$att_se
+	cohort_probs <- att_branch$cohort_probs
+	cohort_probs_overall <- att_branch$cohort_probs_overall
+
+	att_p_value <- .compute_p_values(att_hat, att_se)
+
+	variance_components <- .build_variance_components(
+		att_var_1 = att_branch$att_var_1,
+		att_var_2 = att_branch$att_var_2,
+		N = res$N,
+		T = res$T,
+		se_type = se_type,
+		indep_counts_used = prep$indep_count_data_available
+	)
+
+	# Built in etwfe's field order (alpha, calc_ses, se_type at positions 24-26).
+	out <- list(
+		att_hat = att_hat,
+		att_se = att_se,
+		att_p_value = att_p_value,
+		catt_hats = res$catt_hats,
+		catt_ses = res$catt_ses,
+		cohort_probs = cohort_probs,
+		cohort_probs_overall = cohort_probs_overall,
+		catt_df = res$catt_df,
+		beta_hat = res$beta_hat,
+		treat_inds = res$treat_inds,
+		treat_int_inds = res$treat_int_inds,
+		sig_eps_sq = res$sig_eps_sq,
+		sig_eps_c_sq = res$sig_eps_c_sq,
+		X_ints = res$X_ints,
+		y = res$y,
+		X_final = res$X_final,
+		y_final = res$y_final,
+		N = res$N,
+		T = res$T,
+		G = res$G,
+		R = res$G,
+		d = res$d,
+		p = res$p,
+		alpha = alpha,
+		calc_ses = res$calc_ses,
+		se_type = se_type,
+		indep_counts_used = prep$indep_count_data_available,
+		y_mean = prep$y_mean,
+		response_col_name = response,
+		time_var = time_var,
+		unit_var = unit_var,
+		treatment = treatment,
+		covs = covs_orig,
+		ci_type = ci_type
+	)
+
+	# twfeCovs historically places `alpha` AFTER se_type; reorder by name to preserve
+	# its byte-identical out-list order (#270). etwfe keeps the literal order above.
+	if (field_order == "twfeCovs") {
+		ord <- names(out)
+		ord <- ord[ord != "alpha"]
+		ord <- append(ord, "alpha", after = match("se_type", ord))
+		out <- out[ord]
+	}
+
+	out$internal <- list(
+		X_ints = res$X_ints,
+		y = res$y,
+		X_final = res$X_final,
+		y_final = res$y_final,
+		calc_ses = res$calc_ses,
+		variance_components = variance_components,
+		first_year = prep$first_year
+	)
+
+	validator_fn(out)
+	class(out) <- class_name
+	# Apply ci_type to the cohort-family bounds (#197). No-op unless ci_type ==
+	# "simultaneous"; runs after classing. Re-validates internally.
+	out <- .finalize_ci_type(out, alpha = alpha)
+	out
 }

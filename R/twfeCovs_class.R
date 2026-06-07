@@ -32,6 +32,7 @@ print.twfeCovs <- function(
 	max_cohorts = getOption("twfeCovs.max_cohorts", 10),
 	order_by = c("cohort", "estimate", "abs_estimate", "pvalue", "none"),
 	show_internal = FALSE,
+	max_event_times = getOption("twfeCovs.max_event_times", 10),
 	...
 ) {
 	.print_estimator_output(
@@ -45,7 +46,7 @@ print.twfeCovs <- function(
 		max_cohorts = max_cohorts,
 		order_by = match.arg(order_by),
 		show_internal = show_internal,
-		max_event_times = 10L,
+		max_event_times = max_event_times,
 		include_event_study = FALSE,
 		...
 	)

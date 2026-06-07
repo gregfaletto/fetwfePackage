@@ -207,20 +207,21 @@
 #' provided.} \item{lambda.max}{Either the provided `lambda.max` or the one
 #' that was used, if a value wasn't provided. (This is returned to help with
 #' getting a reasonable range of `lambda` values for grid search.)}
-#' \item{lambda.max_model_size}{The size of the selected model corresponding
-#' `lambda.max` (for `q <= 1`, this will be the smallest model size). As
-#' mentioned above, for `q <= 1` ideally this value is close to 0.}
+#' \item{lambda.max_model_size}{The number of selected features (excluding the
+#' always-present intercept) at `lambda.max` (for `q <= 1`, the smallest model).
+#' As mentioned above, for `q <= 1` ideally this value is close to 0.}
 #' \item{lambda.min}{Either the provided `lambda.min` or the one
 #' that was used, if a value wasn't provided.} \item{lambda.min_model_size}{The
-#' size of the selected model corresponding to `lambda.min` (for `q <= 1`, this
-#' will be the largest model size). As mentioned above, for `q <= 1` ideally
-#' this value is close to `p`.}\item{lambda_star}{The value of `lambda` chosen
+#' number of selected features (excluding the always-present intercept) at
+#' `lambda.min` (for `q <= 1`, the largest model). As mentioned above, for
+#' `q <= 1` ideally this value is close to `p`.}\item{lambda_star}{The value of `lambda` chosen
 #' by the method recorded in `lambda_selection`. If this value is close to
 #' `lambda.min` or `lambda.max`, that could suggest that the range of
 #' `lambda` values should be expanded.}
-#' \item{lambda_star_model_size}{The size of the model that was selected. If
-#' this value is close to `lambda.max_model_size` or `lambda.min_model_size`,
-#' That could suggest that the range of `lambda` values should be expanded.}
+#' \item{lambda_star_model_size}{The number of selected features (excluding the
+#' always-present intercept) in the chosen model. If this value is close to
+#' `lambda.max_model_size` or `lambda.min_model_size`, that could suggest that
+#' the range of `lambda` values should be expanded.}
 #' \item{lambda_selection}{Character scalar; either `"cv"` or `"bic"`.
 #' Mirrors the `lambda_selection` argument the user passed.}
 #' \item{cv_folds}{Integer scalar; the `cv_folds` value used when
@@ -319,6 +320,8 @@
 #' Pinheiro, J. C., & Bates, D. M. (2000). \emph{Mixed-Effects Models in
 #' S and S-PLUS}. Springer.
 #' @examples
+#' # `bacondecomp` (which supplies the `castle` data) is a Suggests-only
+#' # dependency, so guard the example on its availability.
 #' if (requireNamespace("bacondecomp", quietly = TRUE)) {
 #'   library(bacondecomp)
 #'
@@ -722,20 +725,21 @@ betwfe <- function(
 #' provided.} \item{lambda.max}{Either the provided `lambda.max` or the one
 #' that was used, if a value wasn't provided. (This is returned to help with
 #' getting a reasonable range of `lambda` values for grid search.)}
-#' \item{lambda.max_model_size}{The size of the selected model corresponding
-#' `lambda.max` (for `q <= 1`, this will be the smallest model size). As
-#' mentioned above, for `q <= 1` ideally this value is close to 0.}
+#' \item{lambda.max_model_size}{The number of selected features (excluding the
+#' always-present intercept) at `lambda.max` (for `q <= 1`, the smallest model).
+#' As mentioned above, for `q <= 1` ideally this value is close to 0.}
 #' \item{lambda.min}{Either the provided `lambda.min` or the one
 #' that was used, if a value wasn't provided.} \item{lambda.min_model_size}{The
-#' size of the selected model corresponding to `lambda.min` (for `q <= 1`, this
-#' will be the largest model size). As mentioned above, for `q <= 1` ideally
-#' this value is close to `p`.}\item{lambda_star}{The value of `lambda` chosen
+#' number of selected features (excluding the always-present intercept) at
+#' `lambda.min` (for `q <= 1`, the largest model). As mentioned above, for
+#' `q <= 1` ideally this value is close to `p`.}\item{lambda_star}{The value of `lambda` chosen
 #' by the method recorded in `lambda_selection`. If this value is close to
 #' `lambda.min` or `lambda.max`, that could suggest that the range of
 #' `lambda` values should be expanded.}
-#' \item{lambda_star_model_size}{The size of the model that was selected. If
-#' this value is close to `lambda.max_model_size` or `lambda.min_model_size`,
-#' That could suggest that the range of `lambda` values should be expanded.}
+#' \item{lambda_star_model_size}{The number of selected features (excluding the
+#' always-present intercept) in the chosen model. If this value is close to
+#' `lambda.max_model_size` or `lambda.min_model_size`, that could suggest that
+#' the range of `lambda` values should be expanded.}
 #' \item{lambda_selection}{Character scalar; either `"cv"` or `"bic"`.
 #' Mirrors the `lambda_selection` argument the user passed.}
 #' \item{cv_folds}{Integer scalar; the `cv_folds` value used when
@@ -854,30 +858,18 @@ betwfeWithSimulatedData <- function(
 	# `lambda_selection` validated downstream by `checkFetwfeInputs()`
 	# (collect-all-violations pattern).
 
-	if (!inherits(simulated_obj, "FETWFE_simulated")) {
-		stop("simulated_obj must be an object of class 'FETWFE_simulated'")
-	}
-
-	pdata <- simulated_obj$pdata
-	time_var <- simulated_obj$time_var
-	unit_var <- simulated_obj$unit_var
-	treatment <- simulated_obj$treatment
-	response <- simulated_obj$response
-	covs <- simulated_obj$covs
-	sig_eps_sq <- simulated_obj$sig_eps_sq
-	sig_eps_c_sq <- simulated_obj$sig_eps_c_sq
-	indep_counts <- simulated_obj$indep_counts
+	sim <- .unpack_simulated_obj(simulated_obj)
 
 	res <- betwfe(
-		pdata = pdata,
-		time_var = time_var,
-		unit_var = unit_var,
-		treatment = treatment,
-		response = response,
-		covs = covs,
-		indep_counts = indep_counts,
-		sig_eps_sq = sig_eps_sq,
-		sig_eps_c_sq = sig_eps_c_sq,
+		pdata = sim$pdata,
+		time_var = sim$time_var,
+		unit_var = sim$unit_var,
+		treatment = sim$treatment,
+		response = sim$response,
+		covs = sim$covs,
+		indep_counts = sim$indep_counts,
+		sig_eps_sq = sim$sig_eps_sq,
+		sig_eps_c_sq = sim$sig_eps_c_sq,
 		lambda.max = lambda.max,
 		lambda.min = lambda.min,
 		nlambda = nlambda,
@@ -1014,11 +1006,11 @@ betwfeWithSimulatedData <- function(
 #'   \item{sig_eps_sq}{The (possibly estimated) variance of observation-level noise.}
 #'   \item{sig_eps_c_sq}{The (possibly estimated) variance of unit-level random effects.}
 #'   \item{lambda.max}{The maximum lambda value used in `grpreg`.}
-#'   \item{lambda.max_model_size}{Model size for `lambda.max`.}
+#'   \item{lambda.max_model_size}{Number of selected features (excluding the intercept) for `lambda.max`.}
 #'   \item{lambda.min}{The minimum lambda value used in `grpreg`.}
-#'   \item{lambda.min_model_size}{Model size for `lambda.min`.}
+#'   \item{lambda.min_model_size}{Number of selected features (excluding the intercept) for `lambda.min`.}
 #'   \item{lambda_star}{The lambda value selected by BIC.}
-#'   \item{lambda_star_model_size}{Model size for `lambda_star`.}
+#'   \item{lambda_star_model_size}{Number of selected features (excluding the intercept) for `lambda_star`.}
 #'   \item{X_ints}{The original input design matrix from `prepXints`.}
 #'   \item{y}{The original input centered response vector from `prepXints`.}
 #'   \item{X_final}{The design matrix after GLS weighting.}
@@ -1164,8 +1156,9 @@ betwfe_core <- function(
 	treat_inds <- ti$treat_inds
 	treat_int_inds <- ti$treat_int_inds
 
-	# Handle edge case where no features are selected (model_size includes intercept)
-	if (lambda_star_model_size <= 1 && all(beta_hat[2:(p + 1)] == 0)) {
+	# Handle edge case where no features are selected. model_size now excludes the
+	# intercept (#269), so "only the intercept" means a feature count of 0.
+	if (lambda_star_model_size == 0 && all(beta_hat[2:(p + 1)] == 0)) {
 		# Only the intercept might be non-zero. Delegate to the shared
 		# helper (`.build_selected_out_result()` in `R/result_assembly.R`) that
 		# also serves the no-treatment branch below and the two FETWFE

@@ -1,9 +1,9 @@
-#' @title Two-way fixed effects with covariates and separate treatment effects
-#' for each cohort
+#' @title Two-way fixed effects with covariates and a single pooled treatment
+#' effect per cohort
 #'
 #' @description **WARNING: This function should NOT be used for estimation. It
 #' is a biased estimator of treatment effects.** Implementation of two-way fixed
-#' effects with covariates and separate treatment effects for each cohort.
+#' effects with covariates and a single pooled treatment effect per cohort.
 #' Estimates overall ATT as well as CATT (cohort average treatment effects on
 #' the treated units). It is implemented only for the sake of the simulation
 #' studies in Faletto (2025). This estimator is only unbiased under the
@@ -312,132 +312,26 @@ twfeCovs <- function(
 		estimator_type = "etwfe"
 	)
 
-	pdata <- prep$pdata
-	covs <- prep$covs
-	X_ints <- prep$X_ints
-	y <- prep$y
-	y_mean <- prep$y_mean
-	N <- prep$N
-	T <- prep$T
-	d <- prep$d
-	p <- prep$p
-	in_sample_counts <- prep$in_sample_counts
-	num_treats <- prep$num_treats
-	first_inds <- prep$first_inds
-	first_year <- prep$first_year
-	G <- prep$G
-	indep_count_data_available <- prep$indep_count_data_available
-
-	rm(prep)
-
-	.check_cohort_rank_for_ols(
-		in_sample_counts = in_sample_counts,
-		G = G,
-		d = d,
-		add_ridge = add_ridge
-	)
-
-	res <- twfeCovs_core(
-		X_ints = X_ints,
-		y = y,
-		in_sample_counts = in_sample_counts,
-		N = N,
-		T = T,
-		d = d,
-		p = p,
-		num_treats = num_treats,
-		first_inds = first_inds,
+	.assemble_ols_estimator(
+		prep = prep,
+		core_fn = twfeCovs_core,
+		validator_fn = .validate_twfeCovs,
+		class_name = "twfeCovs",
+		field_order = "twfeCovs",
 		indep_counts = indep_counts,
 		sig_eps_sq = sig_eps_sq,
 		sig_eps_c_sq = sig_eps_c_sq,
 		verbose = verbose,
 		alpha = alpha,
 		add_ridge = add_ridge,
-		se_type = se_type
-	)
-
-	att_branch <- .select_att_branch(
-		res,
-		indep_count_data_available = indep_count_data_available
-	)
-	att_hat <- att_branch$att_hat
-	att_se <- att_branch$att_se
-	cohort_probs <- att_branch$cohort_probs
-	cohort_probs_overall <- att_branch$cohort_probs_overall
-
-	att_p_value <- .compute_p_values(att_hat, att_se)
-
-	variance_components <- .build_variance_components(
-		att_var_1 = att_branch$att_var_1,
-		att_var_2 = att_branch$att_var_2,
-		N = res$N,
-		T = res$T,
 		se_type = se_type,
-		indep_counts_used = indep_count_data_available
-	)
-
-	out <- list(
-		att_hat = att_hat,
-		att_se = att_se,
-		att_p_value = att_p_value,
-		catt_hats = res$catt_hats,
-		catt_ses = res$catt_ses,
-		cohort_probs = cohort_probs,
-		cohort_probs_overall = cohort_probs_overall,
-		catt_df = res$catt_df,
-		beta_hat = res$beta_hat,
-		treat_inds = res$treat_inds,
-		treat_int_inds = res$treat_int_inds,
-		sig_eps_sq = res$sig_eps_sq,
-		sig_eps_c_sq = res$sig_eps_c_sq,
-		X_ints = res$X_ints,
-		y = res$y,
-		X_final = res$X_final,
-		y_final = res$y_final,
-		N = res$N,
-		T = res$T,
-		G = res$G,
-		R = res$G,
-		d = res$d,
-		p = res$p,
-		calc_ses = res$calc_ses,
-		se_type = se_type,
-		alpha = alpha,
-		indep_counts_used = indep_count_data_available,
-		y_mean = y_mean,
-		response_col_name = response,
+		ci_type = ci_type,
+		response = response,
 		time_var = time_var,
 		unit_var = unit_var,
 		treatment = treatment,
-		covs = covs_orig,
-		ci_type = ci_type
+		covs_orig = covs_orig
 	)
-	# Add internal outputs in a separate list for parity with `fetwfe()` (#144).
-	# The first five sub-slots (`X_ints`, `y`, `X_final`, `y_final`,
-	# `calc_ses`) are also duplicated at top level for backward compat;
-	# `variance_components` and `first_year` live only under `$internal`
-	# (#179, #180).
-	out$internal <- list(
-		X_ints = res$X_ints,
-		y = res$y,
-		X_final = res$X_final,
-		y_final = res$y_final,
-		calc_ses = res$calc_ses,
-		variance_components = variance_components,
-		# v1.13.3 (#174): see `fetwfe()` for rationale.
-		first_year = first_year
-	)
-	# Validate constructed object's contracts (#85). Validator operates
-	# on the list shape regardless of class, then class is assigned.
-	.validate_twfeCovs(out)
-	class(out) <- "twfeCovs"
-	# Apply ci_type to the cohort-family bounds (#197). twfeCovs now carries
-	# its own `alpha` slot (#204), so the finalizer builds the simultaneous
-	# band at the user's requested alpha (previously it was hardcoded to
-	# 0.05, ignoring `alpha`). No-op unless ci_type == "simultaneous".
-	# Re-validates internally.
-	out <- .finalize_ci_type(out, alpha = alpha)
-	return(out)
 }
 
 
@@ -643,30 +537,18 @@ twfeCovsWithSimulatedData <- function(
 	)
 	ci_type <- match.arg(ci_type)
 
-	if (!inherits(simulated_obj, "FETWFE_simulated")) {
-		stop("simulated_obj must be an object of class 'FETWFE_simulated'")
-	}
-
-	pdata <- simulated_obj$pdata
-	time_var <- simulated_obj$time_var
-	unit_var <- simulated_obj$unit_var
-	treatment <- simulated_obj$treatment
-	response <- simulated_obj$response
-	covs <- simulated_obj$covs
-	sig_eps_sq <- simulated_obj$sig_eps_sq
-	sig_eps_c_sq <- simulated_obj$sig_eps_c_sq
-	indep_counts <- simulated_obj$indep_counts
+	sim <- .unpack_simulated_obj(simulated_obj)
 
 	res <- twfeCovs(
-		pdata = pdata,
-		time_var = time_var,
-		unit_var = unit_var,
-		treatment = treatment,
-		response = response,
-		covs = covs,
-		indep_counts = indep_counts,
-		sig_eps_sq = sig_eps_sq,
-		sig_eps_c_sq = sig_eps_c_sq,
+		pdata = sim$pdata,
+		time_var = sim$time_var,
+		unit_var = sim$unit_var,
+		treatment = sim$treatment,
+		response = sim$response,
+		covs = sim$covs,
+		indep_counts = sim$indep_counts,
+		sig_eps_sq = sim$sig_eps_sq,
+		sig_eps_c_sq = sim$sig_eps_c_sq,
 		verbose = verbose,
 		alpha = alpha,
 		add_ridge = add_ridge,

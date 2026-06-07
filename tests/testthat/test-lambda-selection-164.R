@@ -155,7 +155,10 @@ test_that("BIC path produces byte-identical results on a small fixed-theta DGP",
 	expect_equal(res$att_hat, 0.4480082058461672, tolerance = 1e-12)
 	expect_equal(res$att_se, 0.1356706033541936, tolerance = 1e-12)
 	expect_equal(res$lambda_star, 0.01246630388611171, tolerance = 1e-12)
-	expect_equal(res$lambda_star_model_size, 18L)
+	# Feature count now excludes the always-present intercept (#269); was 18L when
+	# the intercept was counted. The locked att/se/lambda_star above are unchanged
+	# by that switch (it is a constant offset on the BIC, so selection is identical).
+	expect_equal(res$lambda_star_model_size, 17L)
 })
 
 test_that("BETWFE BIC path produces byte-identical results", {

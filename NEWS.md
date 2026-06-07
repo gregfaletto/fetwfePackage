@@ -1,5 +1,69 @@
 # NEWS
 
+## Version 1.26.5
+
+### Bug fixes
+
+- `print.twfeCovs()` now accepts a `max_event_times` argument, for parity with the
+  other estimators' print methods, instead of erroring with "argument matched by
+  multiple actual arguments" when one was supplied. The argument is a no-op for
+  `twfeCovs` (its output has no event-study section) (#267).
+- `attgtToFetwfeDf()` / `etwfeToFetwfeDf()` now validate the `out_names` argument
+  (it must be a list containing the four keys `time`, `unit`, `treatment`, and
+  `response`) and raise a clear error naming that contract, instead of failing later
+  with a cryptic internal message — including the case of a named character vector,
+  which carries the right names but is indexed with `$` downstream (#268).
+
+## Version 1.26.4
+
+### Improvements
+
+- The reported model-size diagnostics `lambda.max_model_size`,
+  `lambda.min_model_size`, and `lambda_star_model_size` (from `fetwfe()` /
+  `betwfe()` and their `*WithSimulatedData` wrappers) now count the number of
+  selected *features* and exclude the always-present intercept, matching the
+  documentation ("ideally close to 0 / `p`") and `glmnet`'s `df` convention.
+  Previously each also counted the intercept, so the smallest model reported 1
+  instead of 0. **This shifts each of the three reported sizes down by 1.** It does
+  *not* change `lambda_star`, the coefficients, the treatment-effect estimates, or
+  their standard errors: the intercept is a constant offset on the BIC, so model
+  selection is identical. Resolves the doc/behavior inconsistency in #269.
+
+## Version 1.26.3
+
+### Bug fixes
+
+- The estimators (`fetwfe()` / `etwfe()` / `betwfe()` / `twfeCovs()`) now emit a
+  warning when exactly one of `sig_eps_sq` / `sig_eps_c_sq` is supplied and the
+  other is left `NA`. The two noise variances are estimated jointly by REML, so
+  supplying only one silently discarded it (re-estimating both); the warning
+  names the ignored value and notes that they must be supplied together or both
+  omitted (#266).
+
+## Version 1.26.2
+
+### Bug fixes
+
+- `print()` and `summary()` for the `FETWFE_tes` object returned by `getTes()`
+  now label cohorts by calendar adoption time (cohort `g` adopts at time `g + 1`),
+  matching `tidy.FETWFE_tes()` and the fitted estimators' `catt_df$cohort`.
+  Previously they used the 1-based loop index, so the same cohort showed as e.g.
+  "Cohort 1" under `print()` / `summary()` but "Cohort 2" under `tidy()`. The
+  convention now lives in one shared helper (#261).
+
+## Version 1.26.1
+
+### Documentation
+
+- `fetwfe()` and `betwfe()` runnable `@examples` now guard their
+  `library(bacondecomp)` / `data(castle)` usage behind
+  `if (requireNamespace("bacondecomp", quietly = TRUE)) { ... }`. `bacondecomp`
+  is a Suggests-only dependency, so previously `example(fetwfe)` / `example(betwfe)`
+  errored for users without it installed (#260).
+- Clarified `twfeCovs()`'s title/description: it estimates a single pooled
+  treatment effect per cohort (not per-(cohort, time)), matching the body text;
+  added the "Optional" qualifier to `genCoefs()`'s `@param G` (#257).
+
 ## Version 1.26.0
 
 ### New features
