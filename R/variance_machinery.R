@@ -1538,7 +1538,11 @@ getCohortATTsFinal <- function(
 
 	psi_mat <- matrix(0, length(sel_treat_inds_shifted), G)
 
-	# loop over cohorts
+	# Loop over cohorts in g = 1:G order. ORDER-INVARIANT (#258): this defines the
+	# row order of the returned `catt_df`, which `.apply_simultaneous_catt_band()`
+	# positionally row-binds against `.build_psi_tes_for_family(family = "cohort")`
+	# (also g = 1:G). Do NOT reorder these rows without making that binding
+	# label-based.
 	for (g in 1:G) {
 		# Get indices corresponding to marginal treatment effects for rth cohort.
 		# Endpoint-preservation form: downstream `getPsiGFused()` takes
