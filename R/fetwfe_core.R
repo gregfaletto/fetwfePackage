@@ -395,11 +395,11 @@ checkFetwfeInputs <- function(
 #'   \item{sig_eps_sq}{The (possibly estimated) variance of observation-level noise.}
 #'   \item{sig_eps_c_sq}{The (possibly estimated) variance of unit-level random effects.}
 #'   \item{lambda.max}{The maximum lambda value used in `grpreg`.}
-#'   \item{lambda.max_model_size}{Model size for `lambda.max`.}
+#'   \item{lambda.max_model_size}{Number of selected features (excluding the intercept) for `lambda.max`.}
 #'   \item{lambda.min}{The minimum lambda value used in `grpreg`.}
-#'   \item{lambda.min_model_size}{Model size for `lambda.min`.}
+#'   \item{lambda.min_model_size}{Number of selected features (excluding the intercept) for `lambda.min`.}
 #'   \item{lambda_star}{The lambda value selected by BIC.}
-#'   \item{lambda_star_model_size}{Model size for `lambda_star`.}
+#'   \item{lambda_star_model_size}{Number of selected features (excluding the intercept) for `lambda_star`.}
 #'   \item{X_ints}{The original input design matrix from `prepXints`.}
 #'   \item{y}{The original input centered response vector from `prepXints`.}
 #'   \item{X_final}{The design matrix after fusion transformation and GLS weighting.}
@@ -579,8 +579,9 @@ fetwfe_core <- function(
 	treat_inds <- ti$treat_inds
 	treat_int_inds <- ti$treat_int_inds
 
-	# Handle edge case where no features are selected (model_size includes intercept)
-	if (lambda_star_model_size <= 1 && all(theta_hat[2:(p + 1)] == 0)) {
+	# Handle edge case where no features are selected. model_size now excludes the
+	# intercept (#269), so "only the intercept" means a feature count of 0.
+	if (lambda_star_model_size == 0 && all(theta_hat[2:(p + 1)] == 0)) {
 		# Only the intercept might be non-zero. Delegate to the shared
 		# helper (`.build_selected_out_result()` in `R/result_assembly.R`) that
 		# also serves the no-treatment branch below and the two BETWFE

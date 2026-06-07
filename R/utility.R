@@ -1908,10 +1908,12 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #'   \item{lambda.max}{`max(fit$lambda)` -- the realised maximum of the
 #'     lambda grid.}
 #'   \item{lambda.min}{`min(fit$lambda)` -- the realised minimum.}
-#'   \item{lambda.max_model_size}{Number of nonzero `fit$beta` columns at
-#'     `lambda.max` (largest lambda, smallest model).}
-#'   \item{lambda.min_model_size}{Number of nonzero `fit$beta` columns at
-#'     `lambda.min` (smallest lambda, largest model).}
+#'   \item{lambda.max_model_size}{Number of selected features (nonzero `fit$beta`
+#'     entries excluding the intercept) at `lambda.max` (largest lambda, smallest
+#'     model).}
+#'   \item{lambda.min_model_size}{Number of selected features (nonzero `fit$beta`
+#'     entries excluding the intercept) at `lambda.min` (smallest lambda, largest
+#'     model).}
 #' @keywords internal
 #' @noRd
 .fit_bridge_with_lambda_path <- function(
@@ -1983,8 +1985,11 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 	list(
 		lambda.max = max(fit$lambda),
 		lambda.min = min(fit$lambda),
-		lambda.max_model_size = sum(fit$beta[, ncol(fit$beta)] != 0),
-		lambda.min_model_size = sum(fit$beta[, 1] != 0)
+		# Drop the always-present (unpenalized) intercept in row 1: report the
+		# number of selected *features* (0..p), matching the @param wording and
+		# glmnet's `df` convention (#269).
+		lambda.max_model_size = sum(fit$beta[-1, ncol(fit$beta)] != 0),
+		lambda.min_model_size = sum(fit$beta[-1, 1] != 0)
 	)
 }
 
@@ -2010,7 +2015,7 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #' @return A list:
 #'   \item{theta_hat}{Selected coefficients on the original-data scale.}
 #'   \item{lambda_star_ind}{Index of the selected lambda in `fit$lambda`.}
-#'   \item{lambda_star_model_size}{Number of nonzero selected coefs (incl. intercept).}
+#'   \item{lambda_star_model_size}{Number of selected features (nonzero coefficients, excluding the intercept).}
 #'   \item{fit}{The underlying `grpreg`/`cv.grpreg` `fit` object.}
 #'   \item{lambda.max,lambda.min,lambda.max_model_size,lambda.min_model_size}{Lambda-path diagnostics.}
 #'   \item{cv_seed_used}{Integer seed used by the CV path; `NA_integer_` under BIC.}

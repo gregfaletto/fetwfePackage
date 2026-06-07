@@ -256,20 +256,21 @@ the provided \code{sig_eps_c_sq} or the estimated one, if a value wasn't
 provided.} \item{lambda.max}{Either the provided \code{lambda.max} or the one
 that was used, if a value wasn't provided. (This is returned to help with
 getting a reasonable range of \code{lambda} values for grid search.)}
-\item{lambda.max_model_size}{The size of the selected model corresponding
-\code{lambda.max} (for \code{q <= 1}, this will be the smallest model size). As
-mentioned above, for \code{q <= 1} ideally this value is close to 0.}
+\item{lambda.max_model_size}{The number of selected features (excluding the
+always-present intercept) at \code{lambda.max} (for \code{q <= 1}, the smallest model).
+As mentioned above, for \code{q <= 1} ideally this value is close to 0.}
 \item{lambda.min}{Either the provided \code{lambda.min} or the one
 that was used, if a value wasn't provided.} \item{lambda.min_model_size}{The
-size of the selected model corresponding to \code{lambda.min} (for \code{q <= 1}, this
-will be the largest model size). As mentioned above, for \code{q <= 1} ideally
-this value is close to \code{p}.}\item{lambda_star}{The value of \code{lambda} chosen
+number of selected features (excluding the always-present intercept) at
+\code{lambda.min} (for \code{q <= 1}, the largest model). As mentioned above, for
+\code{q <= 1} ideally this value is close to \code{p}.}\item{lambda_star}{The value of \code{lambda} chosen
 by the method recorded in \code{lambda_selection}. If this value is close to
 \code{lambda.min} or \code{lambda.max}, that could suggest that the range of
 \code{lambda} values should be expanded.}
-\item{lambda_star_model_size}{The size of the model that was selected. If
-this value is close to \code{lambda.max_model_size} or \code{lambda.min_model_size},
-That could suggest that the range of \code{lambda} values should be expanded.}
+\item{lambda_star_model_size}{The number of selected features (excluding the
+always-present intercept) in the chosen model. If this value is close to
+\code{lambda.max_model_size} or \code{lambda.min_model_size}, that could suggest that
+the range of \code{lambda} values should be expanded.}
 \item{lambda_selection}{Character scalar; either \code{"cv"} or \code{"bic"}.
 Mirrors the \code{lambda_selection} argument the user passed.}
 \item{cv_folds}{Integer scalar; the \code{cv_folds} value used when

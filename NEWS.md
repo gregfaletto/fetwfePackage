@@ -1,5 +1,20 @@
 # NEWS
 
+## Version 1.26.4
+
+### Improvements
+
+- The reported model-size diagnostics `lambda.max_model_size`,
+  `lambda.min_model_size`, and `lambda_star_model_size` (from `fetwfe()` /
+  `betwfe()` and their `*WithSimulatedData` wrappers) now count the number of
+  selected *features* and exclude the always-present intercept, matching the
+  documentation ("ideally close to 0 / `p`") and `glmnet`'s `df` convention.
+  Previously each also counted the intercept, so the smallest model reported 1
+  instead of 0. **This shifts each of the three reported sizes down by 1.** It does
+  *not* change `lambda_star`, the coefficients, the treatment-effect estimates, or
+  their standard errors: the intercept is a constant offset on the BIC, so model
+  selection is identical. Resolves the doc/behavior inconsistency in #269.
+
 ## Version 1.26.3
 
 ### Bug fixes
