@@ -5,7 +5,9 @@
 
 #' @title Estimate variance components and apply GLS whitening
 #' @description If `sig_eps_sq` or `sig_eps_c_sq` is NA, estimate both via
-#'   `estOmegaSqrtInv()` (REML on `y ~ X + (1 | unit)`). Then build
+#'   `estOmegaSqrtInv()` (REML on `y ~ X + (1 | unit)`) -- warning when exactly
+#'   one was supplied, since REML estimates them jointly so the supplied value is
+#'   discarded (#266). Then build
 #'   `Omega = sig_eps_sq * I_T + sig_eps_c_sq * J_T`, take its
 #'   matrix square root inverse, and apply the kronecker-product GLS
 #'   transform to `y` and `X_mod`.
@@ -37,6 +39,23 @@
 	}
 
 	if (is.na(sig_eps_sq) | is.na(sig_eps_c_sq)) {
+		# Both noise variances are estimated jointly by REML, so supplying only
+		# ONE of them silently discards it. Warn when exactly one is given (#266).
+		if (xor(is.na(sig_eps_sq), is.na(sig_eps_c_sq))) {
+			supplied <- if (is.na(sig_eps_sq)) {
+				sprintf("sig_eps_c_sq = %g", sig_eps_c_sq)
+			} else {
+				sprintf("sig_eps_sq = %g", sig_eps_sq)
+			}
+			warning(
+				"Only one of `sig_eps_sq` / `sig_eps_c_sq` was supplied (",
+				supplied,
+				"); the two noise variances are estimated jointly (REML), so the ",
+				"supplied value is ignored and both are re-estimated. Supply both ",
+				"(or neither) to control the noise variances.",
+				call. = FALSE
+			)
+		}
 		omega_res <- estOmegaSqrtInv(
 			y,
 			X_ints,

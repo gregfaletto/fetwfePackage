@@ -1,5 +1,16 @@
 # NEWS
 
+## Version 1.26.3
+
+### Bug fixes
+
+- The estimators (`fetwfe()` / `etwfe()` / `betwfe()` / `twfeCovs()`) now emit a
+  warning when exactly one of `sig_eps_sq` / `sig_eps_c_sq` is supplied and the
+  other is left `NA`. The two noise variances are estimated jointly by REML, so
+  supplying only one silently discarded it (re-estimating both); the warning
+  names the ignored value and notes that they must be supplied together or both
+  omitted (#266).
+
 ## Version 1.26.2
 
 ### Bug fixes
