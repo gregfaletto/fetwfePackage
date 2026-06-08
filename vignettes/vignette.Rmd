@@ -63,7 +63,7 @@ The package provides a single exported function, `fetwfe()`, which implements th
 - **`treatment`**: A character string specifying the treatment indicator variable (which must be an absorbing binary indicator).
 - **`response`**: A character string specifying the response (outcome) variable.
 - **`covs`**: A character vector of covariate names (typically time-invariant or the pre-treatment values), if applicable.
-- **Additional tuning parameters:** such as the tuning parameter for the bridge penalty (controlled via argument `q`) and options for verbosity, standard error calculation, and so on.
+- **Additional tuning parameters:** such as the tuning parameter for the bridge penalty (controlled via argument `q`), the geometry of the fusion penalty (`fusion_structure`, either the default `"cohort"` or `"event_study"`, or a fully custom `fusion_matrix`), and options for verbosity, standard error calculation, and so on.
 
 The function returns a list containing, for example, the estimated overall average treatment effect, cohort-specific treatment effects, standard errors (when available), and various diagnostic quantities.
 
@@ -175,6 +175,8 @@ summary(result)
 ```
 
 When you run this code, the function internally performs all the necessary data preparation, applies the fusion penalty via a bridge regression (using the `grpreg` package), and returns a list with overall and cohort-specific treatment effect estimates, standard errors (if available), and additional diagnostics.
+
+By default the fusion penalty uses the within-/between-cohort structure, but you can instead fuse treatment effects by event time (time since treatment) with `fusion_structure = "event_study"`, or supply a fully custom fusion matrix. For when to prefer each, see the vignette ["Choosing a fusion structure: cohort vs. event-study penalties"](fusion_structure_vignette.html) (`vignette("fusion_structure_vignette", package = "fetwfe")`).
 
 ## A "Real Data" Example
 

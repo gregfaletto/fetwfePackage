@@ -45,7 +45,7 @@ Below is a complete simulation pipeline, step by step.
 
 ## Step 1: Generate Simulation Coefficients
 
-The `genCoefs()` function returns an object of class `"FETWFE_coefs"`, containing both the coefficient vector and its simulation parameters. In this example we set:
+The `genCoefs()` function returns an object of class `"FETWFE_coefs"`, containing both the coefficient vector and its simulation parameters. The `fusion_structure` argument (mirroring `fetwfe()`) additionally controls the *basis* in which the true treatment effects are sparse — `"cohort"` (the default) or `"event_study"`; see the vignette `vignette("fusion_structure_vignette", package = "fetwfe")`. In this example we set:
 
 - **G** (number of treated cohorts) = 3
 - **T** (number of time periods) = 6

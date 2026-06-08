@@ -252,3 +252,11 @@ Difference-in-Differences with Staggered Adoptions.
 \emph{arXiv preprint arXiv:2312.05985}.
 \url{https://arxiv.org/abs/2312.05985}.
 }
+\seealso{
+\code{\link{fetwfe}}, whose \code{fusion_structure} argument this
+mirrors on the estimation side;
+\code{vignette("fusion_structure_vignette", package = "fetwfe")} for the
+cohort-vs-event-study distinction, and
+\code{vignette("simulation_vignette", package = "fetwfe")} for the full
+simulation pipeline.
+}

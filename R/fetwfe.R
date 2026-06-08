@@ -7,6 +7,14 @@
 #' Estimates overall ATT as well as CATT (cohort average treatment effects on
 #' the treated units).
 #'
+#' The treatment-effect fusion penalty defaults to a within-/between-cohort
+#' geometry (`fusion_structure = "cohort"`) and also supports an event-study
+#' geometry (`fusion_structure = "event_study"`, fusing effects at the same
+#' time since treatment across cohorts) or a fully custom `fusion_matrix`. See
+#' the `fusion_structure` / `fusion_matrix` arguments below and
+#' \code{vignette("fusion_structure_vignette", package = "fetwfe")} for guidance
+#' on choosing.
+#'
 #' @param pdata Dataframe; the panel data set. Each row should represent an
 #' observation of a unit at a time. Should contain columns as described below.
 #' @param time_var Character; the name of a single column containing a variable
@@ -293,6 +301,9 @@
 #'
 #' Pinheiro, J. C., & Bates, D. M. (2000). \emph{Mixed-Effects Models in
 #' S and S-PLUS}. Springer.
+#' @seealso \code{vignette("fusion_structure_vignette", package = "fetwfe")} for
+#'   guidance on choosing between the cohort (default) and event-study fusion
+#'   penalties and on supplying a custom \code{fusion_matrix}.
 #' @examples
 #' # `bacondecomp` (which supplies the `divorce` data) is a Suggests-only
 #' # dependency, so guard the example on its availability. The fit is wrapped in

@@ -330,6 +330,14 @@ The object has methods for \code{print()}, \code{summary()}, and \code{coef()}. 
 Implementation of fused extended two-way fixed effects.
 Estimates overall ATT as well as CATT (cohort average treatment effects on
 the treated units).
+
+The treatment-effect fusion penalty defaults to a within-/between-cohort
+geometry (\code{fusion_structure = "cohort"}) and also supports an event-study
+geometry (\code{fusion_structure = "event_study"}, fusing effects at the same
+time since treatment across cohorts) or a fully custom \code{fusion_matrix}. See
+the \code{fusion_structure} / \code{fusion_matrix} arguments below and
+\code{vignette("fusion_structure_vignette", package = "fetwfe")} for guidance
+on choosing.
 }
 \examples{
 # `bacondecomp` (which supplies the `divorce` data) is a Suggests-only
@@ -390,6 +398,11 @@ information when block sizes are unequal. \emph{Biometrika}, 58(3),
 
 Pinheiro, J. C., & Bates, D. M. (2000). \emph{Mixed-Effects Models in
 S and S-PLUS}. Springer.
+}
+\seealso{
+\code{vignette("fusion_structure_vignette", package = "fetwfe")} for
+guidance on choosing between the cohort (default) and event-study fusion
+penalties and on supplying a custom \code{fusion_matrix}.
 }
 \author{
 Gregory Faletto
