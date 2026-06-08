@@ -647,6 +647,88 @@ tidy.cohortStudy <- function(x, ...) {
 	out
 }
 
+#' Tidy a `cohortTimeATTs` object
+#'
+#' Returns a `broom`-style tidy data frame for the output of
+#' [cohortTimeATTs()]. Renames the snake_case columns to broom conventions
+#' (`se` -> `std.error`, `p_value` -> `p.value`, `ci_low` / `ci_high` ->
+#' `conf.low` / `conf.high`), keeps the `time` column, and adds a `term`
+#' column (`"cohort_<cohort label>_time_<time>"`) plus a `statistic` column
+#' (`estimate / std.error`) so the schema parallels [tidy.cohortStudy()] and
+#' [tidy.eventStudy()] for downstream `bind_rows()` consumers. When the input
+#' carries a `selected` column (`fetwfe` / `betwfe`), it is passed through as
+#' the final column.
+#'
+#' Confidence intervals are the pointwise `1 - alpha` Wald bounds
+#' [cohortTimeATTs()] computed (encoding the `alpha` passed there); like
+#' [tidy.cohortStudy()] this method passes them through rather than
+#' recomputing at a custom `conf.level`.
+#'
+#' @param x A `cohortTimeATTs` object returned by [cohortTimeATTs()].
+#' @param ... Unused; present for S3 compatibility.
+#' @return A data frame with one row per `(cohort, time)` cell and columns
+#'   `term`, `time`, `estimate`, `std.error`, `statistic`, `p.value`,
+#'   `conf.low`, `conf.high`, and (if present in the input) `selected`.
+#' @examples
+#' \dontrun{
+#'   res <- fetwfeWithSimulatedData(
+#'     simulateData(genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2),
+#'                  N = 120, sig_eps_sq = 1, sig_eps_c_sq = 0.5, seed = 123)
+#'   )
+#'   broom::tidy(cohortTimeATTs(res))
+#' }
+#' @export
+tidy.cohortTimeATTs <- function(x, ...) {
+	# Localize the error when a user-mutated frame is missing a required
+	# column (mirrors tidy.cohortStudy()).
+	required <- c(
+		"cohort",
+		"time",
+		"estimate",
+		"se",
+		"ci_low",
+		"ci_high",
+		"p_value"
+	)
+	missing_cols <- setdiff(required, names(x))
+	if (length(missing_cols) > 0L) {
+		stop(
+			"tidy.cohortTimeATTs(): input is missing required columns: ",
+			paste(missing_cols, collapse = ", "),
+			". If you have mutated the `cohortTimeATTs` object, restore the ",
+			"original data frame; otherwise please file an issue.",
+			call. = FALSE
+		)
+	}
+	estimate <- .subset2(x, "estimate")
+	se <- .subset2(x, "se")
+	statistic <- ifelse(
+		!is.na(se) & se > 0,
+		estimate / se,
+		NA_real_
+	)
+	out <- data.frame(
+		term = paste0(
+			"cohort_",
+			.subset2(x, "cohort"),
+			"_time_",
+			.subset2(x, "time")
+		),
+		time = .subset2(x, "time"),
+		estimate = estimate,
+		std.error = se,
+		statistic = statistic,
+		p.value = .subset2(x, "p_value"),
+		conf.low = .subset2(x, "ci_low"),
+		conf.high = .subset2(x, "ci_high"),
+		stringsAsFactors = FALSE
+	)
+	if ("selected" %in% names(x)) {
+		out$selected <- .subset2(x, "selected")
+	}
+	out
+}
+
 #' Tidy a `FETWFE_tes` simulation truth object
 #'
 #' Returns a `broom`-style tidy data frame for the population-truth

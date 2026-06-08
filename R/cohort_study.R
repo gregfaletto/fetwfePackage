@@ -54,6 +54,7 @@
 #'   `statistic`, `p.value`, `conf.low`, `conf.high`, optionally
 #'   `selected`); see [tidy.cohortStudy()].
 #' @seealso [eventStudy()] for the parallel event-time accessor;
+#'   [cohortTimeATTs()] for the fully disaggregated per-(cohort, time) accessor;
 #'   [tidy.cohortStudy()] for broom-shape translation.
 #' @examples
 #' \dontrun{

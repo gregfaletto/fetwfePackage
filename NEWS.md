@@ -1,5 +1,21 @@
 # NEWS
 
+## Version 1.27.0
+
+### New features
+
+- New accessor `cohortTimeATTs()` returns the fully disaggregated treatment
+  effects --- one row per `(cohort, time)` cell, with no averaging over either
+  axis --- complementing `cohortStudy()` (per-cohort, time-averaged) and
+  `eventStudy()` (per-event-time, cohort-averaged). Standard errors are the
+  per-cell regression standard errors, recomputed from the fit exactly as
+  `eventStudy()` does (matching `simultaneousCIs(family = "all_post_treatment")`
+  to floating-point precision); confidence intervals and p-values are pointwise.
+  A cell zeroed out by the fusion/bridge penalty reports `estimate = 0`,
+  `se = 0`, and `selected = FALSE`. Supports `fetwfe()`, `etwfe()`, and
+  `betwfe()` (like `eventStudy()`); `broom::tidy()` is supported via
+  `tidy.cohortTimeATTs()` (`term = "cohort_<g>_time_<t>"`) (#280).
+
 ## Version 1.26.5
 
 ### Bug fixes
