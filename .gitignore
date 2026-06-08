@@ -17,5 +17,8 @@ TODO_*
 mybib2fin.bib
 
 # Working / local-only docs (don't push to remote)
+# AGENTS.md is local-only agent guidance (it points at the .gitignore'd .workflow/);
+# kept on disk, not tracked. Still viewable in history before this commit.
+AGENTS.md
 Referee reports/
 *.Rcheck/
