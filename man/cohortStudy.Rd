@@ -74,5 +74,6 @@ fetwfe 1.11.0) that intercepts pre-1.11.0 Title-Case column names
 }
 \seealso{
 \code{\link[=eventStudy]{eventStudy()}} for the parallel event-time accessor;
+\code{\link[=cohortTimeATTs]{cohortTimeATTs()}} for the fully disaggregated per-(cohort, time) accessor;
 \code{\link[=tidy.cohortStudy]{tidy.cohortStudy()}} for broom-shape translation.
 }

@@ -83,5 +83,6 @@ regardless of \code{se_type} (two-sample regime, Theorem (b)).
 }
 }
 \seealso{
-\code{\link[=cohortStudy]{cohortStudy()}} for the parallel per-cohort accessor.
+\code{\link[=cohortStudy]{cohortStudy()}} for the parallel per-cohort accessor;
+\code{\link[=cohortTimeATTs]{cohortTimeATTs()}} for the fully disaggregated per-(cohort, time) accessor.
 }

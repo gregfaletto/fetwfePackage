@@ -72,7 +72,8 @@ utils::globalVariables(c("event_time", "estimate", "ci_low", "ci_high"))
 #'   Only post-treatment event times (`e >= 0`) are included; pre-treatment
 #'   placebo periods would require an extended regression specification and
 #'   are out of scope for this initial release.
-#' @seealso [cohortStudy()] for the parallel per-cohort accessor.
+#' @seealso [cohortStudy()] for the parallel per-cohort accessor;
+#'   [cohortTimeATTs()] for the fully disaggregated per-(cohort, time) accessor.
 #' @examples
 #' \dontrun{
 #'   coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
