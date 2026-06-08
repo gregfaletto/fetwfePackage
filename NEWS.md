@@ -1,5 +1,19 @@
 # NEWS
 
+## Version 1.27.1
+
+### Documentation
+
+- Surfaced the fusion-penalty structure options on high-traffic documentation
+  surfaces (#282). The choice of fusion geometry --- `fusion_structure = "cohort"`
+  (default) vs. `"event_study"`, and the custom `fusion_matrix` override --- is a
+  core differentiator of FETWFE but was previously reachable only through a
+  buried `@param`. It is now named in a new "Penalty and fusion structures"
+  section of the README, cross-linked from the introductory and simulation
+  vignettes to the existing "Choosing a fusion structure" vignette, pulled into
+  `fetwfe()`'s `@description`, and given a `@seealso` on `fetwfe()` and
+  `genCoefs()` (the two functions that expose `fusion_structure`).
+
 ## Version 1.27.0
 
 ### New features

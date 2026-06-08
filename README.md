@@ -56,6 +56,17 @@ summary(res)
 
 For vignettes and full documentation, check out the [page for the `{fetwfe}` package on CRAN](https://CRAN.R-project.org/package=fetwfe).
 
+## Penalty and fusion structures
+
+A core differentiator of FETWFE is the *geometry* of its fusion penalty, chosen via the `fusion_structure` argument of `fetwfe()`:
+
+- **`"cohort"`** (the default) fuses treatment effects within and between cohorts — the two-way fusion structure of Faletto (2025).
+- **`"event_study"`** instead fuses effects at the same time since treatment (event time `e = t - g`) across cohorts — the package realization of the paper's event-study-penalty theory.
+
+For full control, the `fusion_matrix` argument accepts any invertible `num_treats x num_treats` differencing matrix `D_N`, encoding an arbitrary fusion structure beyond the two built-ins. The same `fusion_structure` option is available in `genCoefs()` for simulation studies.
+
+For guidance on which to use, see the vignette *"Choosing a fusion structure: cohort vs. event-study penalties"* — `vignette("fusion_structure_vignette", package = "fetwfe")`, also on the [CRAN page](https://CRAN.R-project.org/package=fetwfe).
+
 ## References
 - Faletto, G (2025). *Fused Extended Two-Way Fixed Effects for Difference-in-Differences with Staggered Adoptions*. [arXiv preprint arXiv:2312.05985](https://arxiv.org/abs/2312.05985).
 
