@@ -233,15 +233,27 @@ test_that("genCoefsCore errors when d is negative", {
 	)
 })
 
-test_that("genCoefsCore errors when density is not between 0 and 1", {
+test_that("genCoefsCore errors when density is outside (0, 1]", {
 	expect_error(
 		genCoefsCore(G = 5, T = 30, density = -0.1, eff_size = 2, d = 12),
+		regexp = "density must be"
+	)
+	expect_error(
+		genCoefsCore(G = 5, T = 30, density = 0, eff_size = 2, d = 12),
 		regexp = "density must be"
 	)
 	expect_error(
 		genCoefsCore(G = 5, T = 30, density = 1.1, eff_size = 2, d = 12),
 		regexp = "density must be"
 	)
+})
+
+test_that("genCoefsCore accepts density = 1 (fully dense, non-sparse truth)", {
+	expect_no_error(
+		res <- genCoefsCore(G = 5, T = 30, density = 1, eff_size = 2, d = 12)
+	)
+	# density = 1 means every entry of the initial theta vector is nonzero
+	expect_true(all(res$theta != 0))
 })
 
 test_that("genCoefsCore errors when eff_size is not numeric", {
