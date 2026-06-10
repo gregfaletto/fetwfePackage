@@ -25,8 +25,9 @@
 #' @param T Integer. The total number of time periods.
 #' @param d Integer. The number of time-invariant covariates. If \code{d > 0}, additional terms
 #'   corresponding to covariate main effects and interactions are included in \code{beta}.
-#' @param density Numeric in (0,1). The probability that any given entry in the initial sparse
-#'   coefficient vector \code{theta} is nonzero.
+#' @param density Numeric in (0,1]. The probability that any given entry in the initial
+#'   coefficient vector \code{theta} is nonzero. \code{density = 1} gives a fully dense
+#'   (non-sparse) coefficient vector.
 #' @param eff_size Numeric. The magnitude used to scale nonzero entries in \code{theta}. Each
 #'   nonzero entry is set to \code{eff_size} or \code{-eff_size} (with a 60 percent chance for a
 #'   positive value).
@@ -271,14 +272,14 @@ genCoefs <- function(
 		stop("d must be a non-negative numeric value")
 	}
 
-	# Check that density is a numeric scalar strictly between 0 and 1.
+	# Check that density is a numeric scalar in (0, 1] (1 = fully dense, non-sparse).
 	if (
 		!is.numeric(density) ||
 			length(density) != 1 ||
 			density <= 0 ||
-			density >= 1
+			density > 1
 	) {
-		stop("density must be numeric and strictly between 0 and 1")
+		stop("density must be numeric, greater than 0 and at most 1")
 	}
 
 	# Check that eff_size is numeric.
@@ -657,8 +658,9 @@ getTes <- function(coefs_obj) {
 #' @param T Integer. The total number of time periods.
 #' @param d Integer. The number of time-invariant covariates. If \code{d > 0}, additional terms
 #' corresponding to covariate main effects and interactions are included in \code{beta}.
-#' @param density Numeric in (0,1). The probability that any given entry in the initial sparse
-#' coefficient vector \code{theta} is nonzero.
+#' @param density Numeric in (0,1]. The probability that any given entry in the initial
+#' coefficient vector \code{theta} is nonzero. \code{density = 1} gives a fully dense
+#' (non-sparse) coefficient vector.
 #' @param eff_size Numeric. The magnitude used to scale nonzero entries in \code{theta}. Each
 #' nonzero entry is set to \code{eff_size} or \code{-eff_size} (with a 60 percent chance for a
 #' positive value).
@@ -778,14 +780,14 @@ genCoefsCore <- function(
 		stop("d must be a non-negative numeric value")
 	}
 
-	# Check that density is a numeric scalar strictly between 0 and 1.
+	# Check that density is a numeric scalar in (0, 1] (1 = fully dense, non-sparse).
 	if (
 		!is.numeric(density) ||
 			length(density) != 1 ||
 			density <= 0 ||
-			density >= 1
+			density > 1
 	) {
-		stop("density must be numeric and strictly between 0 and 1")
+		stop("density must be numeric, greater than 0 and at most 1")
 	}
 
 	# Check that eff_size is numeric.

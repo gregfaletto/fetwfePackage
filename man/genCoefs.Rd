@@ -30,8 +30,9 @@ deprecated alias \code{R} (described below).}
 \item{d}{Integer. The number of time-invariant covariates. If \code{d > 0}, additional terms
 corresponding to covariate main effects and interactions are included in \code{beta}.}
 
-\item{density}{Numeric in (0,1). The probability that any given entry in the initial sparse
-coefficient vector \code{theta} is nonzero.}
+\item{density}{Numeric in (0,1]. The probability that any given entry in the initial
+coefficient vector \code{theta} is nonzero. \code{density = 1} gives a fully dense
+(non-sparse) coefficient vector.}
 
 \item{eff_size}{Numeric. The magnitude used to scale nonzero entries in \code{theta}. Each
 nonzero entry is set to \code{eff_size} or \code{-eff_size} (with a 60 percent chance for a

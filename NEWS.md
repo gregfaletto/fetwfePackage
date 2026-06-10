@@ -1,5 +1,16 @@
 # NEWS
 
+## Version 1.27.2
+
+### Improvements
+
+- `genCoefs()` and `genCoefsCore()` now accept `density = 1`, which yields a
+  fully dense (non-sparse) coefficient vector — every entry of the initial
+  `theta` is nonzero. Previously `density` had to be *strictly* in `(0, 1)`; the
+  accepted range is now `(0, 1]`. This supports simulating data in which the
+  FETWFE sparsity assumption is maximally violated. `density <= 0` (which would
+  zero every coefficient) and `density > 1` still error (#286).
+
 ## Version 1.27.1
 
 ### Documentation
