@@ -1,5 +1,25 @@
 # NEWS
 
+## Version 1.27.3
+
+### Bug fixes
+
+- `eventStudy()`, `cohortTimeATTs()`, and `simultaneousCIs()` no longer error on a
+  fit produced with `indep_counts` when the treated cohorts adopt *later* than the
+  earliest panel periods (e.g. cohorts adopting in 2005–2009 within a 2000–2010
+  panel). The accessors previously failed with `first_inds[G] <= n_vars is not TRUE`
+  (`eventStudy()` / `cohortTimeATTs()`) or `subscript out of bounds`
+  (`simultaneousCIs()`). The cause: the `indep_counts` path stored `cohort_probs`
+  unnamed, so the cohort adoption timing could not be recovered and the accessors
+  fell back to the earliest-timing layout, inconsistent with the actual number of
+  treatment effects. `att_hat` / `att_se` / `catt_df` are unchanged by this fix
+  (it only attaches the previously-missing cohort labels) (#288).
+  Older saved `indep_counts` fits also now recover their cohort timing (from
+  `catt_df`) without re-fitting. Note: with `indep_counts` the `eventStudy()`
+  event-time estimates and the overall `att_hat` are (as before) re-weighted by the
+  independent-sample cohort probabilities; the per-cell `cohortTimeATTs()` estimates
+  are unchanged by `indep_counts`.
+
 ## Version 1.27.2
 
 ### Improvements
