@@ -1140,12 +1140,33 @@ getFirstIndsFromOffsets <- function(cohort_offsets_int, T) {
 #' @keywords internal
 #' @noRd
 .derive_cohort_offsets_from_fit <- function(x) {
+	# Cohort adoption-time labels. Primary source: the names of `cohort_probs`.
+	# On older (pre-#288) saved fits produced with `indep_counts`, `cohort_probs`
+	# is the indep version, which was built unnamed --- fall back to
+	# `catt_df$cohort`, which carries the same adoption-time labels from the
+	# in-sample counts (R/input_prep.R) and is present on every fit, independent
+	# of `indep_counts`. Newly-fitted objects keep the names (via
+	# `.select_att_branch()`, #288), so this fall-back only fires for legacy
+	# objects; on synthetic fixtures `catt_df$cohort` equals the `cohort_probs`
+	# names, so the resolved offsets are unchanged.
 	cohort_probs <- x$cohort_probs
-	if (is.null(cohort_probs) || length(cohort_probs) == 0L) {
-		return(NULL)
-	}
 	cohort_names <- names(cohort_probs)
-	if (is.null(cohort_names) || any(!nzchar(cohort_names))) {
+	if (
+		is.null(cohort_probs) ||
+			length(cohort_probs) == 0L ||
+			is.null(cohort_names) ||
+			any(!nzchar(cohort_names))
+	) {
+		if (is.null(x$catt_df) || is.null(x$catt_df$cohort)) {
+			return(NULL)
+		}
+		cohort_names <- as.character(x$catt_df$cohort)
+	}
+	if (
+		is.null(cohort_names) ||
+			length(cohort_names) == 0L ||
+			any(!nzchar(cohort_names))
+	) {
 		return(NULL)
 	}
 	# Try integer-coerce; suppress the introduced-by-coercion warning so the
@@ -1735,6 +1756,15 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 		att_var_2 <- res$indep_att_var_2
 		cohort_probs <- res$indep_cohort_probs
 		cohort_probs_overall <- res$indep_cohort_probs_overall
+		# Carry over the cohort-year labels from the (named) in-sample vectors
+		# (#288). `indep_counts` describes the SAME cohorts as the in-sample
+		# counts in the same order --- only the probability values differ --- but
+		# the indep vectors are built unnamed from the raw count vector. Without
+		# these names `.derive_cohort_offsets_from_fit()` cannot recover the
+		# adoption timing, so `eventStudy()` / `cohortTimeATTs()` fall back to the
+		# earliest-timing `getFirstInds()` and trip `first_inds[G] <= n_vars`.
+		names(cohort_probs) <- names(res$cohort_probs)
+		names(cohort_probs_overall) <- names(res$cohort_probs_overall)
 	} else {
 		if (uses_bridge) {
 			stopifnot(!is.na(res$in_sample_att_hat))
