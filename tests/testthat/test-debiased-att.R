@@ -215,7 +215,7 @@ test_that("debiasedATTWithSimulatedData matches debiasedATT on the same fit", {
 	expect_equal(w$se, db$se)
 })
 
-test_that("debiasedATT warns on indep_counts fits, not on single-sample fits", {
+test_that("var_weight reuses the fit's att_var_2 (correct two-sample formula)", {
 	coefs <- genCoefs(
 		G = 3,
 		T = 5,
@@ -231,18 +231,38 @@ test_that("debiasedATT warns on indep_counts fits, not on single-sample fits", {
 		sig_eps_c_sq = 0.5,
 		seed = 7
 	)
-	# indep_counts fit (sim default) -> the cohort-weight channel is not validated
-	# for the two-sample case, so the accessor warns.
+	# The cohort-weight channel is the fit's plug-in `att_var_2` on BOTH arms (no
+	# recompute, no warning). On the indep_counts fit `att_var_2` is the two-sample
+	# formula -- exactly the case the naive single-sample (1/N_T) recompute gets
+	# wrong, which is why reusing att_var_2 resolves it.
 	fit_indep <- fetwfeWithSimulatedData(dat, q = 0.5)
 	expect_true(isTRUE(fit_indep$indep_counts_used))
-	expect_warning(debiasedATT(fit_indep), "indep_counts")
+	db_indep <- expect_no_warning(debiasedATT(fit_indep))
+	expect_equal(
+		db_indep$var_weight,
+		fit_indep$internal$variance_components$att_var_2
+	)
+	# The two-sample att_var_2 genuinely differs from the single-sample (1/N_T)
+	# recompute (so the reuse is not a no-op on indep fits).
+	X <- fit_indep$internal$X_final
+	ti <- fit_indep$treat_inds
+	u <- rep(seq_len(nrow(X) / fit_indep$T), each = fit_indep$T)
+	N_T <- sum(tapply(rowSums(abs(X[, ti, drop = FALSE])), u, sum) > 0)
+	naive_vw <- sum(
+		fit_indep$cohort_probs * (fit_indep$catt_hats - fit_indep$att_hat)^2
+	) /
+		N_T
+	expect_false(isTRUE(all.equal(db_indep$var_weight, naive_vw)))
 
-	# Single-sample fit -> no warning.
-	dat_single <- dat
-	dat_single$indep_counts <- NA
-	fit_single <- fetwfeWithSimulatedData(dat_single, q = 0.5)
+	# Single-sample: att_var_2 equals that single-sample recompute exactly.
+	dat$indep_counts <- NA
+	fit_single <- fetwfeWithSimulatedData(dat, q = 0.5)
 	expect_false(isTRUE(fit_single$indep_counts_used))
-	expect_no_warning(debiasedATT(fit_single))
+	db_single <- debiasedATT(fit_single)
+	expect_equal(
+		db_single$var_weight,
+		fit_single$internal$variance_components$att_var_2
+	)
 })
 
 test_that("debiasedATT input guards", {

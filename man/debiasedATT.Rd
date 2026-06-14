@@ -26,7 +26,8 @@ A named list with elements:
 \item{var_reg}{Numeric; the regression (outcome) channel's contribution to
 \code{se^2}, per-unit-clustered.}
 \item{var_weight}{Numeric; the cohort-weight channel's contribution to
-\code{se^2}.}
+\code{se^2} --- the fit's plug-in propensity variance (\code{att_var_2}), which
+carries the correct single- or two-sample (\code{indep_counts}) formula.}
 }
 \code{var_reg} and \code{var_weight} are the two \strong{\code{se^2}-scale} (unit-scale)
 components, so \code{se = sqrt(var_reg + var_weight)}. They are \emph{not} the paper's
@@ -57,17 +58,16 @@ assignment / Assumption (Psi-IF): a regression (outcome) channel,
 per-unit-clustered, and a cohort-weight channel for the sampling noise in the
 estimated cohort weights. See \emph{Assumptions} below.
 
-The estimate and SE are read from the quantities the fit stored. The debiased
-SE is validated for the default single-sample (no-\code{indep_counts}) fit. When the
-fit was made with \code{indep_counts}, the cohort weights come from an independent
-sample of a different size, so the cohort-weight channel's
-in-sample-treated-count normalization can misstate that channel; the accessor
-\strong{warns} in that case (the point estimate and the regression channel are
-unaffected). The fit's \code{se_type} does \strong{not} affect the result ---
-\code{debiasedATT()} always computes its own per-unit-clustered regression channel.
-Fits made with \code{add_ridge = TRUE} are \strong{not} supported (the ridge-augmented
-design and post-fit un-shrink are outside the validated construction); the
-accessor errors on them.
+The cohort-weight channel is the fit's own plug-in propensity variance
+(\code{att_var_2}), the same quantity \code{fit$att_se} uses --- so it automatically
+carries the correct single-sample formula and, for \code{indep_counts} fits, the
+two-sample formula (the weight channel concerns the estimated cohort weights,
+not the selection, so it is shared by the fused and debiased estimators). The
+fit's \code{se_type} does \strong{not} affect the regression channel ---
+\code{debiasedATT()} always computes its own per-unit-clustered version. Fits made
+with \code{add_ridge = TRUE} are \strong{not} supported (the ridge-augmented design and
+post-fit un-shrink are outside the validated construction); the accessor errors
+on them.
 }
 \section{Assumptions}{
 

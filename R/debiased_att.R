@@ -33,17 +33,16 @@
 #' per-unit-clustered, and a cohort-weight channel for the sampling noise in the
 #' estimated cohort weights. See *Assumptions* below.
 #'
-#' The estimate and SE are read from the quantities the fit stored. The debiased
-#' SE is validated for the default single-sample (no-`indep_counts`) fit. When the
-#' fit was made with `indep_counts`, the cohort weights come from an independent
-#' sample of a different size, so the cohort-weight channel's
-#' in-sample-treated-count normalization can misstate that channel; the accessor
-#' **warns** in that case (the point estimate and the regression channel are
-#' unaffected). The fit's `se_type` does **not** affect the result ---
-#' `debiasedATT()` always computes its own per-unit-clustered regression channel.
-#' Fits made with `add_ridge = TRUE` are **not** supported (the ridge-augmented
-#' design and post-fit un-shrink are outside the validated construction); the
-#' accessor errors on them.
+#' The cohort-weight channel is the fit's own plug-in propensity variance
+#' (`att_var_2`), the same quantity `fit$att_se` uses --- so it automatically
+#' carries the correct single-sample formula and, for `indep_counts` fits, the
+#' two-sample formula (the weight channel concerns the estimated cohort weights,
+#' not the selection, so it is shared by the fused and debiased estimators). The
+#' fit's `se_type` does **not** affect the regression channel ---
+#' `debiasedATT()` always computes its own per-unit-clustered version. Fits made
+#' with `add_ridge = TRUE` are **not** supported (the ridge-augmented design and
+#' post-fit un-shrink are outside the validated construction); the accessor errors
+#' on them.
 #'
 #' @section Assumptions:
 #' The uniformly-valid SE relies on the hypotheses of paper Theorem
@@ -95,7 +94,8 @@
 #'     \item{var_reg}{Numeric; the regression (outcome) channel's contribution to
 #'       `se^2`, per-unit-clustered.}
 #'     \item{var_weight}{Numeric; the cohort-weight channel's contribution to
-#'       `se^2`.}
+#'       `se^2` --- the fit's plug-in propensity variance (`att_var_2`), which
+#'       carries the correct single- or two-sample (`indep_counts`) formula.}
 #'   }
 #'   `var_reg` and `var_weight` are the two **`se^2`-scale** (unit-scale)
 #'   components, so `se = sqrt(var_reg + var_weight)`. They are *not* the paper's
@@ -197,21 +197,26 @@ debiasedATT <- function(fit, alpha = NULL) {
 	treat_inds <- fit$treat_inds
 	num_treats <- length(treat_inds)
 	cohort_probs <- fit$cohort_probs
-	catt_hats <- fit$catt_hats
 
-	# The cohort-weight SE channel (var_weight) normalizes by the in-sample
-	# treated-unit count, which is correct for single-sample fits. With
-	# `indep_counts` the cohort weights are estimated on an independent sample of a
-	# different size, so that normalization can misstate the channel. Warn (the
-	# two-sample case is not yet validated); the point estimate and the regression
-	# channel are unaffected.
-	if (isTRUE(fit$indep_counts_used)) {
-		warning(
-			"debiasedATT(): this fit used `indep_counts`. The cohort-weight ",
-			"standard-error channel (var_weight) uses the single-sample ",
-			"normalization; the two-sample (indep_counts) case is not yet ",
-			"validated, so the reported SE may misstate uncertainty. The point ",
-			"estimate and the regression channel are unaffected.",
+	# The cohort-weight SE channel is exactly the package's plug-in propensity
+	# variance `att_var_2` (the weight channel concerns the estimated cohort
+	# weights, not the theta-selection, so it is identical for the fused and
+	# debiased estimators). Reuse it rather than recomputing
+	# `(1/N_T) sum_g pi_g (catt_g - att)^2`: it is byte-identical on single-sample
+	# fits and, crucially, already carries the correct two-sample formula for
+	# `indep_counts` fits (the same `att_var_2` that `fit$att_se` uses). Single
+	# source of truth (#291 review).
+	var_weight <- fit$internal$variance_components$att_var_2
+	if (
+		is.null(var_weight) ||
+			!is.numeric(var_weight) ||
+			length(var_weight) != 1L ||
+			is.na(var_weight)
+	) {
+		stop(
+			"debiasedATT(): the fit does not carry a cohort-weight variance ",
+			"component (`internal$variance_components$att_var_2`). Re-fit with a ",
+			"current version of fetwfe() (>= 1.12.0).",
 			call. = FALSE
 		)
 	}
@@ -279,16 +284,8 @@ debiasedATT <- function(fit, alpha = NULL) {
 	var_reg <- sum(unit_scores^2) / n^2
 
 	# ---- channel 2: cohort-weight variance ----
-	# N_T = number of distinct treated units (the multinomial sample size for the
-	# cohort weights), recovered from the design (pdata is not stored on the fit).
-	treated_unit <- tapply(
-		rowSums(abs(X[, treat_inds, drop = FALSE])),
-		unit,
-		sum
-	) >
-		0
-	N_T <- sum(treated_unit)
-	var_weight <- sum(cohort_probs * (catt_hats - fit$att_hat)^2) / N_T
+	# `var_weight` is the fit's plug-in `att_var_2` (read above): the same
+	# cohort-weight variance, with the correct single- / two-sample formula.
 
 	se_db <- sqrt(var_reg + var_weight)
 	z <- stats::qnorm(1 - alpha / 2)
