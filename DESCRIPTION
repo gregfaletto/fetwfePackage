@@ -1,6 +1,6 @@
 Package: fetwfe
 Title: Fused Extended Two-Way Fixed Effects
-Version: 1.27.3
+Version: 1.28.0
 Authors@R: 
     person(given = "Gregory", family = "Faletto", email = "gfaletto@gmail.com", role = c("aut", "cre"), comment = c(ORCID = "0000-0001-8298-1401"))
 Maintainer: Gregory Faletto <gfaletto@gmail.com>
@@ -12,7 +12,6 @@ BugReports: https://github.com/gregfaletto/fetwfePackage/issues
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.3
 Imports:
     generics,
     glmnet,
@@ -33,3 +32,4 @@ Suggests:
     tibble
 VignetteBuilder:
     knitr
+Config/roxygen2/version: 8.0.0
