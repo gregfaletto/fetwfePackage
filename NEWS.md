@@ -1,5 +1,23 @@
 # NEWS
 
+## Version 1.28.0
+
+### New features
+
+- New accessor `debiasedATT()` (with a `debiasedATTWithSimulatedData()` wrapper)
+  returns a *debiased* overall-ATT point estimate and a uniformly-valid standard
+  error from a fitted `fetwfe()` object (`q < 1`). It is a complement to the
+  fused plug-in interval (`fit$att_hat` / `fit$att_se`), which under-covers the
+  aggregated overall ATT; the debiased interval restores asymptotically nominal
+  coverage at roughly the efficiency of unrestricted ETWFE. The debiased point
+  estimate differs from the fused `att_hat` (by the OLS identity it equals the
+  ETWFE/OLS estimate in the ATT direction), so it is exposed as its own accessor
+  rather than a `se_type` option. The standard error has a per-unit-clustered
+  regression channel plus a cohort-weight channel that add under marginal cohort
+  assignment / (Psi-IF); the assumptions are documented on `?debiasedATT`. Errors
+  cleanly for `q >= 1` (no selection) and for the high-dimensional `p >= NT`
+  regime (a desparsified-lasso construction is follow-up work) (#291).
+
 ## Version 1.27.3
 
 ### Bug fixes

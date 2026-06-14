@@ -190,7 +190,7 @@ the seed defaults internally to \code{as.integer(N * T)}. Ignored when
 \code{"pointwise"}. Controls the confidence-interval bounds reported for the
 cohort-specific ATTs (in \code{catt_df}) and the event-study effects (from
 \code{\link[=eventStudy]{eventStudy()}}, shown by \code{print} / \code{summary} / \code{plot}, and surfaced by
-\code{\link[broom:reexports]{broom::tidy()}} on the fitted object and on the \code{\link[=eventStudy]{eventStudy()}} /
+\code{\link[broom:tidy]{broom::tidy()}} on the fitted object and on the \code{\link[=eventStudy]{eventStudy()}} /
 \code{\link[=cohortStudy]{cohortStudy()}} outputs). \code{"simultaneous"} reports parametric simultaneous
 (family-wise, uniform) bands computed via \code{\link[=simultaneousCIs]{simultaneousCIs()}}: each
 family's band covers all of its effects jointly with probability

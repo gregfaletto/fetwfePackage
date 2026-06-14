@@ -1,0 +1,309 @@
+# Debiased overall-ATT accessor (#291): a uniformly-valid complement to the
+# fused plug-in interval (fit$att_hat / fit$att_se). The fused plug-in SE is the
+# within-selection variance and under-covers the *aggregated* overall ATT; the
+# debiased estimator restores nominal coverage at ETWFE efficiency. Hand-off from
+# the FETWFE methodology paper, Theorem `debiased.att.thm` (eqs
+# `debiased.att.def` / `debiased.ols.identity` / `debiased.att.se`). The exact
+# algorithm mirrors the validated simulation reference
+# `simulations/method_functions.R::debiased_fetwfe` in the paper repo.
+
+#' Debiased overall-ATT with a uniformly-valid standard error
+#'
+#' @description
+#' Computes a *debiased* estimate of the overall average treatment effect on the
+#' treated (ATT) from a fitted [fetwfe()] object, together with a
+#' uniformly-valid standard error. This is a complement to the fused plug-in
+#' interval reported on the fit (`fit$att_hat` / `fit$att_se`): the fused SE is
+#' the within-selection variance and tends to *under-cover* the aggregated
+#' overall ATT (it omits the between-selection term), whereas `debiasedATT()`
+#' returns an interval with asymptotically nominal coverage at roughly the
+#' efficiency of unrestricted ETWFE.
+#'
+#' The debiased point estimate **differs** from the fused `fit$att_hat`: by the
+#' OLS identity (paper eq. `debiased.ols.identity`) it equals the unrestricted
+#' ETWFE/OLS estimate in the ATT direction. You therefore get a dual offering ---
+#' `fit$att_hat` / `fit$att_se` (fused, efficient, pointwise) and
+#' `debiasedATT(fit)` (debiased, ETWFE-efficient, uniformly valid). It is exposed
+#' as a separate accessor (rather than a `se_type` option) precisely because the
+#' debiased SE accompanies a different point estimate than the fused one.
+#'
+#' @details
+#' The standard error has two channels that **add** under marginal cohort
+#' assignment / Assumption (Psi-IF): a regression (outcome) channel,
+#' per-unit-clustered, and a cohort-weight channel for the sampling noise in the
+#' estimated cohort weights. See *Assumptions* below.
+#'
+#' The estimate and SE are read from the quantities the fit stored. When the fit
+#' was made with `indep_counts`, the overall ATT and the cohort weights are the
+#' independent-sample versions, and the cohort-weight channel pairs those weights
+#' with the in-sample treated-unit count (matching the validated reference; the
+#' debiased SE is validated for the default marginal, no-`indep_counts` case).
+#' The fit's `se_type` does **not** affect the result --- `debiasedATT()` always
+#' computes its own per-unit-clustered regression channel. Fits made with
+#' `add_ridge = TRUE` are **not** supported (the ridge-augmented design and
+#' post-fit un-shrink are outside the validated construction); the accessor
+#' errors on them.
+#'
+#' @section Assumptions:
+#' The uniformly-valid SE relies on the hypotheses of paper Theorem
+#' `debiased.att.thm`:
+#' \itemize{
+#'   \item **Marginal cohort assignment / (Psi-IF).** Cohort membership is
+#'     independent of the outcome noise, so the regression and cohort-weight
+#'     variance channels are uncorrelated and add. The package's default cohort
+#'     weight estimator (sample proportions) satisfies this. Under *confounded*
+#'     assignment (cohort membership correlated with treatment-effect
+#'     heterogeneity) the two channels correlate and the additive SE can
+#'     mis-state uncertainty; a combined per-unit score is then required (not yet
+#'     implemented).
+#'   \item **Correctly specified (GLS-whitened) conditional mean** of the
+#'     outcome. Neyman-orthogonality removes first-order sensitivity to the
+#'     selected nuisance coefficients, but not to mean-misspecification.
+#'   \item **Asymptotically negligible ridge,** `lambda = o((NT)^(-1/2))`. The
+#'     implementation uses a tiny fixed ridge (`1e-6 * mean(diag(Sigma))`) purely
+#'     to stabilize the linear solve; it cancels in the leading (OLS-identity)
+#'     case.
+#'   \item **Growing number of clusters,** `N -> infinity`. The CLT is over the
+#'     `N` independent units, not the `NT` rows. With few treated units the
+#'     cluster approximation is poor; prefer a wild-cluster bootstrap when `N` is
+#'     small.
+#'   \item **Fixed-dimension regularity:** the full design Gram matrix is
+#'     nonsingular with finite fourth covariate moments, and the design is
+#'     low-dimensional, `p < NT`. The high-dimensional regime `p >= NT` (where
+#'     unrestricted ETWFE is infeasible and a desparsified-lasso construction is
+#'     required) is out of scope; the accessor errors in that case (paper Remark
+#'     `debiased.regime.remark`).
+#' }
+#'
+#' @param fit A fitted object from [fetwfe()] computed with `q < 1` (so the
+#'   bridge selection produces a valid standard error). [etwfe()] / [betwfe()] /
+#'   [twfeCovs()] are not supported (the construction is specific to the FETWFE
+#'   transformed-coefficient space).
+#' @param alpha Numeric in `(0, 1)`; the confidence level is `1 - alpha`.
+#'   Defaults to the `alpha` stored on the fit.
+#'
+#' @return A named list with elements:
+#'   \describe{
+#'     \item{att}{Numeric scalar; the debiased overall-ATT point estimate.}
+#'     \item{se}{Numeric scalar; the uniformly-valid standard error,
+#'       `sqrt(V1_full + V2)`.}
+#'     \item{ci_low, ci_high}{Numeric; the `1 - alpha` Wald interval
+#'       `att +/- qnorm(1 - alpha/2) * se`.}
+#'     \item{V1_full}{Numeric; the regression (outcome) channel variance
+#'       component, per-unit-clustered.}
+#'     \item{V2}{Numeric; the cohort-weight channel variance component.}
+#'   }
+#'
+#' @seealso [fetwfe()] for the fused fit; [cohortTimeATTs()] / [eventStudy()] /
+#'   [cohortStudy()] for the disaggregated fused effects.
+#' @examples
+#' \dontrun{
+#'   coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2, seed = 1)
+#'   dat <- simulateData(coefs, N = 200, sig_eps_sq = 1, sig_eps_c_sq = 0.5, seed = 1)
+#'   fit <- fetwfeWithSimulatedData(dat, q = 0.5)
+#'   fit$att_hat # fused (pointwise)
+#'   debiasedATT(fit) # debiased (uniformly valid)
+#' }
+#' @export
+debiasedATT <- function(fit, alpha = NULL) {
+	if (!inherits(fit, "fetwfe")) {
+		stop(
+			"debiasedATT() requires a fitted object from fetwfe(). The debiased ",
+			"ATT construction is specific to FETWFE's transformed-coefficient ",
+			"space and is not defined for etwfe()/betwfe()/twfeCovs(). Got class: ",
+			paste(class(fit), collapse = ", "),
+			".",
+			call. = FALSE
+		)
+	}
+
+	if (is.null(alpha)) {
+		alpha <- fit$alpha
+	}
+	if (
+		!is.numeric(alpha) ||
+			length(alpha) != 1L ||
+			is.na(alpha) ||
+			alpha <= 0 ||
+			alpha >= 1
+	) {
+		stop(
+			"debiasedATT(): `alpha` must be a single number in (0, 1).",
+			call. = FALSE
+		)
+	}
+
+	# q >= 1 gate: a valid debiased SE requires the bridge-selection regime
+	# (q < 1), which is exactly when the fit computed standard errors. `q` is not
+	# stored on the object, so detect via the canonical `calc_ses` flag.
+	if (!isTRUE(fit$internal$calc_ses)) {
+		stop(
+			"debiasedATT() requires a fit computed with q < 1 (bridge selection), ",
+			"so a valid debiased standard error exists. This fit has ",
+			"calc_ses = FALSE (q >= 1). Re-fit with q < 1 (e.g. q = 0.5).",
+			call. = FALSE
+		)
+	}
+
+	X <- fit$internal$X_final
+	y <- as.numeric(fit$internal$y_final)
+	theta_hat <- fit$internal$theta_hat
+	n <- nrow(X)
+	p <- ncol(X)
+
+	# add_ridge = TRUE fits store a ridge-row-augmented `y_final` (length NT + p)
+	# against an unaugmented `X_final` (NT rows), and un-shrink the coefficients
+	# post-fit. The debiased construction is not validated for that design, so
+	# reject it cleanly rather than letting the dimension mismatch / un-shrink
+	# trip the internal identity guard with a cryptic message.
+	if (length(y) != n) {
+		stop(
+			"debiasedATT() does not support fits made with add_ridge = TRUE ",
+			"(the ridge-augmented design and post-fit un-shrink are outside the ",
+			"validated debiased construction). Re-fit with add_ridge = FALSE.",
+			call. = FALSE
+		)
+	}
+
+	# High-dimensional regime: the OLS identity (and the whole leading-order
+	# argument) requires p < NT. When p >= NT the unrestricted estimator is
+	# infeasible and a (cluster-ported) desparsified-lasso construction of `v` is
+	# needed -- out of scope here (paper Remark `debiased.regime.remark`).
+	if (p >= n) {
+		stop(
+			"debiasedATT(): the design is high-dimensional (p >= NT: p = ",
+			p,
+			", NT = ",
+			n,
+			"), where unrestricted ETWFE is infeasible and the OLS identity ",
+			"underlying the debiased estimator no longer holds. The desparsified-",
+			"lasso construction for this regime is follow-up work (paper Remark ",
+			"`debiased.regime.remark`) and is not yet available.",
+			call. = FALSE
+		)
+	}
+
+	G <- fit$G
+	T <- fit$T
+	d <- fit$d
+	treat_inds <- fit$treat_inds
+	num_treats <- length(treat_inds)
+	cohort_probs <- fit$cohort_probs
+	catt_hats <- if (!is.null(fit$catt_hats)) {
+		fit$catt_hats
+	} else {
+		fit$catt_df$estimate
+	}
+
+	# Balanced, unit-major panel is required for the per-unit cluster sums
+	# (fetwfe() enforces a balanced panel and sorts rows unit-major).
+	if (n %% T != 0L) {
+		stop(
+			"debiasedATT(): internal design has ",
+			n,
+			" rows, not a multiple of T = ",
+			T,
+			" (expected a balanced panel). Please file an issue.",
+			call. = FALSE
+		)
+	}
+
+	# ---- theta-space ATT weight vector a_theta = c(0, A' a_beta) ----
+	first_inds <- getFirstInds(G = G, T = T)
+	# Cohort g has T - g post-treatment cells; a_beta loads treat_inds with weight
+	# cohort_probs[g] / (#cells in cohort g) so a_beta' beta = sum_g pi_g * catt_g.
+	sizes <- (T - 1):(T - G)
+	cohort_of_treat <- rep(seq_len(G), times = sizes)
+	a_beta <- numeric(p)
+	for (g in seq_len(G)) {
+		idx <- treat_inds[cohort_of_treat == g]
+		a_beta[idx] <- cohort_probs[g] / length(idx)
+	}
+	# Use the SAME fusion transform the fit used (#236 custom matrices included),
+	# NOT a hard-coded "cohort" transform -- otherwise event-study / custom fits
+	# violate the ATT-direction identity below.
+	A <- genFullInvFusionTransformMat(
+		first_inds = first_inds,
+		T = T,
+		G = G,
+		d = d,
+		num_treats = num_treats,
+		fusion_structure = fit$fusion_structure,
+		d_inv_treat = fit$internal$d_inv_treat
+	)
+	a_theta <- c(0, as.numeric(crossprod(A, a_beta)))
+
+	# Invariant: a_theta picks out the same overall ATT the fit reports (the
+	# plug-in functional). A failure here means the weight vector / transform is
+	# inconsistent with the fit.
+	stopifnot(abs(sum(a_theta * theta_hat) - fit$att_hat) < 1e-6)
+
+	# ---- debiased estimate: plug-in functional + orthogonal correction ----
+	Sig <- crossprod(X) / n
+	v <- solve(Sig + (1e-6 * mean(diag(Sig))) * diag(p), a_theta[-1])
+	resid <- as.numeric(y - theta_hat[1] - X %*% theta_hat[-1])
+	score <- as.numeric((X %*% v) * resid)
+	att_db <- sum(a_theta * theta_hat) + mean(score)
+
+	# ---- channel 1: regression (outcome) variance, per-unit clustered ----
+	unit <- rep(seq_len(n / T), each = T)
+	unit_scores <- tapply(score, unit, sum)
+	V1_full <- sum(unit_scores^2) / n^2
+
+	# ---- channel 2: cohort-weight variance ----
+	# N_T = number of distinct treated units (the multinomial sample size for the
+	# cohort weights), recovered from the design (pdata is not stored on the fit).
+	treated_unit <- tapply(
+		rowSums(abs(X[, treat_inds, drop = FALSE])),
+		unit,
+		sum
+	) >
+		0
+	N_T <- sum(treated_unit)
+	V2 <- sum(cohort_probs * (catt_hats - fit$att_hat)^2) / N_T
+
+	se_db <- sqrt(V1_full + V2)
+	z <- stats::qnorm(1 - alpha / 2)
+	list(
+		att = att_db,
+		se = se_db,
+		ci_low = att_db - z * se_db,
+		ci_high = att_db + z * se_db,
+		V1_full = V1_full,
+		V2 = V2
+	)
+}
+
+#' Run debiasedATT() on simulated data
+#'
+#' @description
+#' Convenience wrapper mirroring the `*WithSimulatedData()` pattern: fits
+#' [fetwfe()] on a `"FETWFE_simulated"` object (via [fetwfeWithSimulatedData()])
+#' and returns [debiasedATT()] on the fit.
+#'
+#' @param simulated_obj An object of class `"FETWFE_simulated"` (from
+#'   [simulateData()]).
+#' @param q Numeric; the `L_q` bridge penalty exponent. Must be `< 1` (the
+#'   debiased SE requires bridge selection). Defaults to `0.5`.
+#' @param alpha Numeric in `(0, 1)`; confidence level `1 - alpha`. Default
+#'   `0.05`.
+#' @param ... Further arguments forwarded to [fetwfeWithSimulatedData()] (e.g.
+#'   `fusion_structure`, `lambda_selection`, `cv_seed`).
+#' @return The list returned by [debiasedATT()].
+#' @seealso [debiasedATT()], [fetwfeWithSimulatedData()].
+#' @examples
+#' \dontrun{
+#'   coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2, seed = 1)
+#'   dat <- simulateData(coefs, N = 200, sig_eps_sq = 1, sig_eps_c_sq = 0.5, seed = 1)
+#'   debiasedATTWithSimulatedData(dat)
+#' }
+#' @export
+debiasedATTWithSimulatedData <- function(
+	simulated_obj,
+	q = 0.5,
+	alpha = 0.05,
+	...
+) {
+	fit <- fetwfeWithSimulatedData(simulated_obj, q = q, ...)
+	debiasedATT(fit, alpha = alpha)
+}
