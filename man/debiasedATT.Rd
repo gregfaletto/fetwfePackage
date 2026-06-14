@@ -20,13 +20,18 @@ A named list with elements:
 \describe{
 \item{att}{Numeric scalar; the debiased overall-ATT point estimate.}
 \item{se}{Numeric scalar; the uniformly-valid standard error,
-\code{sqrt(V1_full + V2)}.}
+\code{sqrt(var_reg + var_weight)}.}
 \item{ci_low, ci_high}{Numeric; the \code{1 - alpha} Wald interval
 \verb{att +/- qnorm(1 - alpha/2) * se}.}
-\item{V1_full}{Numeric; the regression (outcome) channel variance
-component, per-unit-clustered.}
-\item{V2}{Numeric; the cohort-weight channel variance component.}
+\item{var_reg}{Numeric; the regression (outcome) channel's contribution to
+\code{se^2}, per-unit-clustered.}
+\item{var_weight}{Numeric; the cohort-weight channel's contribution to
+\code{se^2}.}
 }
+\code{var_reg} and \code{var_weight} are the two \strong{\code{se^2}-scale} (unit-scale)
+components, so \code{se = sqrt(var_reg + var_weight)}. They are \emph{not} the paper's
+CLT-scale variances \code{V_1^full} / \code{V_2} from Theorem \code{debiased.att.thm}, which
+are larger by a factor on the order of \code{NT}.
 }
 \description{
 Computes a \emph{debiased} estimate of the overall average treatment effect on the
@@ -52,16 +57,17 @@ assignment / Assumption (Psi-IF): a regression (outcome) channel,
 per-unit-clustered, and a cohort-weight channel for the sampling noise in the
 estimated cohort weights. See \emph{Assumptions} below.
 
-The estimate and SE are read from the quantities the fit stored. When the fit
-was made with \code{indep_counts}, the overall ATT and the cohort weights are the
-independent-sample versions, and the cohort-weight channel pairs those weights
-with the in-sample treated-unit count (matching the validated reference; the
-debiased SE is validated for the default marginal, no-\code{indep_counts} case).
-The fit's \code{se_type} does \strong{not} affect the result --- \code{debiasedATT()} always
-computes its own per-unit-clustered regression channel. Fits made with
-\code{add_ridge = TRUE} are \strong{not} supported (the ridge-augmented design and
-post-fit un-shrink are outside the validated construction); the accessor
-errors on them.
+The estimate and SE are read from the quantities the fit stored. The debiased
+SE is validated for the default single-sample (no-\code{indep_counts}) fit. When the
+fit was made with \code{indep_counts}, the cohort weights come from an independent
+sample of a different size, so the cohort-weight channel's
+in-sample-treated-count normalization can misstate that channel; the accessor
+\strong{warns} in that case (the point estimate and the regression channel are
+unaffected). The fit's \code{se_type} does \strong{not} affect the result ---
+\code{debiasedATT()} always computes its own per-unit-clustered regression channel.
+Fits made with \code{add_ridge = TRUE} are \strong{not} supported (the ridge-augmented
+design and post-fit un-shrink are outside the validated construction); the
+accessor errors on them.
 }
 \section{Assumptions}{
 
@@ -79,10 +85,12 @@ implemented).
 \item \strong{Correctly specified (GLS-whitened) conditional mean} of the
 outcome. Neyman-orthogonality removes first-order sensitivity to the
 selected nuisance coefficients, but not to mean-misspecification.
-\item \strong{Asymptotically negligible ridge,} \code{lambda = o((NT)^(-1/2))}. The
-implementation uses a tiny fixed ridge (\code{1e-6 * mean(diag(Sigma))}) purely
-to stabilize the linear solve; it cancels in the leading (OLS-identity)
-case.
+\item \strong{Asymptotically negligible ridge,} \code{lambda = o((NT)^(-1/2))} (the
+theoretical condition; the leading case is the exact inverse \code{lambda = 0}).
+The implementation does \strong{not} use a vanishing schedule --- it adds a fixed
+numerical stabilizer \code{1e-6 * mean(diag(Sigma))} to the Gram before solving,
+which (running only at \code{p < NT}) is negligible and cancels in the
+OLS-identity case.
 \item \strong{Growing number of clusters,} \code{N -> infinity}. The CLT is over the
 \code{N} independent units, not the \code{NT} rows. With few treated units the
 cluster approximation is poor; prefer a wild-cluster bootstrap when \code{N} is

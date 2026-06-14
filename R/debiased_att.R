@@ -33,16 +33,17 @@
 #' per-unit-clustered, and a cohort-weight channel for the sampling noise in the
 #' estimated cohort weights. See *Assumptions* below.
 #'
-#' The estimate and SE are read from the quantities the fit stored. When the fit
-#' was made with `indep_counts`, the overall ATT and the cohort weights are the
-#' independent-sample versions, and the cohort-weight channel pairs those weights
-#' with the in-sample treated-unit count (matching the validated reference; the
-#' debiased SE is validated for the default marginal, no-`indep_counts` case).
-#' The fit's `se_type` does **not** affect the result --- `debiasedATT()` always
-#' computes its own per-unit-clustered regression channel. Fits made with
-#' `add_ridge = TRUE` are **not** supported (the ridge-augmented design and
-#' post-fit un-shrink are outside the validated construction); the accessor
-#' errors on them.
+#' The estimate and SE are read from the quantities the fit stored. The debiased
+#' SE is validated for the default single-sample (no-`indep_counts`) fit. When the
+#' fit was made with `indep_counts`, the cohort weights come from an independent
+#' sample of a different size, so the cohort-weight channel's
+#' in-sample-treated-count normalization can misstate that channel; the accessor
+#' **warns** in that case (the point estimate and the regression channel are
+#' unaffected). The fit's `se_type` does **not** affect the result ---
+#' `debiasedATT()` always computes its own per-unit-clustered regression channel.
+#' Fits made with `add_ridge = TRUE` are **not** supported (the ridge-augmented
+#' design and post-fit un-shrink are outside the validated construction); the
+#' accessor errors on them.
 #'
 #' @section Assumptions:
 #' The uniformly-valid SE relies on the hypotheses of paper Theorem
@@ -59,10 +60,12 @@
 #'   \item **Correctly specified (GLS-whitened) conditional mean** of the
 #'     outcome. Neyman-orthogonality removes first-order sensitivity to the
 #'     selected nuisance coefficients, but not to mean-misspecification.
-#'   \item **Asymptotically negligible ridge,** `lambda = o((NT)^(-1/2))`. The
-#'     implementation uses a tiny fixed ridge (`1e-6 * mean(diag(Sigma))`) purely
-#'     to stabilize the linear solve; it cancels in the leading (OLS-identity)
-#'     case.
+#'   \item **Asymptotically negligible ridge,** `lambda = o((NT)^(-1/2))` (the
+#'     theoretical condition; the leading case is the exact inverse `lambda = 0`).
+#'     The implementation does **not** use a vanishing schedule --- it adds a fixed
+#'     numerical stabilizer `1e-6 * mean(diag(Sigma))` to the Gram before solving,
+#'     which (running only at `p < NT`) is negligible and cancels in the
+#'     OLS-identity case.
 #'   \item **Growing number of clusters,** `N -> infinity`. The CLT is over the
 #'     `N` independent units, not the `NT` rows. With few treated units the
 #'     cluster approximation is poor; prefer a wild-cluster bootstrap when `N` is
@@ -86,13 +89,18 @@
 #'   \describe{
 #'     \item{att}{Numeric scalar; the debiased overall-ATT point estimate.}
 #'     \item{se}{Numeric scalar; the uniformly-valid standard error,
-#'       `sqrt(V1_full + V2)`.}
+#'       `sqrt(var_reg + var_weight)`.}
 #'     \item{ci_low, ci_high}{Numeric; the `1 - alpha` Wald interval
 #'       `att +/- qnorm(1 - alpha/2) * se`.}
-#'     \item{V1_full}{Numeric; the regression (outcome) channel variance
-#'       component, per-unit-clustered.}
-#'     \item{V2}{Numeric; the cohort-weight channel variance component.}
+#'     \item{var_reg}{Numeric; the regression (outcome) channel's contribution to
+#'       `se^2`, per-unit-clustered.}
+#'     \item{var_weight}{Numeric; the cohort-weight channel's contribution to
+#'       `se^2`.}
 #'   }
+#'   `var_reg` and `var_weight` are the two **`se^2`-scale** (unit-scale)
+#'   components, so `se = sqrt(var_reg + var_weight)`. They are *not* the paper's
+#'   CLT-scale variances `V_1^full` / `V_2` from Theorem `debiased.att.thm`, which
+#'   are larger by a factor on the order of `NT`.
 #'
 #' @seealso [fetwfe()] for the fused fit; [cohortTimeATTs()] / [eventStudy()] /
 #'   [cohortStudy()] for the disaggregated fused effects.
@@ -189,10 +197,23 @@ debiasedATT <- function(fit, alpha = NULL) {
 	treat_inds <- fit$treat_inds
 	num_treats <- length(treat_inds)
 	cohort_probs <- fit$cohort_probs
-	catt_hats <- if (!is.null(fit$catt_hats)) {
-		fit$catt_hats
-	} else {
-		fit$catt_df$estimate
+	catt_hats <- fit$catt_hats
+
+	# The cohort-weight SE channel (var_weight) normalizes by the in-sample
+	# treated-unit count, which is correct for single-sample fits. With
+	# `indep_counts` the cohort weights are estimated on an independent sample of a
+	# different size, so that normalization can misstate the channel. Warn (the
+	# two-sample case is not yet validated); the point estimate and the regression
+	# channel are unaffected.
+	if (isTRUE(fit$indep_counts_used)) {
+		warning(
+			"debiasedATT(): this fit used `indep_counts`. The cohort-weight ",
+			"standard-error channel (var_weight) uses the single-sample ",
+			"normalization; the two-sample (indep_counts) case is not yet ",
+			"validated, so the reported SE may misstate uncertainty. The point ",
+			"estimate and the regression channel are unaffected.",
+			call. = FALSE
+		)
 	}
 
 	# Balanced, unit-major panel is required for the per-unit cluster sums
@@ -234,9 +255,16 @@ debiasedATT <- function(fit, alpha = NULL) {
 	a_theta <- c(0, as.numeric(crossprod(A, a_beta)))
 
 	# Invariant: a_theta picks out the same overall ATT the fit reports (the
-	# plug-in functional). A failure here means the weight vector / transform is
+	# plug-in functional). A failure means the weight vector / transform is
 	# inconsistent with the fit.
-	stopifnot(abs(sum(a_theta * theta_hat) - fit$att_hat) < 1e-6)
+	if (abs(sum(a_theta * theta_hat) - fit$att_hat) >= 1e-6) {
+		stop(
+			"debiasedATT(): the ATT-direction identity failed --- the reconstructed ",
+			"ATT weight does not match the fit's att_hat. The fit's fusion structure ",
+			"may be unsupported. Please file an issue.",
+			call. = FALSE
+		)
+	}
 
 	# ---- debiased estimate: plug-in functional + orthogonal correction ----
 	Sig <- crossprod(X) / n
@@ -248,7 +276,7 @@ debiasedATT <- function(fit, alpha = NULL) {
 	# ---- channel 1: regression (outcome) variance, per-unit clustered ----
 	unit <- rep(seq_len(n / T), each = T)
 	unit_scores <- tapply(score, unit, sum)
-	V1_full <- sum(unit_scores^2) / n^2
+	var_reg <- sum(unit_scores^2) / n^2
 
 	# ---- channel 2: cohort-weight variance ----
 	# N_T = number of distinct treated units (the multinomial sample size for the
@@ -260,17 +288,17 @@ debiasedATT <- function(fit, alpha = NULL) {
 	) >
 		0
 	N_T <- sum(treated_unit)
-	V2 <- sum(cohort_probs * (catt_hats - fit$att_hat)^2) / N_T
+	var_weight <- sum(cohort_probs * (catt_hats - fit$att_hat)^2) / N_T
 
-	se_db <- sqrt(V1_full + V2)
+	se_db <- sqrt(var_reg + var_weight)
 	z <- stats::qnorm(1 - alpha / 2)
 	list(
 		att = att_db,
 		se = se_db,
 		ci_low = att_db - z * se_db,
 		ci_high = att_db + z * se_db,
-		V1_full = V1_full,
-		V2 = V2
+		var_reg = var_reg,
+		var_weight = var_weight
 	)
 }
 

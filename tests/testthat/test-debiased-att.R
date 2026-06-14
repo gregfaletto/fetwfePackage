@@ -72,6 +72,9 @@
 		sig_eps_c_sq = 0.5,
 		seed = seed
 	)
+	# Single-sample fit (drop the auto-populated indep_counts): the debiased SE is
+	# validated for the single-sample case, and this avoids the two-sample warning.
+	dat$indep_counts <- NA
 	list(
 		fit = fetwfeWithSimulatedData(
 			dat,
@@ -95,7 +98,7 @@ test_that("debiasedATT return shape and Wald interval", {
 	db <- debiasedATT(f$fit, alpha = 0.05)
 	expect_identical(
 		names(db),
-		c("att", "se", "ci_low", "ci_high", "V1_full", "V2")
+		c("att", "se", "ci_low", "ci_high", "var_reg", "var_weight")
 	)
 	expect_true(all(vapply(
 		db,
@@ -103,12 +106,12 @@ test_that("debiasedATT return shape and Wald interval", {
 		NA
 	)))
 	# SE is the sum of the two channels; CI is the Wald interval.
-	expect_equal(db$se, sqrt(db$V1_full + db$V2))
+	expect_equal(db$se, sqrt(db$var_reg + db$var_weight))
 	z <- stats::qnorm(0.975)
 	expect_equal(db$ci_low, db$att - z * db$se)
 	expect_equal(db$ci_high, db$att + z * db$se)
-	expect_gt(db$V1_full, 0)
-	expect_gte(db$V2, 0)
+	expect_gt(db$var_reg, 0)
+	expect_gte(db$var_weight, 0)
 })
 
 test_that("debiased estimate differs from the fused att_hat", {
@@ -127,7 +130,7 @@ test_that("debiasedATT generalizes to event-study fits (fusion_structure threade
 	expect_identical(f$fit$fusion_structure, "event_study")
 	db <- expect_no_error(debiasedATT(f$fit))
 	expect_true(is.finite(db$att) && is.finite(db$se) && db$se > 0)
-	expect_equal(db$se, sqrt(db$V1_full + db$V2))
+	expect_equal(db$se, sqrt(db$var_reg + db$var_weight))
 	# The reference's hard-coded 'cohort' transform would violate the identity on
 	# this fit (so the accessor's threading is load-bearing, not cosmetic).
 	G <- f$fit$G
@@ -178,6 +181,7 @@ test_that("debiasedATT handles a custom fusion_matrix fit (#236)", {
 		sig_eps_c_sq = 0.5,
 		seed = 7
 	)
+	dat$indep_counts <- NA # single-sample (no two-sample warning)
 	nt <- getNumTreats(G = 3, T = 5)
 	D <- diag(nt)
 	D[lower.tri(D)] <- 1 # finite, invertible num_treats x num_treats
@@ -185,7 +189,7 @@ test_that("debiasedATT handles a custom fusion_matrix fit (#236)", {
 	expect_false(is.null(fit_custom$internal$d_inv_treat))
 	db <- expect_no_error(debiasedATT(fit_custom))
 	expect_true(is.finite(db$att) && is.finite(db$se) && db$se > 0)
-	expect_equal(db$se, sqrt(db$V1_full + db$V2))
+	expect_equal(db$se, sqrt(db$var_reg + db$var_weight))
 })
 
 test_that("debiasedATTWithSimulatedData matches debiasedATT on the same fit", {
@@ -204,10 +208,41 @@ test_that("debiasedATTWithSimulatedData matches debiasedATT on the same fit", {
 		sig_eps_c_sq = 0.5,
 		seed = 11
 	)
+	dat$indep_counts <- NA # single-sample (no two-sample warning)
 	w <- debiasedATTWithSimulatedData(dat, q = 0.5)
 	db <- debiasedATT(fetwfeWithSimulatedData(dat, q = 0.5))
 	expect_equal(w$att, db$att)
 	expect_equal(w$se, db$se)
+})
+
+test_that("debiasedATT warns on indep_counts fits, not on single-sample fits", {
+	coefs <- genCoefs(
+		G = 3,
+		T = 5,
+		d = 2,
+		density = 0.6,
+		eff_size = 1.5,
+		seed = 7
+	)
+	dat <- simulateData(
+		coefs,
+		N = 150,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = 7
+	)
+	# indep_counts fit (sim default) -> the cohort-weight channel is not validated
+	# for the two-sample case, so the accessor warns.
+	fit_indep <- fetwfeWithSimulatedData(dat, q = 0.5)
+	expect_true(isTRUE(fit_indep$indep_counts_used))
+	expect_warning(debiasedATT(fit_indep), "indep_counts")
+
+	# Single-sample fit -> no warning.
+	dat_single <- dat
+	dat_single$indep_counts <- NA
+	fit_single <- fetwfeWithSimulatedData(dat_single, q = 0.5)
+	expect_false(isTRUE(fit_single$indep_counts_used))
+	expect_no_warning(debiasedATT(fit_single))
 })
 
 test_that("debiasedATT input guards", {
