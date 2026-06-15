@@ -4,7 +4,13 @@
 \alias{debiasedATT}
 \title{Debiased overall-ATT with a uniformly-valid standard error}
 \usage{
-debiasedATT(fit, alpha = NULL)
+debiasedATT(
+  fit,
+  alpha = NULL,
+  lambda_c = 1,
+  riesz_max_iter = 5000L,
+  riesz_tol = 1e-09
+)
 }
 \arguments{
 \item{fit}{A fitted object from \code{\link[=fetwfe]{fetwfe()}} computed with \code{q < 1} (so the
@@ -14,6 +20,16 @@ transformed-coefficient space).}
 
 \item{alpha}{Numeric in \verb{(0, 1)}; the confidence level is \code{1 - alpha}.
 Defaults to the \code{alpha} stored on the fit.}
+
+\item{lambda_c}{Numeric \verb{> 0}; the leading constant of the high-dimensional
+(\code{p >= NT}) nodewise penalty \verb{lambda_node = lambda_c * max(|a|) * sqrt(log(p) / N)} (\code{N} = number of units). Larger values shrink the
+debiasing direction more (more conservative). \strong{Ignored when \code{p < NT}.}
+Default \code{1.0}. The coverage-optimal value is regime- and data-dependent and
+not yet established by simulation (see \emph{Assumptions}); treat this as a
+tunable, experimental knob.}
+
+\item{riesz_max_iter, riesz_tol}{Integer / numeric; coordinate-descent controls
+for the high-dimensional nodewise solver. \strong{Ignored when \code{p < NT}.}}
 }
 \value{
 A named list with elements:
@@ -33,6 +49,11 @@ carries the correct single- or two-sample (\code{indep_counts}) formula.}
 components, so \code{se = sqrt(var_reg + var_weight)}. They are \emph{not} the paper's
 CLT-scale variances \code{V_1^full} / \code{V_2} from Theorem \code{debiased.att.thm}, which
 are larger by a factor on the order of \code{NT}.
+
+For high-dimensional (\code{p >= NT}) fits the list additionally contains
+\code{feasibility} (\verb{= ||Sigma v - a||_inf}, the nodewise KKT certificate, which
+should be \verb{<= lambda_node}), \code{converged} (the coordinate-descent flag), and
+\code{lambda_node} (the penalty used). These are absent for \code{p < NT} fits.
 }
 \description{
 Computes a \emph{debiased} estimate of the overall average treatment effect on the
@@ -44,13 +65,20 @@ overall ATT (it omits the between-selection term), whereas \code{debiasedATT()}
 returns an interval with asymptotically nominal coverage at roughly the
 efficiency of unrestricted ETWFE.
 
-The debiased point estimate \strong{differs} from the fused \code{fit$att_hat}: by the
-OLS identity (paper eq. \code{debiased.ols.identity}) it equals the unrestricted
-ETWFE/OLS estimate in the ATT direction. You therefore get a dual offering ---
-\code{fit$att_hat} / \code{fit$att_se} (fused, efficient, pointwise) and
+The debiased point estimate \strong{differs} from the fused \code{fit$att_hat}: when
+\code{p < NT}, by the OLS identity (paper eq. \code{debiased.ols.identity}) it equals the
+unrestricted ETWFE/OLS estimate in the ATT direction. You therefore get a dual
+offering --- \code{fit$att_hat} / \code{fit$att_se} (fused, efficient, pointwise) and
 \code{debiasedATT(fit)} (debiased, ETWFE-efficient, uniformly valid). It is exposed
 as a separate accessor (rather than a \code{se_type} option) precisely because the
 debiased SE accompanies a different point estimate than the fused one.
+
+When \code{p >= NT} the unrestricted ETWFE is infeasible, so the OLS identity no
+longer applies; the accessor instead builds the debiasing direction by a
+nodewise (desparsified-lasso) relaxed inverse (paper Theorem
+\code{debiased.highdim.thm}). The point estimate, SE formula, and return value are
+otherwise identical --- "one estimator, two regimes." This high-dimensional
+branch is \strong{experimental} (see Assumptions).
 }
 \details{
 The standard error has two channels that \strong{add} under marginal cohort
@@ -85,23 +113,44 @@ implemented).
 \item \strong{Correctly specified (GLS-whitened) conditional mean} of the
 outcome. Neyman-orthogonality removes first-order sensitivity to the
 selected nuisance coefficients, but not to mean-misspecification.
-\item \strong{Asymptotically negligible ridge,} \code{lambda = o((NT)^(-1/2))} (the
-theoretical condition; the leading case is the exact inverse \code{lambda = 0}).
-The implementation does \strong{not} use a vanishing schedule --- it adds a fixed
-numerical stabilizer \code{1e-6 * mean(diag(Sigma))} to the Gram before solving,
-which (running only at \code{p < NT}) is negligible and cancels in the
-OLS-identity case.
+\item \strong{(Low-dimensional \code{p < NT} only) Asymptotically negligible ridge,}
+\code{lambda = o((NT)^(-1/2))} (the theoretical condition; the leading case is
+the exact inverse \code{lambda = 0}). The implementation does \strong{not} use a
+vanishing schedule --- it adds a fixed numerical stabilizer
+\code{1e-6 * mean(diag(Sigma))} to the Gram before solving, which is negligible
+and cancels in the OLS-identity case.
 \item \strong{Growing number of clusters,} \code{N -> infinity}. The CLT is over the
 \code{N} independent units, not the \code{NT} rows. With few treated units the
 cluster approximation is poor; prefer a wild-cluster bootstrap when \code{N} is
 small.
-\item \strong{Fixed-dimension regularity:} the full design Gram matrix is
-nonsingular with finite fourth covariate moments, and the design is
-low-dimensional, \code{p < NT}. The high-dimensional regime \code{p >= NT} (where
-unrestricted ETWFE is infeasible and a desparsified-lasso construction is
-required) is out of scope; the accessor errors in that case (paper Remark
-\code{debiased.regime.remark}).
+\item \strong{Regularity / two regimes.} When \code{p < NT} (Theorem
+\code{debiased.att.thm}) the full design Gram is nonsingular and the debiasing
+direction is the exact inverse; the accessor reduces to debiased ETWFE.
+When \code{p >= NT} (Theorem \code{debiased.highdim.thm}) the Gram is singular and the
+direction is the \strong{nodewise (desparsified-lasso) relaxed inverse} of
+equation \code{debiased.highdim.v} (the same estimate and SE, only \code{v} differs
+--- "one estimator, two regimes"); it requires sparsity
+(\verb{s_N log(p_N) / sqrt(N) -> 0}), a restricted-eigenvalue condition over
+sparse cones, \verb{||v*||_1 = O(1)}, and a bounded limiting variance
+\verb{a' Sigma_theta^(-1) a}. The high-dimensional branch realizes Theorem
+\code{debiased.highdim.thm} with the theory-scaled penalty, but its
+finite-sample \strong{coverage is not yet validated by simulation} (the penalty
+constant \code{lambda_c} is not yet tuned); treat the \code{p >= NT} path as
+\strong{experimental} and inspect the returned \code{feasibility} / \code{converged}
+diagnostics.
 }
+
+The high-dimensional branch reuses the same bridge (\code{q < 1}) nuisance
+\code{theta_hat} as the fixed-\code{p} branch rather than the paper's literal \code{q = 1}
+fused lasso (a \code{q = 1} fit carries no valid SE here, since \code{calc_ses} is
+\code{FALSE}). For the fixed-\code{p} branch this substitution is first-order innocuous:
+Theorem \code{debiased.att.thm} needs only \emph{consistency} of the nuisance. In the
+high-dimensional regime, however, Theorem \code{debiased.highdim.thm} controls the
+orthogonalization remainder through the nuisance's \code{l1} \emph{rate}
+(\verb{||theta_hat - theta*||_1 = O_p(s_N lambda_theta)}), which the paper
+establishes for the \code{q = 1} fused lasso; the bridge nuisance is \code{l1}-consistent
+and sparse, but its high-dimensional \code{l1} rate is not established for \code{q < 1}.
+This is a further reason the \code{p >= NT} path is flagged experimental.
 }
 
 \examples{

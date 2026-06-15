@@ -19,13 +19,20 @@
 #' returns an interval with asymptotically nominal coverage at roughly the
 #' efficiency of unrestricted ETWFE.
 #'
-#' The debiased point estimate **differs** from the fused `fit$att_hat`: by the
-#' OLS identity (paper eq. `debiased.ols.identity`) it equals the unrestricted
-#' ETWFE/OLS estimate in the ATT direction. You therefore get a dual offering ---
-#' `fit$att_hat` / `fit$att_se` (fused, efficient, pointwise) and
+#' The debiased point estimate **differs** from the fused `fit$att_hat`: when
+#' `p < NT`, by the OLS identity (paper eq. `debiased.ols.identity`) it equals the
+#' unrestricted ETWFE/OLS estimate in the ATT direction. You therefore get a dual
+#' offering --- `fit$att_hat` / `fit$att_se` (fused, efficient, pointwise) and
 #' `debiasedATT(fit)` (debiased, ETWFE-efficient, uniformly valid). It is exposed
 #' as a separate accessor (rather than a `se_type` option) precisely because the
 #' debiased SE accompanies a different point estimate than the fused one.
+#'
+#' When `p >= NT` the unrestricted ETWFE is infeasible, so the OLS identity no
+#' longer applies; the accessor instead builds the debiasing direction by a
+#' nodewise (desparsified-lasso) relaxed inverse (paper Theorem
+#' `debiased.highdim.thm`). The point estimate, SE formula, and return value are
+#' otherwise identical --- "one estimator, two regimes." This high-dimensional
+#' branch is **experimental** (see Assumptions).
 #'
 #' @details
 #' The standard error has two channels that **add** under marginal cohort
@@ -59,23 +66,44 @@
 #'   \item **Correctly specified (GLS-whitened) conditional mean** of the
 #'     outcome. Neyman-orthogonality removes first-order sensitivity to the
 #'     selected nuisance coefficients, but not to mean-misspecification.
-#'   \item **Asymptotically negligible ridge,** `lambda = o((NT)^(-1/2))` (the
-#'     theoretical condition; the leading case is the exact inverse `lambda = 0`).
-#'     The implementation does **not** use a vanishing schedule --- it adds a fixed
-#'     numerical stabilizer `1e-6 * mean(diag(Sigma))` to the Gram before solving,
-#'     which (running only at `p < NT`) is negligible and cancels in the
-#'     OLS-identity case.
+#'   \item **(Low-dimensional `p < NT` only) Asymptotically negligible ridge,**
+#'     `lambda = o((NT)^(-1/2))` (the theoretical condition; the leading case is
+#'     the exact inverse `lambda = 0`). The implementation does **not** use a
+#'     vanishing schedule --- it adds a fixed numerical stabilizer
+#'     `1e-6 * mean(diag(Sigma))` to the Gram before solving, which is negligible
+#'     and cancels in the OLS-identity case.
 #'   \item **Growing number of clusters,** `N -> infinity`. The CLT is over the
 #'     `N` independent units, not the `NT` rows. With few treated units the
 #'     cluster approximation is poor; prefer a wild-cluster bootstrap when `N` is
 #'     small.
-#'   \item **Fixed-dimension regularity:** the full design Gram matrix is
-#'     nonsingular with finite fourth covariate moments, and the design is
-#'     low-dimensional, `p < NT`. The high-dimensional regime `p >= NT` (where
-#'     unrestricted ETWFE is infeasible and a desparsified-lasso construction is
-#'     required) is out of scope; the accessor errors in that case (paper Remark
-#'     `debiased.regime.remark`).
+#'   \item **Regularity / two regimes.** When `p < NT` (Theorem
+#'     `debiased.att.thm`) the full design Gram is nonsingular and the debiasing
+#'     direction is the exact inverse; the accessor reduces to debiased ETWFE.
+#'     When `p >= NT` (Theorem `debiased.highdim.thm`) the Gram is singular and the
+#'     direction is the **nodewise (desparsified-lasso) relaxed inverse** of
+#'     equation `debiased.highdim.v` (the same estimate and SE, only `v` differs
+#'     --- "one estimator, two regimes"); it requires sparsity
+#'     (`s_N log(p_N) / sqrt(N) -> 0`), a restricted-eigenvalue condition over
+#'     sparse cones, `||v*||_1 = O(1)`, and a bounded limiting variance
+#'     `a' Sigma_theta^(-1) a`. The high-dimensional branch realizes Theorem
+#'     `debiased.highdim.thm` with the theory-scaled penalty, but its
+#'     finite-sample **coverage is not yet validated by simulation** (the penalty
+#'     constant `lambda_c` is not yet tuned); treat the `p >= NT` path as
+#'     **experimental** and inspect the returned `feasibility` / `converged`
+#'     diagnostics.
 #' }
+#'
+#' The high-dimensional branch reuses the same bridge (`q < 1`) nuisance
+#' `theta_hat` as the fixed-`p` branch rather than the paper's literal `q = 1`
+#' fused lasso (a `q = 1` fit carries no valid SE here, since `calc_ses` is
+#' `FALSE`). For the fixed-`p` branch this substitution is first-order innocuous:
+#' Theorem `debiased.att.thm` needs only *consistency* of the nuisance. In the
+#' high-dimensional regime, however, Theorem `debiased.highdim.thm` controls the
+#' orthogonalization remainder through the nuisance's `l1` *rate*
+#' (`||theta_hat - theta*||_1 = O_p(s_N lambda_theta)`), which the paper
+#' establishes for the `q = 1` fused lasso; the bridge nuisance is `l1`-consistent
+#' and sparse, but its high-dimensional `l1` rate is not established for `q < 1`.
+#' This is a further reason the `p >= NT` path is flagged experimental.
 #'
 #' @param fit A fitted object from [fetwfe()] computed with `q < 1` (so the
 #'   bridge selection produces a valid standard error). [etwfe()] / [betwfe()] /
@@ -83,6 +111,15 @@
 #'   transformed-coefficient space).
 #' @param alpha Numeric in `(0, 1)`; the confidence level is `1 - alpha`.
 #'   Defaults to the `alpha` stored on the fit.
+#' @param lambda_c Numeric `> 0`; the leading constant of the high-dimensional
+#'   (`p >= NT`) nodewise penalty `lambda_node = lambda_c * max(|a|) *
+#'   sqrt(log(p) / N)` (`N` = number of units). Larger values shrink the
+#'   debiasing direction more (more conservative). **Ignored when `p < NT`.**
+#'   Default `1.0`. The coverage-optimal value is regime- and data-dependent and
+#'   not yet established by simulation (see *Assumptions*); treat this as a
+#'   tunable, experimental knob.
+#' @param riesz_max_iter,riesz_tol Integer / numeric; coordinate-descent controls
+#'   for the high-dimensional nodewise solver. **Ignored when `p < NT`.**
 #'
 #' @return A named list with elements:
 #'   \describe{
@@ -102,6 +139,11 @@
 #'   CLT-scale variances `V_1^full` / `V_2` from Theorem `debiased.att.thm`, which
 #'   are larger by a factor on the order of `NT`.
 #'
+#'   For high-dimensional (`p >= NT`) fits the list additionally contains
+#'   `feasibility` (`= ||Sigma v - a||_inf`, the nodewise KKT certificate, which
+#'   should be `<= lambda_node`), `converged` (the coordinate-descent flag), and
+#'   `lambda_node` (the penalty used). These are absent for `p < NT` fits.
+#'
 #' @seealso [fetwfe()] for the fused fit; [cohortTimeATTs()] / [eventStudy()] /
 #'   [cohortStudy()] for the disaggregated fused effects.
 #' @examples
@@ -113,7 +155,13 @@
 #'   debiasedATT(fit) # debiased (uniformly valid)
 #' }
 #' @export
-debiasedATT <- function(fit, alpha = NULL) {
+debiasedATT <- function(
+	fit,
+	alpha = NULL,
+	lambda_c = 1.0,
+	riesz_max_iter = 5000L,
+	riesz_tol = 1e-9
+) {
 	if (!inherits(fit, "fetwfe")) {
 		stop(
 			"debiasedATT() requires a fitted object from fetwfe(). The debiased ",
@@ -137,6 +185,43 @@ debiasedATT <- function(fit, alpha = NULL) {
 	) {
 		stop(
 			"debiasedATT(): `alpha` must be a single number in (0, 1).",
+			call. = FALSE
+		)
+	}
+
+	# High-dimensional nodewise-solver controls. These only affect the p >= NT
+	# path, but validate them unconditionally so a malformed value fails loudly
+	# rather than silently producing a degenerate debiasing direction.
+	if (
+		!is.numeric(lambda_c) ||
+			length(lambda_c) != 1L ||
+			is.na(lambda_c) ||
+			lambda_c <= 0
+	) {
+		stop(
+			"debiasedATT(): `lambda_c` must be a single positive number.",
+			call. = FALSE
+		)
+	}
+	if (
+		!is.numeric(riesz_max_iter) ||
+			length(riesz_max_iter) != 1L ||
+			is.na(riesz_max_iter) ||
+			riesz_max_iter < 1
+	) {
+		stop(
+			"debiasedATT(): `riesz_max_iter` must be a single positive integer.",
+			call. = FALSE
+		)
+	}
+	if (
+		!is.numeric(riesz_tol) ||
+			length(riesz_tol) != 1L ||
+			is.na(riesz_tol) ||
+			riesz_tol <= 0
+	) {
+		stop(
+			"debiasedATT(): `riesz_tol` must be a single positive number.",
 			call. = FALSE
 		)
 	}
@@ -173,23 +258,10 @@ debiasedATT <- function(fit, alpha = NULL) {
 		)
 	}
 
-	# High-dimensional regime: the OLS identity (and the whole leading-order
-	# argument) requires p < NT. When p >= NT the unrestricted estimator is
-	# infeasible and a (cluster-ported) desparsified-lasso construction of `v` is
-	# needed -- out of scope here (paper Remark `debiased.regime.remark`).
-	if (p >= n) {
-		stop(
-			"debiasedATT(): the design is high-dimensional (p >= NT: p = ",
-			p,
-			", NT = ",
-			n,
-			"), where unrestricted ETWFE is infeasible and the OLS identity ",
-			"underlying the debiased estimator no longer holds. The desparsified-",
-			"lasso construction for this regime is follow-up work (paper Remark ",
-			"`debiased.regime.remark`) and is not yet available.",
-			call. = FALSE
-		)
-	}
+	# Regime is detected from `p` vs `NT` below (see the `v` construction): p < NT
+	# uses the exact/ridged inverse; p >= NT uses the nodewise desparsified-lasso
+	# direction of paper Theorem `debiased.highdim.thm`. Both share everything
+	# else (estimate + SE).
 
 	G <- fit$G
 	T <- fit$T
@@ -272,8 +344,66 @@ debiasedATT <- function(fit, alpha = NULL) {
 	}
 
 	# ---- debiased estimate: plug-in functional + orthogonal correction ----
+	# Two regimes, ONE estimator: only the debiasing direction `v` differs (paper
+	# Theorem `debiased.highdim.thm`, "one estimator, two regimes"); everything
+	# downstream (the correction, both SE channels) is identical.
 	Sig <- crossprod(X) / n
-	v <- solve(Sig + (1e-6 * mean(diag(Sig))) * diag(p), a_theta[-1])
+	highdim <- p >= n
+	riesz_diag <- NULL
+	if (!highdim) {
+		# Fixed-p (p < NT): exact / tiny-ridge inverse. Byte-identical to the
+		# validated fixed-p reference; `lambda_c` / `riesz_*` are ignored here.
+		v <- solve(Sig + (1e-6 * mean(diag(Sig))) * diag(p), a_theta[-1])
+	} else {
+		# High-dimensional (p >= NT): nodewise (desparsified-lasso) relaxed inverse.
+		# `Sig` is singular, so the exact inverse is invalid; `v` is the l1-penalized
+		# Riesz representer with theory penalty
+		# lambda_node = lambda_c * max(|a|) * sqrt(log p / N), N = clusters = n / T
+		# (NOT NT). max(|a|) rescales to the units of the KKT constraint.
+		a_th <- a_theta[-1]
+		N_units <- n / T
+		lambda_node <- lambda_node_default(
+			p = p,
+			N = N_units,
+			c = lambda_c,
+			scale = max(abs(a_th))
+		)
+		v <- riesz_lasso(
+			Sig,
+			a_th,
+			lambda_node,
+			max_iter = riesz_max_iter,
+			tol = riesz_tol
+		)
+		feasibility <- attr(v, "feasibility")
+		converged <- attr(v, "converged")
+		# The KKT certificate ||Sig v - a||_inf <= lambda_node is exactly the
+		# relaxed-inverse feasibility the Theorem 6.6 remainder bound needs.
+		if (feasibility > lambda_node * (1 + riesz_tol)) {
+			warning(
+				"debiasedATT(): the high-dimensional nodewise direction did not meet ",
+				"its feasibility constraint (||Sig v - a||_inf = ",
+				signif(feasibility, 3),
+				" > lambda_node = ",
+				signif(lambda_node, 3),
+				"); the standard error may be unreliable. Raise `riesz_max_iter` ",
+				"and/or `lambda_c`.",
+				call. = FALSE
+			)
+		} else if (!converged) {
+			warning(
+				"debiasedATT(): the high-dimensional nodewise solver hit ",
+				"`riesz_max_iter` (the feasibility constraint is met, but more ",
+				"iterations would tighten the direction).",
+				call. = FALSE
+			)
+		}
+		riesz_diag <- list(
+			feasibility = feasibility,
+			converged = converged,
+			lambda_node = lambda_node
+		)
+	}
 	resid <- as.numeric(y - theta_hat[1] - X %*% theta_hat[-1])
 	score <- as.numeric((X %*% v) * resid)
 	att_db <- sum(a_theta * theta_hat) + mean(score)
@@ -289,7 +419,7 @@ debiasedATT <- function(fit, alpha = NULL) {
 
 	se_db <- sqrt(var_reg + var_weight)
 	z <- stats::qnorm(1 - alpha / 2)
-	list(
+	out <- list(
 		att = att_db,
 		se = se_db,
 		ci_low = att_db - z * se_db,
@@ -297,6 +427,14 @@ debiasedATT <- function(fit, alpha = NULL) {
 		var_reg = var_reg,
 		var_weight = var_weight
 	)
+	# High-dimensional fits append the nodewise-direction diagnostics (the fixed-p
+	# return is unchanged).
+	if (highdim) {
+		out$feasibility <- riesz_diag$feasibility
+		out$converged <- riesz_diag$converged
+		out$lambda_node <- riesz_diag$lambda_node
+	}
+	out
 }
 
 #' Run debiasedATT() on simulated data

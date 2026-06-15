@@ -286,17 +286,4 @@ test_that("debiasedATT input guards", {
 	# alpha out of (0, 1)
 	expect_error(debiasedATT(f$fit, alpha = 1.5), "alpha")
 	expect_error(debiasedATT(f$fit, alpha = 0), "alpha")
-
-	# p >= NT high-dimensional regime (synthetic: shrink BOTH X_final and y_final
-	# to fewer rows than columns so the p >= NT guard fires -- keeping their row
-	# counts equal so the add_ridge guard does not pre-empt it)
-	bad <- f$fit
-	pcols <- ncol(bad$internal$X_final)
-	bad$internal$X_final <- bad$internal$X_final[
-		seq_len(pcols - 1L),
-		,
-		drop = FALSE
-	]
-	bad$internal$y_final <- bad$internal$y_final[seq_len(pcols - 1L)]
-	expect_error(debiasedATT(bad), "high-dimensional")
 })
