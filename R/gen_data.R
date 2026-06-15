@@ -29,7 +29,11 @@
 #' @param guarantee_rank_condition (Optional). Logical. If TRUE, the returned
 #' data set is guaranteed to have at least `d + 1` units per cohort, which is
 #' necessary for the final design matrix to have full column rank. Default is
-#' FALSE, in which case no such condition is enforced.
+#' FALSE, in which case only `>= 1` unit per cohort is required -- this permits
+#' small cohorts and therefore high-dimensional (`p > NT`) panels, which
+#' `fetwfe()` fits in its regularized regime (and on which the high-dimensional
+#' `debiasedATT()` path can be exercised, using the known data-generating
+#' coefficient vector; recovering the truth requires an adequate number of units).
 #' @param seed (Optional) Controls the random-number generator for the simulated
 #'   panel. As of fetwfe 1.24.0 the default is \code{NULL}, which draws from the
 #'   ambient random-number generator (respecting any preceding \code{set.seed()})
@@ -276,7 +280,11 @@ simulateData <- function(
 #' @param guarantee_rank_condition (Optional). Logical. If TRUE, the returned
 #' data set is guaranteed to have at least `d + 1` units per cohort, which is
 #' necessary for the final design matrix to have full column rank. Default is
-#' FALSE, in which case no such condition is enforced.
+#' FALSE, in which case only `>= 1` unit per cohort is required -- this permits
+#' small cohorts and therefore high-dimensional (`p > NT`) panels, which
+#' `fetwfe()` fits in its regularized regime (and on which the high-dimensional
+#' `debiasedATT()` path can be exercised, using the known data-generating
+#' coefficient vector; recovering the truth requires an adequate number of units).
 #' @param assignment_type Character. One of \code{"marginal"} (default),
 #'   \code{"multinomial"}, or \code{"ordered"}. Selects the cohort-assignment
 #'   DGP. \code{"marginal"} preserves the pre-1.14.0 behavior. The

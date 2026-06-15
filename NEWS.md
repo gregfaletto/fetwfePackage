@@ -1,5 +1,24 @@
 # NEWS
 
+## Version 1.30.0
+
+### Improvements
+
+- `simulateData()` / `simulateDataCore()` can now generate **high-dimensional
+  (`p > NT`) panels**. Previously `genCohortTimeFE()` enforced
+  `N >= (G + 1) * (d + 1)` **unconditionally** (every cohort needed at least
+  `d + 1` units), which structurally confined the generator to the `p < NT`
+  regime. That stricter bound is now gated behind `guarantee_rank_condition`
+  (consistent with every other rank guard in the generator); with the default
+  `guarantee_rank_condition = FALSE` only `>= 1` unit per cohort is required, so
+  small cohorts -- and therefore `p > NT` designs -- are reachable. This lets the
+  high-dimensional `debiasedATT()` path (added in 1.29.0) be exercised on
+  synthetic `p > NT` data with a known data-generating coefficient vector (for
+  coverage studies of the method; recovering the truth requires an adequate
+  number of units). Generation with
+  `N >= (G + 1) * (d + 1)` is unchanged, and `guarantee_rank_condition = TRUE`
+  still enforces the full-rank bound (#293).
+
 ## Version 1.29.0
 
 ### New features
