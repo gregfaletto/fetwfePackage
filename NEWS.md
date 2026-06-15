@@ -1,5 +1,24 @@
 # NEWS
 
+## Version 1.29.0
+
+### New features
+
+- `debiasedATT()` now also supports **high-dimensional (`p >= NT`)** fits, where
+  the unrestricted ETWFE is infeasible and the fixed-`p` exact-inverse debiasing
+  direction is invalid. In that regime the debiasing direction is instead the
+  **nodewise (desparsified-lasso) relaxed inverse** of the design Gram (paper
+  Theorem 6.6, `debiased.highdim.thm`). It is the *same* estimator and standard
+  error as the fixed-`p` case — only the construction of the debiasing direction
+  `v` changes — so existing `p < NT` results are unchanged (byte-identical). The
+  `p >= NT` error introduced in 1.28.0 is lifted. New arguments `lambda_c`,
+  `riesz_max_iter`, and `riesz_tol` control the nodewise solver (ignored when
+  `p < NT`), and for `p >= NT` fits the returned list gains `feasibility`,
+  `converged`, and `lambda_node` diagnostics. The high-dimensional path is
+  **experimental**: its finite-sample coverage is not yet validated by
+  simulation and the penalty constant `lambda_c` is not yet tuned — inspect the
+  returned diagnostics and treat `lambda_c` as a tunable knob (#31).
+
 ## Version 1.28.0
 
 ### New features
@@ -15,8 +34,9 @@
   rather than a `se_type` option. The standard error has a per-unit-clustered
   regression channel plus a cohort-weight channel that add under marginal cohort
   assignment / (Psi-IF); the assumptions are documented on `?debiasedATT`. Errors
-  cleanly for `q >= 1` (no selection) and for the high-dimensional `p >= NT`
-  regime (a desparsified-lasso construction is follow-up work) (#291).
+  cleanly for `q >= 1` (no selection). (At this version it also errored for the
+  high-dimensional `p >= NT` regime; that regime is supported as of 1.29.0.)
+  (#291).
 
 ## Version 1.27.3
 
