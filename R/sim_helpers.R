@@ -217,7 +217,8 @@ generateBaseEffects <- function(
 #' @param guarantee_rank_condition (Optional). Logical. If TRUE, the returned
 #' data set is guaranteed to have at least `d + 1` units per cohort, which is
 #' necessary for the final design matrix to have full column rank. Default is
-#' FALSE, in which case no such condition is enforced.
+#' FALSE, in which case only `>= 1` unit per cohort is required (permitting small
+#' cohorts and therefore rank-deficient, high-dimensional `p > NT` designs).
 #'
 #' @return A list containing:
 #'   \item{cohort_fe}{An NT x G matrix of cohort dummy variables. The g-th column is 1
@@ -239,10 +240,18 @@ genCohortTimeFE <- function(N, T, G, d, guarantee_rank_condition = FALSE) {
 	# the observations from untreated units, then the next N_PER_COHORT*T
 	# rows contain the observations from the first cohort, and so on.
 
-	# Each cohort, as well as the untreated group, will have at least d + 1
-	# units. The remaining units will be allocated to each of these G + 1
-	# groups uniformly at random.
-	stopifnot(N >= (G + 1) * (d + 1))
+	# Each of the G + 1 groups (G treated cohorts + the never-treated) needs at
+	# least one unit so its fixed effect is defined; the remaining units are
+	# allocated to the groups uniformly at random. Only when
+	# guarantee_rank_condition = TRUE do we additionally require >= d + 1 units
+	# per group (the OLS full-column-rank condition). Gating the stricter bound
+	# behind the flag -- consistent with every other rank guard, e.g.
+	# .generateBaseEffectsCovariate() and genAssignments() -- is what lets the
+	# generator reach the regularized high-dimensional (p > NT) regime (#293).
+	stopifnot(N >= (G + 1))
+	if (guarantee_rank_condition) {
+		stopifnot(N >= (G + 1) * (d + 1))
+	}
 
 	# Generate cohort assignments
 	assignments <- genAssignments(

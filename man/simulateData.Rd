@@ -33,7 +33,11 @@ from \eqn{[-\sqrt{3}, \sqrt{3}]}.}
 \item{guarantee_rank_condition}{(Optional). Logical. If TRUE, the returned
 data set is guaranteed to have at least \code{d + 1} units per cohort, which is
 necessary for the final design matrix to have full column rank. Default is
-FALSE, in which case no such condition is enforced.}
+FALSE, in which case only \verb{>= 1} unit per cohort is required -- this permits
+small cohorts and therefore high-dimensional (\code{p > NT}) panels, which
+\code{fetwfe()} fits in its regularized regime (and on which the high-dimensional
+\code{debiasedATT()} path can be exercised, using the known data-generating
+coefficient vector; recovering the truth requires an adequate number of units).}
 
 \item{seed}{(Optional) Controls the random-number generator for the simulated
 panel. As of fetwfe 1.24.0 the default is \code{NULL}, which draws from the
