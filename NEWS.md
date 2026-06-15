@@ -1,5 +1,28 @@
 # NEWS
 
+## Version 1.31.0
+
+### New features
+
+- `simultaneousCIs()` gains a **multiplier-bootstrap** method
+  (`method = "bootstrap"`), the Chernozhukov-Chetverikov-Kato (2013) sup-t
+  bootstrap, as an alternative to the default analytic `mvtnorm::qmvnorm()`
+  critical value (`method = "analytic"`, unchanged and still the default). It
+  perturbs the per-unit influence functions with random multipliers
+  (`multiplier = "rademacher"` or `"mammen"`, `B` replicates, optional `seed`)
+  and reads the simultaneous critical value off the bootstrap distribution. The
+  two methods are asymptotically equivalent; the bootstrap scales better to
+  large effect families (where `qmvnorm` strains) and is
+  heteroskedasticity/cluster-robust by construction. The per-unit influence
+  matrix `F` reproduces the cluster-robust joint covariance (`crossprod(F) /
+  (NT)^2` equals it up to the `N/(N-1)` finite-sample factor), so on a
+  `se_type = "cluster"` fit the bootstrap per-effect standard errors match the
+  analytic ones exactly. This
+  release covers `family = "cohort"`, `"all_post_treatment"`, and `"custom"`;
+  `"event_study"` (whose cohort-probability variance term needs a per-unit
+  propensity influence function) and the high-dimensional `p >= NT` regime are
+  planned follow-ups (#142).
+
 ## Version 1.30.0
 
 ### Improvements
