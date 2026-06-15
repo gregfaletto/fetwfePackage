@@ -76,7 +76,13 @@ utils::globalVariables(c(
 #'   regardless of the fit's `se_type`). **Currently `method = "bootstrap"`
 #'   supports `family = "cohort"`, `"all_post_treatment"`, and `"custom"`;**
 #'   `"event_study"` (whose cohort-probability variance term needs a per-unit
-#'   propensity influence function) is analytic-only for now.
+#'   propensity influence function) is analytic-only for now. When the (full)
+#'   design is **high-dimensional (`p >= NT`)** -- where the analytic Gram inverse
+#'   need not exist -- the bootstrap uses the full-design **desparsified**
+#'   construction of `debiasedATT()` (per-effect nodewise directions) generalized
+#'   to the family. This `p >= NT` path is **experimental** (`fetwfe()` fits only;
+#'   coverage is not yet simulation-validated): inspect the returned
+#'   `feasibility` / `converged` diagnostics.
 #' @param B Integer; number of multiplier-bootstrap replicates
 #'   (`method = "bootstrap"` only). Default `1000`.
 #' @param seed Optional integer; if supplied, the bootstrap draws are
@@ -86,6 +92,13 @@ utils::globalVariables(c(
 #' @param multiplier Character; the multiplier-weight distribution for the
 #'   bootstrap: `"rademacher"` (default, `+/-1`) or `"mammen"` (the Mammen 1993
 #'   two-point distribution). Ignored when `method = "analytic"`.
+#' @param lambda_c,riesz_max_iter,riesz_tol Controls for the high-dimensional
+#'   (`p >= NT`) bootstrap, where each effect's debiasing direction is a nodewise
+#'   (desparsified-lasso) `riesz_lasso()` solve. `lambda_c` is the leading
+#'   constant of the penalty `lambda_node = lambda_c * max(|a|) * sqrt(log p / N)`;
+#'   the default `1.0` (theory scale) keeps the directions feasible. **Smaller
+#'   values can leave directions infeasible (a warning fires and those bands are
+#'   unreliable).** Ignored when `p < NT` or `method = "analytic"`.
 #' @return An object of S3 class `"simultaneous_cis"`: a list with
 #'   \describe{
 #'     \item{ci}{A data frame with columns `effect`, `estimate`,
@@ -109,10 +122,12 @@ utils::globalVariables(c(
 #'     \item{K}{The number of effects in the family (integer).}
 #'   }
 #'   For `method = "bootstrap"` the list additionally carries `method`, `B`,
-#'   `seed`, and `multiplier`; the `critical_value` is the bootstrap sup-t
-#'   quantile and the standard errors backing `ci` are the cluster-robust
-#'   per-unit ones (so for a non-`cluster` fit the bootstrap band may differ
-#'   from the analytic homoskedastic band).
+#'   `seed`, `multiplier`, and `regime` (`"fixed-p"` or `"high-dimensional"`); the
+#'   `critical_value` is the bootstrap sup-t quantile and the standard errors
+#'   backing `ci` are the cluster-robust per-unit ones (so for a non-`cluster` fit
+#'   the bootstrap band may differ from the analytic homoskedastic band). A
+#'   `"high-dimensional"` fit additionally carries per-effect `feasibility`,
+#'   `converged`, and `lambda_node` (the nodewise-direction diagnostics).
 #' @details
 #' **Family resolution and `K`.** `"event_study"` resolves to one effect per
 #' post-treatment event time `e = 0, ..., T - 2` (`K = T - 1`); `"cohort"` to
@@ -201,7 +216,10 @@ simultaneousCIs <- function(
 	method = c("analytic", "bootstrap"),
 	B = 1000L,
 	seed = NULL,
-	multiplier = c("rademacher", "mammen")
+	multiplier = c("rademacher", "mammen"),
+	lambda_c = 1.0,
+	riesz_max_iter = 5000L,
+	riesz_tol = 1e-9
 ) {
 	UseMethod("simultaneousCIs")
 }
@@ -215,7 +233,10 @@ simultaneousCIs.fetwfe <- function(
 	method = c("analytic", "bootstrap"),
 	B = 1000L,
 	seed = NULL,
-	multiplier = c("rademacher", "mammen")
+	multiplier = c("rademacher", "mammen"),
+	lambda_c = 1.0,
+	riesz_max_iter = 5000L,
+	riesz_tol = 1e-9
 ) {
 	contract <- .check_for_simultaneous_cis(result)
 	family <- match.arg(family)
@@ -228,7 +249,10 @@ simultaneousCIs.fetwfe <- function(
 		method = match.arg(method),
 		B = B,
 		seed = seed,
-		multiplier = match.arg(multiplier)
+		multiplier = match.arg(multiplier),
+		lambda_c = lambda_c,
+		riesz_max_iter = riesz_max_iter,
+		riesz_tol = riesz_tol
 	)
 }
 
@@ -241,7 +265,10 @@ simultaneousCIs.etwfe <- function(
 	method = c("analytic", "bootstrap"),
 	B = 1000L,
 	seed = NULL,
-	multiplier = c("rademacher", "mammen")
+	multiplier = c("rademacher", "mammen"),
+	lambda_c = 1.0,
+	riesz_max_iter = 5000L,
+	riesz_tol = 1e-9
 ) {
 	contract <- .check_for_simultaneous_cis(result)
 	family <- match.arg(family)
@@ -254,7 +281,10 @@ simultaneousCIs.etwfe <- function(
 		method = match.arg(method),
 		B = B,
 		seed = seed,
-		multiplier = match.arg(multiplier)
+		multiplier = match.arg(multiplier),
+		lambda_c = lambda_c,
+		riesz_max_iter = riesz_max_iter,
+		riesz_tol = riesz_tol
 	)
 }
 
@@ -267,7 +297,10 @@ simultaneousCIs.betwfe <- function(
 	method = c("analytic", "bootstrap"),
 	B = 1000L,
 	seed = NULL,
-	multiplier = c("rademacher", "mammen")
+	multiplier = c("rademacher", "mammen"),
+	lambda_c = 1.0,
+	riesz_max_iter = 5000L,
+	riesz_tol = 1e-9
 ) {
 	contract <- .check_for_simultaneous_cis(result)
 	family <- match.arg(family)
@@ -280,7 +313,10 @@ simultaneousCIs.betwfe <- function(
 		method = match.arg(method),
 		B = B,
 		seed = seed,
-		multiplier = match.arg(multiplier)
+		multiplier = match.arg(multiplier),
+		lambda_c = lambda_c,
+		riesz_max_iter = riesz_max_iter,
+		riesz_tol = riesz_tol
 	)
 }
 
@@ -302,7 +338,10 @@ simultaneousCIs.twfeCovs <- function(
 	method = c("analytic", "bootstrap"),
 	B = 1000L,
 	seed = NULL,
-	multiplier = c("rademacher", "mammen")
+	multiplier = c("rademacher", "mammen"),
+	lambda_c = 1.0,
+	riesz_max_iter = 5000L,
+	riesz_tol = 1e-9
 ) {
 	contract <- .check_for_simultaneous_cis(result)
 	family <- match.arg(family)
@@ -315,7 +354,10 @@ simultaneousCIs.twfeCovs <- function(
 		method = match.arg(method),
 		B = B,
 		seed = seed,
-		multiplier = match.arg(multiplier)
+		multiplier = match.arg(multiplier),
+		lambda_c = lambda_c,
+		riesz_max_iter = riesz_max_iter,
+		riesz_tol = riesz_tol
 	)
 }
 
@@ -343,7 +385,10 @@ simultaneousCIs.twfeCovs <- function(
 	method = "analytic",
 	B = 1000L,
 	seed = NULL,
-	multiplier = "rademacher"
+	multiplier = "rademacher",
+	lambda_c = 1.0,
+	riesz_max_iter = 5000L,
+	riesz_tol = 1e-9
 ) {
 	# --- 1. Argument validation (mvtnorm guard deferred to step 11). ---
 	stopifnot(is.numeric(alpha), length(alpha) == 1L, alpha > 0, alpha < 1)
@@ -525,8 +570,74 @@ simultaneousCIs.twfeCovs <- function(
 		return(out)
 	}
 
-	# --- 8. Re-run getGramInv() and (if cluster) the cluster-robust sandwich,
-	#        reusing the eventStudy machinery. ---
+	# --- 8. Shape Psi (p_sel x K): map each effect's per-cell contrast into the
+	#        selected support (theta-space for FETWFE, beta-space for OLS family).
+	#        Used by both the analytic Sigma assembly and the bootstrap IF. ---
+	Psi <- t(psi_tes_mat %*% d_inv_treat_sel)
+
+	# --- Bootstrap method (#142): build + perturb the per-unit IF matrix instead
+	#     of the analytic qmvnorm critical value. Runs BEFORE getGramInv() so the
+	#     high-dimensional p >= NT regime (singular Gram, no analytic inverse, so
+	#     the nodewise/desparsified direction is used) is reachable; returns early
+	#     with the same S3 shape (+ method/B/seed/diagnostics fields). ---
+	if (identical(method, "bootstrap")) {
+		# High-dimensional full `p >= NT`: build the per-effect full theta-space
+		# directions `targets = A' a_beta` (A the inverse fusion transform), the
+		# input to the full-design desparsified construction. FETWFE-only (the only
+		# estimator with a regularized `p >= NT` fit). Fixed-p leaves `targets`
+		# NULL and the selected-support construction is used.
+		targets <- NULL
+		if (p >= N * T_ && !identical(family, "event_study")) {
+			if (!is_fetwfe) {
+				stop(
+					"simultaneousCIs(): method = 'bootstrap' in the ",
+					"high-dimensional (p >= NT) regime is supported only for ",
+					"fetwfe() fits.",
+					call. = FALSE
+				)
+			}
+			A <- genFullInvFusionTransformMat(
+				first_inds = first_inds,
+				T = T_,
+				G = G,
+				d = x$d,
+				num_treats = num_treats,
+				fusion_structure = x$fusion_structure,
+				d_inv_treat = x$internal$d_inv_treat
+			)
+			a_beta_mat <- matrix(0, p, K)
+			a_beta_mat[treat_inds, ] <- t(psi_tes_mat)
+			targets <- crossprod(A, a_beta_mat) # p x K full theta-space directions
+		}
+		return(.simultaneous_cis_bootstrap(
+			family = family,
+			alpha = alpha,
+			B = B,
+			seed = seed,
+			multiplier = multiplier,
+			lambda_c = lambda_c,
+			riesz_max_iter = riesz_max_iter,
+			riesz_tol = riesz_tol,
+			X_final = X_final,
+			y_final = y_final,
+			N = N,
+			T = T_,
+			treat_inds = treat_inds,
+			sel_feat_inds = sel_feat_inds,
+			sel_treat_inds_shifted = sel_treat_inds_shifted,
+			Psi = Psi,
+			K = K,
+			estimates = estimates,
+			effect_labels = effect_labels,
+			pointwise_crit = pointwise_crit,
+			bonferroni_crit = bonferroni_crit,
+			theta_hat_full = theta_hat_full,
+			targets = targets
+		))
+	}
+
+	# --- 9. (analytic only) getGramInv() + (if cluster) the cluster-robust
+	#        sandwich, reusing the eventStudy machinery. ---
 	gram_sel_feat <- if (any(!is.na(sel_feat_inds))) sel_feat_inds else NA
 	gram_sel_treat <- if (any(!is.na(sel_feat_inds))) {
 		sel_treat_inds_shifted
@@ -547,9 +658,8 @@ simultaneousCIs.twfeCovs <- function(
 	if (!isTRUE(res_gram$calc_ses)) {
 		stop(
 			"simultaneousCIs(): the Gram matrix on the selected support is not ",
-			"invertible; the assumptions needed for inference are not ",
-			"satisfied, so simultaneous confidence intervals cannot be ",
-			"computed.",
+			"invertible; the analytic method's assumptions are not satisfied. ",
+			"For a high-dimensional (p >= NT) design, use method = 'bootstrap'.",
 			call. = FALSE
 		)
 	}
@@ -568,38 +678,6 @@ simultaneousCIs.twfeCovs <- function(
 		)
 		sandwich_full <- res_cl$sandwich_full
 		treat_block_mask <- res_cl$treat_block_mask
-	}
-
-	# --- 9. Shape Psi (p_sel x K) for Sigma_1, and the per-effect J_list for
-	#        Sigma_2. `psi_tes_mat %*% d_inv_treat_sel` maps each effect's
-	#        per-cell contrast into the selected support (theta-space for
-	#        FETWFE, beta-space for the OLS family). ---
-	Psi <- t(psi_tes_mat %*% d_inv_treat_sel)
-
-	# --- Bootstrap method (#142): perturb the per-unit IF matrix instead of the
-	#     analytic qmvnorm critical value. Reuses the selected support + Psi
-	#     above; returns early with the same S3 shape (+ method/B/seed fields). ---
-	if (identical(method, "bootstrap")) {
-		return(.simultaneous_cis_bootstrap(
-			family = family,
-			alpha = alpha,
-			B = B,
-			seed = seed,
-			multiplier = multiplier,
-			X_final = X_final,
-			y_final = y_final,
-			N = N,
-			T = T_,
-			treat_inds = treat_inds,
-			sel_feat_inds = sel_feat_inds,
-			sel_treat_inds_shifted = sel_treat_inds_shifted,
-			Psi = Psi,
-			K = K,
-			estimates = estimates,
-			effect_labels = effect_labels,
-			pointwise_crit = pointwise_crit,
-			bonferroni_crit = bonferroni_crit
-		))
 	}
 
 	Sigma_1 <- .assemble_joint_cov_var1(

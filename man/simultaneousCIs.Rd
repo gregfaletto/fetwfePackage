@@ -13,7 +13,10 @@ simultaneousCIs(
   method = c("analytic", "bootstrap"),
   B = 1000L,
   seed = NULL,
-  multiplier = c("rademacher", "mammen")
+  multiplier = c("rademacher", "mammen"),
+  lambda_c = 1,
+  riesz_max_iter = 5000L,
+  riesz_tol = 1e-09
 )
 }
 \arguments{
@@ -47,7 +50,13 @@ construction (it always reports cluster-robust per-unit standard errors,
 regardless of the fit's \code{se_type}). \strong{Currently \code{method = "bootstrap"}
 supports \code{family = "cohort"}, \code{"all_post_treatment"}, and \code{"custom"};}
 \code{"event_study"} (whose cohort-probability variance term needs a per-unit
-propensity influence function) is analytic-only for now.}
+propensity influence function) is analytic-only for now. When the (full)
+design is \strong{high-dimensional (\code{p >= NT})} -- where the analytic Gram inverse
+need not exist -- the bootstrap uses the full-design \strong{desparsified}
+construction of \code{debiasedATT()} (per-effect nodewise directions) generalized
+to the family. This \code{p >= NT} path is \strong{experimental} (\code{fetwfe()} fits only;
+coverage is not yet simulation-validated): inspect the returned
+\code{feasibility} / \code{converged} diagnostics.}
 
 \item{B}{Integer; number of multiplier-bootstrap replicates
 (\code{method = "bootstrap"} only). Default \code{1000}.}
@@ -60,6 +69,14 @@ results vary run to run. Ignored when \code{method = "analytic"}.}
 \item{multiplier}{Character; the multiplier-weight distribution for the
 bootstrap: \code{"rademacher"} (default, \verb{+/-1}) or \code{"mammen"} (the Mammen 1993
 two-point distribution). Ignored when \code{method = "analytic"}.}
+
+\item{lambda_c, riesz_max_iter, riesz_tol}{Controls for the high-dimensional
+(\code{p >= NT}) bootstrap, where each effect's debiasing direction is a nodewise
+(desparsified-lasso) \code{riesz_lasso()} solve. \code{lambda_c} is the leading
+constant of the penalty \verb{lambda_node = lambda_c * max(|a|) * sqrt(log p / N)};
+the default \code{1.0} (theory scale) keeps the directions feasible. \strong{Smaller
+values can leave directions infeasible (a warning fires and those bands are
+unreliable).} Ignored when \code{p < NT} or \code{method = "analytic"}.}
 }
 \value{
 An object of S3 class \code{"simultaneous_cis"}: a list with
@@ -85,10 +102,12 @@ effects. (#200)}
 \item{K}{The number of effects in the family (integer).}
 }
 For \code{method = "bootstrap"} the list additionally carries \code{method}, \code{B},
-\code{seed}, and \code{multiplier}; the \code{critical_value} is the bootstrap sup-t
-quantile and the standard errors backing \code{ci} are the cluster-robust
-per-unit ones (so for a non-\code{cluster} fit the bootstrap band may differ
-from the analytic homoskedastic band).
+\code{seed}, \code{multiplier}, and \code{regime} (\code{"fixed-p"} or \code{"high-dimensional"}); the
+\code{critical_value} is the bootstrap sup-t quantile and the standard errors
+backing \code{ci} are the cluster-robust per-unit ones (so for a non-\code{cluster} fit
+the bootstrap band may differ from the analytic homoskedastic band). A
+\code{"high-dimensional"} fit additionally carries per-effect \code{feasibility},
+\code{converged}, and \code{lambda_node} (the nodewise-direction diagnostics).
 }
 \description{
 Computes simultaneous (family-wise) confidence intervals for a user-

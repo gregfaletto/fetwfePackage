@@ -1,5 +1,26 @@
 # NEWS
 
+## Version 1.32.0
+
+### New features
+
+- The `simultaneousCIs()` multiplier bootstrap (`method = "bootstrap"`, added in
+  1.31.0) now extends to the **high-dimensional (`p >= NT`) regime**, where the
+  analytic Gram inverse need not exist so there is no analytic sup-t band. There
+  the bootstrap builds each effect's debiasing direction by the full-design
+  **desparsified (nodewise / `riesz_lasso`) construction** of `debiasedATT()`
+  (#31, paper Theorem 6.6), generalized to the effect family -- uniformly valid,
+  **not** post-selection. It returns per-effect `feasibility` / `converged` /
+  `lambda_node` diagnostics and a `regime` field. The path is **experimental**
+  (`fetwfe()` fits only; its finite-sample coverage is not yet simulation-
+  validated). The penalty constant `lambda_c` defaults to the theory scale `1.0`,
+  which keeps the nodewise directions feasible; smaller values can leave them
+  infeasible, in which case a warning fires and the affected bands are
+  unreliable. New arguments `lambda_c` / `riesz_max_iter` / `riesz_tol` control
+  the solver (ignored when `p < NT`). The simulator can now generate the
+  `p > NT` panels needed to exercise this path (see 1.30.0 / #293). `event_study`
+  and the fixed-`p` path are unchanged (#142).
+
 ## Version 1.31.0
 
 ### New features
