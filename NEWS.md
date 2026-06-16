@@ -1,5 +1,24 @@
 # NEWS
 
+## Version 1.33.0
+
+### New features
+
+- `simultaneousCIs(method = "bootstrap")` now supports `family = "event_study"`,
+  completing the multiplier bootstrap's family coverage (#142). The event-study
+  family is the one whose simultaneous-band variance carries a non-zero
+  cohort-probability (propensity) term `Sigma_2`, so the bootstrap perturbs a
+  per-unit propensity influence function (the cohort-sample-proportion summand
+  `xi_i = e_{W_i} - pi_hat`, `pi_hat_g = N_g / N`) with its **own independent**
+  multiplier stream alongside the regression channel -- a two-channel bootstrap
+  matching the analytic `Sigma = Sigma_1 + Sigma_2` (paper Theorem C.1 Step 5
+  shows the two channels are asymptotically uncorrelated, so their variances add
+  with no cross-term). On a `se_type = "cluster"` fit the event-study bootstrap
+  per-effect standard errors equal the analytic ones to machine precision. The
+  fixed-`p` selected-support construction is used (including for high-dimensional
+  `p >= NT` fits whose selected support is low-dimensional); the high-dimensional
+  desparsified event-study combination remains a planned follow-up.
+
 ## Version 1.32.0
 
 ### New features

@@ -159,24 +159,141 @@
 	F_mat
 }
 
+#' Per-unit cohort-probability (propensity) influence-function matrix `F_pi`
+#'
+#' @description
+#' The `event_study` family is the one family whose simultaneous-band variance
+#' carries a non-zero cohort-probability (propensity) channel `Sigma_2`: each
+#' event-time effect pools across the cohorts treated by that event time, with
+#' weights equal to the estimated cohort-membership probabilities
+#' `pi_hat_g = N_g / N`, so estimating those probabilities contributes variance.
+#' This builds the per-unit influence function of that channel, the delta-method
+#' image of the cohort-sample-proportion IF `xi_i = e_{W_i} - psi*` (paper
+#' `\eqref{psi.if.assum}`, line 2072; `e_{W_i}` is the one-hot of unit `i`'s
+#' cohort, `0` for never-treated):
+#'
+#'   `F_pi[i, k] = T * a_k' (e_{W_i} - pi_hat)`,  `a_k = J_k theta_sel`  (length `G`).
+#'
+#' Per-effect this reproduces the analytic `V_2 = v_psi = M' grad-f' Sigma_M
+#' grad-f M` (line 2925), so `colSums(F_pi^2) / (N*T)^2 == diag(Sigma_2)` exactly
+#' (because `sum_i (e_{W_i} - pi_hat)(e_{W_i} - pi_hat)' = N * Sigma_pi`). The
+#' leading `c = T` is PINNED by matching that anchor against
+#' `.assemble_joint_cov_var2`'s `diag(Sigma_2)_k = T * a_k' Sigma_pi a_k / (N*T)
+#' = a_k' Sigma_pi a_k / N` -- no factor-of-N/T/NT freedom.
+#'
+#' This channel is perturbed with its OWN independent multiplier stream (`eta`),
+#' separate from the regression channel's (`xi`): the paper's per-unit IF is
+#' `f_i = f_reg,i + f_pi,i` with `Var(f_i) = V_1 + V_2` and ZERO cross-term
+#' (proof of Thm C.1, "Step 5 -- verify the cross-covariance vanishes", line
+#' 3641: `E[IF^{(beta)}_{(it)} xi_i'] = 0` since `w_{it}` and `xi_i` are both
+#' `(W_i, X_i)`-measurable while the GLS residual is conditionally mean-zero).
+#' A SHARED multiplier would inject the empirical `sum_i F_reg[i,k] F_pi[i,k]`
+#' cross-term (absent from the analytic `Sigma`), mis-studentizing the sup-t.
+#'
+#' Per-unit ordering is irrelevant (the two channels use independent multipliers,
+#' so there is no cross-channel pairing to preserve), so `F_pi` is assembled from
+#' cohort COUNTS alone: with `A = [a_1 ... a_K]` (`G x K`) and the constant row
+#' `c0 = pi_hat' A` (length `K`), stack `n_g = round(N * pi_hat_g)` copies of the
+#' centered one-hot `T * (A[g, ] - c0)` for `g = 1..G`, then `n_never = N - sum
+#' n_g` copies of `-T * c0` (the never-treated row, `e = 0`). `Sigma_2 != 0` only
+#' for `event_study`; the other families have zero Jacobians, hence `F_pi == 0`.
+#'
+#' @param J_list Length-`K` list of per-effect cohort-weight Jacobians from
+#'   `.build_j_list_for_family(family = "event_study", ...)`; each is `G x p_sel`.
+#' @param theta_sel Numeric length `p_sel`; the selected-support treatment-effect
+#'   parameters (theta-space for FETWFE, beta-space for the OLS family / BETWFE).
+#' @param cohort_probs_overall Numeric; cohort-membership probabilities
+#'   `pi_hat_g = N_g / N` (length `>= G`; `[1:G]` are the treated cohorts, the
+#'   residual mass is never-treated).
+#' @param G Integer; number of treated cohorts.
+#' @param N,T Integers; units and periods. (Period arg named `T` to match the
+#'   sibling variance helpers `.assemble_joint_cov_var2()` / `.build_jacobian()`.)
+#' @return `F_pi`, an `N x K` numeric matrix (`K = length(J_list)`).
+#' @keywords internal
+#' @noRd
+.build_propensity_if <- function(
+	J_list,
+	theta_sel,
+	cohort_probs_overall,
+	G,
+	N,
+	T
+) {
+	K <- length(J_list)
+	pi_hat <- cohort_probs_overall[seq_len(G)]
+	# A = [a_1 ... a_K], forced to G x K via matrix(., nrow = G): the bare
+	# vapply(..., numeric(G)) collapses to a length-K vector when G == 1, which
+	# would break A[g, ] indexing for a single treated cohort.
+	A <- matrix(
+		vapply(
+			seq_len(K),
+			function(k) as.numeric(J_list[[k]] %*% theta_sel),
+			numeric(G)
+		),
+		nrow = G,
+		ncol = K
+	)
+	# Centered one-hot e_{W_i} - pi_hat (e = 0 for never-treated). Constant
+	# subtracted row c0 = pi_hat' A (length K); cohort-g rows carry A[g, ] - c0
+	# (one-hot e_g minus pi_hat), never-treated rows carry -c0.
+	c0 <- as.numeric(crossprod(pi_hat, A))
+	n_g <- round(N * pi_hat)
+	n_never <- N - sum(n_g)
+	if (n_never < 0L || sum(n_g) + n_never != N) {
+		stop(
+			"simultaneousCIs(): could not recover integer cohort counts from ",
+			"`cohort_probs_overall` for the event_study propensity influence ",
+			"function.",
+			call. = FALSE
+		)
+	}
+	blocks <- vector("list", G + 1L)
+	for (g in seq_len(G)) {
+		blocks[[g]] <- matrix(
+			rep(T * (A[g, ] - c0), each = n_g[g]),
+			nrow = n_g[g],
+			ncol = K
+		)
+	}
+	blocks[[G + 1L]] <- matrix(
+		rep(-T * c0, each = n_never),
+		nrow = n_never,
+		ncol = K
+	)
+	do.call(rbind, blocks)
+}
+
 #' Studentized sup-t multiplier-bootstrap critical value
 #'
 #' @description
-#' Given the per-unit IF matrix `F` (`N x K`), draws `B` multiplier-bootstrap
-#' replicates of the studentized max-statistic
-#' `T_b = max_k |sum_i xi_i F[i,k]| / sd_k` (`sd_k = sqrt(crossprod(F)[k,k])`) and
-#' returns the `(1 - alpha)` quantile as the simultaneous critical value, along
-#' with the per-effect empirical standard errors `se_k = sd_k / (N*T)` (the
-#' cluster-robust SEs implied by `F`). Degenerate (zero-variance) effects are
-#' excluded from the max (they would divide by ~0); their CIs collapse to the
-#' point estimate.
+#' Given the per-unit regression IF matrix `F` (`N x K`) and, optionally, the
+#' per-unit propensity IF matrix `F_pi` (`N x K`, `event_study` only), draws `B`
+#' multiplier-bootstrap replicates of the studentized max-statistic
+#' `T_b = max_k |sum_i xi_i F[i,k] + sum_i eta_i F_pi[i,k]| / sd_k`,
+#' `sd_k = sqrt(css_reg_k + css_pi_k)` (`css_* = colSums(F_*^2)`), and returns the
+#' `(1 - alpha)` quantile as the simultaneous critical value, along with the
+#' per-effect standard errors. The two channels use INDEPENDENT multiplier
+#' streams (`xi` for regression, `eta` for propensity), reproducing the paper's
+#' zero-cross-term `Var(f_i) = V_1 + V_2` (Thm C.1 Step 5). The reported SE
+#' applies the finite-sample factor `cadjust = N/(N-1)` to the regression channel
+#' ONLY (the cluster sandwich bakes `cadjust` into `Sigma_1`; the multinomial
+#' `Sigma_2` carries none): `se_k = sqrt((cadjust*css_reg_k + css_pi_k) / n^2)`
+#' (`cadjust` cancels in the studentized `crit`). Degenerate (zero combined
+#' variance) effects are excluded from the max; their CIs collapse to the point
+#' estimate.
 #'
-#' @return A list with `crit` (scalar), `ses` (length-K), and `nondeg`
-#'   (logical length-K).
+#' When `F_pi_mat` is `NULL` (all non-event_study families, both regimes) the
+#' `eta` stream is NOT drawn and the draw is byte-identical to the single-channel
+#' Phase-1/2 behavior.
+#'
+#' @return A list with `crit` (scalar), `ses` (length-K), `nondeg`
+#'   (logical length-K), and `boot_max` (length-B, or `NULL` in the degenerate
+#'   single-effect branch).
 #' @keywords internal
 #' @noRd
 .simultaneous_bootstrap_crit <- function(
 	F_mat,
+	F_pi_mat = NULL,
 	n,
 	alpha,
 	B,
@@ -187,22 +304,41 @@
 	N <- nrow(F_mat)
 	K <- ncol(F_mat)
 	n_obs_sq <- n^2 # (N*T)^2
-	col_ss <- colSums(F_mat^2) # crossprod diagonal = sd_k^2
+	css_reg <- colSums(F_mat^2) # regression-channel crossprod diagonal
+	css_pi <- if (is.null(F_pi_mat)) {
+		rep(0, K) # no propensity channel (non-event_study families)
+	} else {
+		colSums(F_pi_mat^2)
+	}
+	col_ss <- css_reg + css_pi # combined sd_k^2 = diag(Sigma_1) + diag(Sigma_2)
+	# Degeneracy uses the COMBINED column sums (relative to max(col_ss, 1)), so a
+	# propensity-only-variance effect is not dropped.
 	var_tol <- .Machine$double.eps^0.5 * max(col_ss, 1)
 	nondeg <- col_ss > var_tol
 	sd_k <- sqrt(col_ss)
-	# Per-effect cluster-robust SE: crossprod(F)/n^2 = cluster Sigma / cadjust, so
-	# the matching SE restores the finite-sample factor cadjust = N/(N-1). (It
-	# cancels in the studentized `crit` below, so it only scales band widths.) The
-	# high-dimensional channel reuses the same cadjust for uniformity -- making its
-	# bands marginally (N/(N-1)) wider than debiasedATT's regression SE, which omits
-	# it; harmless, and -> 1 as N grows.
+	# Per-effect SE. The regression channel: crossprod(F)/n^2 = cluster Sigma_1 /
+	# cadjust, so the matching SE restores the finite-sample factor
+	# cadjust = N/(N-1). The propensity channel's multinomial Sigma_2 carries NO
+	# cadjust (the anchor colSums(F_pi^2)/n^2 == diag(Sigma_2) is exact), so
+	# cadjust is applied to the regression channel ONLY -- the unique scaling that
+	# makes the event_study bootstrap SE equal the analytic event_study SE to
+	# machine precision. (cadjust cancels in the studentized `crit` below
+	# regardless.) The high-dimensional channel reuses the same cadjust for
+	# uniformity -- making its bands marginally (N/(N-1)) wider than debiasedATT's
+	# regression SE, which omits it; harmless, and -> 1 as N grows.
 	cadjust <- N / (N - 1)
-	ses <- sqrt(cadjust * col_ss / n_obs_sq)
+	ses <- sqrt((cadjust * css_reg + css_pi) / n_obs_sq)
 
 	draw_boot <- function() {
 		Xi <- .draw_multipliers(N, B, multiplier) # N x B
 		G <- crossprod(F_mat[, nondeg, drop = FALSE], Xi) # K_nd x B
+		# Independent propensity-channel multiplier stream `eta`, drawn ONLY when
+		# F_pi is present and placed AFTER the `xi` draw so the single-channel
+		# (F_pi = NULL) RNG stream is byte-identical to Phase 1/2.
+		if (!is.null(F_pi_mat)) {
+			Eta <- .draw_multipliers(N, B, multiplier) # N x B, independent of Xi
+			G <- G + crossprod(F_pi_mat[, nondeg, drop = FALSE], Eta)
+		}
 		apply(abs(G) / sd_k[nondeg], 2, max) # length-B sup-t sample T_b
 	}
 	# With 0 or 1 non-degenerate effect the sup-t statistic reduces to the
@@ -234,17 +370,22 @@
 	list(crit = crit, ses = ses, nondeg = nondeg, boot_max = boot_max)
 }
 
-#' Bootstrap path for `simultaneousCIs()` (Phase 1: regression-channel families)
+#' Bootstrap path for `simultaneousCIs()`
 #'
 #' @description
 #' Called by `.simultaneous_cis_impl()` when `method = "bootstrap"`. Builds the
 #' per-unit IF matrix from the already-resolved selected support + effect
 #' contrasts, runs the multiplier bootstrap, and returns the same
 #' `"simultaneous_cis"` S3 object the analytic path returns, plus `method` / `B`
-#' / `seed` / `multiplier` fields. Phase 1 supports `cohort` /
-#' `all_post_treatment` / `custom` (the cohort-probability variance term is zero,
-#' so `F = F_reg`); `event_study` needs the per-unit propensity IF and is a
-#' follow-up.
+#' / `seed` / `multiplier` fields. The regression-channel families (`cohort` /
+#' `all_post_treatment` / `custom`) have zero cohort-probability variance, so
+#' `F = F_reg` and `F_pi = NULL`. The `event_study` family additionally carries
+#' the per-unit propensity IF `F_pi` (`.build_propensity_if()`), perturbed with
+#' its own independent multiplier stream (the two-channel `Sigma = Sigma_1 +
+#' Sigma_2` bootstrap); it needs `J_list` / `theta_sel` / `cohort_probs_overall`
+#' / `G`. Fixed-p / selected-support regression channel only -- the high-dim
+#' desparsified (`targets`) path is non-event_study-only, so `F_pi` is `NULL`
+#' there (high-dim-desparsified x event_study is deferred to a follow-up).
 #' @keywords internal
 #' @noRd
 .simultaneous_cis_bootstrap <- function(
@@ -270,19 +411,12 @@
 	pointwise_crit,
 	bonferroni_crit,
 	theta_hat_full = NULL,
-	targets = NULL
+	targets = NULL,
+	J_list = NULL,
+	theta_sel = NULL,
+	cohort_probs_overall = NULL,
+	G = NULL
 ) {
-	if (identical(family, "event_study")) {
-		stop(
-			"simultaneousCIs(): method = 'bootstrap' does not yet support ",
-			"family = 'event_study' (its cohort-probability variance channel ",
-			"needs a per-unit propensity influence function, planned as a ",
-			"follow-up). Use method = 'analytic' for event_study, or method = ",
-			"'bootstrap' with family = 'cohort', 'all_post_treatment', or ",
-			"'custom'.",
-			call. = FALSE
-		)
-	}
 	n <- N * T
 
 	# Regime dispatch. `targets` (the full-design per-effect theta-space
@@ -326,6 +460,26 @@
 		F_mat <- .build_regression_if(X_sel, y_final, N, T, Psi_full)
 	}
 
+	# Propensity (cohort-probability) channel `F_pi`: non-zero only for the
+	# event_study family, whose pooled event-time effects weight cohorts by the
+	# estimated probabilities `pi_hat_g = N_g/N`. Built (fixed-p path only -- the
+	# high-dim `targets` guard excludes event_study upstream) from the same
+	# `J_list` / `Sigma_pi` the analytic `Sigma_2` uses, so the bootstrap and
+	# analytic `Sigma_2` agree to machine precision. NULL for the other families
+	# (`Sigma_2 = 0`), which keeps their bootstrap draw byte-identical to Phase 1/2.
+	F_pi_mat <- if (identical(family, "event_study")) {
+		.build_propensity_if(
+			J_list = J_list,
+			theta_sel = theta_sel,
+			cohort_probs_overall = cohort_probs_overall,
+			G = G,
+			N = N,
+			T = T
+		)
+	} else {
+		NULL
+	}
+
 	# High-dimensional regime is EXPERIMENTAL: warn if any per-effect nodewise
 	# direction did not meet its KKT feasibility constraint or converge (its band
 	# may be unreliable; the returned diagnostics flag which effects).
@@ -350,6 +504,7 @@
 	}
 	bc <- .simultaneous_bootstrap_crit(
 		F_mat,
+		F_pi_mat = F_pi_mat,
 		n = n,
 		alpha = alpha,
 		B = B,

@@ -47,16 +47,23 @@ functions and reads the sup-t critical value off the bootstrap
 distribution. The two are asymptotically equivalent; the bootstrap scales
 better to large effect families and is heteroskedasticity/cluster-robust by
 construction (it always reports cluster-robust per-unit standard errors,
-regardless of the fit's \code{se_type}). \strong{Currently \code{method = "bootstrap"}
-supports \code{family = "cohort"}, \code{"all_post_treatment"}, and \code{"custom"};}
-\code{"event_study"} (whose cohort-probability variance term needs a per-unit
-propensity influence function) is analytic-only for now. When the (full)
+regardless of the fit's \code{se_type}). \code{method = "bootstrap"} supports all four
+families. For \code{family = "event_study"} the bootstrap additionally perturbs
+the per-unit cohort-probability (propensity) influence function with its own
+independent multiplier stream -- a two-channel bootstrap matching the
+analytic variance \code{Sigma = Sigma_1 + Sigma_2} (the event-study family is the
+one whose \code{Sigma_2} is non-zero, because each event-time effect pools across
+cohorts weighted by the estimated cohort probabilities). When the (full)
 design is \strong{high-dimensional (\code{p >= NT})} -- where the analytic Gram inverse
 need not exist -- the bootstrap uses the full-design \strong{desparsified}
 construction of \code{debiasedATT()} (per-effect nodewise directions) generalized
 to the family. This \code{p >= NT} path is \strong{experimental} (\code{fetwfe()} fits only;
 coverage is not yet simulation-validated): inspect the returned
-\code{feasibility} / \code{converged} diagnostics.}
+\code{feasibility} / \code{converged} diagnostics. The desparsified path covers the
+regression-channel families; a high-dimensional \code{family = "event_study"} fit
+uses the fixed-p selected-support construction when its selected support is
+low-dimensional (the high-dim-desparsified event-study combination is a
+planned follow-up).}
 
 \item{B}{Integer; number of multiplier-bootstrap replicates
 (\code{method = "bootstrap"} only). Default \code{1000}.}

@@ -179,13 +179,25 @@ test_that("method = 'analytic' is the default and byte-identical to omitting it"
 	expect_identical(bo$method, "bootstrap")
 })
 
-test_that("event_study is rejected for the bootstrap method (Phase 1)", {
+test_that("event_study is supported by the bootstrap method (#142 Phase 3)", {
+	# Phase 3 added the per-unit propensity influence-function channel, so
+	# event_study + method = "bootstrap" now returns a valid band (it used to
+	# stop()). See test-simultaneous-bootstrap-eventstudy-142.R for the anchor /
+	# SE-match / coverage tests; this just confirms it no longer errors and is
+	# consistent with the analytic path.
 	fit <- .boot_fit(se_type = "cluster")
-	expect_error(
-		simultaneousCIs(fit, family = "event_study", method = "bootstrap"),
-		"event_study"
+	bo <- simultaneousCIs(
+		fit,
+		family = "event_study",
+		method = "bootstrap",
+		B = 500,
+		seed = 1
 	)
-	# but still works analytically
+	expect_s3_class(bo, "simultaneous_cis")
+	expect_identical(bo$family, "event_study")
+	expect_identical(bo$regime, "fixed-p")
+	expect_true(all(is.finite(bo$ci$simultaneous_ci_low)))
+	# and still works analytically
 	expect_s3_class(
 		simultaneousCIs(fit, family = "event_study", method = "analytic"),
 		"simultaneous_cis"
