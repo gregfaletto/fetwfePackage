@@ -46,27 +46,25 @@
 	}
 }
 
-#' Per-unit regression influence-function matrix `F_reg` (N_units x K)
+#' Per-unit regression influence-function matrix `F_reg` (N_units x K), fixed-p
 #'
 #' @description
-#' For each effect `k` in the family, the per-unit regression IF is
-#' `F_reg[i, k] = sum_{t} (x_{it}' v_k) * resid_{it}`, where `v_k` is the
-#' debiasing direction for effect `k` and `resid` are the OLS-refit residuals on
-#' the selected support (the same residuals the cluster-robust sandwich uses).
-#' Vectorized as `F_reg = XEps %*% V`, with `XEps = rowsum(X_sel_c * resid, unit)`
-#' (the per-unit aggregated score, `N x p_sel`) and `V` the `p_sel x K` matrix of
-#' debiasing directions. This is `debiasedATT()`'s `(X %*% v) * resid` per-unit
-#' score generalized to `K` columns, in `getGramInv()`'s centered / `n = NT`
-#' convention. By construction `crossprod(F_reg) / (N*T)^2` equals the
-#' cluster-robust `Sigma_1` divided by the finite-sample adjustment `N/(N-1)`.
+#' For each effect `k`, the per-unit regression IF is
+#' `F_reg[i, k] = sum_t (x_{it}' v_k) * resid_{it}`, vectorized as
+#' `F_reg = XEps %*% V` with `XEps = rowsum(X_sel_c * resid, unit)` and
+#' `v_k = solve(Sig, Psi_full[,k])`, `Sig = X_sel_c'X_sel_c / n`. `resid` are the
+#' OLS-refit residuals on the (centered) selected support, so by construction
+#' `crossprod(F_reg)/(NT)^2` equals the cluster-robust `Sigma_1` up to the
+#' finite-sample factor `N/(N-1)`. This is `debiasedATT()`'s `(X v) * resid` score
+#' generalized to `K` columns. Fixed-`p` (`p_sel < NT`) only; see
+#' `.build_regression_if_highdim()` for the `p >= NT` regime.
 #'
 #' @param X_sel Numeric `NT x p_sel`; the SELECTED-support design (uncentered).
 #' @param y Numeric; the (post-GLS) response, length `>= NT`.
 #' @param N,T Integers; units and periods.
 #' @param Psi_full Numeric `p_sel x K`; effect contrasts mapped to the selected
-#'   support and zero-padded over nuisance columns (column `k` is effect `k`'s
-#'   direction in selected coefficient space).
-#' @return `F_reg`, an `N x K` matrix.
+#'   support and zero-padded over nuisance columns.
+#' @return `F_reg`, an `N x K` matrix, with attribute `highdim = FALSE`.
 #' @keywords internal
 #' @noRd
 .build_regression_if <- function(X_sel, y, N, T, Psi_full) {
@@ -83,7 +81,82 @@
 	for (k in seq_len(K)) {
 		V[, k] <- solve(Sig, Psi_full[, k])
 	}
-	XEps %*% V
+	F_mat <- XEps %*% V
+	attr(F_mat, "highdim") <- FALSE
+	F_mat
+}
+
+#' Per-unit regression IF, high-dimensional (p >= NT) regime (#142 Phase 2)
+#'
+#' @description
+#' The full-design desparsified construction of `debiasedATT()` (#31), generalized
+#' to `K` effects. With `p >= NT` the OLS refit overfits and the Gram `X'X/n` is
+#' singular, so this uses the *full* (uncentered) design `X`, the regularized
+#' **bridge** residuals `resid`, and a per-effect **nodewise (desparsified-lasso)**
+#' direction `v_k = riesz_lasso(Sig, targets[,k], lambda_node_k)`. Then
+#' `F[i,k] = sum_t (x_{it}' v_k) * resid_{it}` -- exactly `debiasedATT()`'s
+#' high-dim per-unit score, one direction per effect. `targets[,k]` is effect
+#' `k`'s direction in the full theta-space (`A' a_beta_k`). NOT post-selection:
+#' uniformly valid under the desparsified-lasso conditions of paper Theorem
+#' `debiased.highdim.thm` (experimental). `lambda_node = lambda_c * max(|target|)
+#' * sqrt(log p / N)`.
+#'
+#' @param X Numeric `NT x p`; the FULL (uncentered) design.
+#' @param resid Numeric length `NT`; bridge residuals
+#'   `y - theta_hat[1] - X theta_hat[-1]`.
+#' @param N,T Integers.
+#' @param targets Numeric `p x K`; per-effect full theta-space directions.
+#' @param lambda_c,riesz_max_iter,riesz_tol Nodewise-solver controls.
+#' @return `F`, `N x K`, with attributes `highdim = TRUE` and `diagnostics`
+#'   (per-effect feasibility / converged / lambda_node).
+#' @keywords internal
+#' @noRd
+.build_regression_if_highdim <- function(
+	X,
+	resid,
+	N,
+	T,
+	targets,
+	lambda_c = 1.0,
+	riesz_max_iter = 5000L,
+	riesz_tol = 1e-9
+) {
+	n <- N * T
+	p <- ncol(X)
+	Sig <- crossprod(X) / n # full, uncentered (debiasedATT convention)
+	unit <- rep(seq_len(N), each = T)
+	K <- ncol(targets)
+	F_mat <- matrix(0, N, K)
+	feasibility <- numeric(K)
+	converged <- logical(K)
+	lambda_node <- numeric(K)
+	for (k in seq_len(K)) {
+		a_k <- targets[, k]
+		lambda_node[k] <- lambda_node_default(
+			p = p,
+			N = N,
+			c = lambda_c,
+			scale = max(abs(a_k))
+		)
+		v_k <- riesz_lasso(
+			Sig,
+			a_k,
+			lambda_node[k],
+			max_iter = riesz_max_iter,
+			tol = riesz_tol
+		)
+		score_k <- as.numeric((X %*% v_k) * resid)
+		F_mat[, k] <- rowsum(score_k, group = unit, reorder = FALSE)
+		feasibility[k] <- attr(v_k, "feasibility")
+		converged[k] <- attr(v_k, "converged")
+	}
+	attr(F_mat, "highdim") <- TRUE
+	attr(F_mat, "diagnostics") <- list(
+		feasibility = feasibility,
+		converged = converged,
+		lambda_node = lambda_node
+	)
+	F_mat
 }
 
 #' Studentized sup-t multiplier-bootstrap critical value
@@ -120,7 +193,10 @@
 	sd_k <- sqrt(col_ss)
 	# Per-effect cluster-robust SE: crossprod(F)/n^2 = cluster Sigma / cadjust, so
 	# the matching SE restores the finite-sample factor cadjust = N/(N-1). (It
-	# cancels in the studentized `crit` below, so it only scales band widths.)
+	# cancels in the studentized `crit` below, so it only scales band widths.) The
+	# high-dimensional channel reuses the same cadjust for uniformity -- making its
+	# bands marginally (N/(N-1)) wider than debiasedATT's regression SE, which omits
+	# it; harmless, and -> 1 as N grows.
 	cadjust <- N / (N - 1)
 	ses <- sqrt(cadjust * col_ss / n_obs_sq)
 
@@ -177,6 +253,9 @@
 	B,
 	seed,
 	multiplier,
+	lambda_c,
+	riesz_max_iter,
+	riesz_tol,
 	X_final,
 	y_final,
 	N,
@@ -189,7 +268,9 @@
 	estimates,
 	effect_labels,
 	pointwise_crit,
-	bonferroni_crit
+	bonferroni_crit,
+	theta_hat_full = NULL,
+	targets = NULL
 ) {
 	if (identical(family, "event_study")) {
 		stop(
@@ -204,20 +285,69 @@
 	}
 	n <- N * T
 
-	# X_sel + zero-padded Psi_full over the selected support. FETWFE/BETWFE select
-	# a subset (`sel_feat_inds`); etwfe/twfeCovs use the full design.
-	if (any(!is.na(sel_feat_inds))) {
-		X_sel <- X_final[, sel_feat_inds, drop = FALSE]
-		Psi_full <- matrix(0, length(sel_feat_inds), K)
-		treat_pos <- match(treat_inds[sel_treat_inds_shifted], sel_feat_inds)
-		Psi_full[treat_pos, ] <- Psi
+	# Regime dispatch. `targets` (the full-design per-effect theta-space
+	# directions) is non-NULL iff the caller detected the high-dimensional full
+	# `p >= NT` regime: use the full-design desparsified construction (#31
+	# generalized to K effects -- uniformly valid, NOT post-selection). Otherwise
+	# the fixed-p selected-support construction (Phase 1).
+	if (!is.null(targets)) {
+		# Bridge residuals (debiasedATT convention) over the FULL design.
+		resid_bridge <- as.numeric(
+			y_final[seq_len(n)] -
+				theta_hat_full[1] -
+				X_final %*% theta_hat_full[-1]
+		)
+		F_mat <- .build_regression_if_highdim(
+			X_final,
+			resid_bridge,
+			N,
+			T,
+			targets,
+			lambda_c = lambda_c,
+			riesz_max_iter = riesz_max_iter,
+			riesz_tol = riesz_tol
+		)
 	} else {
-		X_sel <- X_final
-		Psi_full <- matrix(0, ncol(X_final), K)
-		Psi_full[treat_inds[sel_treat_inds_shifted], ] <- Psi
+		# Fixed-p: selected support + zero-padded Psi_full. FETWFE/BETWFE select a
+		# subset (`sel_feat_inds`); etwfe/twfeCovs use the full design.
+		if (any(!is.na(sel_feat_inds))) {
+			X_sel <- X_final[, sel_feat_inds, drop = FALSE]
+			Psi_full <- matrix(0, length(sel_feat_inds), K)
+			treat_pos <- match(
+				treat_inds[sel_treat_inds_shifted],
+				sel_feat_inds
+			)
+			Psi_full[treat_pos, ] <- Psi
+		} else {
+			X_sel <- X_final
+			Psi_full <- matrix(0, ncol(X_final), K)
+			Psi_full[treat_inds[sel_treat_inds_shifted], ] <- Psi
+		}
+		F_mat <- .build_regression_if(X_sel, y_final, N, T, Psi_full)
 	}
 
-	F_mat <- .build_regression_if(X_sel, y_final, N, T, Psi_full)
+	# High-dimensional regime is EXPERIMENTAL: warn if any per-effect nodewise
+	# direction did not meet its KKT feasibility constraint or converge (its band
+	# may be unreliable; the returned diagnostics flag which effects).
+	if (isTRUE(attr(F_mat, "highdim"))) {
+		dg <- attr(F_mat, "diagnostics")
+		bad <- (dg$feasibility > dg$lambda_node * (1 + riesz_tol)) |
+			!dg$converged
+		if (any(bad)) {
+			warning(
+				"simultaneousCIs(): the high-dimensional nodewise debiasing ",
+				"direction for ",
+				sum(bad),
+				" of ",
+				length(bad),
+				" effect(s) did not meet its feasibility constraint / converge; ",
+				"those simultaneous bands may be unreliable. Raise `riesz_max_iter` ",
+				"and/or `lambda_c` and inspect the returned `feasibility` / ",
+				"`converged` diagnostics. The p >= NT path is experimental.",
+				call. = FALSE
+			)
+		}
+	}
 	bc <- .simultaneous_bootstrap_crit(
 		F_mat,
 		n = n,
@@ -267,8 +397,22 @@
 		method = "bootstrap",
 		B = B,
 		seed = seed,
-		multiplier = multiplier
+		multiplier = multiplier,
+		regime = if (isTRUE(attr(F_mat, "highdim"))) {
+			"high-dimensional"
+		} else {
+			"fixed-p"
+		}
 	)
+	# High-dimensional fits append the per-effect nodewise-direction diagnostics
+	# (feasibility = ||Sig v - a||_inf, the KKT certificate; convergence flags;
+	# the penalties used).
+	if (isTRUE(attr(F_mat, "highdim"))) {
+		d <- attr(F_mat, "diagnostics")
+		out$feasibility <- d$feasibility
+		out$converged <- d$converged
+		out$lambda_node <- d$lambda_node
+	}
 	class(out) <- "simultaneous_cis"
 	out
 }
