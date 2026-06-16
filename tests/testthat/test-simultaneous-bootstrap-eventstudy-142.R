@@ -12,9 +12,9 @@
 # analytic delta-method sandwich, so not a round-trip); hence on a
 # se_type = "cluster" fit the bootstrap event_study SEs equal the analytic ones
 # to machine precision, and the bootstrap critical value matches qmvnorm up to
-# Monte-Carlo error. Fixed-p / selected-support regression channel only (the
-# high-dim desparsified path stays regression-only-families; high-dim event_study
-# falls back to fixed-p when its selected support is low-dimensional).
+# Monte-Carlo error. In fixed-p the propensity channel composes with the
+# selected-support regression channel; since #299 it also composes with the
+# high-dim desparsified regression channel (high-dim event_study uses both).
 
 .es_boot_fit <- function(
 	se_type = "cluster",
@@ -429,12 +429,12 @@ test_that("event_study bootstrap works with a never-treated group and with no co
 })
 
 # ------------------------------------------------------------------------------
-# High-dimensional (full p >= NT): event_study routes through the FIXED-P
-# selected-support path (NOT the desparsified `targets` path), since its selected
-# support is low-dimensional. No analytic ground truth at p >= NT, so assert
-# finiteness + regime. (high-dim-desparsified x event_study is deferred.)
+# High-dimensional (full p >= NT): since #299 event_study routes through the
+# DESPARSIFIED `targets` path (both the full-design regression channel and the
+# propensity channel `F_pi`), not the fixed-p selected-support fallback. No
+# analytic ground truth at p >= NT, so assert finiteness + regime + diagnostics.
 # ------------------------------------------------------------------------------
-test_that("high-dim event_study bootstrap uses the fixed-p path and returns a finite band", {
+test_that("high-dim event_study bootstrap uses the desparsified path and returns a finite band (#299)", {
 	# G=3, T=5, d=22 => full p = 390 > NT = 200 at N = 40; selected support ~42 < NT.
 	coefs <- genCoefs(
 		G = 3,
@@ -478,10 +478,12 @@ test_that("high-dim event_study bootstrap uses the fixed-p path and returns a fi
 		seed = 1
 	)
 	expect_s3_class(bo, "simultaneous_cis")
-	# the proof it bypasses the desparsified path: regime is fixed-p, NOT
-	# high-dimensional, and there are no nodewise diagnostics attached.
-	expect_identical(bo$regime, "fixed-p")
-	expect_false("feasibility" %in% names(bo))
+	# the proof it uses the desparsified path: regime is high-dimensional, with
+	# the nodewise diagnostics attached.
+	expect_identical(bo$regime, "high-dimensional")
+	expect_true(all(
+		c("feasibility", "converged", "lambda_node") %in% names(bo)
+	))
 	expect_true(all(is.finite(bo$ci$simultaneous_ci_low)))
 	expect_gte(bo$critical_value, bo$pointwise_critical_value - 1e-8)
 	expect_lte(bo$critical_value, bo$bonferroni_critical_value + 1e-8)

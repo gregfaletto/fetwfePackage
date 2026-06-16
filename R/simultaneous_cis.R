@@ -85,11 +85,13 @@ utils::globalVariables(c(
 #'   construction of `debiasedATT()` (per-effect nodewise directions) generalized
 #'   to the family. This `p >= NT` path is **experimental** (`fetwfe()` fits only;
 #'   coverage is not yet simulation-validated): inspect the returned
-#'   `feasibility` / `converged` diagnostics. The desparsified path covers the
-#'   regression-channel families; a high-dimensional `family = "event_study"` fit
-#'   uses the fixed-p selected-support construction when its selected support is
-#'   low-dimensional (the high-dim-desparsified event-study combination is a
-#'   planned follow-up).
+#'   `feasibility` / `converged` diagnostics. The desparsified path covers all
+#'   four families (a high-dimensional `family = "event_study"` fit additionally
+#'   carries the propensity channel `F_pi`). In the high-dimensional regime the
+#'   band is centered on the **debiased** estimate (the Theorem 6.6 correction,
+#'   equal to `debiasedATT()`'s point estimate for the matching contrast), not
+#'   the post-selection bridge estimate; fixed-p bands center on the (unbiased)
+#'   bridge estimate as before.
 #' @param B Integer; number of multiplier-bootstrap replicates
 #'   (`method = "bootstrap"` only). Default `1000`.
 #' @param seed Optional integer; if supplied, the bootstrap draws are
@@ -594,7 +596,7 @@ simultaneousCIs.twfeCovs <- function(
 		# estimator with a regularized `p >= NT` fit). Fixed-p leaves `targets`
 		# NULL and the selected-support construction is used.
 		targets <- NULL
-		if (p >= N * T_ && !identical(family, "event_study")) {
+		if (p >= N * T_) {
 			if (!is_fetwfe) {
 				stop(
 					"simultaneousCIs(): method = 'bootstrap' in the ",

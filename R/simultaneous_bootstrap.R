@@ -10,10 +10,12 @@
 # generalizes to the high-dimensional regime (Phase 2, where the analytic Gram
 # inverse does not exist).
 #
-# Phase 1 covers the regression-channel families (`cohort`,
+# Phase 1 covered the regression-channel families (`cohort`,
 # `all_post_treatment`, `custom`), where the cohort-probability variance term
-# `Sigma_2` is zero, so `F = F_reg`. The `event_study` family (which needs the
-# per-unit propensity IF `F_pi`) and the high-dimensional regime are Phase 2.
+# `Sigma_2` is zero, so `F = F_reg`. Phase 2 added the `event_study` family (the
+# per-unit propensity IF `F_pi`) and the high-dimensional (`p >= NT`) regime --
+# including their combination (high-dim `event_study` uses BOTH channels), and
+# the high-dim band center is debiased (Theorem 6.6) rather than the raw bridge.
 
 #' Draw multiplier-bootstrap weights
 #'
@@ -389,9 +391,11 @@
 #' the per-unit propensity IF `F_pi` (`.build_propensity_if()`), perturbed with
 #' its own independent multiplier stream (the two-channel `Sigma = Sigma_1 +
 #' Sigma_2` bootstrap); it needs `J_list` / `theta_sel` / `cohort_probs_overall`
-#' / `G`. Fixed-p / selected-support regression channel only -- the high-dim
-#' desparsified (`targets`) path is non-event_study-only, so `F_pi` is `NULL`
-#' there (high-dim-desparsified x event_study is deferred to a follow-up).
+#' / `G`. The propensity channel composes regime-agnostically, so high-dim
+#' `event_study` (the desparsified `targets` path) carries `F_pi` too. In the
+#' high-dim regime the band center is the debiased estimate
+#' (`estimates + colSums(F_mat)/(N*T)`, the Theorem 6.6 realization matching
+#' `debiasedATT()`); fixed-p centers on the (unbiased) bridge estimate unchanged.
 #' @keywords internal
 #' @noRd
 .simultaneous_cis_bootstrap <- function(
@@ -447,6 +451,15 @@
 			riesz_max_iter = riesz_max_iter,
 			riesz_tol = riesz_tol
 		)
+		# Debias the band center (Theorem 6.6). In the high-dim regime the bridge
+		# (post-selection) estimate is biased; the per-effect desparsified
+		# correction `colSums(F_mat)/(N*T)` is exactly `debiasedATT()`'s
+		# `mean(score)` (the per-effect generalization of `att_db = sum(a*theta) +
+		# mean(score)`), so `estimates_used` here equals `debiasedATT()$att` for the
+		# matching overall-ATT contrast. Centering the band on the bridge estimate
+		# instead would carry the post-selection bias (variance -> 0 with N, bias
+		# does not) and undercover.
+		estimates_used <- estimates + colSums(F_mat) / (N * T)
 	} else {
 		# Fixed-p: selected support + zero-padded Psi_full. FETWFE/BETWFE select a
 		# subset (`sel_feat_inds`); etwfe/twfeCovs use the full design.
@@ -464,15 +477,19 @@
 			Psi_full[treat_inds[sel_treat_inds_shifted], ] <- Psi
 		}
 		F_mat <- .build_regression_if(X_sel, y_final, N, T, Psi_full)
+		# Fixed-p: the selected estimate is unbiased (selection consistency), so the
+		# band centers on the bridge estimate unchanged (byte-identical to Phase 1/2).
+		estimates_used <- estimates
 	}
 
 	# Propensity (cohort-probability) channel `F_pi`: non-zero only for the
 	# event_study family, whose pooled event-time effects weight cohorts by the
-	# estimated probabilities `pi_hat_g = N_g/N`. Built (fixed-p path only -- the
-	# high-dim `targets` guard excludes event_study upstream) from the same
-	# `J_list` / `Sigma_pi` the analytic `Sigma_2` uses, so the bootstrap and
-	# analytic `Sigma_2` agree to machine precision. NULL for the other families
-	# (`Sigma_2 = 0`), which keeps their bootstrap draw byte-identical to Phase 1/2.
+	# estimated probabilities `pi_hat_g = N_g/N`. Built for event_study in BOTH
+	# regimes (it depends only on cohort counts + `theta_sel`, so it composes
+	# regime-agnostically with the high-dim desparsified regression channel) from
+	# the same `J_list` / `Sigma_pi` the analytic `Sigma_2` uses, so the bootstrap
+	# and analytic `Sigma_2` agree to machine precision. NULL for the other
+	# families (`Sigma_2 = 0`), keeping their bootstrap draw byte-identical.
 	F_pi_mat <- if (identical(family, "event_study")) {
 		.build_propensity_if(
 			J_list = J_list,
@@ -526,7 +543,7 @@
 	# effect `boot_max` is NULL and the band uses the exact qnorm crit, so the
 	# matching dual is the two-sided normal p-value 2 * pnorm(-|z|) (mirrors the
 	# analytic K = 1 path; keeps "outside band iff adjusted p < alpha" exact).
-	t_stat <- ifelse(bc$nondeg & ses > 0, abs(estimates) / ses, NA_real_)
+	t_stat <- ifelse(bc$nondeg & ses > 0, abs(estimates_used) / ses, NA_real_)
 	adjusted_p_values <- if (is.null(bc$boot_max)) {
 		2 * stats::pnorm(-abs(t_stat))
 	} else {
@@ -537,13 +554,17 @@
 		)
 	}
 
+	# Band center `estimates_used`: the bridge `estimates` in fixed-p, the debiased
+	# `estimates + colSums(F_mat)/(N*T)` in the high-dim regime (see the regime
+	# dispatch above). Both the band endpoints AND the adjusted-p `t_stat` use it,
+	# so "outside band iff adjusted p < alpha" stays exact.
 	ci <- data.frame(
 		effect = effect_labels,
-		estimate = estimates,
-		simultaneous_ci_low = estimates - crit * ses,
-		simultaneous_ci_high = estimates + crit * ses,
-		pointwise_ci_low = estimates - pointwise_crit * ses,
-		pointwise_ci_high = estimates + pointwise_crit * ses,
+		estimate = estimates_used,
+		simultaneous_ci_low = estimates_used - crit * ses,
+		simultaneous_ci_high = estimates_used + crit * ses,
+		pointwise_ci_low = estimates_used - pointwise_crit * ses,
+		pointwise_ci_high = estimates_used + pointwise_crit * ses,
 		stringsAsFactors = FALSE
 	)
 	out <- list(

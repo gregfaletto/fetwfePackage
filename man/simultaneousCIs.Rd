@@ -59,11 +59,13 @@ need not exist -- the bootstrap uses the full-design \strong{desparsified}
 construction of \code{debiasedATT()} (per-effect nodewise directions) generalized
 to the family. This \code{p >= NT} path is \strong{experimental} (\code{fetwfe()} fits only;
 coverage is not yet simulation-validated): inspect the returned
-\code{feasibility} / \code{converged} diagnostics. The desparsified path covers the
-regression-channel families; a high-dimensional \code{family = "event_study"} fit
-uses the fixed-p selected-support construction when its selected support is
-low-dimensional (the high-dim-desparsified event-study combination is a
-planned follow-up).}
+\code{feasibility} / \code{converged} diagnostics. The desparsified path covers all
+four families (a high-dimensional \code{family = "event_study"} fit additionally
+carries the propensity channel \code{F_pi}). In the high-dimensional regime the
+band is centered on the \strong{debiased} estimate (the Theorem 6.6 correction,
+equal to \code{debiasedATT()}'s point estimate for the matching contrast), not
+the post-selection bridge estimate; fixed-p bands center on the (unbiased)
+bridge estimate as before.}
 
 \item{B}{Integer; number of multiplier-bootstrap replicates
 (\code{method = "bootstrap"} only). Default \code{1000}.}

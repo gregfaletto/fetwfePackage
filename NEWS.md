@@ -1,5 +1,23 @@
 # NEWS
 
+## Version 1.34.0
+
+### New features
+
+- `simultaneousCIs(method = "bootstrap")` now extends the high-dimensional
+  (`p >= NT`) **desparsified** path to `family = "event_study"` and **debiases
+  the high-dimensional band centers** (#299). A high-dim `event_study` fit now
+  uses the full-design `riesz_lasso` regression channel together with the
+  per-unit propensity channel `F_pi` (the two-channel `Sigma = Sigma_1 + Sigma_2`
+  bootstrap), rather than falling back to the fixed-`p` selected-support
+  construction. In the high-dimensional regime all bands are now centered on the
+  **debiased** estimate (`estimates + colSums(F_reg)/(NT)`, the Theorem 6.6
+  correction, equal to `debiasedATT()`'s point estimate for the matching
+  contrast) instead of the post-selection bridge estimate; this also re-centers
+  the high-dimensional `cohort` / `all_post_treatment` / `custom` bands added in
+  1.32.0. The `p >= NT` path remains **experimental** (coverage not yet
+  simulation-validated). Fixed-`p` behavior is unchanged.
+
 ## Version 1.33.0
 
 ### New features
