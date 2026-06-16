@@ -9,7 +9,11 @@ simultaneousCIs(
   result,
   family = c("event_study", "cohort", "all_post_treatment", "custom"),
   alpha = 0.05,
-  contrasts = NULL
+  contrasts = NULL,
+  method = c("analytic", "bootstrap"),
+  B = 1000L,
+  seed = NULL,
+  multiplier = c("rademacher", "mammen")
 )
 }
 \arguments{
@@ -31,6 +35,31 @@ cohort-probability variance term (\code{Sigma_2 = 0}), so a custom contrast
 that pools across cohorts in a probability-weighted way is
 anti-conservative (its band can under-cover); use \code{family = "cohort"} for
 cohort-pooled effects.}
+
+\item{method}{Character; how the simultaneous critical value is computed.
+\code{"analytic"} (default) uses the exact multivariate-normal sup-t quantile via
+\code{mvtnorm::qmvnorm()}. \code{"bootstrap"} uses the multiplier bootstrap of
+Chernozhukov, Chetverikov & Kato (2013): it perturbs the per-unit influence
+functions and reads the sup-t critical value off the bootstrap
+distribution. The two are asymptotically equivalent; the bootstrap scales
+better to large effect families and is heteroskedasticity/cluster-robust by
+construction (it always reports cluster-robust per-unit standard errors,
+regardless of the fit's \code{se_type}). \strong{Currently \code{method = "bootstrap"}
+supports \code{family = "cohort"}, \code{"all_post_treatment"}, and \code{"custom"};}
+\code{"event_study"} (whose cohort-probability variance term needs a per-unit
+propensity influence function) is analytic-only for now.}
+
+\item{B}{Integer; number of multiplier-bootstrap replicates
+(\code{method = "bootstrap"} only). Default \code{1000}.}
+
+\item{seed}{Optional integer; if supplied, the bootstrap draws are
+reproducible (the ambient random-number stream is saved and restored around
+them). If \code{NULL} (default), the draws come from the ambient generator, so
+results vary run to run. Ignored when \code{method = "analytic"}.}
+
+\item{multiplier}{Character; the multiplier-weight distribution for the
+bootstrap: \code{"rademacher"} (default, \verb{+/-1}) or \code{"mammen"} (the Mammen 1993
+two-point distribution). Ignored when \code{method = "analytic"}.}
 }
 \value{
 An object of S3 class \code{"simultaneous_cis"}: a list with
@@ -55,6 +84,11 @@ effects. (#200)}
 \item{alpha}{The significance level used.}
 \item{K}{The number of effects in the family (integer).}
 }
+For \code{method = "bootstrap"} the list additionally carries \code{method}, \code{B},
+\code{seed}, and \code{multiplier}; the \code{critical_value} is the bootstrap sup-t
+quantile and the standard errors backing \code{ci} are the cluster-robust
+per-unit ones (so for a non-\code{cluster} fit the bootstrap band may differ
+from the analytic homoskedastic band).
 }
 \description{
 Computes simultaneous (family-wise) confidence intervals for a user-

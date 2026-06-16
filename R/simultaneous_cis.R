@@ -65,6 +65,27 @@ utils::globalVariables(c(
 #'   that pools across cohorts in a probability-weighted way is
 #'   anti-conservative (its band can under-cover); use `family = "cohort"` for
 #'   cohort-pooled effects.
+#' @param method Character; how the simultaneous critical value is computed.
+#'   `"analytic"` (default) uses the exact multivariate-normal sup-t quantile via
+#'   `mvtnorm::qmvnorm()`. `"bootstrap"` uses the multiplier bootstrap of
+#'   Chernozhukov, Chetverikov & Kato (2013): it perturbs the per-unit influence
+#'   functions and reads the sup-t critical value off the bootstrap
+#'   distribution. The two are asymptotically equivalent; the bootstrap scales
+#'   better to large effect families and is heteroskedasticity/cluster-robust by
+#'   construction (it always reports cluster-robust per-unit standard errors,
+#'   regardless of the fit's `se_type`). **Currently `method = "bootstrap"`
+#'   supports `family = "cohort"`, `"all_post_treatment"`, and `"custom"`;**
+#'   `"event_study"` (whose cohort-probability variance term needs a per-unit
+#'   propensity influence function) is analytic-only for now.
+#' @param B Integer; number of multiplier-bootstrap replicates
+#'   (`method = "bootstrap"` only). Default `1000`.
+#' @param seed Optional integer; if supplied, the bootstrap draws are
+#'   reproducible (the ambient random-number stream is saved and restored around
+#'   them). If `NULL` (default), the draws come from the ambient generator, so
+#'   results vary run to run. Ignored when `method = "analytic"`.
+#' @param multiplier Character; the multiplier-weight distribution for the
+#'   bootstrap: `"rademacher"` (default, `+/-1`) or `"mammen"` (the Mammen 1993
+#'   two-point distribution). Ignored when `method = "analytic"`.
 #' @return An object of S3 class `"simultaneous_cis"`: a list with
 #'   \describe{
 #'     \item{ci}{A data frame with columns `effect`, `estimate`,
@@ -87,6 +108,11 @@ utils::globalVariables(c(
 #'     \item{alpha}{The significance level used.}
 #'     \item{K}{The number of effects in the family (integer).}
 #'   }
+#'   For `method = "bootstrap"` the list additionally carries `method`, `B`,
+#'   `seed`, and `multiplier`; the `critical_value` is the bootstrap sup-t
+#'   quantile and the standard errors backing `ci` are the cluster-robust
+#'   per-unit ones (so for a non-`cluster` fit the bootstrap band may differ
+#'   from the analytic homoskedastic band).
 #' @details
 #' **Family resolution and `K`.** `"event_study"` resolves to one effect per
 #' post-treatment event time `e = 0, ..., T - 2` (`K = T - 1`); `"cohort"` to
@@ -171,7 +197,11 @@ simultaneousCIs <- function(
 	result,
 	family = c("event_study", "cohort", "all_post_treatment", "custom"),
 	alpha = 0.05,
-	contrasts = NULL
+	contrasts = NULL,
+	method = c("analytic", "bootstrap"),
+	B = 1000L,
+	seed = NULL,
+	multiplier = c("rademacher", "mammen")
 ) {
 	UseMethod("simultaneousCIs")
 }
@@ -181,7 +211,11 @@ simultaneousCIs.fetwfe <- function(
 	result,
 	family = c("event_study", "cohort", "all_post_treatment", "custom"),
 	alpha = 0.05,
-	contrasts = NULL
+	contrasts = NULL,
+	method = c("analytic", "bootstrap"),
+	B = 1000L,
+	seed = NULL,
+	multiplier = c("rademacher", "mammen")
 ) {
 	contract <- .check_for_simultaneous_cis(result)
 	family <- match.arg(family)
@@ -190,7 +224,11 @@ simultaneousCIs.fetwfe <- function(
 		family = family,
 		alpha = alpha,
 		contrasts = contrasts,
-		has_valid_ses = contract$has_valid_ses
+		has_valid_ses = contract$has_valid_ses,
+		method = match.arg(method),
+		B = B,
+		seed = seed,
+		multiplier = match.arg(multiplier)
 	)
 }
 
@@ -199,7 +237,11 @@ simultaneousCIs.etwfe <- function(
 	result,
 	family = c("event_study", "cohort", "all_post_treatment", "custom"),
 	alpha = 0.05,
-	contrasts = NULL
+	contrasts = NULL,
+	method = c("analytic", "bootstrap"),
+	B = 1000L,
+	seed = NULL,
+	multiplier = c("rademacher", "mammen")
 ) {
 	contract <- .check_for_simultaneous_cis(result)
 	family <- match.arg(family)
@@ -208,7 +250,11 @@ simultaneousCIs.etwfe <- function(
 		family = family,
 		alpha = alpha,
 		contrasts = contrasts,
-		has_valid_ses = contract$has_valid_ses
+		has_valid_ses = contract$has_valid_ses,
+		method = match.arg(method),
+		B = B,
+		seed = seed,
+		multiplier = match.arg(multiplier)
 	)
 }
 
@@ -217,7 +263,11 @@ simultaneousCIs.betwfe <- function(
 	result,
 	family = c("event_study", "cohort", "all_post_treatment", "custom"),
 	alpha = 0.05,
-	contrasts = NULL
+	contrasts = NULL,
+	method = c("analytic", "bootstrap"),
+	B = 1000L,
+	seed = NULL,
+	multiplier = c("rademacher", "mammen")
 ) {
 	contract <- .check_for_simultaneous_cis(result)
 	family <- match.arg(family)
@@ -226,7 +276,11 @@ simultaneousCIs.betwfe <- function(
 		family = family,
 		alpha = alpha,
 		contrasts = contrasts,
-		has_valid_ses = contract$has_valid_ses
+		has_valid_ses = contract$has_valid_ses,
+		method = match.arg(method),
+		B = B,
+		seed = seed,
+		multiplier = match.arg(multiplier)
 	)
 }
 
@@ -244,7 +298,11 @@ simultaneousCIs.twfeCovs <- function(
 	result,
 	family = c("event_study", "cohort", "all_post_treatment", "custom"),
 	alpha = 0.05,
-	contrasts = NULL
+	contrasts = NULL,
+	method = c("analytic", "bootstrap"),
+	B = 1000L,
+	seed = NULL,
+	multiplier = c("rademacher", "mammen")
 ) {
 	contract <- .check_for_simultaneous_cis(result)
 	family <- match.arg(family)
@@ -253,7 +311,11 @@ simultaneousCIs.twfeCovs <- function(
 		family = family,
 		alpha = alpha,
 		contrasts = contrasts,
-		has_valid_ses = contract$has_valid_ses
+		has_valid_ses = contract$has_valid_ses,
+		method = match.arg(method),
+		B = B,
+		seed = seed,
+		multiplier = match.arg(multiplier)
 	)
 }
 
@@ -277,10 +339,39 @@ simultaneousCIs.twfeCovs <- function(
 	family,
 	alpha,
 	contrasts,
-	has_valid_ses
+	has_valid_ses,
+	method = "analytic",
+	B = 1000L,
+	seed = NULL,
+	multiplier = "rademacher"
 ) {
 	# --- 1. Argument validation (mvtnorm guard deferred to step 11). ---
 	stopifnot(is.numeric(alpha), length(alpha) == 1L, alpha > 0, alpha < 1)
+	method <- match.arg(method, c("analytic", "bootstrap"))
+	if (method == "bootstrap") {
+		if (
+			!is.numeric(B) ||
+				length(B) != 1L ||
+				is.na(B) ||
+				B < 1 ||
+				B != round(B)
+		) {
+			stop(
+				"simultaneousCIs(): `B` must be a single positive integer.",
+				call. = FALSE
+			)
+		}
+		B <- as.integer(B)
+		if (
+			!is.null(seed) &&
+				(!is.numeric(seed) || length(seed) != 1L || is.na(seed))
+		) {
+			stop(
+				"simultaneousCIs(): `seed` must be NULL or a single number.",
+				call. = FALSE
+			)
+		}
+	}
 
 	# --- 2. Read fit slots via class-aware shims. ---
 	is_fetwfe <- inherits(x, "fetwfe")
@@ -484,6 +575,32 @@ simultaneousCIs.twfeCovs <- function(
 	#        per-cell contrast into the selected support (theta-space for
 	#        FETWFE, beta-space for the OLS family). ---
 	Psi <- t(psi_tes_mat %*% d_inv_treat_sel)
+
+	# --- Bootstrap method (#142): perturb the per-unit IF matrix instead of the
+	#     analytic qmvnorm critical value. Reuses the selected support + Psi
+	#     above; returns early with the same S3 shape (+ method/B/seed fields). ---
+	if (identical(method, "bootstrap")) {
+		return(.simultaneous_cis_bootstrap(
+			family = family,
+			alpha = alpha,
+			B = B,
+			seed = seed,
+			multiplier = multiplier,
+			X_final = X_final,
+			y_final = y_final,
+			N = N,
+			T = T_,
+			treat_inds = treat_inds,
+			sel_feat_inds = sel_feat_inds,
+			sel_treat_inds_shifted = sel_treat_inds_shifted,
+			Psi = Psi,
+			K = K,
+			estimates = estimates,
+			effect_labels = effect_labels,
+			pointwise_crit = pointwise_crit,
+			bonferroni_crit = bonferroni_crit
+		))
+	}
 
 	Sigma_1 <- .assemble_joint_cov_var1(
 		Psi = Psi,

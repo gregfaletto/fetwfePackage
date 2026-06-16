@@ -292,7 +292,24 @@ The critical value is computed via `mvtnorm::qmvnorm(..., algorithm = mvtnorm::G
 
 As of version 1.16.0 the `mvtnorm` package is an `Imports` dependency (it ships with the package), because simultaneous bands are now computed by default at fit time --- see the `ci_type` subsection below. (In versions 1.15.x `mvtnorm` was in `Suggests` and only loaded when `simultaneousCIs()` was called.) The `plot.simultaneous_cis` method additionally requires `ggplot2`, which is in `Suggests`; install it with `install.packages("ggplot2")` if you have not already.
 
-The pattern matches `did::aggte(cband = TRUE)` from the Callaway-Sant'Anna `did` package, which computes simultaneous bands via the CCK (2013) multiplier bootstrap. Asymptotically the two critical values are identical under fixed-dim Gaussianity; the parametric `simultaneousCIs()` path here is deterministic and sub-second, whereas the multiplier-bootstrap path is stochastic and resampling-based.
+The default analytic path matches `did::aggte(cband = TRUE)` from the Callaway-Sant'Anna `did` package, which computes simultaneous bands via the CCK (2013) multiplier bootstrap. Asymptotically the two critical values are identical under fixed-dim Gaussianity; the analytic `simultaneousCIs()` path is deterministic and sub-second, whereas a multiplier bootstrap is stochastic and resampling-based.
+
+## The multiplier-bootstrap method: `method = "bootstrap"`
+
+`simultaneousCIs(..., method = "bootstrap")` computes the same sup-t critical value by the CCK (2013) multiplier bootstrap directly --- the procedure `did` uses. It perturbs the per-unit influence functions $\hat f_i^{(k)}$ with random multipliers $\xi_i$ (`multiplier = "rademacher"` or `"mammen"`), forms $T^{(b)} = \max_k |\frac{1}{N}\sum_i \xi_i \hat f_i^{(k)}| / \widehat{\mathrm{sd}}_k$ over $B$ replicates, and takes the $(1-\alpha)$ quantile. The analytic and bootstrap critical values agree up to Monte-Carlo error, and both sit between the pointwise and Bonferroni values:
+
+```{r}
+sci_boot <- simultaneousCIs(res_default, family = "all_post_treatment",
+                            method = "bootstrap", B = 1000, seed = 1)
+c(pointwise  = sci_boot$pointwise_critical_value,
+  analytic   = simultaneousCIs(res_default, family = "all_post_treatment")$critical_value,
+  bootstrap  = sci_boot$critical_value,
+  bonferroni = sci_boot$bonferroni_critical_value)
+```
+
+Two reasons to prefer the bootstrap. First, it **scales to large effect families**: `qmvnorm` integration strains at hundreds of effects (e.g. simultaneous bands over the full disaggregated cohort $\times$ event-time grid), whereas the bootstrap stays stable and linear in $B \cdot K$. Second, it is **heteroskedasticity/cluster-robust by construction** --- its per-unit influence matrix $F$ reproduces the cluster-robust joint covariance ($\mathrm{crossprod}(F)/(NT)^2$ equals it up to the $N/(N-1)$ finite-sample factor), so on a `se_type = "cluster"` fit the bootstrap per-effect standard errors equal the analytic ones exactly (and on a default fit the bootstrap reports the cluster-robust band regardless). Pass an integer `seed` for reproducible draws; with `seed = NULL` the draws come from the ambient RNG.
+
+Phase 1 (this release) supports `method = "bootstrap"` for `family = "cohort"`, `"all_post_treatment"`, and `"custom"`. The `"event_study"` family --- whose pooling across cohorts introduces a cohort-probability variance term needing a per-unit propensity influence function --- and the high-dimensional `p \ge NT` regime (where the analytic Gram inverse does not exist, so the bootstrap is the *only* route to simultaneous bands) are planned follow-ups; use `method = "analytic"` for `event_study` in the meantime.
 
 ## Simultaneous bands are the default: the `ci_type` argument
 
