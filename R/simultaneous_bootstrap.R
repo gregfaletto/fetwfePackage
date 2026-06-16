@@ -322,8 +322,14 @@
 	# cadjust (the anchor colSums(F_pi^2)/n^2 == diag(Sigma_2) is exact), so
 	# cadjust is applied to the regression channel ONLY -- the unique scaling that
 	# makes the event_study bootstrap SE equal the analytic event_study SE to
-	# machine precision. (cadjust cancels in the studentized `crit` below
-	# regardless.) The high-dimensional channel reuses the same cadjust for
+	# machine precision. cadjust is deliberately NOT applied to the studentization
+	# (`col_ss` above): the sup-t `crit` below calibrates on the empirical per-unit
+	# IF correlation cov2cor(Sigma_1 + Sigma_2). For the Sigma_2 = 0 families that
+	# equals the analytic correlation (a uniform scale cancels in cov2cor); for
+	# event_study (Sigma_2 != 0) it differs from the analytic qmvnorm's
+	# cov2cor(cadjust*Sigma_1 + Sigma_2) by an O(1/N) reweighting -- within MC
+	# error, marginally conservative (see #302 for the optional exact-match draw
+	# scaling). The high-dimensional channel reuses the same cadjust for
 	# uniformity -- making its bands marginally (N/(N-1)) wider than debiasedATT's
 	# regression SE, which omits it; harmless, and -> 1 as N grows.
 	cadjust <- N / (N - 1)
