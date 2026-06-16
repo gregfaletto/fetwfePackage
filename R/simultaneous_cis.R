@@ -73,16 +73,23 @@ utils::globalVariables(c(
 #'   distribution. The two are asymptotically equivalent; the bootstrap scales
 #'   better to large effect families and is heteroskedasticity/cluster-robust by
 #'   construction (it always reports cluster-robust per-unit standard errors,
-#'   regardless of the fit's `se_type`). **Currently `method = "bootstrap"`
-#'   supports `family = "cohort"`, `"all_post_treatment"`, and `"custom"`;**
-#'   `"event_study"` (whose cohort-probability variance term needs a per-unit
-#'   propensity influence function) is analytic-only for now. When the (full)
+#'   regardless of the fit's `se_type`). `method = "bootstrap"` supports all four
+#'   families. For `family = "event_study"` the bootstrap additionally perturbs
+#'   the per-unit cohort-probability (propensity) influence function with its own
+#'   independent multiplier stream -- a two-channel bootstrap matching the
+#'   analytic variance `Sigma = Sigma_1 + Sigma_2` (the event-study family is the
+#'   one whose `Sigma_2` is non-zero, because each event-time effect pools across
+#'   cohorts weighted by the estimated cohort probabilities). When the (full)
 #'   design is **high-dimensional (`p >= NT`)** -- where the analytic Gram inverse
 #'   need not exist -- the bootstrap uses the full-design **desparsified**
 #'   construction of `debiasedATT()` (per-effect nodewise directions) generalized
 #'   to the family. This `p >= NT` path is **experimental** (`fetwfe()` fits only;
 #'   coverage is not yet simulation-validated): inspect the returned
-#'   `feasibility` / `converged` diagnostics.
+#'   `feasibility` / `converged` diagnostics. The desparsified path covers the
+#'   regression-channel families; a high-dimensional `family = "event_study"` fit
+#'   uses the fixed-p selected-support construction when its selected support is
+#'   low-dimensional (the high-dim-desparsified event-study combination is a
+#'   planned follow-up).
 #' @param B Integer; number of multiplier-bootstrap replicates
 #'   (`method = "bootstrap"` only). Default `1000`.
 #' @param seed Optional integer; if supplied, the bootstrap draws are
@@ -609,6 +616,26 @@ simultaneousCIs.twfeCovs <- function(
 			a_beta_mat[treat_inds, ] <- t(psi_tes_mat)
 			targets <- crossprod(A, a_beta_mat) # p x K full theta-space directions
 		}
+		# event_study carries the non-zero cohort-probability (propensity)
+		# variance channel Sigma_2: build the SAME per-effect Jacobian list the
+		# analytic path uses (Step 10 below) so the bootstrap propensity IF and the
+		# analytic Sigma_2 are provably consistent. NULL for the other families
+		# (Sigma_2 = 0), which keeps their bootstrap byte-identical to Phase 1/2.
+		J_list <- if (identical(family, "event_study")) {
+			.build_j_list_for_family(
+				family = family,
+				K = K,
+				G = G,
+				T = T_,
+				num_treats = num_treats,
+				cohort_offsets_int = cohort_offsets_int,
+				first_inds = first_inds,
+				cohort_probs_overall = cohort_probs_overall,
+				d_inv_treat_sel = d_inv_treat_sel
+			)
+		} else {
+			NULL
+		}
 		return(.simultaneous_cis_bootstrap(
 			family = family,
 			alpha = alpha,
@@ -632,7 +659,11 @@ simultaneousCIs.twfeCovs <- function(
 			pointwise_crit = pointwise_crit,
 			bonferroni_crit = bonferroni_crit,
 			theta_hat_full = theta_hat_full,
-			targets = targets
+			targets = targets,
+			J_list = J_list,
+			theta_sel = theta_sel,
+			cohort_probs_overall = cohort_probs_overall,
+			G = G
 		))
 	}
 

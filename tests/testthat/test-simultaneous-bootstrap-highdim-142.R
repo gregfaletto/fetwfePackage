@@ -109,9 +109,23 @@ test_that("high-dim bootstrap is deterministic given a seed", {
 	expect_identical(a$critical_value, b$critical_value)
 })
 
-test_that("event_study is still rejected for the bootstrap in the high-dim regime", {
-	expect_error(
-		simultaneousCIs(hd_fit, family = "event_study", method = "bootstrap"),
-		"event_study"
+test_that("event_study bootstrap bypasses the desparsified path (fixed-p) in the high-dim regime", {
+	# #142 Phase 3: event_study + method = "bootstrap" no longer errors. Even
+	# though this fixture is genuinely full p >= NT, the event_study guard at the
+	# dispatch leaves `targets = NULL`, so its low-dim selected support (~42 < NT
+	# = 200) routes through the FIXED-P selected-support construction, NOT the
+	# desparsified `targets` path -- the concrete proof that high-dim event_study
+	# bypasses the (regression-only) desparsified channel.
+	bo <- simultaneousCIs(
+		hd_fit,
+		family = "event_study",
+		method = "bootstrap",
+		B = 500,
+		seed = 1
 	)
+	expect_s3_class(bo, "simultaneous_cis")
+	expect_identical(bo$regime, "fixed-p")
+	# no nodewise diagnostics attached (those are the desparsified-path signature)
+	expect_false("feasibility" %in% names(bo))
+	expect_true(all(is.finite(bo$ci$simultaneous_ci_low)))
 })
