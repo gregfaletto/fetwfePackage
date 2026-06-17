@@ -215,8 +215,9 @@ test_that("high-dim debiased band center equals debiasedATT()$att for the overal
 # debiased center is non-zero). The mutation-checkable signal: e3's adjusted
 # p-value is finite and < 1 here (debiased |center|/se ~1.5); reverting the
 # `t_stat` to abs(estimates) would make e3's t_stat abs(0)/se = 0 and its adjusted
-# p ~1. NOTE: seed = 6 zeroes ALL effects and trips the upstream all-zero
-# early-exit (R/simultaneous_cis.R:551), so it never reaches this path.
+# p ~1. NOTE: seed = 6 instead zeroes ALL effects and trips the upstream all-zero
+# early-exit (which now warns in the high-dim regime -- see the dedicated test
+# below), so it never reaches this duality path.
 # ------------------------------------------------------------------------------
 test_that("high-dim event_study band/adjusted-p duality holds with the debiased center (#299)", {
 	coefs <- genCoefs(
@@ -279,4 +280,65 @@ test_that("high-dim event_study band/adjusted-p duality holds with the debiased 
 	# DEBIASED center, so it is < 1 (here ~0.28); under the bug (abs(estimates))
 	# it would be ~1 (mean(boot_max >= 0)).
 	expect_true(all(bo$adjusted_p_values[bridge_zero] < 0.95))
+})
+
+# ------------------------------------------------------------------------------
+# High-dim all-zero degenerate band WARNS, not a silent message (#299 review /
+# #304). When the bridge zeroes EVERY treatment effect at p >= NT, the upstream
+# degenerate early-exit returns an all-zero band BEFORE the debiased bootstrap
+# path. In the high-dim regime selection is NOT consistent and the debiased
+# center can be non-zero, so that all-zero band must not be read as "all effects
+# are zero" -- the early-exit warns() (instead of the fixed-p message()). Fixture:
+# seed = 6 (same high-dim DGP) zeroes all 9 treatment cells. Mutation-checkable:
+# reverting the early-exit to a plain message() (or dropping its `p >= N * T_`
+# guard) drops the warning and fails expect_warning(). Fixed-p behavior (a
+# message(), no warning) is unchanged -- covered by test-degenerate-jacobian-225.R.
+# ------------------------------------------------------------------------------
+test_that("high-dim all-zero degenerate band warns (not a silent message) (#304)", {
+	coefs <- genCoefs(
+		G = 3,
+		T = 5,
+		d = 22,
+		density = 0.5,
+		eff_size = 2,
+		seed = 6
+	)
+	dat <- simulateData(
+		coefs,
+		N = 40,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = 6
+	)
+	dat$indep_counts <- NA
+	fit6 <- fetwfe(
+		pdata = dat$pdata,
+		time_var = dat$time_var,
+		unit_var = dat$unit_var,
+		treatment = dat$treatment,
+		response = dat$response,
+		covs = dat$covs,
+		q = 0.5,
+		verbose = FALSE,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5
+	)
+	# Fixture invariants: genuinely high-dim AND the bridge zeroed EVERY treat cell
+	# (so the degenerate early-exit fires in the high-dim regime).
+	expect_gte(ncol(fit6$internal$X_final), nrow(fit6$internal$X_final))
+	expect_true(all(fit6$internal$theta_hat[-1][fit6$treat_inds] == 0))
+
+	expect_warning(
+		bo <- simultaneousCIs(
+			fit6,
+			family = "cohort",
+			method = "bootstrap",
+			B = 100,
+			seed = 1
+		),
+		"degenerate|unreliable|zeroed out every"
+	)
+	# the degenerate band is the all-zero early-exit return, as documented.
+	expect_true(all(bo$ci$simultaneous_ci_low == 0))
+	expect_true(all(bo$ci$simultaneous_ci_high == 0))
 })

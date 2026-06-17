@@ -17,6 +17,12 @@
   the high-dimensional `cohort` / `all_post_treatment` / `custom` bands added in
   1.32.0. The `p >= NT` path remains **experimental** (coverage not yet
   simulation-validated). Fixed-`p` behavior is unchanged.
+- In the high-dimensional (`p >= NT`) regime, a `simultaneousCIs()` fit whose
+  bridge penalty zeroes *every* treatment effect now emits a `warning()` rather
+  than a silent `message()`: an all-zero band there is degenerate and does not
+  imply the effects are zero (selection is not consistent at `p >= NT`, and the
+  debiased band center is bypassed; see #304). Fixed-`p` behavior (a `message()`)
+  is unchanged.
 
 ## Version 1.33.0
 

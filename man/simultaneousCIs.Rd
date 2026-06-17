@@ -85,7 +85,10 @@ two-point distribution). Ignored when \code{method = "analytic"}.}
 constant of the penalty \verb{lambda_node = lambda_c * max(|a|) * sqrt(log p / N)};
 the default \code{1.0} (theory scale) keeps the directions feasible. \strong{Smaller
 values can leave directions infeasible (a warning fires and those bands are
-unreliable).} Ignored when \code{p < NT} or \code{method = "analytic"}.}
+unreliable).} Ignored when \code{p < NT} or \code{method = "analytic"}. The fixed
+default is a known limitation: the eventual production path should select
+this per fit by cross-validation rather than carry a constant (tracked at
+#295).}
 }
 \value{
 An object of S3 class \code{"simultaneous_cis"}: a list with

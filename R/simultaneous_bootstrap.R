@@ -490,6 +490,17 @@
 	# the same `J_list` / `Sigma_pi` the analytic `Sigma_2` uses, so the bootstrap
 	# and analytic `Sigma_2` agree to machine precision. NULL for the other
 	# families (`Sigma_2 = 0`), keeping their bootstrap draw byte-identical.
+	#
+	# CAVEAT (high-dim, deferred -- tracked at #303 / #295): `theta_sel` is the
+	# bridge-SELECTED (post-selection) effects in BOTH regimes, so the propensity
+	# channel is NOT desparsified even when the regression channel is. A cohort the
+	# bridge zeroed contributes 0 to `F_pi` (its cells are simply absent from
+	# `theta_sel` / `J_list`), so if a truly-non-zero cohort effect was zeroed this
+	# understates `Sigma_2` and the high-dim event_study band can undercover. It is
+	# o(1) / second-order when `Sigma_2 << Sigma_1`. The uniformly-valid fix (a
+	# debiased per-cell nuisance for the propensity channel, matching the
+	# regression channel) is the q=1 nuisance swap of #303; coverage validation
+	# against a "bridge zeroes a truly-non-zero cohort" DGP is tracked under #295.
 	F_pi_mat <- if (identical(family, "event_study")) {
 		.build_propensity_if(
 			J_list = J_list,
