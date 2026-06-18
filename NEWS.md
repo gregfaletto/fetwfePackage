@@ -23,6 +23,13 @@
   imply the effects are zero (selection is not consistent at `p >= NT`, and the
   debiased band center is bypassed; see #304). Fixed-`p` behavior (a `message()`)
   is unchanged.
+- In the high-dimensional (`p >= NT`) regime, `simultaneousCIs(method = "bootstrap")`
+  on a non-`fetwfe()` fit (e.g. `betwfe()`) uses the fixed-`p` selected-support
+  band instead of erroring: the full-design desparsified path is `fetwfe()`-only,
+  so a non-fetwfe `p >= NT` fit falls back to the fixed-`p` construction (valid
+  when its selected support is low-dimensional). This restores the fixed-`p`
+  fallback for the `event_study` family and extends it to the regression-channel
+  families (`cohort` / `all_post_treatment` / `custom`).
 
 ## Version 1.33.0
 

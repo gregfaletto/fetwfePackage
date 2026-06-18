@@ -57,9 +57,12 @@ cohorts weighted by the estimated cohort probabilities). When the (full)
 design is \strong{high-dimensional (\code{p >= NT})} -- where the analytic Gram inverse
 need not exist -- the bootstrap uses the full-design \strong{desparsified}
 construction of \code{debiasedATT()} (per-effect nodewise directions) generalized
-to the family. This \code{p >= NT} path is \strong{experimental} (\code{fetwfe()} fits only;
-coverage is not yet simulation-validated): inspect the returned
-\code{feasibility} / \code{converged} diagnostics. The desparsified path covers all
+to the family. This desparsified \code{p >= NT} path is \strong{experimental}
+(\code{fetwfe()} fits only; coverage is not yet simulation-validated): inspect the
+returned \code{feasibility} / \code{converged} diagnostics. A non-\code{fetwfe()} \code{p >= NT}
+fit (e.g. \code{betwfe()}) instead falls back to the fixed-\code{p} selected-support
+band (valid when its selected support is low-dimensional). The desparsified
+path covers all
 four families (a high-dimensional \code{family = "event_study"} fit additionally
 carries the propensity channel \code{F_pi}). In the high-dimensional regime the
 band is centered on the \strong{debiased} estimate (the Theorem 6.6 correction,

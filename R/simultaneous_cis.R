@@ -83,9 +83,12 @@ utils::globalVariables(c(
 #'   design is **high-dimensional (`p >= NT`)** -- where the analytic Gram inverse
 #'   need not exist -- the bootstrap uses the full-design **desparsified**
 #'   construction of `debiasedATT()` (per-effect nodewise directions) generalized
-#'   to the family. This `p >= NT` path is **experimental** (`fetwfe()` fits only;
-#'   coverage is not yet simulation-validated): inspect the returned
-#'   `feasibility` / `converged` diagnostics. The desparsified path covers all
+#'   to the family. This desparsified `p >= NT` path is **experimental**
+#'   (`fetwfe()` fits only; coverage is not yet simulation-validated): inspect the
+#'   returned `feasibility` / `converged` diagnostics. A non-`fetwfe()` `p >= NT`
+#'   fit (e.g. `betwfe()`) instead falls back to the fixed-`p` selected-support
+#'   band (valid when its selected support is low-dimensional). The desparsified
+#'   path covers all
 #'   four families (a high-dimensional `family = "event_study"` fit additionally
 #'   carries the propensity channel `F_pi`). In the high-dimensional regime the
 #'   band is centered on the **debiased** estimate (the Theorem 6.6 correction,
@@ -621,19 +624,14 @@ simultaneousCIs.twfeCovs <- function(
 	if (identical(method, "bootstrap")) {
 		# High-dimensional full `p >= NT`: build the per-effect full theta-space
 		# directions `targets = A' a_beta` (A the inverse fusion transform), the
-		# input to the full-design desparsified construction. FETWFE-only (the only
-		# estimator with a regularized `p >= NT` fit). Fixed-p leaves `targets`
-		# NULL and the selected-support construction is used.
+		# input to the full-design desparsified construction. The desparsified path
+		# is FETWFE-only (the only estimator with a regularized `p >= NT` fit); a
+		# non-fetwfe `p >= NT` fit (e.g. betwfe) leaves `targets` NULL and falls
+		# through to the fixed-p selected-support construction -- valid when its
+		# selected support is low-dimensional (the usual sparse case). Fixed-p
+		# (`p < NT`) likewise leaves `targets` NULL.
 		targets <- NULL
-		if (p >= N * T_) {
-			if (!is_fetwfe) {
-				stop(
-					"simultaneousCIs(): method = 'bootstrap' in the ",
-					"high-dimensional (p >= NT) regime is supported only for ",
-					"fetwfe() fits.",
-					call. = FALSE
-				)
-			}
+		if (p >= N * T_ && is_fetwfe) {
 			A <- genFullInvFusionTransformMat(
 				first_inds = first_inds,
 				T = T_,

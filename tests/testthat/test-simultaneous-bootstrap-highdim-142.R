@@ -342,3 +342,63 @@ test_that("high-dim all-zero degenerate band warns (not a silent message) (#304)
 	expect_true(all(bo$ci$simultaneous_ci_low == 0))
 	expect_true(all(bo$ci$simultaneous_ci_high == 0))
 })
+
+# ------------------------------------------------------------------------------
+# Non-fetwfe (betwfe) high-dim bootstrap falls back to the fixed-p band, NOT an
+# error (#305 review, Major). The desparsified `targets` path is fetwfe-only; a
+# non-fetwfe p >= NT fit must leave `targets` NULL and route through the fixed-p
+# selected-support construction (regime == "fixed-p") -- for BOTH the propensity-
+# channel `event_study` family and a regression-channel family (`cohort`).
+# Mutation-checkable: reverting the dispatch guard `if (p >= N*T_ && is_fetwfe)`
+# to `if (p >= N*T_)` reinstates the `stop("...only for fetwfe() fits")`, making
+# both calls error and failing the expect_s3_class / regime assertions here.
+# ------------------------------------------------------------------------------
+test_that("non-fetwfe (betwfe) high-dim bootstrap uses the fixed-p band, not an error (#305)", {
+	coefs <- genCoefs(
+		G = 3,
+		T = 5,
+		d = 22,
+		density = 0.5,
+		eff_size = 2,
+		seed = 1
+	)
+	dat <- simulateData(
+		coefs,
+		N = 40,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = 1
+	)
+	dat$indep_counts <- NA
+	bfit <- betwfe(
+		pdata = dat$pdata,
+		time_var = dat$time_var,
+		unit_var = dat$unit_var,
+		treatment = dat$treatment,
+		response = dat$response,
+		covs = dat$covs,
+		q = 0.5,
+		verbose = FALSE,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5
+	)
+	# fixture invariant: genuinely high-dim (full p >= NT)
+	expect_gte(ncol(bfit$internal$X_final), nrow(bfit$internal$X_final))
+
+	for (fam in c("event_study", "cohort")) {
+		bo <- simultaneousCIs(
+			bfit,
+			family = fam,
+			method = "bootstrap",
+			B = 200,
+			seed = 1
+		)
+		expect_s3_class(bo, "simultaneous_cis")
+		# load-bearing: non-fetwfe HD routes through the fixed-p selected-support
+		# path (NOT the fetwfe-only desparsified path, NOT a stop()).
+		expect_identical(bo$regime, "fixed-p")
+		expect_false("feasibility" %in% names(bo)) # no nodewise diagnostics
+		expect_true(all(is.finite(bo$ci$simultaneous_ci_low)))
+		expect_true(all(is.finite(bo$ci$simultaneous_ci_high)))
+	}
+})
