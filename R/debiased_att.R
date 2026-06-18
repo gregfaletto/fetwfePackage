@@ -117,7 +117,7 @@
 #'     `N -> infinity` with **no** model for within-unit dependence (so a
 #'     `gls = FALSE` fit, which skips GLS whitening, yields a valid cluster-robust
 #'     SE; #307, paper Decision D1). GLS whitening (`gls = TRUE`) buys
-#'     *efficiency* (a smaller `var_reg`), not validity.
+#'     *efficiency* (an asymptotically smaller `var_reg`), not validity.
 #'   \item **(Low-dimensional `p < NT` only) Asymptotically negligible ridge,**
 #'     `lambda = o((NT)^(-1/2))` (the theoretical condition; the leading case is
 #'     the exact inverse `lambda = 0`). The implementation does **not** use a
@@ -301,7 +301,11 @@ debiasedATT <- function(
 	#  - High-dim (p >= NT): the SE is the desparsified cluster-robust sandwich
 	#    (V1 unit-clustered + V2 plug-in), which needs neither the oracle SE
 	#    machinery nor Omega -- so a `gls = FALSE` fit (`calc_ses = FALSE`, no GLS
-	#    whitening; #307) is the EXPECTED input and is accepted here.
+	#    whitening; #307) is the EXPECTED input and is accepted here. The high-dim
+	#    branch re-fits its OWN q=1 nuisance internally (#303), so it does not rely
+	#    on the input fit's `calc_ses`: ANY p >= NT fit is accepted regardless,
+	#    including a high-dim q >= 1 fit (newly accepted vs prior versions) -- both
+	#    give the same debiased estimate + cluster-robust SE.
 	if (!highdim && !isTRUE(fit$internal$calc_ses)) {
 		stop(
 			"debiasedATT() requires a fit computed with q < 1 (bridge selection) in ",
@@ -494,8 +498,9 @@ debiasedATT <- function(
 	var_reg <- sum(unit_scores^2) / n^2
 
 	# ---- channel 2: cohort-weight variance ----
-	# `var_weight` is the fit's plug-in `att_var_2` (read above): the same
-	# cohort-weight variance, with the correct single- / two-sample formula.
+	# `var_weight` is the fit's stored `att_var_2` or its `.plugin_v2()`
+	# recomputation (read above): the same cohort-weight variance, with the correct
+	# single- / two-sample formula.
 
 	se_db <- sqrt(var_reg + var_weight)
 	z <- stats::qnorm(1 - alpha / 2)

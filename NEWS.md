@@ -17,7 +17,10 @@
   the cohort-weight channel `var_weight` falls back to the plug-in
   `(1/N_tau) sum_g pi_g (catt_g - att)^2` when the fit carries no `att_var_2`
   (byte-identical to `att_var_2` when present). Whitening buys efficiency, not
-  validity (paper Decision D1). The `p >= NT` path remains **experimental**
+  validity (paper Decision D1). Because the high-dimensional branch re-fits its
+  own nuisance, `debiasedATT()` now accepts **any** `p >= NT` fit regardless of
+  `calc_ses` (a high-dimensional `q >= 1` fit is now accepted; previously an
+  error). The `p >= NT` path remains **experimental**
   (coverage / `lambda_c` per #295); small-cluster applications (few treated
   units) should prefer a wild-cluster bootstrap (a planned follow-up).
 

@@ -117,7 +117,7 @@ channel is the unit-clustered sandwich, valid as the number of units
 \code{N -> infinity} with \strong{no} model for within-unit dependence (so a
 \code{gls = FALSE} fit, which skips GLS whitening, yields a valid cluster-robust
 SE; #307, paper Decision D1). GLS whitening (\code{gls = TRUE}) buys
-\emph{efficiency} (a smaller \code{var_reg}), not validity.
+\emph{efficiency} (an asymptotically smaller \code{var_reg}), not validity.
 \item \strong{(Low-dimensional \code{p < NT} only) Asymptotically negligible ridge,}
 \code{lambda = o((NT)^(-1/2))} (the theoretical condition; the leading case is
 the exact inverse \code{lambda = 0}). The implementation does \strong{not} use a
