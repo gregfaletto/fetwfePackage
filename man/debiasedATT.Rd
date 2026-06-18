@@ -154,6 +154,10 @@ the paper points to; the \code{q < 1} bridge is super-efficient / non-uniform --
 the wrong nuisance for a uniformly-valid CI (#303). The
 \emph{input} fit must still be \code{q < 1} (it supplies the cohort-weight variance
 channel \code{att_var_2}); only the high-dimensional debiasing nuisance is \code{q = 1}.
+That nuisance's cross-validation uses a fixed, data-derived seed, so it is
+deterministic across calls (\code{debiasedATT()} and the high-dimensional
+\code{\link[=simultaneousCIs]{simultaneousCIs()}} band center agree exactly) --- but it is not tunable via
+the fit's \code{cv_seed}.
 }
 
 \examples{
