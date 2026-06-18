@@ -207,6 +207,65 @@ test_that("high-dim debiased band center equals debiasedATT()$att for the overal
 })
 
 # ------------------------------------------------------------------------------
+# Per-effect q=1 plug-in pin (#303, post-exec review). The cross-check above pins
+# ONE direction (via debiasedATT). This pins a MULTI-effect (K = 2) custom family
+# against a fully INDEPENDENT reconstruction: the q=1 nuisance plug-in
+# `sum(a_theta * theta_q1)` plus the manual nodewise correction
+# `mean((X v) resid_q1)` -- built here with `riesz_lasso` + a hand-rolled score,
+# NOT the implementation's `.build_regression_if_highdim`. Mutation-checkable:
+# reverting the high-dim band center from the q=1 plug-in (`estimates_q1`) to the
+# bridge `estimates` shifts these per-effect centers and fails the match.
+# ------------------------------------------------------------------------------
+test_that("high-dim custom per-effect centers match an independent q=1 reconstruction (#303)", {
+	X <- hd_fit$internal$X_final
+	y <- as.numeric(hd_fit$internal$y_final)
+	n <- nrow(X)
+	p <- ncol(X)
+	Tt <- hd_fit$T
+	G <- hd_fit$G
+	ti <- hd_fit$treat_inds
+	nt <- length(ti)
+	A <- genFullInvFusionTransformMat(
+		first_inds = getFirstInds(G = G, T = Tt),
+		T = Tt,
+		G = G,
+		d = hd_fit$d,
+		num_treats = nt,
+		fusion_structure = hd_fit$fusion_structure,
+		d_inv_treat = hd_fit$internal$d_inv_treat
+	)
+	theta_q1 <- fetwfe:::.fit_q1_nuisance(X, y, n / Tt, Tt)
+	resid <- as.numeric(y - theta_q1[1] - X %*% theta_q1[-1])
+	Sig <- crossprod(X) / n
+	# two distinct multi-effect contrasts (K = 2): first and last treatment cell.
+	C <- rbind(c(1, rep(0, nt - 1)), c(rep(0, nt - 1), 1))
+	recon <- apply(C, 1, function(cc) {
+		ab <- numeric(p)
+		ab[ti] <- cc
+		ath <- as.numeric(crossprod(A, ab))
+		ln <- lambda_node_default(
+			p = p,
+			N = n / Tt,
+			c = 1.0,
+			scale = max(abs(ath))
+		)
+		v <- riesz_lasso(Sig, ath, ln)
+		sum(ath * theta_q1[-1]) + mean((X %*% v) * resid)
+	})
+	sc <- simultaneousCIs(
+		hd_fit,
+		family = "custom",
+		contrasts = C,
+		method = "bootstrap",
+		B = 100,
+		seed = 1
+	)
+	expect_identical(sc$regime, "high-dimensional")
+	# centers are B/seed-independent (plug-in + deterministic correction).
+	expect_equal(sc$ci$estimate, recon, tolerance = 1e-9)
+})
+
+# ------------------------------------------------------------------------------
 # Band / adjusted-p duality under debiasing (#299, plan-review item 1). The
 # adjusted-p `t_stat` MUST use the debiased center `estimates_used`, not the bridge
 # `estimates`, or the band and its adjusted p-values disagree on a bridge-zeroed

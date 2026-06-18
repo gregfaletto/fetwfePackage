@@ -1,5 +1,26 @@
 # NEWS
 
+## Version 1.35.0
+
+### Changes
+
+- The high-dimensional (`p >= NT`) **debiased nuisance** is now an internally-fit
+  **`q = 1` fused lasso** (`grpreg::cv.grpreg(penalty = "gBridge", gamma = 1)`,
+  CV-selected `lambda`) -- the Theorem 6.6 nuisance -- rather than the reused
+  `q < 1` FETWFE bridge `theta_hat` (#303). The `q < 1` bridge is
+  super-efficient / non-uniform (the wrong rate for a uniformly-valid CI); only
+  its `l1` *rate*, which the paper establishes for the `q = 1` fused lasso,
+  controls the orthogonalization remainder. This changes the debiased **point
+  estimate** (and, through the nuisance residuals, its regression-channel
+  standard error / band width) returned by `debiasedATT()` and the
+  high-dimensional band centers of `simultaneousCIs(method = "bootstrap")` (both
+  move to the `q = 1` nuisance consistently, so they remain equal for the
+  matching contrast). The *input* fit
+  stays `q < 1` (the cohort-weight variance channel `att_var_2` and the
+  `calc_ses` gate are unchanged); fixed-`p` (`p < NT`) behavior is unchanged. The
+  `p >= NT` path remains **experimental** (coverage not yet simulation-validated;
+  `lambda_c` not yet tuned, #295).
+
 ## Version 1.34.0
 
 ### New features

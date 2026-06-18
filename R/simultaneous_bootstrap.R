@@ -15,7 +15,8 @@
 # `Sigma_2` is zero, so `F = F_reg`. Phase 2 added the `event_study` family (the
 # per-unit propensity IF `F_pi`) and the high-dimensional (`p >= NT`) regime --
 # including their combination (high-dim `event_study` uses BOTH channels), and
-# the high-dim band center is debiased (Theorem 6.6) rather than the raw bridge.
+# the high-dim band center is debiased (Theorem 6.6) on an internal q=1
+# fused-lasso nuisance (#303), not the raw q<1 bridge.
 
 #' Draw multiplier-bootstrap weights
 #'
@@ -104,8 +105,9 @@
 #' * sqrt(log p / N)`.
 #'
 #' @param X Numeric `NT x p`; the FULL (uncentered) design.
-#' @param resid Numeric length `NT`; bridge residuals
-#'   `y - theta_hat[1] - X theta_hat[-1]`.
+#' @param resid Numeric length `NT`; the nuisance residuals
+#'   `y - theta[1] - X theta[-1]` (the high-dim center uses the q=1 fused-lasso
+#'   nuisance, #303). This helper is residual-agnostic.
 #' @param N,T Integers.
 #' @param targets Numeric `p x K`; per-effect full theta-space directions.
 #' @param lambda_c,riesz_max_iter,riesz_tol Nodewise-solver controls.
@@ -420,7 +422,6 @@
 	effect_labels,
 	pointwise_crit,
 	bonferroni_crit,
-	theta_hat_full = NULL,
 	targets = NULL,
 	J_list = NULL,
 	theta_sel = NULL,
@@ -435,15 +436,19 @@
 	# generalized to K effects -- uniformly valid, NOT post-selection). Otherwise
 	# the fixed-p selected-support construction (Phase 1).
 	if (!is.null(targets)) {
-		# Bridge residuals (debiasedATT convention) over the FULL design.
-		resid_bridge <- as.numeric(
-			y_final[seq_len(n)] -
-				theta_hat_full[1] -
-				X_final %*% theta_hat_full[-1]
+		# High-dim nuisance (#303): an internal q=1 fused lasso (NOT the q<1 bridge
+		# theta_hat), the SAME nuisance debiasedATT() uses -- its l1 rate is what
+		# Theorem `debiased.highdim.thm` controls the orthogonalization remainder
+		# through, and the fixed seed makes it byte-identical to debiasedATT()'s
+		# nuisance so the debiased center below matches debiasedATT()$att exactly.
+		theta_q1 <- .fit_q1_nuisance(X_final, y_final[seq_len(n)], N, T)
+		# q=1 residuals over the FULL design (debiasedATT convention).
+		resid_q1 <- as.numeric(
+			y_final[seq_len(n)] - theta_q1[1] - X_final %*% theta_q1[-1]
 		)
 		F_mat <- .build_regression_if_highdim(
 			X_final,
-			resid_bridge,
+			resid_q1,
 			N,
 			T,
 			targets,
@@ -451,15 +456,16 @@
 			riesz_max_iter = riesz_max_iter,
 			riesz_tol = riesz_tol
 		)
-		# Debias the band center (Theorem 6.6). In the high-dim regime the bridge
-		# (post-selection) estimate is biased; the per-effect desparsified
-		# correction `colSums(F_mat)/(N*T)` is exactly `debiasedATT()`'s
-		# `mean(score)` (the per-effect generalization of `att_db = sum(a*theta) +
-		# mean(score)`), so `estimates_used` here equals `debiasedATT()$att` for the
-		# matching overall-ATT contrast. Centering the band on the bridge estimate
-		# instead would carry the post-selection bias (variance -> 0 with N, bias
-		# does not) and undercover.
-		estimates_used <- estimates + colSums(F_mat) / (N * T)
+		# Debias the band center (Theorem 6.6): the q=1 plug-in plus the per-effect
+		# desparsified correction `colSums(F_mat)/(N*T)` (exactly `debiasedATT()`'s
+		# `mean(score)`, the per-effect generalization of `att_db = sum(a*theta) +
+		# mean(score)`), so `estimates_used` equals `debiasedATT()$att` for the
+		# matching overall-ATT contrast. The q=1 plug-in `crossprod(targets,
+		# theta_q1[-1])` is the per-effect generalization of `sum(a_theta * theta)`.
+		# Centering on the post-selection bridge estimate instead would carry the
+		# selection bias (variance -> 0 with N, bias does not) and undercover.
+		estimates_q1 <- as.numeric(crossprod(targets, theta_q1[-1]))
+		estimates_used <- estimates_q1 + colSums(F_mat) / (N * T)
 	} else {
 		# Fixed-p: selected support + zero-padded Psi_full. FETWFE/BETWFE select a
 		# subset (`sel_feat_inds`); etwfe/twfeCovs use the full design.
