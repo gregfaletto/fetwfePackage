@@ -633,6 +633,7 @@ simultaneousCIs.twfeCovs <- function(
 		# selected support is low-dimensional (the usual sparse case). Fixed-p
 		# (`p < NT`) likewise leaves `targets` NULL.
 		targets <- NULL
+		cell_targets <- NULL
 		if (p >= N * T_ && is_fetwfe) {
 			A <- genFullInvFusionTransformMat(
 				first_inds = first_inds,
@@ -646,6 +647,15 @@ simultaneousCIs.twfeCovs <- function(
 			a_beta_mat <- matrix(0, p, K)
 			a_beta_mat[treat_inds, ] <- t(psi_tes_mat)
 			targets <- crossprod(A, a_beta_mat) # p x K full theta-space directions
+			# Per-cell full theta-space directions (#309): cell_targets[, j] =
+			# A' e_{treat_inds[j]}, the direction whose debiased value is the
+			# desparsified per-cohort-time effect tau_db_j. Only the event_study
+			# propensity channel needs them (its Sigma_2 must be desparsified too).
+			if (identical(family, "event_study")) {
+				E_cells <- matrix(0, p, num_treats)
+				E_cells[cbind(treat_inds, seq_len(num_treats))] <- 1
+				cell_targets <- crossprod(A, E_cells) # p x num_treats
+			}
 		}
 		# event_study carries the non-zero cohort-probability (propensity)
 		# variance channel Sigma_2: build the SAME per-effect Jacobian list the
@@ -663,6 +673,28 @@ simultaneousCIs.twfeCovs <- function(
 				first_inds = first_inds,
 				cohort_probs_overall = cohort_probs_overall,
 				d_inv_treat_sel = d_inv_treat_sel
+			)
+		} else {
+			NULL
+		}
+		# Cell-space cohort-weight Jacobians (#309): the SAME coefficients as J_list
+		# but on the identity per-cell map (`d_inv_treat_sel = I`), so the high-dim
+		# propensity channel can re-pool the debiased per-cell effects as
+		# A_db[, k] = j_cells[[k]] %*% tau_db. Only built for high-dim event_study
+		# (cell_targets non-NULL); NULL otherwise -> fixed-p post-selection path.
+		j_cells <- if (
+			identical(family, "event_study") && !is.null(cell_targets)
+		) {
+			.build_j_list_for_family(
+				family = family,
+				K = K,
+				G = G,
+				T = T_,
+				num_treats = num_treats,
+				cohort_offsets_int = cohort_offsets_int,
+				first_inds = first_inds,
+				cohort_probs_overall = cohort_probs_overall,
+				d_inv_treat_sel = diag(num_treats)
 			)
 		} else {
 			NULL
@@ -693,7 +725,9 @@ simultaneousCIs.twfeCovs <- function(
 			J_list = J_list,
 			theta_sel = theta_sel,
 			cohort_probs_overall = cohort_probs_overall,
-			G = G
+			G = G,
+			cell_targets = cell_targets,
+			j_cells = j_cells
 		))
 	}
 

@@ -1,5 +1,25 @@
 # NEWS
 
+## Version 1.37.0
+
+### Bug fixes
+
+- `simultaneousCIs(family = "event_study", method = "bootstrap")` now
+  **desparsifies the propensity (cohort-weight) variance channel** `F_pi` in the
+  high-dimensional (`p >= NT`) regime (#309). Previously the band *center* was
+  debiased (Theorem 6.6) but `F_pi` (the `Sigma_2` term) was still built from the
+  **post-selection** effects, so a cohort the bridge zeroed contributed `0` to the
+  cohort-weight variance while the debiased center counted its non-zero value -- a
+  center/variance inconsistency that under-covered in the heterogeneous-cohort
+  regime (a large zeroed `tau_g` with non-trivial cohort-weight uncertainty).
+  `F_pi` is now built from the **debiased per-cohort-time effects**, computed with
+  the same q=1 fused-lasso nuisance and nodewise (`riesz_lasso`) directions the
+  band center uses, so center and `Sigma_2` are mutually consistent. Fixed-`p`
+  fits are unaffected (their selected estimate is unbiased by selection
+  consistency, so the post-selection construction is byte-identical to before).
+  The `p >= NT` `event_study` path remains experimental (coverage validation under
+  #295 / paper-side `gregfaletto/fetwfe#88`).
+
 ## Version 1.36.0
 
 ### New features

@@ -163,6 +163,103 @@
 	F_mat
 }
 
+#' Debiased per-cohort-time effects for the high-dim propensity channel (#309)
+#'
+#' @description
+#' Desparsifies each treatment cell's effect `tau_{g,t}` for the high-dimensional
+#' (`p >= NT`) `event_study` propensity channel. The post-selection bridge zeroes
+#' some cells, so feeding `theta_sel` into `.build_propensity_if()` lets a zeroed
+#' cohort contribute `0` to `Sigma_2` while the (debiased) band CENTER counts its
+#' non-zero value -- a center/variance inconsistency that undercovers in the
+#' heterogeneous-cohort regime. This returns the DEBIASED per-cell values so the
+#' propensity channel matches the debiased center.
+#'
+#' Each cell value mirrors `debiasedATT()` (`att_db = sum(a*theta) + mean(score)`,
+#' paper Theorem `debiased.highdim.thm`): `tau_db[j] = cell_targets[,j]' theta_q1
+#' + mean_n((X v_j) * resid)`, with `v_j = riesz_lasso(Sig, cell_targets[,j],
+#' lambda_node_j)` -- the SAME q=1 nuisance / residuals / nodewise machinery the
+#' regression channel uses (`.build_regression_if_highdim()`). Center and variance
+#' share that machinery but are not byte-identical: the band center desparsifies
+#' the *pooled* event-time direction (one `riesz_lasso` solve on `targets[,k]`),
+#' while the propensity channel pools the *per-cell* debiased values; because
+#' `riesz_lasso` is nonlinear in its target the two agree only at leading order
+#' (the residual is second-order in the *variance* -- it perturbs the per-effect
+#' SE by a few percent on the test fixture -- not a vanishing term in the point
+#' estimate). This removes the first-order post-selection inconsistency (a
+#' bridge-zeroed cohort contributing 0 vs its O(1) debiased magnitude); the
+#' residual is the deliberate scope boundary of #309 (coverage validation #295).
+#' Deterministic (no RNG; `riesz_lasso` is deterministic and the nuisance was
+#' already data-seeded).
+#'
+#' @param X Numeric `NT x p`; the FULL (uncentered) design.
+#' @param resid Numeric length `NT`; the q=1 nuisance residuals (shared with
+#'   `.build_regression_if_highdim()`).
+#' @param N,T Integers.
+#' @param theta_q1_slopes Numeric length `p`; the q=1 nuisance slopes
+#'   (`theta_q1[-1]`), shared with the regression-channel center.
+#' @param cell_targets Numeric `p x num_treats`; per-cell full theta-space
+#'   directions (`A' e_{treat_inds[j]}`).
+#' @param lambda_c,riesz_max_iter,riesz_tol Nodewise-solver controls (as for
+#'   `.build_regression_if_highdim()`).
+#' @return A list with `tau_db` (length `num_treats`) and `diagnostics`
+#'   (per-cell `feasibility` / `converged` / `lambda_node`).
+#' @keywords internal
+#' @noRd
+.build_debiased_treat_cells_highdim <- function(
+	X,
+	resid,
+	N,
+	T,
+	theta_q1_slopes,
+	cell_targets,
+	lambda_c = 1.0,
+	riesz_max_iter = 5000L,
+	riesz_tol = 1e-9
+) {
+	n <- N * T
+	p <- ncol(X)
+	# Same full, uncentered Gram as .build_regression_if_highdim() (recomputed
+	# here to keep this helper self-contained; for large p the two share Sig --
+	# a future optimization could hoist it into the caller).
+	Sig <- crossprod(X) / n
+	num_treats <- ncol(cell_targets)
+	tau_db <- numeric(num_treats)
+	feasibility <- numeric(num_treats)
+	converged <- logical(num_treats)
+	lambda_node <- numeric(num_treats)
+	for (j in seq_len(num_treats)) {
+		a_j <- cell_targets[, j]
+		lambda_node[j] <- lambda_node_default(
+			p = p,
+			N = N,
+			c = lambda_c,
+			scale = max(abs(a_j))
+		)
+		v_j <- riesz_lasso(
+			Sig,
+			a_j,
+			lambda_node[j],
+			max_iter = riesz_max_iter,
+			tol = riesz_tol
+		)
+		# q=1 plug-in + desparsified correction mean_n((X v_j) * resid). The mean
+		# is over all n = N*T rows (matching debiasedATT()'s mean(score) and
+		# colSums(F_reg)/(N*T)), NOT over units.
+		corr_j <- sum((X %*% v_j) * resid) / n
+		tau_db[j] <- as.numeric(crossprod(a_j, theta_q1_slopes)) + corr_j
+		feasibility[j] <- attr(v_j, "feasibility")
+		converged[j] <- attr(v_j, "converged")
+	}
+	list(
+		tau_db = tau_db,
+		diagnostics = list(
+			feasibility = feasibility,
+			converged = converged,
+			lambda_node = lambda_node
+		)
+	)
+}
+
 #' Per-unit cohort-probability (propensity) influence-function matrix `F_pi`
 #'
 #' @description
@@ -204,39 +301,53 @@
 #'
 #' @param J_list Length-`K` list of per-effect cohort-weight Jacobians from
 #'   `.build_j_list_for_family(family = "event_study", ...)`; each is `G x p_sel`.
+#'   Used only to build `A` on the fixed-p path; `NULL` when `A` is supplied.
 #' @param theta_sel Numeric length `p_sel`; the selected-support treatment-effect
 #'   parameters (theta-space for FETWFE, beta-space for the OLS family / BETWFE).
+#'   Used only on the fixed-p path; `NULL` when `A` is supplied.
 #' @param cohort_probs_overall Numeric; cohort-membership probabilities
 #'   `pi_hat_g = N_g / N` (length `>= G`; `[1:G]` are the treated cohorts, the
 #'   residual mass is never-treated).
 #' @param G Integer; number of treated cohorts.
 #' @param N,T Integers; units and periods. (Period arg named `T` to match the
 #'   sibling variance helpers `.assemble_joint_cov_var2()` / `.build_jacobian()`.)
-#' @return `F_pi`, an `N x K` numeric matrix (`K = length(J_list)`).
+#' @param A Optional `G x K` matrix `[a_1 ... a_K]` precomputed by the caller. When
+#'   supplied (the high-dim `event_study` path, #309) it is the DEBIASED cohort
+#'   effect matrix and `J_list` / `theta_sel` are ignored; when `NULL` (fixed-p) it
+#'   is built from `J_list %*% theta_sel` (post-selection, byte-identical to before).
+#' @return `F_pi`, an `N x K` numeric matrix (`K = ncol(A)`).
 #' @keywords internal
 #' @noRd
 .build_propensity_if <- function(
-	J_list,
-	theta_sel,
+	J_list = NULL,
+	theta_sel = NULL,
 	cohort_probs_overall,
 	G,
 	N,
-	T
+	T,
+	A = NULL
 ) {
-	K <- length(J_list)
 	pi_hat <- cohort_probs_overall[seq_len(G)]
-	# A = [a_1 ... a_K], forced to G x K via matrix(., nrow = G): the bare
-	# vapply(..., numeric(G)) collapses to a length-K vector when G == 1, which
-	# would break A[g, ] indexing for a single treated cohort.
-	A <- matrix(
-		vapply(
-			seq_len(K),
-			function(k) as.numeric(J_list[[k]] %*% theta_sel),
-			numeric(G)
-		),
-		nrow = G,
-		ncol = K
-	)
+	# A = [a_1 ... a_K] (G x K). Fixed-p / post-selection builds it as
+	# a_k = J_list[[k]] %*% theta_sel; the high-dim event_study path (#309) passes a
+	# DEBIASED A (desparsified per-cohort-time effects), so a cohort the bridge
+	# zeroed contributes its non-zero debiased value to Sigma_2 -- matching the
+	# debiased band center rather than 0. The `matrix(., nrow = G)` forcing handles
+	# G == 1 (the bare vapply collapses to a length-K vector, which would break
+	# A[g, ] indexing for a single treated cohort).
+	if (is.null(A)) {
+		K <- length(J_list)
+		A <- matrix(
+			vapply(
+				seq_len(K),
+				function(k) as.numeric(J_list[[k]] %*% theta_sel),
+				numeric(G)
+			),
+			nrow = G,
+			ncol = K
+		)
+	}
+	K <- ncol(A)
 	# Centered one-hot e_{W_i} - pi_hat (e = 0 for never-treated). Constant
 	# subtracted row c0 = pi_hat' A (length K); cohort-g rows carry A[g, ] - c0
 	# (one-hot e_g minus pi_hat), never-treated rows carry -c0.
@@ -426,7 +537,9 @@
 	J_list = NULL,
 	theta_sel = NULL,
 	cohort_probs_overall = NULL,
-	G = NULL
+	G = NULL,
+	cell_targets = NULL,
+	j_cells = NULL
 ) {
 	n <- N * T
 
@@ -435,6 +548,13 @@
 	# `p >= NT` regime: use the full-design desparsified construction (#31
 	# generalized to K effects -- uniformly valid, NOT post-selection). Otherwise
 	# the fixed-p selected-support construction (Phase 1).
+	#
+	# `A_db` (the DEBIASED per-cohort effect matrix for the high-dim `event_study`
+	# propensity channel, #309) is built inside the high-dim branch below; it stays
+	# NULL elsewhere (fixed-p, non-event_study), so `.build_propensity_if()` falls
+	# back to the post-selection `J_list %*% theta_sel` construction.
+	A_db <- NULL
+	cell_diag <- NULL
 	if (!is.null(targets)) {
 		# High-dim nuisance (#303): an internal q=1 fused lasso (NOT the q<1 bridge
 		# theta_hat), the SAME nuisance debiasedATT() uses -- its l1 rate is what
@@ -466,6 +586,37 @@
 		# selection bias (variance -> 0 with N, bias does not) and undercover.
 		estimates_q1 <- as.numeric(crossprod(targets, theta_q1[-1]))
 		estimates_used <- estimates_q1 + colSums(F_mat) / (N * T)
+		# Desparsify the propensity channel too (#309): for event_study, build the
+		# DEBIASED per-cohort effect matrix A_db so Sigma_2 matches the debiased
+		# center (a bridge-zeroed cohort contributes its non-zero debiased value,
+		# not 0). Per-cell `tau_db` reuses the SAME q=1 nuisance / residuals /
+		# nodewise machinery as the center above; A_db re-pools them through the
+		# cohort-weight Jacobian coefficients `j_cells` (built on the identity
+		# per-cell map, so A_db[g, k] = (j_cells[[k]] %*% tau_db)[g]).
+		if (identical(family, "event_study") && !is.null(cell_targets)) {
+			cells <- .build_debiased_treat_cells_highdim(
+				X_final,
+				resid_q1,
+				N,
+				T,
+				theta_q1_slopes = theta_q1[-1],
+				cell_targets = cell_targets,
+				lambda_c = lambda_c,
+				riesz_max_iter = riesz_max_iter,
+				riesz_tol = riesz_tol
+			)
+			cell_diag <- cells$diagnostics
+			# vapply collapses to a length-K vector when G == 1; force G x K.
+			A_db <- matrix(
+				vapply(
+					seq_along(j_cells),
+					function(k) as.numeric(j_cells[[k]] %*% cells$tau_db),
+					numeric(G)
+				),
+				nrow = G,
+				ncol = length(j_cells)
+			)
+		}
 	} else {
 		# Fixed-p: selected support + zero-padded Psi_full. FETWFE/BETWFE select a
 		# subset (`sel_feat_inds`); etwfe/twfeCovs use the full design.
@@ -491,24 +642,23 @@
 	# Propensity (cohort-probability) channel `F_pi`: non-zero only for the
 	# event_study family, whose pooled event-time effects weight cohorts by the
 	# estimated probabilities `pi_hat_g = N_g/N`. Built for event_study in BOTH
-	# regimes (it depends only on cohort counts + `theta_sel`, so it composes
-	# regime-agnostically with the high-dim desparsified regression channel) from
-	# the same `J_list` / `Sigma_pi` the analytic `Sigma_2` uses, so the bootstrap
-	# and analytic `Sigma_2` agree to machine precision. NULL for the other
-	# families (`Sigma_2 = 0`), keeping their bootstrap draw byte-identical.
+	# regimes from the same `J_list` / `Sigma_pi` the analytic `Sigma_2` uses.
+	# NULL for the other families (`Sigma_2 = 0`), keeping their draw byte-identical.
 	#
-	# CAVEAT (high-dim, deferred -- tracked at #309 / #295): `theta_sel` is the
-	# bridge-SELECTED (post-selection) effects in BOTH regimes, so the propensity
-	# channel is NOT desparsified even when the regression channel (the band
-	# CENTER) is. A cohort the bridge zeroed contributes 0 to `F_pi` (its cells are
-	# absent from `theta_sel` / `J_list`) while the debiased center counts its
-	# non-zero effect -- a center/variance INCONSISTENCY (not just an understated
-	# `Sigma_2`), worst exactly in the heterogeneous-cohort case (a large zeroed
-	# tau_g with non-trivial cohort-weight uncertainty), where `Sigma_2` is NOT
-	# negligible and the band can undercover. The precise fix is to feed the
-	# DEBIASED per-cohort effects into `F_pi` (matching the regression channel) --
-	# NOT the #303 q=1 nuisance swap, which still SELECTS and so won't un-zero a
-	# cohort here. Tracked at #309; coverage validation under #295.
+	# FIXED-P passes the post-selection effects (`A = NULL` -> the helper builds
+	# `A = J_list %*% theta_sel`): the selected estimate is unbiased by selection
+	# consistency, so the bootstrap and analytic `Sigma_2` agree to machine
+	# precision and the band is byte-identical to before.
+	#
+	# HIGH-DIM (#309) passes the DEBIASED per-cohort effect matrix `A_db` (built
+	# above from desparsified per-cell `tau_db`), so a cohort the bridge zeroed
+	# contributes its non-zero debiased value to `Sigma_2` -- matching the debiased
+	# band CENTER. Previously `theta_sel` was used here in both regimes, so a zeroed
+	# cohort contributed 0 to `F_pi` while the debiased center counted its non-zero
+	# effect: a center/variance inconsistency that undercovered in the
+	# heterogeneous-cohort case (a large zeroed tau_g with non-trivial cohort-weight
+	# uncertainty). (A_db is NULL on the high-dim path only if the caller did not
+	# supply `cell_targets`, in which case it safely falls back to post-selection.)
 	F_pi_mat <- if (identical(family, "event_study")) {
 		.build_propensity_if(
 			J_list = J_list,
@@ -516,7 +666,8 @@
 			cohort_probs_overall = cohort_probs_overall,
 			G = G,
 			N = N,
-			T = T
+			T = T,
+			A = A_db
 		)
 	} else {
 		NULL
@@ -529,17 +680,30 @@
 		dg <- attr(F_mat, "diagnostics")
 		bad <- (dg$feasibility > dg$lambda_node * (1 + riesz_tol)) |
 			!dg$converged
+		# Fold in the per-cell propensity-channel directions (#309): they also feed
+		# the band (through Sigma_2), so an infeasible cell direction is equally a
+		# reliability flag.
+		if (!is.null(cell_diag)) {
+			bad <- c(
+				bad,
+				(cell_diag$feasibility >
+					cell_diag$lambda_node * (1 + riesz_tol)) |
+					!cell_diag$converged
+			)
+		}
 		if (any(bad)) {
 			warning(
-				"simultaneousCIs(): the high-dimensional nodewise debiasing ",
-				"direction for ",
+				"simultaneousCIs(): ",
 				sum(bad),
 				" of ",
 				length(bad),
-				" effect(s) did not meet its feasibility constraint / converge; ",
+				" high-dimensional nodewise debiasing direction(s) (effect and/or ",
+				"cohort-cell) did not meet the feasibility constraint / converge; ",
 				"those simultaneous bands may be unreliable. Raise `riesz_max_iter` ",
 				"and/or `lambda_c` and inspect the returned `feasibility` / ",
-				"`converged` diagnostics. The p >= NT path is experimental.",
+				"`converged` (per-effect) and `propensity_feasibility` / ",
+				"`propensity_converged` (per-cohort-cell) diagnostics. The p >= NT ",
+				"path is experimental.",
 				call. = FALSE
 			)
 		}
@@ -607,12 +771,22 @@
 	)
 	# High-dimensional fits append the per-effect nodewise-direction diagnostics
 	# (feasibility = ||Sig v - a||_inf, the KKT certificate; convergence flags;
-	# the penalties used).
+	# the penalties used). These are aligned with the K effects / CI rows.
 	if (isTRUE(attr(F_mat, "highdim"))) {
 		d <- attr(F_mat, "diagnostics")
 		out$feasibility <- d$feasibility
 		out$converged <- d$converged
 		out$lambda_node <- d$lambda_node
+		# The high-dim event_study propensity channel desparsifies num_treats extra
+		# per-cohort-cell directions (#309); they also feed the band (via Sigma_2)
+		# and the experimental-regime warning, so expose their diagnostics too --
+		# otherwise a cell-direction infeasibility trips the warning but has no entry
+		# in the per-effect `feasibility` / `converged` the user is told to inspect.
+		if (!is.null(cell_diag)) {
+			out$propensity_feasibility <- cell_diag$feasibility
+			out$propensity_converged <- cell_diag$converged
+			out$propensity_lambda_node <- cell_diag$lambda_node
+		}
 	}
 	class(out) <- "simultaneous_cis"
 	out
