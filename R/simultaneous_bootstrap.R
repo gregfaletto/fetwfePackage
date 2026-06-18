@@ -491,16 +491,18 @@
 	# and analytic `Sigma_2` agree to machine precision. NULL for the other
 	# families (`Sigma_2 = 0`), keeping their bootstrap draw byte-identical.
 	#
-	# CAVEAT (high-dim, deferred -- tracked at #303 / #295): `theta_sel` is the
+	# CAVEAT (high-dim, deferred -- tracked at #309 / #295): `theta_sel` is the
 	# bridge-SELECTED (post-selection) effects in BOTH regimes, so the propensity
-	# channel is NOT desparsified even when the regression channel is. A cohort the
-	# bridge zeroed contributes 0 to `F_pi` (its cells are simply absent from
-	# `theta_sel` / `J_list`), so if a truly-non-zero cohort effect was zeroed this
-	# understates `Sigma_2` and the high-dim event_study band can undercover. It is
-	# o(1) / second-order when `Sigma_2 << Sigma_1`. The uniformly-valid fix (a
-	# debiased per-cell nuisance for the propensity channel, matching the
-	# regression channel) is the q=1 nuisance swap of #303; coverage validation
-	# against a "bridge zeroes a truly-non-zero cohort" DGP is tracked under #295.
+	# channel is NOT desparsified even when the regression channel (the band
+	# CENTER) is. A cohort the bridge zeroed contributes 0 to `F_pi` (its cells are
+	# absent from `theta_sel` / `J_list`) while the debiased center counts its
+	# non-zero effect -- a center/variance INCONSISTENCY (not just an understated
+	# `Sigma_2`), worst exactly in the heterogeneous-cohort case (a large zeroed
+	# tau_g with non-trivial cohort-weight uncertainty), where `Sigma_2` is NOT
+	# negligible and the band can undercover. The precise fix is to feed the
+	# DEBIASED per-cohort effects into `F_pi` (matching the regression channel) --
+	# NOT the #303 q=1 nuisance swap, which still SELECTS and so won't un-zero a
+	# cohort here. Tracked at #309; coverage validation under #295.
 	F_pi_mat <- if (identical(family, "event_study")) {
 		.build_propensity_if(
 			J_list = J_list,
