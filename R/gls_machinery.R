@@ -426,7 +426,14 @@ getGramInv <- function(
 #' @noRd
 estOmegaSqrtInv <- function(y, X_ints, N, T, p) {
 	if (N * (T - 1) - p <= 0) {
-		stop("Not enough units available to estimate the noise variance.")
+		stop(
+			"Not enough units available to estimate the noise variance (REML needs ",
+			"p < N(T - 1)). For a high-dimensional (p >= NT) fit, either supply ",
+			"`sig_eps_sq` / `sig_eps_c_sq`, or re-fit with `gls = FALSE` to skip ",
+			"variance-component estimation entirely (the debiasedATT() ",
+			"cluster-robust standard error needs no whitening).",
+			call. = FALSE
+		)
 	}
 	stopifnot(N > 1)
 

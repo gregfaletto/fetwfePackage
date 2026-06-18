@@ -28,7 +28,8 @@ fetwfe(
   cv_seed = NULL,
   ci_type = c("simultaneous", "pointwise"),
   fusion_structure = c("cohort", "event_study"),
-  fusion_matrix = NULL
+  fusion_matrix = NULL,
+  gls = TRUE
 )
 }
 \arguments{
@@ -252,6 +253,20 @@ changes only constant factors. A numerically near-singular (ill-conditioned)
 \code{D_N} still yields a valid point estimator but emits a \code{warning()} that its
 inverse may be unreliable. Default is \code{NULL} (use the built-in
 \code{fusion_structure}).}
+
+\item{gls}{(Optional.) Logical; default \code{TRUE}. When \code{TRUE}, the design is
+GLS-whitened using REML-estimated (or supplied) variance components --- the
+standard, efficient path. When \code{FALSE}, \code{fetwfe()} \strong{skips GLS whitening and
+variance-component estimation entirely}, fitting on the un-whitened
+(fusion-transformed) design. This is the high-dimensional (\code{p >= NT}) path:
+REML cannot estimate the variance components there (the \code{p < N(T - 1)} REML
+guard would otherwise stop the fit), and whitening buys efficiency, not
+validity --- the \code{\link[=debiasedATT]{debiasedATT()}} cluster-robust sandwich standard error needs
+no \code{Omega} (paper Decision D1). A \code{gls = FALSE} fit has \code{calc_ses = FALSE}
+(no within-selection oracle standard errors) and un-whitened
+\code{internal$X_final} / \code{internal$y_final}; pass it to \code{\link[=debiasedATT]{debiasedATT()}} for a
+valid cluster-robust SE. \code{add_ridge = TRUE} is not supported, and supplied
+\code{sig_eps_sq} / \code{sig_eps_c_sq} are ignored, under \code{gls = FALSE}.}
 }
 \value{
 An object of class \code{fetwfe} containing the following elements:

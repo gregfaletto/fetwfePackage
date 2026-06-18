@@ -432,7 +432,8 @@ fetwfe_core <- function(
 	cv_folds = 10L,
 	cv_seed = NULL,
 	fusion_structure = "cohort",
-	d_inv_treat = NULL
+	d_inv_treat = NULL,
+	gls = TRUE
 ) {
 	se_type <- match.arg(
 		se_type,
@@ -507,7 +508,8 @@ fetwfe_core <- function(
 		indep_counts = indep_counts,
 		is_fetwfe = TRUE,
 		fusion_structure = fusion_structure,
-		d_inv_treat = d_inv_treat
+		d_inv_treat = d_inv_treat,
+		gls = gls
 	)
 
 	X_final_scaled <- res$X_final_scaled
@@ -776,7 +778,10 @@ fetwfe_core <- function(
 		N = N,
 		T = T,
 		fused = TRUE,
-		calc_ses = q < 1,
+		# gls = FALSE (#307) skips variance-component estimation, so the oracle SE
+		# machinery cannot run -> no within-selection SEs. The debiasedATT()
+		# cluster-robust sandwich (V1 unit-clustered + V2 plug-in) needs none.
+		calc_ses = (q < 1) && gls,
 		include_selected = TRUE,
 		alpha = alpha,
 		se_type = se_type,

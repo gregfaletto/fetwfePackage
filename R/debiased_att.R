@@ -7,6 +7,53 @@
 # algorithm mirrors the validated simulation reference
 # `simulations/method_functions.R::debiased_fetwfe` in the paper repo.
 
+#' Plug-in cohort-weight variance V2 (the `att_var_2` channel, without Omega)
+#'
+#' @description The debiased SE's cohort-weight channel
+#'   `V2 = (1/N_tau) sum_g pi_hat_g (catt_g - att)^2` (paper eq `debiased.att.se`)
+#'   --- the variance from estimating the cohort sample proportions. It needs only
+#'   the per-cohort effects `catt_g`, the within-treated weights `pi_hat_g`, the
+#'   overall ATT, and the treated-unit count `N_tau` --- NOT the noise variances
+#'   or Omega. This equals the value the oracle SE machinery stores as
+#'   `att_var_2` (verified identical, single-sample, including unequal cohorts);
+#'   `debiasedATT()` recomputes it here when the fit carries no `att_var_2`
+#'   (a `gls = FALSE` high-dimensional fit, #307).
+#' @param fit A fitted `fetwfe` object.
+#' @return Numeric scalar; the plug-in V2.
+#' @keywords internal
+#' @noRd
+.plugin_v2 <- function(fit) {
+	att <- fit$att_hat
+	pi_g <- fit$cohort_probs
+	catt <- fit$catt_df$estimate
+	# N_tau = number of treated units = sum_g N_g, recovered from the overall
+	# cohort proportions (`cohort_probs_overall` sums to the treated fraction).
+	N_tau <- round(sum(fit$cohort_probs_overall) * fit$N)
+	if (
+		!is.numeric(att) ||
+			length(att) != 1L ||
+			is.na(att) ||
+			!is.numeric(pi_g) ||
+			!is.numeric(catt) ||
+			length(pi_g) != length(catt) ||
+			length(pi_g) == 0L ||
+			anyNA(pi_g) ||
+			anyNA(catt) ||
+			!is.numeric(N_tau) ||
+			length(N_tau) != 1L ||
+			is.na(N_tau) ||
+			N_tau <= 0
+	) {
+		stop(
+			"debiasedATT(): could not compute the plug-in cohort-weight variance ",
+			"(V2) from the fit (missing `catt_df` / `cohort_probs` / `att_hat`). ",
+			"Re-fit with a current version of fetwfe().",
+			call. = FALSE
+		)
+	}
+	sum(pi_g * (catt - att)^2) / N_tau
+}
+
 #' Debiased overall-ATT with a uniformly-valid standard error
 #'
 #' @description
@@ -63,9 +110,14 @@
 #'     heterogeneity) the two channels correlate and the additive SE can
 #'     mis-state uncertainty; a combined per-unit score is then required (not yet
 #'     implemented).
-#'   \item **Correctly specified (GLS-whitened) conditional mean** of the
-#'     outcome. Neyman-orthogonality removes first-order sensitivity to the
-#'     selected nuisance coefficients, but not to mean-misspecification.
+#'   \item **Correctly specified conditional mean** of the outcome.
+#'     Neyman-orthogonality removes first-order sensitivity to the selected
+#'     nuisance coefficients, but not to mean-misspecification. The regression
+#'     channel is the unit-clustered sandwich, valid as the number of units
+#'     `N -> infinity` with **no** model for within-unit dependence (so a
+#'     `gls = FALSE` fit, which skips GLS whitening, yields a valid cluster-robust
+#'     SE; #307, paper Decision D1). GLS whitening (`gls = TRUE`) buys
+#'     *efficiency* (an asymptotically smaller `var_reg`), not validity.
 #'   \item **(Low-dimensional `p < NT` only) Asymptotically negligible ridge,**
 #'     `lambda = o((NT)^(-1/2))` (the theoretical condition; the leading case is
 #'     the exact inverse `lambda = 0`). The implementation does **not** use a
@@ -233,23 +285,54 @@ debiasedATT <- function(
 		)
 	}
 
-	# q >= 1 gate: a valid debiased SE requires the bridge-selection regime
-	# (q < 1), which is exactly when the fit computed standard errors. `q` is not
-	# stored on the object, so detect via the canonical `calc_ses` flag.
-	if (!isTRUE(fit$internal$calc_ses)) {
-		stop(
-			"debiasedATT() requires a fit computed with q < 1 (bridge selection), ",
-			"so a valid debiased standard error exists. This fit has ",
-			"calc_ses = FALSE (q >= 1). Re-fit with q < 1 (e.g. q = 0.5).",
-			call. = FALSE
-		)
-	}
-
 	X <- fit$internal$X_final
 	y <- as.numeric(fit$internal$y_final)
 	theta_hat <- fit$internal$theta_hat
 	n <- nrow(X)
 	p <- ncol(X)
+	# Regime: p < NT (fixed-p, exact/ridged inverse) vs p >= NT (high-dimensional
+	# nodewise desparsified direction, paper Theorem `debiased.highdim.thm`).
+	highdim <- p >= n
+
+	# Standard-error gate, regime-aware.
+	#  - Fixed-p (p < NT): the SE is the OLS-identity construction, which needs the
+	#    bridge-selection regime (q < 1) -- exactly when the fit computed its oracle
+	#    SEs (`calc_ses = TRUE`). A q >= 1 fit has no valid debiased SE here.
+	#  - High-dim (p >= NT): the SE is the desparsified cluster-robust sandwich
+	#    (V1 unit-clustered + V2 plug-in), which needs neither the oracle SE
+	#    machinery nor Omega -- so a `gls = FALSE` fit (`calc_ses = FALSE`, no GLS
+	#    whitening; #307) is the EXPECTED input and is accepted here. The high-dim
+	#    branch re-fits its OWN q=1 nuisance internally (#303), so it depends on
+	#    neither the input fit's `calc_ses` NOR its `q`: ANY p >= NT fit is accepted,
+	#    and the debiased estimate is IDENTICAL across the input fit's q (verified
+	#    |diff| = 0, q = 1 vs q < 1) -- the high-dim center uses the re-fit q=1
+	#    nuisance, not the input `theta_hat` (which seeds only the `a_theta` identity
+	#    check below). A high-dim q >= 1 fit is newly accepted (vs prior versions).
+	if (!highdim && !isTRUE(fit$internal$calc_ses)) {
+		if (is.na(fit$sig_eps_sq)) {
+			# A `gls = FALSE` (un-whitened) fixed-p fit -- including the boundary band
+			# N(T-1) <= p < NT where REML is infeasible but p < NT. The cluster-robust
+			# sandwich IS valid here, but the fixed-p `debiasedATT()` path is not yet
+			# wired for an un-whitened fit (the p >= NT path is; the fixed-p one is the
+			# #312 follow-up). Name the real cause, not the misleading "requires q < 1".
+			stop(
+				"debiasedATT(): a `gls = FALSE` (un-whitened) fit in the fixed-p ",
+				"(p < NT) regime is not yet supported -- the high-dimensional ",
+				"(p >= NT) cluster-robust path is implemented, but the fixed-p ",
+				"cluster-robust SE is a planned follow-up (#312). Re-fit with ",
+				"`gls = TRUE` (supplying `sig_eps_sq` / `sig_eps_c_sq` if ",
+				"`p >= N(T - 1)`), or use a `p >= NT` design.",
+				call. = FALSE
+			)
+		}
+		stop(
+			"debiasedATT() requires a fit computed with q < 1 (bridge selection) in ",
+			"the fixed-p (p < NT) regime, so a valid debiased standard error exists. ",
+			"This fit has calc_ses = FALSE (q >= 1). Re-fit with q < 1 (e.g. ",
+			"q = 0.5).",
+			call. = FALSE
+		)
+	}
 
 	# add_ridge = TRUE fits store a ridge-row-augmented `y_final` (length NT + p)
 	# against an unaugmented `X_final` (NT rows), and un-shrink the coefficients
@@ -265,11 +348,6 @@ debiasedATT <- function(
 		)
 	}
 
-	# Regime is detected from `p` vs `NT` below (see the `v` construction): p < NT
-	# uses the exact/ridged inverse; p >= NT uses the nodewise desparsified-lasso
-	# direction of paper Theorem `debiased.highdim.thm`. Both share everything
-	# else (estimate + SE).
-
 	G <- fit$G
 	T <- fit$T
 	d <- fit$d
@@ -277,33 +355,31 @@ debiasedATT <- function(
 	num_treats <- length(treat_inds)
 	cohort_probs <- fit$cohort_probs
 
-	# The cohort-weight SE channel is the package's plug-in propensity variance
-	# `att_var_2` = `(1/N_T) sum_g pi_g (catt_g - att)^2` -- the variance from
-	# estimating the cohort weights pi_hat_g. Reuse the fit's stored value rather
-	# than recomputing: it is the same `att_var_2` `fit$att_se` uses, byte-identical
-	# on single-sample fits and already carrying the correct two-sample formula for
-	# `indep_counts` fits (single source of truth, #291 review).
+	# The cohort-weight SE channel V2 = `(1/N_tau) sum_g pi_g (catt_g - att)^2` --
+	# the variance from estimating the cohort weights pi_hat_g. Prefer the fit's
+	# stored plug-in `att_var_2` when present (the same value `fit$att_se` uses,
+	# byte-identical on single-sample fits and carrying the correct two-sample
+	# formula for `indep_counts` fits; single source of truth, #291 review). It is
+	# ABSENT on a `gls = FALSE` fit (`calc_ses = FALSE`, no oracle SE machinery;
+	# #307) -- there, recompute the identical plug-in directly via `.plugin_v2()`,
+	# which needs only `catt_g` / `att_hat` / the cohort weights, NOT Omega.
 	#
-	# CAVEAT (#303 review, second-order, deferred -> #295): this channel plugs in
-	# the BRIDGE `catt_g` / `att_hat`, while the high-dim center is now the q=1
-	# debiased estimate -- the same center(q=1)/variance-channel(bridge) mismatch as
-	# the event_study propensity channel `F_pi` (#309), here for the overall-ATT V2.
-	# It is second-order (the bridge and q=1 `catt_g` are both consistent for the
-	# true cohort effects), so the additive SE stays asymptotically correct; the
-	# finite-sample effect is part of the #295 high-dim coverage validation.
-	var_weight <- fit$internal$variance_components$att_var_2
-	if (
-		is.null(var_weight) ||
-			!is.numeric(var_weight) ||
-			length(var_weight) != 1L ||
-			is.na(var_weight)
+	# CAVEAT (#303 review, second-order, deferred -> #295): V2 plugs in the BRIDGE
+	# `catt_g` / `att_hat`, while the high-dim center is the q=1 debiased estimate
+	# -- the same center(q=1)/variance-channel(bridge) mismatch as the event_study
+	# `F_pi` (#309), here for the overall-ATT V2. Second-order (bridge and q=1
+	# `catt_g` are both consistent), so the additive SE stays asymptotically
+	# correct; the finite-sample effect is part of the #295 coverage validation.
+	att_var_2 <- fit$internal$variance_components$att_var_2
+	var_weight <- if (
+		is.null(att_var_2) ||
+			!is.numeric(att_var_2) ||
+			length(att_var_2) != 1L ||
+			is.na(att_var_2)
 	) {
-		stop(
-			"debiasedATT(): the fit does not carry a cohort-weight variance ",
-			"component (`internal$variance_components$att_var_2`). Re-fit with a ",
-			"current version of fetwfe() (>= 1.12.0).",
-			call. = FALSE
-		)
+		.plugin_v2(fit)
+	} else {
+		att_var_2
 	}
 
 	# Balanced, unit-major panel is required for the per-unit cluster sums
@@ -361,7 +437,6 @@ debiasedATT <- function(
 	# Theorem `debiased.highdim.thm`, "one estimator, two regimes"); everything
 	# downstream (the correction, both SE channels) is identical.
 	Sig <- crossprod(X) / n
-	highdim <- p >= n
 	riesz_diag <- NULL
 	if (!highdim) {
 		# Fixed-p (p < NT): exact / tiny-ridge inverse. Byte-identical to the
@@ -441,8 +516,9 @@ debiasedATT <- function(
 	var_reg <- sum(unit_scores^2) / n^2
 
 	# ---- channel 2: cohort-weight variance ----
-	# `var_weight` is the fit's plug-in `att_var_2` (read above): the same
-	# cohort-weight variance, with the correct single- / two-sample formula.
+	# `var_weight` is the fit's stored `att_var_2` or its `.plugin_v2()`
+	# recomputation (read above): the same cohort-weight variance, with the correct
+	# single- / two-sample formula.
 
 	se_db <- sqrt(var_reg + var_weight)
 	z <- stats::qnorm(1 - alpha / 2)

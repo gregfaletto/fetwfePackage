@@ -514,7 +514,9 @@ simultaneousCIs.twfeCovs <- function(
 		stop(
 			"simultaneousCIs(): the fitted object was constructed with ",
 			"calc_ses = FALSE; standard errors are not available. Re-fit ",
-			"with q < 1 (FETWFE/BETWFE) and a satisfied rank condition.",
+			"with q < 1 (FETWFE/BETWFE) and a satisfied rank condition, or -- for ",
+			"a `gls = FALSE` high-dimensional fit -- use `debiasedATT()` for the ",
+			"overall-ATT standard error.",
 			call. = FALSE
 		)
 	}
