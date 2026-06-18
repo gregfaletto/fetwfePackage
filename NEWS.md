@@ -1,5 +1,25 @@
 # NEWS
 
+## Version 1.37.0
+
+### New features
+
+- `debiasedATT()` and `simultaneousCIs(method = "bootstrap")` now accept
+  `lambda_c = "cv"` in the high-dimensional (`p >= NT`) regime. Instead of the
+  fixed theory-scale constant, the leading constant of the nodewise penalty
+  `lambda_node = lambda_c * max(|a|) * sqrt(log(p) / N)` is selected **per fit**
+  by 5-fold cross-validation of the unit-level Riesz loss
+  `0.5 v'Sigma v - a'v`, restricted to the grid penalties that remain
+  KKT-feasible, falling back to the theory scale `1.0` when none are feasible
+  (the desparsified-lasso / auto-DML standard; van de Geer 2014;
+  Chernozhukov-Newey-Singh 2022). The CV runs on the overall-ATT debiasing
+  direction, so one constant serves both the `debiasedATT()` point estimate and
+  every `simultaneousCIs()` band effect, and is deterministic (folds seeded from
+  the panel dimensions, ambient RNG preserved). The returned object reports
+  `lambda_c`, `lambda_c_selection` (`"fixed"` or `"cv"`), and (for `"cv"`) the
+  `lambda_cv` diagnostics. The default stays the fixed `1.0`; the `"cv"`
+  mechanism is **opt-in** pending simulation validation of its coverage (#295).
+
 ## Version 1.36.0
 
 ### New features

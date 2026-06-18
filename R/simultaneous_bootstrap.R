@@ -423,6 +423,7 @@
 	pointwise_crit,
 	bonferroni_crit,
 	targets = NULL,
+	a_att = NULL,
 	J_list = NULL,
 	theta_sel = NULL,
 	cohort_probs_overall = NULL,
@@ -446,13 +447,31 @@
 		resid_q1 <- as.numeric(
 			y_final[seq_len(n)] - theta_q1[1] - X_final %*% theta_q1[-1]
 		)
+		# Resolve the node-penalty constant ONCE on the overall-ATT direction (#295
+		# D2: one `lambda_c` serves the point estimate AND every band effect). The
+		# same CV `debiasedATT()` runs (same fit's Sig / X / direction `a_att` /
+		# data-derived seed), so the band center matches `debiasedATT()$att` under
+		# `lambda_c = "cv"`. Each effect's `lambda_node_k` then scales the shared
+		# constant by its own `max(|a_k|)` inside `.build_regression_if_highdim()`.
+		lambda_c_used <- lambda_c
+		if (identical(lambda_c, "cv")) {
+			lambda_c_used <- .cv_lambda_node(
+				crossprod(X_final) / n,
+				a_att,
+				X_final,
+				N,
+				T,
+				riesz_max_iter = riesz_max_iter,
+				riesz_tol = riesz_tol
+			)$lambda_c
+		}
 		F_mat <- .build_regression_if_highdim(
 			X_final,
 			resid_q1,
 			N,
 			T,
 			targets,
-			lambda_c = lambda_c,
+			lambda_c = lambda_c_used,
 			riesz_max_iter = riesz_max_iter,
 			riesz_tol = riesz_tol
 		)
@@ -613,6 +632,13 @@
 		out$feasibility <- d$feasibility
 		out$converged <- d$converged
 		out$lambda_node <- d$lambda_node
+		# The node-penalty constant actually used (CV-selected when "cv", #295).
+		out$lambda_c <- lambda_c_used
+		out$lambda_c_selection <- if (identical(lambda_c, "cv")) {
+			"cv"
+		} else {
+			"fixed"
+		}
 	}
 	class(out) <- "simultaneous_cis"
 	out
