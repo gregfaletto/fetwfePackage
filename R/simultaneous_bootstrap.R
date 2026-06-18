@@ -448,11 +448,14 @@
 			y_final[seq_len(n)] - theta_q1[1] - X_final %*% theta_q1[-1]
 		)
 		# Resolve the node-penalty constant ONCE on the overall-ATT direction (#295
-		# D2: one `lambda_c` serves the point estimate AND every band effect). The
-		# same CV `debiasedATT()` runs (same fit's Sig / X / direction `a_att` /
-		# data-derived seed), so the band center matches `debiasedATT()$att` under
-		# `lambda_c = "cv"`. Each effect's `lambda_node_k` then scales the shared
-		# constant by its own `max(|a_k|)` inside `.build_regression_if_highdim()`.
+		# D2: one `lambda_c` serves the point estimate AND every band effect). For the
+		# common consecutive-cohort layout `a_att` equals debiasedATT()'s direction
+		# exactly (same fit's Sig / X / data-derived seed), so the band center matches
+		# `debiasedATT()$att` under `lambda_c = "cv"`; for scattered adoption times
+		# high-dim debiasedATT() is unsupported (it errors at its identity guard), so
+		# only the band runs and CVs on its own correct direction. Each effect's
+		# `lambda_node_k` then scales the shared constant by its own `max(|a_k|)`
+		# inside `.build_regression_if_highdim()`.
 		lambda_c_used <- lambda_c
 		if (identical(lambda_c, "cv")) {
 			lambda_c_used <- .cv_lambda_node(

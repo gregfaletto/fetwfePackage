@@ -417,6 +417,22 @@ simultaneousCIs.twfeCovs <- function(
 	# --- 1. Argument validation (mvtnorm guard deferred to step 11). ---
 	stopifnot(is.numeric(alpha), length(alpha) == 1L, alpha > 0, alpha < 1)
 	method <- match.arg(method, c("analytic", "bootstrap"))
+	# `lambda_c` is validated unconditionally (symmetric with debiasedATT()). It is
+	# only USED on the high-dim bootstrap path, but a malformed value should error
+	# regardless of `method` rather than be silently ignored under "analytic".
+	if (
+		!(identical(lambda_c, "cv") ||
+			(is.numeric(lambda_c) &&
+				length(lambda_c) == 1L &&
+				!is.na(lambda_c) &&
+				lambda_c > 0))
+	) {
+		stop(
+			"simultaneousCIs(): `lambda_c` must be a single positive number ",
+			"or the string \"cv\".",
+			call. = FALSE
+		)
+	}
 	if (method == "bootstrap") {
 		if (
 			!is.numeric(B) ||
@@ -437,19 +453,6 @@ simultaneousCIs.twfeCovs <- function(
 		) {
 			stop(
 				"simultaneousCIs(): `seed` must be NULL or a single number.",
-				call. = FALSE
-			)
-		}
-		if (
-			!(identical(lambda_c, "cv") ||
-				(is.numeric(lambda_c) &&
-					length(lambda_c) == 1L &&
-					!is.na(lambda_c) &&
-					lambda_c > 0))
-		) {
-			stop(
-				"simultaneousCIs(): `lambda_c` must be a single positive number ",
-				"or the string \"cv\".",
 				call. = FALSE
 			)
 		}
@@ -666,9 +669,14 @@ simultaneousCIs.twfeCovs <- function(
 			targets <- crossprod(A, a_beta_mat) # p x K full theta-space directions
 			# Overall-ATT theta-space direction (cohort_probs-weighted), the direction
 			# the shared CV penalty constant is selected on (#295 D2: one lambda_c for
-			# point + band). Byte-identical to debiasedATT()'s `a_th`, so the CV'd
-			# constant -- hence the band center -- matches debiasedATT() under
-			# `lambda_c = "cv"`.
+			# point + band). For the common consecutive-cohort layout this equals
+			# debiasedATT()'s `a_th` exactly (same A / cohort_probs / first_inds), so
+			# the CV'd constant -- hence the band center -- matches debiasedATT() under
+			# `lambda_c = "cv"`. (For scattered adoption times the two use different
+			# `first_inds` -- getFirstInds() in debiasedATT() vs the offset resolver
+			# here -- but high-dim debiasedATT() is unsupported there anyway: it errors
+			# at its ATT-identity guard, so no shared-constant divergence can ship and
+			# the band simply CVs on its own correct direction.)
 			a_beta_att <- numeric(p)
 			cohort_of_treat <- rep(seq_len(G), times = (T_ - 1):(T_ - G))
 			for (g in seq_len(G)) {

@@ -182,9 +182,11 @@ test_that("debiasedATT is deterministic at lambda_c = 'cv'", {
 })
 
 test_that("point estimate and bootstrap band share one CV constant (#295)", {
-	# The band CVs on the overall-ATT direction with the same data seed, so it
-	# resolves to the identical constant debiasedATT() picks -- one constant for
-	# the point estimate and every band effect (the auto-DML convention).
+	# The fixture's cohorts adopt in consecutive periods, so the band's overall-ATT
+	# direction equals debiasedATT()'s exactly; CVing it with the same data seed
+	# resolves to the identical constant -- one constant for the point estimate and
+	# every band effect (the auto-DML convention). (For scattered adoption times
+	# high-dim debiasedATT() is unsupported; the band alone still CVs deterministically.)
 	db <- debiasedATT(hd295, lambda_c = "cv")
 	sc <- simultaneousCIs(
 		hd295,
@@ -230,5 +232,11 @@ test_that("lambda_c rejects anything but a positive number or 'cv'", {
 			lambda_c = -1,
 			B = 50L
 		)
+	)
+	# Validated regardless of method (symmetric with debiasedATT), even though
+	# lambda_c is only USED on the high-dim bootstrap path: a garbage value under
+	# method = "analytic" should error rather than be silently ignored.
+	expect_error(
+		simultaneousCIs(hd295, method = "analytic", lambda_c = "garbage")
 	)
 })

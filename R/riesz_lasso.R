@@ -142,6 +142,15 @@ lambda_node_default <- function(p, N, c = 1.0, scale = 1.0) {
 	gate_iter <- min(gate_max_iter, riesz_max_iter)
 
 	# --- Feasibility gate (full data): only KKT-feasible grid points compete. ---
+	# Deliberately conservative: a grid point qualifies only if the reduced-budget
+	# (`gate_iter`) solve BOTH converges AND certifies `||Sig v - a||_inf <= lambda`.
+	# The deployed solve (debiasedATT() / .build_regression_if_highdim()) runs the
+	# full `riesz_max_iter` budget and accepts feasibility regardless of `converged`,
+	# so the gate can in principle exclude a lambda that becomes feasible only after
+	# more iterations, biasing selection toward larger (better-conditioned) constants.
+	# That is the safe direction for a pre-filter (CV competes only among confidently
+	# feasible candidates) and was not observed to bite; revisit under the #88
+	# coverage work if the feasible edge must extend to smaller lambda.
 	lambdas <- mult_grid * lam0
 	feasible <- vapply(
 		lambdas,
