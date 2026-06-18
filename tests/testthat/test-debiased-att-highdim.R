@@ -413,7 +413,7 @@ test_that("debiasedATT() is deterministic on a gls = FALSE fit (#307)", {
 # units), so the match is not a balanced-design coincidence. Mutation-checkable:
 # a wrong N_tau (e.g. N instead of N_treated) or dropping the cohort_probs
 # weighting in `.plugin_v2` breaks this past 1e-10.
-test_that(".plugin_v2 equals att_var_2 (equal AND unequal cohorts) (#307)", {
+test_that(".plugin_v2 equals att_var_2 (equal, unequal, two-sample cohorts) (#307)", {
 	expect_equal(
 		fetwfe:::.plugin_v2(hd_fix),
 		hd_fix$internal$variance_components$att_var_2,
@@ -463,10 +463,82 @@ test_that(".plugin_v2 equals att_var_2 (equal AND unequal cohorts) (#307)", {
 		fit_uneq$internal$variance_components$att_var_2,
 		tolerance = 1e-10
 	)
+	# two-sample (indep_counts): the plug-in must match the TWO-SAMPLE att_var_2
+	# (the case the naive single-sample (1/N_T) recompute gets wrong). simulateData()
+	# auto-populates indep_counts; fetwfeWithSimulatedData() keeps it.
+	coefs_ic <- genCoefs(
+		G = 3,
+		T = 5,
+		d = 2,
+		density = 0.6,
+		eff_size = 1.5,
+		seed = 7
+	)
+	dat_ic <- simulateData(
+		coefs_ic,
+		N = 80,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = 7
+	)
+	fit_indep <- fetwfeWithSimulatedData(dat_ic, q = 0.5)
+	expect_true(isTRUE(fit_indep$indep_counts_used))
+	expect_equal(
+		fetwfe:::.plugin_v2(fit_indep),
+		fit_indep$internal$variance_components$att_var_2,
+		tolerance = 1e-10
+	)
 })
 
 test_that("the att_var_2 path is byte-unchanged: supplied-var var_weight == att_var_2 (#307)", {
 	# the plug-in fallback must NOT perturb the whitened / supplied-variance path.
 	db <- debiasedATT(hd_fix)
 	expect_equal(db$var_weight, hd_fix$internal$variance_components$att_var_2)
+})
+
+# A gls = FALSE FIXED-p (p < NT) fit must error naming the REAL cause (the fixed-p
+# cluster-robust path is the #312 follow-up), not the misleading "requires q < 1"
+# (the fit IS q < 1). This is the PR #311 review's boundary-gap clarity ask.
+test_that("a gls = FALSE fixed-p fit errors with the real cause, not 'requires q < 1' (#307/#312)", {
+	set.seed(5)
+	N <- 30L
+	Tt <- 5L
+	cohort_of_unit <- c(rep(0L, 12), rep(3L, 9), rep(4L, 9))
+	eff <- c(`3` = 1, `4` = 2)
+	cv <- stats::rnorm(N)
+	rows <- do.call(
+		rbind,
+		lapply(seq_len(N), function(i) {
+			g <- cohort_of_unit[i]
+			df <- data.frame(
+				unit = sprintf("u%02d", i),
+				year = 1:Tt,
+				treat = as.integer(g > 0 & (1:Tt) >= g),
+				x1 = cv[i]
+			)
+			te <- if (g > 0) eff[[as.character(g)]] else 0
+			df$y <- 0.1 *
+				(1:Tt) +
+				te * df$treat +
+				0.3 * cv[i] +
+				stats::rnorm(Tt, 0, 0.5)
+			df
+		})
+	)
+	fit <- fetwfe(
+		pdata = rows,
+		time_var = "year",
+		unit_var = "unit",
+		treatment = "treat",
+		covs = "x1",
+		response = "y",
+		q = 0.5,
+		verbose = FALSE,
+		gls = FALSE
+	)
+	expect_lt(ncol(fit$internal$X_final), nrow(fit$internal$X_final)) # fixed-p
+	# the message names gls = FALSE + the #312 follow-up (NOT "requires q < 1"; the
+	# "bridge selection" q-attribution lives in the other branch only).
+	expect_error(debiasedATT(fit), "gls = FALSE")
+	expect_error(debiasedATT(fit), "follow-up")
 })

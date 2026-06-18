@@ -302,11 +302,29 @@ debiasedATT <- function(
 	#    (V1 unit-clustered + V2 plug-in), which needs neither the oracle SE
 	#    machinery nor Omega -- so a `gls = FALSE` fit (`calc_ses = FALSE`, no GLS
 	#    whitening; #307) is the EXPECTED input and is accepted here. The high-dim
-	#    branch re-fits its OWN q=1 nuisance internally (#303), so it does not rely
-	#    on the input fit's `calc_ses`: ANY p >= NT fit is accepted regardless,
-	#    including a high-dim q >= 1 fit (newly accepted vs prior versions) -- both
-	#    give the same debiased estimate + cluster-robust SE.
+	#    branch re-fits its OWN q=1 nuisance internally (#303), so it depends on
+	#    neither the input fit's `calc_ses` NOR its `q`: ANY p >= NT fit is accepted,
+	#    and the debiased estimate is IDENTICAL across the input fit's q (verified
+	#    |diff| = 0, q = 1 vs q < 1) -- the high-dim center uses the re-fit q=1
+	#    nuisance, not the input `theta_hat` (which seeds only the `a_theta` identity
+	#    check below). A high-dim q >= 1 fit is newly accepted (vs prior versions).
 	if (!highdim && !isTRUE(fit$internal$calc_ses)) {
+		if (is.na(fit$sig_eps_sq)) {
+			# A `gls = FALSE` (un-whitened) fixed-p fit -- including the boundary band
+			# N(T-1) <= p < NT where REML is infeasible but p < NT. The cluster-robust
+			# sandwich IS valid here, but the fixed-p `debiasedATT()` path is not yet
+			# wired for an un-whitened fit (the p >= NT path is; the fixed-p one is the
+			# #312 follow-up). Name the real cause, not the misleading "requires q < 1".
+			stop(
+				"debiasedATT(): a `gls = FALSE` (un-whitened) fit in the fixed-p ",
+				"(p < NT) regime is not yet supported -- the high-dimensional ",
+				"(p >= NT) cluster-robust path is implemented, but the fixed-p ",
+				"cluster-robust SE is a planned follow-up (#312). Re-fit with ",
+				"`gls = TRUE` (supplying `sig_eps_sq` / `sig_eps_c_sq` if ",
+				"`p >= N(T - 1)`), or use a `p >= NT` design.",
+				call. = FALSE
+			)
+		}
 		stop(
 			"debiasedATT() requires a fit computed with q < 1 (bridge selection) in ",
 			"the fixed-p (p < NT) regime, so a valid debiased standard error exists. ",
