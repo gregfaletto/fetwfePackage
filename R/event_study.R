@@ -775,7 +775,13 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 				family = "event_study",
 				alpha = alpha,
 				contrasts = NULL,
-				has_valid_ses = TRUE
+				has_valid_ses = TRUE,
+				# Silent band-attach helper (like .apply_simultaneous_catt_band):
+				# keep the high-dim degenerate notice a message() rather than a
+				# warning(). The user gets the warning by calling simultaneousCIs()
+				# directly. (In practice an all-zeroed fit has all-NA event-time SEs
+				# so this path is skipped; FALSE keeps it silent defensively.) #304.
+				warn_degenerate_highdim = FALSE
 			)
 		),
 		error = function(e) NULL

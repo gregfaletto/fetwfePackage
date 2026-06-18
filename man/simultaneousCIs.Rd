@@ -57,13 +57,18 @@ cohorts weighted by the estimated cohort probabilities). When the (full)
 design is \strong{high-dimensional (\code{p >= NT})} -- where the analytic Gram inverse
 need not exist -- the bootstrap uses the full-design \strong{desparsified}
 construction of \code{debiasedATT()} (per-effect nodewise directions) generalized
-to the family. This \code{p >= NT} path is \strong{experimental} (\code{fetwfe()} fits only;
-coverage is not yet simulation-validated): inspect the returned
-\code{feasibility} / \code{converged} diagnostics. The desparsified path covers the
-regression-channel families; a high-dimensional \code{family = "event_study"} fit
-uses the fixed-p selected-support construction when its selected support is
-low-dimensional (the high-dim-desparsified event-study combination is a
-planned follow-up).}
+to the family. This desparsified \code{p >= NT} path is \strong{experimental}
+(\code{fetwfe()} fits only; coverage is not yet simulation-validated): inspect the
+returned \code{feasibility} / \code{converged} diagnostics. A non-\code{fetwfe()} \code{p >= NT}
+fit (e.g. \code{betwfe()}) instead falls back to the fixed-\code{p} selected-support
+band (valid when its selected support is low-dimensional). The desparsified
+path covers all
+four families (a high-dimensional \code{family = "event_study"} fit additionally
+carries the propensity channel \code{F_pi}). In the high-dimensional regime the
+band is centered on the \strong{debiased} estimate (the Theorem 6.6 correction,
+equal to \code{debiasedATT()}'s point estimate for the matching contrast), not
+the post-selection bridge estimate; fixed-p bands center on the (unbiased)
+bridge estimate as before.}
 
 \item{B}{Integer; number of multiplier-bootstrap replicates
 (\code{method = "bootstrap"} only). Default \code{1000}.}
@@ -83,7 +88,10 @@ two-point distribution). Ignored when \code{method = "analytic"}.}
 constant of the penalty \verb{lambda_node = lambda_c * max(|a|) * sqrt(log p / N)};
 the default \code{1.0} (theory scale) keeps the directions feasible. \strong{Smaller
 values can leave directions infeasible (a warning fires and those bands are
-unreliable).} Ignored when \code{p < NT} or \code{method = "analytic"}.}
+unreliable).} Ignored when \code{p < NT} or \code{method = "analytic"}. The fixed
+default is a known limitation: the eventual production path should select
+this per fit by cross-validation rather than carry a constant (tracked at
+#295).}
 }
 \value{
 An object of S3 class \code{"simultaneous_cis"}: a list with

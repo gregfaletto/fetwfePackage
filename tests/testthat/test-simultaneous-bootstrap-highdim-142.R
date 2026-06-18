@@ -109,13 +109,12 @@ test_that("high-dim bootstrap is deterministic given a seed", {
 	expect_identical(a$critical_value, b$critical_value)
 })
 
-test_that("event_study bootstrap bypasses the desparsified path (fixed-p) in the high-dim regime", {
-	# #142 Phase 3: event_study + method = "bootstrap" no longer errors. Even
-	# though this fixture is genuinely full p >= NT, the event_study guard at the
-	# dispatch leaves `targets = NULL`, so its low-dim selected support (~42 < NT
-	# = 200) routes through the FIXED-P selected-support construction, NOT the
-	# desparsified `targets` path -- the concrete proof that high-dim event_study
-	# bypasses the (regression-only) desparsified channel.
+test_that("event_study bootstrap uses the desparsified path in the high-dim regime (#299)", {
+	# #299: a full p >= NT event_study fit routes through the desparsified
+	# `targets` path (the regression-only guard was lifted), so it carries BOTH the
+	# full-design desparsified regression channel and the propensity channel
+	# `F_pi`, with `regime == "high-dimensional"` + nodewise diagnostics -- not the
+	# fixed-p selected-support fallback it used before #299.
 	bo <- simultaneousCIs(
 		hd_fit,
 		family = "event_study",
@@ -124,8 +123,282 @@ test_that("event_study bootstrap bypasses the desparsified path (fixed-p) in the
 		seed = 1
 	)
 	expect_s3_class(bo, "simultaneous_cis")
-	expect_identical(bo$regime, "fixed-p")
-	# no nodewise diagnostics attached (those are the desparsified-path signature)
-	expect_false("feasibility" %in% names(bo))
+	expect_identical(bo$regime, "high-dimensional")
+	# nodewise diagnostics attached (the desparsified-path signature)
+	expect_true(all(
+		c("feasibility", "converged", "lambda_node") %in% names(bo)
+	))
 	expect_true(all(is.finite(bo$ci$simultaneous_ci_low)))
+})
+
+test_that("high-dim event_study bootstrap is deterministic given a seed", {
+	a <- simultaneousCIs(
+		hd_fit,
+		family = "event_study",
+		method = "bootstrap",
+		B = 800,
+		seed = 11
+	)
+	b <- simultaneousCIs(
+		hd_fit,
+		family = "event_study",
+		method = "bootstrap",
+		B = 800,
+		seed = 11
+	)
+	expect_identical(a$critical_value, b$critical_value)
+	expect_identical(a$ci$estimate, b$ci$estimate)
+	expect_identical(a$ci$simultaneous_ci_low, b$ci$simultaneous_ci_low)
+})
+
+test_that("too-small lambda_c warns for high-dim event_study (experimental)", {
+	expect_warning(
+		simultaneousCIs(
+			hd_fit,
+			family = "event_study",
+			method = "bootstrap",
+			B = 500,
+			seed = 1,
+			lambda_c = 0.05
+		),
+		"feasibility|experimental"
+	)
+})
+
+# ------------------------------------------------------------------------------
+# Debiasing anchor (#299, mutation-checkable cross-check vs the validated
+# debiasedATT()). The high-dim band center is the DEBIASED estimate
+# `estimates + colSums(F_reg)/(N*T)` (Theorem 6.6). For a 1 x num_treats `custom`
+# contrast that matches debiasedATT()'s overall-ATT direction (cohort g loads its
+# treat_inds cells with cohort_probs[g] / (#cells in cohort g)), that center must
+# equal debiasedATT(fit)$att. RHS is the independently-validated single-effect
+# debiased ATT; LHS is the simultaneousCIs high-dim center -- an independent path,
+# not a round-trip. Mutation-checkable against the `colSums(F_mat)/(N*T)` line.
+# ------------------------------------------------------------------------------
+test_that("high-dim debiased band center equals debiasedATT()$att for the overall-ATT contrast", {
+	G <- hd_fit$G
+	T_ <- hd_fit$T
+	treat_inds <- hd_fit$treat_inds
+	num_treats <- length(treat_inds)
+	cohort_probs <- hd_fit$cohort_probs
+	# cohort of each treatment cell: T-1 cells for cohort 1, ..., T-G for cohort G
+	cohort_of_treat <- rep(seq_len(G), times = (T_ - 1):(T_ - G))
+	contrast <- numeric(num_treats)
+	for (g in seq_len(G)) {
+		idx <- which(cohort_of_treat == g)
+		contrast[idx] <- cohort_probs[g] / length(idx)
+	}
+	# overall-ATT direction: weights sum to sum(cohort_probs[1:G])
+	expect_equal(sum(contrast), sum(cohort_probs[seq_len(G)]))
+	contrast_mat <- matrix(contrast, nrow = 1L)
+
+	sc <- simultaneousCIs(
+		hd_fit,
+		family = "custom",
+		contrasts = contrast_mat,
+		method = "bootstrap",
+		B = 200,
+		seed = 1
+	)
+	expect_identical(sc$regime, "high-dimensional")
+	db <- debiasedATT(hd_fit)
+	# the load-bearing cross-check: equal to ~1e-9 (observed |diff| ~4e-16).
+	expect_equal(sc$ci$estimate, db$att, tolerance = 1e-9)
+})
+
+# ------------------------------------------------------------------------------
+# Band / adjusted-p duality under debiasing (#299, plan-review item 1). The
+# adjusted-p `t_stat` MUST use the debiased center `estimates_used`, not the bridge
+# `estimates`, or the band and its adjusted p-values disagree on a bridge-zeroed
+# effect. Fixture: seed = 2 (same G=3,T=5,d=22,N=40 high-dim DGP), where the
+# bridge zeroes SOME-but-not-all event-study effects (bridge e3 == 0 exactly, its
+# debiased center is non-zero). The mutation-checkable signal: e3's adjusted
+# p-value is finite and < 1 here (debiased |center|/se ~1.5); reverting the
+# `t_stat` to abs(estimates) would make e3's t_stat abs(0)/se = 0 and its adjusted
+# p ~1. NOTE: seed = 6 instead zeroes ALL effects and trips the upstream all-zero
+# early-exit (which now warns in the high-dim regime -- see the dedicated test
+# below), so it never reaches this duality path.
+# ------------------------------------------------------------------------------
+test_that("high-dim event_study band/adjusted-p duality holds with the debiased center (#299)", {
+	coefs <- genCoefs(
+		G = 3,
+		T = 5,
+		d = 22,
+		density = 0.5,
+		eff_size = 2,
+		seed = 2
+	)
+	dat <- simulateData(
+		coefs,
+		N = 40,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = 2
+	)
+	dat$indep_counts <- NA
+	fit2 <- fetwfe(
+		pdata = dat$pdata,
+		time_var = dat$time_var,
+		unit_var = dat$unit_var,
+		treatment = dat$treatment,
+		response = dat$response,
+		covs = dat$covs,
+		q = 0.5,
+		verbose = FALSE,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5
+	)
+	expect_gte(ncol(fit2$internal$X_final), nrow(fit2$internal$X_final))
+	# the fixture genuinely zeroes SOME (not all) treatment cells in the bridge,
+	# so the path reaches the bootstrap AND has a bridge-zero effect.
+	n_sel <- sum(fit2$internal$theta_hat[-1][fit2$treat_inds] != 0)
+	expect_gt(n_sel, 0L)
+	expect_lt(n_sel, length(fit2$treat_inds))
+
+	bo <- simultaneousCIs(
+		fit2,
+		family = "event_study",
+		method = "bootstrap",
+		B = 4000,
+		seed = 1
+	)
+	expect_identical(bo$regime, "high-dimensional")
+	# bridge ES estimate for the last event time is exactly 0; the debiased center
+	# is not -- the configuration that makes the t_stat source decisive.
+	an <- simultaneousCIs(fit2, family = "event_study", method = "analytic")
+	bridge_zero <- which(abs(an$ci$estimate) < 1e-10)
+	expect_gt(length(bridge_zero), 0L)
+	expect_true(any(abs(bo$ci$estimate[bridge_zero]) > 1e-6))
+
+	# Exact dual: an effect's simultaneous band excludes 0 iff its adjusted p-value
+	# is < alpha (uses the debiased center on BOTH sides).
+	excl0 <- (bo$ci$simultaneous_ci_low > 0) | (bo$ci$simultaneous_ci_high < 0)
+	sig <- bo$adjusted_p_values < bo$alpha
+	expect_identical(excl0, sig)
+
+	# Mutation anchor: a bridge-zero effect's adjusted p-value is driven by its
+	# DEBIASED center, so it is < 1 (here ~0.28); under the bug (abs(estimates))
+	# it would be ~1 (mean(boot_max >= 0)).
+	expect_true(all(bo$adjusted_p_values[bridge_zero] < 0.95))
+})
+
+# ------------------------------------------------------------------------------
+# High-dim all-zero degenerate band WARNS, not a silent message (#299 review /
+# #304). When the bridge zeroes EVERY treatment effect at p >= NT, the upstream
+# degenerate early-exit returns an all-zero band BEFORE the debiased bootstrap
+# path. In the high-dim regime selection is NOT consistent and the debiased
+# center can be non-zero, so that all-zero band must not be read as "all effects
+# are zero" -- the early-exit warns() (instead of the fixed-p message()). Fixture:
+# seed = 6 (same high-dim DGP) zeroes all 9 treatment cells. Mutation-checkable:
+# reverting the early-exit to a plain message() (or dropping its `p >= N * T_`
+# guard) drops the warning and fails expect_warning(). Fixed-p behavior (a
+# message(), no warning) is unchanged -- covered by test-degenerate-jacobian-225.R.
+# ------------------------------------------------------------------------------
+test_that("high-dim all-zero degenerate band warns (not a silent message) (#304)", {
+	coefs <- genCoefs(
+		G = 3,
+		T = 5,
+		d = 22,
+		density = 0.5,
+		eff_size = 2,
+		seed = 6
+	)
+	dat <- simulateData(
+		coefs,
+		N = 40,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = 6
+	)
+	dat$indep_counts <- NA
+	fit6 <- fetwfe(
+		pdata = dat$pdata,
+		time_var = dat$time_var,
+		unit_var = dat$unit_var,
+		treatment = dat$treatment,
+		response = dat$response,
+		covs = dat$covs,
+		q = 0.5,
+		verbose = FALSE,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5
+	)
+	# Fixture invariants: genuinely high-dim AND the bridge zeroed EVERY treat cell
+	# (so the degenerate early-exit fires in the high-dim regime).
+	expect_gte(ncol(fit6$internal$X_final), nrow(fit6$internal$X_final))
+	expect_true(all(fit6$internal$theta_hat[-1][fit6$treat_inds] == 0))
+
+	expect_warning(
+		bo <- simultaneousCIs(
+			fit6,
+			family = "cohort",
+			method = "bootstrap",
+			B = 100,
+			seed = 1
+		),
+		"degenerate|unreliable|zeroed out every"
+	)
+	# the degenerate band is the all-zero early-exit return, as documented.
+	expect_true(all(bo$ci$simultaneous_ci_low == 0))
+	expect_true(all(bo$ci$simultaneous_ci_high == 0))
+})
+
+# ------------------------------------------------------------------------------
+# Non-fetwfe (betwfe) high-dim bootstrap falls back to the fixed-p band, NOT an
+# error (#305 review, Major). The desparsified `targets` path is fetwfe-only; a
+# non-fetwfe p >= NT fit must leave `targets` NULL and route through the fixed-p
+# selected-support construction (regime == "fixed-p") -- for BOTH the propensity-
+# channel `event_study` family and a regression-channel family (`cohort`).
+# Mutation-checkable: reverting the dispatch guard `if (p >= N*T_ && is_fetwfe)`
+# to `if (p >= N*T_)` reinstates the `stop("...only for fetwfe() fits")`, making
+# both calls error and failing the expect_s3_class / regime assertions here.
+# ------------------------------------------------------------------------------
+test_that("non-fetwfe (betwfe) high-dim bootstrap uses the fixed-p band, not an error (#305)", {
+	coefs <- genCoefs(
+		G = 3,
+		T = 5,
+		d = 22,
+		density = 0.5,
+		eff_size = 2,
+		seed = 1
+	)
+	dat <- simulateData(
+		coefs,
+		N = 40,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = 1
+	)
+	dat$indep_counts <- NA
+	bfit <- betwfe(
+		pdata = dat$pdata,
+		time_var = dat$time_var,
+		unit_var = dat$unit_var,
+		treatment = dat$treatment,
+		response = dat$response,
+		covs = dat$covs,
+		q = 0.5,
+		verbose = FALSE,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5
+	)
+	# fixture invariant: genuinely high-dim (full p >= NT)
+	expect_gte(ncol(bfit$internal$X_final), nrow(bfit$internal$X_final))
+
+	for (fam in c("event_study", "cohort")) {
+		bo <- simultaneousCIs(
+			bfit,
+			family = fam,
+			method = "bootstrap",
+			B = 200,
+			seed = 1
+		)
+		expect_s3_class(bo, "simultaneous_cis")
+		# load-bearing: non-fetwfe HD routes through the fixed-p selected-support
+		# path (NOT the fetwfe-only desparsified path, NOT a stop()).
+		expect_identical(bo$regime, "fixed-p")
+		expect_false("feasibility" %in% names(bo)) # no nodewise diagnostics
+		expect_true(all(is.finite(bo$ci$simultaneous_ci_low)))
+		expect_true(all(is.finite(bo$ci$simultaneous_ci_high)))
+	}
 })

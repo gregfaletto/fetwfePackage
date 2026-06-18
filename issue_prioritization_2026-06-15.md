@@ -7,11 +7,11 @@ roadmap — reweight as priorities shift.
 > **Status update (end of 2026-06-15 session).** Tier 1 **#31 shipped** (PR #294, v1.29.0)
 > with follow-up **#295** for coverage/`lambda_c` tuning. Tier 2 **#146 shipped** (verified
 > already done in v1.12.0, closed). **#293 shipped** (PR #296, v1.30.0 — `simulateData()` can
-> now make `p > NT` panels, unblocking high-dim ground-truth tests). **#142 is now the live
-> thread**: Phase 1 fixed-`p` bootstrap (PR #297) + Phase 2 high-dim desparsified bootstrap
-> (PR #298, stacked) open & ready to merge; Phase 3 (`event_study`) designed, branch created,
-> implementation pending. Next paper-anchored items after #142: **#142 follow-up** (high-dim
-> band coverage validation), then **#5 / #30 Layer 2 / #26 / #33** (Tier 3 below). Canonical
+> now make `p > NT` panels, unblocking high-dim ground-truth tests). **#142 is SHIPPED** (updated
+> 2026-06-17): Phase 1 fixed-`p` bootstrap (PR #297) + Phase 2 high-dim desparsified bootstrap
+> (PR #298) + Phase 3 `event_study` (PR #300) — all three merged, #142 closed. The live thread
+> has moved to the **high-dim debiased-band cluster** (#299 / PR #305, #295, #303, #304). After
+> that, the paper-anchored Tier-3 items **#5 / #30 Layer 2 / #26 / #33** below. Canonical
 > sequencing doc: `.workflow/PRIORITIZATION.md`.
 
 **Note on the top item:** the paper now contains a second, high-dimensional regime
