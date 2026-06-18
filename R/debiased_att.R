@@ -93,17 +93,24 @@
 #'     diagnostics.
 #' }
 #'
-#' The high-dimensional branch reuses the same bridge (`q < 1`) nuisance
-#' `theta_hat` as the fixed-`p` branch rather than the paper's literal `q = 1`
-#' fused lasso (a `q = 1` fit carries no valid SE here, since `calc_ses` is
-#' `FALSE`). For the fixed-`p` branch this substitution is first-order innocuous:
-#' Theorem `debiased.att.thm` needs only *consistency* of the nuisance. In the
-#' high-dimensional regime, however, Theorem `debiased.highdim.thm` controls the
+#' The two regimes use different nuisances. The **fixed-`p`** branch uses the
+#' fit's bridge (`q < 1`) `theta_hat`: Theorem `debiased.att.thm` needs only
+#' *consistency* of the nuisance, and with the exact inverse this is the OLS
+#' identity. The **high-dimensional** branch instead fits an internal `q = 1`
+#' fused lasso (`grpreg::cv.grpreg(penalty = "gBridge", gamma = 1)`, CV-selected
+#' `lambda`) as the nuisance, because Theorem `debiased.highdim.thm` controls the
 #' orthogonalization remainder through the nuisance's `l1` *rate*
-#' (`||theta_hat - theta*||_1 = O_p(s_N lambda_theta)`), which the paper
-#' establishes for the `q = 1` fused lasso; the bridge nuisance is `l1`-consistent
-#' and sparse, but its high-dimensional `l1` rate is not established for `q < 1`.
-#' This is a further reason the `p >= NT` path is flagged experimental.
+#' (`||theta_hat - theta*||_1 = O_p(s_N lambda_theta)`) --- the rate the `q = 1`
+#' fused lasso enjoys under a restricted-eigenvalue condition (the standard
+#' desparsified-lasso rate; cf. Negahban et al. 2012), the `p >= NT` extension
+#' the paper points to; the `q < 1` bridge is super-efficient / non-uniform ---
+#' the wrong nuisance for a uniformly-valid CI (#303). The
+#' *input* fit must still be `q < 1` (it supplies the cohort-weight variance
+#' channel `att_var_2`); only the high-dimensional debiasing nuisance is `q = 1`.
+#' That nuisance's cross-validation uses a fixed, data-derived seed, so it is
+#' deterministic across calls (`debiasedATT()` and the high-dimensional
+#' [simultaneousCIs()] band center agree exactly) --- but it is not tunable via
+#' the fit's `cv_seed`.
 #'
 #' @param fit A fitted object from [fetwfe()] computed with `q < 1` (so the
 #'   bridge selection produces a valid standard error). [etwfe()] / [betwfe()] /
@@ -270,14 +277,20 @@ debiasedATT <- function(
 	num_treats <- length(treat_inds)
 	cohort_probs <- fit$cohort_probs
 
-	# The cohort-weight SE channel is exactly the package's plug-in propensity
-	# variance `att_var_2` (the weight channel concerns the estimated cohort
-	# weights, not the theta-selection, so it is identical for the fused and
-	# debiased estimators). Reuse it rather than recomputing
-	# `(1/N_T) sum_g pi_g (catt_g - att)^2`: it is byte-identical on single-sample
-	# fits and, crucially, already carries the correct two-sample formula for
-	# `indep_counts` fits (the same `att_var_2` that `fit$att_se` uses). Single
-	# source of truth (#291 review).
+	# The cohort-weight SE channel is the package's plug-in propensity variance
+	# `att_var_2` = `(1/N_T) sum_g pi_g (catt_g - att)^2` -- the variance from
+	# estimating the cohort weights pi_hat_g. Reuse the fit's stored value rather
+	# than recomputing: it is the same `att_var_2` `fit$att_se` uses, byte-identical
+	# on single-sample fits and already carrying the correct two-sample formula for
+	# `indep_counts` fits (single source of truth, #291 review).
+	#
+	# CAVEAT (#303 review, second-order, deferred -> #295): this channel plugs in
+	# the BRIDGE `catt_g` / `att_hat`, while the high-dim center is now the q=1
+	# debiased estimate -- the same center(q=1)/variance-channel(bridge) mismatch as
+	# the event_study propensity channel `F_pi` (#309), here for the overall-ATT V2.
+	# It is second-order (the bridge and q=1 `catt_g` are both consistent for the
+	# true cohort effects), so the additive SE stays asymptotically correct; the
+	# finite-sample effect is part of the #295 high-dim coverage validation.
 	var_weight <- fit$internal$variance_components$att_var_2
 	if (
 		is.null(var_weight) ||
@@ -354,6 +367,10 @@ debiasedATT <- function(
 		# Fixed-p (p < NT): exact / tiny-ridge inverse. Byte-identical to the
 		# validated fixed-p reference; `lambda_c` / `riesz_*` are ignored here.
 		v <- solve(Sig + (1e-6 * mean(diag(Sig))) * diag(p), a_theta[-1])
+		# Fixed-p nuisance: the bridge theta_hat. Theorem `debiased.att.thm` needs
+		# only nuisance *consistency*, and with the exact inverse this reduces to
+		# the OLS identity. Byte-unchanged.
+		theta_nuis <- theta_hat
 	} else {
 		# High-dimensional (p >= NT): nodewise (desparsified-lasso) relaxed inverse.
 		# `Sig` is singular, so the exact inverse is invalid; `v` is the l1-penalized
@@ -403,10 +420,20 @@ debiasedATT <- function(
 			converged = converged,
 			lambda_node = lambda_node
 		)
+		# High-dim nuisance (#303): an internal q=1 fused lasso, NOT the reused
+		# q<1 bridge theta_hat. Its l1 rate is what Theorem `debiased.highdim.thm`
+		# controls the orthogonalization remainder through (the q<1 bridge is
+		# super-efficient / non-uniform -- the wrong nuisance for a uniform CI).
+		# Deterministic (fixed seed) so the simultaneousCIs() high-dim band center
+		# matches debiasedATT()$att exactly.
+		theta_nuis <- .fit_q1_nuisance(X, y, N_units, T)
 	}
-	resid <- as.numeric(y - theta_hat[1] - X %*% theta_hat[-1])
+	# Nuisance: the q=1 fused lasso in high-dim (theta_nuis set above), the bridge
+	# theta_hat in fixed-p. The plug-in functional and the residuals use it; the
+	# debiasing direction `v` and the `a_theta` identity check (above) do not.
+	resid <- as.numeric(y - theta_nuis[1] - X %*% theta_nuis[-1])
 	score <- as.numeric((X %*% v) * resid)
-	att_db <- sum(a_theta * theta_hat) + mean(score)
+	att_db <- sum(a_theta * theta_nuis) + mean(score)
 
 	# ---- channel 1: regression (outcome) variance, per-unit clustered ----
 	unit <- rep(seq_len(n / T), each = T)

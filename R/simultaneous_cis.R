@@ -687,7 +687,6 @@ simultaneousCIs.twfeCovs <- function(
 			effect_labels = effect_labels,
 			pointwise_crit = pointwise_crit,
 			bonferroni_crit = bonferroni_crit,
-			theta_hat_full = theta_hat_full,
 			targets = targets,
 			J_list = J_list,
 			theta_sel = theta_sel,

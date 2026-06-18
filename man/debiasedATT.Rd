@@ -140,17 +140,24 @@ constant \code{lambda_c} is not yet tuned); treat the \code{p >= NT} path as
 diagnostics.
 }
 
-The high-dimensional branch reuses the same bridge (\code{q < 1}) nuisance
-\code{theta_hat} as the fixed-\code{p} branch rather than the paper's literal \code{q = 1}
-fused lasso (a \code{q = 1} fit carries no valid SE here, since \code{calc_ses} is
-\code{FALSE}). For the fixed-\code{p} branch this substitution is first-order innocuous:
-Theorem \code{debiased.att.thm} needs only \emph{consistency} of the nuisance. In the
-high-dimensional regime, however, Theorem \code{debiased.highdim.thm} controls the
+The two regimes use different nuisances. The \strong{fixed-\code{p}} branch uses the
+fit's bridge (\code{q < 1}) \code{theta_hat}: Theorem \code{debiased.att.thm} needs only
+\emph{consistency} of the nuisance, and with the exact inverse this is the OLS
+identity. The \strong{high-dimensional} branch instead fits an internal \code{q = 1}
+fused lasso (\code{grpreg::cv.grpreg(penalty = "gBridge", gamma = 1)}, CV-selected
+\code{lambda}) as the nuisance, because Theorem \code{debiased.highdim.thm} controls the
 orthogonalization remainder through the nuisance's \code{l1} \emph{rate}
-(\verb{||theta_hat - theta*||_1 = O_p(s_N lambda_theta)}), which the paper
-establishes for the \code{q = 1} fused lasso; the bridge nuisance is \code{l1}-consistent
-and sparse, but its high-dimensional \code{l1} rate is not established for \code{q < 1}.
-This is a further reason the \code{p >= NT} path is flagged experimental.
+(\verb{||theta_hat - theta*||_1 = O_p(s_N lambda_theta)}) --- the rate the \code{q = 1}
+fused lasso enjoys under a restricted-eigenvalue condition (the standard
+desparsified-lasso rate; cf. Negahban et al. 2012), the \code{p >= NT} extension
+the paper points to; the \code{q < 1} bridge is super-efficient / non-uniform ---
+the wrong nuisance for a uniformly-valid CI (#303). The
+\emph{input} fit must still be \code{q < 1} (it supplies the cohort-weight variance
+channel \code{att_var_2}); only the high-dimensional debiasing nuisance is \code{q = 1}.
+That nuisance's cross-validation uses a fixed, data-derived seed, so it is
+deterministic across calls (\code{debiasedATT()} and the high-dimensional
+\code{\link[=simultaneousCIs]{simultaneousCIs()}} band center agree exactly) --- but it is not tunable via
+the fit's \code{cv_seed}.
 }
 
 \examples{

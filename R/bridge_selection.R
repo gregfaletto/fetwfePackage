@@ -293,3 +293,75 @@ getBetaCV <- function(
 		cv_seed = cv_seed
 	)
 }
+
+# .fit_q1_nuisance
+#' @title Fit the high-dimensional debiased nuisance as a `q = 1` fused lasso
+#' @description The high-dimensional (`p >= NT`) debiased construction --- shared
+#'   by `debiasedATT()` and the `simultaneousCIs(method = "bootstrap")` band
+#'   center --- needs a nuisance `theta_hat` whose `l1` *rate* controls the
+#'   Neyman-orthogonal remainder (paper Theorem `debiased.highdim.thm`). The paper
+#'   establishes that rate for a **`q = 1` fused lasso** (the convex case,
+#'   standard under the restricted-eigenvalue condition); the `q < 1` FETWFE
+#'   bridge is super-efficient / non-uniform --- the wrong nuisance for a
+#'   uniformly-valid CI (#303). This fits that nuisance on the SAME whitened,
+#'   fusion-transformed design the bridge used, via `grpreg::cv.grpreg(penalty =
+#'   "gBridge", gamma = 1)` (the group-bridge penalty at `gamma = 1` over
+#'   singleton groups is the lasso), CV-selecting `lambda` --- the package's "CV
+#'   on the raw lambda" convention (cf. `getBetaCV()`).
+#'
+#'   **Determinism contract.** `debiasedATT()` and `.simultaneous_cis_bootstrap()`
+#'   must obtain the *identical* nuisance so the high-dim band center equals
+#'   `debiasedATT()$att` to machine precision. The seed is derived from the data
+#'   (`as.integer(N * T)`, `getBetaCV()`'s default), NOT the fit's `cv_seed`
+#'   (which is `NA` for BIC-selected fits); both call sites pass the same
+#'   `X_final` / `y_final` / `N` / `T` from the same fit, and
+#'   `.with_preserved_rng()` leaves the caller's RNG untouched (#177).
+#' @param X_final Numeric matrix; the `NT x p` unscaled, fusion + GLS-transformed
+#'   design (`fit$internal$X_final`).
+#' @param y_final Numeric vector of length `NT`; the GLS-transformed response
+#'   (callers pass the `NT`-truncated `y_final`, matching the `add_ridge` design).
+#' @param N,T Integer; the number of units and time periods.
+#' @param cv_folds Integer; CV folds (fixed by the call sites for determinism).
+#' @return Numeric vector of length `p + 1`: the `q = 1` nuisance coefficients
+#'   (intercept at position 1) on the original-data scale.
+#' @keywords internal
+#' @noRd
+.fit_q1_nuisance <- function(X_final, y_final, N, T, cv_folds = 10L) {
+	p <- ncol(X_final)
+	X_scaled <- my_scale(X_final)
+	scale_center <- attr(X_scaled, "scaled:center")
+	scale_scale <- attr(X_scaled, "scaled:scale")
+	# Deterministic seed from the data only (NOT fit$cv_seed, which is NA for
+	# BIC-selected fits). as.integer(N * T) is getBetaCV()'s default-seed
+	# convention; identical at both call sites since N, T come from the same fit.
+	nt_double <- as.numeric(N) * as.numeric(T)
+	cv_seed <- if (nt_double > .Machine$integer.max) {
+		.Machine$integer.max
+	} else {
+		as.integer(nt_double)
+	}
+	cv_fit <- .with_preserved_rng(cv_seed, {
+		grpreg::cv.grpreg(
+			X = X_scaled,
+			y = y_final,
+			penalty = "gBridge",
+			gamma = 1,
+			nfolds = cv_folds
+		)
+	})
+	lambda_star <- cv_fit$lambda.min
+	lam_idx <- which(cv_fit$fit$lambda == lambda_star)
+	if (length(lam_idx) != 1L) {
+		# Fall back to nearest match in case of floating-point comparison drift.
+		lam_idx <- which.min(abs(cv_fit$fit$lambda - lambda_star))
+	}
+	stopifnot(length(lam_idx) == 1L, nrow(cv_fit$fit$beta) == p + 1L)
+	theta_scaled <- cv_fit$fit$beta[, lam_idx]
+	stopifnot(length(theta_scaled) == p + 1L, all(!is.na(theta_scaled)))
+	.untransform_scaled_theta(
+		theta_hat_scaled = theta_scaled,
+		p = p,
+		scale_center = scale_center,
+		scale_scale = scale_scale
+	)
+}
