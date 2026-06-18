@@ -1,5 +1,26 @@
 # NEWS
 
+## Version 1.36.0
+
+### New features
+
+- `fetwfe(gls = FALSE)` skips GLS whitening and variance-component estimation, so
+  high-dimensional (`p >= NT`) fits run **without** supplied `sig_eps_sq` /
+  `sig_eps_c_sq` (previously a hard error from the REML guard `p < N(T - 1)` in
+  `estOmegaSqrtInv()`). Such fits have `calc_ses = FALSE` and un-whitened
+  `internal$X_final` / `internal$y_final`; the default `gls = TRUE` is unchanged
+  (#307).
+- `debiasedATT()` now produces its cluster-robust standard error on these
+  un-whitened high-dimensional fits, so the `p >= NT` path is usable on **real
+  data** (not only supplied-variance simulations). The regression channel
+  `var_reg` is the unit-clustered sandwich (robust to within-unit dependence);
+  the cohort-weight channel `var_weight` falls back to the plug-in
+  `(1/N_tau) sum_g pi_g (catt_g - att)^2` when the fit carries no `att_var_2`
+  (byte-identical to `att_var_2` when present). Whitening buys efficiency, not
+  validity (paper Decision D1). The `p >= NT` path remains **experimental**
+  (coverage / `lambda_c` per #295); small-cluster applications (few treated
+  units) should prefer a wild-cluster bootstrap (a planned follow-up).
+
 ## Version 1.35.0
 
 ### Changes

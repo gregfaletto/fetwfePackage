@@ -56,7 +56,7 @@
 # ---- A genuine p >= NT fetwfe fit (the simulator cannot make one: it enforces
 # N >= (G+1)(d+1), so build the raw panel directly and supply the noise
 # variances to bypass REML). N=20, T=8, d=12 => p = 376 >> NT = 160. -----------
-.make_highdim_fit <- function() {
+.make_highdim_panel <- function() {
 	set.seed(3)
 	N <- 20L
 	T <- 8L
@@ -64,7 +64,7 @@
 	cohort_of_unit <- c(rep(0L, 8), rep(2L, 4), rep(3L, 4), rep(4L, 4))
 	eff <- c(`2` = 0.5, `3` = 1.75, `4` = 3.0)
 	covs <- matrix(stats::rnorm(N * d), N, d)
-	rows <- do.call(
+	do.call(
 		rbind,
 		lapply(seq_len(N), function(i) {
 			g <- cohort_of_unit[i]
@@ -86,12 +86,15 @@
 			df
 		})
 	)
+}
+
+.make_highdim_fit <- function() {
 	fetwfe(
-		pdata = rows,
+		pdata = .make_highdim_panel(),
 		time_var = "year",
 		unit_var = "unit",
 		treatment = "treat",
-		covs = paste0("x", 1:d),
+		covs = paste0("x", 1:12),
 		response = "y",
 		q = 0.5,
 		verbose = FALSE,
@@ -100,8 +103,26 @@
 	)
 }
 
+# gls = FALSE sibling (#307): the SAME panel, but NO supplied variances -- the fit
+# that errors today (the REML guard at p >= N(T-1)) and is the whole point of this
+# path. calc_ses = FALSE; the debiasedATT() cluster-robust sandwich SE needs no Omega.
+.make_highdim_fit_nogls <- function() {
+	fetwfe(
+		pdata = .make_highdim_panel(),
+		time_var = "year",
+		unit_var = "unit",
+		treatment = "treat",
+		covs = paste0("x", 1:12),
+		response = "y",
+		q = 0.5,
+		verbose = FALSE,
+		gls = FALSE
+	)
+}
+
 # Build the high-dim fit once (the fit is the slow part); reuse across tests.
 hd_fix <- .make_highdim_fit()
+hd_fix_nogls <- .make_highdim_fit_nogls()
 
 # ============================ solver-level tests =============================
 
@@ -329,4 +350,123 @@ test_that("debiasedATT validates the high-dim solver arguments", {
 	expect_error(debiasedATT(hd_fix, riesz_max_iter = 0), "riesz_max_iter")
 	expect_error(debiasedATT(hd_fix, riesz_tol = 0), "riesz_tol")
 	expect_error(debiasedATT(hd_fix, riesz_tol = -1e-9), "riesz_tol")
+})
+
+# ==============================================================================
+# #307: Omega-free high-dim cluster-robust SE (gls = FALSE). The headline -- a
+# p >= NT fit WITHOUT supplied variances (impossible today: the REML guard) --
+# plus the load-bearing plug-in V2 == att_var_2 cross-check.
+# ==============================================================================
+
+test_that("gls = FALSE fits a p >= NT panel without supplied variances (#307)", {
+	expect_s3_class(hd_fix_nogls, "fetwfe")
+	# genuinely high-dim, and no whitening / variance components were estimated.
+	expect_gte(
+		ncol(hd_fix_nogls$internal$X_final),
+		nrow(hd_fix_nogls$internal$X_final)
+	)
+	expect_false(isTRUE(hd_fix_nogls$internal$calc_ses))
+	expect_true(is.na(hd_fix_nogls$sig_eps_sq))
+	expect_true(is.na(hd_fix_nogls$sig_eps_c_sq))
+	# the oracle SE machinery did not run, so att_var_2 is absent.
+	av2 <- hd_fix_nogls$internal$variance_components$att_var_2
+	expect_true(is.null(av2) || is.na(av2))
+	# the headline ATT is still produced.
+	expect_true(is.finite(hd_fix_nogls$att_hat))
+})
+
+test_that("debiasedATT() returns a finite cluster-robust SE on a gls = FALSE fit (#307)", {
+	db <- debiasedATT(hd_fix_nogls)
+	expect_true(all(
+		c(
+			"att",
+			"se",
+			"ci_low",
+			"ci_high",
+			"var_reg",
+			"var_weight",
+			"feasibility",
+			"converged",
+			"lambda_node"
+		) %in%
+			names(db)
+	))
+	expect_true(is.finite(db$att))
+	expect_true(is.finite(db$se) && db$se > 0)
+	expect_true(is.finite(db$var_reg) && db$var_reg > 0) # V1 unit-clustered sandwich
+	expect_true(is.finite(db$var_weight) && db$var_weight > 0) # V2 plug-in
+	expect_equal(db$se, sqrt(db$var_reg + db$var_weight))
+	expect_equal(db$ci_low, db$att - stats::qnorm(0.975) * db$se)
+})
+
+test_that("debiasedATT() is deterministic on a gls = FALSE fit (#307)", {
+	a <- debiasedATT(hd_fix_nogls)
+	b <- debiasedATT(hd_fix_nogls)
+	expect_identical(a$att, b$att)
+	expect_identical(a$se, b$se)
+	expect_identical(a$lambda_node, b$lambda_node)
+})
+
+# The load-bearing validation: the plug-in V2 (`.plugin_v2`, used when att_var_2 is
+# absent) EQUALS the oracle `att_var_2` the whitened path uses. hd_fix has equal
+# treated cohorts; the inline fit below has UNEQUAL cohorts (4 / 6 / 8 treated
+# units), so the match is not a balanced-design coincidence. Mutation-checkable:
+# a wrong N_tau (e.g. N instead of N_treated) or dropping the cohort_probs
+# weighting in `.plugin_v2` breaks this past 1e-10.
+test_that(".plugin_v2 equals att_var_2 (equal AND unequal cohorts) (#307)", {
+	expect_equal(
+		fetwfe:::.plugin_v2(hd_fix),
+		hd_fix$internal$variance_components$att_var_2,
+		tolerance = 1e-10
+	)
+	set.seed(7)
+	Nq <- 24L
+	Tq <- 6L
+	cohort_of_unit <- c(rep(0L, 6), rep(3L, 4), rep(4L, 6), rep(5L, 8))
+	eff <- c(`3` = 1.0, `4` = 2.0, `5` = -1.0)
+	cv <- stats::rnorm(Nq)
+	rows <- do.call(
+		rbind,
+		lapply(seq_len(Nq), function(i) {
+			g <- cohort_of_unit[i]
+			df <- data.frame(
+				unit = sprintf("u%02d", i),
+				year = 1:Tq,
+				treat = as.integer(g > 0 & (1:Tq) >= g),
+				x1 = cv[i]
+			)
+			te <- if (g > 0) eff[[as.character(g)]] else 0
+			df$y <- 0.1 *
+				(1:Tq) +
+				te * df$treat +
+				0.3 * cv[i] +
+				stats::rnorm(Tq, 0, 0.5)
+			df
+		})
+	)
+	fit_uneq <- fetwfe(
+		pdata = rows,
+		time_var = "year",
+		unit_var = "unit",
+		treatment = "treat",
+		covs = "x1",
+		response = "y",
+		q = 0.5,
+		verbose = FALSE,
+		sig_eps_sq = 0.25,
+		sig_eps_c_sq = 0.1
+	)
+	# confirm the treated cohorts really are unequal (so the test bites weighting).
+	expect_gt(max(fit_uneq$cohort_probs) - min(fit_uneq$cohort_probs), 0.05)
+	expect_equal(
+		fetwfe:::.plugin_v2(fit_uneq),
+		fit_uneq$internal$variance_components$att_var_2,
+		tolerance = 1e-10
+	)
+})
+
+test_that("the att_var_2 path is byte-unchanged: supplied-var var_weight == att_var_2 (#307)", {
+	# the plug-in fallback must NOT perturb the whitened / supplied-variance path.
+	db <- debiasedATT(hd_fix)
+	expect_equal(db$var_weight, hd_fix$internal$variance_components$att_var_2)
 })

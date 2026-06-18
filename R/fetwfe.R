@@ -191,6 +191,19 @@
 #'   `D_N` still yields a valid point estimator but emits a `warning()` that its
 #'   inverse may be unreliable. Default is `NULL` (use the built-in
 #'   `fusion_structure`).
+#' @param gls (Optional.) Logical; default `TRUE`. When `TRUE`, the design is
+#'   GLS-whitened using REML-estimated (or supplied) variance components --- the
+#'   standard, efficient path. When `FALSE`, `fetwfe()` **skips GLS whitening and
+#'   variance-component estimation entirely**, fitting on the un-whitened
+#'   (fusion-transformed) design. This is the high-dimensional (`p >= NT`) path:
+#'   REML cannot estimate the variance components there (the `p < N(T - 1)` REML
+#'   guard would otherwise stop the fit), and whitening buys efficiency, not
+#'   validity --- the [debiasedATT()] cluster-robust sandwich standard error needs
+#'   no `Omega` (paper Decision D1). A `gls = FALSE` fit has `calc_ses = FALSE`
+#'   (no within-selection oracle standard errors) and un-whitened
+#'   `internal$X_final` / `internal$y_final`; pass it to [debiasedATT()] for a
+#'   valid cluster-robust SE. `add_ridge = TRUE` is not supported, and supplied
+#'   `sig_eps_sq` / `sig_eps_c_sq` are ignored, under `gls = FALSE`.
 #' @param ci_type Character; one of `"simultaneous"` (default) or
 #'   `"pointwise"`. Controls the confidence-interval bounds reported for the
 #'   cohort-specific ATTs (in `catt_df`) and the event-study effects (from
@@ -371,13 +384,41 @@ fetwfe <- function(
 	cv_seed = NULL,
 	ci_type = c("simultaneous", "pointwise"),
 	fusion_structure = c("cohort", "event_study"),
-	fusion_matrix = NULL
+	fusion_matrix = NULL,
+	gls = TRUE
 ) {
 	se_type <- match.arg(
 		se_type,
 		c("default", "conservative", "cluster")
 	)
 	ci_type <- match.arg(ci_type)
+	# #307: `gls = FALSE` skips GLS whitening + variance-component estimation (the
+	# high-dimensional `p >= NT` path, where REML cannot estimate Omega). Validate
+	# it and its interactions before any heavy work.
+	if (!is.logical(gls) || length(gls) != 1L || is.na(gls)) {
+		stop(
+			"fetwfe(): `gls` must be a single logical (TRUE or FALSE).",
+			call. = FALSE
+		)
+	}
+	if (!gls) {
+		if (isTRUE(add_ridge)) {
+			stop(
+				"fetwfe(): `add_ridge = TRUE` is not supported with `gls = FALSE` ",
+				"(the ridge penalty scales with the noise variances, which are not ",
+				"estimated when whitening is skipped). Re-fit with `add_ridge = FALSE`.",
+				call. = FALSE
+			)
+		}
+		if (!is.na(sig_eps_sq) || !is.na(sig_eps_c_sq)) {
+			warning(
+				"fetwfe(): `sig_eps_sq` / `sig_eps_c_sq` are ignored when ",
+				"`gls = FALSE` (no GLS whitening is performed); the fit uses the ",
+				"un-whitened design.",
+				call. = FALSE
+			)
+		}
+	}
 	# Record whether the user explicitly passed `fusion_structure` so we can
 	# emit a one-line override notice when a custom `fusion_matrix` is also
 	# supplied (the matrix wins for the treatment block; #236).
@@ -499,7 +540,8 @@ fetwfe <- function(
 		cv_folds = cv_folds,
 		cv_seed = cv_seed,
 		fusion_structure = fusion_structure,
-		d_inv_treat = d_inv_treat
+		d_inv_treat = d_inv_treat,
+		gls = gls
 	)
 
 	att_branch <- .select_att_branch(
@@ -749,6 +791,19 @@ fetwfe <- function(
 #'   `D_N` still yields a valid point estimator but emits a `warning()` that its
 #'   inverse may be unreliable. Default is `NULL` (use the built-in
 #'   `fusion_structure`).
+#' @param gls (Optional.) Logical; default `TRUE`. When `TRUE`, the design is
+#'   GLS-whitened using REML-estimated (or supplied) variance components --- the
+#'   standard, efficient path. When `FALSE`, `fetwfe()` **skips GLS whitening and
+#'   variance-component estimation entirely**, fitting on the un-whitened
+#'   (fusion-transformed) design. This is the high-dimensional (`p >= NT`) path:
+#'   REML cannot estimate the variance components there (the `p < N(T - 1)` REML
+#'   guard would otherwise stop the fit), and whitening buys efficiency, not
+#'   validity --- the [debiasedATT()] cluster-robust sandwich standard error needs
+#'   no `Omega` (paper Decision D1). A `gls = FALSE` fit has `calc_ses = FALSE`
+#'   (no within-selection oracle standard errors) and un-whitened
+#'   `internal$X_final` / `internal$y_final`; pass it to [debiasedATT()] for a
+#'   valid cluster-robust SE. `add_ridge = TRUE` is not supported, and supplied
+#'   `sig_eps_sq` / `sig_eps_c_sq` are ignored, under `gls = FALSE`.
 #' @param ci_type Character; one of `"simultaneous"` (default) or
 #'   `"pointwise"`. Controls the confidence-interval bounds reported for the
 #'   cohort-specific ATTs (in `catt_df`) and the event-study effects (from
@@ -870,7 +925,8 @@ fetwfeWithSimulatedData <- function(
 	cv_seed = NULL,
 	ci_type = c("simultaneous", "pointwise"),
 	fusion_structure = c("cohort", "event_study"),
-	fusion_matrix = NULL
+	fusion_matrix = NULL,
+	gls = TRUE
 ) {
 	se_type <- match.arg(
 		se_type,
@@ -907,7 +963,8 @@ fetwfeWithSimulatedData <- function(
 		cv_seed = cv_seed,
 		ci_type = ci_type,
 		fusion_structure = fusion_structure,
-		fusion_matrix = fusion_matrix
+		fusion_matrix = fusion_matrix,
+		gls = gls
 	)
 
 	return(res)

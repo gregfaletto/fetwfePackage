@@ -122,23 +122,42 @@ prep_for_etwfe_regression <- function(
 	is_fetwfe,
 	is_twfe_covs = FALSE,
 	fusion_structure = "cohort",
-	d_inv_treat = NULL
+	d_inv_treat = NULL,
+	gls = TRUE
 ) {
-	gls <- .estimate_variance_and_gls(
-		y = y,
-		X_ints = X_ints,
-		X_mod = X_mod,
-		sig_eps_sq = sig_eps_sq,
-		sig_eps_c_sq = sig_eps_c_sq,
-		N = N,
-		T = T,
-		p = p,
-		verbose = verbose
-	)
-	y_final <- gls$y_gls
-	X_final <- gls$X_gls
-	sig_eps_sq <- gls$sig_eps_sq
-	sig_eps_c_sq <- gls$sig_eps_c_sq
+	if (gls) {
+		# Default: estimate the variance components (REML when not supplied) and
+		# GLS-whiten the design. This is where `estOmegaSqrtInv()` hard-stops at
+		# `p >= N(T - 1)` (its REML guard) -- the reason `gls = FALSE` exists for the
+		# high-dimensional path.
+		gls_res <- .estimate_variance_and_gls(
+			y = y,
+			X_ints = X_ints,
+			X_mod = X_mod,
+			sig_eps_sq = sig_eps_sq,
+			sig_eps_c_sq = sig_eps_c_sq,
+			N = N,
+			T = T,
+			p = p,
+			verbose = verbose
+		)
+		y_final <- gls_res$y_gls
+		X_final <- gls_res$X_gls
+		sig_eps_sq <- gls_res$sig_eps_sq
+		sig_eps_c_sq <- gls_res$sig_eps_c_sq
+	} else {
+		# gls = FALSE (#307): skip whitening AND variance-component estimation
+		# entirely. The high-dimensional (`p >= NT`) path, where REML cannot estimate
+		# Omega -- and whitening buys efficiency, not validity: the `debiasedATT()`
+		# cluster-robust sandwich SE needs no Omega (paper Decision D1 /
+		# gregfaletto/fetwfe#90). Use the un-whitened (fusion-transformed) design
+		# `X_mod`; leave the variance components NA (`calc_ses` is forced FALSE in
+		# `fetwfe_core()`).
+		y_final <- as.numeric(y)
+		X_final <- X_mod
+		sig_eps_sq <- NA_real_
+		sig_eps_c_sq <- NA_real_
+	}
 
 	if (is_twfe_covs) {
 		coll <- .collapse_design_for_twfe_covs(
