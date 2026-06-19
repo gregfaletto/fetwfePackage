@@ -407,10 +407,28 @@ debiasedATT <- function(
 	}
 
 	# ---- theta-space ATT weight vector a_theta = c(0, A' a_beta) ----
-	first_inds <- getFirstInds(G = G, T = T)
-	# Cohort g has T - g post-treatment cells; a_beta loads treat_inds with weight
-	# cohort_probs[g] / (#cells in cohort g) so a_beta' beta = sum_g pi_g * catt_g.
-	sizes <- (T - 1):(T - G)
+	# Resolve the ACTUAL cohort offsets (#174 / #318): `getFirstInds(G, T)` and
+	# `sizes <- (T-1):(T-G)` assume CONSECUTIVE adoption (offsets 2..G+1), which
+	# mis-assigns the treatment cells under non-consecutive (scattered-cohort)
+	# adoption -- e.g. bacondecomp::divorce -- so the identity guard below would
+	# (correctly) fire on a wrong weight vector. The #174 dispatcher reads the real
+	# offsets from the fit's cohort labels (and falls back to `getFirstInds()` when
+	# the labels are not integer-coercible). Either way it returns exactly
+	# `getFirstInds()` for any CONSECUTIVE layout -- whether by deriving the
+	# consecutive labels `2..G+1` (e.g. genCoefs/simulateData fixtures) or by the
+	# no-label fallback -- so consecutive fits stay byte-identical.
+	# `genFullInvFusionTransformMat()` already takes `first_inds`, so the scattered
+	# offsets propagate into the transform automatically.
+	first_inds <- .resolve_event_study_offsets_and_first_inds(
+		fit,
+		G = G,
+		T = T
+	)$first_inds
+	# Cohort g's treatment-cell block runs from `first_inds[g]` to the next cohort's
+	# first index; a_beta loads treat_inds with weight cohort_probs[g] / (#cells in
+	# cohort g) so a_beta' beta = sum_g pi_g * catt_g. For consecutive cohorts the
+	# block sizes reduce to (T-1):(T-G).
+	sizes <- diff(c(first_inds, num_treats + 1L))
 	cohort_of_treat <- rep(seq_len(G), times = sizes)
 	a_beta <- numeric(p)
 	for (g in seq_len(G)) {

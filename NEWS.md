@@ -1,5 +1,23 @@
 # NEWS
 
+## Version 1.41.0
+
+### Bug fixes
+
+- `debiasedATT()` now supports fits with **non-consecutive (scattered-cohort)
+  adoption** -- adoption times with gaps, e.g. `bacondecomp::divorce` (#318). Its
+  overall-ATT weight vector was built under a consecutive-cohort assumption
+  (`getFirstInds()` + `sizes <- (T - 1):(T - G)`), so a scattered fit mis-assigned
+  the treatment cells to cohorts and tripped the ATT-identity guard. It now
+  resolves the *actual* adoption offsets via the same offset dispatcher the
+  disaggregated functions (`event_study()`, `cohortTimeATTs()`,
+  `simultaneousCIs()`) already use (v1.13.3, #174), so the identity holds for
+  scattered cohorts in **both** the fixed-p and high-dimensional regimes.
+  Consecutive-cohort fits are byte-identical (the resolver returns the same
+  offsets, and the block sizes reduce to `(T - 1):(T - G)`). This was the gap
+  behind the scattered-cohort notes in #316 / #317 and unblocks the divorce
+  high-dimensional application.
+
 ## Version 1.40.0
 
 ### New features
