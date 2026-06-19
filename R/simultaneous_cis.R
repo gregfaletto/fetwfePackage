@@ -483,7 +483,7 @@ simultaneousCIs.twfeCovs <- function(
 
 	# --- 3. Resolve cohort-time offsets + first_inds (same helper eventStudy
 	#        uses; preserves scattered-cohort support). ---
-	offs <- .resolve_event_study_offsets_and_first_inds(x, G = G, T = T_)
+	offs <- .resolve_cohort_offsets_and_first_inds(x, G = G, T = T_)
 	cohort_offsets_int <- offs$cohort_offsets_int
 	first_inds <- offs$first_inds
 

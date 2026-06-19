@@ -192,7 +192,7 @@ cohortTimeATTs <- function(result, alpha = NULL) {
 	# uses: real panels map integer-coercible cohort labels to panel-time
 	# offsets; synthetic fixtures fall back to the consecutive-cohort
 	# assumption).
-	offs <- .resolve_event_study_offsets_and_first_inds(x, G = G, T = T)
+	offs <- .resolve_cohort_offsets_and_first_inds(x, G = G, T = T)
 	cohort_offsets_int <- offs$cohort_offsets_int
 	first_inds <- offs$first_inds
 	first_year <- x$internal$first_year

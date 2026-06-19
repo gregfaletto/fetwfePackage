@@ -130,7 +130,7 @@ test_that(".assemble_joint_cov_var2 (K=1) matches getSecondVarTermOLS on an even
 	tes <- fit$beta_hat[fit$treat_inds]
 	cpo <- fit$cohort_probs_overall
 
-	offs <- fetwfe:::.resolve_event_study_offsets_and_first_inds(
+	offs <- fetwfe:::.resolve_cohort_offsets_and_first_inds(
 		fit,
 		G = G,
 		T = T_

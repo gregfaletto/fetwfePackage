@@ -4,7 +4,7 @@
 # adoption (offsets 2..G+1); on scattered adoption (gaps, e.g. years 2,4,7 --
 # bacondecomp::divorce) the treatment cells were mis-assigned and the ATT-identity
 # guard correctly fired. The fix resolves the ACTUAL offsets via the #174
-# dispatcher (`.resolve_event_study_offsets_and_first_inds`), so the identity
+# dispatcher (`.resolve_cohort_offsets_and_first_inds`), so the identity
 # `a_theta' theta_hat == att_hat` holds for scattered cohorts too, in both regimes.
 
 # Raw panel with `adopt` adoption years (integer-coercible cohort labels, so the
@@ -64,7 +64,7 @@
 	T <- fit$T
 	nt <- length(fit$treat_inds)
 	p <- ncol(fit$internal$X_final)
-	fi <- fetwfe:::.resolve_event_study_offsets_and_first_inds(
+	fi <- fetwfe:::.resolve_cohort_offsets_and_first_inds(
 		fit,
 		G = G,
 		T = T
@@ -98,7 +98,7 @@ test_that("debiasedATT() runs on a scattered-cohort FIXED-p fit (#318)", {
 	)
 	expect_lt(ncol(f$internal$X_final), nrow(f$internal$X_final)) # fixed-p
 	# the resolved offsets are the SCATTERED ones, not consecutive.
-	offs <- fetwfe:::.resolve_event_study_offsets_and_first_inds(
+	offs <- fetwfe:::.resolve_cohort_offsets_and_first_inds(
 		f,
 		G = f$G,
 		T = f$T
@@ -131,7 +131,7 @@ test_that("consecutive-cohort fits are byte-identical (the resolver matches getF
 	)
 	# consecutive adoption: the resolver returns exactly getFirstInds() and the
 	# block sizes reduce to (T-1):(T-G), so the construction is unchanged.
-	fi_res <- fetwfe:::.resolve_event_study_offsets_and_first_inds(
+	fi_res <- fetwfe:::.resolve_cohort_offsets_and_first_inds(
 		f,
 		G = f$G,
 		T = f$T

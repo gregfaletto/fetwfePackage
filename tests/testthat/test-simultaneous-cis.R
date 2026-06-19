@@ -175,7 +175,7 @@ test_that("simultaneousCIs achieves ~nominal simultaneous coverage", {
 		sci_i <- simultaneousCIs(fit_i, family = "event_study", alpha = 0.05)
 
 		cpo_i <- fit_i$cohort_probs_overall
-		offs_i <- fetwfe:::.resolve_event_study_offsets_and_first_inds(
+		offs_i <- fetwfe:::.resolve_cohort_offsets_and_first_inds(
 			fit_i,
 			G = R_,
 			T = T_
