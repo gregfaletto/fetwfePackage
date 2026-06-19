@@ -85,13 +85,15 @@ two-point distribution). Ignored when \code{method = "analytic"}.}
 \item{lambda_c, riesz_max_iter, riesz_tol}{Controls for the high-dimensional
 (\code{p >= NT}) bootstrap, where each effect's debiasing direction is a nodewise
 (desparsified-lasso) \code{riesz_lasso()} solve. \code{lambda_c} is the leading
-constant of the penalty \verb{lambda_node = lambda_c * max(|a|) * sqrt(log p / N)};
-the default \code{1.0} (theory scale) keeps the directions feasible. \strong{Smaller
-values can leave directions infeasible (a warning fires and those bands are
-unreliable).} Ignored when \code{p < NT} or \code{method = "analytic"}. The fixed
-default is a known limitation: the eventual production path should select
-this per fit by cross-validation rather than carry a constant (tracked at
-#295).}
+constant of the penalty \verb{lambda_node = lambda_c * max(|a|) * sqrt(log p / N)}:
+either a single positive number (the default \code{1.0} = theory scale) or the
+string \code{"cv"}, which selects the constant \strong{per fit} by cross-validation
+(the same CV \code{debiasedATT()} uses, on the overall-ATT direction, so one
+constant serves the point estimate and every band effect; #295). \strong{Smaller
+fixed values can leave directions infeasible (a warning fires and those bands
+are unreliable).} Ignored when \code{p < NT} or \code{method = "analytic"}. The default
+stays the fixed \code{1.0} (the \code{"cv"} mechanism is opt-in pending coverage
+validation).}
 }
 \value{
 An object of S3 class \code{"simultaneous_cis"}: a list with
@@ -122,7 +124,9 @@ For \code{method = "bootstrap"} the list additionally carries \code{method}, \co
 backing \code{ci} are the cluster-robust per-unit ones (so for a non-\code{cluster} fit
 the bootstrap band may differ from the analytic homoskedastic band). A
 \code{"high-dimensional"} fit additionally carries per-effect \code{feasibility},
-\code{converged}, and \code{lambda_node} (the nodewise-direction diagnostics).
+\code{converged}, and \code{lambda_node} (the nodewise-direction diagnostics), plus
+\code{lambda_c} (the leading constant used) and \code{lambda_c_selection} (\code{"fixed"}
+or \code{"cv"}).
 }
 \description{
 Computes simultaneous (family-wise) confidence intervals for a user-

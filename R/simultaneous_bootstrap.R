@@ -546,6 +546,7 @@
 	pointwise_crit,
 	bonferroni_crit,
 	targets = NULL,
+	a_att = NULL,
 	J_list = NULL,
 	theta_sel = NULL,
 	cohort_probs_overall = NULL,
@@ -578,17 +579,39 @@
 		resid_q1 <- as.numeric(
 			y_final[seq_len(n)] - theta_q1[1] - X_final %*% theta_q1[-1]
 		)
-		# Hoist the full Gram once and share it across both high-dim channels (the
-		# regression IF and -- for event_study -- the per-cell propensity
-		# desparsification), so they do ONE O(NT p^2) crossprod, not two.
+		# Hoist the full Gram once and share it across every high-dim channel -- the
+		# regression IF, the CV penalty selection (#295), and the per-cell propensity
+		# desparsification (#309) -- so they do ONE O(NT p^2) crossprod, not several.
 		Sig_hd <- crossprod(X_final) / n
+		# Resolve the node-penalty constant ONCE on the overall-ATT direction (#295
+		# D2: one `lambda_c` serves the point estimate AND every band effect). For the
+		# common consecutive-cohort layout `a_att` equals debiasedATT()'s direction
+		# exactly (same fit's Sig / X / data-derived seed), so the band center matches
+		# `debiasedATT()$att` under `lambda_c = "cv"`; for scattered adoption times
+		# high-dim debiasedATT() is unsupported (it errors at its identity guard), so
+		# only the band runs and CVs on its own correct direction. Each effect's
+		# `lambda_node_k` then scales the shared constant by its own `max(|a_k|)`
+		# inside `.build_regression_if_highdim()`. The SAME resolved `lambda_c_used`
+		# also scales the #309 per-cell propensity directions below.
+		lambda_c_used <- lambda_c
+		if (identical(lambda_c, "cv")) {
+			lambda_c_used <- .cv_lambda_node(
+				Sig_hd,
+				a_att,
+				X_final,
+				N,
+				T,
+				riesz_max_iter = riesz_max_iter,
+				riesz_tol = riesz_tol
+			)$lambda_c
+		}
 		F_mat <- .build_regression_if_highdim(
 			X_final,
 			resid_q1,
 			N,
 			T,
 			targets,
-			lambda_c = lambda_c,
+			lambda_c = lambda_c_used,
 			riesz_max_iter = riesz_max_iter,
 			riesz_tol = riesz_tol,
 			Sig = Sig_hd
@@ -618,7 +641,7 @@
 				T,
 				theta_q1_slopes = theta_q1[-1],
 				cell_targets = cell_targets,
-				lambda_c = lambda_c,
+				lambda_c = lambda_c_used,
 				riesz_max_iter = riesz_max_iter,
 				riesz_tol = riesz_tol,
 				Sig = Sig_hd
@@ -795,6 +818,13 @@
 		out$feasibility <- d$feasibility
 		out$converged <- d$converged
 		out$lambda_node <- d$lambda_node
+		# The node-penalty constant actually used (CV-selected when "cv", #295).
+		out$lambda_c <- lambda_c_used
+		out$lambda_c_selection <- if (identical(lambda_c, "cv")) {
+			"cv"
+		} else {
+			"fixed"
+		}
 		# The high-dim event_study propensity channel desparsifies num_treats extra
 		# per-cohort-cell directions (#309); they also feed the band (via Sigma_2)
 		# and the experimental-regime warning, so expose their diagnostics too --

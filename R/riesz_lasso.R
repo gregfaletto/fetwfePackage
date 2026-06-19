@@ -76,3 +76,153 @@ riesz_lasso <- function(Sig, a, lambda, max_iter = 5000L, tol = 1e-9) {
 lambda_node_default <- function(p, N, c = 1.0, scale = 1.0) {
 	c * scale * sqrt(log(p) / N)
 }
+
+#' Cross-validate the high-dimensional nodewise penalty constant `lambda_c`
+#'
+#' @description
+#' Selects the leading constant `lambda_c` of the nodewise penalty
+#' `lambda_node = lambda_c * max(|a|) * sqrt(log p / N)` **per fit** by
+#' cross-validating the unit-level Riesz loss `L(v) = 0.5 v' Sig v - a' v`,
+#' restricted to the **KKT-feasible region** (the grid points where
+#' `riesz_lasso()` converges and `||Sig v - a||_inf <= lambda_node`). This is the
+#' desparsified-lasso / auto-DML penalty-selection standard (van de Geer; hdi;
+#' Chernozhukov-Newey-Singh), replacing the fixed theory-scale `lambda_c = 1.0`
+#' (#295, Decision D2). The theory scale `1.0` is the documented **fallback** when
+#' no grid point is feasible.
+#'
+#' The constant is in pure-constant units (the `max(|a|)` constraint scale and the
+#' `sqrt(log p / N)` rate are factored out by `lambda_node_default()`), so the
+#' same selected constant transfers across effect directions -- the D2 "one
+#' `lambda_c` for the point estimate AND the simultaneous band" requirement
+#' (`debiasedATT()` CV-selects on the overall-ATT direction; the band reuses the
+#' constant, scaling each effect's `lambda_node_k` by its own `max(|a_k|)`).
+#'
+#' **Determinism.** The only RNG draw is the unit-fold assignment, seeded from the
+#' data (`as.integer(N * T)`, the `.fit_q1_nuisance()` convention) under
+#' `.with_preserved_rng()`; `riesz_lasso()` is itself deterministic. So the CV is
+#' reproducible and identical at the `debiasedATT()` and `simultaneousCIs()` call
+#' sites (same `Sig` / `X` / `N` / `T` / direction).
+#'
+#' @param Sig_full Numeric `p x p`; the full-data Gram `crossprod(X) / n`.
+#' @param a Numeric length `p`; the target (theta-space) direction.
+#' @param X Numeric `n x p` (`n = N*T`); the unit-major balanced design (for the
+#'   fold-specific Grams).
+#' @param N_units,T Integer; units and time periods.
+#' @param mult_grid Numeric; multipliers of the theory scale to search (the grid
+#'   spans below and above `1.0` so the CV sees the feasibility edge).
+#' @param nfolds Integer; CV folds over units.
+#' @param riesz_max_iter,riesz_tol Passed to `riesz_lasso()` for the fold solves.
+#' @param gate_max_iter Integer; iteration cap for the full-data feasibility gate
+#'   ONLY (the gate just classifies feasible/infeasible, so a smaller cap is
+#'   cheap); floored at `riesz_max_iter` if that is smaller.
+#' @return A list: `lambda_c` (the selected constant, or `1.0` on fallback),
+#'   `fallback` (logical), `cv_loss` / `feasible` (length-`mult_grid`), `mult_grid`.
+#' @keywords internal
+#' @noRd
+.cv_lambda_node <- function(
+	Sig_full,
+	a,
+	X,
+	N_units,
+	T,
+	mult_grid = c(0.15, 0.2, 0.3, 0.5, 0.75, 1.0, 1.5, 2.0),
+	nfolds = 5L,
+	riesz_max_iter = 5000L,
+	riesz_tol = 1e-9,
+	gate_max_iter = 500L
+) {
+	p <- length(a)
+	# Theory anchor; the grid is `mult_grid * lam0` (pure-constant units).
+	lam0 <- lambda_node_default(
+		p = p,
+		N = N_units,
+		c = 1.0,
+		scale = max(abs(a))
+	)
+	gate_iter <- min(gate_max_iter, riesz_max_iter)
+
+	# --- Feasibility gate (full data): only KKT-feasible grid points compete. ---
+	# Deliberately conservative: a grid point qualifies only if the reduced-budget
+	# (`gate_iter`) solve BOTH converges AND certifies `||Sig v - a||_inf <= lambda`.
+	# The deployed solve (debiasedATT() / .build_regression_if_highdim()) runs the
+	# full `riesz_max_iter` budget and accepts feasibility regardless of `converged`,
+	# so the gate can in principle exclude a lambda that becomes feasible only after
+	# more iterations, biasing selection toward larger (better-conditioned) constants.
+	# That is the safe direction for a pre-filter (CV competes only among confidently
+	# feasible candidates) and was not observed to bite; revisit under the #88
+	# coverage work if the feasible edge must extend to smaller lambda.
+	lambdas <- mult_grid * lam0
+	feasible <- vapply(
+		lambdas,
+		function(lam) {
+			vf <- riesz_lasso(
+				Sig_full,
+				a,
+				lam,
+				max_iter = gate_iter,
+				tol = riesz_tol
+			)
+			isTRUE(attr(vf, "converged")) &&
+				attr(vf, "feasibility") <= lam * (1 + riesz_tol)
+		},
+		logical(1)
+	)
+	feas_idx <- which(feasible)
+	if (length(feas_idx) == 0L) {
+		# No feasible grid point -> documented theory-scale fallback.
+		return(list(
+			lambda_c = 1.0,
+			fallback = TRUE,
+			cv_loss = rep(NA_real_, length(mult_grid)),
+			feasible = feasible,
+			mult_grid = mult_grid
+		))
+	}
+
+	# --- Unit-fold CV of the Riesz loss over the feasible grid points. ---
+	# Data-derived fold seed (the only RNG draw; RNG state preserved). Unit-major
+	# balanced panel: unit i occupies rows ((i-1)*T + 1):(i*T). Two configs sharing
+	# `N*T` share this fold seed, which is harmless: the seed only fixes a partition
+	# of units into folds, so reuse just means an identical (still valid) split.
+	cv_seed <- as.integer(min(as.numeric(N_units) * T, .Machine$integer.max))
+	fold <- .with_preserved_rng(
+		cv_seed,
+		sample(rep(seq_len(nfolds), length.out = N_units))
+	)
+	unit_of_row <- rep(seq_len(N_units), each = T)
+	cv_loss <- rep(NA_real_, length(mult_grid))
+	for (gi in feas_idx) {
+		lam <- lambdas[gi]
+		fold_losses <- vapply(
+			seq_len(nfolds),
+			function(f) {
+				test_rows <- unit_of_row %in% which(fold == f)
+				X_tr <- X[!test_rows, , drop = FALSE]
+				X_te <- X[test_rows, , drop = FALSE]
+				Sig_tr <- crossprod(X_tr) / nrow(X_tr)
+				Sig_te <- crossprod(X_te) / nrow(X_te)
+				v_tr <- riesz_lasso(
+					Sig_tr,
+					a,
+					lam,
+					max_iter = riesz_max_iter,
+					tol = riesz_tol
+				)
+				# Held-out Riesz loss 0.5 v' Sig_te v - a' v.
+				0.5 *
+					as.numeric(crossprod(v_tr, Sig_te %*% v_tr)) -
+					sum(a * v_tr)
+			},
+			numeric(1)
+		)
+		cv_loss[gi] <- mean(fold_losses)
+	}
+	best <- feas_idx[which.min(cv_loss[feas_idx])]
+	list(
+		lambda_c = mult_grid[best],
+		fallback = FALSE,
+		cv_loss = cv_loss,
+		feasible = feasible,
+		mult_grid = mult_grid
+	)
+}
