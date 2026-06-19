@@ -86,9 +86,14 @@ utils::globalVariables(c(
 #'   to the family. This desparsified `p >= NT` path is **experimental**
 #'   (`fetwfe()` fits only; coverage is not yet simulation-validated): inspect the
 #'   returned `feasibility` / `converged` diagnostics. A non-`fetwfe()` `p >= NT`
-#'   fit (e.g. `betwfe()`) instead falls back to the fixed-`p` selected-support
-#'   band (valid when its selected support is low-dimensional). The desparsified
-#'   path covers all
+#'   fit (e.g. `betwfe()`) has no desparsified band, so it instead falls back to
+#'   the fixed-`p` selected-support band and emits a `warning()`: a #308 coverage
+#'   study shows that band substantially **under-covers** in the `p >= NT` regime
+#'   -- even when the selected support is low-dimensional -- because the bridge
+#'   shrinks the band center toward zero and the post-selection standard error
+#'   understates variability, so the band is returned but should be treated as
+#'   unreliable (use a `fetwfe()` fit for valid high-dimensional bands). The
+#'   desparsified path covers all
 #'   four families (a high-dimensional `family = "event_study"` fit additionally
 #'   carries the propensity channel `F_pi`). In the high-dimensional regime the
 #'   band is centered on the **debiased** estimate (the Theorem 6.6 correction,
@@ -687,9 +692,10 @@ simultaneousCIs.twfeCovs <- function(
 		# input to the full-design desparsified construction. The desparsified path
 		# is FETWFE-only (the only estimator with a regularized `p >= NT` fit); a
 		# non-fetwfe `p >= NT` fit (e.g. betwfe) leaves `targets` NULL and falls
-		# through to the fixed-p selected-support construction -- valid when its
-		# selected support is low-dimensional (the usual sparse case). Fixed-p
-		# (`p < NT`) likewise leaves `targets` NULL.
+		# through to the fixed-p selected-support construction (and warns below: a
+		# #308 coverage study shows that band under-covers in `p >= NT`, even when
+		# the selected support is low-dimensional). Fixed-p (`p < NT`) likewise
+		# leaves `targets` NULL.
 		targets <- NULL
 		cell_targets <- NULL
 		a_att <- NULL
@@ -732,6 +738,29 @@ simultaneousCIs.twfeCovs <- function(
 				a_beta_att[idx] <- x$cohort_probs[g] / length(idx)
 			}
 			a_att <- as.numeric(crossprod(A, a_beta_att))
+		} else if (p >= N * T_) {
+			# Non-fetwfe high-dimensional (`p >= NT`) bootstrap (e.g. betwfe): the
+			# desparsified uniformly-valid path is fetwfe-only, so this falls through
+			# to the post-selection fixed-p selected-support band. A #308 coverage
+			# study shows that band substantially UNDER-COVERS in the `p >= NT` regime
+			# -- even when the selected support is low-dimensional -- because the
+			# bridge shrinks the band center toward zero (bias/SE ~ -10) and the
+			# post-selection SE understates sampling variability. The band is still
+			# returned (not an error, preserving #305), but is unreliable. (The
+			# all-zero-support sub-case already returned with the #304 warning above,
+			# so this fires only on the non-empty-support path.)
+			warning(
+				"simultaneousCIs(): a non-fetwfe high-dimensional (p >= NT) fit ",
+				"(e.g. betwfe()) has no desparsified band, so the returned band is ",
+				"the post-selection fixed-p selected-support band, centered on the ",
+				"bridge-shrunk estimate. Simulation (#308) shows it substantially ",
+				"UNDER-COVERS in the p >= NT regime, even when the selected support ",
+				"is low-dimensional (the bridge shrinkage biases the band center ",
+				"toward zero and the post-selection standard error understates ",
+				"variability); treat this result as unreliable. For valid ",
+				"high-dimensional simultaneous bands, use a fetwfe() fit.",
+				call. = FALSE
+			)
 		}
 		# event_study carries the non-zero cohort-probability (propensity)
 		# variance channel Sigma_2: build the SAME per-effect Jacobian list the

@@ -1,5 +1,22 @@
 # NEWS
 
+## Version 1.43.0
+
+### Improvements
+
+- `simultaneousCIs(method = "bootstrap")` now emits a `warning()` when called on a
+  **non-`fetwfe()` high-dimensional (`p >= NT`) fit** (e.g. `betwfe()`). Such a fit
+  has no desparsified (Theorem 6.6) band, so the call falls back to the post-selection
+  fixed-`p` selected-support band (a band, not an error, preserving #305) -- but a
+  coverage study (#308) shows that fallback band substantially **under-covers** in the
+  `p >= NT` regime, *even when the selected support is low-dimensional*: the bridge
+  shrinks the band center toward zero and the post-selection standard error understates
+  sampling variability. The warning flags the result as unreliable and points to using a
+  `fetwfe()` fit for valid high-dimensional simultaneous bands. The `@param method`
+  documentation and the inference vignette are corrected accordingly (the previous claim
+  that the fallback band is "valid when its selected support is low-dimensional" is
+  empirically falsified) (#308).
+
 ## Version 1.42.0
 
 ### Bug fixes
