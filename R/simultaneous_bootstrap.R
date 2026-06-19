@@ -592,7 +592,12 @@
 		# only the band runs and CVs on its own correct direction. Each effect's
 		# `lambda_node_k` then scales the shared constant by its own `max(|a_k|)`
 		# inside `.build_regression_if_highdim()`. The SAME resolved `lambda_c_used`
-		# also scales the #309 per-cell propensity directions below.
+		# also scales the #309 per-cell propensity directions below -- D2's "one
+		# constant" extended to the propensity channel. NB: the CV feasibility gate
+		# is on the overall-ATT direction `a_att` only, so a per-cell propensity
+		# direction is not guaranteed KKT-feasible at this shared constant; that is
+		# surfaced by the per-cell `propensity_feasibility` / `converged` diagnostics
+		# and the experimental-regime warning (a #88 coverage consideration).
 		lambda_c_used <- lambda_c
 		if (identical(lambda_c, "cv")) {
 			lambda_c_used <- .cv_lambda_node(
