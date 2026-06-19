@@ -1,5 +1,18 @@
 # NEWS
 
+## Version 1.44.0
+
+### Bug fixes
+
+- `simultaneousCIs()` now **inherits the fit's `alpha`** when `alpha` is not
+  supplied (the default is now `alpha = NULL`), matching `eventStudy()` and every
+  other accessor. Previously it hard-coded `alpha = 0.05`, so a fit built at a
+  non-default level (e.g. `fetwfe(..., alpha = 0.10)`) displayed 90% simultaneous
+  `catt_df` bands while `simultaneousCIs(fit)` silently returned 95% bands —
+  breaking the documented identity that the displayed bounds are the
+  `simultaneousCIs(fit, family = …)` bounds. Passing an explicit `alpha` still
+  overrides, and default (`alpha = 0.05`) fits are unaffected (#324).
+
 ## Version 1.43.0
 
 ### Improvements
