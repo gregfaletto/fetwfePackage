@@ -561,12 +561,18 @@ test_that("non-fetwfe (betwfe) high-dim bootstrap uses the fixed-p band, not an 
 	expect_gte(ncol(bfit$internal$X_final), nrow(bfit$internal$X_final))
 
 	for (fam in c("event_study", "cohort")) {
-		bo <- simultaneousCIs(
-			bfit,
-			family = fam,
-			method = "bootstrap",
-			B = 200,
-			seed = 1
+		# #308: the fallback band substantially under-covers (the selected support
+		# here is non-empty, so this is NOT the #304 all-zero degenerate path), so a
+		# warning fires; the band is still returned (preserving #305).
+		expect_warning(
+			bo <- simultaneousCIs(
+				bfit,
+				family = fam,
+				method = "bootstrap",
+				B = 200,
+				seed = 1
+			),
+			"under-?cover|unreliable"
 		)
 		expect_s3_class(bo, "simultaneous_cis")
 		# load-bearing: non-fetwfe HD routes through the fixed-p selected-support

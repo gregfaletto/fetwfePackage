@@ -60,9 +60,14 @@ construction of \code{debiasedATT()} (per-effect nodewise directions) generalize
 to the family. This desparsified \code{p >= NT} path is \strong{experimental}
 (\code{fetwfe()} fits only; coverage is not yet simulation-validated): inspect the
 returned \code{feasibility} / \code{converged} diagnostics. A non-\code{fetwfe()} \code{p >= NT}
-fit (e.g. \code{betwfe()}) instead falls back to the fixed-\code{p} selected-support
-band (valid when its selected support is low-dimensional). The desparsified
-path covers all
+fit (e.g. \code{betwfe()}) has no desparsified band, so it instead falls back to
+the fixed-\code{p} selected-support band and emits a \code{warning()}: a #308 coverage
+study shows that band substantially \strong{under-covers} in the \code{p >= NT} regime
+-- even when the selected support is low-dimensional -- because the bridge
+shrinks the band center toward zero and the post-selection standard error
+understates variability, so the band is returned but should be treated as
+unreliable (use a \code{fetwfe()} fit for valid high-dimensional bands). The
+desparsified path covers all
 four families (a high-dimensional \code{family = "event_study"} fit additionally
 carries the propensity channel \code{F_pi}). In the high-dimensional regime the
 band is centered on the \strong{debiased} estimate (the Theorem 6.6 correction,
