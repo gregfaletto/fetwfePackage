@@ -94,7 +94,12 @@ utils::globalVariables(c(
 #'   band is centered on the **debiased** estimate (the Theorem 6.6 correction,
 #'   equal to `debiasedATT()`'s point estimate for the matching contrast), not
 #'   the post-selection bridge estimate; fixed-p bands center on the (unbiased)
-#'   bridge estimate as before.
+#'   bridge estimate as before. Because this desparsified bootstrap band is
+#'   built from the empirical per-unit influence function -- needing neither GLS
+#'   whitening nor `sig_eps_sq` -- it also accepts a high-dimensional
+#'   **`gls = FALSE`** fetwfe fit (`calc_ses = FALSE`), the band analog of
+#'   `debiasedATT()`'s Omega-free SE (#307, #313). `method = "analytic"` still
+#'   requires valid analytic SEs (a `q < 1`, `gls = TRUE`, rank-satisfied fit).
 #' @param B Integer; number of multiplier-bootstrap replicates
 #'   (`method = "bootstrap"` only). Default `1000`.
 #' @param seed Optional integer; if supplied, the bootstrap draws are
@@ -529,14 +534,31 @@ simultaneousCIs.twfeCovs <- function(
 		cohort_offsets_int = cohort_offsets_int
 	)
 
-	# --- 5. Edge case 1: no valid SEs -> stop(). ---
-	if (!isTRUE(has_valid_ses)) {
+	# --- 5. Edge case 1: no valid SEs -> stop(), EXCEPT the Omega-free band. ---
+	# `calc_ses = FALSE` fits (gls = FALSE, or q >= 1) carry no analytic SEs. The one
+	# exception is the desparsified high-dimensional band: a `p >= NT` fetwfe fit
+	# under `method = "bootstrap"` builds a cluster-robust simultaneous band from the
+	# empirical per-unit influence function -- no GLS whitening, no `sig_eps_sq` --
+	# exactly as debiasedATT() does for the overall ATT (#307, #313). Every other
+	# calc_ses = FALSE case still errors: `method = "analytic"` needs `sig_eps_sq`
+	# (NA here, and would crash downstream in Sigma_1); fixed-p (`p < NT`) is #312's
+	# scope; a non-fetwfe `p >= NT` fit (betwfe) is #308's. `p`, `N`, `T_`,
+	# `is_fetwfe`, and the resolved `method` are all already in scope here.
+	proceed_omega_free_highdim <- !isTRUE(has_valid_ses) &&
+		is_fetwfe &&
+		identical(method, "bootstrap") &&
+		(p >= N * T_)
+	if (!isTRUE(has_valid_ses) && !proceed_omega_free_highdim) {
 		stop(
 			"simultaneousCIs(): the fitted object was constructed with ",
-			"calc_ses = FALSE; standard errors are not available. Re-fit ",
-			"with q < 1 (FETWFE/BETWFE) and a satisfied rank condition, or -- for ",
-			"a `gls = FALSE` high-dimensional fit -- use `debiasedATT()` for the ",
-			"overall-ATT standard error.",
+			"calc_ses = FALSE; an analytic simultaneous band is not available. For ",
+			"a `gls = FALSE` high-dimensional (`p >= NT`) fetwfe fit, use ",
+			"`method = \"bootstrap\"` for cluster-robust simultaneous bands (the ",
+			"Omega-free desparsified construction, the band analog of ",
+			"`debiasedATT()`). Otherwise re-fit with q < 1 and `gls = TRUE` (a ",
+			"satisfied rank condition gives valid analytic SEs); the fixed-p ",
+			"`gls = FALSE` band is a planned follow-up (#312). For the overall ATT ",
+			"specifically, `debiasedATT()` works in both regimes.",
 			call. = FALSE
 		)
 	}
