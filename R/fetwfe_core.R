@@ -596,6 +596,7 @@ fetwfe_core <- function(
 			G = G,
 			c_names = c_names,
 			q = q,
+			gls = gls,
 			beta_hat = rep(0, p), # Slopes are all zero
 			treat_inds = treat_inds,
 			treat_int_inds = treat_int_inds,
@@ -682,6 +683,7 @@ fetwfe_core <- function(
 			G = G,
 			c_names = c_names,
 			q = q,
+			gls = gls,
 			beta_hat = beta_hat_early_exit, # Untransformed slopes
 			treat_inds = treat_inds,
 			treat_int_inds = treat_int_inds,
