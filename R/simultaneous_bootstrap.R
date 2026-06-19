@@ -584,12 +584,13 @@
 		# desparsification (#309) -- so they do ONE O(NT p^2) crossprod, not several.
 		Sig_hd <- crossprod(X_final) / n
 		# Resolve the node-penalty constant ONCE on the overall-ATT direction (#295
-		# D2: one `lambda_c` serves the point estimate AND every band effect). For the
-		# common consecutive-cohort layout `a_att` equals debiasedATT()'s direction
-		# exactly (same fit's Sig / X / data-derived seed), so the band center matches
-		# `debiasedATT()$att` under `lambda_c = "cv"`; for scattered adoption times
-		# high-dim debiasedATT() is unsupported (it errors at its identity guard), so
-		# only the band runs and CVs on its own correct direction. Each effect's
+		# D2: one `lambda_c` serves the point estimate AND every band effect). `a_att`
+		# is built (in `.simultaneous_cis_impl`) with the offset-resolved per-cohort
+		# block sizes, the SAME construction debiasedATT() uses, so it equals
+		# debiasedATT()'s direction exactly -- and the band center matches
+		# `debiasedATT()$att` under `lambda_c = "cv"` for BOTH consecutive and
+		# scattered (non-consecutive) adoption (#318 made debiasedATT() support
+		# scattered; #323 aligned this CV direction with it). Each effect's
 		# `lambda_node_k` then scales the shared constant by its own `max(|a_k|)`
 		# inside `.build_regression_if_highdim()`. The SAME resolved `lambda_c_used`
 		# also scales the #309 per-cell propensity directions below -- D2's "one
