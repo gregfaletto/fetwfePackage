@@ -103,12 +103,12 @@ for (est in c("fetwfe", "etwfe", "betwfe")) {
 				names(fit_no$cohort_probs)
 			)
 			expect_identical(names(fit_ic$cohort_probs), c("6", "7", "8", "9"))
-			fi_no <- .resolve_event_study_offsets_and_first_inds(
+			fi_no <- .resolve_cohort_offsets_and_first_inds(
 				fit_no,
 				fit_no$G,
 				fit_no$T
 			)$first_inds
-			fi_ic <- .resolve_event_study_offsets_and_first_inds(
+			fi_ic <- .resolve_cohort_offsets_and_first_inds(
 				fit_ic,
 				fit_ic$G,
 				fit_ic$T
@@ -147,7 +147,7 @@ test_that("legacy indep fit with unnamed cohort_probs is rescued via catt_df", {
 	expect_identical(as.integer(off), c(6L, 7L, 8L, 9L))
 	expect_identical(
 		as.integer(
-			.resolve_event_study_offsets_and_first_inds(
+			.resolve_cohort_offsets_and_first_inds(
 				legacy,
 				legacy$G,
 				legacy$T

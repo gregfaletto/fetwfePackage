@@ -419,7 +419,7 @@ debiasedATT <- function(
 	# no-label fallback -- so consecutive fits stay byte-identical.
 	# `genFullInvFusionTransformMat()` already takes `first_inds`, so the scattered
 	# offsets propagate into the transform automatically.
-	first_inds <- .resolve_event_study_offsets_and_first_inds(
+	first_inds <- .resolve_cohort_offsets_and_first_inds(
 		fit,
 		G = G,
 		T = T

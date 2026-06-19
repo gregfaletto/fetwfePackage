@@ -114,13 +114,16 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	}
 }
 
-#' Resolve cohort offsets and first-treatment-effect indices for event-study
+#' Resolve cohort offsets and first-treatment-effect indices
 #'
-#' Wraps `.derive_cohort_offsets_from_fit(x)` and the conditional dispatch
-#' between `getFirstInds(G, T)` (the consecutive-cohort assumption, used as
-#' a fall-back when `cohort_probs` carry no integer-coercible names --- true
-#' of synthetic genCoefs-based fixtures) and `getFirstIndsFromOffsets(...)`
-#' (the scattered-cohort path used on real panels like `bacondecomp::divorce`).
+#' The package-wide cohort-offset resolver: **not** event-study-specific (despite
+#' living in this file), it is used by `event_study()`, `cohortTimeATTs()`,
+#' `simultaneousCIs()`, and `debiasedATT()` (#318). Wraps
+#' `.derive_cohort_offsets_from_fit(x)` and the conditional dispatch between
+#' `getFirstInds(G, T)` (the consecutive-cohort assumption, used as a fall-back
+#' when `cohort_probs` carry no integer-coercible names --- true of synthetic
+#' genCoefs-based fixtures) and `getFirstIndsFromOffsets(...)` (the
+#' scattered-cohort path used on real panels like `bacondecomp::divorce`).
 #'
 #' Extracted in v1.13.3 (#174) to eliminate a byte-identical 10-line block
 #' that had appeared in both `.event_study_etwfe_betwfe()` and
@@ -135,7 +138,7 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #'   length `G`) and `first_inds` (integer vector of length `G`).
 #' @keywords internal
 #' @noRd
-.resolve_event_study_offsets_and_first_inds <- function(x, G, T) {
+.resolve_cohort_offsets_and_first_inds <- function(x, G, T) {
 	cohort_offsets_int <- .derive_cohort_offsets_from_fit(x)
 	if (is.null(cohort_offsets_int)) {
 		list(
@@ -198,7 +201,7 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	# `cohort_offsets_int` is also used for the per-event-time validity
 	# set `V_e <- which(cohort_offsets_int <= T - e)`; for consecutive
 	# cohorts this reduces to the pre-#174 `seq_len(G) <= T - 1L - e`.
-	offs <- .resolve_event_study_offsets_and_first_inds(x, G = G, T = T)
+	offs <- .resolve_cohort_offsets_and_first_inds(x, G = G, T = T)
 	cohort_offsets_int <- offs$cohort_offsets_int
 	first_inds <- offs$first_inds
 	tes <- beta_hat[treat_inds]
@@ -423,10 +426,10 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	se_type <- if (is.null(x$se_type)) "default" else x$se_type
 	is_indep <- isTRUE(x$indep_counts_used)
 	# v1.13.3 (#174): offset resolution lives in the shared helper
-	# `.resolve_event_study_offsets_and_first_inds()` at the top of this
+	# `.resolve_cohort_offsets_and_first_inds()` at the top of this
 	# file. The fall-back keeps synthetic-fixture results byte-identical
 	# to the pre-#174 path.
-	offs <- .resolve_event_study_offsets_and_first_inds(x, G = G, T = T)
+	offs <- .resolve_cohort_offsets_and_first_inds(x, G = G, T = T)
 	cohort_offsets_int <- offs$cohort_offsets_int
 	first_inds <- offs$first_inds
 	tes <- beta_hat[treat_inds]

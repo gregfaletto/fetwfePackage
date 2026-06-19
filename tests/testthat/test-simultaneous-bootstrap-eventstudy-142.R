@@ -72,7 +72,7 @@
 	num_treats <- length(treat_inds)
 	cohort_probs_overall <- fit$cohort_probs_overall
 	theta_hat_full <- fit$internal$theta_hat
-	offs <- fetwfe:::.resolve_event_study_offsets_and_first_inds(
+	offs <- fetwfe:::.resolve_cohort_offsets_and_first_inds(
 		fit,
 		G = G,
 		T = T_
@@ -545,7 +545,7 @@ test_that("event_study bootstrap bands attain near-nominal family-wise coverage"
 		# per-cell effects across the cohorts treated by event time e (matches
 		# the truth construction in test-simultaneous-cis.R Test 3).
 		cpo <- fit$cohort_probs_overall
-		offs <- fetwfe:::.resolve_event_study_offsets_and_first_inds(
+		offs <- fetwfe:::.resolve_cohort_offsets_and_first_inds(
 			fit,
 			G = G,
 			T = T_

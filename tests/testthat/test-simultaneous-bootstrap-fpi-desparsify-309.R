@@ -76,7 +76,7 @@ hd309 <- .make_hd309_fit()
 	E <- matrix(0, p, nt)
 	E[cbind(ti, seq_len(nt))] <- 1
 	cell_targets <- crossprod(A, E) # p x num_treats
-	offs <- fetwfe:::.resolve_event_study_offsets_and_first_inds(
+	offs <- fetwfe:::.resolve_cohort_offsets_and_first_inds(
 		hd,
 		G = G,
 		T = Tt
@@ -251,7 +251,7 @@ test_that("high-dim event_study band matches the desparsified reconstruction (en
 	K <- pr$T - 1L
 	# Regression channel css_reg: the event-time family targets are the pooled cell
 	# targets, targets[,k] = sum_g w_{g,k} cell_targets[,g-cell].
-	offs <- fetwfe:::.resolve_event_study_offsets_and_first_inds(
+	offs <- fetwfe:::.resolve_cohort_offsets_and_first_inds(
 		hd309,
 		G = pr$G,
 		T = pr$T
