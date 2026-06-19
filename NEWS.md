@@ -1,5 +1,23 @@
 # NEWS
 
+## Version 1.39.0
+
+### New features
+
+- `simultaneousCIs(method = "bootstrap")` now accepts a **`gls = FALSE`
+  high-dimensional (`p >= NT`) fetwfe fit** (`calc_ses = FALSE`), producing
+  cluster-robust simultaneous bands for the `event_study` / `cohort` /
+  `all_post_treatment` / `custom` families without GLS whitening (#313). This is
+  the band analog of #307's Omega-free `debiasedATT()` SE: the high-dimensional
+  bootstrap variance is the empirical per-unit influence function (cluster-robust
+  by construction) and the band center is the same desparsified Theorem-6.6
+  estimate, so neither GLS whitening nor `sig_eps_sq` is needed; the band center
+  still matches `debiasedATT()$att` on the overall-ATT contrast. Previously such a
+  fit errored at the `calc_ses = FALSE` gate. `method = "analytic"` still requires
+  valid analytic SEs (a `q < 1`, `gls = TRUE`, rank-satisfied fit); the fixed-`p`
+  (`p < NT`) `gls = FALSE` band remains a planned follow-up (#312), and the
+  `p >= NT` path stays experimental (coverage validation under #295).
+
 ## Version 1.38.0
 
 ### Bug fixes

@@ -68,7 +68,12 @@ carries the propensity channel \code{F_pi}). In the high-dimensional regime the
 band is centered on the \strong{debiased} estimate (the Theorem 6.6 correction,
 equal to \code{debiasedATT()}'s point estimate for the matching contrast), not
 the post-selection bridge estimate; fixed-p bands center on the (unbiased)
-bridge estimate as before.}
+bridge estimate as before. Because this desparsified bootstrap band is
+built from the empirical per-unit influence function -- needing neither GLS
+whitening nor \code{sig_eps_sq} -- it also accepts a high-dimensional
+\strong{\code{gls = FALSE}} fetwfe fit (\code{calc_ses = FALSE}), the band analog of
+\code{debiasedATT()}'s Omega-free SE (#307, #313). \code{method = "analytic"} still
+requires valid analytic SEs (a \code{q < 1}, \code{gls = TRUE}, rank-satisfied fit).}
 
 \item{B}{Integer; number of multiplier-bootstrap replicates
 (\code{method = "bootstrap"} only). Default \code{1000}.}
