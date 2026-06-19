@@ -1,5 +1,23 @@
 # NEWS
 
+## Version 1.40.0
+
+### New features
+
+- `debiasedATT()` now produces its Omega-free cluster-robust standard error for
+  **`gls = FALSE` fixed-p (`p < NT`) fits** (`calc_ses = FALSE`), the fixed-p
+  analog of the high-dimensional path #307 already supported. Such fits
+  previously errored. The regression channel is the exact-inverse OLS direction
+  with the unit-clustered residual sandwich, and the cohort-weight channel falls
+  back to the propensity-only plug-in (`.plugin_v2`); both are `sig_eps_sq`-free,
+  so no GLS whitening is needed (paper Decision D1). This unblocks (1) the
+  boundary band `N(T-1) <= p < NT`, where REML cannot fit (`gls = TRUE` is
+  infeasible) but `gls = FALSE` can, and (2) a within-unit-dependence-robust
+  fixed-p SE generally. A GLS-whitened `q >= 1` fit still errors (no validated
+  debiased SE); an un-whitened fit is accepted for any `q` (the SE is
+  q-independent). The fixed-p `gls = FALSE` SE is valid (not experimental); see
+  also #313 for the simultaneous-band analog.
+
 ## Version 1.39.0
 
 ### New features

@@ -164,10 +164,12 @@
 #' [simultaneousCIs()] band center agree exactly) --- but it is not tunable via
 #' the fit's `cv_seed`.
 #'
-#' @param fit A fitted object from [fetwfe()] computed with `q < 1` (so the
-#'   bridge selection produces a valid standard error). [etwfe()] / [betwfe()] /
-#'   [twfeCovs()] are not supported (the construction is specific to the FETWFE
-#'   transformed-coefficient space).
+#' @param fit A fitted object from [fetwfe()]. In the fixed-p (`p < NT`) regime
+#'   the SE needs either bridge selection (`q < 1`, `gls = TRUE`) or an un-whitened
+#'   fit (`gls = FALSE`, any `q`, the Omega-free cluster-robust path; #312); a
+#'   GLS-whitened `q >= 1` fit is rejected. The high-dimensional (`p >= NT`) path
+#'   accepts any fit. [etwfe()] / [betwfe()] / [twfeCovs()] are not supported (the
+#'   construction is specific to the FETWFE transformed-coefficient space).
 #' @param alpha Numeric in `(0, 1)`; the confidence level is `1 - alpha`.
 #'   Defaults to the `alpha` stored on the fit.
 #' @param lambda_c The leading constant of the high-dimensional (`p >= NT`)
@@ -308,9 +310,13 @@ debiasedATT <- function(
 	highdim <- p >= n
 
 	# Standard-error gate, regime-aware.
-	#  - Fixed-p (p < NT): the SE is the OLS-identity construction, which needs the
-	#    bridge-selection regime (q < 1) -- exactly when the fit computed its oracle
-	#    SEs (`calc_ses = TRUE`). A q >= 1 fit has no valid debiased SE here.
+	#  - Fixed-p (p < NT): two valid SE paths. (i) A GLS-whitened bridge fit
+	#    (`gls = TRUE`, q < 1, `calc_ses = TRUE`) uses the OLS-identity oracle SE.
+	#    (ii) An un-whitened fit (`gls = FALSE`, `sig_eps_sq = NA`) uses the exact-
+	#    inverse OLS direction + unit-clustered residual sandwich -- Omega-free and
+	#    valid for ANY q, the fixed-p analog of the high-dim path (#312, paper
+	#    Decision D1). Only a WHITENED q >= 1 fit (`calc_ses = FALSE` but
+	#    `!is.na(sig_eps_sq)`) has no validated debiased SE and is rejected below.
 	#  - High-dim (p >= NT): the SE is the desparsified cluster-robust sandwich
 	#    (V1 unit-clustered + V2 plug-in), which needs neither the oracle SE
 	#    machinery nor Omega -- so a `gls = FALSE` fit (`calc_ses = FALSE`, no GLS
@@ -321,28 +327,20 @@ debiasedATT <- function(
 	#    |diff| = 0, q = 1 vs q < 1) -- the high-dim center uses the re-fit q=1
 	#    nuisance, not the input `theta_hat` (which seeds only the `a_theta` identity
 	#    check below). A high-dim q >= 1 fit is newly accepted (vs prior versions).
-	if (!highdim && !isTRUE(fit$internal$calc_ses)) {
-		if (is.na(fit$sig_eps_sq)) {
-			# A `gls = FALSE` (un-whitened) fixed-p fit -- including the boundary band
-			# N(T-1) <= p < NT where REML is infeasible but p < NT. The cluster-robust
-			# sandwich IS valid here, but the fixed-p `debiasedATT()` path is not yet
-			# wired for an un-whitened fit (the p >= NT path is; the fixed-p one is the
-			# #312 follow-up). Name the real cause, not the misleading "requires q < 1".
-			stop(
-				"debiasedATT(): a `gls = FALSE` (un-whitened) fit in the fixed-p ",
-				"(p < NT) regime is not yet supported -- the high-dimensional ",
-				"(p >= NT) cluster-robust path is implemented, but the fixed-p ",
-				"cluster-robust SE is a planned follow-up (#312). Re-fit with ",
-				"`gls = TRUE` (supplying `sig_eps_sq` / `sig_eps_c_sq` if ",
-				"`p >= N(T - 1)`), or use a `p >= NT` design.",
-				call. = FALSE
-			)
-		}
+	# A WHITENED (`gls = TRUE`) fixed-p fit with q >= 1: the exact inverse gives the
+	# GLS direction, whose validated SE is the oracle `calc_ses = TRUE` path that
+	# q >= 1 lacks -- so no validated debiased SE exists, and it is rejected. A
+	# `gls = FALSE` / un-whitened fit (`is.na(sig_eps_sq)`) is NOT rejected: it falls
+	# through to the exact-inverse OLS + unit-clustered sandwich, valid for any q
+	# (#312). `is.na(sig_eps_sq)` is an exact proxy for un-whitened: `gls = FALSE`
+	# leaves it NA, while REML estimates it under `gls = TRUE` even when q >= 1.
+	if (!highdim && !isTRUE(fit$internal$calc_ses) && !is.na(fit$sig_eps_sq)) {
 		stop(
 			"debiasedATT() requires a fit computed with q < 1 (bridge selection) in ",
-			"the fixed-p (p < NT) regime, so a valid debiased standard error exists. ",
-			"This fit has calc_ses = FALSE (q >= 1). Re-fit with q < 1 (e.g. ",
-			"q = 0.5).",
+			"the fixed-p (p < NT) regime when the design is GLS-whitened ",
+			"(`gls = TRUE`), so a valid debiased standard error exists. This fit has ",
+			"calc_ses = FALSE (q >= 1). Re-fit with q < 1 (e.g. q = 0.5), or with ",
+			"`gls = FALSE` for the cluster-robust SE.",
 			call. = FALSE
 		)
 	}

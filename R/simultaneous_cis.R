@@ -557,8 +557,9 @@ simultaneousCIs.twfeCovs <- function(
 			"Omega-free desparsified construction, the band analog of ",
 			"`debiasedATT()`). Otherwise re-fit with q < 1 and `gls = TRUE` (a ",
 			"satisfied rank condition gives valid analytic SEs); the fixed-p ",
-			"`gls = FALSE` band is a planned follow-up (#312). For the overall ATT ",
-			"specifically, `debiasedATT()` works in both regimes.",
+			"`gls = FALSE` simultaneous band is not yet built (the band analog of ",
+			"the point-estimate SE #312 ships). For the overall ATT specifically, ",
+			"`debiasedATT()` works in both regimes (including fixed-p `gls = FALSE`).",
 			call. = FALSE
 		)
 	}
