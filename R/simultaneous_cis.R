@@ -107,13 +107,15 @@ utils::globalVariables(c(
 #' @param lambda_c,riesz_max_iter,riesz_tol Controls for the high-dimensional
 #'   (`p >= NT`) bootstrap, where each effect's debiasing direction is a nodewise
 #'   (desparsified-lasso) `riesz_lasso()` solve. `lambda_c` is the leading
-#'   constant of the penalty `lambda_node = lambda_c * max(|a|) * sqrt(log p / N)`;
-#'   the default `1.0` (theory scale) keeps the directions feasible. **Smaller
-#'   values can leave directions infeasible (a warning fires and those bands are
-#'   unreliable).** Ignored when `p < NT` or `method = "analytic"`. The fixed
-#'   default is a known limitation: the eventual production path should select
-#'   this per fit by cross-validation rather than carry a constant (tracked at
-#'   #295).
+#'   constant of the penalty `lambda_node = lambda_c * max(|a|) * sqrt(log p / N)`:
+#'   either a single positive number (the default `1.0` = theory scale) or the
+#'   string `"cv"`, which selects the constant **per fit** by cross-validation
+#'   (the same CV `debiasedATT()` uses, on the overall-ATT direction, so one
+#'   constant serves the point estimate and every band effect; #295). **Smaller
+#'   fixed values can leave directions infeasible (a warning fires and those bands
+#'   are unreliable).** Ignored when `p < NT` or `method = "analytic"`. The default
+#'   stays the fixed `1.0` (the `"cv"` mechanism is opt-in pending coverage
+#'   validation).
 #' @return An object of S3 class `"simultaneous_cis"`: a list with
 #'   \describe{
 #'     \item{ci}{A data frame with columns `effect`, `estimate`,
@@ -142,7 +144,9 @@ utils::globalVariables(c(
 #'   backing `ci` are the cluster-robust per-unit ones (so for a non-`cluster` fit
 #'   the bootstrap band may differ from the analytic homoskedastic band). A
 #'   `"high-dimensional"` fit additionally carries per-effect `feasibility`,
-#'   `converged`, and `lambda_node` (the nodewise-direction diagnostics).
+#'   `converged`, and `lambda_node` (the nodewise-direction diagnostics), plus
+#'   `lambda_c` (the leading constant used) and `lambda_c_selection` (`"fixed"`
+#'   or `"cv"`).
 #' @details
 #' **Family resolution and `K`.** `"event_study"` resolves to one effect per
 #' post-treatment event time `e = 0, ..., T - 2` (`K = T - 1`); `"cohort"` to
@@ -413,6 +417,22 @@ simultaneousCIs.twfeCovs <- function(
 	# --- 1. Argument validation (mvtnorm guard deferred to step 11). ---
 	stopifnot(is.numeric(alpha), length(alpha) == 1L, alpha > 0, alpha < 1)
 	method <- match.arg(method, c("analytic", "bootstrap"))
+	# `lambda_c` is validated unconditionally (symmetric with debiasedATT()). It is
+	# only USED on the high-dim bootstrap path, but a malformed value should error
+	# regardless of `method` rather than be silently ignored under "analytic".
+	if (
+		!(identical(lambda_c, "cv") ||
+			(is.numeric(lambda_c) &&
+				length(lambda_c) == 1L &&
+				!is.na(lambda_c) &&
+				lambda_c > 0))
+	) {
+		stop(
+			"simultaneousCIs(): `lambda_c` must be a single positive number ",
+			"or the string \"cv\".",
+			call. = FALSE
+		)
+	}
 	if (method == "bootstrap") {
 		if (
 			!is.numeric(B) ||
@@ -633,6 +653,7 @@ simultaneousCIs.twfeCovs <- function(
 		# selected support is low-dimensional (the usual sparse case). Fixed-p
 		# (`p < NT`) likewise leaves `targets` NULL.
 		targets <- NULL
+		a_att <- NULL
 		if (p >= N * T_ && is_fetwfe) {
 			A <- genFullInvFusionTransformMat(
 				first_inds = first_inds,
@@ -646,6 +667,23 @@ simultaneousCIs.twfeCovs <- function(
 			a_beta_mat <- matrix(0, p, K)
 			a_beta_mat[treat_inds, ] <- t(psi_tes_mat)
 			targets <- crossprod(A, a_beta_mat) # p x K full theta-space directions
+			# Overall-ATT theta-space direction (cohort_probs-weighted), the direction
+			# the shared CV penalty constant is selected on (#295 D2: one lambda_c for
+			# point + band). For the common consecutive-cohort layout this equals
+			# debiasedATT()'s `a_th` exactly (same A / cohort_probs / first_inds), so
+			# the CV'd constant -- hence the band center -- matches debiasedATT() under
+			# `lambda_c = "cv"`. (For scattered adoption times the two use different
+			# `first_inds` -- getFirstInds() in debiasedATT() vs the offset resolver
+			# here -- but high-dim debiasedATT() is unsupported there anyway: it errors
+			# at its ATT-identity guard, so no shared-constant divergence can ship and
+			# the band simply CVs on its own correct direction.)
+			a_beta_att <- numeric(p)
+			cohort_of_treat <- rep(seq_len(G), times = (T_ - 1):(T_ - G))
+			for (g in seq_len(G)) {
+				idx <- treat_inds[cohort_of_treat == g]
+				a_beta_att[idx] <- x$cohort_probs[g] / length(idx)
+			}
+			a_att <- as.numeric(crossprod(A, a_beta_att))
 		}
 		# event_study carries the non-zero cohort-probability (propensity)
 		# variance channel Sigma_2: build the SAME per-effect Jacobian list the
@@ -690,6 +728,7 @@ simultaneousCIs.twfeCovs <- function(
 			pointwise_crit = pointwise_crit,
 			bonferroni_crit = bonferroni_crit,
 			targets = targets,
+			a_att = a_att,
 			J_list = J_list,
 			theta_sel = theta_sel,
 			cohort_probs_overall = cohort_probs_overall,

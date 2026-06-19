@@ -170,13 +170,17 @@
 #'   transformed-coefficient space).
 #' @param alpha Numeric in `(0, 1)`; the confidence level is `1 - alpha`.
 #'   Defaults to the `alpha` stored on the fit.
-#' @param lambda_c Numeric `> 0`; the leading constant of the high-dimensional
-#'   (`p >= NT`) nodewise penalty `lambda_node = lambda_c * max(|a|) *
-#'   sqrt(log(p) / N)` (`N` = number of units). Larger values shrink the
-#'   debiasing direction more (more conservative). **Ignored when `p < NT`.**
-#'   Default `1.0`. The coverage-optimal value is regime- and data-dependent and
-#'   not yet established by simulation (see *Assumptions*); treat this as a
-#'   tunable, experimental knob.
+#' @param lambda_c The leading constant of the high-dimensional (`p >= NT`)
+#'   nodewise penalty `lambda_node = lambda_c * max(|a|) * sqrt(log(p) / N)` (`N` =
+#'   number of units). Either a single positive number (a fixed constant; default
+#'   `1.0` = the theory scale) or the string `"cv"`, which selects the constant
+#'   **per fit** by cross-validating the unit-level Riesz loss
+#'   `0.5 v'Sigma v - a'v` over the KKT-feasible region (the desparsified-lasso /
+#'   auto-DML standard; van de Geer; Chernozhukov-Newey-Singh), falling back to
+#'   the theory scale `1.0` when no grid penalty is feasible (#295). Larger values
+#'   shrink the debiasing direction more. **Ignored when `p < NT`.** The default
+#'   stays the fixed `1.0` (the `"cv"` mechanism is opt-in pending simulation
+#'   validation of its coverage); treat the `p >= NT` path as experimental.
 #' @param riesz_max_iter,riesz_tol Integer / numeric; coordinate-descent controls
 #'   for the high-dimensional nodewise solver. **Ignored when `p < NT`.**
 #'
@@ -200,8 +204,12 @@
 #'
 #'   For high-dimensional (`p >= NT`) fits the list additionally contains
 #'   `feasibility` (`= ||Sigma v - a||_inf`, the nodewise KKT certificate, which
-#'   should be `<= lambda_node`), `converged` (the coordinate-descent flag), and
-#'   `lambda_node` (the penalty used). These are absent for `p < NT` fits.
+#'   should be `<= lambda_node`), `converged` (the coordinate-descent flag),
+#'   `lambda_node` (the penalty used), `lambda_c` (the leading constant used),
+#'   and `lambda_c_selection` (`"fixed"` or `"cv"`). When `lambda_c = "cv"` it
+#'   also contains `lambda_cv`, the cross-validation diagnostics (the grid, the
+#'   per-grid feasibility flags and CV losses, and whether the theory-scale
+#'   fallback fired). These are absent for `p < NT` fits.
 #'
 #' @seealso [fetwfe()] for the fused fit; [cohortTimeATTs()] / [eventStudy()] /
 #'   [cohortStudy()] for the disaggregated fused effects.
@@ -251,14 +259,19 @@ debiasedATT <- function(
 	# High-dimensional nodewise-solver controls. These only affect the p >= NT
 	# path, but validate them unconditionally so a malformed value fails loudly
 	# rather than silently producing a degenerate debiasing direction.
+	# `lambda_c` is either the string "cv" (cross-validate the penalty constant per
+	# fit, #295) or a single positive number (the fixed constant; 1.0 = theory
+	# scale, the default and the CV fallback).
 	if (
-		!is.numeric(lambda_c) ||
-			length(lambda_c) != 1L ||
-			is.na(lambda_c) ||
-			lambda_c <= 0
+		!(identical(lambda_c, "cv") ||
+			(is.numeric(lambda_c) &&
+				length(lambda_c) == 1L &&
+				!is.na(lambda_c) &&
+				lambda_c > 0))
 	) {
 		stop(
-			"debiasedATT(): `lambda_c` must be a single positive number.",
+			"debiasedATT(): `lambda_c` must be \"cv\" (cross-validate) or a single ",
+			"positive number.",
 			call. = FALSE
 		)
 	}
@@ -454,10 +467,28 @@ debiasedATT <- function(
 		# (NOT NT). max(|a|) rescales to the units of the KKT constraint.
 		a_th <- a_theta[-1]
 		N_units <- n / T
+		# Resolve the penalty constant: CV-select per fit (#295, Decision D2) when
+		# `lambda_c = "cv"`, else use the supplied fixed constant. The band reuses
+		# this same constant (one `lambda_c` for point + band) -- see
+		# `.simultaneous_cis_bootstrap()`.
+		lambda_cv <- NULL
+		lambda_c_used <- lambda_c
+		if (identical(lambda_c, "cv")) {
+			lambda_cv <- .cv_lambda_node(
+				Sig,
+				a_th,
+				X,
+				N_units,
+				T,
+				riesz_max_iter = riesz_max_iter,
+				riesz_tol = riesz_tol
+			)
+			lambda_c_used <- lambda_cv$lambda_c
+		}
 		lambda_node <- lambda_node_default(
 			p = p,
 			N = N_units,
-			c = lambda_c,
+			c = lambda_c_used,
 			scale = max(abs(a_th))
 		)
 		v <- riesz_lasso(
@@ -493,7 +524,18 @@ debiasedATT <- function(
 		riesz_diag <- list(
 			feasibility = feasibility,
 			converged = converged,
-			lambda_node = lambda_node
+			lambda_node = lambda_node,
+			lambda_c = lambda_c_used,
+			lambda_c_selection = if (identical(lambda_c, "cv")) {
+				"cv"
+			} else {
+				"fixed"
+			},
+			lambda_cv = if (!is.null(lambda_cv)) {
+				lambda_cv[c("cv_loss", "feasible", "mult_grid", "fallback")]
+			} else {
+				NULL
+			}
 		)
 		# High-dim nuisance (#303): an internal q=1 fused lasso, NOT the reused
 		# q<1 bridge theta_hat. Its l1 rate is what Theorem `debiased.highdim.thm`
@@ -536,6 +578,13 @@ debiasedATT <- function(
 		out$feasibility <- riesz_diag$feasibility
 		out$converged <- riesz_diag$converged
 		out$lambda_node <- riesz_diag$lambda_node
+		out$lambda_c <- riesz_diag$lambda_c
+		out$lambda_c_selection <- riesz_diag$lambda_c_selection
+		# CV diagnostics (per-draw logging for the #88 coverage gate); NULL for the
+		# fixed-`lambda_c` path.
+		if (!is.null(riesz_diag$lambda_cv)) {
+			out$lambda_cv <- riesz_diag$lambda_cv
+		}
 	}
 	out
 }

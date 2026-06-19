@@ -21,12 +21,17 @@ transformed-coefficient space).}
 \item{alpha}{Numeric in \verb{(0, 1)}; the confidence level is \code{1 - alpha}.
 Defaults to the \code{alpha} stored on the fit.}
 
-\item{lambda_c}{Numeric \verb{> 0}; the leading constant of the high-dimensional
-(\code{p >= NT}) nodewise penalty \verb{lambda_node = lambda_c * max(|a|) * sqrt(log(p) / N)} (\code{N} = number of units). Larger values shrink the
-debiasing direction more (more conservative). \strong{Ignored when \code{p < NT}.}
-Default \code{1.0}. The coverage-optimal value is regime- and data-dependent and
-not yet established by simulation (see \emph{Assumptions}); treat this as a
-tunable, experimental knob.}
+\item{lambda_c}{The leading constant of the high-dimensional (\code{p >= NT})
+nodewise penalty \verb{lambda_node = lambda_c * max(|a|) * sqrt(log(p) / N)} (\code{N} =
+number of units). Either a single positive number (a fixed constant; default
+\code{1.0} = the theory scale) or the string \code{"cv"}, which selects the constant
+\strong{per fit} by cross-validating the unit-level Riesz loss
+\verb{0.5 v'Sigma v - a'v} over the KKT-feasible region (the desparsified-lasso /
+auto-DML standard; van de Geer; Chernozhukov-Newey-Singh), falling back to
+the theory scale \code{1.0} when no grid penalty is feasible (#295). Larger values
+shrink the debiasing direction more. \strong{Ignored when \code{p < NT}.} The default
+stays the fixed \code{1.0} (the \code{"cv"} mechanism is opt-in pending simulation
+validation of its coverage); treat the \code{p >= NT} path as experimental.}
 
 \item{riesz_max_iter, riesz_tol}{Integer / numeric; coordinate-descent controls
 for the high-dimensional nodewise solver. \strong{Ignored when \code{p < NT}.}}
@@ -52,8 +57,12 @@ are larger by a factor on the order of \code{NT}.
 
 For high-dimensional (\code{p >= NT}) fits the list additionally contains
 \code{feasibility} (\verb{= ||Sigma v - a||_inf}, the nodewise KKT certificate, which
-should be \verb{<= lambda_node}), \code{converged} (the coordinate-descent flag), and
-\code{lambda_node} (the penalty used). These are absent for \code{p < NT} fits.
+should be \verb{<= lambda_node}), \code{converged} (the coordinate-descent flag),
+\code{lambda_node} (the penalty used), \code{lambda_c} (the leading constant used),
+and \code{lambda_c_selection} (\code{"fixed"} or \code{"cv"}). When \code{lambda_c = "cv"} it
+also contains \code{lambda_cv}, the cross-validation diagnostics (the grid, the
+per-grid feasibility flags and CV losses, and whether the theory-scale
+fallback fired). These are absent for \code{p < NT} fits.
 }
 \description{
 Computes a \emph{debiased} estimate of the overall average treatment effect on the

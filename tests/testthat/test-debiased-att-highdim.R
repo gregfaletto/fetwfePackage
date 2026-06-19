@@ -198,7 +198,9 @@ test_that("the high-dim fixture really is p >= NT and fits with q < 1", {
 
 test_that("debiasedATT runs in the p >= NT regime and returns nodewise diagnostics", {
 	db <- debiasedATT(hd_fix)
-	# the 6 fixed-p elements PLUS the 3 high-dim diagnostics
+	# the 6 fixed-p elements PLUS the high-dim diagnostics (feasibility / converged
+	# / lambda_node + the #295 lambda_c / lambda_c_selection; lambda_cv only under
+	# lambda_c = "cv").
 	expect_identical(
 		names(db),
 		c(
@@ -210,9 +212,12 @@ test_that("debiasedATT runs in the p >= NT regime and returns nodewise diagnosti
 			"var_weight",
 			"feasibility",
 			"converged",
-			"lambda_node"
+			"lambda_node",
+			"lambda_c",
+			"lambda_c_selection"
 		)
 	)
+	expect_identical(db$lambda_c_selection, "fixed") # default is the fixed 1.0
 	expect_true(is.finite(db$att))
 	expect_gt(db$se, 0)
 	expect_true(is.finite(db$se))
