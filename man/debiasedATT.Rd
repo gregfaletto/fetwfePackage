@@ -13,10 +13,12 @@ debiasedATT(
 )
 }
 \arguments{
-\item{fit}{A fitted object from \code{\link[=fetwfe]{fetwfe()}} computed with \code{q < 1} (so the
-bridge selection produces a valid standard error). \code{\link[=etwfe]{etwfe()}} / \code{\link[=betwfe]{betwfe()}} /
-\code{\link[=twfeCovs]{twfeCovs()}} are not supported (the construction is specific to the FETWFE
-transformed-coefficient space).}
+\item{fit}{A fitted object from \code{\link[=fetwfe]{fetwfe()}}. In the fixed-p (\code{p < NT}) regime
+the SE needs either bridge selection (\code{q < 1}, \code{gls = TRUE}) or an un-whitened
+fit (\code{gls = FALSE}, any \code{q}, the Omega-free cluster-robust path; #312); a
+GLS-whitened \code{q >= 1} fit is rejected. The high-dimensional (\code{p >= NT}) path
+accepts any fit. \code{\link[=etwfe]{etwfe()}} / \code{\link[=betwfe]{betwfe()}} / \code{\link[=twfeCovs]{twfeCovs()}} are not supported (the
+construction is specific to the FETWFE transformed-coefficient space).}
 
 \item{alpha}{Numeric in \verb{(0, 1)}; the confidence level is \code{1 - alpha}.
 Defaults to the \code{alpha} stored on the fit.}
