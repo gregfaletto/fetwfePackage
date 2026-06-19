@@ -13,10 +13,12 @@
   center/variance inconsistency that under-covered in the heterogeneous-cohort
   regime (a large zeroed `tau_g` with non-trivial cohort-weight uncertainty).
   `F_pi` is now built from the **debiased per-cohort-time effects**, computed with
-  the same q=1 fused-lasso nuisance and nodewise (`riesz_lasso`) directions the
-  band center uses, so center and `Sigma_2` are mutually consistent. Fixed-`p`
-  fits are unaffected (their selected estimate is unbiased by selection
-  consistency, so the post-selection construction is byte-identical to before).
+  the same q=1 fused-lasso nuisance, residuals, and Gram the band center uses (the
+  per-cell nodewise `riesz_lasso` directions are themselves new -- the center uses
+  one pooled direction per effect), so center and `Sigma_2` are consistent at
+  leading order. Fixed-`p` fits are unaffected (their selected estimate is unbiased
+  by selection consistency, so the post-selection construction is byte-identical to
+  before).
   The `p >= NT` `event_study` path remains experimental (coverage validation under
   #295 / paper-side `gregfaletto/fetwfe#88`).
 

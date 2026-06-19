@@ -111,6 +111,9 @@
 #' @param N,T Integers.
 #' @param targets Numeric `p x K`; per-effect full theta-space directions.
 #' @param lambda_c,riesz_max_iter,riesz_tol Nodewise-solver controls.
+#' @param Sig Optional precomputed Gram `crossprod(X) / n`; the high-dim
+#'   `event_study` caller hoists it so the regression and propensity channels
+#'   share one `O(NT p^2)` crossprod. `NULL` (the default) computes it here.
 #' @return `F`, `N x K`, with attributes `highdim = TRUE` and `diagnostics`
 #'   (per-effect feasibility / converged / lambda_node).
 #' @keywords internal
@@ -123,11 +126,14 @@
 	targets,
 	lambda_c = 1.0,
 	riesz_max_iter = 5000L,
-	riesz_tol = 1e-9
+	riesz_tol = 1e-9,
+	Sig = NULL
 ) {
 	n <- N * T
 	p <- ncol(X)
-	Sig <- crossprod(X) / n # full, uncentered (debiasedATT convention)
+	if (is.null(Sig)) {
+		Sig <- crossprod(X) / n # full, uncentered (debiasedATT convention)
+	}
 	unit <- rep(seq_len(N), each = T)
 	K <- ncol(targets)
 	F_mat <- matrix(0, N, K)
@@ -201,6 +207,9 @@
 #'   directions (`A' e_{treat_inds[j]}`).
 #' @param lambda_c,riesz_max_iter,riesz_tol Nodewise-solver controls (as for
 #'   `.build_regression_if_highdim()`).
+#' @param Sig Optional precomputed Gram `crossprod(X) / n`, shared with
+#'   `.build_regression_if_highdim()` so the two channels do one crossprod, not
+#'   two. `NULL` (the default) computes it here.
 #' @return A list with `tau_db` (length `num_treats`) and `diagnostics`
 #'   (per-cell `feasibility` / `converged` / `lambda_node`).
 #' @keywords internal
@@ -214,14 +223,17 @@
 	cell_targets,
 	lambda_c = 1.0,
 	riesz_max_iter = 5000L,
-	riesz_tol = 1e-9
+	riesz_tol = 1e-9,
+	Sig = NULL
 ) {
 	n <- N * T
 	p <- ncol(X)
-	# Same full, uncentered Gram as .build_regression_if_highdim() (recomputed
-	# here to keep this helper self-contained; for large p the two share Sig --
-	# a future optimization could hoist it into the caller).
-	Sig <- crossprod(X) / n
+	# Same full, uncentered Gram as .build_regression_if_highdim(); the caller
+	# hoists and shares it so the regression and propensity channels do ONE
+	# O(NT p^2) crossprod, not two (matters at large p, e.g. the #88 run).
+	if (is.null(Sig)) {
+		Sig <- crossprod(X) / n
+	}
 	num_treats <- ncol(cell_targets)
 	tau_db <- numeric(num_treats)
 	feasibility <- numeric(num_treats)
@@ -566,6 +578,10 @@
 		resid_q1 <- as.numeric(
 			y_final[seq_len(n)] - theta_q1[1] - X_final %*% theta_q1[-1]
 		)
+		# Hoist the full Gram once and share it across both high-dim channels (the
+		# regression IF and -- for event_study -- the per-cell propensity
+		# desparsification), so they do ONE O(NT p^2) crossprod, not two.
+		Sig_hd <- crossprod(X_final) / n
 		F_mat <- .build_regression_if_highdim(
 			X_final,
 			resid_q1,
@@ -574,7 +590,8 @@
 			targets,
 			lambda_c = lambda_c,
 			riesz_max_iter = riesz_max_iter,
-			riesz_tol = riesz_tol
+			riesz_tol = riesz_tol,
+			Sig = Sig_hd
 		)
 		# Debias the band center (Theorem 6.6): the q=1 plug-in plus the per-effect
 		# desparsified correction `colSums(F_mat)/(N*T)` (exactly `debiasedATT()`'s
@@ -603,7 +620,8 @@
 				cell_targets = cell_targets,
 				lambda_c = lambda_c,
 				riesz_max_iter = riesz_max_iter,
-				riesz_tol = riesz_tol
+				riesz_tol = riesz_tol,
+				Sig = Sig_hd
 			)
 			cell_diag <- cells$diagnostics
 			# vapply collapses to a length-K vector when G == 1; force G x K.
