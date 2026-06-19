@@ -12,6 +12,11 @@
   breaking the documented identity that the displayed bounds are the
   `simultaneousCIs(fit, family = …)` bounds. Passing an explicit `alpha` still
   overrides, and default (`alpha = 0.05`) fits are unaffected (#324).
+  **Behavior change on upgrade:** if you called `simultaneousCIs()` (or read its
+  bands) on a fit built at a non-default `alpha` *without* passing an explicit
+  `alpha`, the returned bounds now use the fit's level rather than `0.05`, so
+  their widths will shift — pass `alpha = 0.05` explicitly to reproduce the
+  pre-1.44.0 output.
 
 ## Version 1.43.0
 
