@@ -55,7 +55,10 @@ utils::globalVariables(c(
 #' @param family Character; one of `"event_study"`, `"cohort"`,
 #'   `"all_post_treatment"`, or `"custom"`. See Details for each family's
 #'   resolution.
-#' @param alpha Numeric in `(0, 1)`; significance level. Default `0.05`.
+#' @param alpha Numeric in `(0, 1)`; significance level. Default `NULL`, which
+#'   inherits the fit's own `alpha` (the level its `catt_df` / displayed
+#'   simultaneous bands were built at), so `simultaneousCIs(fit)` reproduces the
+#'   fit's shown simultaneous bounds. Pass an explicit value to override.
 #' @param contrasts For `family = "custom"`, a `K x num_treats` matrix whose
 #'   rows give the `K` linear combinations of the underlying per-`(g, t)`
 #'   treatment-effect vector (the `multcomp::glht()` convention; `num_treats`
@@ -240,7 +243,7 @@ utils::globalVariables(c(
 simultaneousCIs <- function(
 	result,
 	family = c("event_study", "cohort", "all_post_treatment", "custom"),
-	alpha = 0.05,
+	alpha = NULL,
 	contrasts = NULL,
 	method = c("analytic", "bootstrap"),
 	B = 1000L,
@@ -257,7 +260,7 @@ simultaneousCIs <- function(
 simultaneousCIs.fetwfe <- function(
 	result,
 	family = c("event_study", "cohort", "all_post_treatment", "custom"),
-	alpha = 0.05,
+	alpha = NULL,
 	contrasts = NULL,
 	method = c("analytic", "bootstrap"),
 	B = 1000L,
@@ -289,7 +292,7 @@ simultaneousCIs.fetwfe <- function(
 simultaneousCIs.etwfe <- function(
 	result,
 	family = c("event_study", "cohort", "all_post_treatment", "custom"),
-	alpha = 0.05,
+	alpha = NULL,
 	contrasts = NULL,
 	method = c("analytic", "bootstrap"),
 	B = 1000L,
@@ -321,7 +324,7 @@ simultaneousCIs.etwfe <- function(
 simultaneousCIs.betwfe <- function(
 	result,
 	family = c("event_study", "cohort", "all_post_treatment", "custom"),
-	alpha = 0.05,
+	alpha = NULL,
 	contrasts = NULL,
 	method = c("analytic", "bootstrap"),
 	B = 1000L,
@@ -362,7 +365,7 @@ simultaneousCIs.betwfe <- function(
 simultaneousCIs.twfeCovs <- function(
 	result,
 	family = c("event_study", "cohort", "all_post_treatment", "custom"),
-	alpha = 0.05,
+	alpha = NULL,
 	contrasts = NULL,
 	method = c("analytic", "bootstrap"),
 	B = 1000L,
@@ -398,7 +401,8 @@ simultaneousCIs.twfeCovs <- function(
 #'   `.plans/feat-simultaneous-cis-192/PLAN.md`.
 #' @param x A validated fitted estimator object.
 #' @param family Character (already `match.arg`-resolved by the caller).
-#' @param alpha Numeric significance level.
+#' @param alpha Numeric significance level, or `NULL` to inherit `.alpha_of(x)`
+#'   (the level the fit's bands were built at).
 #' @param contrasts For `family = "custom"`, the `K x num_treats` contrast
 #'   matrix; `NULL` otherwise.
 #' @param has_valid_ses Logical; from `.check_for_simultaneous_cis()`.
@@ -425,6 +429,14 @@ simultaneousCIs.twfeCovs <- function(
 	warn_degenerate_highdim = TRUE
 ) {
 	# --- 1. Argument validation (mvtnorm guard deferred to step 11). ---
+	# `alpha = NULL` (the accessor default) inherits the level the fit's catt_df /
+	# displayed simultaneous bands were built at (`.alpha_of(x)`), matching
+	# `eventStudy()` and every other accessor (#324); an explicit `alpha`
+	# overrides. Internal callers (the fit-time band precompute, the event-study
+	# bounds helper) always pass an explicit `alpha`, so they are unaffected.
+	if (is.null(alpha)) {
+		alpha <- .alpha_of(x)
+	}
 	stopifnot(is.numeric(alpha), length(alpha) == 1L, alpha > 0, alpha < 1)
 	method <- match.arg(method, c("analytic", "bootstrap"))
 	# `lambda_c` is validated unconditionally (symmetric with debiasedATT()). It is

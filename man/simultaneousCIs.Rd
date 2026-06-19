@@ -8,7 +8,7 @@ treatment effects}
 simultaneousCIs(
   result,
   family = c("event_study", "cohort", "all_post_treatment", "custom"),
-  alpha = 0.05,
+  alpha = NULL,
   contrasts = NULL,
   method = c("analytic", "bootstrap"),
   B = 1000L,
@@ -27,7 +27,10 @@ or \code{"twfeCovs"}.}
 \code{"all_post_treatment"}, or \code{"custom"}. See Details for each family's
 resolution.}
 
-\item{alpha}{Numeric in \verb{(0, 1)}; significance level. Default \code{0.05}.}
+\item{alpha}{Numeric in \verb{(0, 1)}; significance level. Default \code{NULL}, which
+inherits the fit's own \code{alpha} (the level its \code{catt_df} / displayed
+simultaneous bands were built at), so \code{simultaneousCIs(fit)} reproduces the
+fit's shown simultaneous bounds. Pass an explicit value to override.}
 
 \item{contrasts}{For \code{family = "custom"}, a \verb{K x num_treats} matrix whose
 rows give the \code{K} linear combinations of the underlying per-\verb{(g, t)}
