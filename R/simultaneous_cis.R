@@ -735,16 +735,21 @@ simultaneousCIs.twfeCovs <- function(
 			}
 			# Overall-ATT theta-space direction (cohort_probs-weighted), the direction
 			# the shared CV penalty constant is selected on (#295 D2: one lambda_c for
-			# point + band). For the common consecutive-cohort layout this equals
-			# debiasedATT()'s `a_th` exactly (same A / cohort_probs / first_inds), so
-			# the CV'd constant -- hence the band center -- matches debiasedATT() under
-			# `lambda_c = "cv"`. (For scattered adoption times the two use different
-			# `first_inds` -- getFirstInds() in debiasedATT() vs the offset resolver
-			# here -- but high-dim debiasedATT() is unsupported there anyway: it errors
-			# at its ATT-identity guard, so no shared-constant divergence can ship and
-			# the band simply CVs on its own correct direction.)
+			# point + band). Built with the offset-resolved per-cohort block sizes
+			# `diff(c(first_inds, num_treats + 1L))` -- the SAME construction
+			# debiasedATT() uses (R/debiased_att.R) -- so the CV'd constant, hence the
+			# band center, matches debiasedATT() under `lambda_c = "cv"`, including for
+			# scattered (non-consecutive) adoption, which #318 made debiasedATT()
+			# support. A hard-coded `(T_ - 1):(T_ - G)` assumes consecutive adoption and
+			# under scattered offsets both mis-weights AND overruns `treat_inds` (its
+			# sizes can sum past num_treats), so the band would CV a wrong/fallback
+			# constant and diverge from debiasedATT() (#323). For consecutive adoption
+			# the resolved sizes reduce to `(T_ - 1):(T_ - G)`, so this is byte-identical.
 			a_beta_att <- numeric(p)
-			cohort_of_treat <- rep(seq_len(G), times = (T_ - 1):(T_ - G))
+			cohort_of_treat <- rep(
+				seq_len(G),
+				times = diff(c(first_inds, num_treats + 1L))
+			)
 			for (g in seq_len(G)) {
 				idx <- treat_inds[cohort_of_treat == g]
 				a_beta_att[idx] <- x$cohort_probs[g] / length(idx)

@@ -1,5 +1,23 @@
 # NEWS
 
+## Version 1.45.0
+
+### Bug fixes
+
+- `simultaneousCIs(method = "bootstrap", lambda_c = "cv")` now selects its
+  nodewise penalty constant on the correct overall-ATT direction under **scattered
+  (non-consecutive) cohort adoption**. The cross-validation direction `a_att` was
+  built with hard-coded consecutive-adoption per-cohort sizes `(T - 1):(T - G)`,
+  which under scattered offsets both mis-weight and overrun the treatment-effect
+  index, so the band cross-validated a different penalty constant than
+  `debiasedATT()` — silently breaking the documented "one `lambda_c` for the point
+  estimate and the band" guarantee (the band center no longer equalled
+  `debiasedATT()$att`). It now uses the offset-resolved sizes
+  `diff(c(first_inds, num_treats + 1L))`, matching `debiasedATT()`. Consecutive
+  adoption (the common case) and the default `lambda_c = 1.0` are byte-identical;
+  this only affected the experimental `lambda_c = "cv"` path on scattered data
+  (#323).
+
 ## Version 1.44.0
 
 ### Bug fixes
