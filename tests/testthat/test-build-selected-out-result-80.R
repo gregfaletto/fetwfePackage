@@ -283,6 +283,28 @@ test_that("q gating: q >= 1 -> ret_se = NA, calc_ses = FALSE; q < 1 -> ret_se = 
 	expect_false(res_high$calc_ses)
 })
 
+test_that("gls gating (#304): q < 1 but gls = FALSE -> ret_se = NA, calc_ses = FALSE", {
+	# A gls = FALSE degenerate fit has no oracle SE, so its degenerate SE is NA and
+	# calc_ses is FALSE -- mirroring the normal path's `(q < 1) && gls`. calc_ses,
+	# the SEs, and the variance components must all agree (else the C1 SE-consistency
+	# validator trips at fit construction).
+	args <- .make_helper_args()
+	args$q <- 0.5
+	args$gls <- FALSE
+	res <- do.call(fetwfe:::.build_selected_out_result, args)
+	expect_false(res$calc_ses)
+	expect_identical(res$in_sample_att_se, NA)
+	expect_identical(res$indep_att_se, NA)
+	expect_true(all(is.na(res$catt_ses)))
+	expect_true(all(is.na(res$catt_df$se)))
+	# the default (gls absent) keeps the old q < 1 -> calc_ses = TRUE behavior.
+	args_default <- .make_helper_args()
+	args_default$q <- 0.5
+	expect_true(
+		do.call(fetwfe:::.build_selected_out_result, args_default)$calc_ses
+	)
+})
+
 test_that("verbose = TRUE emits the supplied message_text; verbose = FALSE is silent", {
 	args <- .make_helper_args()
 	args$verbose <- TRUE

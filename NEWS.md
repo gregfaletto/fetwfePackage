@@ -1,5 +1,25 @@
 # NEWS
 
+## Version 1.42.0
+
+### Bug fixes
+
+- `simultaneousCIs(method = "bootstrap")` no longer returns a degenerate all-zero
+  band in the high-dimensional (`p >= NT`) regime when the bridge penalty zeroes
+  every treatment effect (#304). There the **debiased** band center (the
+  Theorem 6.6 desparsified construction) is generally non-zero and informative, so
+  the all-zero early-exit is now bypassed for the high-dim fetwfe bootstrap path,
+  which falls through to the desparsified band (it re-fits its own q=1 nuisance and
+  builds the directions from the full design, both selection-independent). Fixed-p
+  fits (where an all-zero bridge genuinely means a zero estimate), `method =
+  "analytic"`, and non-`fetwfe()` fits still return the degenerate band.
+- The "no treatment features selected" early-exit now reports
+  `calc_ses = (q < 1) && gls`, matching the normal path (previously `q < 1` alone).
+  So a `gls = FALSE` fit whose bridge zeroes all treatment effects correctly
+  reports `calc_ses = FALSE` with `NA` standard errors, and `simultaneousCIs(method
+  = "analytic")` / `debiasedATT()`-style gating treat it consistently (previously
+  it wrongly reported `calc_ses = TRUE` and bypassed the `gls = FALSE` SE gate).
+
 ## Version 1.41.0
 
 ### Bug fixes

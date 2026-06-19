@@ -604,18 +604,24 @@ simultaneousCIs.twfeCovs <- function(
 		d_inv_treat_sel <- diag(num_treats)
 	}
 
-	# --- 7. Degenerate support: all effects zeroed out by selection. Return
-	#        zero estimates / zero SEs / pointwise critical value. In fixed-p this
-	#        is consistent with selection consistency (the truth is ~ all-zero), so
-	#        a message() suffices. In the high-dimensional (p >= NT) regime
-	#        selection is NOT consistent and the debiased band center (generally
-	#        non-zero) is bypassed here, so an all-zero band must not be read as
-	#        "all effects are zero" -- a direct accessor call warns instead. The
-	#        silent fit-time precompute passes `warn_degenerate_highdim = FALSE`
-	#        and keeps the message() (swallowed by its suppressMessages()), so
-	#        fitting stays quiet. (The cleaner fall-through to the desparsified
-	#        path is the deferred #304.) ---
-	if (length(sel_treat_inds_shifted) == 0L) {
+	# --- 7. Degenerate support: the bridge zeroed every treatment effect. Normally
+	#        return a degenerate all-zero band. EXCEPT the high-dim (p >= NT) fetwfe
+	#        BOOTSTRAP case (#304): there the desparsified band center
+	#        (`estimates + colSums(F_reg)/(N*T)`) is generally NON-zero and
+	#        informative -- the bootstrap re-fits its OWN q=1 nuisance and builds
+	#        `targets` from the full design, both selection-independent -- so fall
+	#        THROUGH to the desparsified dispatch below rather than the all-zero band.
+	#        Every other case still returns the degenerate band: fixed-p (an all-zero
+	#        bridge genuinely means an empty support / zero estimate, consistent with
+	#        selection consistency), `method = "analytic"` (no Gram inverse in
+	#        high-dim anyway), and non-fetwfe high-dim (betwfe -- no desparsified
+	#        path). A direct accessor call to one of those WARNS (the debiased center
+	#        is bypassed); the silent fit-time precompute passes
+	#        `warn_degenerate_highdim = FALSE` and keeps the message(). ---
+	highdim_fetwfe_bootstrap <- is_fetwfe &&
+		identical(method, "bootstrap") &&
+		(p >= N * T_)
+	if (length(sel_treat_inds_shifted) == 0L && !highdim_fetwfe_bootstrap) {
 		if (p >= N * T_ && isTRUE(warn_degenerate_highdim)) {
 			warning(
 				"simultaneousCIs(): the bridge penalty zeroed out every treatment ",
@@ -658,8 +664,17 @@ simultaneousCIs.twfeCovs <- function(
 
 	# --- 8. Shape Psi (p_sel x K): map each effect's per-cell contrast into the
 	#        selected support (theta-space for FETWFE, beta-space for OLS family).
-	#        Used by both the analytic Sigma assembly and the bootstrap IF. ---
-	Psi <- t(psi_tes_mat %*% d_inv_treat_sel)
+	#        Used by both the analytic Sigma assembly and the bootstrap IF. The
+	#        empty selected-support case (`d_inv_treat_sel = NULL`) is reachable ONLY
+	#        via the #304 high-dim-bootstrap fall-through above (every other empty
+	#        support returned at the degenerate early-exit); there the high-dim
+	#        branch uses `targets` (full design), never this `Psi`, so a `K x 0`
+	#        placeholder suffices and must just not error on `m %*% NULL`. ---
+	Psi <- if (length(sel_treat_inds_shifted) == 0L) {
+		matrix(0, nrow = K, ncol = 0L)
+	} else {
+		t(psi_tes_mat %*% d_inv_treat_sel)
+	}
 
 	# --- Bootstrap method (#142): build + perturb the per-unit IF matrix instead
 	#     of the analytic qmvnorm critical value. Runs BEFORE getGramInv() so the
@@ -723,7 +738,14 @@ simultaneousCIs.twfeCovs <- function(
 		# analytic path uses (Step 10 below) so the bootstrap propensity IF and the
 		# analytic Sigma_2 are provably consistent. NULL for the other families
 		# (Sigma_2 = 0), which keeps their bootstrap byte-identical to Phase 1/2.
-		J_list <- if (identical(family, "event_study")) {
+		# Empty selected support (`d_inv_treat_sel = NULL`) is reachable ONLY via the
+		# #304 high-dim-bootstrap fall-through; there the propensity channel uses the
+		# debiased `j_cells` / `A_db` (below), NOT this `J_list`, so skip the build
+		# (it would otherwise crash on `ncol(NULL)` in `.build_j_list_for_family`).
+		J_list <- if (
+			identical(family, "event_study") &&
+				length(sel_treat_inds_shifted) > 0L
+		) {
 			.build_j_list_for_family(
 				family = family,
 				K = K,

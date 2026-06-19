@@ -353,7 +353,7 @@ test_that("high-dim event_study band/adjusted-p duality holds with the debiased 
 # guard) drops the warning and fails expect_warning(). Fixed-p behavior (a
 # message(), no warning) is unchanged -- covered by test-degenerate-jacobian-225.R.
 # ------------------------------------------------------------------------------
-test_that("high-dim all-zero degenerate band warns (not a silent message) (#304)", {
+test_that("high-dim all-zero-bridge bootstrap returns an INFORMATIVE band, not the degenerate one (#304)", {
 	coefs <- genCoefs(
 		G = 3,
 		T = 5,
@@ -382,24 +382,140 @@ test_that("high-dim all-zero degenerate band warns (not a silent message) (#304)
 		sig_eps_sq = 1,
 		sig_eps_c_sq = 0.5
 	)
-	# Fixture invariants: genuinely high-dim AND the bridge zeroed EVERY treat cell
-	# (so the degenerate early-exit fires in the high-dim regime).
+	# Fixture invariants: genuinely high-dim AND the bridge zeroed EVERY treat cell.
 	expect_gte(ncol(fit6$internal$X_final), nrow(fit6$internal$X_final))
 	expect_true(all(fit6$internal$theta_hat[-1][fit6$treat_inds] == 0))
 
-	expect_warning(
-		bo <- simultaneousCIs(
+	# #304: the high-dim bootstrap now FALLS THROUGH to the desparsified band -- the
+	# debiased centers (Theorem 6.6) are non-zero and informative -- instead of the
+	# all-zero degenerate early-exit. So NO "zeroed out every" degenerate warning,
+	# and the band is informative.
+	# Capture warnings: assert NO degenerate ("zeroed out every") warning fires (the
+	# #304 fall-through is taken, not the all-zero early-exit), while tolerating the
+	# standing high-dim experimental-feasibility warning (orthogonal; fit-specific).
+	w <- character(0)
+	bo <- withCallingHandlers(
+		simultaneousCIs(
 			fit6,
 			family = "cohort",
 			method = "bootstrap",
-			B = 100,
+			B = 300,
 			seed = 1
 		),
-		"degenerate|unreliable|zeroed out every"
+		warning = function(cond) {
+			w <<- c(w, conditionMessage(cond))
+			invokeRestart("muffleWarning")
+		}
 	)
-	# the degenerate band is the all-zero early-exit return, as documented.
-	expect_true(all(bo$ci$simultaneous_ci_low == 0))
-	expect_true(all(bo$ci$simultaneous_ci_high == 0))
+	expect_false(any(grepl("zeroed out every|degenerate", w)))
+	expect_identical(bo$regime, "high-dimensional")
+	expect_false(all(bo$ci$estimate == 0)) # informative debiased centers
+	ses <- (bo$ci$simultaneous_ci_high - bo$ci$estimate) / bo$critical_value
+	expect_true(all(is.finite(ses)) && all(ses > 0))
+	expect_true(any(
+		bo$ci$simultaneous_ci_low != bo$ci$simultaneous_ci_high
+	)) # non-degenerate
+
+	# event_study (the headline Theorem 6.6 family, which builds a J_list) must ALSO
+	# fall through to an informative band, not crash on the empty selected support.
+	wes <- character(0)
+	boES <- withCallingHandlers(
+		simultaneousCIs(
+			fit6,
+			family = "event_study",
+			method = "bootstrap",
+			B = 200,
+			seed = 1
+		),
+		warning = function(cond) {
+			wes <<- c(wes, conditionMessage(cond))
+			invokeRestart("muffleWarning")
+		}
+	)
+	expect_identical(boES$regime, "high-dimensional")
+	expect_false(all(boES$ci$estimate == 0))
+	expect_false(any(grepl("zeroed out every|degenerate", wes)))
+
+	# #303 identity: the overall-ATT band center == debiasedATT()$att at lambda_c=1.0.
+	G <- fit6$G
+	ti <- fit6$treat_inds
+	Tt <- fit6$T
+	sizes <- (Tt - 1):(Tt - G)
+	cot <- rep(seq_len(G), times = sizes)
+	a_beta <- numeric(length(ti))
+	for (g in seq_len(G)) {
+		a_beta[which(cot == g)] <- fit6$cohort_probs[g] / sum(cot == g)
+	}
+	sc <- simultaneousCIs(
+		fit6,
+		family = "custom",
+		contrasts = matrix(a_beta, nrow = 1),
+		method = "bootstrap",
+		B = 100,
+		seed = 1
+	)
+	expect_equal(sc$ci$estimate, debiasedATT(fit6)$att, tolerance = 1e-9)
+})
+
+test_that("gls=FALSE high-dim all-zero-bridge: calc_ses=FALSE, analytic errors, bootstrap informative (#304)", {
+	# Same seed=6 all-zero-bridge fixture, but gls=FALSE (no supplied variances).
+	coefs <- genCoefs(
+		G = 3,
+		T = 5,
+		d = 22,
+		density = 0.5,
+		eff_size = 2,
+		seed = 6
+	)
+	dat <- simulateData(
+		coefs,
+		N = 40,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = 6
+	)
+	dat$indep_counts <- NA
+	fitF <- fetwfe(
+		pdata = dat$pdata,
+		time_var = dat$time_var,
+		unit_var = dat$unit_var,
+		treatment = dat$treatment,
+		response = dat$response,
+		covs = dat$covs,
+		q = 0.5,
+		verbose = FALSE,
+		gls = FALSE
+	)
+	expect_true(all(fitF$internal$theta_hat[-1][fitF$treat_inds] == 0)) # all zeroed
+	# Part B: the degenerate gls=FALSE fit now reports calc_ses=FALSE (was TRUE) with
+	# NA SE (so the C1 SE-consistency validator passes at fit construction).
+	expect_false(isTRUE(fitF$internal$calc_ses))
+	expect_true(is.na(fitF$att_se))
+	# Part B reconciliation: analytic now errors at the calc_ses gate (was: returned
+	# the degenerate band because calc_ses was wrongly TRUE).
+	expect_error(
+		simultaneousCIs(fitF, family = "cohort", method = "analytic"),
+		"calc_ses = FALSE"
+	)
+	# Part A: bootstrap still falls through to the informative desparsified band
+	# (no degenerate warning; the experimental-feasibility warning is tolerated).
+	wF <- character(0)
+	boF <- withCallingHandlers(
+		simultaneousCIs(
+			fitF,
+			family = "cohort",
+			method = "bootstrap",
+			B = 200,
+			seed = 1
+		),
+		warning = function(cond) {
+			wF <<- c(wF, conditionMessage(cond))
+			invokeRestart("muffleWarning")
+		}
+	)
+	expect_false(any(grepl("zeroed out every|degenerate", wF)))
+	expect_identical(boF$regime, "high-dimensional")
+	expect_false(all(boF$ci$estimate == 0))
 })
 
 # ------------------------------------------------------------------------------

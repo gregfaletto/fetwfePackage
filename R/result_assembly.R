@@ -26,8 +26,13 @@
 #' @param G,N,T,d,p Integers; problem dimensions.
 #' @param c_names Character vector of length `G`; cohort labels for the
 #'   `catt_df_to_ret` rows.
-#' @param q Numeric; bridge regression exponent. Drives the
-#'   `ret_se <- if (q < 1) 0 else NA` SE-shape gate.
+#' @param q Numeric; bridge regression exponent. With `gls`, drives the
+#'   SE-validity gate `ses_valid <- (q < 1) && gls` that shapes `ret_se` /
+#'   `ret_var` / `calc_ses`.
+#' @param gls Logical; whether the fit used GLS whitening. A valid (zero)
+#'   degenerate SE needs `(q < 1) && gls` (mirrors the normal path's `calc_ses`);
+#'   a `gls = FALSE` fit reports `calc_ses = FALSE` with NA SEs (#304). Defaults
+#'   to `TRUE` so the BETWFE / OLS callers (which have no `gls`) keep `q < 1`.
 #' @param beta_hat Numeric vector of length `p`; the final slope estimates
 #'   (caller-computed). For BETWFE intercept-only this is
 #'   `beta_hat[2:(p+1)]` (all zero); for BETWFE no-treatment this is
@@ -73,6 +78,7 @@
 	G,
 	c_names,
 	q,
+	gls = TRUE,
 	beta_hat,
 	treat_inds,
 	treat_int_inds,
@@ -104,11 +110,15 @@
 		message(message_text)
 	}
 
-	if (q < 1) {
-		ret_se <- 0
-	} else {
-		ret_se <- NA
-	}
+	# A valid (zero) SE for this degenerate fit needs the SAME condition the normal
+	# path uses (`fetwfe_core.R`: `calc_ses = (q < 1) && gls`): bridge selection
+	# (q < 1) AND GLS whitening (gls). A `gls = FALSE` fit has no oracle SE, so its
+	# degenerate SE is NA -- and `calc_ses`, `ret_se`, and `ret_var` must agree, or
+	# the C1 SE-consistency validator (`att_se` must be NA when `calc_ses = FALSE`)
+	# trips at fit construction. (#304 reconciliation: previously keyed on `q < 1`
+	# alone, so a gls = FALSE degenerate fit wrongly reported calc_ses = TRUE.)
+	ses_valid <- (q < 1) && gls
+	ret_se <- if (ses_valid) 0 else NA
 
 	catt_df_to_ret <- data.frame(
 		cohort = c_names,
@@ -135,7 +145,7 @@
 	# out every coefficient, `att_var_1` / `att_var_2` are zero (mirroring
 	# `att_se = 0` under `q < 1`) or NA (mirroring `att_se = NA` under
 	# `q >= 1`).
-	ret_var <- if (q < 1) 0 else NA
+	ret_var <- if (ses_valid) 0 else NA
 
 	out <- list(
 		in_sample_att_hat = 0,
@@ -175,7 +185,7 @@
 		G = G,
 		d = d,
 		p = p,
-		calc_ses = q < 1,
+		calc_ses = ses_valid,
 		# v1.13.0 (#164): CV-path provenance. NA_integer_ when reached
 		# via the BIC path or an OLS-only early-exit (etwfe / twfeCovs).
 		cv_seed_used = cv_seed_used
