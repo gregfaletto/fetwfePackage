@@ -3,6 +3,30 @@
 # the input validation, design-matrix prep, and cohort-probability helpers that
 # run before the GLS step (see R/gls_machinery.R).
 
+#' @title Validate that `in_sample_counts` is fully named with unique names
+#' @description `prep_for_etwfe_core()` and `check_etwfe_core_inputs()` both
+#'   require `in_sample_counts` to have one uniquely-named entry per cohort.
+#'   Factored out of the two byte-identical validation blocks (#325) so the
+#'   error message lives in a single place.
+#' @param in_sample_counts The (named) count vector to validate.
+#' @return `invisible(NULL)`; errors via `stop()` if the names are missing or
+#'   non-unique.
+#' @keywords internal
+#' @noRd
+.validate_in_sample_counts_named_unique <- function(in_sample_counts) {
+	nm <- names(in_sample_counts)
+	if (
+		length(nm) != length(in_sample_counts) ||
+			length(nm) != length(unique(nm))
+	) {
+		stop(
+			"in_sample_counts must have all unique named entries (with names corresponding to the names of each cohort)",
+			call. = FALSE
+		)
+	}
+	invisible(NULL)
+}
+
 #' @title Prepare Transformed Design Matrix and Response for ETWFE Regression
 #'
 #' @description
@@ -353,19 +377,7 @@ prep_for_etwfe_core <- function(
 			"No never-treated units detected in data to fit model; estimating treatment effects is not possible"
 		)
 	}
-	if (length(names(in_sample_counts)) != length(in_sample_counts)) {
-		stop(
-			"in_sample_counts must have all unique named entries (with names corresponding to the names of each cohort)"
-		)
-	}
-	if (
-		length(names(in_sample_counts)) !=
-			length(unique(names(in_sample_counts)))
-	) {
-		stop(
-			"in_sample_counts must have all unique named entries (with names corresponding to the names of each cohort)"
-		)
-	}
+	.validate_in_sample_counts_named_unique(in_sample_counts)
 	if (indep_count_data_available) {
 		if (sum(indep_counts) != N) {
 			stop(
@@ -612,20 +624,7 @@ check_etwfe_core_inputs <- function(
 			"No never-treated units detected in data to fit model; estimating treatment effects is not possible"
 		)
 	}
-	if (length(names(in_sample_counts)) != length(in_sample_counts)) {
-		stop(
-			"in_sample_counts must have all unique named entries (with names corresponding to the names of each cohort)"
-		)
-	}
-
-	if (
-		length(names(in_sample_counts)) !=
-			length(unique(names(in_sample_counts)))
-	) {
-		stop(
-			"in_sample_counts must have all unique named entries (with names corresponding to the names of each cohort)"
-		)
-	}
+	.validate_in_sample_counts_named_unique(in_sample_counts)
 
 	# Mirror prep_for_etwfe_core()'s friendly message (#208) so that whichever
 	# validator fires first, the user sees the same actionable text rather than

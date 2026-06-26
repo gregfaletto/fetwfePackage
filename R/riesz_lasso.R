@@ -39,7 +39,10 @@ riesz_lasso <- function(Sig, a, lambda, max_iter = 5000L, tol = 1e-9) {
 		max_change <- 0
 		for (j in seq_len(p)) {
 			if (dgSig[j] <= 0) {
-				next # all-zero column: leave v_j = 0
+				# All-zero (or non-positive-diagonal) Gram column: leave v_j = 0.
+				# Its residual |Sv - a|_j = |a_j| still enters `feasibility` below --
+				# see the note there; this is intentional, not an oversight.
+				next
 			}
 			cj <- Sv[j] - dgSig[j] * v[j] # (Sig v)_j without the j-th term
 			rho <- a[j] - cj
@@ -59,6 +62,16 @@ riesz_lasso <- function(Sig, a, lambda, max_iter = 5000L, tol = 1e-9) {
 			break
 		}
 	}
+	# Feasibility certificate ||Sig v - a||_inf, the KKT residual. Semantics note
+	# (#325): the max is taken over ALL p coordinates, INCLUDING any skipped
+	# zero-diagonal columns (whose residual is the full |a_j|). This is deliberate:
+	# a zero Gram column with a nonzero target means the Riesz representer genuinely
+	# does not exist in that coordinate, so the constraint truly cannot be met and
+	# reporting infeasibility is correct. Do NOT "fix" this by restricting the max
+	# to active (`dgSig > 0`) coordinates -- that would mask a real infeasibility and
+	# let an undefined direction pass the gate. Unreachable from the real pipeline
+	# (the full design's `min(diag(Sig))` is bounded well above 0), so this guards a
+	# theoretical corner, not an observed one.
 	attr(v, "feasibility") <- max(abs(Sv - a)) # ||Sig v - a||_inf
 	attr(v, "iters") <- it
 	attr(v, "converged") <- converged # FALSE => lambda likely too small

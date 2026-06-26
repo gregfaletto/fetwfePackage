@@ -90,7 +90,11 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 		return(.event_study_etwfe_betwfe(x, alpha, ci_type))
 	}
 	stop(
-		"eventStudy() requires an object of class 'fetwfe', 'etwfe', or 'betwfe'."
+		"eventStudy() requires an object of class 'fetwfe', 'etwfe', or ",
+		"'betwfe'. Got class: ",
+		paste(class(x), collapse = ", "),
+		".",
+		call. = FALSE
 	)
 }
 

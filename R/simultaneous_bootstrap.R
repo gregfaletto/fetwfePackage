@@ -773,6 +773,16 @@
 	# effect `boot_max` is NULL and the band uses the exact qnorm crit, so the
 	# matching dual is the two-sided normal p-value 2 * pnorm(-|z|) (mirrors the
 	# analytic K = 1 path; keeps "outside band iff adjusted p < alpha" exact).
+	# Degeneracy semantics (#325): the band endpoints use `ses` directly (finite
+	# for every effect), while the adjusted p-value gates on `bc$nondeg` (the
+	# combined-column-sum test `col_ss > var_tol`). So a near-zero-variance effect
+	# classified degenerate (`nondeg = FALSE`) still gets a finite -- but near-
+	# zero-width -- band from its tiny `ses`, yet an `NA` adjusted p-value: the
+	# package's degenerate-effect convention (a collapsed band, no p-value), not an
+	# inconsistency. The two gates cannot disagree the other way: `nondeg` implies
+	# `col_ss > 0`, and `ses^2 = (cadjust*css_reg + css_pi)/n^2 >= col_ss/n^2 > 0`
+	# since `cadjust >= 1`, so `ses > 0` whenever `nondeg` -- the `& ses > 0` here is
+	# a defensive belt against floating-point only.
 	t_stat <- ifelse(bc$nondeg & ses > 0, abs(estimates_used) / ses, NA_real_)
 	adjusted_p_values <- if (is.null(bc$boot_max)) {
 		2 * stats::pnorm(-abs(t_stat))

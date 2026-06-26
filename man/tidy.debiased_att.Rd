@@ -17,5 +17,7 @@ A one-row data frame with columns \code{term}, \code{estimate}, \code{std.error}
 }
 \description{
 One-row \code{broom::tidy()} data frame for a \code{\link[=debiasedATT]{debiasedATT()}} result,
-matching the \code{tidy.simultaneous_cis} column convention.
+following the package's \code{broom} column convention (\code{term}, \code{estimate},
+\code{std.error}, \code{conf.low}, \code{conf.high}) -- the same columns \code{tidy.fetwfe()} /
+\code{tidy.eventStudy()} return.
 }
