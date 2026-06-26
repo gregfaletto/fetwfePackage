@@ -3,6 +3,88 @@
 # `getTes()` / `getActualCohortTes()`. Moved from R/gen_funcs.R in
 # 1.9.25.
 
+#' @title Validate the targeted-sparsity arguments of `genCoefs()` (#332)
+#' @description Shared, RNG-free validation of `n_signal_cohorts` /
+#'   `treat_base_levels` for `genCoefs()` and `genCoefsCore()`. Both `NULL`
+#'   (the default) is the uniform-`density` mode and is accepted silently. The
+#'   numeric non-degeneracy of the resulting cohort effects (`att != 0`,
+#'   `V2 > 0`) is enforced separately by a build-time assertion in
+#'   `genCoefsCore()` once `beta` is assembled.
+#' @param n_signal_cohorts `NULL`, or a length-1 value coercible to a positive
+#'   integer in `1..(G - 1)` (the count of signal cohorts beyond the baseline).
+#' @param treat_base_levels `NULL`, or a finite numeric vector of length `G`.
+#' @param G Integer; the resolved cohort count.
+#' @return `invisible(NULL)`; errors via `stop()` on an invalid spec.
+#' @keywords internal
+#' @noRd
+.validate_targeted_sparsity <- function(
+	n_signal_cohorts,
+	treat_base_levels,
+	G
+) {
+	if (is.null(n_signal_cohorts) && is.null(treat_base_levels)) {
+		return(invisible(NULL)) # uniform-`density` mode
+	}
+	if (!is.null(n_signal_cohorts) && !is.null(treat_base_levels)) {
+		stop(
+			"genCoefs(): supply at most one of `n_signal_cohorts` or ",
+			"`treat_base_levels` (the count convenience OR the explicit ",
+			"per-cohort base-level vector), not both.",
+			call. = FALSE
+		)
+	}
+	if (G < 2) {
+		stop(
+			"genCoefs(): targeted sparsity requires G >= 2 (cross-cohort ",
+			"heterogeneity, V2 > 0, needs at least two cohorts).",
+			call. = FALSE
+		)
+	}
+	if (!is.null(n_signal_cohorts)) {
+		k <- n_signal_cohorts
+		if (
+			!is.numeric(k) ||
+				length(k) != 1L ||
+				!is.finite(k) ||
+				k != round(k) ||
+				k < 1
+		) {
+			stop(
+				"genCoefs(): `n_signal_cohorts` must be a single positive ",
+				"integer.",
+				call. = FALSE
+			)
+		}
+		if (k > G - 1) {
+			stop(
+				"genCoefs(): `n_signal_cohorts` (",
+				as.integer(k),
+				") must be ",
+				"<= G - 1 (",
+				G - 1,
+				"): at least one cohort must stay at the ",
+				"baseline for the cohort effects to be heterogeneous (V2 > 0).",
+				call. = FALSE
+			)
+		}
+	} else {
+		if (
+			!is.numeric(treat_base_levels) ||
+				length(treat_base_levels) != G ||
+				any(!is.finite(treat_base_levels))
+		) {
+			stop(
+				"genCoefs(): `treat_base_levels` must be a finite numeric vector ",
+				"of length G (",
+				G,
+				"), one fused base level per cohort.",
+				call. = FALSE
+			)
+		}
+	}
+	invisible(NULL)
+}
+
 #' Generate Coefficient Vector for Data Generation
 #'
 #' This function generates a coefficient vector \code{beta} for simulation studies of the fused
@@ -91,6 +173,35 @@
 #'   downstream differences (without simultaneously cranking the linear
 #'   angle). Ignored when \code{assignment_interactions = NULL}. New in
 #'   1.14.1.
+#' @param n_signal_cohorts (Optional) Targeted-sparsity mode (#332). A single
+#'   positive integer \code{k} in \code{1..(G - 1)}. When supplied, the
+#'   coefficient vector is built \emph{deterministically} with the treatment
+#'   signal placed on exactly \code{k} cohorts' fused base levels (and the
+#'   covariate / interaction blocks left at zero), giving \code{||theta||_0 = k}
+#'   non-zeros with a guaranteed non-zero, \emph{heterogeneous} cohort effect
+#'   (overall ATT \eqn{\neq 0} and positive cohort-weight variance \eqn{V_2 > 0}).
+#'   This produces the simultaneously sparse and non-degenerate
+#'   high-dimensional (\eqn{p \ge NT}) data-generating process the desparsified /
+#'   nodewise debiased-ATT coverage study needs, which the default uniform
+#'   \code{density} placement cannot (it almost never lands signal on the tiny
+#'   treatment-effect coordinate block). Cohort 1 is held at the baseline and
+#'   cohorts \code{2..(k + 1)} receive the distinct magnitudes
+#'   \code{eff_size * (1, 2, ..., k)} (so \code{eff_size} must be non-zero).
+#'   Defaults to \code{NULL}; \code{NULL} (with \code{treat_base_levels = NULL})
+#'   is the unchanged, byte-identical uniform-\code{density} behavior. Mutually
+#'   exclusive with \code{treat_base_levels}.
+#' @param treat_base_levels (Optional) Targeted-sparsity mode (#332), explicit
+#'   form. A finite numeric vector of length \code{G} giving each cohort's fused
+#'   base level directly (placed on \code{getTreatInds()[getFirstInds()]}); every
+#'   other coordinate is left at zero, so \code{||theta||_0} is the number of
+#'   non-zero entries. Note these are \emph{fused} base levels, not the per-cohort
+#'   ATTs: under \code{fusion_structure = "cohort"} a vector
+#'   \code{(b_1, ..., b_G)} maps to the cumulative cohort effects
+#'   \code{cumsum(b)} (e.g. \code{c(0, m, 0)} gives cohort ATTs \code{(0, m, m)}),
+#'   and \code{"event_study"} uses a different but still heterogeneity-preserving
+#'   map. The result must be non-degenerate and heterogeneous (\eqn{V_2 > 0}); an
+#'   all-zero or constant-effect specification is rejected. Defaults to
+#'   \code{NULL}. Mutually exclusive with \code{n_signal_cohorts}.
 #' @param seed (Optional) Integer. Seed for reproducibility. Three
 #'   deterministic offsets share this seed: the main coefficient draw uses
 #'   \code{seed}; the assignment coefficients use \code{seed + 1L}; the
@@ -241,6 +352,8 @@ genCoefs <- function(
 	assignment_strength = 1.0,
 	assignment_interactions = NULL,
 	assignment_interaction_strength = NULL,
+	n_signal_cohorts = NULL,
+	treat_base_levels = NULL,
 	seed = NULL,
 	verbose = FALSE,
 	R = NULL
@@ -249,6 +362,10 @@ genCoefs <- function(
 	# alias and warning if it is supplied (#41). The body below uses `G`
 	# directly.
 	G <- .resolve_cohort_count_arg(G, R, "genCoefs")
+
+	# Validate the targeted-sparsity arguments (#332) up front (pure checks,
+	# consume no RNG). Both NULL => uniform-`density` mode, byte-identical.
+	.validate_targeted_sparsity(n_signal_cohorts, treat_base_levels, G)
 
 	# Check that T is a numeric scalar and at least 2.
 	if (!is.numeric(T) || length(T) != 1 || T < 2) {
@@ -389,6 +506,8 @@ genCoefs <- function(
 		density = density,
 		eff_size = eff_size,
 		fusion_structure = fusion_structure,
+		n_signal_cohorts = n_signal_cohorts,
+		treat_base_levels = treat_base_levels,
 		seed = seed
 	)
 	if (is.null(core_obj$beta)) {
@@ -670,6 +789,12 @@ getTes <- function(coefs_obj) {
 #' effects are sparse. \code{"cohort"} is byte-identical to previous behavior;
 #' \code{"event_study"} fuses effects at the same time since treatment across
 #' cohorts. See \code{genCoefs()} for details.
+#' @param n_signal_cohorts,treat_base_levels (Optional) Targeted-sparsity mode
+#' (#332). Both \code{NULL} (the default) is the unchanged, byte-identical
+#' uniform-\code{density} path. Otherwise the treatment signal is placed
+#' deterministically on the per-cohort fused base levels for a sparse,
+#' non-degenerate, heterogeneous high-dimensional DGP. See \code{genCoefs()} for
+#' the full description; the two are mutually exclusive.
 #' @param seed (Optional) Integer. Seed for reproducibility. \code{NA} (or
 #' \code{NULL}) means "draw from the ambient random-number generator" --- no
 #' \code{set.seed()} is called.
@@ -746,6 +871,8 @@ genCoefsCore <- function(
 	density,
 	eff_size,
 	fusion_structure = c("cohort", "event_study"),
+	n_signal_cohorts = NULL,
+	treat_base_levels = NULL,
 	seed = NULL,
 	R = NULL
 ) {
@@ -755,6 +882,10 @@ genCoefsCore <- function(
 	G <- .resolve_cohort_count_arg(G, R, "genCoefsCore")
 
 	fusion_structure <- match.arg(fusion_structure)
+
+	# Defensive re-validation (genCoefsCore is exported and callable directly);
+	# pure checks, no RNG, before `.apply_seed` (#332).
+	.validate_targeted_sparsity(n_signal_cohorts, treat_base_levels, G)
 
 	.apply_seed(seed)
 
@@ -805,19 +936,65 @@ genCoefsCore <- function(
 
 	theta <- rep(0, p)
 
-	# Make sure at least one feature is selected
-	pass_condition <- FALSE
-	while (!pass_condition) {
-		theta_inds <- which(as.logical(rbinom(n = p, size = 1, prob = density)))
-		pass_condition <- length(theta_inds) > 0
+	targeted <- !is.null(n_signal_cohorts) || !is.null(treat_base_levels)
+	if (!targeted) {
+		# ---- Default uniform-`density` path. Kept VERBATIM so that, when the
+		#      targeted-sparsity args are unset, the RNG stream (the rbinom at this
+		#      line, re-drawn on an all-zero result, then the rfunc sign draw whose
+		#      length depends on it) and hence `theta`/`beta` are byte-identical to
+		#      pre-#332 behavior. ----
+		# Make sure at least one feature is selected
+		pass_condition <- FALSE
+		while (!pass_condition) {
+			theta_inds <- which(as.logical(rbinom(
+				n = p,
+				size = 1,
+				prob = density
+			)))
+			pass_condition <- length(theta_inds) > 0
+		}
+
+		num_coefs <- length(theta_inds)
+		# Generate signs of coefficients in transformed space, and bias away from
+		# 0.5 (as described in paper)
+		signs <- rfunc(num_coefs, prob = 0.6)
+
+		theta[theta_inds] <- eff_size * signs
+	} else {
+		# ---- Targeted-sparsity path (#332): place a small, heterogeneous signal
+		#      on the per-cohort fused BASE levels and leave everything else --
+		#      including the covariate/interaction blocks -- at zero, so
+		#      `s = ||theta||_0` is exactly the treatment-signal count. FULLY
+		#      DETERMINISTIC: no rbinom/rfunc/sample/rnorm here, so this branch
+		#      cannot perturb the default RNG stream and is reproducible from its
+		#      args alone.
+		#
+		#      `theta[treat_inds]` are FUSED differences; `treat_inds[first_inds[g]]`
+		#      is cohort g's base level. Cohort 1's base (`first_inds[1]`) is the
+		#      unique all-ones column of the inverse treatment-fusion transform --
+		#      it lifts EVERY cohort's effect equally, contributing to `att` but
+		#      0 to the cohort-weight variance V2. The count mode therefore SKIPS
+		#      cohort 1 and writes distinct magnitudes on cohorts 2..(k+1), which
+		#      load only cohorts {g..G} (a nested staircase) and so produce
+		#      heterogeneous cohort effects (V2 > 0). The build-time assertion
+		#      after `beta` is assembled enforces the same non-degeneracy for the
+		#      free-form `treat_base_levels` vector. See issue #332 (high-dim
+		#      p > NT desparsified-ATT coverage study). ----
+		ts_first_inds <- getFirstInds(G = G, T = T)
+		ts_treat_inds <- getTreatInds(
+			G = G,
+			T = T,
+			d = d,
+			num_treats = num_treats
+		)
+		if (!is.null(n_signal_cohorts)) {
+			k <- as.integer(n_signal_cohorts)
+			theta[ts_treat_inds[ts_first_inds[2:(k + 1)]]] <- eff_size *
+				seq_len(k)
+		} else {
+			theta[ts_treat_inds[ts_first_inds]] <- treat_base_levels
+		}
 	}
-
-	num_coefs <- length(theta_inds)
-	# Generate signs of coefficients in transformed space, and bias away from
-	# 0.5 (as described in paper)
-	signs <- rfunc(num_coefs, prob = 0.6)
-
-	theta[theta_inds] <- eff_size * signs
 
 	# Now we have coefficients that are sparse in the appropriate feature space.
 	# The last step is to transform them to the original feature space. Since
@@ -927,6 +1104,44 @@ genCoefsCore <- function(
 	}
 
 	stopifnot(all(!is.na(beta)))
+
+	# Targeted-sparsity non-degeneracy contract (#332): in targeted mode the
+	# point of the DGP is a NON-degenerate, HETEROGENEOUS cohort effect (att != 0
+	# AND V2 > 0). V2 > 0 iff the per-cohort effects are not all equal, so this is
+	# checked on the assembled `beta` (intrinsic to it, DGP-weight-independent).
+	# It catches `eff_size = 0`, an all-zero `treat_base_levels`, and the
+	# homogeneous trap (e.g. signal only on cohort 1's all-ones base, or any
+	# constant `treat_base_levels`) -- for either fusion_structure -- without the
+	# caller having to reason about the fused map. (The count mode cannot reach
+	# either failure given the validated 1 <= k <= G-1, but the check is cheap
+	# insurance and the only guard for the free-form vector.)
+	if (targeted) {
+		catt_built <- getActualCohortTes(
+			G = G,
+			first_inds = first_inds,
+			treat_inds = treat_inds,
+			coefs = beta,
+			num_treats = num_treats
+		)
+		if (all(catt_built == 0)) {
+			stop(
+				"genCoefs() targeted mode produced all-zero cohort effects ",
+				"(att == 0). Supply a nonzero `eff_size` (count mode) or a ",
+				"`treat_base_levels` with a nonzero entry.",
+				call. = FALSE
+			)
+		}
+		if (length(unique(catt_built)) == 1L) {
+			stop(
+				"genCoefs() targeted mode produced homogeneous cohort effects ",
+				"(V2 == 0): all cohorts have the same effect, so there is no ",
+				"cohort-weight variance. Place signal on at least one non-baseline ",
+				"cohort with a distinct level (count mode does this automatically; ",
+				"for `treat_base_levels` use entries that are not all equal).",
+				call. = FALSE
+			)
+		}
+	}
 
 	# Confirm beta satisfies input requirements of genRandomData() (make
 	# up values for N, sig_eps_sq, and sig_eps_c_sq that meet requirements)
