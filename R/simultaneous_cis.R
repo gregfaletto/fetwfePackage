@@ -1439,9 +1439,77 @@ print.simultaneous_cis <- function(x, ...) {
 		x$pointwise_critical_value,
 		x$bonferroni_critical_value
 	))
+	if (identical(x$regime, "high-dimensional")) {
+		.print_highdim_diagnostics(x)
+	}
 	cat("\n")
 	print(x$ci, row.names = FALSE, right = TRUE)
 	invisible(x)
+}
+
+#' @title Print the high-dimensional desparsified-band diagnostics
+#' @description Shared by `print.simultaneous_cis` and `print.debiased_att`: in
+#'   the high-dimensional (`p >= NT`) regime, surfaces the experimental caveat and
+#'   the nodewise-direction diagnostics (the resolved `lambda_c` / `lambda_node`
+#'   scale, the KKT feasibility certificate `||Sigma v - a||_inf <= lambda_node`,
+#'   and convergence) that the documentation tells users to inspect. `x` carries
+#'   `lambda_c` / `lambda_c_selection` / `lambda_node` / `feasibility` /
+#'   `converged` (and, for the event-study propensity channel, `propensity_*`).
+#' @param x A `simultaneous_cis` or `debiased_att` object in the high-dim regime.
+#' @return `invisible(NULL)`; called for its `cat()` side effects.
+#' @keywords internal
+#' @noRd
+.print_highdim_diagnostics <- function(x) {
+	cat(
+		"High-dimensional (p >= NT) desparsified band [EXPERIMENTAL: coverage not\n",
+		"  yet simulation-validated -- inspect the diagnostics below]\n",
+		sep = ""
+	)
+	sel <- if (identical(x$lambda_c_selection, "cv")) "CV-selected" else "fixed"
+	cat(sprintf(
+		"  nodewise penalty: lambda_c = %.4g (%s); lambda_node in [%.4g, %.4g]\n",
+		x$lambda_c,
+		sel,
+		min(x$lambda_node),
+		max(x$lambda_node)
+	))
+	nk <- length(x$converged)
+	# KKT-feasible iff `||Sigma v - a||_inf <= lambda_node`, with the same default
+	# `riesz_tol` slack the band's feasibility gate / experimental warning use, so
+	# "K/K KKT-feasible" here means "no feasibility warning fired".
+	nfeas <- sum(x$feasibility <= x$lambda_node * (1 + 1e-9))
+	feas_ratio <- x$feasibility / x$lambda_node
+	feas_ratio <- feas_ratio[is.finite(feas_ratio)]
+	worst_txt <- if (length(feas_ratio)) {
+		sprintf(" (worst feasibility/lambda_node = %.4g)", max(feas_ratio))
+	} else {
+		""
+	}
+	cat(sprintf(
+		"  nodewise directions: %d/%d converged, %d/%d KKT-feasible%s\n",
+		sum(x$converged),
+		nk,
+		nfeas,
+		nk,
+		worst_txt
+	))
+	if (!is.null(x$propensity_feasibility)) {
+		pk <- length(x$propensity_converged)
+		cat(sprintf(
+			"  propensity channel (#309): %d/%d converged, %d/%d KKT-feasible\n",
+			sum(x$propensity_converged),
+			pk,
+			# same `riesz_tol` slack as the per-effect line above (the nodewise solver
+			# routinely binds the constraint to ~1e-10, so a strict `<=` would report
+			# 0/K feasible exactly when the band's gate fired no warning).
+			sum(
+				x$propensity_feasibility <=
+					x$propensity_lambda_node * (1 + 1e-9)
+			),
+			pk
+		))
+	}
+	invisible(NULL)
 }
 
 #' @importFrom generics tidy

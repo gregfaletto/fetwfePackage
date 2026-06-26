@@ -39,7 +39,8 @@ validation of its coverage); treat the \code{p >= NT} path as experimental.}
 for the high-dimensional nodewise solver. \strong{Ignored when \code{p < NT}.}}
 }
 \value{
-A named list with elements:
+An object of S3 class \code{"debiased_att"} (a named list, with a \code{print}
+and a \code{tidy} method) with elements:
 \describe{
 \item{att}{Numeric scalar; the debiased overall-ATT point estimate.}
 \item{se}{Numeric scalar; the uniformly-valid standard error,

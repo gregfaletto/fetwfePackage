@@ -1,5 +1,20 @@
 # NEWS
 
+## Version 1.46.0
+
+### Improvements
+
+- `print()` on a `simultaneousCIs()` result now surfaces the **high-dimensional
+  (`p >= NT`) desparsified-band diagnostics** the documentation tells users to
+  inspect: the experimental caveat, the resolved nodewise penalty
+  (`lambda_c` / `lambda_node`), and the per-effect KKT feasibility and convergence
+  summary (plus the event-study propensity channel when present). The fixed-`p`
+  print is unchanged (#326).
+- `debiasedATT()` now returns a lightweight S3 object of class `"debiased_att"`
+  with `print()` and `broom::tidy()` methods (the `print()` shares the same high-dim
+  diagnostics). The returned list's contents and names are unchanged, so existing
+  `$`-accessor code is unaffected (#326).
+
 ## Version 1.45.0
 
 ### Bug fixes

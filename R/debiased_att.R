@@ -186,7 +186,8 @@
 #' @param riesz_max_iter,riesz_tol Integer / numeric; coordinate-descent controls
 #'   for the high-dimensional nodewise solver. **Ignored when `p < NT`.**
 #'
-#' @return A named list with elements:
+#' @return An object of S3 class `"debiased_att"` (a named list, with a `print`
+#'   and a `tidy` method) with elements:
 #'   \describe{
 #'     \item{att}{Numeric scalar; the debiased overall-ATT point estimate.}
 #'     \item{se}{Numeric scalar; the uniformly-valid standard error,
@@ -602,7 +603,64 @@ debiasedATT <- function(
 			out$lambda_cv <- riesz_diag$lambda_cv
 		}
 	}
+	# Lightweight S3 class for a `print` / `tidy` method (#326). The list contents
+	# are unchanged -- the regime is inferred from the presence of `lambda_node` --
+	# so existing `$`-accessor and `names()` code is unaffected.
+	class(out) <- "debiased_att"
 	out
+}
+
+#' @title Print a debiased overall-ATT estimate
+#' @description Compact display of [debiasedATT()]'s estimate, standard error, and
+#'   Wald confidence interval. In the high-dimensional (`p >= NT`) regime it also
+#'   surfaces the experimental caveat and the nodewise-direction diagnostics
+#'   (`lambda_c` / `lambda_node`, KKT feasibility, convergence) the documentation
+#'   tells users to inspect; the fixed-`p` print shows only the estimate block.
+#' @param x A `"debiased_att"` object from [debiasedATT()].
+#' @param ... Ignored.
+#' @return `x`, invisibly.
+#' @export
+print.debiased_att <- function(x, ...) {
+	highdim <- !is.null(x$lambda_node)
+	cat(sprintf(
+		"Debiased overall ATT (%s regime)\n",
+		if (highdim) "high-dimensional" else "fixed-p"
+	))
+	level <- if (is.finite(x$se) && x$se > 0) {
+		round(100 * (2 * stats::pnorm((x$ci_high - x$att) / x$se) - 1))
+	} else {
+		NA_real_
+	}
+	ci_label <- if (is.na(level)) "Wald CI" else sprintf("%g%% CI", level)
+	cat(sprintf("  Estimate:   %.4f\n", x$att))
+	cat(sprintf("  Std. Error: %.4f\n", x$se))
+	cat(sprintf("  %s: [%.4f, %.4f]\n", ci_label, x$ci_low, x$ci_high))
+	if (highdim) {
+		.print_highdim_diagnostics(x)
+	}
+	invisible(x)
+}
+
+#' @title Tidy a debiased overall-ATT estimate
+#' @description One-row `broom::tidy()` data frame for a [debiasedATT()] result,
+#'   following the package's `broom` column convention (`term`, `estimate`,
+#'   `std.error`, `conf.low`, `conf.high`) -- the same columns `tidy.fetwfe()` /
+#'   `tidy.eventStudy()` return.
+#' @param x A `"debiased_att"` object from [debiasedATT()].
+#' @param ... Ignored.
+#' @return A one-row data frame with columns `term`, `estimate`, `std.error`,
+#'   `conf.low`, `conf.high`.
+#' @importFrom generics tidy
+#' @export
+tidy.debiased_att <- function(x, ...) {
+	data.frame(
+		term = "overall ATT",
+		estimate = x$att,
+		std.error = x$se,
+		conf.low = x$ci_low,
+		conf.high = x$ci_high,
+		stringsAsFactors = FALSE
+	)
 }
 
 #' Run debiasedATT() on simulated data
