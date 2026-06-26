@@ -116,7 +116,6 @@
 #' @keywords internal
 #' @noRd
 getTeResultsOLS <- function(
-	# model,
 	sig_eps_sq,
 	N,
 	T,
@@ -267,7 +266,8 @@ getSecondVarTermOLS <- function(
 
 	# Construct Jacobian matrix corresponding to the mapping from the
 	# individual cohort probabilities to the proportions calculated for the ATT.
-	# See Proof of Theorem 6.1 for form. Consolidated into `.build_jacobian()`
+	# See the Proof of Theorem 6.1 (Consistency of FETWFE), paper_arxiv.tex:2678,
+	# for the explicit form (verified #325). Consolidated into `.build_jacobian()`
 	# (#192, WORKFLOW_LESSONS §14 Class A); the OLS-family path (d_inv = NULL)
 	# returns the G x G column-indexed Jacobian byte-identically.
 	jacobian_mat <- .build_jacobian(
@@ -283,7 +283,10 @@ getSecondVarTermOLS <- function(
 	stopifnot(length(tes) == nrow(psi_mat))
 
 	# Finally, calculate variance term for ATT from Sigma_pi_hat, Jacobian
-	# matrix, psi_mat, and beta_hat. See proof of Theorem D.2 for details.
+	# matrix, psi_mat, and beta_hat. This is the estimated-propensity variance
+	# term: see Theorem 6.4(b) (Asymptotic Confidence Intervals for FETWFE),
+	# eq. (v.n.r.t.att.rand) at paper_arxiv.tex:2876, for details (was a stale
+	# "Theorem D.2" reference; corrected #325).
 
 	# Issue #127: floor `att_var_2` at zero, mirroring the `att_var_1`
 	# floor PR #111 added at the analogous sibling sites in this file. The
@@ -631,7 +634,6 @@ getPsiGUnfused <- function(
 #' @keywords internal
 #' @noRd
 getTeResults2 <- function(
-	# model,
 	sig_eps_sq,
 	N,
 	T,
@@ -959,7 +961,8 @@ getSecondVarTermDataApp <- function(
 	stopifnot(nrow(Sigma_pi_hat) == G)
 	stopifnot(ncol(Sigma_pi_hat) == G)
 
-	# Jacobian (paper Theorem 6.3, paper_arxiv.tex:2577-2592):
+	# Jacobian (paper Theorem 6.1 proof, paper_arxiv.tex:2678; was a stale
+	# "Theorem 6.3 / 2577-2592" reference, corrected #325):
 	##
 	## J_{rs} =  (S-pi_g)/S^2      if g = s
 	##           -pi_s   /S^2      if g != s    (off-diagonal uses COLUMN index s)
@@ -1022,9 +1025,10 @@ getSecondVarTermDataApp <- function(
 #' `simultaneousCIs()` call site into one helper (WORKFLOW_LESSONS section 14 Class A:
 #' the third copy triggers a refactor). All four sites implement the same
 #' delta-method gradient of \eqn{f_g(\pi)=\pi_g/\sum_k \pi_k}; the column-index
-#' off-diagonal coefficient \eqn{J_{rs}=-\pi_s/S^2} matches paper Theorem 6.3
-#' (`paper_arxiv.tex:2577-2592`). Prior to v1.8.0 the off-diagonal used the
-#' outer-loop row index; see issue #46.
+#' off-diagonal coefficient \eqn{J_{rs}=-\pi_s/S^2} matches the explicit Jacobian
+#' in the proof of paper Theorem 6.1 (`paper_arxiv.tex:2678`; was a stale
+#' "Theorem 6.3 / 2577-2592" reference, corrected #325). Prior to v1.8.0 the
+#' off-diagonal used the outer-loop row index; see issue #46.
 #' @param cohort_probs_overall Numeric vector of length `G`; marginal cohort
 #'   probabilities P(W = g). For `mode = "per_effect_masked"` the caller passes
 #'   the full (un-masked) vector; this helper masks to `V_e` internally.

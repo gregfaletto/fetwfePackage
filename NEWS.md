@@ -1,5 +1,24 @@
 # NEWS
 
+## Version 1.47.0
+
+### Improvements
+
+- `eventStudy()` now names the offending class when called on an unsupported
+  object (e.g. `Got class: lm`), matching `cohortStudy()`'s error and making
+  misuse easier to debug (#325).
+
+### Internal
+
+- Cleanup batch from the 2026-06-19 periodic review (#325): corrected stale paper
+  cross-references in the ATT-variance machinery (the estimated-propensity variance
+  term now points to Theorem 6.4(b) / eq. `v.n.r.t.att.rand`, and the cohort-share
+  Jacobian to the proof of Theorem 6.1 — both verified against `paper_arxiv.tex`);
+  de-duplicated the `in_sample_counts` named/unique validation into a single helper;
+  removed two dead commented-out parameters; and documented the `riesz_lasso`
+  feasibility-certificate and bootstrap degeneracy semantics to prevent future
+  mis-"fixes". No change to estimates, standard errors, or returned values.
+
 ## Version 1.46.0
 
 ### Improvements
