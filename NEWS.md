@@ -1,5 +1,25 @@
 # NEWS
 
+## Version 1.48.0
+
+### Improvements
+
+- `genCoefs()` / `genCoefsCore()` gain a **targeted-sparsity mode** via two new
+  (mutually exclusive) arguments, `n_signal_cohorts` and `treat_base_levels`. It
+  places a small, controllable, **heterogeneous** treatment-effect signal on the
+  per-cohort fused base levels (with the covariate / interaction block left at
+  zero), producing a coefficient vector that is simultaneously sparse
+  (`||theta||_0` equal to the signal count) and non-degenerate (overall ATT
+  `!= 0` and positive cohort-weight variance `V2 > 0`). This is the
+  data-generating process the high-dimensional (`p >= NT`) desparsified /
+  nodewise debiased-ATT coverage study needs — which the default uniform-`density`
+  placement cannot produce, because at `p >> num_treats` it almost never lands
+  signal on the tiny treatment-effect coordinate block (#332). The default
+  uniform-`density` behavior (both new arguments `NULL`) is unchanged and
+  byte-identical. `n_signal_cohorts = k` is the count convenience (a deterministic
+  staircase on `k` cohorts); `treat_base_levels` gives explicit per-cohort fused
+  base levels. `simulateData()` / `getTes()` consume the result unchanged.
+
 ## Version 1.47.0
 
 ### Improvements

@@ -15,6 +15,8 @@ genCoefs(
   assignment_strength = 1,
   assignment_interactions = NULL,
   assignment_interaction_strength = NULL,
+  n_signal_cohorts = NULL,
+  treat_base_levels = NULL,
   seed = NULL,
   verbose = FALSE,
   R = NULL
@@ -102,6 +104,37 @@ stress-testing whether the nonlinear-propensity angle alone drives
 downstream differences (without simultaneously cranking the linear
 angle). Ignored when \code{assignment_interactions = NULL}. New in
 1.14.1.}
+
+\item{n_signal_cohorts}{(Optional) Targeted-sparsity mode (#332). A single
+positive integer \code{k} in \code{1..(G - 1)}. When supplied, the
+coefficient vector is built \emph{deterministically} with the treatment
+signal placed on exactly \code{k} cohorts' fused base levels (and the
+covariate / interaction blocks left at zero), giving \code{||theta||_0 = k}
+non-zeros with a guaranteed non-zero, \emph{heterogeneous} cohort effect
+(overall ATT \eqn{\neq 0} and positive cohort-weight variance \eqn{V_2 > 0}).
+This produces the simultaneously sparse and non-degenerate
+high-dimensional (\eqn{p \ge NT}) data-generating process the desparsified /
+nodewise debiased-ATT coverage study needs, which the default uniform
+\code{density} placement cannot (it almost never lands signal on the tiny
+treatment-effect coordinate block). Cohort 1 is held at the baseline and
+cohorts \code{2..(k + 1)} receive the distinct magnitudes
+\code{eff_size * (1, 2, ..., k)} (so \code{eff_size} must be non-zero).
+Defaults to \code{NULL}; \code{NULL} (with \code{treat_base_levels = NULL})
+is the unchanged, byte-identical uniform-\code{density} behavior. Mutually
+exclusive with \code{treat_base_levels}.}
+
+\item{treat_base_levels}{(Optional) Targeted-sparsity mode (#332), explicit
+form. A finite numeric vector of length \code{G} giving each cohort's fused
+base level directly (placed on \code{getTreatInds()[getFirstInds()]}); every
+other coordinate is left at zero, so \code{||theta||_0} is the number of
+non-zero entries. Note these are \emph{fused} base levels, not the per-cohort
+ATTs: under \code{fusion_structure = "cohort"} a vector
+\code{(b_1, ..., b_G)} maps to the cumulative cohort effects
+\code{cumsum(b)} (e.g. \code{c(0, m, 0)} gives cohort ATTs \code{(0, m, m)}),
+and \code{"event_study"} uses a different but still heterogeneity-preserving
+map. The result must be non-degenerate and heterogeneous (\eqn{V_2 > 0}); an
+all-zero or constant-effect specification is rejected. Defaults to
+\code{NULL}. Mutually exclusive with \code{n_signal_cohorts}.}
 
 \item{seed}{(Optional) Integer. Seed for reproducibility. Three
 deterministic offsets share this seed: the main coefficient draw uses

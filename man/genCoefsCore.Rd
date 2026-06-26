@@ -11,6 +11,8 @@ genCoefsCore(
   density,
   eff_size,
   fusion_structure = c("cohort", "event_study"),
+  n_signal_cohorts = NULL,
+  treat_base_levels = NULL,
   seed = NULL,
   R = NULL
 )
@@ -39,6 +41,13 @@ treatment-effect block, controlling the basis in which the true treatment
 effects are sparse. \code{"cohort"} is byte-identical to previous behavior;
 \code{"event_study"} fuses effects at the same time since treatment across
 cohorts. See \code{genCoefs()} for details.}
+
+\item{n_signal_cohorts, treat_base_levels}{(Optional) Targeted-sparsity mode
+(#332). Both \code{NULL} (the default) is the unchanged, byte-identical
+uniform-\code{density} path. Otherwise the treatment signal is placed
+deterministically on the per-cohort fused base levels for a sparse,
+non-degenerate, heterogeneous high-dimensional DGP. See \code{genCoefs()} for
+the full description; the two are mutually exclusive.}
 
 \item{seed}{(Optional) Integer. Seed for reproducibility. \code{NA} (or
 \code{NULL}) means "draw from the ambient random-number generator" --- no
