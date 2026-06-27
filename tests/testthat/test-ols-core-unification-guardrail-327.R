@@ -14,8 +14,9 @@
 # (the c7_indep configs), which exercises the indep getTeResultsOLS() call -- the
 # full catt_df, and the coefficient vector) and reduces it to collision-resistant
 # aggregates; the position-weighted sum (`wsum`) catches reorderings/swaps that
-# plain sum/sumsq would miss. Goldens captured from the pre-refactor code (commit
-# f1c8cca).
+# plain sum/sumsq would miss. The etwfe goldens are captured from the pre-refactor
+# code (commit f1c8cca); the twfeCovs goldens were re-captured after the #339
+# collapse off-by-one fix (see the note on the twfeCovs_* block below).
 
 .fp_327 <- function(fit) {
 	v <- c(
@@ -170,68 +171,72 @@
 		mx = 6.1470871639,
 		mn = -4.3501244277
 	),
+	# twfeCovs goldens re-captured after the #339 collapse off-by-one fix (the
+	# pre-collapse treatment-column extraction now uses getTreatInds()), so these
+	# rows are post-#339 values, NOT the pre-refactor f1c8cca byte-identical
+	# values; the etwfe goldens above remain pre-refactor (etwfe never collapses).
 	twfeCovs_c1_base = c(
 		n = 36,
-		sum = 40.3928807217,
-		sumsq = 143.179199422,
-		sumabs = 40.684445326,
-		wsum = 1055.74546402,
-		mx = 8.48022246831,
-		mn = -0.145782302154
+		sum = 28.2113851932,
+		sumsq = 174.5039823141,
+		sumabs = 48.4404221105,
+		wsum = 889.6701501748,
+		mx = 8.5910974771,
+		mn = -2.0282300035
 	),
 	twfeCovs_c2_cluster = c(
 		n = 36,
-		sum = 45.6229901083,
-		sumsq = 161.68019933,
-		sumabs = 51.4796001752,
-		wsum = 1137.28023272,
-		mx = 8.48022246831,
-		mn = -1.64492081469
+		sum = 34.8652761713,
+		sumsq = 221.8957842605,
+		sumabs = 64.6894233615,
+		wsum = 986.9970631622,
+		mx = 8.5910974771,
+		mn = -3.1887787766
 	),
 	twfeCovs_c3_ridge = c(
 		n = 36,
-		sum = 40.3929796973,
-		sumsq = 143.179930206,
-		sumabs = 40.684542513,
-		wsum = 1055.74808929,
-		mx = 8.48024443005,
-		mn = -0.145781407869
+		sum = 28.2114481934,
+		sumsq = 174.5048553094,
+		sumabs = 48.4405272317,
+		wsum = 889.6722529844,
+		mx = 8.5911197332,
+		mn = -2.0282336359
 	),
 	twfeCovs_c4_d0 = c(
 		n = 34,
-		sum = -35.0606655433,
-		sumsq = 81.3634195152,
-		sumabs = 42.0840786104,
-		wsum = -620.146197574,
-		mx = 0.874312552911,
-		mn = -2.86568612327
+		sum = -29.9224949548,
+		sumsq = 96.4450430598,
+		sumabs = 39.8082659448,
+		wsum = -562.3335794533,
+		mx = 1.0096134340,
+		mn = -4.2026152336
 	),
 	twfeCovs_c5_bigGT = c(
 		n = 47,
-		sum = 30.8793423015,
-		sumsq = 190.00469572,
-		sumabs = 67.5089511377,
-		wsum = 596.753874573,
-		mx = 5.11653367631,
-		mn = -6.09899877872
+		sum = 20.9958565766,
+		sumsq = 151.4808010364,
+		sumabs = 58.7333446913,
+		wsum = 478.5060668888,
+		mx = 4.8163044763,
+		mn = -5.3625646504
 	),
 	twfeCovs_c6_reml = c(
 		n = 36,
-		sum = 40.4838258143,
-		sumsq = 143.323584631,
-		sumabs = 40.8177266326,
-		wsum = 1057.30820486,
-		mx = 8.48022246831,
-		mn = -0.166950409144
+		sum = 28.3713380297,
+		sumsq = 174.8449365058,
+		sumabs = 48.7203315275,
+		wsum = 892.4322530116,
+		mx = 8.5910974771,
+		mn = -2.0548339806
 	),
 	twfeCovs_c7_indep = c(
 		n = 36,
-		sum = 40.3357038891,
-		sumsq = 143.1233086215,
-		sumabs = 40.6272684934,
-		wsum = 1055.6800476111,
-		mx = 8.4802224683,
-		mn = -0.1457823022
+		sum = 28.5235274621,
+		sumsq = 174.3981994637,
+		sumabs = 48.4130630864,
+		wsum = 890.2587409090,
+		mx = 8.5910974771,
+		mn = -2.0282300035
 	)
 )
 

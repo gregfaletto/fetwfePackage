@@ -451,8 +451,14 @@ prep_for_etwfe_core <- function(
 
 	X <- X_gls[, 1:(G + T - 1 + d * (1 + G + T - 1) + num_treats)]
 
-	first_treat_ind <- G + T - 1 + d * (1 + G + T - 1)
-	treat_inds <- first_treat_ind:(first_treat_ind + num_treats - 1)
+	# Treatment columns in the (pre-collapse) GLS design. Use the validated helper
+	# getTreatInds() rather than an inline formula, so the pre-collapse treatment
+	# block matches the etwfe path exactly and cannot drift. This fixes a previous
+	# off-by-one: the old inline `first_treat_ind <- G + T - 1 + d*(1 + G + T - 1)`
+	# was the *count* of pre-treatment columns, so `first_treat_ind:(...)` started
+	# one column too low -- it pulled the last covariate-interaction column into the
+	# treatment block and dropped the last treatment column (#339).
+	treat_inds <- getTreatInds(G = G, T = T, d = d, num_treats = num_treats)
 	stopifnot(length(treat_inds) == num_treats)
 
 	X <- X[, c(1:(G + T - 1 + d), treat_inds)]

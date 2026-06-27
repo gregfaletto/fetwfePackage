@@ -1,5 +1,20 @@
 # NEWS
 
+## Version 1.49.0
+
+### Bug fixes
+
+- `twfeCovs()`: fixed an off-by-one in the internal collapse of the
+  treatment-effect columns (`.collapse_design_for_twfe_covs()`). The pre-collapse
+  extraction began one column too low — it summed a covariate-interaction column
+  into the per-cohort treatment block and dropped the last treatment column — and
+  now uses the validated `getTreatInds()` indices (the same ones the `etwfe()`
+  path uses). As a result, **`twfeCovs()` output changes versus `<= 1.48.0`**.
+  This is a correction, but anyone reproducing the `twfeCovs` benchmark from the
+  Faletto (2025) simulation studies should note that those numbers will differ.
+  No other estimator (`fetwfe()`, `etwfe()`, `betwfe()`) is affected — none uses
+  this collapse (#339).
+
 ## Version 1.48.0
 
 ### Improvements
