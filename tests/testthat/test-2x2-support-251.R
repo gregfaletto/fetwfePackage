@@ -98,8 +98,11 @@
 #
 # tau = 2 is injected, so att_hat recovery is numerical (tolerance), not just
 # finiteness. twfeCovs is the naive benchmark -- biased under staggering, but at
-# a clean 2x2 with one cohort it should still be in the right ballpark; we assert
-# only finiteness for it to stay robust.
+# a clean 2x2 with one cohort it recovers tau too. Asserting that recovery is the
+# external-truth anchor for the #339 collapse off-by-one fix: pre-fix the
+# extraction summed a covariate-interaction column instead of the lone treatment
+# column (getTreatInds(1,2,2,1) = 9, buggy formula gave 8), so twfeCovs could NOT
+# recover tau here -- this assertion would have FAILED before the fix.
 # ------------------------------------------------------------------------------
 
 test_that("all four estimators fit a 2x2 (T = 2, G = 1) panel", {
@@ -132,6 +135,10 @@ test_that("all four estimators fit a 2x2 (T = 2, G = 1) panel", {
 	expect_equal(res_t$T, 2)
 	expect_true(is.finite(res_t$att_hat))
 	expect_true(is.finite(res_t$att_se))
+	# External-truth anchor for the #339 collapse fix (see header note above):
+	# twfeCovs recovers the injected tau = 2 once the right treatment column is
+	# summed. Would have failed pre-fix (summed a covariate-interaction column).
+	expect_equal(res_t$att_hat, 2, tolerance = 0.3)
 })
 
 test_that("fetwfe add_ridge fits a 2x2 panel (the relaxed T >= 2L fusion guard)", {
@@ -221,6 +228,9 @@ test_that("all four estimators fit a late-adopting (G = 1, T = 5) num_treats = 1
 	res_t <- .s251_fit(plate, twfeCovs)
 	expect_s3_class(res_t, "twfeCovs")
 	expect_true(is.finite(res_t$att_hat))
+	# External-truth anchor for the #339 collapse fix (would have failed pre-fix,
+	# which summed a covariate-interaction column instead of the treatment column).
+	expect_equal(res_t$att_hat, 2, tolerance = 0.4)
 })
 
 # ------------------------------------------------------------------------------

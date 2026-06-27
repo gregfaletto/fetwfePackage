@@ -71,6 +71,19 @@ test_that(".collapse_design_for_twfe_covs returns expected shape (#81)", {
 	# of truth for the collapsed-design layout consumed by the core (#337).
 	expect_equal(out$treat_inds, (R + T - 1 + d + 1):out$p_short)
 	expect_equal(length(out$treat_inds), R)
+
+	# #339 regression: the collapse must sum the genuine treatment columns
+	# (getTreatInds()), NOT an off-by-one range. Each treatment column is summed
+	# into exactly one cohort, so the collapsed treatment block totals the sum of
+	# all getTreatInds() columns of X_gls -- a total that shifts if the
+	# pre-collapse extraction drifts by even one column (the previous inline
+	# formula started one column too low, pulling in a covariate-interaction
+	# column and dropping the last treatment column).
+	gti <- fetwfe:::getTreatInds(G = R, T = T, d = d, num_treats = num_treats)
+	expect_equal(
+		sum(out$X_collapsed[, out$treat_inds]),
+		sum(X_gls[, gti])
+	)
 })
 
 # ------------------------------------------------------------------------------
