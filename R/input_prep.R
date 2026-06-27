@@ -122,6 +122,10 @@
 #'       variance components carried forward.}
 #'     \item{\code{lambda_ridge}}{Numeric scalar.  Value of the ridge penalty
 #'       used (or \code{NA} if none).}
+#'     \item{\code{twfe_covs_treat_inds}}{Integer vector of treatment-column
+#'       indices in the collapsed twfeCovs design (from
+#'       \code{.collapse_design_for_twfe_covs()}); \code{NULL} on every other
+#'       path (#337).}
 #'   }
 #' @keywords internal
 #' @noRd
@@ -474,8 +478,8 @@ prep_for_etwfe_core <- function(
 	p_short <- ncol(X_collapsed)
 	treat_inds_collapsed <- (n_non_treat + 1):p_short
 
+	# p_short == n_non_treat + G already implies length(treat_inds_collapsed) == G.
 	stopifnot(p_short == n_non_treat + G)
-	stopifnot(length(treat_inds_collapsed) == G)
 
 	list(
 		X_collapsed = X_collapsed,

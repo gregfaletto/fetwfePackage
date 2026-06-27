@@ -265,10 +265,16 @@ checkEtwfeInputs <- function(
 
 	rm(res)
 
+	# Effective parameter count: the width of the (possibly collapsed) design.
+	# Read it from the design itself rather than re-deriving the formula, so the
+	# width is single-sourced -- p for etwfe, the collapsed width for twfeCovs
+	# (#337).
+	p_eff <- ncol(X_final)
+
 	# Treatment-effect index bookkeeping. The full ETWFE design carries one base
 	# effect per treated (cohort, period) plus covariate interactions; the
-	# twfeCovs design (#327) collapses to a single effect per cohort. We build the
-	# treatment indices, the effective dimensions (p_eff, num_treats_eff), and the
+	# twfeCovs design (#327) collapses to a single effect per cohort. We set the
+	# treatment indices, the effective treatment count (num_treats_eff), and the
 	# per-cohort first-index basis (first_inds_basis). The passed-in `first_inds`
 	# (pre-collapse column offsets) is left untouched so it keeps one meaning
 	# throughout (#337).
@@ -277,13 +283,11 @@ checkEtwfeInputs <- function(
 		# .collapse_design_for_twfe_covs() (the owner of the collapsed-design
 		# column layout); we do not re-derive "treatment = trailing G columns"
 		# here (#337).
-		p_eff <- G + T - 1 + d + G
 		treat_inds <- twfe_covs_treat_inds
 		treat_int_inds <- c()
 		num_treats_eff <- G
 		first_inds_basis <- 1:G
 	} else {
-		p_eff <- p
 		num_treats_eff <- num_treats
 		first_inds_basis <- first_inds
 		# Indices corresponding to base treatment effects
@@ -334,15 +338,6 @@ checkEtwfeInputs <- function(
 		lambda_ridge <- ifelse(is.na(lambda_ridge), 0, lambda_ridge)
 		beta_hat_slopes <- beta_hat_slopes * (1 + lambda_ridge)
 		stopifnot(all(!is.na(beta_hat_slopes)))
-	}
-
-	# Cross-check the treatment indices from .collapse_design_for_twfe_covs()
-	# against the expected collapsed width: the treatment block must be exactly
-	# the trailing G columns. Gated to twfeCovs -- the full ETWFE design
-	# interleaves covariate interactions after the base block, so
-	# max(treat_inds) < p there (#337).
-	if (is_twfe_covs) {
-		stopifnot(max(treat_inds) == p_eff)
 	}
 
 	# Get actual estimated treatment effects (in original, untransformed space)
