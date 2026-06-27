@@ -122,6 +122,10 @@
 #'       variance components carried forward.}
 #'     \item{\code{lambda_ridge}}{Numeric scalar.  Value of the ridge penalty
 #'       used (or \code{NA} if none).}
+#'     \item{\code{twfe_covs_treat_inds}}{Integer vector of treatment-column
+#'       indices in the collapsed twfeCovs design (from
+#'       \code{.collapse_design_for_twfe_covs()}); \code{NULL} on every other
+#'       path (#337).}
 #'   }
 #' @keywords internal
 #' @noRd
@@ -183,6 +187,10 @@ prep_for_etwfe_regression <- function(
 		sig_eps_c_sq <- NA_real_
 	}
 
+	# Treatment-column indices in the (possibly collapsed) design. Only the
+	# twfeCovs collapse re-lays-out the columns; every other path derives its own
+	# treatment indices, so this stays NULL there. (#337)
+	twfe_covs_treat_inds <- NULL
 	if (is_twfe_covs) {
 		coll <- .collapse_design_for_twfe_covs(
 			X_gls = X_final,
@@ -195,6 +203,7 @@ prep_for_etwfe_regression <- function(
 		)
 		X_final <- coll$X_collapsed
 		p <- coll$p_short
+		twfe_covs_treat_inds <- coll$treat_inds
 	}
 
 	X_final_scaled <- my_scale(X_final)
@@ -243,7 +252,8 @@ prep_for_etwfe_regression <- function(
 		indep_cohort_probs_overall = probs$indep_cohort_probs_overall,
 		sig_eps_sq = sig_eps_sq,
 		sig_eps_c_sq = sig_eps_c_sq,
-		lambda_ridge = lambda_ridge
+		lambda_ridge = lambda_ridge,
+		twfe_covs_treat_inds = twfe_covs_treat_inds
 	)
 }
 
@@ -421,8 +431,11 @@ prep_for_etwfe_core <- function(
 #' @param num_treats Integer; treatment-column count in the pre-collapse
 #'   design.
 #' @param first_inds Integer vector; first-index-within-cohort offsets.
-#' @return List with `X_collapsed` (post-collapse design) and `p_short`
-#'   (column count `= G + T - 1 + d + G`).
+#' @return List with `X_collapsed` (post-collapse design), `p_short`
+#'   (column count `= G + T - 1 + d + G`), and `treat_inds` (indices of the
+#'   trailing G treatment columns in `X_collapsed`). `treat_inds` is the single
+#'   source of truth for the collapsed-design treatment-column layout, consumed
+#'   by `.ols_estimator_core()` rather than re-derived there (#337).
 #' @keywords internal
 #' @noRd
 .collapse_design_for_twfe_covs <- function(
@@ -453,12 +466,26 @@ prep_for_etwfe_core <- function(
 	}
 	stopifnot(all(!is.na(treat_inds_mat)))
 
-	X_collapsed <- cbind(X[, 1:(G + T - 1 + d)], treat_inds_mat)
+	# The collapsed per-cohort treatment columns are cbind'd AFTER the
+	# non-treatment block (cohort FE + time FE + covariate main effects), so the
+	# treatment block is the trailing G columns. Derive treat_inds from that
+	# actual placement and return it as the single source of truth, so the
+	# "treatment = trailing G columns" contract is not independently re-encoded by
+	# callers such as .ols_estimator_core() (#337).
+	n_non_treat <- G + T - 1 + d
+	X_collapsed <- cbind(X[, 1:n_non_treat], treat_inds_mat)
 
-	p_short <- G + T - 1 + d + G
-	stopifnot(ncol(X_collapsed) == p_short)
+	p_short <- ncol(X_collapsed)
+	treat_inds_collapsed <- (n_non_treat + 1):p_short
 
-	list(X_collapsed = X_collapsed, p_short = p_short)
+	# p_short == n_non_treat + G already implies length(treat_inds_collapsed) == G.
+	stopifnot(p_short == n_non_treat + G)
+
+	list(
+		X_collapsed = X_collapsed,
+		p_short = p_short,
+		treat_inds = treat_inds_collapsed
+	)
 }
 
 #' @title Compute in-sample (and optionally independent) cohort probabilities
