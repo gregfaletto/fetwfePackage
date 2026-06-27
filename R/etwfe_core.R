@@ -261,25 +261,31 @@ checkEtwfeInputs <- function(
 	lambda_ridge <- res$lambda_ridge
 	sig_eps_sq <- res$sig_eps_sq
 	sig_eps_c_sq <- res$sig_eps_c_sq
+	twfe_covs_treat_inds <- res$twfe_covs_treat_inds
 
 	rm(res)
 
 	# Treatment-effect index bookkeeping. The full ETWFE design carries one base
 	# effect per treated (cohort, period) plus covariate interactions; the
-	# twfeCovs design (#327) collapses to a single effect per cohort, so the
-	# treatment block is the trailing G columns and there are no interaction
-	# terms. prep_for_etwfe_regression() has already narrowed the GLS design when
-	# is_twfe_covs = TRUE; here we build the matching indices and the effective
-	# dimensions (p_eff, num_treats_eff) used throughout the rest of the pipeline.
+	# twfeCovs design (#327) collapses to a single effect per cohort. We build the
+	# treatment indices, the effective dimensions (p_eff, num_treats_eff), and the
+	# per-cohort first-index basis (first_inds_basis). The passed-in `first_inds`
+	# (pre-collapse column offsets) is left untouched so it keeps one meaning
+	# throughout (#337).
 	if (is_twfe_covs) {
+		# treat_inds is the single source of truth from
+		# .collapse_design_for_twfe_covs() (the owner of the collapsed-design
+		# column layout); we do not re-derive "treatment = trailing G columns"
+		# here (#337).
 		p_eff <- G + T - 1 + d + G
-		treat_inds <- (G + T - 1 + d + 1):p_eff
+		treat_inds <- twfe_covs_treat_inds
 		treat_int_inds <- c()
 		num_treats_eff <- G
-		first_inds <- 1:G
+		first_inds_basis <- 1:G
 	} else {
 		p_eff <- p
 		num_treats_eff <- num_treats
+		first_inds_basis <- first_inds
 		# Indices corresponding to base treatment effects
 		ti <- .compute_treat_inds(
 			G = G,
@@ -304,17 +310,18 @@ checkEtwfeInputs <- function(
 
 	stopifnot(all(!is.na(df)))
 	stopifnot("y" %in% colnames(df))
-	if (is_twfe_covs) {
-		stopifnot(ncol(df) == p_eff + 1)
-	}
+	# Universal shape invariant: p_eff predictors plus the response. Holds on both
+	# the ETWFE basis (p_eff = p) and the collapsed twfeCovs basis (#337).
+	stopifnot(ncol(df) == p_eff + 1)
 
 	# Response already centered; no intercept needed
 	fit <- lm(y ~ . + 0, df)
 
-	if (is_twfe_covs) {
-		stopifnot(length(coef(fit)) == p_eff)
-		stopifnot(length(scale_scale) == p_eff)
-	}
+	# scale_scale has one entry per design column (p_eff) on both bases. Together
+	# with the ncol(df) == p_eff + 1 invariant above (which pins coef(fit) to
+	# p_eff), this keeps the element-wise division below from silently recycling
+	# (#337).
+	stopifnot(length(scale_scale) == p_eff)
 
 	beta_hat_slopes <- coef(fit) / scale_scale
 
@@ -329,10 +336,11 @@ checkEtwfeInputs <- function(
 		stopifnot(all(!is.na(beta_hat_slopes)))
 	}
 
-	# The collapsed twfeCovs basis places its G treatment columns last, so the
-	# base treatment indices end exactly at p_eff. The full ETWFE design
-	# interleaves covariate interactions after the base block, so this invariant
-	# only holds on the twfeCovs path.
+	# Cross-check the treatment indices from .collapse_design_for_twfe_covs()
+	# against the expected collapsed width: the treatment block must be exactly
+	# the trailing G columns. Gated to twfeCovs -- the full ETWFE design
+	# interleaves covariate interactions after the base block, so
+	# max(treat_inds) < p there (#337).
 	if (is_twfe_covs) {
 		stopifnot(max(treat_inds) == p_eff)
 	}
@@ -344,8 +352,8 @@ checkEtwfeInputs <- function(
 
 	stopifnot(length(tes) == num_treats_eff)
 
-	stopifnot(length(first_inds) == G)
-	stopifnot(max(first_inds) <= num_treats_eff)
+	stopifnot(length(first_inds_basis) == G)
+	stopifnot(max(first_inds_basis) <= num_treats_eff)
 
 	#
 	#
@@ -359,7 +367,7 @@ checkEtwfeInputs <- function(
 		sel_feat_inds = NULL, # OLS path: no penalty selection occurred
 		treat_inds = treat_inds, # Global indices for treatment effects
 		num_treats = num_treats_eff,
-		first_inds = first_inds,
+		first_inds = first_inds_basis,
 		sel_treat_inds_shifted = seq_len(num_treats_eff),
 		c_names = c_names,
 		tes = tes, # Treatment effect estimates (beta_hat_slopes[treat_inds])

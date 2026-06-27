@@ -63,10 +63,14 @@ test_that(".collapse_design_for_twfe_covs returns expected shape (#81)", {
 		first_inds = first_inds
 	)
 
-	expect_named(out, c("X_collapsed", "p_short"))
+	expect_named(out, c("X_collapsed", "p_short", "treat_inds"))
 	expect_equal(out$p_short, R + T - 1 + d + R)
 	expect_equal(ncol(out$X_collapsed), out$p_short)
 	expect_equal(nrow(out$X_collapsed), N * T)
+	# treat_inds is the trailing R (= G) treatment columns -- the single source
+	# of truth for the collapsed-design layout consumed by the core (#337).
+	expect_equal(out$treat_inds, (R + T - 1 + d + 1):out$p_short)
+	expect_equal(length(out$treat_inds), R)
 })
 
 # ------------------------------------------------------------------------------
