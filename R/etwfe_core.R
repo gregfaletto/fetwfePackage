@@ -73,12 +73,17 @@ checkEtwfeInputs <- function(
 	)
 }
 
-#' Core Estimation Logic for Extended Two-Way Fixed Effects
+#' Shared OLS estimator core for etwfe() and twfeCovs()
 #'
 #' @description
-#' This function implements the core estimation steps of the ETWFE methodology.
-#' It takes a pre-processed design matrix and response, handles variance components, performs
-#' ordinary least squares regression, and calculates treatment effects and their standard errors.
+#' This function implements the core OLS estimation steps shared by the ETWFE
+#' and twfeCovs methodologies (unified in #327). It takes a pre-processed design
+#' matrix and response, handles variance components, performs ordinary least
+#' squares regression, and calculates treatment effects and their standard
+#' errors. The `is_twfe_covs` flag selects the treatment-effect basis: the full
+#' ETWFE design (one base effect per treated cohort-period plus covariate
+#' interactions) when `FALSE`, or the collapsed twfeCovs design (one effect per
+#' cohort, no interactions) when `TRUE`.
 #'
 #' @param X_ints The design matrix with all fixed effects, covariates, treatment
 #'   dummies, and their interactions, as produced by `prepXints`.
@@ -113,6 +118,12 @@ checkEtwfeInputs <- function(
 #'   unit-clustered Liang-Zeger sandwich SE on the OLS-selected support).
 #'   See the exported wrapper `etwfe()` for details. Default is
 #'   `"default"`.
+#' @param is_twfe_covs Logical; selects the treatment-effect basis. `FALSE`
+#'   (default) uses the full ETWFE design; `TRUE` uses the collapsed twfeCovs
+#'   design (one effect per cohort, no covariate interactions). The flag is
+#'   forwarded to `prep_for_etwfe_regression()` to narrow the GLS design and
+#'   selects the matching index bookkeeping inside this function. Default is
+#'   `FALSE`.
 #'
 #' @details
 #' The function executes the following main steps:
@@ -158,7 +169,7 @@ checkEtwfeInputs <- function(
 #'   \item{catt_ses}{A named vector of SEs for `catt_hats` (NA when the Gram matrix is not invertible).}
 #'   \item{catt_df}{A data frame (with S3 class `c("catt_df", "data.frame")`) summarizing CATTs (`cohort`, `estimate`, `se`, `ci_low`, `ci_high`, `p_value`). The `catt_df` S3 class makes `[[` / `$` / `[` access on the pre-1.11.0 Title-Case column names `stop()` with a migration message pointing to the new name.}
 #'   \item{beta_hat}{The vector of estimated coefficients in the *original*
-#'     space (no bridge fusion transformation; etwfe is pure OLS).}
+#'     space (no bridge fusion transformation; the OLS path is pure OLS).}
 #'   \item{treat_inds}{Indices in `beta_hat` corresponding to base treatment effects.}
 #'   \item{treat_int_inds}{Indices in `beta_hat` corresponding to treatment-covariate interactions.}
 #'   \item{cohort_probs}{Estimated cohort probabilities conditional on being treated, from `in_sample_counts`.}
@@ -168,12 +179,12 @@ checkEtwfeInputs <- function(
 #'   \item{X_ints}{The original input design matrix from `prepXints`.}
 #'   \item{y}{The original input centered response vector from `prepXints`.}
 #'   \item{X_final}{The design matrix after GLS weighting (no fusion
-#'     transformation for `etwfe_core`).}
+#'     transformation on the OLS path).}
 #'   \item{y_final}{The response vector after GLS weighting.}
 #'   \item{N, T, G, d, p}{Dimensions used in estimation.}
 #' @keywords internal
 #' @noRd
-etwfe_core <- function(
+.ols_estimator_core <- function(
 	X_ints,
 	y,
 	in_sample_counts,
@@ -189,7 +200,8 @@ etwfe_core <- function(
 	verbose = FALSE,
 	alpha = 0.05,
 	add_ridge = FALSE,
-	se_type = "default"
+	se_type = "default",
+	is_twfe_covs = FALSE
 ) {
 	se_type <- match.arg(
 		se_type,
@@ -233,7 +245,8 @@ etwfe_core <- function(
 		in_sample_counts = in_sample_counts,
 		indep_count_data_available = indep_count_data_available,
 		indep_counts = indep_counts,
-		is_fetwfe = FALSE
+		is_fetwfe = FALSE,
+		is_twfe_covs = is_twfe_covs
 	)
 
 	X_final_scaled <- res$X_final_scaled
@@ -251,6 +264,36 @@ etwfe_core <- function(
 
 	rm(res)
 
+	# Treatment-effect index bookkeeping. The full ETWFE design carries one base
+	# effect per treated (cohort, period) plus covariate interactions; the
+	# twfeCovs design (#327) collapses to a single effect per cohort, so the
+	# treatment block is the trailing G columns and there are no interaction
+	# terms. prep_for_etwfe_regression() has already narrowed the GLS design when
+	# is_twfe_covs = TRUE; here we build the matching indices and the effective
+	# dimensions (p_eff, num_treats_eff) used throughout the rest of the pipeline.
+	if (is_twfe_covs) {
+		p_eff <- G + T - 1 + d + G
+		treat_inds <- (G + T - 1 + d + 1):p_eff
+		treat_int_inds <- c()
+		num_treats_eff <- G
+		first_inds <- 1:G
+	} else {
+		p_eff <- p
+		num_treats_eff <- num_treats
+		# Indices corresponding to base treatment effects
+		ti <- .compute_treat_inds(
+			G = G,
+			T = T,
+			d = d,
+			num_treats = num_treats,
+			p = p
+		)
+		treat_inds <- ti$treat_inds
+		treat_int_inds <- ti$treat_int_inds
+	}
+
+	stopifnot(length(treat_inds) == num_treats_eff)
+
 	#
 	#
 	# OLS regression and fitted-coefficient extraction
@@ -261,27 +304,22 @@ etwfe_core <- function(
 
 	stopifnot(all(!is.na(df)))
 	stopifnot("y" %in% colnames(df))
+	if (is_twfe_covs) {
+		stopifnot(ncol(df) == p_eff + 1)
+	}
 
 	# Response already centered; no intercept needed
 	fit <- lm(y ~ . + 0, df)
 
+	if (is_twfe_covs) {
+		stopifnot(length(coef(fit)) == p_eff)
+		stopifnot(length(scale_scale) == p_eff)
+	}
+
 	beta_hat_slopes <- coef(fit) / scale_scale
 
-	stopifnot(length(beta_hat_slopes) == p)
+	stopifnot(length(beta_hat_slopes) == p_eff)
 	stopifnot(all(!is.na(beta_hat_slopes)))
-
-	# Indices corresponding to base treatment effects
-	ti <- .compute_treat_inds(
-		G = G,
-		T = T,
-		d = d,
-		num_treats = num_treats,
-		p = p
-	)
-	treat_inds <- ti$treat_inds
-	treat_int_inds <- ti$treat_int_inds
-
-	stopifnot(length(treat_inds) == num_treats)
 
 	# If using ridge regularization, multiply the "naive" estimated coefficients
 	# by 1 + lambda_ridge, similar to suggestion in original elastic net paper.
@@ -291,15 +329,23 @@ etwfe_core <- function(
 		stopifnot(all(!is.na(beta_hat_slopes)))
 	}
 
+	# The collapsed twfeCovs basis places its G treatment columns last, so the
+	# base treatment indices end exactly at p_eff. The full ETWFE design
+	# interleaves covariate interactions after the base block, so this invariant
+	# only holds on the twfeCovs path.
+	if (is_twfe_covs) {
+		stopifnot(max(treat_inds) == p_eff)
+	}
+
 	# Get actual estimated treatment effects (in original, untransformed space)
 	tes <- beta_hat_slopes[treat_inds]
 
 	stopifnot(all(!is.na(tes)))
 
-	stopifnot(length(tes) == num_treats)
+	stopifnot(length(tes) == num_treats_eff)
 
 	stopifnot(length(first_inds) == G)
-	stopifnot(max(first_inds) <= num_treats)
+	stopifnot(max(first_inds) <= num_treats_eff)
 
 	#
 	#
@@ -312,9 +358,9 @@ etwfe_core <- function(
 		X_final = X_final, # This is X_mod * GLS_transform_matrix
 		sel_feat_inds = NULL, # OLS path: no penalty selection occurred
 		treat_inds = treat_inds, # Global indices for treatment effects
-		num_treats = num_treats,
+		num_treats = num_treats_eff,
 		first_inds = first_inds,
-		sel_treat_inds_shifted = seq_len(num_treats),
+		sel_treat_inds_shifted = seq_len(num_treats_eff),
 		c_names = c_names,
 		tes = tes, # Treatment effect estimates (beta_hat_slopes[treat_inds])
 		sig_eps_sq = sig_eps_sq,
@@ -323,7 +369,7 @@ etwfe_core <- function(
 		T = T,
 		fused = FALSE,
 		calc_ses = TRUE,
-		include_selected = FALSE, # etwfe has no bridge selection
+		include_selected = FALSE, # OLS path has no bridge selection
 		alpha = alpha,
 		se_type = se_type,
 		y_final = y_final
@@ -340,7 +386,7 @@ etwfe_core <- function(
 
 	rm(res)
 
-	stopifnot(nrow(psi_mat) == num_treats)
+	stopifnot(nrow(psi_mat) == num_treats_eff)
 	stopifnot(ncol(psi_mat) == G)
 
 	#
@@ -350,7 +396,7 @@ etwfe_core <- function(
 	#
 
 	# Get overal estimated ATT!
-	stopifnot(length(tes) == num_treats)
+	stopifnot(length(tes) == num_treats_eff)
 	stopifnot(nrow(psi_mat) == length(tes))
 
 	in_sample_te_results <- getTeResultsOLS(
@@ -358,7 +404,7 @@ etwfe_core <- function(
 		N = N,
 		T = T,
 		G = G,
-		num_treats = num_treats,
+		num_treats = num_treats_eff,
 		cohort_tes = cohort_tes, # CATTs (point estimates)
 		cohort_probs = cohort_probs, # In-sample pi_g | treated
 		psi_mat = psi_mat,
@@ -384,7 +430,7 @@ etwfe_core <- function(
 			N = N,
 			T = T,
 			G = G,
-			num_treats = num_treats,
+			num_treats = num_treats_eff,
 			cohort_tes = cohort_tes,
 			cohort_probs = indep_cohort_probs, # indep pi_g | treated
 			psi_mat = psi_mat,
@@ -438,7 +484,19 @@ etwfe_core <- function(
 		T = T,
 		G = G,
 		d = d,
-		p = p,
+		p = p_eff,
 		calc_ses = calc_ses
 	))
+}
+
+
+#' ETWFE OLS estimator core (thin wrapper over `.ols_estimator_core()`)
+#'
+#' Forwards to [.ols_estimator_core()] with the full ETWFE treatment basis
+#' (`is_twfe_covs = FALSE`). Retained as a named function because `etwfe()`
+#' passes it as `core_fn` to `.assemble_ols_estimator()`.
+#' @keywords internal
+#' @noRd
+etwfe_core <- function(...) {
+	.ols_estimator_core(..., is_twfe_covs = FALSE)
 }
