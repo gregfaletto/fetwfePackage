@@ -2,13 +2,20 @@
 # unification (#327). The existing `_snaps` lock only PRINTED output; this pins
 # the full NUMERIC output of etwfe() / twfeCovs() (which exercise the two OLS
 # cores end-to-end) across a fixture matrix, so the refactor that extracts the
-# shared `.ols_estimator_core()` is provably byte-identical, and any future drift
-# between the two estimators is caught.
+# shared `.ols_estimator_core()` reproduces the pre-refactor output to numeric
+# tolerance, and any future drift between the two estimators is caught. (The
+# refactor is bit-identical by construction -- a pure reorganization with no
+# arithmetic change -- but we assert at testthat's default tolerance, which is
+# tight enough to catch any substantive regression while staying robust across
+# BLAS/platforms.)
 #
-# The fingerprint flattens every numeric output the core produces (overall ATT,
-# the full catt_df, the coefficient vector) and reduces it to collision-resistant
+# The fingerprint flattens every numeric output the cores produce (overall ATT --
+# including the asymptotically-exact two-sample ATT when indep_counts is supplied
+# (the c7_indep configs), which exercises the indep getTeResultsOLS() call -- the
+# full catt_df, and the coefficient vector) and reduces it to collision-resistant
 # aggregates; the position-weighted sum (`wsum`) catches reorderings/swaps that
-# plain sum/sumsq would miss. Goldens captured from the pre-refactor code.
+# plain sum/sumsq would miss. Goldens captured from the pre-refactor code (commit
+# f1c8cca).
 
 .fp_327 <- function(fit) {
 	v <- c(
@@ -42,6 +49,7 @@
 	se_type = "default",
 	add_ridge = FALSE,
 	reml = FALSE,
+	indep = FALSE,
 	seed = 1
 ) {
 	co <- genCoefs(
@@ -74,6 +82,13 @@
 		args$sig_eps_sq <- 1
 		args$sig_eps_c_sq <- 0.5
 	}
+	# Exercise the asymptotically-exact two-sample ATT path: indep_counts routes
+	# the overall ATT through the indep getTeResultsOLS() call, a branch the other
+	# six configs never reach. The refactor reorganized this branch, so pin its
+	# output to lock byte-identity there too.
+	if (indep) {
+		args$indep_counts <- dat$indep_counts
+	}
 	do.call(estimator, args)
 }
 
@@ -83,7 +98,11 @@
 	c3_ridge = list(G = 3, T = 5, d = 2, add_ridge = TRUE),
 	c4_d0 = list(G = 3, T = 5, d = 0),
 	c5_bigGT = list(G = 4, T = 6, d = 3),
-	c6_reml = list(G = 3, T = 5, d = 2, reml = TRUE)
+	c6_reml = list(G = 3, T = 5, d = 2, reml = TRUE),
+	# Same DGP as c1_base but with indep_counts supplied, so the overall ATT comes
+	# from the indep (two-sample) getTeResultsOLS() call -- a branch otherwise
+	# unexercised by this guardrail.
+	c7_indep = list(G = 3, T = 5, d = 2, indep = TRUE)
 )
 
 # Goldens: fingerprint of each (estimator, config) from the pre-#327 code.
@@ -142,6 +161,15 @@
 		mx = 6.14708716389,
 		mn = -4.35012442767
 	),
+	etwfe_c7_indep = c(
+		n = 74,
+		sum = 60.7968737847,
+		sumsq = 304.0921750954,
+		sumabs = 108.1871309400,
+		wsum = 2230.6565019494,
+		mx = 6.1470871639,
+		mn = -4.3501244277
+	),
 	twfeCovs_c1_base = c(
 		n = 36,
 		sum = 40.3928807217,
@@ -195,18 +223,34 @@
 		wsum = 1057.30820486,
 		mx = 8.48022246831,
 		mn = -0.166950409144
+	),
+	twfeCovs_c7_indep = c(
+		n = 36,
+		sum = 40.3357038891,
+		sumsq = 143.1233086215,
+		sumabs = 40.6272684934,
+		wsum = 1055.6800476111,
+		mx = 8.4802224683,
+		mn = -0.1457823022
 	)
 )
 
-test_that("etwfe() / twfeCovs() numeric output is byte-identical to the pre-#327 golden (#327)", {
+test_that("etwfe() / twfeCovs() numeric output matches the pre-#327 golden to numeric tolerance (#327)", {
 	skip_on_cran()
 	for (est in c("etwfe", "twfeCovs")) {
 		for (nm in names(.CONFIGS_327)) {
+			cfg <- .CONFIGS_327[[nm]]
 			fit <- do.call(
 				.mk_327,
-				c(list(estimator = get(est)), .CONFIGS_327[[nm]])
+				c(list(estimator = get(est)), cfg)
 			)
 			key <- paste0(est, "_", nm)
+			# Guard that an indep config actually consumed indep_counts -- else
+			# the overall ATT would silently fall back to the in-sample branch and
+			# the indep coverage this config exists for would be illusory.
+			if (isTRUE(cfg$indep)) {
+				expect_true(isTRUE(fit$indep_counts_used), info = key)
+			}
 			expect_equal(.fp_327(fit), .GOLDEN_327[[key]], info = key)
 		}
 	}
