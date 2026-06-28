@@ -90,6 +90,38 @@ lambda_node_default <- function(p, N, const = 1.0, scale = 1.0) {
 	const * scale * sqrt(log(p) / N)
 }
 
+# Relative tolerance for the high-dim nodewise KKT feasibility certificate. The
+# desparsified L1 direction BINDS its constraint by construction
+# (||Sig v - a||_inf = lambda_node at the L1 optimum), so a converged solver
+# overshoots only by coordinate-descent round-off (~1e-9..1e-8 relative). The
+# feasibility slack must therefore floor ABOVE solver precision -- it is
+# deliberately DECOUPLED from the convergence control `riesz_tol`, which
+# previously doubled as the slack at 1e-9 (below precision), spuriously flagging
+# legitimately-binding directions as infeasible (gregfaletto/fetwfe#88). A
+# genuine infeasibility (lambda_c too small / non-convergence) overshoots by
+# >> 1e-6, so 1e-6 cleanly separates round-off from a real constraint violation.
+.RIESZ_FEASIBILITY_RTOL <- 1e-6
+
+#' @title KKT feasibility test for a high-dim nodewise direction
+#' @description `TRUE` iff the relaxed-inverse certificate holds to within the
+#'   feasibility tolerance: `feasibility <= lambda_node * (1 + rtol)`. Vectorized.
+#'   The single source for every nodewise feasibility check -- the `debiasedATT()`
+#'   / `simultaneousCIs()` warnings, the `lambda_c = "cv"` grid gate, and the
+#'   high-dim print diagnostics -- so they always agree. See `.RIESZ_FEASIBILITY_RTOL`.
+#' @param feasibility Numeric (scalar or vector); `||Sig v - a||_inf`.
+#' @param lambda_node Numeric (scalar or vector); the nodewise penalty scale.
+#' @param rtol Relative feasibility tolerance; defaults to `.RIESZ_FEASIBILITY_RTOL`.
+#' @return Logical of the recycled length of `feasibility` / `lambda_node`.
+#' @keywords internal
+#' @noRd
+.riesz_feasible <- function(
+	feasibility,
+	lambda_node,
+	rtol = .RIESZ_FEASIBILITY_RTOL
+) {
+	feasibility <= lambda_node * (1 + rtol)
+}
+
 #' Cross-validate the high-dimensional nodewise penalty constant `lambda_c`
 #'
 #' @description
@@ -176,7 +208,7 @@ lambda_node_default <- function(p, N, const = 1.0, scale = 1.0) {
 				tol = riesz_tol
 			)
 			isTRUE(attr(vf, "converged")) &&
-				attr(vf, "feasibility") <= lam * (1 + riesz_tol)
+				.riesz_feasible(attr(vf, "feasibility"), lam)
 		},
 		logical(1)
 	)

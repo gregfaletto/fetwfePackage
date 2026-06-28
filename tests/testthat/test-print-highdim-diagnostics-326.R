@@ -163,7 +163,8 @@ test_that("print.simultaneous_cis shows the high-dim diagnostics block only in t
 
 test_that("the high-dim event_study propensity-channel feasibility count uses the gate's slack (#326)", {
 	# The propensity (#309) channel's KKT-feasible count must use the same
-	# `riesz_tol` slack as the per-effect line and the band's warning gate. The
+	# feasibility tolerance (via `.riesz_feasible()`) as the per-effect line and
+	# the band's warning gate. The
 	# nodewise solver binds the constraint to ~1e-10, so a strict `<=` reports
 	# 0/K feasible exactly when no feasibility warning fired -- the most alarming
 	# possible output, shown when everything is fine.

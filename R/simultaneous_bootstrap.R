@@ -725,7 +725,7 @@
 	# may be unreliable; the returned diagnostics flag which effects).
 	if (isTRUE(attr(F_mat, "highdim"))) {
 		dg <- attr(F_mat, "diagnostics")
-		bad <- (dg$feasibility > dg$lambda_node * (1 + riesz_tol)) |
+		bad <- !.riesz_feasible(dg$feasibility, dg$lambda_node) |
 			!dg$converged
 		# Fold in the per-cell propensity-channel directions (#309): they also feed
 		# the band (through Sigma_2), so an infeasible cell direction is equally a
@@ -733,8 +733,10 @@
 		if (!is.null(cell_diag)) {
 			bad <- c(
 				bad,
-				(cell_diag$feasibility >
-					cell_diag$lambda_node * (1 + riesz_tol)) |
+				!.riesz_feasible(
+					cell_diag$feasibility,
+					cell_diag$lambda_node
+				) |
 					!cell_diag$converged
 			)
 		}
