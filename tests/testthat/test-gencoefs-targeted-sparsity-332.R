@@ -274,6 +274,31 @@ test_that("explicit treat_base_levels places exact bases and stays heterogeneous
 	expect_equal(te$actual_cohort_tes, c(0, 1.5, 1.5))
 })
 
+test_that("explicit treat_base_levels under event_study fusion is non-degenerate (#343)", {
+	# Same explicit base vector as the cohort-fusion test above, but mapped
+	# through the event-study inverse fusion transform. Pins the cumulative ->
+	# fused mapping for the explicit-vector x event_study combination (previously
+	# only the count mode exercised event_study fusion; the explicit-vector mode
+	# tested only the default "cohort" fusion).
+	coefs <- genCoefs(
+		G = 3,
+		T = 5,
+		d = 40,
+		density = 0.2,
+		eff_size = 2,
+		treat_base_levels = c(0, 1.5, 0),
+		fusion_structure = "event_study",
+		seed = 1L
+	)
+	expect_identical(sum(coefs$theta != 0), 1L)
+	te <- getTes(coefs)
+	expect_true(te$att_true != 0)
+	expect_gt(v2_truth(te), 0)
+	# event_study fusion maps the bases differently from cohort fusion (which
+	# gives c(0, 1.5, 1.5) above).
+	expect_equal(te$actual_cohort_tes, c(0, 0.5, 0.75))
+})
+
 test_that("simulateData() / getTes() consume a targeted coefs object unchanged (#332)", {
 	coefs <- genCoefs(
 		G = 3,

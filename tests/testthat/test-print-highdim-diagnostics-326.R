@@ -119,6 +119,16 @@ test_that("print.debiased_att shows the high-dim diagnostics only in the high-di
 	expect_true(any(grepl("EXPERIMENTAL", out_hd)))
 	expect_true(any(grepl("nodewise penalty: lambda_c", out_hd)))
 	expect_true(any(grepl("converged.*KKT-feasible", out_hd)))
+
+	# #343: tidy.debiased_att in the HIGH-DIM regime (the fixed-p tidy schema is
+	# pinned above; confirm the high-dim object stays broom-compatible too).
+	td_hd <- tidy(db_hd)
+	expect_s3_class(td_hd, "data.frame")
+	expect_equal(nrow(td_hd), 1L)
+	expect_named(
+		td_hd,
+		c("term", "estimate", "std.error", "conf.low", "conf.high")
+	)
 })
 
 test_that("print.simultaneous_cis shows the high-dim diagnostics block only in the high-dim regime (#326)", {

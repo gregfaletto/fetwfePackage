@@ -641,7 +641,11 @@ check_etwfe_core_inputs <- function(
 	if (any(!is.na(sig_eps_sq))) {
 		stopifnot(is.numeric(sig_eps_sq) | is.integer(sig_eps_sq))
 		stopifnot(length(sig_eps_sq) == 1)
-		stopifnot(sig_eps_sq >= 0)
+		# `> 0` (not `>= 0`): `sig_eps_sq = 0` makes the GLS transform's
+		# `1 / sqrt(sig_eps_sq)` non-finite (#185). Matches the public validator
+		# `.collect_etwfe_input_violations()` (utility.R), which rejects `<= 0`;
+		# `sig_eps_c_sq` correctly still allows `0` (no unit-level effects).
+		stopifnot(sig_eps_sq > 0)
 	}
 
 	if (any(!is.na(sig_eps_c_sq))) {
