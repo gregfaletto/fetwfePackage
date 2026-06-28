@@ -771,7 +771,7 @@ getTes <- function(coefs_obj) {
 #' This function generates a coefficient vector \code{beta} along with a sparse auxiliary vector
 #' \code{theta} for simulation studies of the fused extended two-way fixed effects estimator. The
 #' returned \code{beta} is formatted to align with the design matrix created by
-#' \code{genRandomData()}, and is a valid input for the \code{beta} argument of that function. The
+#' \code{simulateDataCore()}, and is a valid input for the \code{beta} argument of that function. The
 #' vector \code{theta} is sparse, with nonzero entries occurring with probability \code{density} and
 #' scaled by \code{eff_size}. See the simulation studies section of Faletto (2025) for details.
 #'
@@ -1151,7 +1151,7 @@ genCoefsCore <- function(
 		}
 	}
 
-	# Confirm beta satisfies input requirements of genRandomData() (make
+	# Confirm beta satisfies input requirements of simulateDataCore() (make
 	# up values for N, sig_eps_sq, and sig_eps_c_sq that meet requirements)
 
 	testGenRandomDataInputs(

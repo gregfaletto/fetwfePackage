@@ -25,10 +25,11 @@
 
 - Documentation and hygiene cleanup from the 2026-06-27 periodic review: renamed
   the `lambda_node_default()` `c` argument to `const` (it no longer shadows
-  `base::c`), removed two no-op self-referential `@inheritParams` tags, and
-  corrected an over-stated comment on the `genCoefs()` targeted-sparsity
-  non-degeneracy guards. No change to estimates, standard errors, or returned
-  values (#342).
+  `base::c`), removed two no-op self-referential `@inheritParams` tags, corrected
+  an over-stated comment on the `genCoefs()` targeted-sparsity non-degeneracy
+  guards, and fixed two stale references to the defunct `genRandomData()` (now
+  `simulateDataCore()`) in the `genCoefsCore()` documentation and a code comment.
+  No change to estimates, standard errors, or returned values (#342).
 
 ## Version 1.49.0
 
