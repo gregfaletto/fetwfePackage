@@ -84,6 +84,18 @@ test_that(".collapse_design_for_twfe_covs returns expected shape (#81)", {
 		sum(out$X_collapsed[, out$treat_inds]),
 		sum(X_gls[, gti])
 	)
+
+	# #343: a grand-total check cannot catch a CROSS-COHORT permutation (columns
+	# summed into the wrong cohort give the same overall total). Pin each
+	# collapsed treatment column to the sum of exactly its cohort's getTreatInds()
+	# columns -- mirroring the collapse's own per-cohort loop.
+	for (g in 1:R) {
+		inds_g <- fetwfe:::.cohort_block_inds(g, R, first_inds, num_treats)
+		expect_equal(
+			out$X_collapsed[, out$treat_inds[g]],
+			rowSums(X_gls[, gti[inds_g], drop = FALSE])
+		)
+	}
 })
 
 # ------------------------------------------------------------------------------
