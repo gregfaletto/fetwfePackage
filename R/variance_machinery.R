@@ -808,7 +808,6 @@ getTeResults2 <- function(
 #'   both the mean and the returned block are forced to the correct
 #'   1 x 1 or 1 x *`k`* shape so that higher-level code can
 #'   `rbind()` the blocks without special cases.
-#' @inheritParams getPsiGFused
 #' @seealso \code{getCohortATTsFinal()}
 #' @keywords internal
 #' @noRd
@@ -935,7 +934,6 @@ getPsiGFused <- function(
 #' It first reconstructs \(J\) from `d_inv_treat_sel` and the cohort
 #' probabilities, then plugs everything into the quadratic form above and
 #' finally rescales by \(T/(N T)=1/N\).
-#' @inheritParams getSecondVarTermDataApp
 #' @seealso \code{getTeResults2()}
 #' @keywords internal
 #' @noRd

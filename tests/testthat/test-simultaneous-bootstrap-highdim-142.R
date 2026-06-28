@@ -246,7 +246,7 @@ test_that("high-dim custom per-effect centers match an independent q=1 reconstru
 		ln <- lambda_node_default(
 			p = p,
 			N = n / Tt,
-			c = 1.0,
+			const = 1.0,
 			scale = max(abs(ath))
 		)
 		v <- riesz_lasso(Sig, ath, ln)

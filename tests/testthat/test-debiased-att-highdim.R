@@ -183,7 +183,7 @@ test_that("riesz_lasso is deterministic", {
 test_that("lambda_node_default is the theory-scaled rate c * scale * sqrt(log p / N)", {
 	expect_equal(lambda_node_default(p = 100, N = 25), sqrt(log(100) / 25))
 	expect_equal(
-		lambda_node_default(p = 376, N = 20, c = 2, scale = 3),
+		lambda_node_default(p = 376, N = 20, const = 2, scale = 3),
 		2 * 3 * sqrt(log(376) / 20)
 	)
 })
@@ -277,7 +277,7 @@ test_that("the high-dim branch is load-bearing: the fixed-p inverse explodes on 
 	lam_node <- lambda_node_default(
 		p = p,
 		N = n / Tt,
-		c = 1.0,
+		const = 1.0,
 		scale = max(abs(a_th))
 	)
 	v_node <- riesz_lasso(Sig, a_th, lam_node)

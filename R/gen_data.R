@@ -130,7 +130,11 @@ simulateData <- function(
 	seed = NULL
 ) {
 	if (!inherits(coefs_obj, "FETWFE_coefs")) {
-		stop("coefs_obj must be an object of class 'FETWFE_coefs'")
+		stop(
+			"coefs_obj must be an object of class 'FETWFE_coefs'; got class: ",
+			paste(class(coefs_obj), collapse = ", "),
+			call. = FALSE
+		)
 	}
 	if (!is.numeric(N) || length(N) != 1 || N <= 0) {
 		stop("N must be a positive numeric value")

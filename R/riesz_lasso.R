@@ -86,8 +86,8 @@ riesz_lasso <- function(Sig, a, lambda, max_iter = 5000L, tol = 1e-9) {
 #'   passes `scale = max(abs(a))`).
 #' @keywords internal
 #' @noRd
-lambda_node_default <- function(p, N, c = 1.0, scale = 1.0) {
-	c * scale * sqrt(log(p) / N)
+lambda_node_default <- function(p, N, const = 1.0, scale = 1.0) {
+	const * scale * sqrt(log(p) / N)
 }
 
 #' Cross-validate the high-dimensional nodewise penalty constant `lambda_c`
@@ -149,7 +149,7 @@ lambda_node_default <- function(p, N, c = 1.0, scale = 1.0) {
 	lam0 <- lambda_node_default(
 		p = p,
 		N = N_units,
-		c = 1.0,
+		const = 1.0,
 		scale = max(abs(a))
 	)
 	gate_iter <- min(gate_max_iter, riesz_max_iter)

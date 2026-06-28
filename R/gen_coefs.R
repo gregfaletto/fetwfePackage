@@ -660,7 +660,11 @@ genCoefs <- function(
 #' @export
 getTes <- function(coefs_obj) {
 	if (!inherits(coefs_obj, "FETWFE_coefs")) {
-		stop("coefs_obj must be an object of class 'FETWFE_coefs'")
+		stop(
+			"coefs_obj must be an object of class 'FETWFE_coefs'; got class: ",
+			paste(class(coefs_obj), collapse = ", "),
+			call. = FALSE
+		)
 	}
 
 	# Unpack components from the coefs object
@@ -767,7 +771,7 @@ getTes <- function(coefs_obj) {
 #' This function generates a coefficient vector \code{beta} along with a sparse auxiliary vector
 #' \code{theta} for simulation studies of the fused extended two-way fixed effects estimator. The
 #' returned \code{beta} is formatted to align with the design matrix created by
-#' \code{genRandomData()}, and is a valid input for the \code{beta} argument of that function. The
+#' \code{simulateDataCore()}, and is a valid input for the \code{beta} argument of that function. The
 #' vector \code{theta} is sparse, with nonzero entries occurring with probability \code{density} and
 #' scaled by \code{eff_size}. See the simulation studies section of Faletto (2025) for details.
 #'
@@ -1105,16 +1109,20 @@ genCoefsCore <- function(
 
 	stopifnot(all(!is.na(beta)))
 
-	# Targeted-sparsity non-degeneracy contract (#332): in targeted mode the
-	# point of the DGP is a NON-degenerate, HETEROGENEOUS cohort effect (att != 0
-	# AND V2 > 0). V2 > 0 iff the per-cohort effects are not all equal, so this is
-	# checked on the assembled `beta` (intrinsic to it, DGP-weight-independent).
-	# It catches `eff_size = 0`, an all-zero `treat_base_levels`, and the
-	# homogeneous trap (e.g. signal only on cohort 1's all-ones base, or any
-	# constant `treat_base_levels`) -- for either fusion_structure -- without the
-	# caller having to reason about the fused map. (The count mode cannot reach
-	# either failure given the validated 1 <= k <= G-1, but the check is cheap
-	# insurance and the only guard for the free-form vector.)
+	# Targeted-sparsity non-degeneracy contract (#332): in targeted mode the point
+	# of the DGP is a NON-degenerate, HETEROGENEOUS cohort effect. The two guards
+	# below catch the two DEGENERATE failure modes on the assembled `beta`
+	# (intrinsic to it, DGP-weight-independent): all-zero cohort effects (=> overall
+	# att = 0) and all-equal cohort effects (=> V2 = 0). Between them they reject
+	# `eff_size = 0`, an all-zero `treat_base_levels`, and the homogeneous trap
+	# (e.g. signal only on cohort 1's all-ones base, or any constant
+	# `treat_base_levels`) -- for either fusion_structure -- without the caller
+	# having to reason about the fused map. Note they do NOT prove `att != 0` for an
+	# arbitrary mixed-sign free-form `treat_base_levels` (equal-and-opposite levels
+	# could cancel to att ~ 0 while keeping V2 > 0); the roxygen only promises
+	# V2 > 0 for the explicit vector, which is the caller's responsibility on that
+	# escape hatch. (The count mode cannot reach either failure given the validated
+	# 1 <= k <= G-1, but the check is cheap insurance.)
 	if (targeted) {
 		catt_built <- getActualCohortTes(
 			G = G,
@@ -1143,7 +1151,7 @@ genCoefsCore <- function(
 		}
 	}
 
-	# Confirm beta satisfies input requirements of genRandomData() (make
+	# Confirm beta satisfies input requirements of simulateDataCore() (make
 	# up values for N, sig_eps_sq, and sig_eps_c_sq that meet requirements)
 
 	testGenRandomDataInputs(

@@ -11,6 +11,31 @@
 #' @importFrom generics tidy glance augment
 NULL
 
+#' @title Validate a `conf.level` argument
+#' @description Checks that `conf.level` is a single finite number strictly inside
+#'   `(0, 1)`, erroring with an actionable message otherwise. Shared by the broom
+#'   `tidy()` methods, which expose `conf.level` as a user-facing argument.
+#' @param conf.level The confidence level to validate.
+#' @return `invisible(NULL)`, called for the side effect of erroring on bad input.
+#' @keywords internal
+#' @noRd
+.validate_conf_level <- function(conf.level) {
+	if (
+		!is.numeric(conf.level) ||
+			length(conf.level) != 1L ||
+			!is.finite(conf.level) ||
+			conf.level <= 0 ||
+			conf.level >= 1
+	) {
+		stop(
+			"`conf.level` must be a single number in (0, 1); got ",
+			deparse(conf.level),
+			call. = FALSE
+		)
+	}
+	invisible(NULL)
+}
+
 #-------------------------------------------------------------------------------
 # Internal helpers
 #-------------------------------------------------------------------------------
@@ -49,7 +74,7 @@ NULL
 	include_selected = inherits(x, c("fetwfe", "betwfe"))
 ) {
 	.check_for_tidy(x)
-	stopifnot(conf.level > 0, conf.level < 1)
+	.validate_conf_level(conf.level)
 
 	z <- stats::qnorm(1 - (1 - conf.level) / 2)
 
@@ -517,7 +542,7 @@ tidy.eventStudy <- function(
 	conf.level = 0.95,
 	...
 ) {
-	stopifnot(conf.level > 0, conf.level < 1)
+	.validate_conf_level(conf.level)
 	# Guard against a user-mutated `eventStudy` frame that's missing a
 	# required column: localizes the error message rather than the cryptic
 	# "arguments imply differing number of rows" from `data.frame()` when
@@ -766,7 +791,7 @@ tidy.cohortTimeATTs <- function(x, ...) {
 #' }
 #' @export
 tidy.FETWFE_tes <- function(x, conf.int = TRUE, conf.level = 0.95, ...) {
-	stopifnot(conf.level > 0, conf.level < 1)
+	.validate_conf_level(conf.level)
 	G <- length(x$actual_cohort_tes)
 	# Cohorts are labeled by calendar adoption time (#261), shared with
 	# print/summary.FETWFE_tes via .resolve_tes_cohort_times().
