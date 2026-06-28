@@ -2416,3 +2416,196 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 	out <- .finalize_ci_type(out, alpha = alpha)
 	out
 }
+
+#' @title Assemble the user-facing bridge-estimator (`betwfe`/`fetwfe`) fit
+#' @description Shared final-object assembler for the two bridge estimators, the
+#'   sibling of [.assemble_ols_estimator()] for the OLS pair (#344). From a core
+#'   result `res` it builds the overall-ATT summary, the top-level out-list, and
+#'   the `$internal` sub-list, then validates, classes, and applies `ci_type`.
+#'   The `is_fetwfe` flag drives the only structural differences between the two:
+#'   `fetwfe` carries `fusion_structure`/`fusion_matrix` at the top level (where
+#'   `betwfe` instead duplicates `X_ints`/`y`/`X_final`/`y_final`), orders `alpha`
+#'   before `calc_ses`, and adds `theta_hat` and `d_inv_treat` to `$internal`.
+#' @param res Core result list from `betwfe_core()` / `fetwfe_core()`.
+#' @param q Numeric bridge exponent (selects the ATT branch via
+#'   `.select_att_branch()`).
+#' @param indep_count_data_available Logical; whether independent cohort counts
+#'   were supplied (the two-sample exact-SE branch).
+#' @param lambda_selection,cv_folds Bridge penalty-selection provenance (#164).
+#' @param alpha,se_type,ci_type Confidence level, SE type, and CI family.
+#' @param y_mean,response,time_var,unit_var,treatment,covs_orig Pass-through
+#'   metadata for the returned object.
+#' @param first_year First panel year, surfaced from `prepXints` (#174).
+#' @param is_fetwfe Logical; `TRUE` assembles a `fetwfe` object, `FALSE` a
+#'   `betwfe`.
+#' @param fusion_structure,fusion_matrix,d_inv_treat `fetwfe`-only fields (`NULL`
+#'   for `betwfe`); `fusion_matrix` / `d_inv_treat` are `NULL` when the user
+#'   supplied no forward-difference matrix `D_N`.
+#' @return The assembled, validated, classed (`betwfe` / `fetwfe`) fit object.
+#' @keywords internal
+#' @noRd
+.assemble_bridge_estimator <- function(
+	res,
+	q,
+	indep_count_data_available,
+	lambda_selection,
+	cv_folds,
+	alpha,
+	se_type,
+	ci_type,
+	y_mean,
+	response,
+	time_var,
+	unit_var,
+	treatment,
+	covs_orig,
+	first_year,
+	is_fetwfe,
+	fusion_structure = NULL,
+	fusion_matrix = NULL,
+	d_inv_treat = NULL
+) {
+	att_branch <- .select_att_branch(
+		res,
+		indep_count_data_available = indep_count_data_available,
+		q = q
+	)
+	att_hat <- att_branch$att_hat
+	att_se <- att_branch$att_se
+	cohort_probs <- att_branch$cohort_probs
+	cohort_probs_overall <- att_branch$cohort_probs_overall
+
+	att_p_value <- .compute_p_values(att_hat, att_se)
+	att_selected <- att_hat != 0
+
+	variance_components <- .build_variance_components(
+		att_var_1 = att_branch$att_var_1,
+		att_var_2 = att_branch$att_var_2,
+		N = res$N,
+		T = res$T,
+		se_type = se_type,
+		indep_counts_used = indep_count_data_available
+	)
+
+	# Fields 1-23, identical across both bridge estimators.
+	head <- list(
+		att_hat = att_hat,
+		att_se = att_se,
+		att_p_value = att_p_value,
+		att_selected = att_selected,
+		catt_hats = res$catt_hats,
+		catt_ses = res$catt_ses,
+		cohort_probs = cohort_probs,
+		cohort_probs_overall = cohort_probs_overall,
+		catt_df = res$catt_df,
+		beta_hat = res$beta_hat,
+		treat_inds = res$treat_inds,
+		treat_int_inds = res$treat_int_inds,
+		sig_eps_sq = res$sig_eps_sq,
+		sig_eps_c_sq = res$sig_eps_c_sq,
+		lambda.max = res$lambda.max,
+		lambda.max_model_size = res$lambda.max_model_size,
+		lambda.min = res$lambda.min,
+		lambda.min_model_size = res$lambda.min_model_size,
+		lambda_star = res$lambda_star,
+		lambda_star_model_size = res$lambda_star_model_size,
+		# v1.13.0 (#164): lambda-selection method provenance. `cv_folds` / `cv_seed`
+		# are NA_integer_ under the BIC path (the core's dispatch initializes
+		# `res$cv_seed_used` to NA_integer_ on that branch).
+		lambda_selection = lambda_selection,
+		cv_folds = if (lambda_selection == "cv") {
+			as.integer(cv_folds)
+		} else {
+			NA_integer_
+		},
+		cv_seed = res$cv_seed_used
+	)
+
+	# block_a: fetwfe carries the fusion fields here; betwfe duplicates the
+	# design / response at top level (they also live under `$internal` for both --
+	# the top-level copies are betwfe backward-compat, #144/#179/#180).
+	# #236: `fusion_matrix` is NULL when the user supplied no forward-difference
+	# matrix D_N; keeping it inside this list() literal (concatenated by c() below)
+	# preserves the slot NAME even when NULL -- a post-construction `out$x <- NULL`
+	# would silently drop the name and break doc-slot parity.
+	block_a <- if (is_fetwfe) {
+		list(fusion_structure = fusion_structure, fusion_matrix = fusion_matrix)
+	} else {
+		list(
+			X_ints = res$X_ints,
+			y = res$y,
+			X_final = res$X_final,
+			y_final = res$y_final
+		)
+	}
+
+	dims <- list(
+		N = res$N,
+		T = res$T,
+		G = res$G,
+		R = res$G,
+		d = res$d,
+		p = res$p
+	)
+
+	# block_b: fetwfe historically orders `alpha` before `calc_ses`; betwfe the
+	# reverse. Preserved exactly (test-bridge-out-list-field-order-343.R pins it).
+	block_b <- if (is_fetwfe) {
+		list(alpha = alpha, calc_ses = res$calc_ses)
+	} else {
+		list(calc_ses = res$calc_ses, alpha = alpha)
+	}
+
+	tail <- list(
+		se_type = se_type,
+		indep_counts_used = indep_count_data_available,
+		y_mean = y_mean,
+		response_col_name = response,
+		time_var = time_var,
+		unit_var = unit_var,
+		treatment = treatment,
+		covs = covs_orig,
+		ci_type = ci_type
+	)
+
+	out <- c(head, block_a, dims, block_b, tail)
+
+	# `$internal`: for betwfe these design / response slots (X_ints, y, X_final,
+	# y_final) plus calc_ses are ALSO duplicated at the top level for backward
+	# compat (#144/#179/#180); for fetwfe X_ints/y/X_final/y_final live only here.
+	# fetwfe additionally carries `theta_hat` (after `y_final`) and, at the end,
+	# `d_inv_treat` -- the inverted user fusion block solve(fusion_matrix), NULL
+	# when no D_N was supplied (#236; name preserved via the list() literal, as
+	# above). `variance_components` / `first_year` live only here; `first_year`
+	# (#174; see R/event_study.R and getFirstIndsFromOffsets) lets `eventStudy()`
+	# map cohort labels back to panel-time offsets.
+	out$internal <- c(
+		list(
+			X_ints = res$X_ints,
+			y = res$y,
+			X_final = res$X_final,
+			y_final = res$y_final
+		),
+		if (is_fetwfe) list(theta_hat = res$theta_hat) else list(),
+		list(
+			calc_ses = res$calc_ses,
+			variance_components = variance_components,
+			first_year = first_year
+		),
+		if (is_fetwfe) list(d_inv_treat = d_inv_treat) else list()
+	)
+
+	# Validate the constructed object's contracts (#85), class it, then apply
+	# ci_type to the cohort-family bounds (#197; no-op unless ci_type ==
+	# "simultaneous", runs after classing so inherits()-based dispatch resolves,
+	# and re-validates internally).
+	if (is_fetwfe) {
+		.validate_fetwfe(out)
+		class(out) <- "fetwfe"
+	} else {
+		.validate_betwfe(out)
+		class(out) <- "betwfe"
+	}
+	out <- .finalize_ci_type(out, alpha = alpha)
+	out
+}

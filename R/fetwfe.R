@@ -544,124 +544,27 @@ fetwfe <- function(
 		gls = gls
 	)
 
-	att_branch <- .select_att_branch(
-		res,
+	out <- .assemble_bridge_estimator(
+		res = res,
+		q = q,
 		indep_count_data_available = indep_count_data_available,
-		q = q
-	)
-	att_hat <- att_branch$att_hat
-	att_se <- att_branch$att_se
-	cohort_probs <- att_branch$cohort_probs
-	cohort_probs_overall <- att_branch$cohort_probs_overall
-
-	att_p_value <- .compute_p_values(att_hat, att_se)
-	att_selected <- att_hat != 0
-
-	variance_components <- .build_variance_components(
-		att_var_1 = att_branch$att_var_1,
-		att_var_2 = att_branch$att_var_2,
-		N = res$N,
-		T = res$T,
-		se_type = se_type,
-		indep_counts_used = indep_count_data_available
-	)
-
-	# Create the main output list with essential results
-	out <- list(
-		att_hat = att_hat,
-		att_se = att_se,
-		att_p_value = att_p_value,
-		att_selected = att_selected,
-		catt_hats = res$catt_hats,
-		catt_ses = res$catt_ses,
-		cohort_probs = cohort_probs,
-		cohort_probs_overall = cohort_probs_overall,
-		catt_df = res$catt_df,
-		beta_hat = res$beta_hat,
-		treat_inds = res$treat_inds,
-		treat_int_inds = res$treat_int_inds,
-		sig_eps_sq = res$sig_eps_sq,
-		sig_eps_c_sq = res$sig_eps_c_sq,
-		lambda.max = res$lambda.max,
-		lambda.max_model_size = res$lambda.max_model_size,
-		lambda.min = res$lambda.min,
-		lambda.min_model_size = res$lambda.min_model_size,
-		lambda_star = res$lambda_star,
-		lambda_star_model_size = res$lambda_star_model_size,
-		# v1.13.0 (#164): lambda-selection method provenance. The CV path
-		# is the new default; pass `lambda_selection = "bic"` to recover
-		# the prior behavior. `cv_folds` and `cv_seed` are NA_integer_
-		# under the BIC path (the core's dispatch initializes
-		# `res$cv_seed_used` to NA_integer_ on the BIC branch).
 		lambda_selection = lambda_selection,
-		cv_folds = if (lambda_selection == "cv") {
-			as.integer(cv_folds)
-		} else {
-			NA_integer_
-		},
-		cv_seed = res$cv_seed_used,
-		fusion_structure = fusion_structure,
-		# #236: the user-supplied forward difference matrix D_N (NULL when not
-		# supplied). Kept inside this list() literal so the slot name survives
-		# even when NULL (a post-construction `out$fusion_matrix <- NULL` would
-		# silently drop the name, breaking doc-slot parity). The inverted block
-		# `solve(fusion_matrix)` lives in `internal$d_inv_treat` below.
-		fusion_matrix = fusion_matrix,
-		N = res$N,
-		T = res$T,
-		G = res$G,
-		R = res$G,
-		d = res$d,
-		p = res$p,
+		cv_folds = cv_folds,
 		alpha = alpha,
-		calc_ses = res$calc_ses,
 		se_type = se_type,
-		indep_counts_used = indep_count_data_available,
+		ci_type = ci_type,
 		y_mean = y_mean,
-		response_col_name = response,
+		response = response,
 		time_var = time_var,
 		unit_var = unit_var,
 		treatment = treatment,
-		covs = covs_orig,
-		ci_type = ci_type
-	)
-
-	# Add internal outputs in a separate list
-	out$internal <- list(
-		X_ints = res$X_ints,
-		y = res$y,
-		X_final = res$X_final,
-		y_final = res$y_final,
-		theta_hat = res$theta_hat,
-		calc_ses = res$calc_ses,
-		variance_components = variance_components,
-		# v1.13.3 (#174): first panel year, surfaced from `prepXints` so
-		# `eventStudy()` can map `cohort_probs`' cohort labels back to
-		# panel-time offsets. See `R/event_study.R` and
-		# `R/utility.R::getFirstIndsFromOffsets`.
+		covs_orig = covs_orig,
 		first_year = first_year,
-		# #236: the inverted user fusion block `solve(fusion_matrix)` (NULL when
-		# not supplied). Consumed by the access-time accessors `eventStudy()`
-		# (R/event_study.R) and `simultaneousCIs()` (R/simultaneous_cis.R), and
-		# by `.finalize_ci_type()` below (which rebuilds the simultaneous catt_df
-		# band at construction). Kept inside this list() literal so the name
-		# survives when NULL.
+		is_fetwfe = TRUE,
+		fusion_structure = fusion_structure,
+		fusion_matrix = fusion_matrix,
 		d_inv_treat = d_inv_treat
 	)
-
-	# Validate constructed object's contracts (#85). Catches malformed
-	# output at construction time rather than at downstream-method
-	# confusion time.
-	.validate_fetwfe(out)
-
-	# Add the fetwfe class
-	class(out) <- "fetwfe"
-
-	# Apply ci_type to the cohort-family bounds (#197). No-op unless
-	# ci_type == "simultaneous"; runs after classing so the worker's
-	# inherits()-based dispatch resolves. Re-validates internally.
-	out <- .finalize_ci_type(out, alpha = alpha)
-
 	return(out)
 }
 
