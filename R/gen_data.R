@@ -428,7 +428,7 @@ simulateDataCore <- function(
 		))
 	}
 
-	res <- testGenRandomDataInputs(
+	res <- testSimulateDataCoreInputs(
 		beta = beta,
 		G = G,
 		T = T,

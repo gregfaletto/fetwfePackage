@@ -1154,7 +1154,7 @@ genCoefsCore <- function(
 	# Confirm beta satisfies input requirements of simulateDataCore() (make
 	# up values for N, sig_eps_sq, and sig_eps_c_sq that meet requirements)
 
-	testGenRandomDataInputs(
+	testSimulateDataCoreInputs(
 		beta = beta,
 		G = G,
 		T = T,
