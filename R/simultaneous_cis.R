@@ -1492,10 +1492,11 @@ print.simultaneous_cis <- function(x, ...) {
 		max(x$lambda_node)
 	))
 	nk <- length(x$converged)
-	# KKT-feasible iff `||Sigma v - a||_inf <= lambda_node`, with the same default
-	# `riesz_tol` slack the band's feasibility gate / experimental warning use, so
-	# "K/K KKT-feasible" here means "no feasibility warning fired".
-	nfeas <- sum(x$feasibility <= x$lambda_node * (1 + 1e-9))
+	# KKT-feasible iff `||Sigma v - a||_inf <= lambda_node` to within the shared
+	# `.riesz_feasible()` tolerance (the band's feasibility gate and the
+	# experimental warning use the same helper), so "K/K KKT-feasible" here means
+	# "no feasibility warning fired".
+	nfeas <- sum(.riesz_feasible(x$feasibility, x$lambda_node))
 	feas_ratio <- x$feasibility / x$lambda_node
 	feas_ratio <- feas_ratio[is.finite(feas_ratio)]
 	worst_txt <- if (length(feas_ratio)) {
@@ -1517,13 +1518,14 @@ print.simultaneous_cis <- function(x, ...) {
 			"  propensity channel (#309): %d/%d converged, %d/%d KKT-feasible\n",
 			sum(x$propensity_converged),
 			pk,
-			# same `riesz_tol` slack as the per-effect line above (the nodewise solver
-			# routinely binds the constraint to ~1e-10, so a strict `<=` would report
-			# 0/K feasible exactly when the band's gate fired no warning).
-			sum(
-				x$propensity_feasibility <=
-					x$propensity_lambda_node * (1 + 1e-9)
-			),
+			# same feasibility tolerance as the per-effect line above (via
+			# `.riesz_feasible()`; the nodewise solver routinely binds the
+			# constraint to ~1e-10, so a strict `<=` would report 0/K feasible
+			# exactly when the band's gate fired no warning).
+			sum(.riesz_feasible(
+				x$propensity_feasibility,
+				x$propensity_lambda_node
+			)),
 			pk
 		))
 	}

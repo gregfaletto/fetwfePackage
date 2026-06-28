@@ -1,5 +1,23 @@
 # NEWS
 
+## Version 1.51.0
+
+### Bug fixes
+
+- High-dimensional nodewise debiasing: the KKT feasibility check no longer reuses
+  the coordinate-descent convergence tolerance (`riesz_tol`, `1e-9`) as its
+  feasibility slack, which sat below solver precision and so spuriously flagged
+  legitimately-binding nodewise directions as infeasible. The slack is now a
+  fixed `1e-6` relative tolerance (`.riesz_feasible()`), fixing over-pessimistic
+  `debiasedATT()` / `simultaneousCIs()` feasibility warnings and the high-dim
+  print diagnostics' under-reported "KKT-feasible" counts. Surfaced by the
+  `p > NT` coverage study (`gregfaletto/fetwfe#88`) (#351).
+- As part of the same fix, `lambda_c = "cv"` may now select a slightly smaller
+  penalty constant for fits sitting exactly at the feasibility edge (a
+  genuinely-feasible grid point previously excluded by round-off can now win).
+  Default `lambda_c = 1.0` fits -- which never invoke the CV feasibility gate --
+  are unchanged (#351).
+
 ## Version 1.50.0
 
 ### Improvements

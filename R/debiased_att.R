@@ -519,7 +519,7 @@ debiasedATT <- function(
 		converged <- attr(v, "converged")
 		# The KKT certificate ||Sig v - a||_inf <= lambda_node is exactly the
 		# relaxed-inverse feasibility the Theorem 6.6 remainder bound needs.
-		if (feasibility > lambda_node * (1 + riesz_tol)) {
+		if (!.riesz_feasible(feasibility, lambda_node)) {
 			warning(
 				"debiasedATT(): the high-dimensional nodewise direction did not meet ",
 				"its feasibility constraint (||Sig v - a||_inf = ",
