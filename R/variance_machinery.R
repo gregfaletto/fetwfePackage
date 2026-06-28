@@ -145,40 +145,20 @@ getTeResultsOLS <- function(
 		stopifnot(nrow(psi_mat) <= num_treats)
 		stopifnot(ncol(psi_mat) == G)
 
-		# Get ATT standard error
-		# first variance term: convergence of theta
-		psi_att <- psi_mat %*% cohort_probs
-
-		if (identical(se_type, "cluster")) {
-			stopifnot(!is.null(sandwich_full))
-			stopifnot(!is.null(treat_block_mask))
-			stopifnot(is.logical(treat_block_mask))
-			stopifnot(length(treat_block_mask) == nrow(sandwich_full))
-			stopifnot(sum(treat_block_mask) == nrow(psi_mat))
-
-			psi_att_full <- numeric(length(treat_block_mask))
-			psi_att_full[treat_block_mask] <- psi_att
-
-			# Issue #84 item 9: floor the cluster-sandwich quadratic form
-			# at zero. See the matching guard in `getTeResults2`
-			# (same file, R/variance_machinery.R) for rationale. Issue
-			# #139 layers a two-tier (warning / error) diagnostic on top
-			# of the floor via `.floor_cluster_quad()`; on well-conditioned
-			# data the behavior is unchanged.
-			att_var_1 <- .floor_cluster_quad(
-				as.numeric(
-					t(psi_att_full) %*% sandwich_full %*% psi_att_full
-				),
-				"getTeResultsOLS/att_var_1"
-			)
-		} else {
-			att_var_1 <- sig_eps_sq *
-				as.numeric(t(psi_att) %*% gram_inv %*% psi_att) /
-				(N * T)
-		}
+		att_var_1 <- .compute_att_var1(
+			psi_mat = psi_mat,
+			cohort_probs = cohort_probs,
+			se_type = se_type,
+			sandwich_full = sandwich_full,
+			treat_block_mask = treat_block_mask,
+			sig_eps_sq = sig_eps_sq,
+			gram_inv = gram_inv,
+			N = N,
+			T = T,
+			label = "getTeResultsOLS/att_var_1"
+		)
 
 		stopifnot(length(tes) <= num_treats)
-
 		stopifnot(length(tes) == nrow(psi_mat))
 
 		# Second variance term: convergence of cohort membership probabilities
@@ -191,33 +171,18 @@ getTeResultsOLS <- function(
 			T = T,
 			G = G
 		)
-
-		# Combine the two variance pieces. The independent-sample case
-		# (`indep_probs = TRUE`) and the same-data (Psi-IF)-satisfying case
-		# (`se_type %in% c("default", "cluster")`) both use the tight
-		# Gaussian formula `att_var_1 + att_var_2`. The conservative
-		# Cauchy-Schwarz fallback is reserved for the same-data
-		# non-(Psi-IF) case via `se_type = "conservative"`. See
-		# Theorem `te.asym.norm.thm`(c$'$) and Assumption (Psi-IF)
-		# (`paper_arxiv.tex` ~ line 1233 and ~ line 2013).
-		att_te_se <- sqrt(
-			.combine_att_variance(att_var_1, att_var_2, indep_probs, se_type)
-		)
-
-		att_te_se_no_prob <- sqrt(att_var_1)
 	} else {
-		att_te_se <- NA
-		att_te_se_no_prob <- NA
 		att_var_1 <- NA
 		att_var_2 <- NA
 	}
 
-	return(list(
+	return(.assemble_te_results(
 		att_hat = att_hat,
-		att_te_se = att_te_se,
-		att_te_se_no_prob = att_te_se_no_prob,
 		att_var_1 = att_var_1,
-		att_var_2 = att_var_2
+		att_var_2 = att_var_2,
+		indep_probs = indep_probs,
+		se_type = se_type,
+		calc_ses = calc_ses
 	))
 }
 
@@ -668,45 +633,19 @@ getTeResults2 <- function(
 		stopifnot(all(!is.na(psi_mat)))
 		stopifnot(!is.na(sig_eps_sq))
 		stopifnot(all(!is.na(gram_inv)))
-		# Get ATT standard error
 
-		# first variance term: convergence of theta
-		psi_att <- psi_mat %*% cohort_probs
-
-		if (identical(se_type, "cluster")) {
-			stopifnot(!is.null(sandwich_full))
-			stopifnot(!is.null(treat_block_mask))
-			stopifnot(is.logical(treat_block_mask))
-			stopifnot(length(treat_block_mask) == nrow(sandwich_full))
-			stopifnot(sum(treat_block_mask) == nrow(psi_mat))
-
-			psi_att_full <- numeric(length(treat_block_mask))
-			psi_att_full[treat_block_mask] <- psi_att
-
-			# Issue #84 item 9: floor the cluster-sandwich quadratic form
-			# at zero. The Liang-Zeger sandwich is PSD in exact arithmetic,
-			# so `t(psi) %*% sandwich %*% psi >= 0` always — but the
-			# now-vectorized `rowsum` assembly (see item 18) and the
-			# subsequent matrix triple-product accumulate enough
-			# floating-point rounding that a near-zero quadratic form
-			# could come out negative by a few ulps, NaN-ing downstream
-			# sqrt() into a baffling "NA SE" surface. Floor at zero so
-			# any rounding-induced negative collapses to the
-			# mathematically correct value. Issue #139 layers a two-tier
-			# (warning / error) diagnostic on top of the floor via
-			# `.floor_cluster_quad()`; on well-conditioned data the
-			# behavior is unchanged.
-			att_var_1 <- .floor_cluster_quad(
-				as.numeric(
-					t(psi_att_full) %*% sandwich_full %*% psi_att_full
-				),
-				"getTeResults2/att_var_1"
-			)
-		} else {
-			att_var_1 <- sig_eps_sq *
-				as.numeric(t(psi_att) %*% gram_inv %*% psi_att) /
-				(N * T)
-		}
+		att_var_1 <- .compute_att_var1(
+			psi_mat = psi_mat,
+			cohort_probs = cohort_probs,
+			se_type = se_type,
+			sandwich_full = sandwich_full,
+			treat_block_mask = treat_block_mask,
+			sig_eps_sq = sig_eps_sq,
+			gram_inv = gram_inv,
+			N = N,
+			T = T,
+			label = "getTeResults2/att_var_1"
+		)
 
 		stopifnot(!is.na(att_var_1))
 
@@ -724,27 +663,117 @@ getTeResults2 <- function(
 		)
 
 		stopifnot(!is.na(att_var_2))
+	} else {
+		att_var_1 <- NA
+		att_var_2 <- NA
+	}
 
-		# Combine the two variance pieces. The independent-sample case
-		# (`indep_probs = TRUE`) and the same-data (Psi-IF)-satisfying case
-		# (`se_type %in% c("default", "cluster")`) both use the tight
-		# Gaussian formula `att_var_1 + att_var_2`. The conservative
-		# Cauchy-Schwarz fallback is reserved for the same-data
-		# non-(Psi-IF) case via `se_type = "conservative"`. See
-		# Theorem `te.asym.norm.thm`(c$'$) and Assumption (Psi-IF)
-		# (`paper_arxiv.tex` ~ line 1233 and ~ line 2013). Prior to v1.12.0
-		# the same-data path defaulted to the Cauchy-Schwarz bound regardless
-		# of (Psi-IF); v1.12.0 inverted that default.
+	return(.assemble_te_results(
+		att_hat = att_hat,
+		att_var_1 = att_var_1,
+		att_var_2 = att_var_2,
+		indep_probs = indep_probs,
+		se_type = se_type,
+		calc_ses = calc_ses
+	))
+}
+
+#' @title Compute the first ATT variance term (theta-convergence)
+#' @description Shared by [getTeResultsOLS()] and [getTeResults2()]: the
+#'   `att_var_1` piece of the overall-ATT variance. The cluster branch floors the
+#'   Liang-Zeger sandwich quadratic form at zero (#84 item 9, with the #139
+#'   two-tier diagnostic via `.floor_cluster_quad()`); the non-cluster branch is
+#'   the model-based `sigma^2 psi' Gram^{-1} psi / (N T)`.
+#' @param psi_mat Numeric matrix; the per-cohort psi columns.
+#' @param cohort_probs Numeric vector of within-treated cohort probabilities.
+#' @param se_type One of `"default"`, `"conservative"`, `"cluster"`.
+#' @param sandwich_full,treat_block_mask Cluster-robust sandwich and its
+#'   treatment-block mask (required, and used, only when `se_type == "cluster"`).
+#' @param sig_eps_sq,gram_inv,N,T Inputs to the model-based (non-cluster) branch.
+#' @param label Character; the call-site label passed to `.floor_cluster_quad()`
+#'   so its diagnostic names the originating function.
+#' @return Numeric scalar `att_var_1`.
+#' @keywords internal
+#' @noRd
+.compute_att_var1 <- function(
+	psi_mat,
+	cohort_probs,
+	se_type,
+	sandwich_full,
+	treat_block_mask,
+	sig_eps_sq,
+	gram_inv,
+	N,
+	T,
+	label
+) {
+	# first variance term: convergence of theta
+	psi_att <- psi_mat %*% cohort_probs
+
+	if (identical(se_type, "cluster")) {
+		stopifnot(!is.null(sandwich_full))
+		stopifnot(!is.null(treat_block_mask))
+		stopifnot(is.logical(treat_block_mask))
+		stopifnot(length(treat_block_mask) == nrow(sandwich_full))
+		stopifnot(sum(treat_block_mask) == nrow(psi_mat))
+
+		psi_att_full <- numeric(length(treat_block_mask))
+		psi_att_full[treat_block_mask] <- psi_att
+
+		# Issue #84 item 9: floor the cluster-sandwich quadratic form at zero. The
+		# Liang-Zeger sandwich is PSD in exact arithmetic, so
+		# `t(psi) %*% sandwich %*% psi >= 0` always -- but the vectorized `rowsum`
+		# assembly (item 18) plus the matrix triple-product accumulate enough
+		# floating-point rounding that a near-zero quadratic form could come out
+		# negative by a few ulps, NaN-ing the downstream sqrt() into a baffling
+		# "NA SE" surface. Floor at zero so any rounding-induced negative collapses
+		# to the mathematically correct value. Issue #139 layers a two-tier
+		# (warning / error) diagnostic on top of the floor via
+		# `.floor_cluster_quad()`; on well-conditioned data the behavior is
+		# unchanged.
+		.floor_cluster_quad(
+			as.numeric(t(psi_att_full) %*% sandwich_full %*% psi_att_full),
+			label
+		)
+	} else {
+		sig_eps_sq *
+			as.numeric(t(psi_att) %*% gram_inv %*% psi_att) /
+			(N * T)
+	}
+}
+
+#' @title Assemble the `getTeResults*()` return list
+#' @description Shared by [getTeResultsOLS()] and [getTeResults2()]: combines the
+#'   two variance pieces into `att_te_se` and packages the 5-field result. When
+#'   `calc_ses` is `FALSE` every SE / variance slot is `NA`. The tight Gaussian
+#'   combination `att_var_1 + att_var_2` is used for the independent-sample case
+#'   and the same-data (Psi-IF) case (`se_type` default / cluster); the
+#'   Cauchy-Schwarz bound is reserved for `se_type == "conservative"` (see
+#'   `.combine_att_variance()` and Theorem `te.asym.norm.thm`(c$'$)).
+#' @param att_hat Numeric scalar; the overall ATT point estimate.
+#' @param att_var_1,att_var_2 The two variance terms (or `NA` when `!calc_ses`).
+#' @param indep_probs,se_type Inputs to `.combine_att_variance()`.
+#' @param calc_ses Logical; whether standard errors were computed.
+#' @return A list with `att_hat`, `att_te_se`, `att_te_se_no_prob`, `att_var_1`,
+#'   and `att_var_2`.
+#' @keywords internal
+#' @noRd
+.assemble_te_results <- function(
+	att_hat,
+	att_var_1,
+	att_var_2,
+	indep_probs,
+	se_type,
+	calc_ses
+) {
+	if (calc_ses) {
 		att_te_se <- sqrt(
 			.combine_att_variance(att_var_1, att_var_2, indep_probs, se_type)
 		)
-
 		att_te_se_no_prob <- sqrt(att_var_1)
 	} else {
 		att_te_se <- NA
 		att_te_se_no_prob <- NA
-		att_var_1 <- NA
-		att_var_2 <- NA
 	}
 
 	return(list(

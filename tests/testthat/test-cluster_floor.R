@@ -124,7 +124,7 @@ test_that(".floor_cluster_quad respects custom thresholds", {
 # routes through `.floor_cluster_quad`, catching a future revert to the bare
 # `max(., 0)` floor.
 
-test_that("all 5 cluster-sandwich floor sites use .floor_cluster_quad", {
+test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 	pkg_root <- system.file(package = "fetwfe")
 	# When the package is loaded via devtools::load_all(), the installed
 	# `system.file()` may return the install dir (no R/ source). Prefer the
@@ -140,10 +140,13 @@ test_that("all 5 cluster-sandwich floor sites use .floor_cluster_quad", {
 	}
 
 	files <- c("R/variance_machinery.R", "R/event_study.R")
-	# Count `.floor_cluster_quad(` call sites across both files. The helper
-	# is invoked once per site, so the call count is exactly 5. We skip
-	# comment lines (so the matching helper-name mention in each site's
-	# explanatory comment does not double-count).
+	# Count `.floor_cluster_quad(` call sites across both files, skipping
+	# comment lines (so a helper-name mention in a site's explanatory comment
+	# does not double-count). There are 4 call sites: the shared
+	# `.compute_att_var1()` (#344; invoked by both getTeResultsOLS() and
+	# getTeResults2(), each passing its own per-site label), getCohortATTsFinal(),
+	# and the two event-study workers. The 5 labeled computations -- two of which
+	# now share `.compute_att_var1()` -- are verified individually below.
 	call_count <- 0L
 	for (f in files) {
 		path <- file.path(root, f)
@@ -156,7 +159,7 @@ test_that("all 5 cluster-sandwich floor sites use .floor_cluster_quad", {
 		call_count <- call_count +
 			sum(grepl(".floor_cluster_quad(", non_comment, fixed = TRUE))
 	}
-	expect_equal(call_count, 5L)
+	expect_equal(call_count, 4L)
 
 	# Per-site label coverage: each site uses its expected per-site label.
 	# This catches a future copy-paste regression where two sites end up
