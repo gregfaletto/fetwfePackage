@@ -1,6 +1,6 @@
 # Internal helpers shared by the simulation pipeline:
 # `generateBaseEffects()`, `genCohortTimeFE()`, `genAssignments()`,
-# `genTreatVarsSim()`, `rfunc()`, and `testGenRandomDataInputs()`.
+# `genTreatVarsSim()`, `rfunc()`, and `testSimulateDataCoreInputs()`.
 # Moved from R/gen_funcs.R in 1.9.25.
 
 #' Draw covariates and their long-format expansion
@@ -529,7 +529,7 @@ rfunc <- function(n, prob) {
 #' @seealso \code{\link{getNumTreats}}, \code{\link{getP}}
 #' @keywords internal
 #' @noRd
-testGenRandomDataInputs <- function(
+testSimulateDataCoreInputs <- function(
 	beta,
 	G,
 	T,

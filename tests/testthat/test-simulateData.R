@@ -442,7 +442,7 @@ test_that("print.FETWFE_simulated summarizes instead of dumping (#84 item 13)", 
 # Case 2 from #109: simulateData() accepts sig_eps_c_sq = 0 (no unit-level
 # random effects). Pre-fix, simulateData() rejected sig_eps_c_sq <= 0 while
 # the validators downstream of fetwfe() accepted sig_eps_c_sq >= 0.
-# Loosened simulateData (and testGenRandomDataInputs) to match.
+# Loosened simulateData (and testSimulateDataCoreInputs) to match.
 # ------------------------------------------------------------------------------
 test_that("simulateData accepts sig_eps_c_sq = 0 (#109 Case 2)", {
 	coefs <- genCoefs(
