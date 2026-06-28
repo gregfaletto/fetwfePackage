@@ -1,5 +1,16 @@
 # NEWS
 
+## Version 1.53.0
+
+### Improvements
+
+- The inference vignette now documents **high-dimensional (`p >= NT`) debiased
+  inference**: a new section with a worked `debiasedATT()` / `simultaneousCIs()`
+  example on a `p > NT` panel, the feasibility / `lambda_c` diagnostics to
+  inspect, and the high-dimensional coverage result from `gregfaletto/fetwfe#88`
+  (debiased ~93% vs fused ~77% at the studied anchor). Closes the last major
+  post-1.10.0 vignette gap (#353).
+
 ## Version 1.52.0
 
 ### Improvements
