@@ -61,8 +61,12 @@ design is \strong{high-dimensional (\code{p >= NT})} -- where the analytic Gram 
 need not exist -- the bootstrap uses the full-design \strong{desparsified}
 construction of \code{debiasedATT()} (per-effect nodewise directions) generalized
 to the family. This desparsified \code{p >= NT} path is \strong{experimental}
-(\code{fetwfe()} fits only; coverage is not yet simulation-validated): inspect the
-returned \code{feasibility} / \code{converged} diagnostics. A non-\code{fetwfe()} \code{p >= NT}
+(\code{fetwfe()} fits only): it generalizes the \code{debiasedATT()} construction
+whose overall-ATT coverage is validated near-nominally at the \code{p >= NT}
+anchor of Faletto (2025), but the family-wise \emph{band} coverage here is not
+itself simulation-validated, so inspect the returned \code{feasibility} /
+\code{converged} diagnostics. A
+non-\code{fetwfe()} \code{p >= NT}
 fit (e.g. \code{betwfe()}) has no desparsified band, so it instead falls back to
 the fixed-\code{p} selected-support band and emits a \code{warning()}: a #308 coverage
 study shows that band substantially \strong{under-covers} in the \code{p >= NT} regime

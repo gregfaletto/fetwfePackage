@@ -79,7 +79,8 @@
 #' nodewise (desparsified-lasso) relaxed inverse (paper Theorem
 #' `debiased.highdim.thm`). The point estimate, SE formula, and return value are
 #' otherwise identical --- "one estimator, two regimes." This high-dimensional
-#' branch is **experimental** (see Assumptions).
+#' branch is **experimental** (its overall-ATT coverage is validated
+#' near-nominally at the `p >= NT` anchor of Faletto (2025); see Assumptions).
 #'
 #' @details
 #' The standard error has two channels that **add** under marginal cohort
@@ -138,11 +139,12 @@
 #'     (`s_N log(p_N) / sqrt(N) -> 0`), a restricted-eigenvalue condition over
 #'     sparse cones, `||v*||_1 = O(1)`, and a bounded limiting variance
 #'     `a' Sigma_theta^(-1) a`. The high-dimensional branch realizes Theorem
-#'     `debiased.highdim.thm` with the theory-scaled penalty, but its
-#'     finite-sample **coverage is not yet validated by simulation** (the penalty
-#'     constant `lambda_c` is not yet tuned); treat the `p >= NT` path as
-#'     **experimental** and inspect the returned `feasibility` / `converged`
-#'     diagnostics.
+#'     `debiased.highdim.thm` with the theory-scaled penalty; its finite-sample
+#'     **coverage is validated near-nominally** at the `p >= NT` anchor of Faletto
+#'     (2025) with the feasibility-appropriate penalty, but not yet across regimes
+#'     or at the default theory-scale `lambda_c`; treat the `p >= NT` path as
+#'     **experimental** outside that setting and inspect the returned
+#'     `feasibility` / `converged` diagnostics.
 #' }
 #'
 #' The two regimes use different nuisances. The **fixed-`p`** branch uses the
@@ -181,8 +183,9 @@
 #'   auto-DML standard; van de Geer; Chernozhukov-Newey-Singh), falling back to
 #'   the theory scale `1.0` when no grid penalty is feasible (#295). Larger values
 #'   shrink the debiasing direction more. **Ignored when `p < NT`.** The default
-#'   stays the fixed `1.0` (the `"cv"` mechanism is opt-in pending simulation
-#'   validation of its coverage); treat the `p >= NT` path as experimental.
+#'   stays the fixed `1.0` (the `"cv"` mechanism is opt-in; it selects the
+#'   feasibility-appropriate constant validated at the anchor of Faletto 2025);
+#'   treat the `p >= NT` path as experimental outside that regime.
 #' @param riesz_max_iter,riesz_tol Integer / numeric; coordinate-descent controls
 #'   for the high-dimensional nodewise solver. **Ignored when `p < NT`.**
 #'
@@ -214,6 +217,11 @@
 #'   per-grid feasibility flags and CV losses, and whether the theory-scale
 #'   fallback fired). These are absent for `p < NT` fits.
 #'
+#' @references
+#' Faletto, G (2025). Fused Extended Two-Way Fixed Effects for
+#' Difference-in-Differences with Staggered Adoptions.
+#' \emph{arXiv preprint arXiv:2312.05985}.
+#' \url{https://arxiv.org/abs/2312.05985}.
 #' @seealso [fetwfe()] for the fused fit; [cohortTimeATTs()] / [eventStudy()] /
 #'   [cohortStudy()] for the disaggregated fused effects.
 #' @examples
