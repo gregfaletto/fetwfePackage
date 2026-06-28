@@ -1,5 +1,35 @@
 # NEWS
 
+## Version 1.50.0
+
+### Improvements
+
+- The `simultaneousCIs()` `print()`, `tidy()`, and `plot()` S3 methods now carry
+  full roxygen documentation, so `?print.simultaneous_cis` (and the `tidy` /
+  `plot` equivalents) open help pages, matching the `debiasedATT()` method docs
+  (#342).
+- `simultaneousCIs()` gained a `default` method that errors with the offending
+  class name when called on an unsupported object, rather than R's generic
+  "no applicable method" message (#342).
+- `getTes()` and `simulateData()` now name the offending class (and use
+  `call. = FALSE`) when passed a non-`FETWFE_coefs` object, matching the other
+  accessors' error style (#342).
+- `debiasedATTWithSimulatedData()` now defaults `alpha = NULL`, inheriting the
+  fit's confidence level, consistent with every other accessor (the returned
+  values are unchanged, since the wrapped fit always uses the default `alpha`)
+  (#342).
+- The `broom::tidy()` methods now validate `conf.level` with an actionable
+  message instead of an opaque `stopifnot()` failure (#342).
+
+### Internal
+
+- Documentation and hygiene cleanup from the 2026-06-27 periodic review: renamed
+  the `lambda_node_default()` `c` argument to `const` (it no longer shadows
+  `base::c`), removed two no-op self-referential `@inheritParams` tags, and
+  corrected an over-stated comment on the `genCoefs()` targeted-sparsity
+  non-degeneracy guards. No change to estimates, standard errors, or returned
+  values (#342).
+
 ## Version 1.49.0
 
 ### Bug fixes

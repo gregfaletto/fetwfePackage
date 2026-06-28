@@ -257,6 +257,16 @@ simultaneousCIs <- function(
 }
 
 #' @export
+simultaneousCIs.default <- function(result, ...) {
+	stop(
+		"simultaneousCIs() requires a fetwfe, etwfe, betwfe, or twfeCovs fit ",
+		"object; got class: ",
+		paste(class(result), collapse = ", "),
+		call. = FALSE
+	)
+}
+
+#' @export
 simultaneousCIs.fetwfe <- function(
 	result,
 	family = c("event_study", "cohort", "all_post_treatment", "custom"),
@@ -1429,6 +1439,14 @@ simultaneousCIs.twfeCovs <- function(
 	paste0("contrast_", seq_len(K))
 }
 
+#' @title Print a simultaneous-confidence-interval object
+#' @description Compact display of a [simultaneousCIs()] result: the family, `K`,
+#'   and `alpha`; the simultaneous / pointwise / Bonferroni critical values; the
+#'   high-dimensional desparsified-band diagnostics (only in the `p >= NT`
+#'   regime); and the per-effect interval table.
+#' @param x A `"simultaneous_cis"` object from [simultaneousCIs()].
+#' @param ... Ignored.
+#' @return `x`, invisibly.
 #' @export
 print.simultaneous_cis <- function(x, ...) {
 	cat("Parametric simultaneous (1 - alpha) confidence intervals\n")
@@ -1512,6 +1530,14 @@ print.simultaneous_cis <- function(x, ...) {
 	invisible(NULL)
 }
 
+#' @title Tidy a simultaneous-confidence-interval object
+#' @description One row per effect for a [simultaneousCIs()] result, in `broom`
+#'   form: the simultaneous band as `conf.low` / `conf.high`, plus the pointwise
+#'   band as `pointwise.conf.low` / `pointwise.conf.high`.
+#' @param x A `"simultaneous_cis"` object from [simultaneousCIs()].
+#' @param ... Ignored.
+#' @return A data frame with one row per effect and columns `term`, `estimate`,
+#'   `conf.low`, `conf.high`, `pointwise.conf.low`, and `pointwise.conf.high`.
 #' @importFrom generics tidy
 #' @export
 tidy.simultaneous_cis <- function(x, ...) {
@@ -1526,6 +1552,14 @@ tidy.simultaneous_cis <- function(x, ...) {
 	)
 }
 
+#' @title Plot a simultaneous-confidence-interval object
+#' @description Draws the per-effect estimates with both bands overlaid -- the
+#'   wider simultaneous band (error bars) on top of the narrower pointwise band
+#'   (thick line range) -- for a [simultaneousCIs()] result, so the family-wise
+#'   vs per-effect coverage trade-off is visible.
+#' @param x A `"simultaneous_cis"` object from [simultaneousCIs()].
+#' @param ... Ignored.
+#' @return A `ggplot` object.
 #' @note Requires the `ggplot2` package (in Suggests). Install via
 #'   `install.packages("ggplot2")` if it is not already installed. Matches
 #'   `R/plot.R`'s `.plot_estimator` precedent for ggplot2-dependent plot

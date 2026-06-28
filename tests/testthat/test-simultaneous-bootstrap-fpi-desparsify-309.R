@@ -136,7 +136,7 @@ test_that(".build_debiased_treat_cells_highdim matches an independent q=1 + node
 			ln <- lambda_node_default(
 				p = pr$p,
 				N = pr$n / pr$T,
-				c = 1.0,
+				const = 1.0,
 				scale = max(abs(ath))
 			)
 			v <- riesz_lasso(Sig, ath, ln)

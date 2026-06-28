@@ -505,7 +505,7 @@ debiasedATT <- function(
 		lambda_node <- lambda_node_default(
 			p = p,
 			N = N_units,
-			c = lambda_c_used,
+			const = lambda_c_used,
 			scale = max(abs(a_th))
 		)
 		v <- riesz_lasso(
@@ -674,11 +674,11 @@ tidy.debiased_att <- function(x, ...) {
 #'   [simulateData()]).
 #' @param q Numeric; the `L_q` bridge penalty exponent. Must be `< 1` (the
 #'   debiased SE requires bridge selection). Defaults to `0.5`.
-#' @param alpha Numeric in `(0, 1)`; confidence level `1 - alpha`. Default
-#'   `0.05`.
+#' @param alpha Numeric in `(0, 1)` or `NULL`; confidence level `1 - alpha`.
+#'   Default `NULL`, inheriting the `alpha` stored on the fit.
 #' @param ... Further arguments forwarded to [fetwfeWithSimulatedData()] (e.g.
 #'   `fusion_structure`, `lambda_selection`, `cv_seed`).
-#' @return The list returned by [debiasedATT()].
+#' @return An object of class `"debiased_att"` (see [debiasedATT()]).
 #' @seealso [debiasedATT()], [fetwfeWithSimulatedData()].
 #' @examples
 #' \dontrun{
@@ -690,7 +690,7 @@ tidy.debiased_att <- function(x, ...) {
 debiasedATTWithSimulatedData <- function(
 	simulated_obj,
 	q = 0.5,
-	alpha = 0.05,
+	alpha = NULL,
 	...
 ) {
 	fit <- fetwfeWithSimulatedData(simulated_obj, q = q, ...)

@@ -145,7 +145,7 @@
 		lambda_node[k] <- lambda_node_default(
 			p = p,
 			N = N,
-			c = lambda_c,
+			const = lambda_c,
 			scale = max(abs(a_k))
 		)
 		v_k <- riesz_lasso(
@@ -244,7 +244,7 @@
 		lambda_node[j] <- lambda_node_default(
 			p = p,
 			N = N,
-			c = lambda_c,
+			const = lambda_c,
 			scale = max(abs(a_j))
 		)
 		v_j <- riesz_lasso(

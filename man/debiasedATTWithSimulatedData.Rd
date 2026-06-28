@@ -4,7 +4,7 @@
 \alias{debiasedATTWithSimulatedData}
 \title{Run debiasedATT() on simulated data}
 \usage{
-debiasedATTWithSimulatedData(simulated_obj, q = 0.5, alpha = 0.05, ...)
+debiasedATTWithSimulatedData(simulated_obj, q = 0.5, alpha = NULL, ...)
 }
 \arguments{
 \item{simulated_obj}{An object of class \code{"FETWFE_simulated"} (from
@@ -13,14 +13,14 @@ debiasedATTWithSimulatedData(simulated_obj, q = 0.5, alpha = 0.05, ...)
 \item{q}{Numeric; the \code{L_q} bridge penalty exponent. Must be \verb{< 1} (the
 debiased SE requires bridge selection). Defaults to \code{0.5}.}
 
-\item{alpha}{Numeric in \verb{(0, 1)}; confidence level \code{1 - alpha}. Default
-\code{0.05}.}
+\item{alpha}{Numeric in \verb{(0, 1)} or \code{NULL}; confidence level \code{1 - alpha}.
+Default \code{NULL}, inheriting the \code{alpha} stored on the fit.}
 
 \item{...}{Further arguments forwarded to \code{\link[=fetwfeWithSimulatedData]{fetwfeWithSimulatedData()}} (e.g.
 \code{fusion_structure}, \code{lambda_selection}, \code{cv_seed}).}
 }
 \value{
-The list returned by \code{\link[=debiasedATT]{debiasedATT()}}.
+An object of class \code{"debiased_att"} (see \code{\link[=debiasedATT]{debiasedATT()}}).
 }
 \description{
 Convenience wrapper mirroring the \verb{*WithSimulatedData()} pattern: fits
