@@ -87,8 +87,12 @@ utils::globalVariables(c(
 #'   need not exist -- the bootstrap uses the full-design **desparsified**
 #'   construction of `debiasedATT()` (per-effect nodewise directions) generalized
 #'   to the family. This desparsified `p >= NT` path is **experimental**
-#'   (`fetwfe()` fits only; coverage is not yet simulation-validated): inspect the
-#'   returned `feasibility` / `converged` diagnostics. A non-`fetwfe()` `p >= NT`
+#'   (`fetwfe()` fits only): it generalizes the `debiasedATT()` construction
+#'   whose overall-ATT coverage is validated near-nominally at the `p >= NT`
+#'   anchor of Faletto (2025), but the family-wise *band* coverage here is not
+#'   itself simulation-validated, so inspect the returned `feasibility` /
+#'   `converged` diagnostics. A
+#'   non-`fetwfe()` `p >= NT`
 #'   fit (e.g. `betwfe()`) has no desparsified band, so it instead falls back to
 #'   the fixed-`p` selected-support band and emits a `warning()`: a #308 coverage
 #'   study shows that band substantially **under-covers** in the `p >= NT` regime
@@ -1479,8 +1483,9 @@ print.simultaneous_cis <- function(x, ...) {
 #' @noRd
 .print_highdim_diagnostics <- function(x) {
 	cat(
-		"High-dimensional (p >= NT) desparsified band [EXPERIMENTAL: coverage not\n",
-		"  yet simulation-validated -- inspect the diagnostics below]\n",
+		"High-dimensional (p >= NT) desparsified band [EXPERIMENTAL: overall-ATT\n",
+		"  coverage validated near-nominally at the studied p >= NT anchor\n",
+		"  (Faletto 2025) -- inspect the diagnostics below]\n",
 		sep = ""
 	)
 	sel <- if (identical(x$lambda_c_selection, "cv")) "CV-selected" else "fixed"

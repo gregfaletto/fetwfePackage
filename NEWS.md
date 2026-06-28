@@ -1,5 +1,17 @@
 # NEWS
 
+## Version 1.52.0
+
+### Improvements
+
+- Updated the high-dimensional (`p >= NT`) debiased-inference caveats in
+  `debiasedATT()` / `simultaneousCIs()` (their roxygen and the print
+  diagnostics) to reflect the completed coverage study (`gregfaletto/fetwfe#88`):
+  the overall-ATT coverage is now validated near-nominally at the studied
+  `p >= NT` anchor of Faletto (2025), rather than "not yet simulation-validated."
+  The path is still flagged **experimental** outside that regime. No code or
+  numeric change (#352).
+
 ## Version 1.51.0
 
 ### Bug fixes
