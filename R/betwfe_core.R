@@ -474,102 +474,24 @@ betwfe <- function(
 		cv_seed = cv_seed
 	)
 
-	att_branch <- .select_att_branch(
-		res,
+	out <- .assemble_bridge_estimator(
+		res = res,
+		q = q,
 		indep_count_data_available = indep_count_data_available,
-		q = q
-	)
-	att_hat <- att_branch$att_hat
-	att_se <- att_branch$att_se
-	cohort_probs <- att_branch$cohort_probs
-	cohort_probs_overall <- att_branch$cohort_probs_overall
-
-	att_p_value <- .compute_p_values(att_hat, att_se)
-	att_selected <- att_hat != 0
-
-	variance_components <- .build_variance_components(
-		att_var_1 = att_branch$att_var_1,
-		att_var_2 = att_branch$att_var_2,
-		N = res$N,
-		T = res$T,
-		se_type = se_type,
-		indep_counts_used = indep_count_data_available
-	)
-
-	out <- list(
-		att_hat = att_hat,
-		att_se = att_se,
-		att_p_value = att_p_value,
-		att_selected = att_selected,
-		catt_hats = res$catt_hats,
-		catt_ses = res$catt_ses,
-		cohort_probs = cohort_probs,
-		cohort_probs_overall = cohort_probs_overall,
-		catt_df = res$catt_df,
-		beta_hat = res$beta_hat,
-		treat_inds = res$treat_inds,
-		treat_int_inds = res$treat_int_inds,
-		sig_eps_sq = res$sig_eps_sq,
-		sig_eps_c_sq = res$sig_eps_c_sq,
-		lambda.max = res$lambda.max,
-		lambda.max_model_size = res$lambda.max_model_size,
-		lambda.min = res$lambda.min,
-		lambda.min_model_size = res$lambda.min_model_size,
-		lambda_star = res$lambda_star,
-		lambda_star_model_size = res$lambda_star_model_size,
-		# v1.13.0 (#164): lambda-selection method provenance. Mirrors
-		# fetwfe()'s shape. `res$cv_seed_used` is already NA_integer_
-		# under the BIC path (the core's dispatch sets it on that branch).
 		lambda_selection = lambda_selection,
-		cv_folds = if (lambda_selection == "cv") {
-			as.integer(cv_folds)
-		} else {
-			NA_integer_
-		},
-		cv_seed = res$cv_seed_used,
-		X_ints = res$X_ints,
-		y = res$y,
-		X_final = res$X_final,
-		y_final = res$y_final,
-		N = res$N,
-		T = res$T,
-		G = res$G,
-		R = res$G,
-		d = res$d,
-		p = res$p,
-		calc_ses = res$calc_ses,
+		cv_folds = cv_folds,
 		alpha = alpha,
 		se_type = se_type,
-		indep_counts_used = indep_count_data_available,
+		ci_type = ci_type,
 		y_mean = y_mean,
-		response_col_name = response,
+		response = response,
 		time_var = time_var,
 		unit_var = unit_var,
 		treatment = treatment,
-		covs = covs_orig,
-		ci_type = ci_type
+		covs_orig = covs_orig,
+		first_year = first_year,
+		is_fetwfe = FALSE
 	)
-	# Add internal outputs in a separate list for parity with `fetwfe()` (#144).
-	# The first five sub-slots (`X_ints`, `y`, `X_final`, `y_final`,
-	# `calc_ses`) are also duplicated at top level for backward compat;
-	# `variance_components` and `first_year` live only under `$internal`
-	# (#179, #180).
-	out$internal <- list(
-		X_ints = res$X_ints,
-		y = res$y,
-		X_final = res$X_final,
-		y_final = res$y_final,
-		calc_ses = res$calc_ses,
-		variance_components = variance_components,
-		# v1.13.3 (#174): see `fetwfe()` for rationale.
-		first_year = first_year
-	)
-	# Validate constructed object's contracts (#85).
-	.validate_betwfe(out)
-	class(out) <- "betwfe"
-	# Apply ci_type to the cohort-family bounds (#197). No-op unless
-	# ci_type == "simultaneous"; runs after classing. Re-validates internally.
-	out <- .finalize_ci_type(out, alpha = alpha)
 	return(out)
 }
 
