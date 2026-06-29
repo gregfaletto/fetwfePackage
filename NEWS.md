@@ -1,5 +1,15 @@
 # NEWS
 
+## Version 1.54.0
+
+### Improvements
+
+- The simulation vignette now documents the **targeted-sparsity** coefficient
+  mode (`genCoefs(n_signal_cohorts = ...)` / `treat_base_levels`, added in
+  1.48.0): a new section explaining how it builds a sparse, non-degenerate,
+  heterogeneous high-dimensional (`p >= NT`) truth that the default uniform
+  `density` placement cannot, with a worked example (#353 follow-up).
+
 ## Version 1.53.0
 
 ### Improvements
