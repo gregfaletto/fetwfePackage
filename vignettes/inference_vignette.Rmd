@@ -1,5 +1,5 @@
 ---
-title: "Standard errors in fetwfe: tight Gaussian CIs, the conservative fallback, the experimental cluster option, and high-dimensional debiased inference"
+title: "Inference in fetwfe: standard errors, simultaneous bands, and high-dimensional debiasing"
 author: "Gregory Faletto"
 date: "`r Sys.Date()`"
 output:
@@ -8,7 +8,7 @@ output:
     math_method: "mathml"
     output_file: "FETWFE_Inference_Vignette.html"
 vignette: >
-  %\VignetteIndexEntry{Standard errors in fetwfe: tight Gaussian CIs, the conservative fallback, the experimental cluster option, and high-dimensional debiased inference}
+  %\VignetteIndexEntry{Inference in fetwfe: standard errors, simultaneous bands, and high-dimensional debiasing}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -24,7 +24,7 @@ knitr::opts_chunk$set(
 library(fetwfe)
 ```
 
-This vignette documents how `fetwfe()`, `betwfe()`, `etwfe()`, and `twfeCovs()` compute their standard errors, what assumptions those standard errors rely on, and the three values `se_type` can take. The four estimators share the same inferential machinery, so the discussion applies to all of them; we use `fetwfe()` in the running example.
+This vignette documents inference in the package: how `fetwfe()`, `betwfe()`, `etwfe()`, and `twfeCovs()` compute their standard errors (and the three values `se_type` can take), the family-wise simultaneous confidence bands from `simultaneousCIs()`, and the high-dimensional ($p \geq NT$) debiased path of `debiasedATT()`. The four estimators share the same inferential machinery, so the discussion applies to all of them; we use `fetwfe()` in the running example.
 
 # 1. The headline: tight Gaussian CIs by default under (Ψ-IF)
 
