@@ -433,17 +433,17 @@ debiasedATT <- function(
 		G = G,
 		T = T
 	)$first_inds
-	# Cohort g's treatment-cell block runs from `first_inds[g]` to the next cohort's
-	# first index; a_beta loads treat_inds with weight cohort_probs[g] / (#cells in
-	# cohort g) so a_beta' beta = sum_g pi_g * catt_g. For consecutive cohorts the
-	# block sizes reduce to (T-1):(T-G).
-	sizes <- diff(c(first_inds, num_treats + 1L))
-	cohort_of_treat <- rep(seq_len(G), times = sizes)
-	a_beta <- numeric(p)
-	for (g in seq_len(G)) {
-		idx <- treat_inds[cohort_of_treat == g]
-		a_beta[idx] <- cohort_probs[g] / length(idx)
-	}
+	# a_beta loads treat_inds so a_beta' beta = sum_g pi_g * catt_g (the overall
+	# ATT); see .build_att_beta_direction() for the offset-resolved per-cohort
+	# weighting.
+	a_beta <- .build_att_beta_direction(
+		first_inds = first_inds,
+		num_treats = num_treats,
+		G = G,
+		p = p,
+		treat_inds = treat_inds,
+		cohort_probs = cohort_probs
+	)
 	# Use the SAME fusion transform the fit used (#236 custom matrices included),
 	# NOT a hard-coded "cohort" transform -- otherwise event-study / custom fits
 	# violate the ATT-direction identity below.
