@@ -1509,6 +1509,60 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 	first_ind_g:last_ind_g
 }
 
+#' @title Cohort-probability-weighted overall-ATT direction (beta space)
+#' @description
+#' Builds the length-`p` vector `a_beta` for which `a_beta' beta` equals the
+#' overall ATT `sum_g pi_g * catt_g`: each treated cohort `g`'s treatment-effect
+#' cells (the `treat_inds` columns in `g`'s offset-resolved block) are loaded
+#' with weight `cohort_probs[g] / (#cells in g)`. The per-cohort block sizes are
+#' the offset-resolved `diff(c(first_inds, num_treats + 1L))`, which reduce to
+#' `(T - 1):(T - G)` for consecutive adoption but stay correct under scattered
+#' (non-consecutive) adoption (#318/#323) -- do NOT hard-code `(T - 1):(T - G)`,
+#' which under scattered offsets both mis-weights and overruns `treat_inds` (its
+#' block sizes can sum past `num_treats`), diverging the band center from
+#' `debiasedATT()` (#323).
+#'
+#' Single-sources the construction shared by `debiasedATT()` (R/debiased_att.R)
+#' and the high-dimensional bootstrap band in `simultaneousCIs()`
+#' (R/simultaneous_cis.R). Because both call this, the band center matches
+#' `debiasedATT()$att` by construction under `lambda_c = "cv"` (the #295
+#' shared-penalty / #323 coupling) rather than via a hand-maintained parallel
+#' copy. The callers apply the fit's fusion transform `A` to the result
+#' themselves (`crossprod(A, a_beta)`), since they need it in slightly different
+#' shapes.
+#' @param first_inds Integer vector (length `G`); the first treatment-effect
+#'   index of each cohort's block.
+#' @param num_treats Integer; the total number of treatment-effect parameters.
+#' @param G Integer; the number of treated cohorts.
+#' @param p Integer; the number of design columns (length of the returned
+#'   vector).
+#' @param treat_inds Integer vector; the design-column indices of the treatment
+#'   effects.
+#' @param cohort_probs Numeric vector (length `G`); estimated cohort-assignment
+#'   probabilities `pi_g`.
+#' @return Numeric vector of length `p`: the overall-ATT direction in beta space.
+#' @keywords internal
+#' @noRd
+.build_att_beta_direction <- function(
+	first_inds,
+	num_treats,
+	G,
+	p,
+	treat_inds,
+	cohort_probs
+) {
+	cohort_of_treat <- rep(
+		seq_len(G),
+		times = diff(c(first_inds, num_treats + 1L))
+	)
+	a_beta <- numeric(p)
+	for (g in seq_len(G)) {
+		idx <- treat_inds[cohort_of_treat == g]
+		a_beta[idx] <- cohort_probs[g] / length(idx)
+	}
+	a_beta
+}
+
 #' @title Multinomial covariance matrix from cohort-membership probabilities
 #' @description
 #' Returns the `length(probs) x length(probs)` covariance matrix of the

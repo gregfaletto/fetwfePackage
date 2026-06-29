@@ -749,25 +749,19 @@ simultaneousCIs.twfeCovs <- function(
 			}
 			# Overall-ATT theta-space direction (cohort_probs-weighted), the direction
 			# the shared CV penalty constant is selected on (#295 D2: one lambda_c for
-			# point + band). Built with the offset-resolved per-cohort block sizes
-			# `diff(c(first_inds, num_treats + 1L))` -- the SAME construction
-			# debiasedATT() uses (R/debiased_att.R) -- so the CV'd constant, hence the
-			# band center, matches debiasedATT() under `lambda_c = "cv"`, including for
-			# scattered (non-consecutive) adoption, which #318 made debiasedATT()
-			# support. A hard-coded `(T_ - 1):(T_ - G)` assumes consecutive adoption and
-			# under scattered offsets both mis-weights AND overruns `treat_inds` (its
-			# sizes can sum past num_treats), so the band would CV a wrong/fallback
-			# constant and diverge from debiasedATT() (#323). For consecutive adoption
-			# the resolved sizes reduce to `(T_ - 1):(T_ - G)`, so this is byte-identical.
-			a_beta_att <- numeric(p)
-			cohort_of_treat <- rep(
-				seq_len(G),
-				times = diff(c(first_inds, num_treats + 1L))
+			# point + band). Built via the shared `.build_att_beta_direction()` -- the
+			# SAME construction debiasedATT() uses (R/debiased_att.R), now
+			# single-sourced -- so the CV'd constant, hence the band center, matches
+			# debiasedATT() under `lambda_c = "cv"`, including for scattered
+			# (non-consecutive) adoption, which #318 made debiasedATT() support (#323).
+			a_beta_att <- .build_att_beta_direction(
+				first_inds = first_inds,
+				num_treats = num_treats,
+				G = G,
+				p = p,
+				treat_inds = treat_inds,
+				cohort_probs = x$cohort_probs
 			)
-			for (g in seq_len(G)) {
-				idx <- treat_inds[cohort_of_treat == g]
-				a_beta_att[idx] <- x$cohort_probs[g] / length(idx)
-			}
 			a_att <- as.numeric(crossprod(A, a_beta_att))
 		} else if (p >= N * T_) {
 			# Non-fetwfe high-dimensional (`p >= NT`) bootstrap (e.g. betwfe): the
