@@ -10,7 +10,7 @@ debiasedATT(
   se_method = c("analytic", "wild_bootstrap"),
   B = 1000L,
   seed = NULL,
-  multiplier = c("rademacher", "mammen", "webb"),
+  multiplier = c("webb", "rademacher", "mammen"),
   lambda_c = 1,
   riesz_max_iter = 5000L,
   riesz_tol = 1e-09
@@ -47,10 +47,15 @@ Ignored unless \code{se_method = "wild_bootstrap"}.}
 integer for a reproducible bootstrap (the RNG state is saved and restored).
 Ignored unless \code{se_method = "wild_bootstrap"}.}
 
-\item{multiplier}{The wild-bootstrap weight distribution: \code{"rademacher"}
-(default), \code{"mammen"}, or \code{"webb"} (the Webb (2013) six-point distribution,
-recommended when \code{N} is very small, where the \code{2^N} Rademacher sign vectors
-are too coarse). Ignored unless \code{se_method = "wild_bootstrap"}.}
+\item{multiplier}{The wild-bootstrap weight distribution: \code{"webb"} (default),
+\code{"rademacher"}, or \code{"mammen"}. The default is the Webb (2013) six-point
+distribution because this few-clusters correction is where it matters most:
+with \code{"rademacher"} (\verb{±1}) the studentization denominator is constant, so
+the interval reduces to a \emph{percentile} wild bootstrap, whereas \code{"webb"} and
+\code{"mammen"} vary the denominator and deliver the \emph{studentized} bootstrap-t
+refinement; Webb's finer six-point support is also preferable to the \code{2^N}
+Rademacher sign vectors when the number of clusters is very small. Ignored
+unless \code{se_method = "wild_bootstrap"}.}
 
 \item{lambda_c}{The leading constant of the high-dimensional (\code{p >= NT})
 nodewise penalty \verb{lambda_node = lambda_c * max(|a|) * sqrt(log(p) / N)} (\code{N} =

@@ -200,9 +200,64 @@ test_that("wild bootstrap validates B and seed (#360)", {
 		debiasedATT(fit, se_method = "wild_bootstrap", seed = c(1, 2)),
 		"`seed`"
 	)
+	# A non-integer seed is rejected (it would be silently truncated by set.seed).
+	expect_error(
+		debiasedATT(fit, se_method = "wild_bootstrap", seed = 1.5),
+		"`seed`"
+	)
 	expect_error(
 		debiasedATT(fit, se_method = "wild_bootstrap", multiplier = "gaussian")
 	)
+})
+
+test_that("the default wild-bootstrap multiplier is webb (#360, review 1)", {
+	# Webb is the default so the *studentized* bootstrap-t refinement is delivered
+	# by default in the few-clusters regime this targets -- rademacher's constant
+	# denominator would instead give the (unstudentized) percentile variant.
+	w <- debiasedATT(.wb_fixedp, se_method = "wild_bootstrap", seed = 1)
+	expect_identical(w$multiplier, "webb")
+})
+
+test_that("wild bootstrap handles a single-cohort fit, var_weight = 0 (#360, review 6)", {
+	# One treated cohort => no cohort-weight variance => psi2 == 0 => the bootstrap
+	# degrades cleanly to a V1-only wild bootstrap (anchor 0 == 0 holds, no NaN).
+	cf <- genCoefs(G = 1, T = 5, d = 2, density = 0.5, eff_size = 2, seed = 4)
+	sim <- simulateData(
+		cf,
+		N = 60,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = 4
+	)
+	fit <- fetwfe(
+		pdata = sim$pdata,
+		time_var = sim$time_var,
+		unit_var = sim$unit_var,
+		treatment = sim$treatment,
+		response = sim$response,
+		covs = sim$covs,
+		q = 0.5,
+		verbose = FALSE
+	)
+	a <- debiasedATT(fit)
+	expect_equal(a$var_weight, 0)
+	w <- debiasedATT(fit, se_method = "wild_bootstrap", seed = 1)
+	expect_equal(w$se, a$se)
+	expect_true(is.finite(w$crit_value) && w$crit_value > 0)
+	expect_equal(w$ci_high - w$att, w$crit_value * w$se)
+})
+
+test_that("webb is reachable from simultaneousCIs() too (#360, review 5)", {
+	sc <- suppressWarnings(simultaneousCIs(
+		.wb_fixedp,
+		family = "cohort",
+		method = "bootstrap",
+		B = 200,
+		seed = 1,
+		multiplier = "webb"
+	))
+	expect_s3_class(sc, "simultaneous_cis")
+	expect_true(is.finite(sc$critical_value) && sc$critical_value > 0)
 })
 
 test_that("print.debiased_att surfaces the bootstrap method and level (#360)", {

@@ -60,6 +60,46 @@
 	}
 }
 
+#' @title Validate shared multiplier-bootstrap `B` / `seed` arguments
+#' @description Shared validation for the bootstrap replicate count `B` (a single
+#'   positive integer) and `seed` (`NULL` or a single integer) used by both
+#'   `simultaneousCIs(method = "bootstrap")` and
+#'   `debiasedATT(se_method = "wild_bootstrap")`, so the two cannot silently drift
+#'   on what they accept. `seed` must be integer-valued (a non-integer would be
+#'   silently truncated by `set.seed()`).
+#' @param B,seed The arguments to validate.
+#' @param fn_name Character; the caller's name, for the error message prefix.
+#' @return `B` coerced to integer.
+#' @keywords internal
+#' @noRd
+.validate_boot_args <- function(B, seed, fn_name) {
+	if (
+		!is.numeric(B) ||
+			length(B) != 1L ||
+			is.na(B) ||
+			B < 1 ||
+			B != round(B)
+	) {
+		stop(
+			sprintf("%s(): `B` must be a single positive integer.", fn_name),
+			call. = FALSE
+		)
+	}
+	if (
+		!is.null(seed) &&
+			(!is.numeric(seed) ||
+				length(seed) != 1L ||
+				is.na(seed) ||
+				seed != round(seed))
+	) {
+		stop(
+			sprintf("%s(): `seed` must be NULL or a single integer.", fn_name),
+			call. = FALSE
+		)
+	}
+	as.integer(B)
+}
+
 #' Per-unit regression influence-function matrix `F_reg` (N_units x K), fixed-p
 #'
 #' @description
@@ -435,7 +475,7 @@
 	n,
 	alpha,
 	B,
-	multiplier = c("rademacher", "mammen"),
+	multiplier = c("rademacher", "mammen", "webb"),
 	seed = NULL
 ) {
 	multiplier <- match.arg(multiplier)

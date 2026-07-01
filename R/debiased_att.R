@@ -191,10 +191,15 @@
 #' @param seed `NULL` (draw from the ambient RNG, the default) or a single
 #'   integer for a reproducible bootstrap (the RNG state is saved and restored).
 #'   Ignored unless `se_method = "wild_bootstrap"`.
-#' @param multiplier The wild-bootstrap weight distribution: `"rademacher"`
-#'   (default), `"mammen"`, or `"webb"` (the Webb (2013) six-point distribution,
-#'   recommended when `N` is very small, where the `2^N` Rademacher sign vectors
-#'   are too coarse). Ignored unless `se_method = "wild_bootstrap"`.
+#' @param multiplier The wild-bootstrap weight distribution: `"webb"` (default),
+#'   `"rademacher"`, or `"mammen"`. The default is the Webb (2013) six-point
+#'   distribution because this few-clusters correction is where it matters most:
+#'   with `"rademacher"` (`±1`) the studentization denominator is constant, so
+#'   the interval reduces to a *percentile* wild bootstrap, whereas `"webb"` and
+#'   `"mammen"` vary the denominator and deliver the *studentized* bootstrap-t
+#'   refinement; Webb's finer six-point support is also preferable to the `2^N`
+#'   Rademacher sign vectors when the number of clusters is very small. Ignored
+#'   unless `se_method = "wild_bootstrap"`.
 #' @param lambda_c The leading constant of the high-dimensional (`p >= NT`)
 #'   nodewise penalty `lambda_node = lambda_c * max(|a|) * sqrt(log(p) / N)` (`N` =
 #'   number of units). Either a single positive number (a fixed constant; default
@@ -268,7 +273,7 @@ debiasedATT <- function(
 	se_method = c("analytic", "wild_bootstrap"),
 	B = 1000L,
 	seed = NULL,
-	multiplier = c("rademacher", "mammen", "webb"),
+	multiplier = c("webb", "rademacher", "mammen"),
 	lambda_c = 1.0,
 	riesz_max_iter = 5000L,
 	riesz_tol = 1e-9
@@ -303,29 +308,7 @@ debiasedATT <- function(
 	}
 
 	if (se_method == "wild_bootstrap") {
-		if (
-			!is.numeric(B) ||
-				length(B) != 1L ||
-				is.na(B) ||
-				B < 1 ||
-				B != round(B)
-		) {
-			stop(
-				"debiasedATT(): `B` (bootstrap replicates) must be a single ",
-				"positive integer.",
-				call. = FALSE
-			)
-		}
-		B <- as.integer(B)
-		if (
-			!is.null(seed) &&
-				(!is.numeric(seed) || length(seed) != 1L || is.na(seed))
-		) {
-			stop(
-				"debiasedATT(): `seed` must be NULL or a single integer.",
-				call. = FALSE
-			)
-		}
+		B <- .validate_boot_args(B, seed, "debiasedATT")
 		if (isTRUE(fit$indep_counts_used)) {
 			stop(
 				"debiasedATT(se_method = \"wild_bootstrap\") is not supported for ",
@@ -805,9 +788,18 @@ debiasedATT <- function(
 		# Degenerate variance: the interval collapses to the point estimate.
 		return(list(crit = 0, ci_low = att, ci_high = att))
 	}
+	# Studentized bootstrap-t draw. This is the scalar analogue of
+	# `.simultaneous_bootstrap_crit()` (R/simultaneous_bootstrap.R), which does the
+	# K-dimensional sup-t with a FIXED per-effect studentization; here the scalar
+	# denominator `den` is re-drawn per replicate (a genuine bootstrap-t).
+	# INVARIANT: `psi1` is in fit-unit order and `psi2` in cohort-block order, so
+	# they index DIFFERENT physical units -- the two multiplier streams MUST stay
+	# independent. A shared stream would pair unit i's regression influence with a
+	# different unit's propensity influence; independence makes the statistic
+	# order-invariant, so the order mismatch is harmless.
 	draw_boot <- function() {
 		xi <- .draw_multipliers(N, B, multiplier) # N x B
-		eta <- .draw_multipliers(N, B, multiplier) # N x B, independent stream
+		eta <- .draw_multipliers(N, B, multiplier) # N x B, INDEPENDENT (see above)
 		num <- crossprod(psi1, xi) + crossprod(psi2, eta) # 1 x B
 		den <- sqrt(crossprod(psi1^2, xi^2) + crossprod(psi2^2, eta^2)) # 1 x B
 		as.numeric(num / den)

@@ -13,7 +13,7 @@ simultaneousCIs(
   method = c("analytic", "bootstrap"),
   B = 1000L,
   seed = NULL,
-  multiplier = c("rademacher", "mammen"),
+  multiplier = c("rademacher", "mammen", "webb"),
   lambda_c = 1,
   riesz_max_iter = 5000L,
   riesz_tol = 1e-09
@@ -96,8 +96,9 @@ them). If \code{NULL} (default), the draws come from the ambient generator, so
 results vary run to run. Ignored when \code{method = "analytic"}.}
 
 \item{multiplier}{Character; the multiplier-weight distribution for the
-bootstrap: \code{"rademacher"} (default, \verb{+/-1}) or \code{"mammen"} (the Mammen 1993
-two-point distribution). Ignored when \code{method = "analytic"}.}
+bootstrap: \code{"rademacher"} (default, \verb{+/-1}), \code{"mammen"} (the Mammen 1993
+two-point distribution), or \code{"webb"} (the Webb 2013 six-point distribution,
+preferred with very few clusters). Ignored when \code{method = "analytic"}.}
 
 \item{lambda_c, riesz_max_iter, riesz_tol}{Controls for the high-dimensional
 (\code{p >= NT}) bootstrap, where each effect's debiasing direction is a nodewise

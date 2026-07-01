@@ -119,8 +119,9 @@ utils::globalVariables(c(
 #'   them). If `NULL` (default), the draws come from the ambient generator, so
 #'   results vary run to run. Ignored when `method = "analytic"`.
 #' @param multiplier Character; the multiplier-weight distribution for the
-#'   bootstrap: `"rademacher"` (default, `+/-1`) or `"mammen"` (the Mammen 1993
-#'   two-point distribution). Ignored when `method = "analytic"`.
+#'   bootstrap: `"rademacher"` (default, `+/-1`), `"mammen"` (the Mammen 1993
+#'   two-point distribution), or `"webb"` (the Webb 2013 six-point distribution,
+#'   preferred with very few clusters). Ignored when `method = "analytic"`.
 #' @param lambda_c,riesz_max_iter,riesz_tol Controls for the high-dimensional
 #'   (`p >= NT`) bootstrap, where each effect's debiasing direction is a nodewise
 #'   (desparsified-lasso) `riesz_lasso()` solve. `lambda_c` is the leading
@@ -252,7 +253,7 @@ simultaneousCIs <- function(
 	method = c("analytic", "bootstrap"),
 	B = 1000L,
 	seed = NULL,
-	multiplier = c("rademacher", "mammen"),
+	multiplier = c("rademacher", "mammen", "webb"),
 	lambda_c = 1.0,
 	riesz_max_iter = 5000L,
 	riesz_tol = 1e-9
@@ -279,7 +280,7 @@ simultaneousCIs.fetwfe <- function(
 	method = c("analytic", "bootstrap"),
 	B = 1000L,
 	seed = NULL,
-	multiplier = c("rademacher", "mammen"),
+	multiplier = c("rademacher", "mammen", "webb"),
 	lambda_c = 1.0,
 	riesz_max_iter = 5000L,
 	riesz_tol = 1e-9
@@ -311,7 +312,7 @@ simultaneousCIs.etwfe <- function(
 	method = c("analytic", "bootstrap"),
 	B = 1000L,
 	seed = NULL,
-	multiplier = c("rademacher", "mammen"),
+	multiplier = c("rademacher", "mammen", "webb"),
 	lambda_c = 1.0,
 	riesz_max_iter = 5000L,
 	riesz_tol = 1e-9
@@ -343,7 +344,7 @@ simultaneousCIs.betwfe <- function(
 	method = c("analytic", "bootstrap"),
 	B = 1000L,
 	seed = NULL,
-	multiplier = c("rademacher", "mammen"),
+	multiplier = c("rademacher", "mammen", "webb"),
 	lambda_c = 1.0,
 	riesz_max_iter = 5000L,
 	riesz_tol = 1e-9
@@ -384,7 +385,7 @@ simultaneousCIs.twfeCovs <- function(
 	method = c("analytic", "bootstrap"),
 	B = 1000L,
 	seed = NULL,
-	multiplier = c("rademacher", "mammen"),
+	multiplier = c("rademacher", "mammen", "webb"),
 	lambda_c = 1.0,
 	riesz_max_iter = 5000L,
 	riesz_tol = 1e-9
@@ -470,28 +471,7 @@ simultaneousCIs.twfeCovs <- function(
 		)
 	}
 	if (method == "bootstrap") {
-		if (
-			!is.numeric(B) ||
-				length(B) != 1L ||
-				is.na(B) ||
-				B < 1 ||
-				B != round(B)
-		) {
-			stop(
-				"simultaneousCIs(): `B` must be a single positive integer.",
-				call. = FALSE
-			)
-		}
-		B <- as.integer(B)
-		if (
-			!is.null(seed) &&
-				(!is.numeric(seed) || length(seed) != 1L || is.na(seed))
-		) {
-			stop(
-				"simultaneousCIs(): `seed` must be NULL or a single number.",
-				call. = FALSE
-			)
-		}
+		B <- .validate_boot_args(B, seed, "simultaneousCIs")
 	}
 
 	# --- 2. Read fit slots via class-aware shims. ---
