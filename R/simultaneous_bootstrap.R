@@ -23,14 +23,25 @@
 #' @description `N x B` matrix of mean-zero, unit-variance multipliers, one column
 #'   per bootstrap replicate. `"rademacher"` draws `+/-1` with probability 1/2;
 #'   `"mammen"` draws the two-point distribution of Mammen (1993) (mean 0,
-#'   variance 1, third moment 1).
+#'   variance 1, third moment 1); `"webb"` draws the six-point distribution of
+#'   Webb (2013), values `+/- sqrt(1.5)`, `+/- 1`, `+/- sqrt(0.5)` each with
+#'   probability 1/6 (mean 0, variance 1) -- preferred with very few clusters,
+#'   where the `2^N` Rademacher sign vectors are too coarse.
 #' @keywords internal
 #' @noRd
-.draw_multipliers <- function(N, B, type = c("rademacher", "mammen")) {
+.draw_multipliers <- function(N, B, type = c("rademacher", "mammen", "webb")) {
 	type <- match.arg(type)
 	if (type == "rademacher") {
 		matrix(
 			sample(c(-1, 1), size = N * B, replace = TRUE),
+			nrow = N,
+			ncol = B
+		)
+	} else if (type == "webb") {
+		# Webb (2013) six-point distribution: mean 0, E[w^2] = 1.
+		webb_vals <- c(-sqrt(1.5), -1, -sqrt(0.5), sqrt(0.5), 1, sqrt(1.5))
+		matrix(
+			sample(webb_vals, size = N * B, replace = TRUE),
 			nrow = N,
 			ncol = B
 		)
