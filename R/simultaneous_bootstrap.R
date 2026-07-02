@@ -23,14 +23,25 @@
 #' @description `N x B` matrix of mean-zero, unit-variance multipliers, one column
 #'   per bootstrap replicate. `"rademacher"` draws `+/-1` with probability 1/2;
 #'   `"mammen"` draws the two-point distribution of Mammen (1993) (mean 0,
-#'   variance 1, third moment 1).
+#'   variance 1, third moment 1); `"webb"` draws the six-point distribution of
+#'   Webb (2013), values `+/- sqrt(1.5)`, `+/- 1`, `+/- sqrt(0.5)` each with
+#'   probability 1/6 (mean 0, variance 1) -- preferred with very few clusters,
+#'   where the `2^N` Rademacher sign vectors are too coarse.
 #' @keywords internal
 #' @noRd
-.draw_multipliers <- function(N, B, type = c("rademacher", "mammen")) {
+.draw_multipliers <- function(N, B, type = c("rademacher", "mammen", "webb")) {
 	type <- match.arg(type)
 	if (type == "rademacher") {
 		matrix(
 			sample(c(-1, 1), size = N * B, replace = TRUE),
+			nrow = N,
+			ncol = B
+		)
+	} else if (type == "webb") {
+		# Webb (2013) six-point distribution: mean 0, E[w^2] = 1.
+		webb_vals <- c(-sqrt(1.5), -1, -sqrt(0.5), sqrt(0.5), 1, sqrt(1.5))
+		matrix(
+			sample(webb_vals, size = N * B, replace = TRUE),
 			nrow = N,
 			ncol = B
 		)
@@ -47,6 +58,46 @@
 		)
 		matrix(draws, nrow = N, ncol = B)
 	}
+}
+
+#' @title Validate shared multiplier-bootstrap `B` / `seed` arguments
+#' @description Shared validation for the bootstrap replicate count `B` (a single
+#'   positive integer) and `seed` (`NULL` or a single integer) used by both
+#'   `simultaneousCIs(method = "bootstrap")` and
+#'   `debiasedATT(se_method = "wild_bootstrap")`, so the two cannot silently drift
+#'   on what they accept. `seed` must be integer-valued (a non-integer would be
+#'   silently truncated by `set.seed()`).
+#' @param B,seed The arguments to validate.
+#' @param fn_name Character; the caller's name, for the error message prefix.
+#' @return `B` coerced to integer.
+#' @keywords internal
+#' @noRd
+.validate_boot_args <- function(B, seed, fn_name) {
+	if (
+		!is.numeric(B) ||
+			length(B) != 1L ||
+			is.na(B) ||
+			B < 1 ||
+			B != round(B)
+	) {
+		stop(
+			sprintf("%s(): `B` must be a single positive integer.", fn_name),
+			call. = FALSE
+		)
+	}
+	if (
+		!is.null(seed) &&
+			(!is.numeric(seed) ||
+				length(seed) != 1L ||
+				is.na(seed) ||
+				seed != round(seed))
+	) {
+		stop(
+			sprintf("%s(): `seed` must be NULL or a single integer.", fn_name),
+			call. = FALSE
+		)
+	}
+	as.integer(B)
 }
 
 #' Per-unit regression influence-function matrix `F_reg` (N_units x K), fixed-p
@@ -424,7 +475,7 @@
 	n,
 	alpha,
 	B,
-	multiplier = c("rademacher", "mammen"),
+	multiplier = c("rademacher", "mammen", "webb"),
 	seed = NULL
 ) {
 	multiplier <- match.arg(multiplier)

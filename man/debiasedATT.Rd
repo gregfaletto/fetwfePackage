@@ -7,6 +7,10 @@
 debiasedATT(
   fit,
   alpha = NULL,
+  se_method = c("analytic", "wild_bootstrap"),
+  B = 1000L,
+  seed = NULL,
+  multiplier = c("webb", "rademacher", "mammen"),
   lambda_c = 1,
   riesz_max_iter = 5000L,
   riesz_tol = 1e-09
@@ -22,6 +26,36 @@ construction is specific to the FETWFE transformed-coefficient space).}
 
 \item{alpha}{Numeric in \verb{(0, 1)}; the confidence level is \code{1 - alpha}.
 Defaults to the \code{alpha} stored on the fit.}
+
+\item{se_method}{How to form the confidence interval. \code{"analytic"} (default)
+uses the two-channel unit-clustered sandwich SE with a Gaussian critical
+value (unchanged, backward-compatible). \code{"wild_bootstrap"} replaces the
+Gaussian critical value with a studentized score / influence-function
+\strong{wild cluster bootstrap} (#360) --- a few-clusters correction for the
+analytic sandwich, which is downward-biased when the number of units (\code{N},
+the clusters) is small. The point estimate and the reported \code{se} are
+unchanged; only the interval half-width (\code{crit * se}) changes. This is the
+unrestricted score/IF wild bootstrap (no refit per replicate); it refines
+the reference distribution but does not relax the additive-channel
+assumption of the analytic SE. Not supported for \code{indep_counts} (two-sample)
+fits.}
+
+\item{B}{Integer; the number of wild-bootstrap replicates (default \code{1000}).
+Ignored unless \code{se_method = "wild_bootstrap"}.}
+
+\item{seed}{\code{NULL} (draw from the ambient RNG, the default) or a single
+integer for a reproducible bootstrap (the RNG state is saved and restored).
+Ignored unless \code{se_method = "wild_bootstrap"}.}
+
+\item{multiplier}{The wild-bootstrap weight distribution: \code{"webb"} (default),
+\code{"rademacher"}, or \code{"mammen"}. The default is the Webb (2013) six-point
+distribution because this few-clusters correction is where it matters most:
+with \code{"rademacher"} (\verb{±1}) the studentization denominator is constant, so
+the interval reduces to a \emph{percentile} wild bootstrap, whereas \code{"webb"} and
+\code{"mammen"} vary the denominator and deliver the \emph{studentized} bootstrap-t
+refinement; Webb's finer six-point support is also preferable to the \code{2^N}
+Rademacher sign vectors when the number of clusters is very small. Ignored
+unless \code{se_method = "wild_bootstrap"}.}
 
 \item{lambda_c}{The leading constant of the high-dimensional (\code{p >= NT})
 nodewise penalty \verb{lambda_node = lambda_c * max(|a|) * sqrt(log(p) / N)} (\code{N} =
@@ -46,8 +80,11 @@ and a \code{tidy} method) with elements:
 \item{att}{Numeric scalar; the debiased overall-ATT point estimate.}
 \item{se}{Numeric scalar; the uniformly-valid standard error,
 \code{sqrt(var_reg + var_weight)}.}
-\item{ci_low, ci_high}{Numeric; the \code{1 - alpha} Wald interval
-\verb{att +/- qnorm(1 - alpha/2) * se}.}
+\item{ci_low, ci_high}{Numeric; the \code{1 - alpha} interval. With
+\code{se_method = "analytic"} (default) this is the Wald interval
+\verb{att +/- qnorm(1 - alpha/2) * se}; with \code{se_method = "wild_bootstrap"}
+the critical value is the bootstrap \code{crit_value} in place of
+\code{qnorm(1 - alpha/2)}.}
 \item{var_reg}{Numeric; the regression (outcome) channel's contribution to
 \code{se^2}, per-unit-clustered.}
 \item{var_weight}{Numeric; the cohort-weight channel's contribution to
@@ -67,6 +104,11 @@ and \code{lambda_c_selection} (\code{"fixed"} or \code{"cv"}). When \code{lambda
 also contains \code{lambda_cv}, the cross-validation diagnostics (the grid, the
 per-grid feasibility flags and CV losses, and whether the theory-scale
 fallback fired). These are absent for \code{p < NT} fits.
+
+With \code{se_method = "wild_bootstrap"} the list additionally contains
+\code{se_method}, \code{crit_value} (the studentized wild-bootstrap critical value
+replacing \code{qnorm(1 - alpha/2)}), \code{B}, \code{multiplier}, and \code{alpha}. The analytic
+default adds none of these, so its \code{names()} are unchanged.
 }
 \description{
 Computes a \emph{debiased} estimate of the overall average treatment effect on the

@@ -1,5 +1,32 @@
 # NEWS
 
+## Version 1.55.0
+
+### New features
+
+- `debiasedATT()` gains a **wild cluster bootstrap** confidence interval for the
+  overall ATT via the new `se_method = "wild_bootstrap"` argument (with `B`,
+  `seed`, and `multiplier`). It is a few-clusters correction for the analytic
+  two-channel sandwich SE, which is downward-biased when the number of units
+  (clusters) is small --- the regime the high-dimensional path targets (e.g.
+  state-level panels). A studentized score / influence-function bootstrap
+  re-signs the per-unit influence summands (no refit per replicate), so the point
+  estimate and the reported `se` are unchanged and only the interval's critical
+  value is refined. The default `se_method = "analytic"` is unchanged; the new
+  path is not supported for `indep_counts` (two-sample) fits. Implements the
+  deferred small-`N` half of #307 (#360).
+- Adds the **Webb (2013) six-point** multiplier (`multiplier = "webb"`) to the
+  bootstrap machinery, available to both `debiasedATT()`'s wild bootstrap and
+  `simultaneousCIs(method = "bootstrap")`. It is the **default** for
+  `debiasedATT()`'s wild bootstrap, because it delivers the studentized
+  bootstrap-t refinement that `"rademacher"`'s constant studentization does not
+  --- exactly what the few-clusters regime needs. Recommended whenever the number
+  of clusters is very small.
+- `simultaneousCIs(method = "bootstrap")` and `debiasedATT(se_method =
+  "wild_bootstrap")` now share their `B` / `seed` validation; a non-integer
+  `seed` (previously truncated silently by `set.seed()`) is now rejected with a
+  clear message.
+
 ## Version 1.54.0
 
 ### Improvements

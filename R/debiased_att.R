@@ -174,6 +174,32 @@
 #'   construction is specific to the FETWFE transformed-coefficient space).
 #' @param alpha Numeric in `(0, 1)`; the confidence level is `1 - alpha`.
 #'   Defaults to the `alpha` stored on the fit.
+#' @param se_method How to form the confidence interval. `"analytic"` (default)
+#'   uses the two-channel unit-clustered sandwich SE with a Gaussian critical
+#'   value (unchanged, backward-compatible). `"wild_bootstrap"` replaces the
+#'   Gaussian critical value with a studentized score / influence-function
+#'   **wild cluster bootstrap** (#360) --- a few-clusters correction for the
+#'   analytic sandwich, which is downward-biased when the number of units (`N`,
+#'   the clusters) is small. The point estimate and the reported `se` are
+#'   unchanged; only the interval half-width (`crit * se`) changes. This is the
+#'   unrestricted score/IF wild bootstrap (no refit per replicate); it refines
+#'   the reference distribution but does not relax the additive-channel
+#'   assumption of the analytic SE. Not supported for `indep_counts` (two-sample)
+#'   fits.
+#' @param B Integer; the number of wild-bootstrap replicates (default `1000`).
+#'   Ignored unless `se_method = "wild_bootstrap"`.
+#' @param seed `NULL` (draw from the ambient RNG, the default) or a single
+#'   integer for a reproducible bootstrap (the RNG state is saved and restored).
+#'   Ignored unless `se_method = "wild_bootstrap"`.
+#' @param multiplier The wild-bootstrap weight distribution: `"webb"` (default),
+#'   `"rademacher"`, or `"mammen"`. The default is the Webb (2013) six-point
+#'   distribution because this few-clusters correction is where it matters most:
+#'   with `"rademacher"` (`±1`) the studentization denominator is constant, so
+#'   the interval reduces to a *percentile* wild bootstrap, whereas `"webb"` and
+#'   `"mammen"` vary the denominator and deliver the *studentized* bootstrap-t
+#'   refinement; Webb's finer six-point support is also preferable to the `2^N`
+#'   Rademacher sign vectors when the number of clusters is very small. Ignored
+#'   unless `se_method = "wild_bootstrap"`.
 #' @param lambda_c The leading constant of the high-dimensional (`p >= NT`)
 #'   nodewise penalty `lambda_node = lambda_c * max(|a|) * sqrt(log(p) / N)` (`N` =
 #'   number of units). Either a single positive number (a fixed constant; default
@@ -195,8 +221,11 @@
 #'     \item{att}{Numeric scalar; the debiased overall-ATT point estimate.}
 #'     \item{se}{Numeric scalar; the uniformly-valid standard error,
 #'       `sqrt(var_reg + var_weight)`.}
-#'     \item{ci_low, ci_high}{Numeric; the `1 - alpha` Wald interval
-#'       `att +/- qnorm(1 - alpha/2) * se`.}
+#'     \item{ci_low, ci_high}{Numeric; the `1 - alpha` interval. With
+#'       `se_method = "analytic"` (default) this is the Wald interval
+#'       `att +/- qnorm(1 - alpha/2) * se`; with `se_method = "wild_bootstrap"`
+#'       the critical value is the bootstrap `crit_value` in place of
+#'       `qnorm(1 - alpha/2)`.}
 #'     \item{var_reg}{Numeric; the regression (outcome) channel's contribution to
 #'       `se^2`, per-unit-clustered.}
 #'     \item{var_weight}{Numeric; the cohort-weight channel's contribution to
@@ -217,6 +246,11 @@
 #'   per-grid feasibility flags and CV losses, and whether the theory-scale
 #'   fallback fired). These are absent for `p < NT` fits.
 #'
+#'   With `se_method = "wild_bootstrap"` the list additionally contains
+#'   `se_method`, `crit_value` (the studentized wild-bootstrap critical value
+#'   replacing `qnorm(1 - alpha/2)`), `B`, `multiplier`, and `alpha`. The analytic
+#'   default adds none of these, so its `names()` are unchanged.
+#'
 #' @references
 #' Faletto, G (2025). Fused Extended Two-Way Fixed Effects for
 #' Difference-in-Differences with Staggered Adoptions.
@@ -236,10 +270,16 @@
 debiasedATT <- function(
 	fit,
 	alpha = NULL,
+	se_method = c("analytic", "wild_bootstrap"),
+	B = 1000L,
+	seed = NULL,
+	multiplier = c("webb", "rademacher", "mammen"),
 	lambda_c = 1.0,
 	riesz_max_iter = 5000L,
 	riesz_tol = 1e-9
 ) {
+	se_method <- match.arg(se_method)
+	multiplier <- match.arg(multiplier)
 	if (!inherits(fit, "fetwfe")) {
 		stop(
 			"debiasedATT() requires a fitted object from fetwfe(). The debiased ",
@@ -265,6 +305,22 @@ debiasedATT <- function(
 			"debiasedATT(): `alpha` must be a single number in (0, 1).",
 			call. = FALSE
 		)
+	}
+
+	if (se_method == "wild_bootstrap") {
+		B <- .validate_boot_args(B, seed, "debiasedATT")
+		if (isTRUE(fit$indep_counts_used)) {
+			stop(
+				"debiasedATT(se_method = \"wild_bootstrap\") is not supported for ",
+				"`indep_counts` (two-sample) fits: the cohort-weight variance ",
+				"channel is estimated from the separate count sample, so it has no ",
+				"per-unit influence-function decomposition over the main sample's ",
+				"clusters. Use the analytic SE (the default) here, or refit without ",
+				"`indep_counts` -- a simulation-only feature -- to use the wild ",
+				"bootstrap (real single-sample panels are supported directly).",
+				call. = FALSE
+			)
+		}
 	}
 
 	# High-dimensional nodewise-solver controls. These only affect the p >= NT
@@ -611,11 +667,154 @@ debiasedATT <- function(
 			out$lambda_cv <- riesz_diag$lambda_cv
 		}
 	}
+	# Few-clusters SE (#360): replace the Gaussian critical value with a
+	# studentized score / influence-function wild cluster bootstrap. The analytic
+	# `se` (sqrt(var_reg + var_weight)) is unchanged; only the reference
+	# distribution -- hence the CI half-width -- changes. `unit_scores` is the
+	# per-unit V1 (regression) influence summand; the per-unit V2 (cohort-weight)
+	# summands are built inside the helper. The analytic default leaves `out`
+	# byte-identical (no extra fields), preserving the `names()` contract.
+	if (se_method == "wild_bootstrap") {
+		boot <- .debiased_att_wild_boot(
+			fit = fit,
+			psi1 = unit_scores,
+			var_reg = var_reg,
+			var_weight = var_weight,
+			att = att_db,
+			alpha = alpha,
+			n = n,
+			G = G,
+			T = T,
+			B = B,
+			seed = seed,
+			multiplier = multiplier
+		)
+		out$ci_low <- boot$ci_low
+		out$ci_high <- boot$ci_high
+		out$se_method <- "wild_bootstrap"
+		out$crit_value <- boot$crit
+		out$B <- B
+		out$multiplier <- multiplier
+		out$alpha <- alpha
+	}
 	# Lightweight S3 class for a `print` / `tidy` method (#326). The list contents
 	# are unchanged -- the regime is inferred from the presence of `lambda_node` --
 	# so existing `$`-accessor and `names()` code is unaffected.
 	class(out) <- "debiased_att"
 	out
+}
+
+#' @title Studentized wild cluster bootstrap for the debiased overall ATT
+#' @description
+#' Few-clusters critical value for [debiasedATT()]'s overall-ATT CI via a
+#' studentized score / influence-function wild cluster bootstrap (#360), with NO
+#' refit per replicate. The debiased ATT is asymptotically linear with per-unit
+#' (per-cluster) influence summands in two asymptotically-independent channels:
+#' the regression channel `psi1 = unit_scores` (already computed;
+#' `sum(psi1^2) / n^2 == var_reg`) and the cohort-weight channel `psi2`, built
+#' here from the closed-form overall-ATT gradient `a_att_G = (catt - att_hat) / S`
+#' (`S` = treated fraction) fed to [.build_propensity_if()]
+#' (`sum(psi2^2) / n^2 == var_weight`, checked). Each channel is re-signed with an
+#' INDEPENDENT stream of cluster-level multipliers (reproducing
+#' `var_reg + var_weight` with no cross term), and the `(1 - alpha)` quantile of
+#' the studentized statistic
+#' `|sum(xi psi1) + sum(eta psi2)| / sqrt(sum((xi psi1)^2) + sum((eta psi2)^2))`
+#' is the critical value: `CI = att +/- crit * se`. Uses the BRIDGE `catt` /
+#' `att_hat` (matching `.plugin_v2()` / the analytic `var_weight`) in both
+#' regimes, so the bootstrap reproduces the reported `se` and only refines the
+#' reference distribution.
+#' @param fit The `"fetwfe"` fit (supplies `catt_df$estimate`, `att_hat`,
+#'   `cohort_probs_overall`).
+#' @param psi1 Numeric length-N (number of clusters / units); the per-unit V1
+#'   regression influence summands (`unit_scores`).
+#' @param var_reg,var_weight Numeric scalars; the analytic V1 / V2 variance
+#'   components (`se^2 = var_reg + var_weight`), for the anchor check and `se`.
+#' @param att Numeric scalar; the debiased overall-ATT point estimate (CI center).
+#' @param alpha Numeric in `(0, 1)`.
+#' @param n Integer; the number of observations `N * T` (for the anchor check).
+#' @param G,T Integer; number of treated cohorts / time periods.
+#' @param B Integer; bootstrap replicates.
+#' @param seed `NULL` (ambient RNG) or an integer (reproducible via
+#'   [.with_preserved_rng()]).
+#' @param multiplier Weight type passed to [.draw_multipliers()].
+#' @return A list with `crit` (the bootstrap critical value), `ci_low`, `ci_high`.
+#' @keywords internal
+#' @noRd
+.debiased_att_wild_boot <- function(
+	fit,
+	psi1,
+	var_reg,
+	var_weight,
+	att,
+	alpha,
+	n,
+	G,
+	T,
+	B,
+	seed,
+	multiplier
+) {
+	N <- length(psi1)
+	se <- sqrt(var_reg + var_weight)
+	# Per-unit V2 (cohort-weight) influence: closed-form overall-ATT gradient
+	# a_att_G[g] = (catt_g - att_hat) / S fed to the existing per-unit propensity
+	# IF. Uses the BRIDGE catt / att_hat (fit$catt_df$estimate / fit$att_hat), the
+	# same quantities .plugin_v2() uses, so sum(psi2^2) / n^2 == var_weight. The
+	# marginal `cohort_probs_overall` (sums to the treated fraction) is required by
+	# .build_propensity_if()'s cohort-count recovery.
+	cohort_probs_overall <- fit$cohort_probs_overall
+	S <- sum(cohort_probs_overall[seq_len(G)])
+	a_att_G <- (fit$catt_df$estimate - fit$att_hat) / S
+	psi2 <- as.numeric(.build_propensity_if(
+		cohort_probs_overall = cohort_probs_overall,
+		G = G,
+		N = N,
+		T = T,
+		A = matrix(a_att_G, nrow = G, ncol = 1L)
+	))
+	# Anchor: the per-unit V2 IF must reproduce the analytic cohort-weight
+	# variance. A mismatch means the V2 gradient / probabilities are inconsistent
+	# with `var_weight` (e.g. an unhandled two-sample fit) -- fail loudly.
+	if (abs(sum(psi2^2) / n^2 - var_weight) > 1e-6 * max(1, abs(var_weight))) {
+		stop(
+			"debiasedATT(): internal wild-bootstrap V2 influence-function anchor ",
+			"failed (the per-unit cohort-weight IF does not reproduce ",
+			"`var_weight`). This should not happen for a supported fit; please ",
+			"report it.",
+			call. = FALSE
+		)
+	}
+	if (!is.finite(se) || se <= 0) {
+		# Degenerate variance: the interval collapses to the point estimate.
+		return(list(crit = 0, ci_low = att, ci_high = att))
+	}
+	# Studentized bootstrap-t draw. This is the scalar analogue of
+	# `.simultaneous_bootstrap_crit()` (R/simultaneous_bootstrap.R), which does the
+	# K-dimensional sup-t with a FIXED per-effect studentization; here the scalar
+	# denominator `den` is re-drawn per replicate (a genuine bootstrap-t).
+	# INVARIANT: `psi1` is in fit-unit order and `psi2` in cohort-block order, so
+	# they index DIFFERENT physical units -- the two multiplier streams MUST stay
+	# independent. A shared stream would pair unit i's regression influence with a
+	# different unit's propensity influence; independence makes the statistic
+	# order-invariant, so the order mismatch is harmless.
+	draw_boot <- function() {
+		xi <- .draw_multipliers(N, B, multiplier) # N x B
+		eta <- .draw_multipliers(N, B, multiplier) # N x B, INDEPENDENT (see above)
+		num <- crossprod(psi1, xi) + crossprod(psi2, eta) # 1 x B
+		den <- sqrt(crossprod(psi1^2, xi^2) + crossprod(psi2^2, eta^2)) # 1 x B
+		as.numeric(num / den)
+	}
+	t_boot <- if (is.null(seed)) {
+		draw_boot()
+	} else {
+		.with_preserved_rng(seed, draw_boot())
+	}
+	crit <- as.numeric(stats::quantile(
+		abs(t_boot),
+		probs = 1 - alpha,
+		names = FALSE
+	))
+	list(crit = crit, ci_low = att - crit * se, ci_high = att + crit * se)
 }
 
 #' @title Print a debiased overall-ATT estimate
@@ -630,11 +829,17 @@ debiasedATT <- function(
 #' @export
 print.debiased_att <- function(x, ...) {
 	highdim <- !is.null(x$lambda_node)
+	boot <- identical(x$se_method, "wild_bootstrap")
 	cat(sprintf(
 		"Debiased overall ATT (%s regime)\n",
 		if (highdim) "high-dimensional" else "fixed-p"
 	))
-	level <- if (is.finite(x$se) && x$se > 0) {
+	# The wild-bootstrap CI half-width is `crit * se` with a bootstrap `crit`, so
+	# the nominal level cannot be read back off the Gaussian quantile -- use the
+	# stored `alpha`. The analytic path (no `se_method`) keeps its inference.
+	level <- if (boot) {
+		round(100 * (1 - x$alpha))
+	} else if (is.finite(x$se) && x$se > 0) {
 		round(100 * (2 * stats::pnorm((x$ci_high - x$att) / x$se) - 1))
 	} else {
 		NA_real_
@@ -643,6 +848,14 @@ print.debiased_att <- function(x, ...) {
 	cat(sprintf("  Estimate:   %.4f\n", x$att))
 	cat(sprintf("  Std. Error: %.4f\n", x$se))
 	cat(sprintf("  %s: [%.4f, %.4f]\n", ci_label, x$ci_low, x$ci_high))
+	if (boot) {
+		cat(sprintf(
+			"  CI method:  wild cluster bootstrap (B = %d, %s weights; crit = %.3f)\n",
+			x$B,
+			x$multiplier,
+			x$crit_value
+		))
+	}
 	if (highdim) {
 		.print_highdim_diagnostics(x)
 	}

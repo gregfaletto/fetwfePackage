@@ -435,6 +435,18 @@ In any single draw the fused and debiased point estimates can be close, so the v
 
 The fused interval under-covers because of the post-selection non-uniformity; the debiased interval is near-nominal. This is validated at the studied anchor (with the feasibility-appropriate penalty); treat the $p \geq NT$ path as **experimental** outside that regime --- which is why the diagnostics above matter.
 
+## Few clusters: the wild cluster bootstrap
+
+The analytic standard error above is a unit-clustered sandwich: consistent as the number of units (clusters) grows, but **downward-biased when there are few clusters** --- exactly the regime the high-dimensional path often lives in (state-level panels have tens of units, not thousands), so the Gaussian interval can over-reject. `se_method = "wild_bootstrap"` replaces the Gaussian critical value with a studentized score / influence-function **wild cluster bootstrap** that re-signs the per-unit influence summands (no refit per replicate), leaving the point estimate and the reported `se` unchanged and only replacing the Gaussian critical value with a few-cluster-corrected one (usually wider, occasionally slightly narrower at moderate cluster counts):
+
+```{r highdim-wild-boot, eval = FALSE}
+# `fit` must be a single-sample fetwfe() fit -- not an `indep_counts` fit, which
+# the worked example above (via fetwfeWithSimulatedData) happens to be.
+debiasedATT(fit, se_method = "wild_bootstrap", multiplier = "webb", seed = 1)
+```
+
+Prefer `multiplier = "webb"` (the Webb six-point weights) when the number of units is very small, where the default `"rademacher"` ($\pm 1$) has too few distinct sign vectors. The bootstrap is defined only for **single-sample** fits; real observational panels --- the few-cluster case this targets --- are single-sample.
+
 ## Simultaneous bands at $p \geq NT$
 
 `simultaneousCIs()` also switches to the desparsified construction in the high-dimensional regime (via `method = "bootstrap"`; the analytic Gram-inverse band does not exist when $p \geq NT$):
