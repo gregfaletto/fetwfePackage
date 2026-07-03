@@ -2,14 +2,15 @@ library(testthat)
 library(fetwfe)
 
 # ------------------------------------------------------------------------------
-# #360: small-number-of-clusters SE for the debiased overall ATT via a
-# studentized score / influence-function WILD CLUSTER BOOTSTRAP (se_method =
-# "wild_bootstrap"). The analytic sandwich SE is downward-biased with few
-# clusters; the bootstrap replaces the Gaussian critical value with a
-# few-cluster-corrected one WITHOUT a refit per replicate, by re-signing the
-# per-unit influence summands (V1 regression `unit_scores` + V2 cohort-weight,
-# built from a_att_G = (catt - att_hat)/S). Point estimate and reported `se` are
-# unchanged; only the CI half-width changes. Default se_method = "analytic" is
+# #360 / #363: the debiased overall ATT via a studentized score /
+# influence-function WILD CLUSTER BOOTSTRAP (se_method = "wild_bootstrap"),
+# re-signing the per-unit influence summands (V1 regression `unit_scores` + V2
+# cohort-weight, built from a_att_G = (catt - att_hat)/S) WITHOUT a refit per
+# replicate. Point estimate and reported `se` are unchanged; only the critical
+# value changes, and it is FLOORED at qnorm(1 - alpha/2) (#363) so the interval is
+# never narrower than the analytic Wald interval -- this is NOT a few-clusters
+# remedy (an unrestricted no-refit score bootstrap narrows below the Gaussian
+# under heterogeneous cluster influence). Default se_method = "analytic" is
 # byte-identical to the previous behavior.
 # ------------------------------------------------------------------------------
 
@@ -211,9 +212,9 @@ test_that("wild bootstrap validates B and seed (#360)", {
 })
 
 test_that("the default wild-bootstrap multiplier is webb (#360, review 1)", {
-	# Webb is the default so the *studentized* bootstrap-t refinement is delivered
-	# by default in the few-clusters regime this targets -- rademacher's constant
-	# denominator would instead give the (unstudentized) percentile variant.
+	# Webb is kept as the default (a studentized statistic, vs rademacher's constant
+	# denominator); given the #363 floor the multiplier choice only matters in the
+	# near-homogeneous case where the bootstrap widens above the floor.
 	w <- debiasedATT(.wb_fixedp, se_method = "wild_bootstrap", seed = 1)
 	expect_identical(w$multiplier, "webb")
 })
@@ -276,4 +277,47 @@ test_that("print.debiased_att surfaces the bootstrap method and level (#360)", {
 	# The analytic print does NOT show the bootstrap line.
 	out_a <- capture.output(print(debiasedATT(fit)))
 	expect_false(any(grepl("wild cluster bootstrap", out_a)))
+})
+
+test_that("the wild-bootstrap crit is floored at the Gaussian quantile (#363)", {
+	z <- stats::qnorm(0.975)
+	# The (floored) crit is never below z on any fit.
+	for (fit in list(.wb_fixedp, .wb_highdim)) {
+		w <- debiasedATT(fit, se_method = "wild_bootstrap", seed = 1)
+		expect_gte(w$crit_value, z)
+	}
+	# The floor BITES: on a heterogeneous few-cluster fit whose pre-floor crit is
+	# ~1.44 (< z -- the anti-conservative narrowing this fix removes, #363), the
+	# returned crit equals z exactly, so the interval is the analytic Wald interval.
+	# Remove the `max(crit, z)` floor and this returns ~1.44 != z.
+	cf <- genCoefs(G = 3, T = 5, d = 2, density = 0.5, eff_size = 2, seed = 1)
+	sim <- simulateData(
+		cf,
+		N = 18,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = 1
+	)
+	fit_het <- fetwfe(
+		pdata = sim$pdata,
+		time_var = sim$time_var,
+		unit_var = sim$unit_var,
+		treatment = sim$treatment,
+		response = sim$response,
+		covs = sim$covs,
+		q = 0.5,
+		gls = FALSE,
+		verbose = FALSE
+	)
+	w_het <- debiasedATT(
+		fit_het,
+		se_method = "wild_bootstrap",
+		multiplier = "webb",
+		seed = 1,
+		B = 2000
+	)
+	expect_equal(w_het$crit_value, z)
+	a_het <- debiasedATT(fit_het)
+	expect_equal(w_het$ci_low, a_het$att - z * a_het$se)
+	expect_equal(w_het$ci_high, a_het$att + z * a_het$se)
 })

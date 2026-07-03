@@ -435,9 +435,11 @@ In any single draw the fused and debiased point estimates can be close, so the v
 
 The fused interval under-covers because of the post-selection non-uniformity; the debiased interval is near-nominal. This is validated at the studied anchor (with the feasibility-appropriate penalty); treat the $p \geq NT$ path as **experimental** outside that regime --- which is why the diagnostics above matter.
 
-## Few clusters: the wild cluster bootstrap
+## An asymptotic alternative: the wild bootstrap
 
-The analytic standard error above is a unit-clustered sandwich: consistent as the number of units (clusters) grows, but **downward-biased when there are few clusters** --- exactly the regime the high-dimensional path often lives in (state-level panels have tens of units, not thousands), so the Gaussian interval can over-reject. `se_method = "wild_bootstrap"` replaces the Gaussian critical value with a studentized score / influence-function **wild cluster bootstrap** that re-signs the per-unit influence summands (no refit per replicate), leaving the point estimate and the reported `se` unchanged and only replacing the Gaussian critical value with a few-cluster-corrected one (usually wider, occasionally slightly narrower at moderate cluster counts):
+`se_method = "wild_bootstrap"` offers an alternative, asymptotically-valid reference distribution for the overall-ATT interval: a studentized score / influence-function **wild cluster bootstrap** that re-signs the per-unit influence summands (no refit per replicate), leaving the point estimate and the reported `se` unchanged and changing only the critical value. It is **floored at the Gaussian quantile**, so the interval is never narrower than the analytic Wald interval.
+
+**It is not a few-clusters remedy.** The analytic sandwich SE is downward-biased with few clusters, but this bootstrap does not fix that: as an *unrestricted, no-refit* score bootstrap it does not reproduce the tail inflation the *restricted* wild-cluster bootstrap-t uses for few-cluster coverage, and under heterogeneous cluster influence its critical value (before the floor) actually falls *below* the Gaussian --- so the floor reduces it to the analytic interval in exactly the small-`N` regime. Its only effect is to *widen* the interval when cluster influence is near-homogeneous. For genuine few-clusters inference a restricted bootstrap-t or a CR2-type analytic correction is required (future work).
 
 ```{r highdim-wild-boot, eval = FALSE}
 # `fit` must be a single-sample fetwfe() fit -- not an `indep_counts` fit, which
@@ -445,7 +447,7 @@ The analytic standard error above is a unit-clustered sandwich: consistent as th
 debiasedATT(fit, se_method = "wild_bootstrap", multiplier = "webb", seed = 1)
 ```
 
-Prefer `multiplier = "webb"` (the Webb six-point weights) when the number of units is very small, where the default `"rademacher"` ($\pm 1$) has too few distinct sign vectors. The bootstrap is defined only for **single-sample** fits; real observational panels --- the few-cluster case this targets --- are single-sample.
+The `multiplier` (`"webb"`, the default; `"rademacher"`; or `"mammen"`) only affects the near-homogeneous case where the bootstrap widens above the floor --- in the small-`N` / heterogeneous regime the interval is the analytic one regardless of the weight. The bootstrap is defined only for **single-sample** fits (real observational panels are single-sample), not `indep_counts` two-sample fits.
 
 ## Simultaneous bands at $p \geq NT$
 

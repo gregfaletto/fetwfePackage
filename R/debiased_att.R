@@ -176,30 +176,35 @@
 #'   Defaults to the `alpha` stored on the fit.
 #' @param se_method How to form the confidence interval. `"analytic"` (default)
 #'   uses the two-channel unit-clustered sandwich SE with a Gaussian critical
-#'   value (unchanged, backward-compatible). `"wild_bootstrap"` replaces the
-#'   Gaussian critical value with a studentized score / influence-function
-#'   **wild cluster bootstrap** (#360) --- a few-clusters correction for the
-#'   analytic sandwich, which is downward-biased when the number of units (`N`,
-#'   the clusters) is small. The point estimate and the reported `se` are
-#'   unchanged; only the interval half-width (`crit * se`) changes. This is the
-#'   unrestricted score/IF wild bootstrap (no refit per replicate); it refines
-#'   the reference distribution but does not relax the additive-channel
-#'   assumption of the analytic SE. Not supported for `indep_counts` (two-sample)
-#'   fits.
+#'   value. `"wild_bootstrap"` replaces the Gaussian critical value with a
+#'   studentized score / influence-function **wild cluster bootstrap** (#360),
+#'   **floored at the Gaussian quantile** so the interval is never narrower than
+#'   the analytic Wald interval. The point estimate and the reported `se` are
+#'   unchanged; only the critical value changes.
+#'
+#'   **This is not a few-clusters remedy.** As an *unrestricted, no-refit* score
+#'   bootstrap it does not reproduce the tail inflation of the *restricted*
+#'   wild-cluster bootstrap-t, and under heterogeneous cluster influence its
+#'   critical value (before the floor) falls *below* the Gaussian --- so under the
+#'   floor it reduces to the analytic interval exactly in the small-`N` regime, and
+#'   only
+#'   ever *widens* the interval when cluster influence is near-homogeneous. For a
+#'   genuine few-clusters correction the restricted bootstrap-t or a CR2-type
+#'   analytic adjustment is required (tracked as future work, #361). Not supported
+#'   for `indep_counts` (two-sample) fits.
 #' @param B Integer; the number of wild-bootstrap replicates (default `1000`).
 #'   Ignored unless `se_method = "wild_bootstrap"`.
 #' @param seed `NULL` (draw from the ambient RNG, the default) or a single
 #'   integer for a reproducible bootstrap (the RNG state is saved and restored).
 #'   Ignored unless `se_method = "wild_bootstrap"`.
 #' @param multiplier The wild-bootstrap weight distribution: `"webb"` (default),
-#'   `"rademacher"`, or `"mammen"`. The default is the Webb (2013) six-point
-#'   distribution because this few-clusters correction is where it matters most:
-#'   with `"rademacher"` (`±1`) the studentization denominator is constant, so
-#'   the interval reduces to a *percentile* wild bootstrap, whereas `"webb"` and
-#'   `"mammen"` vary the denominator and deliver the *studentized* bootstrap-t
-#'   refinement; Webb's finer six-point support is also preferable to the `2^N`
-#'   Rademacher sign vectors when the number of clusters is very small. Ignored
-#'   unless `se_method = "wild_bootstrap"`.
+#'   `"rademacher"`, or `"mammen"`. `"rademacher"` (`±1`) gives a constant
+#'   studentization denominator (a *percentile* bootstrap); `"webb"` and
+#'   `"mammen"` vary it (a *studentized* statistic). Because the critical value is
+#'   floored at the Gaussian quantile, the multiplier only affects the
+#'   near-homogeneous case where the bootstrap widens above the floor; in the
+#'   small-`N` / heterogeneous regime the interval is the analytic one regardless
+#'   of the weight. Ignored unless `se_method = "wild_bootstrap"`.
 #' @param lambda_c The leading constant of the high-dimensional (`p >= NT`)
 #'   nodewise penalty `lambda_node = lambda_c * max(|a|) * sqrt(log(p) / N)` (`N` =
 #'   number of units). Either a single positive number (a fixed constant; default
@@ -224,8 +229,9 @@
 #'     \item{ci_low, ci_high}{Numeric; the `1 - alpha` interval. With
 #'       `se_method = "analytic"` (default) this is the Wald interval
 #'       `att +/- qnorm(1 - alpha/2) * se`; with `se_method = "wild_bootstrap"`
-#'       the critical value is the bootstrap `crit_value` in place of
-#'       `qnorm(1 - alpha/2)`.}
+#'       the critical value is the bootstrap `crit_value` (floored at
+#'       `qnorm(1 - alpha/2)`, so never narrower than the Wald interval) in place
+#'       of `qnorm(1 - alpha/2)`.}
 #'     \item{var_reg}{Numeric; the regression (outcome) channel's contribution to
 #'       `se^2`, per-unit-clustered.}
 #'     \item{var_weight}{Numeric; the cohort-weight channel's contribution to
@@ -247,8 +253,8 @@
 #'   fallback fired). These are absent for `p < NT` fits.
 #'
 #'   With `se_method = "wild_bootstrap"` the list additionally contains
-#'   `se_method`, `crit_value` (the studentized wild-bootstrap critical value
-#'   replacing `qnorm(1 - alpha/2)`), `B`, `multiplier`, and `alpha`. The analytic
+#'   `se_method`, `crit_value` (the studentized wild-bootstrap critical value,
+#'   floored at `qnorm(1 - alpha/2)`), `B`, `multiplier`, and `alpha`. The analytic
 #'   default adds none of these, so its `names()` are unchanged.
 #'
 #' @references
@@ -667,8 +673,9 @@ debiasedATT <- function(
 			out$lambda_cv <- riesz_diag$lambda_cv
 		}
 	}
-	# Few-clusters SE (#360): replace the Gaussian critical value with a
-	# studentized score / influence-function wild cluster bootstrap. The analytic
+	# Wild-bootstrap CI (#360, floored at the Gaussian quantile per #363): replace
+	# the Gaussian critical value with a studentized score / IF wild cluster
+	# bootstrap. The analytic
 	# `se` (sqrt(var_reg + var_weight)) is unchanged; only the reference
 	# distribution -- hence the CI half-width -- changes. `unit_scores` is the
 	# per-unit V1 (regression) influence summand; the per-unit V2 (cohort-weight)
@@ -706,9 +713,8 @@ debiasedATT <- function(
 
 #' @title Studentized wild cluster bootstrap for the debiased overall ATT
 #' @description
-#' Few-clusters critical value for [debiasedATT()]'s overall-ATT CI via a
-#' studentized score / influence-function wild cluster bootstrap (#360), with NO
-#' refit per replicate. The debiased ATT is asymptotically linear with per-unit
+#' Critical value for [debiasedATT()]'s overall-ATT CI via a studentized score /
+#' influence-function wild cluster bootstrap (#360), with NO refit per replicate. The debiased ATT is asymptotically linear with per-unit
 #' (per-cluster) influence summands in two asymptotically-independent channels:
 #' the regression channel `psi1 = unit_scores` (already computed;
 #' `sum(psi1^2) / n^2 == var_reg`) and the cohort-weight channel `psi2`, built
@@ -719,10 +725,13 @@ debiasedATT <- function(
 #' `var_reg + var_weight` with no cross term), and the `(1 - alpha)` quantile of
 #' the studentized statistic
 #' `|sum(xi psi1) + sum(eta psi2)| / sqrt(sum((xi psi1)^2) + sum((eta psi2)^2))`
-#' is the critical value: `CI = att +/- crit * se`. Uses the BRIDGE `catt` /
-#' `att_hat` (matching `.plugin_v2()` / the analytic `var_weight`) in both
-#' regimes, so the bootstrap reproduces the reported `se` and only refines the
-#' reference distribution.
+#' is the critical value, **floored at `qnorm(1 - alpha/2)`** so the interval is
+#' never narrower than the analytic Wald interval (#363; before the floor, the
+#' self-normalized statistic can fall below the Gaussian under heterogeneous
+#' cluster influence, so this is *not* a few-clusters remedy): `CI = att +/- crit
+#' * se`. Uses the BRIDGE `catt` / `att_hat` (matching `.plugin_v2()` / the
+#' analytic `var_weight`) in both regimes, so the bootstrap reproduces the
+#' reported `se` and only refines the reference distribution.
 #' @param fit The `"fetwfe"` fit (supplies `catt_df$estimate`, `att_hat`,
 #'   `cohort_probs_overall`).
 #' @param psi1 Numeric length-N (number of clusters / units); the per-unit V1
@@ -814,6 +823,16 @@ debiasedATT <- function(
 		probs = 1 - alpha,
 		names = FALSE
 	))
+	# Floor at the Gaussian quantile (#363). The unrestricted, no-refit score/IF
+	# wild bootstrap self-normalizes, so under heterogeneous / dominant-cluster
+	# influence its critical value falls BELOW qnorm(1 - alpha/2) -- narrowing the
+	# interval in exactly the few-clusters regime, the opposite of a correction
+	# (MacKinnon-Webb: this statistic does not reproduce the tail inflation of the
+	# restricted wild-cluster bootstrap-t). Flooring guarantees the interval is
+	# never narrower than the analytic Wald interval; it only ever WIDENS (crit > z,
+	# near-homogeneous influence). This is NOT a few-clusters remedy -- see the CR2
+	# follow-up (#361).
+	crit <- max(crit, stats::qnorm(1 - alpha / 2))
 	list(crit = crit, ci_low = att - crit * se, ci_high = att + crit * se)
 }
 
