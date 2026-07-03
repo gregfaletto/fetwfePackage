@@ -386,7 +386,10 @@
   `calc_ses` (a high-dimensional `q >= 1` fit is now accepted; previously an
   error). The `p >= NT` path remains **experimental**
   (coverage / `lambda_c` per #295); small-cluster applications (few treated
-  units) should prefer a wild-cluster bootstrap (a planned follow-up).
+  units) can under-cover --- a genuine few-clusters correction (restricted
+  wild-cluster bootstrap-t or CR2) is tracked as #361. (The
+  `se_method = "wild_bootstrap"` option added later in 1.55.0 is *not* that
+  remedy; see 1.56.0.)
 
 ## Version 1.35.0
 

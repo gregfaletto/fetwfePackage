@@ -320,4 +320,17 @@ test_that("the wild-bootstrap crit is floored at the Gaussian quantile (#363)", 
 	a_het <- debiasedATT(fit_het)
 	expect_equal(w_het$ci_low, a_het$att - z * a_het$se)
 	expect_equal(w_het$ci_high, a_het$att + z * a_het$se)
+	# The floor is alpha-dependent (qnorm(1 - alpha/2), not a hardcoded 1.96): at
+	# alpha = 0.1 the same heterogeneous fit floors to qnorm(0.95). A mutant that
+	# floored at a literal qnorm(0.975) would pass at the default alpha but fail
+	# here.
+	w_het_90 <- debiasedATT(
+		fit_het,
+		se_method = "wild_bootstrap",
+		multiplier = "webb",
+		seed = 1,
+		B = 2000,
+		alpha = 0.1
+	)
+	expect_equal(w_het_90$crit_value, stats::qnorm(0.95))
 })

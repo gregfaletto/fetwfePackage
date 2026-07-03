@@ -39,9 +39,9 @@ unchanged; only the critical value changes.
 bootstrap it does not reproduce the tail inflation of the \emph{restricted}
 wild-cluster bootstrap-t, and under heterogeneous cluster influence its
 critical value (before the floor) falls \emph{below} the Gaussian --- so under the
-floor it reduces to the analytic interval exactly in the small-\code{N} regime, and
-only
-ever \emph{widens} the interval when cluster influence is near-homogeneous. For a
+floor it reduces to the analytic interval exactly in the small-\code{N} regime; it
+only ever \emph{widens} the interval when cluster influence is near-homogeneous.
+For a
 genuine few-clusters correction the restricted bootstrap-t or a CR2-type
 analytic adjustment is required (tracked as future work, #361). Not supported
 for \code{indep_counts} (two-sample) fits.}
@@ -188,8 +188,11 @@ vanishing schedule --- it adds a fixed numerical stabilizer
 and cancels in the OLS-identity case.
 \item \strong{Growing number of clusters,} \code{N -> infinity}. The CLT is over the
 \code{N} independent units, not the \code{NT} rows. With few treated units the
-cluster approximation is poor; prefer a wild-cluster bootstrap when \code{N} is
-small.
+cluster approximation is poor and the interval can under-cover; a genuine
+few-clusters correction (a restricted wild-cluster bootstrap-t or a
+CR2-type analytic adjustment, #361) is future work. The
+\code{se_method = "wild_bootstrap"} option does \emph{not} remedy this (see its
+documentation).
 \item \strong{Regularity / two regimes.} When \code{p < NT} (Theorem
 \code{debiased.att.thm}) the full design Gram is nonsingular and the debiasing
 direction is the exact inverse; the accessor reduces to debiased ETWFE.

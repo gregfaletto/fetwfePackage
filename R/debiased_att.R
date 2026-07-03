@@ -127,8 +127,11 @@
 #'     and cancels in the OLS-identity case.
 #'   \item **Growing number of clusters,** `N -> infinity`. The CLT is over the
 #'     `N` independent units, not the `NT` rows. With few treated units the
-#'     cluster approximation is poor; prefer a wild-cluster bootstrap when `N` is
-#'     small.
+#'     cluster approximation is poor and the interval can under-cover; a genuine
+#'     few-clusters correction (a restricted wild-cluster bootstrap-t or a
+#'     CR2-type analytic adjustment, #361) is future work. The
+#'     `se_method = "wild_bootstrap"` option does *not* remedy this (see its
+#'     documentation).
 #'   \item **Regularity / two regimes.** When `p < NT` (Theorem
 #'     `debiased.att.thm`) the full design Gram is nonsingular and the debiasing
 #'     direction is the exact inverse; the accessor reduces to debiased ETWFE.
@@ -186,9 +189,9 @@
 #'   bootstrap it does not reproduce the tail inflation of the *restricted*
 #'   wild-cluster bootstrap-t, and under heterogeneous cluster influence its
 #'   critical value (before the floor) falls *below* the Gaussian --- so under the
-#'   floor it reduces to the analytic interval exactly in the small-`N` regime, and
-#'   only
-#'   ever *widens* the interval when cluster influence is near-homogeneous. For a
+#'   floor it reduces to the analytic interval exactly in the small-`N` regime; it
+#'   only ever *widens* the interval when cluster influence is near-homogeneous.
+#'   For a
 #'   genuine few-clusters correction the restricted bootstrap-t or a CR2-type
 #'   analytic adjustment is required (tracked as future work, #361). Not supported
 #'   for `indep_counts` (two-sample) fits.
@@ -794,8 +797,14 @@ debiasedATT <- function(
 		)
 	}
 	if (!is.finite(se) || se <= 0) {
-		# Degenerate variance: the interval collapses to the point estimate.
-		return(list(crit = 0, ci_low = att, ci_high = att))
+		# Degenerate variance: the interval collapses to the point estimate. Report
+		# the floored crit (#363) for consistency with the `@return` contract -- the
+		# CI is the point [att, att] regardless, since se = 0.
+		return(list(
+			crit = stats::qnorm(1 - alpha / 2),
+			ci_low = att,
+			ci_high = att
+		))
 	}
 	# Studentized bootstrap-t draw. This is the scalar analogue of
 	# `.simultaneous_bootstrap_crit()` (R/simultaneous_bootstrap.R), which does the
