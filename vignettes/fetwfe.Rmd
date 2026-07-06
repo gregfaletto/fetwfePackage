@@ -69,6 +69,14 @@ The function returns a list containing, for example, the estimated overall avera
 
 You can get the full documentation details by using `?fetwfe` in R when you have the package loaded.
 
+**The workflow in three moves.** Working with a fit comes down to:
+
+1. **Fit** --- call `fetwfe()` on your panel.
+2. **Extract** --- pull out the treatment effects by the view you want: `cohortStudy()` (per adoption cohort), `eventStudy()` (per time since treatment), or `cohortTimeATTs()` (the fully disaggregated cohort-by-time cells); the overall ATT is on the fit as `att_hat` / `att_se`.
+3. **Plot** --- visualize them with `plot(fit, type = "event_study")` or `plot(fit, type = "catt")`.
+
+The rest of this vignette expands on each of these.
+
 For a detailed discussion of how the package's standard errors are computed, the assumptions they rely on, and an experimental cluster-robust option (`se_type = "cluster"`) suitable as a sensitivity check, see the companion vignette `inference_vignette`.
 
 In the next sections, we'll walk through examples of how `fetwfe()` is used.
@@ -286,6 +294,16 @@ Its standard errors are the per-cell regression standard errors, recomputed from
 ```{r cohort-time-atts-tidy, eval = requireNamespace("broom", quietly = TRUE)}
 head(broom::tidy(cta))
 ```
+
+## Plotting the effects
+
+The built-in `plot()` method draws the effects directly --- the event-study view (`type = "event_study"`, the default) or the per-cohort view (`type = "catt"`), each with confidence intervals:
+
+```{r plot-event-study, fig.width = 7, fig.height = 4, eval = requireNamespace("ggplot2", quietly = TRUE)}
+plot(res_demo, type = "event_study")
+```
+
+Reading it: each point is the average treatment effect at a given number of periods since adoption (the *event time*), with its confidence interval. The plot begins at event time 0 (treatment onset) and traces how the effect evolves over the post-treatment periods --- FETWFE does not estimate pre-treatment placebo coefficients (they are out of scope; see `?eventStudy`), so there is no pre-trends panel here. Swap in `type = "catt"` for the per-adoption-cohort effects, where any cohort the fusion penalty pooled to zero appears pinned exactly at zero --- a visual signature of the fusion. (The `broom` route in the next section is the do-it-yourself alternative when you want full `ggplot2` control.)
 
 ## Tidy outputs with broom
 
