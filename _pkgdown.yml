@@ -1,0 +1,86 @@
+url: https://gregfaletto.github.io/fetwfePackage/
+
+template:
+  bootstrap: 5
+
+navbar:
+  structure:
+    left: [reference, articles, news]
+    right: [search, paper, github]
+  components:
+    paper:
+      text: Paper
+      href: https://arxiv.org/abs/2312.05985
+      aria-label: FETWFE paper on arXiv
+
+articles:
+- title: Get started
+  contents:
+  - vignette
+- title: Topics
+  desc: >
+    Deeper dives into fusion structures, inference, simulation, and the
+    comparison estimators.
+  contents:
+  - fusion_structure_vignette
+  - inference_vignette
+  - simulation_vignette
+  - etwfe_betwfe_vignette
+
+reference:
+- title: Estimators
+  desc: >
+    Fit fused extended two-way fixed effects (FETWFE) and its comparison
+    estimators for difference-in-differences with staggered adoptions.
+  contents:
+  - fetwfe
+  - etwfe
+  - betwfe
+  - twfeCovs
+- title: Inference
+  desc: Confidence intervals and debiased overall-ATT inference.
+  contents:
+  - debiasedATT
+  - simultaneousCIs
+- title: Treatment-effect summaries
+  desc: Extract cohort, event-study, and cohort-by-time treatment effects.
+  contents:
+  - getTes
+  - cohortStudy
+  - eventStudy
+  - cohortTimeATTs
+- title: Simulation
+  desc: Generate coefficients and panel data for simulation studies.
+  contents:
+  - genCoefs
+  - genCoefsCore
+  - simulateData
+  - simulateDataCore
+- title: Fit on simulated data
+  desc: Convenience drivers that fit directly on simulateData() output.
+  contents:
+  - fetwfeWithSimulatedData
+  - etwfeWithSimulatedData
+  - betwfeWithSimulatedData
+  - twfeCovsWithSimulatedData
+  - debiasedATTWithSimulatedData
+- title: Data conversion
+  desc: Convert data frames from other DiD packages into the FETWFE format.
+  contents:
+  - attgtToFetwfeDf
+  - etwfeToFetwfeDf
+- title: Methods
+  desc: >
+    broom (tidy / glance / augment) and base S3 methods (plot, print) for the
+    fitted objects.
+  contents:
+  - starts_with("tidy.")
+  - starts_with("glance.")
+  - starts_with("augment.")
+  - starts_with("plot.")
+  - starts_with("print.")
+- title: Classes and low-level accessors
+  desc: Class definitions and the `catt_df` element accessors.
+  contents:
+  - ends_with("-class")
+  - matches("catt_df")

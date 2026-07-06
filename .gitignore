@@ -2,6 +2,7 @@
 .Rhistory
 inst/doc
 /doc/
+/docs/
 /Meta/
 /..Rcheck
 /.claude/

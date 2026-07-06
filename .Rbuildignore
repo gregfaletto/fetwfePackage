@@ -28,3 +28,7 @@
 ^TODO_
 ^issue_
 ^mybib2fin\.bib$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
+^\.github$
