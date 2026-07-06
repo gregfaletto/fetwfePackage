@@ -299,7 +299,7 @@ getBetaCV <- function(
 #' @description The high-dimensional (`p >= NT`) debiased construction --- shared
 #'   by `debiasedATT()` and the `simultaneousCIs(method = "bootstrap")` band
 #'   center --- needs a nuisance `theta_hat` whose `l1` *rate* controls the
-#'   Neyman-orthogonal remainder (paper Theorem `debiased.highdim.thm`). The paper
+#'   Neyman-orthogonal remainder (the high-dimensional FETWFE theory). The paper
 #'   establishes that rate for a **`q = 1` fused lasso** (the convex case,
 #'   standard under the restricted-eigenvalue condition); the `q < 1` FETWFE
 #'   bridge is super-efficient / non-uniform --- the wrong nuisance for a

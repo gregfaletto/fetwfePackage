@@ -135,11 +135,12 @@ debiased SE accompanies a different point estimate than the fused one.
 
 When \code{p >= NT} the unrestricted ETWFE is infeasible, so the OLS identity no
 longer applies; the accessor instead builds the debiasing direction by a
-nodewise (desparsified-lasso) relaxed inverse (paper Theorem
-\code{debiased.highdim.thm}). The point estimate, SE formula, and return value are
+nodewise (desparsified-lasso) relaxed inverse (the high-dimensional FETWFE
+theory). The point estimate, SE formula, and return value are
 otherwise identical --- "one estimator, two regimes." This high-dimensional
 branch is \strong{experimental} (its overall-ATT coverage is validated
-near-nominally at the \code{p >= NT} anchor of Faletto (2025); see Assumptions).
+near-nominally, with the CV-selected penalty, at the \code{p >= NT} anchor of
+Faletto (2025); see Assumptions).
 }
 \details{
 The standard error has two channels that \strong{add} under marginal cohort
@@ -195,14 +196,14 @@ documentation).
 \item \strong{Regularity / two regimes.} When \code{p < NT} (Theorem
 \code{debiased.att.thm}) the full design Gram is nonsingular and the debiasing
 direction is the exact inverse; the accessor reduces to debiased ETWFE.
-When \code{p >= NT} (Theorem \code{debiased.highdim.thm}) the Gram is singular and the
+When \code{p >= NT} (the high-dimensional FETWFE theory) the Gram is singular and the
 direction is the \strong{nodewise (desparsified-lasso) relaxed inverse} of
 equation \code{debiased.highdim.v} (the same estimate and SE, only \code{v} differs
 --- "one estimator, two regimes"); it requires sparsity
 (\verb{s_N log(p_N) / sqrt(N) -> 0}), a restricted-eigenvalue condition over
 sparse cones, \verb{||v*||_1 = O(1)}, and a bounded limiting variance
-\verb{a' Sigma_theta^(-1) a}. The high-dimensional branch realizes Theorem
-\code{debiased.highdim.thm} with the theory-scaled penalty; its finite-sample
+\verb{a' Sigma_theta^(-1) a}. The high-dimensional branch realizes the
+high-dimensional FETWFE theory with the theory-scaled penalty; its finite-sample
 \strong{coverage is validated near-nominally} at the \code{p >= NT} anchor of Faletto
 (2025) with the feasibility-appropriate penalty, but not yet across regimes
 or at the default theory-scale \code{lambda_c}; treat the \code{p >= NT} path as
@@ -215,7 +216,7 @@ fit's bridge (\code{q < 1}) \code{theta_hat}: Theorem \code{debiased.att.thm} ne
 \emph{consistency} of the nuisance, and with the exact inverse this is the OLS
 identity. The \strong{high-dimensional} branch instead fits an internal \code{q = 1}
 fused lasso (\code{grpreg::cv.grpreg(penalty = "gBridge", gamma = 1)}, CV-selected
-\code{lambda}) as the nuisance, because Theorem \code{debiased.highdim.thm} controls the
+\code{lambda}) as the nuisance, because the high-dimensional FETWFE theory controls the
 orthogonalization remainder through the nuisance's \code{l1} \emph{rate}
 (\verb{||theta_hat - theta*||_1 = O_p(s_N lambda_theta)}) --- the rate the \code{q = 1}
 fused lasso enjoys under a restricted-eigenvalue condition (the standard

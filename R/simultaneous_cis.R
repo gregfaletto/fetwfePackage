@@ -88,9 +88,11 @@ utils::globalVariables(c(
 #'   construction of `debiasedATT()` (per-effect nodewise directions) generalized
 #'   to the family. This desparsified `p >= NT` path is **experimental**
 #'   (`fetwfe()` fits only): it generalizes the `debiasedATT()` construction
-#'   whose overall-ATT coverage is validated near-nominally at the `p >= NT`
-#'   anchor of Faletto (2025), but the family-wise *band* coverage here is not
-#'   itself simulation-validated, so inspect the returned `feasibility` /
+#'   whose overall-ATT coverage was validated near-nominally (with the
+#'   CV-selected penalty) at the `p >= NT` anchor of Faletto (2025), but the
+#'   family-wise
+#'   *band* coverage here is not itself simulation-validated, so inspect the
+#'   returned `feasibility` /
 #'   `converged` diagnostics. A
 #'   non-`fetwfe()` `p >= NT`
 #'   fit (e.g. `betwfe()`) has no desparsified band, so it instead falls back to
@@ -103,7 +105,7 @@ utils::globalVariables(c(
 #'   desparsified path covers all
 #'   four families (a high-dimensional `family = "event_study"` fit additionally
 #'   carries the propensity channel `F_pi`). In the high-dimensional regime the
-#'   band is centered on the **debiased** estimate (the Theorem 6.6 correction,
+#'   band is centered on the **debiased** estimate (the high-dimensional FETWFE theory correction,
 #'   equal to `debiasedATT()`'s point estimate for the matching contrast), not
 #'   the post-selection bridge estimate; fixed-p bands center on the (unbiased)
 #'   bridge estimate as before. Because this desparsified bootstrap band is
@@ -1456,10 +1458,25 @@ print.simultaneous_cis <- function(x, ...) {
 #' @keywords internal
 #' @noRd
 .print_highdim_diagnostics <- function(x) {
+	# Scope the coverage claim honestly (#364): the p >= NT overall-ATT coverage
+	# was validated near-nominally (#88 simulation study), and only with the CV-selected
+	# penalty -- not the default fixed `lambda_c`. For a band object the family-wise
+	# coverage is not itself validated; for the scalar interval, only the overall
+	# ATT at the CV penalty is.
+	is_band <- inherits(x, "simultaneous_cis")
+	caveat <- if (is_band) {
+		"family-wise band coverage here is not itself simulation-validated"
+	} else {
+		"coverage at other penalties is not separately validated"
+	}
 	cat(
-		"High-dimensional (p >= NT) desparsified band [EXPERIMENTAL: overall-ATT\n",
-		"  coverage validated near-nominally at the studied p >= NT anchor\n",
-		"  (Faletto 2025) -- inspect the diagnostics below]\n",
+		sprintf(
+			"High-dimensional (p >= NT) desparsified %s [EXPERIMENTAL:\n",
+			if (is_band) "band" else "interval"
+		),
+		"  overall-ATT coverage was validated near-nominally at a p >= NT anchor\n",
+		"  with the CV-selected penalty (Faletto 2025), but\n",
+		sprintf("  %s -- inspect the diagnostics below]\n", caveat),
 		sep = ""
 	)
 	sel <- if (identical(x$lambda_c_selection, "cv")) "CV-selected" else "fixed"
