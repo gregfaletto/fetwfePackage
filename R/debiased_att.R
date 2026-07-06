@@ -130,7 +130,7 @@
 #'     cluster approximation is poor and the interval can under-cover; a genuine
 #'     few-clusters correction (a restricted wild-cluster bootstrap-t or a
 #'     CR2-type analytic adjustment, #361) is future work. The
-#'     `se_method = "wild_bootstrap"` option does *not* remedy this (see its
+#'     `method = "bootstrap"` option does *not* remedy this (see its
 #'     documentation).
 #'   \item **Regularity / two regimes.** When `p < NT` (Theorem
 #'     `debiased.att.thm`) the full design Gram is nonsingular and the debiasing
@@ -177,9 +177,9 @@
 #'   construction is specific to the FETWFE transformed-coefficient space).
 #' @param alpha Numeric in `(0, 1)`; the confidence level is `1 - alpha`.
 #'   Defaults to the `alpha` stored on the fit.
-#' @param se_method How to form the confidence interval. `"analytic"` (default)
+#' @param method How to form the confidence interval. `"analytic"` (default)
 #'   uses the two-channel unit-clustered sandwich SE with a Gaussian critical
-#'   value. `"wild_bootstrap"` replaces the Gaussian critical value with a
+#'   value. `"bootstrap"` replaces the Gaussian critical value with a
 #'   studentized score / influence-function **wild cluster bootstrap** (#360),
 #'   **floored at the Gaussian quantile** so the interval is never narrower than
 #'   the analytic Wald interval. The point estimate and the reported `se` are
@@ -191,15 +191,14 @@
 #'   critical value (before the floor) falls *below* the Gaussian --- so under the
 #'   floor it reduces to the analytic interval exactly in the small-`N` regime; it
 #'   only ever *widens* the interval when cluster influence is near-homogeneous.
-#'   For a
-#'   genuine few-clusters correction the restricted bootstrap-t or a CR2-type
+#'   For a genuine few-clusters correction the restricted bootstrap-t or a CR2-type
 #'   analytic adjustment is required (tracked as future work, #361). Not supported
 #'   for `indep_counts` (two-sample) fits.
 #' @param B Integer; the number of wild-bootstrap replicates (default `1000`).
-#'   Ignored unless `se_method = "wild_bootstrap"`.
+#'   Ignored unless `method = "bootstrap"`.
 #' @param seed `NULL` (draw from the ambient RNG, the default) or a single
 #'   integer for a reproducible bootstrap (the RNG state is saved and restored).
-#'   Ignored unless `se_method = "wild_bootstrap"`.
+#'   Ignored unless `method = "bootstrap"`.
 #' @param multiplier The wild-bootstrap weight distribution: `"webb"` (default),
 #'   `"rademacher"`, or `"mammen"`. `"rademacher"` (`±1`) gives a constant
 #'   studentization denominator (a *percentile* bootstrap); `"webb"` and
@@ -207,7 +206,7 @@
 #'   floored at the Gaussian quantile, the multiplier only affects the
 #'   near-homogeneous case where the bootstrap widens above the floor; in the
 #'   small-`N` / heterogeneous regime the interval is the analytic one regardless
-#'   of the weight. Ignored unless `se_method = "wild_bootstrap"`.
+#'   of the weight. Ignored unless `method = "bootstrap"`.
 #' @param lambda_c The leading constant of the high-dimensional (`p >= NT`)
 #'   nodewise penalty `lambda_node = lambda_c * max(|a|) * sqrt(log(p) / N)` (`N` =
 #'   number of units). Either a single positive number (a fixed constant; default
@@ -230,8 +229,8 @@
 #'     \item{se}{Numeric scalar; the uniformly-valid standard error,
 #'       `sqrt(var_reg + var_weight)`.}
 #'     \item{ci_low, ci_high}{Numeric; the `1 - alpha` interval. With
-#'       `se_method = "analytic"` (default) this is the Wald interval
-#'       `att +/- qnorm(1 - alpha/2) * se`; with `se_method = "wild_bootstrap"`
+#'       `method = "analytic"` (default) this is the Wald interval
+#'       `att +/- qnorm(1 - alpha/2) * se`; with `method = "bootstrap"`
 #'       the critical value is the bootstrap `crit_value` (floored at
 #'       `qnorm(1 - alpha/2)`, so never narrower than the Wald interval) in place
 #'       of `qnorm(1 - alpha/2)`.}
@@ -255,8 +254,8 @@
 #'   per-grid feasibility flags and CV losses, and whether the theory-scale
 #'   fallback fired). These are absent for `p < NT` fits.
 #'
-#'   With `se_method = "wild_bootstrap"` the list additionally contains
-#'   `se_method`, `crit_value` (the studentized wild-bootstrap critical value,
+#'   With `method = "bootstrap"` the list additionally contains
+#'   `method`, `crit_value` (the studentized wild-bootstrap critical value,
 #'   floored at `qnorm(1 - alpha/2)`), `B`, `multiplier`, and `alpha`. The analytic
 #'   default adds none of these, so its `names()` are unchanged.
 #'
@@ -279,7 +278,7 @@
 debiasedATT <- function(
 	fit,
 	alpha = NULL,
-	se_method = c("analytic", "wild_bootstrap"),
+	method = c("analytic", "bootstrap"),
 	B = 1000L,
 	seed = NULL,
 	multiplier = c("webb", "rademacher", "mammen"),
@@ -287,7 +286,7 @@ debiasedATT <- function(
 	riesz_max_iter = 5000L,
 	riesz_tol = 1e-9
 ) {
-	se_method <- match.arg(se_method)
+	method <- match.arg(method)
 	multiplier <- match.arg(multiplier)
 	if (!inherits(fit, "fetwfe")) {
 		stop(
@@ -316,11 +315,11 @@ debiasedATT <- function(
 		)
 	}
 
-	if (se_method == "wild_bootstrap") {
+	if (method == "bootstrap") {
 		B <- .validate_boot_args(B, seed, "debiasedATT")
 		if (isTRUE(fit$indep_counts_used)) {
 			stop(
-				"debiasedATT(se_method = \"wild_bootstrap\") is not supported for ",
+				"debiasedATT(method = \"bootstrap\") is not supported for ",
 				"`indep_counts` (two-sample) fits: the cohort-weight variance ",
 				"channel is estimated from the separate count sample, so it has no ",
 				"per-unit influence-function decomposition over the main sample's ",
@@ -684,7 +683,7 @@ debiasedATT <- function(
 	# per-unit V1 (regression) influence summand; the per-unit V2 (cohort-weight)
 	# summands are built inside the helper. The analytic default leaves `out`
 	# byte-identical (no extra fields), preserving the `names()` contract.
-	if (se_method == "wild_bootstrap") {
+	if (method == "bootstrap") {
 		boot <- .debiased_att_wild_boot(
 			fit = fit,
 			psi1 = unit_scores,
@@ -701,7 +700,7 @@ debiasedATT <- function(
 		)
 		out$ci_low <- boot$ci_low
 		out$ci_high <- boot$ci_high
-		out$se_method <- "wild_bootstrap"
+		out$method <- "bootstrap"
 		out$crit_value <- boot$crit
 		out$B <- B
 		out$multiplier <- multiplier
@@ -857,14 +856,14 @@ debiasedATT <- function(
 #' @export
 print.debiased_att <- function(x, ...) {
 	highdim <- !is.null(x$lambda_node)
-	boot <- identical(x$se_method, "wild_bootstrap")
+	boot <- identical(x$method, "bootstrap")
 	cat(sprintf(
 		"Debiased overall ATT (%s regime)\n",
 		if (highdim) "high-dimensional" else "fixed-p"
 	))
 	# The wild-bootstrap CI half-width is `crit * se` with a bootstrap `crit`, so
 	# the nominal level cannot be read back off the Gaussian quantile -- use the
-	# stored `alpha`. The analytic path (no `se_method`) keeps its inference.
+	# stored `alpha`. The analytic path (no `method`) keeps its inference.
 	level <- if (boot) {
 		round(100 * (1 - x$alpha))
 	} else if (is.finite(x$se) && x$se > 0) {

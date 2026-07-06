@@ -1,5 +1,14 @@
 # NEWS
 
+## Version 1.56.2
+
+- Renamed `debiasedATT()`'s bootstrap-CI argument from `se_method` to `method`
+  (and its non-default value from `"wild_bootstrap"` to `"bootstrap"`) to match
+  the sibling `simultaneousCIs()`, whose argument is also `method` with values
+  `"analytic"` / `"bootstrap"`. This resolves the naming inconsistency between the
+  two inference functions before the 2.x release; `se_method` never appeared in a
+  CRAN release (#365).
+
 ## Version 1.56.1
 
 - Renamed the introductory vignette from `vignette.Rmd` to `fetwfe.Rmd` so it is
