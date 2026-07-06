@@ -1,0 +1,386 @@
+# Fused Extended Two-Way Fixed Effects
+
+The [fetwfe](https://gregfaletto.github.io/fetwfePackage/) package
+implements *fused extended two-way fixed effects* (FETWFE), a
+methodology for estimating treatment effects in
+difference-in-differences with staggered adoptions.
+
+- For a brief introduction to the methodology, as well as background on
+  difference-in-differences with staggered adoptions and motivation for
+  FETWFE, see this [blog
+  post](https://gregoryfaletto.com/2023/12/13/new-paper-fused-extended-two-way-fixed-effects-for-difference-in-differences-with-staggered-adoptions/).
+- For more detailed slides on the methodology (but less detailed than
+  the paper), see
+  [here](https://gregoryfaletto.com/2024/02/11/presentation-on-fused-extended-two-way-fixed-effects/).
+- Check out the most recent draft of the full paper
+  [here](https://arxiv.org/abs/2312.05985).
+- This [blog
+  post](https://gregoryfaletto.com/2025/01/03/new-r-fetwfe-package-implementing-fused-extended-two-way-fixed-effects/)
+  explains a little more about what the package does under the hood, if
+  you’re interested.
+
+# fetwfePackage
+
+To install the [fetwfe](https://gregfaletto.github.io/fetwfePackage/)
+package, simply use
+
+``` r
+
+install.packages("fetwfe")
+```
+
+You can also install the latest development version by using
+
+``` r
+
+# install.packages("remotes")  # if needed
+remotes::install_github("gregfaletto/fetwfePackage")
+```
+
+The primary function in the
+[fetwfe](https://gregfaletto.github.io/fetwfePackage/) is
+[`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md),
+which implements fused extended two-way fixed effects. Here’s some
+example code applying
+[`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)
+to the `divorce` data set from the `bacondecomp` package – the
+unilateral (“no-fault”) divorce / female-suicide panel of Stevenson and
+Wolfers (2006):
+
+``` r
+
+library(fetwfe)
+library(bacondecomp)
+
+data(divorce)
+
+# Restrict to the female subset (`sex == 2`). `changed` is already the absorbing
+# 0/1 divorce-reform indicator, and the response is the elasticity-scaled female
+# suicide rate. This reproduces the empirical application in Faletto (2025,
+# Sec. 8.2): the three covariates are passed as controls (one, `murderrate`, is
+# auto-dropped because it is missing in 1964, leaving two), and the noise
+# variances are supplied (precomputed by REML) to keep the call fast.
+divorce_f <- divorce[divorce$sex == 2, ]
+
+res <- fetwfe(
+    pdata = divorce_f,
+    time_var = "year",
+    unit_var = "st",
+    treatment = "changed",
+    covs = c("murderrate", "lnpersinc", "afdcrolls"),
+    response = "suiciderate_elast_jag",
+    sig_eps_sq = 0.0344,
+    sig_eps_c_sq = 0.1507,
+    add_ridge = TRUE,
+    q = 0.5)
+
+# Overall ATT is about -6% on the elasticity-scaled female suicide rate, with a
+# 95% CI that excludes zero; FETWFE retains heterogeneous cohort effects here.
+summary(res)
+```
+
+For vignettes and full documentation, check out the [page for the
+`{fetwfe}` package on CRAN](https://CRAN.R-project.org/package=fetwfe).
+
+## Penalty and fusion structures
+
+A core differentiator of FETWFE is the *geometry* of its fusion penalty,
+chosen via the `fusion_structure` argument of
+[`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md):
+
+- **`"cohort"`** (the default) fuses treatment effects within and
+  between cohorts — the two-way fusion structure of Faletto (2025).
+- **`"event_study"`** instead fuses effects at the same time since
+  treatment (event time `e = t - g`) across cohorts — the package
+  realization of the paper’s event-study-penalty theory.
+
+For full control, the `fusion_matrix` argument accepts any invertible
+`num_treats x num_treats` differencing matrix `D_N`, encoding an
+arbitrary fusion structure beyond the two built-ins. The same
+`fusion_structure` option is available in
+[`genCoefs()`](https://gregfaletto.github.io/fetwfePackage/reference/genCoefs.md)
+for simulation studies.
+
+For guidance on which to use, see the vignette *“Choosing a fusion
+structure: cohort vs. event-study penalties”* —
+[`vignette("fusion_structure_vignette", package = "fetwfe")`](https://gregfaletto.github.io/fetwfePackage/articles/fusion_structure_vignette.md),
+also on the [CRAN page](https://CRAN.R-project.org/package=fetwfe).
+
+## References
+
+- Faletto, G (2025). *Fused Extended Two-Way Fixed Effects for
+  Difference-in-Differences with Staggered Adoptions*. [arXiv preprint
+  arXiv:2312.05985](https://arxiv.org/abs/2312.05985).
+
+# Package index
+
+## Estimators
+
+Fit fused extended two-way fixed effects (FETWFE) and its comparison
+estimators for difference-in-differences with staggered adoptions.
+
+- [`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)
+  : Fused extended two-way fixed effects
+- [`etwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/etwfe.md)
+  : Extended two-way fixed effects
+- [`betwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/betwfe.md)
+  : Bridge-penalized extended two-way fixed effects
+- [`twfeCovs()`](https://gregfaletto.github.io/fetwfePackage/reference/twfeCovs.md)
+  : Two-way fixed effects with covariates and a single pooled treatment
+  effect per cohort
+
+## Inference
+
+Confidence intervals and debiased overall-ATT inference.
+
+- [`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)
+  : Debiased overall-ATT with a uniformly-valid standard error
+- [`simultaneousCIs()`](https://gregfaletto.github.io/fetwfePackage/reference/simultaneousCIs.md)
+  : Parametric simultaneous (1 - alpha) confidence intervals over a
+  family of treatment effects
+
+## Treatment-effect summaries
+
+Extract cohort, event-study, and cohort-by-time treatment effects.
+
+- [`getTes()`](https://gregfaletto.github.io/fetwfePackage/reference/getTes.md)
+  : Compute True Treatment Effects
+- [`cohortStudy()`](https://gregfaletto.github.io/fetwfePackage/reference/cohortStudy.md)
+  : Per-cohort average treatment effects
+- [`eventStudy()`](https://gregfaletto.github.io/fetwfePackage/reference/eventStudy.md)
+  : Compute pooled event-time treatment-effect estimates
+- [`cohortTimeATTs()`](https://gregfaletto.github.io/fetwfePackage/reference/cohortTimeATTs.md)
+  : Per-(cohort, time) average treatment effects
+
+## Simulation
+
+Generate coefficients and panel data for simulation studies.
+
+- [`genCoefs()`](https://gregfaletto.github.io/fetwfePackage/reference/genCoefs.md)
+  : Generate Coefficient Vector for Data Generation
+- [`genCoefsCore()`](https://gregfaletto.github.io/fetwfePackage/reference/genCoefsCore.md)
+  : Generate Coefficient Vector for Data Generation (core)
+- [`simulateData()`](https://gregfaletto.github.io/fetwfePackage/reference/simulateData.md)
+  : Generate Random Panel Data for FETWFE Simulations
+- [`simulateDataCore()`](https://gregfaletto.github.io/fetwfePackage/reference/simulateDataCore.md)
+  : Generate Random Panel Data for FETWFE Simulations (core)
+
+## Fit on simulated data
+
+Convenience drivers that fit directly on simulateData() output.
+
+- [`fetwfeWithSimulatedData()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfeWithSimulatedData.md)
+  : Run FETWFE on Simulated Data
+- [`etwfeWithSimulatedData()`](https://gregfaletto.github.io/fetwfePackage/reference/etwfeWithSimulatedData.md)
+  : Run ETWFE on Simulated Data
+- [`betwfeWithSimulatedData()`](https://gregfaletto.github.io/fetwfePackage/reference/betwfeWithSimulatedData.md)
+  : Run BETWFE on Simulated Data
+- [`twfeCovsWithSimulatedData()`](https://gregfaletto.github.io/fetwfePackage/reference/twfeCovsWithSimulatedData.md)
+  : Run twfeCovs on Simulated Data
+- [`debiasedATTWithSimulatedData()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATTWithSimulatedData.md)
+  : Run debiasedATT() on simulated data
+
+## Data conversion
+
+Convert data frames from other DiD packages into the FETWFE format.
+
+- [`attgtToFetwfeDf()`](https://gregfaletto.github.io/fetwfePackage/reference/attgtToFetwfeDf.md)
+  :
+
+  Convert data formatted for `att_gt()` to a dataframe suitable for
+  [`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)
+  /
+  [`etwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/etwfe.md)
+
+- [`etwfeToFetwfeDf()`](https://gregfaletto.github.io/fetwfePackage/reference/etwfeToFetwfeDf.md)
+  :
+
+  Convert data prepared for `etwfe::etwfe()` to the format required by
+  [`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)
+  and
+  [`fetwfe::etwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/etwfe.md)
+
+## Methods
+
+broom (tidy / glance / augment) and base S3 methods (plot, print) for
+the fitted objects.
+
+- [`tidy(`*`<FETWFE_tes>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/tidy.FETWFE_tes.md)
+  :
+
+  Tidy a `FETWFE_tes` simulation truth object
+
+- [`tidy(`*`<betwfe>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/tidy.betwfe.md)
+  :
+
+  Tidy a `betwfe` fitted object
+
+- [`tidy(`*`<cohortStudy>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/tidy.cohortStudy.md)
+  :
+
+  Tidy a `cohortStudy` object
+
+- [`tidy(`*`<cohortTimeATTs>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/tidy.cohortTimeATTs.md)
+  :
+
+  Tidy a `cohortTimeATTs` object
+
+- [`tidy(`*`<debiased_att>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/tidy.debiased_att.md)
+  : Tidy a debiased overall-ATT estimate
+
+- [`tidy(`*`<etwfe>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/tidy.etwfe.md)
+  :
+
+  Tidy an `etwfe` fitted object
+
+- [`tidy(`*`<eventStudy>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/tidy.eventStudy.md)
+  :
+
+  Tidy an `eventStudy` object
+
+- [`tidy(`*`<fetwfe>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/tidy.fetwfe.md)
+  :
+
+  Tidy an `fetwfe` fitted object
+
+- [`tidy(`*`<simultaneous_cis>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/tidy.simultaneous_cis.md)
+  : Tidy a simultaneous-confidence-interval object
+
+- [`tidy(`*`<twfeCovs>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/tidy.twfeCovs.md)
+  :
+
+  Tidy a `twfeCovs` fitted object
+
+- [`glance(`*`<betwfe>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/glance.betwfe.md)
+  :
+
+  Glance a `betwfe` fitted object
+
+- [`glance(`*`<etwfe>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/glance.etwfe.md)
+  :
+
+  Glance an `etwfe` fitted object
+
+- [`glance(`*`<fetwfe>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/glance.fetwfe.md)
+  :
+
+  Glance an `fetwfe` fitted object
+
+- [`glance(`*`<twfeCovs>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/glance.twfeCovs.md)
+  :
+
+  Glance a `twfeCovs` fitted object
+
+- [`augment(`*`<betwfe>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/augment.betwfe.md)
+  : Augment user-supplied data with fitted values and residuals from a
+  betwfe fit
+
+- [`augment(`*`<etwfe>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/augment.etwfe.md)
+  : Augment user-supplied data with fitted values and residuals from an
+  etwfe fit
+
+- [`augment(`*`<fetwfe>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/augment.fetwfe.md)
+  : Augment user-supplied data with fitted values and residuals from a
+  fetwfe fit
+
+- [`augment(`*`<twfeCovs>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/augment.twfeCovs.md)
+  : Augment is not defined for a twfeCovs fit (documented omission)
+
+- [`plot(`*`<betwfe>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/plot.betwfe.md)
+  : Plot CATT or event-study estimates from a fitted BETWFE
+
+- [`plot(`*`<etwfe>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/plot.etwfe.md)
+  : Plot CATT or event-study estimates from a fitted ETWFE
+
+- [`plot(`*`<fetwfe>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/plot.fetwfe.md)
+  : Plot CATT or event-study estimates from a fitted FETWFE / ETWFE /
+  BETWFE
+
+- [`plot(`*`<simultaneous_cis>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/plot.simultaneous_cis.md)
+  : Plot a simultaneous-confidence-interval object
+
+- [`plot(`*`<twfeCovs>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/plot.twfeCovs.md)
+  : Plot is not defined for a twfeCovs fit (documented omission)
+
+- [`print(`*`<debiased_att>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/print.debiased_att.md)
+  : Print a debiased overall-ATT estimate
+
+- [`print(`*`<simultaneous_cis>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/print.simultaneous_cis.md)
+  : Print a simultaneous-confidence-interval object
+
+## Classes and low-level accessors
+
+Class definitions and the `catt_df` element accessors.
+
+- [`FETWFE_coefs-class`](https://gregfaletto.github.io/fetwfePackage/reference/FETWFE_coefs-class.md)
+  : FETWFE Coefficient-Vector Class
+
+- [`FETWFE_simulated-class`](https://gregfaletto.github.io/fetwfePackage/reference/FETWFE_simulated-class.md)
+  : Simulated Panel-Data Class
+
+- [`FETWFE_tes-class`](https://gregfaletto.github.io/fetwfePackage/reference/FETWFE_tes-class.md)
+  : Compute True Treatment Effects Output Class
+
+- [`betwfe-class`](https://gregfaletto.github.io/fetwfePackage/reference/betwfe-class.md)
+  : Bridge-Penalized Extended Two-Way Fixed Effects Output Class
+
+- [`etwfe-class`](https://gregfaletto.github.io/fetwfePackage/reference/etwfe-class.md)
+  : Extended Two-Way Fixed Effects Output Class
+
+- [`fetwfe-class`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe-class.md)
+  : Fused Extended Two-Way Fixed Effects Output Class
+
+- [`twfeCovs-class`](https://gregfaletto.github.io/fetwfePackage/reference/twfeCovs-class.md)
+  : TWFE-With-Covariates Output Class
+
+- [`` `$`( ``*`<catt_df>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/cash-.catt_df.md)
+  :
+
+  Dollar-sign access on a `catt_df` object
+
+- [`` `$<-`( ``*`<catt_df>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/cash-set-.catt_df.md)
+  :
+
+  Dollar-sign assignment on a `catt_df` object
+
+- [`` `[`( ``*`<catt_df>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/sub-.catt_df.md)
+  :
+
+  Single-bracket access on a `catt_df` object
+
+- [`` `[[`( ``*`<catt_df>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/sub-sub-.catt_df.md)
+  :
+
+  Double-bracket access on a `catt_df` object
+
+- [`` `[[<-`( ``*`<catt_df>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/sub-subset-.catt_df.md)
+  :
+
+  Double-bracket assignment on a `catt_df` object
+
+- [`` `[<-`( ``*`<catt_df>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/subset-.catt_df.md)
+  :
+
+  Single-bracket assignment on a `catt_df` object
+
+# Articles
+
+### Get started
+
+- [fetwfe: A Package for Fused Extended Two-Way Fixed
+  Effects](https://gregfaletto.github.io/fetwfePackage/articles/vignette.md):
+
+### Topics
+
+Deeper dives into fusion structures, inference, simulation, and the
+comparison estimators.
+
+- [Choosing a fusion structure: cohort vs. event-study
+  penalties](https://gregfaletto.github.io/fetwfePackage/articles/fusion_structure_vignette.md):
+- [Inference in fetwfe: standard errors, simultaneous bands, and
+  high-dimensional
+  debiasing](https://gregfaletto.github.io/fetwfePackage/articles/inference_vignette.md):
+- [Simulation Vignette for FETWFE: From Coefficients to True Treatment
+  Effects](https://gregfaletto.github.io/fetwfePackage/articles/simulation_vignette.md):
+- [Comparison Estimators: ETWFE and
+  BETWFE](https://gregfaletto.github.io/fetwfePackage/articles/etwfe_betwfe_vignette.md):
