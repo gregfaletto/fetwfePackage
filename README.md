@@ -8,6 +8,10 @@
 
 The `{fetwfe}` package implements *fused extended two-way fixed effects* (FETWFE), a methodology for estimating treatment effects in difference-in-differences with staggered adoptions.
 
+In staggered-adoption settings — where units become treated at different times — treatment effects typically vary across adoption cohorts and over time since treatment. The conventional two-way fixed effects (TWFE) estimator is biased when effects are heterogeneous like this, because it effectively uses already-treated units as controls for newly-treated ones, contaminating the estimate.
+
+FETWFE instead fits a *fully heterogeneous* model — a separate effect for every cohort and time period — and applies a **fusion penalty** that shrinks together effects which are similar across neighboring cohorts and periods. This pools the cohort-by-time effects in a data-driven way (collapsing them where they genuinely agree, keeping them distinct where they differ) and, unlike ad hoc model selection, comes with **asymptotically valid standard errors and confidence intervals** for the resulting estimates.
+
 * For a brief introduction to the methodology, as well as background on difference-in-differences with staggered adoptions and motivation for FETWFE, see this [blog post](https://gregoryfaletto.com/2023/12/13/new-paper-fused-extended-two-way-fixed-effects-for-difference-in-differences-with-staggered-adoptions/).
 * For more detailed slides on the methodology (but less detailed than the paper), see [here](https://gregoryfaletto.com/2024/02/11/presentation-on-fused-extended-two-way-fixed-effects/).
 * Check out the most recent draft of the full paper [here](https://arxiv.org/abs/2312.05985).
