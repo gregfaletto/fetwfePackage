@@ -5,7 +5,7 @@ template:
 
 navbar:
   structure:
-    left: [reference, articles, news]
+    left: [intro, reference, articles, news]
     right: [search, paper, github]
   components:
     paper:
@@ -14,9 +14,6 @@ navbar:
       aria-label: FETWFE paper on arXiv
 
 articles:
-- title: Get started
-  contents:
-  - vignette
 - title: Topics
   desc: >
     Deeper dives into fusion structures, inference, simulation, and the

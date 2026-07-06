@@ -1,5 +1,12 @@
 # NEWS
 
+## Version 1.56.1
+
+- Renamed the introductory vignette from `vignette.Rmd` to `fetwfe.Rmd` so it is
+  featured as the "Get started" page on the package website (#283, #371). It is
+  now accessed with `vignette("fetwfe")` rather than `vignette("vignette")`; the
+  content is unchanged.
+
 ## Version 1.56.0
 
 ### Bug fixes
