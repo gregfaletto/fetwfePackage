@@ -1,5 +1,11 @@
 # Fused Extended Two-Way Fixed Effects
 
+<!-- badges: start -->
+[![CRAN status](https://www.r-pkg.org/badges/version/fetwfe)](https://CRAN.R-project.org/package=fetwfe)
+[![CRAN downloads](https://cranlogs.r-pkg.org/badges/grand-total/fetwfe)](https://CRAN.R-project.org/package=fetwfe)
+[![Lifecycle: stable](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://lifecycle.r-lib.org/articles/stages.html#stable)
+<!-- badges: end -->
+
 The `{fetwfe}` package implements *fused extended two-way fixed effects* (FETWFE), a methodology for estimating treatment effects in difference-in-differences with staggered adoptions.
 
 * For a brief introduction to the methodology, as well as background on difference-in-differences with staggered adoptions and motivation for FETWFE, see this [blog post](https://gregoryfaletto.com/2023/12/13/new-paper-fused-extended-two-way-fixed-effects-for-difference-in-differences-with-staggered-adoptions/).
