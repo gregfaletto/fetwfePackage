@@ -985,14 +985,13 @@ is why the diagnostics above matter.
 
 ### An asymptotic alternative: the wild bootstrap
 
-`se_method = "wild_bootstrap"` offers an alternative,
-asymptotically-valid reference distribution for the overall-ATT
-interval: a studentized score / influence-function **wild cluster
-bootstrap** that re-signs the per-unit influence summands (no refit per
-replicate), leaving the point estimate and the reported `se` unchanged
-and changing only the critical value. It is **floored at the Gaussian
-quantile**, so the interval is never narrower than the analytic Wald
-interval.
+`method = "bootstrap"` offers an alternative, asymptotically-valid
+reference distribution for the overall-ATT interval: a studentized score
+/ influence-function **wild cluster bootstrap** that re-signs the
+per-unit influence summands (no refit per replicate), leaving the point
+estimate and the reported `se` unchanged and changing only the critical
+value. It is **floored at the Gaussian quantile**, so the interval is
+never narrower than the analytic Wald interval.
 
 **It is not a few-clusters remedy.** The analytic sandwich SE is
 downward-biased with few clusters, but this bootstrap does not fix that:
@@ -1010,7 +1009,7 @@ required (future work).
 
 # `fit` must be a single-sample fetwfe() fit -- not an `indep_counts` fit, which
 # the worked example above (via fetwfeWithSimulatedData) happens to be.
-debiasedATT(fit, se_method = "wild_bootstrap", multiplier = "webb", seed = 1)
+debiasedATT(fit, method = "bootstrap", multiplier = "webb", seed = 1)
 ```
 
 The `multiplier` (`"webb"`, the default; `"rademacher"`; or `"mammen"`)

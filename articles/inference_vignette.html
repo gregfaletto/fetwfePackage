@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">fetwfe</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -1180,7 +1180,7 @@ the diagnostics above matter.</p>
 <div class="section level3">
 <h3 id="an-asymptotic-alternative-the-wild-bootstrap">An asymptotic alternative: the wild bootstrap<a class="anchor" aria-label="anchor" href="#an-asymptotic-alternative-the-wild-bootstrap"></a>
 </h3>
-<p><code>se_method = "wild_bootstrap"</code> offers an alternative,
+<p><code>method = "bootstrap"</code> offers an alternative,
 asymptotically-valid reference distribution for the overall-ATT
 interval: a studentized score / influence-function <strong>wild cluster
 bootstrap</strong> that re-signs the per-unit influence summands (no
@@ -1203,7 +1203,7 @@ work).</p>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># `fit` must be a single-sample fetwfe() fit -- not an `indep_counts` fit, which</span></span>
 <span><span class="co"># the worked example above (via fetwfeWithSimulatedData) happens to be.</span></span>
-<span><span class="fu"><a href="../reference/debiasedATT.html">debiasedATT</a></span><span class="op">(</span><span class="va">fit</span>, se_method <span class="op">=</span> <span class="st">"wild_bootstrap"</span>, multiplier <span class="op">=</span> <span class="st">"webb"</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/debiasedATT.html">debiasedATT</a></span><span class="op">(</span><span class="va">fit</span>, method <span class="op">=</span> <span class="st">"bootstrap"</span>, multiplier <span class="op">=</span> <span class="st">"webb"</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></code></pre></div>
 <p>The <code>multiplier</code> (<code>"webb"</code>, the default;
 <code>"rademacher"</code>; or <code>"mammen"</code>) only affects the
 near-homogeneous case where the bootstrap widens above the floor — in

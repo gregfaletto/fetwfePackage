@@ -49,7 +49,7 @@ near-nominally at the p &amp;gt;= NT anchor of Faletto (2025); see Assumptions).
 
     <a class="navbar-brand me-2" href="../index.html">fetwfe</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -108,7 +108,7 @@ near-nominally at the <code>p &gt;= NT</code> anchor of Faletto (2025); see Assu
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">debiasedATT</span><span class="op">(</span></span>
 <span>  <span class="va">fit</span>,</span>
 <span>  alpha <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  se_method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"analytic"</span>, <span class="st">"wild_bootstrap"</span><span class="op">)</span>,</span>
+<span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"analytic"</span>, <span class="st">"bootstrap"</span><span class="op">)</span>,</span>
 <span>  B <span class="op">=</span> <span class="fl">1000L</span>,</span>
 <span>  seed <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  multiplier <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"webb"</span>, <span class="st">"rademacher"</span>, <span class="st">"mammen"</span><span class="op">)</span>,</span>
@@ -136,10 +136,10 @@ construction is specific to the FETWFE transformed-coefficient space).</p></dd>
 Defaults to the <code>alpha</code> stored on the fit.</p></dd>
 
 
-<dt id="arg-se-method">se_method<a class="anchor" aria-label="anchor" href="#arg-se-method"></a></dt>
+<dt id="arg-method">method<a class="anchor" aria-label="anchor" href="#arg-method"></a></dt>
 <dd><p>How to form the confidence interval. <code>"analytic"</code> (default)
 uses the two-channel unit-clustered sandwich SE with a Gaussian critical
-value. <code>"wild_bootstrap"</code> replaces the Gaussian critical value with a
+value. <code>"bootstrap"</code> replaces the Gaussian critical value with a
 studentized score / influence-function <strong>wild cluster bootstrap</strong> (#360),
 <strong>floored at the Gaussian quantile</strong> so the interval is never narrower than
 the analytic Wald interval. The point estimate and the reported <code>se</code> are
@@ -150,21 +150,20 @@ wild-cluster bootstrap-t, and under heterogeneous cluster influence its
 critical value (before the floor) falls <em>below</em> the Gaussian — so under the
 floor it reduces to the analytic interval exactly in the small-<code>N</code> regime; it
 only ever <em>widens</em> the interval when cluster influence is near-homogeneous.
-For a
-genuine few-clusters correction the restricted bootstrap-t or a CR2-type
+For a genuine few-clusters correction the restricted bootstrap-t or a CR2-type
 analytic adjustment is required (tracked as future work, #361). Not supported
 for <code>indep_counts</code> (two-sample) fits.</p></dd>
 
 
 <dt id="arg-b">B<a class="anchor" aria-label="anchor" href="#arg-b"></a></dt>
 <dd><p>Integer; the number of wild-bootstrap replicates (default <code>1000</code>).
-Ignored unless <code>se_method = "wild_bootstrap"</code>.</p></dd>
+Ignored unless <code>method = "bootstrap"</code>.</p></dd>
 
 
 <dt id="arg-seed">seed<a class="anchor" aria-label="anchor" href="#arg-seed"></a></dt>
 <dd><p><code>NULL</code> (draw from the ambient RNG, the default) or a single
 integer for a reproducible bootstrap (the RNG state is saved and restored).
-Ignored unless <code>se_method = "wild_bootstrap"</code>.</p></dd>
+Ignored unless <code>method = "bootstrap"</code>.</p></dd>
 
 
 <dt id="arg-multiplier">multiplier<a class="anchor" aria-label="anchor" href="#arg-multiplier"></a></dt>
@@ -175,7 +174,7 @@ studentization denominator (a <em>percentile</em> bootstrap); <code>"webb"</code
 floored at the Gaussian quantile, the multiplier only affects the
 near-homogeneous case where the bootstrap widens above the floor; in the
 small-<code>N</code> / heterogeneous regime the interval is the analytic one regardless
-of the weight. Ignored unless <code>se_method = "wild_bootstrap"</code>.</p></dd>
+of the weight. Ignored unless <code>method = "bootstrap"</code>.</p></dd>
 
 
 <dt id="arg-lambda-c">lambda_c<a class="anchor" aria-label="anchor" href="#arg-lambda-c"></a></dt>
@@ -210,8 +209,8 @@ and a <code>tidy</code> method) with elements:</p><dl><dt>att</dt>
 
 <dt>ci_low, ci_high</dt>
 <dd><p>Numeric; the <code>1 - alpha</code> interval. With
-<code>se_method = "analytic"</code> (default) this is the Wald interval
-<code>att +/- qnorm(1 - alpha/2) * se</code>; with <code>se_method = "wild_bootstrap"</code>
+<code>method = "analytic"</code> (default) this is the Wald interval
+<code>att +/- qnorm(1 - alpha/2) * se</code>; with <code>method = "bootstrap"</code>
 the critical value is the bootstrap <code>crit_value</code> (floored at
 <code>qnorm(1 - alpha/2)</code>, so never narrower than the Wald interval) in place
 of <code>qnorm(1 - alpha/2)</code>.</p></dd>
@@ -238,8 +237,8 @@ and <code>lambda_c_selection</code> (<code>"fixed"</code> or <code>"cv"</code>).
 also contains <code>lambda_cv</code>, the cross-validation diagnostics (the grid, the
 per-grid feasibility flags and CV losses, and whether the theory-scale
 fallback fired). These are absent for <code>p &lt; NT</code> fits.</p>
-<p>With <code>se_method = "wild_bootstrap"</code> the list additionally contains
-<code>se_method</code>, <code>crit_value</code> (the studentized wild-bootstrap critical value,
+<p>With <code>method = "bootstrap"</code> the list additionally contains
+<code>method</code>, <code>crit_value</code> (the studentized wild-bootstrap critical value,
 floored at <code>qnorm(1 - alpha/2)</code>), <code>B</code>, <code>multiplier</code>, and <code>alpha</code>. The analytic
 default adds none of these, so its <code><a href="https://rdrr.io/r/base/names.html" class="external-link">names()</a></code> are unchanged.</p>
     </div>
@@ -292,7 +291,7 @@ and cancels in the OLS-identity case.</p></li>
 cluster approximation is poor and the interval can under-cover; a genuine
 few-clusters correction (a restricted wild-cluster bootstrap-t or a
 CR2-type analytic adjustment, #361) is future work. The
-<code>se_method = "wild_bootstrap"</code> option does <em>not</em> remedy this (see its
+<code>method = "bootstrap"</code> option does <em>not</em> remedy this (see its
 documentation).</p></li>
 <li><p><strong>Regularity / two regimes.</strong> When <code>p &lt; NT</code> (Theorem
 <code>debiased.att.thm</code>) the full design Gram is nonsingular and the debiasing

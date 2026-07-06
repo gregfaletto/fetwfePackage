@@ -35,7 +35,7 @@ Assumptions).
 debiasedATT(
   fit,
   alpha = NULL,
-  se_method = c("analytic", "wild_bootstrap"),
+  method = c("analytic", "bootstrap"),
   B = 1000L,
   seed = NULL,
   multiplier = c("webb", "rademacher", "mammen"),
@@ -69,15 +69,15 @@ debiasedATT(
   Numeric in `(0, 1)`; the confidence level is `1 - alpha`. Defaults to
   the `alpha` stored on the fit.
 
-- se_method:
+- method:
 
   How to form the confidence interval. `"analytic"` (default) uses the
   two-channel unit-clustered sandwich SE with a Gaussian critical value.
-  `"wild_bootstrap"` replaces the Gaussian critical value with a
-  studentized score / influence-function **wild cluster bootstrap**
-  (#360), **floored at the Gaussian quantile** so the interval is never
-  narrower than the analytic Wald interval. The point estimate and the
-  reported `se` are unchanged; only the critical value changes.
+  `"bootstrap"` replaces the Gaussian critical value with a studentized
+  score / influence-function **wild cluster bootstrap** (#360),
+  **floored at the Gaussian quantile** so the interval is never narrower
+  than the analytic Wald interval. The point estimate and the reported
+  `se` are unchanged; only the critical value changes.
 
   **This is not a few-clusters remedy.** As an *unrestricted, no-refit*
   score bootstrap it does not reproduce the tail inflation of the
@@ -93,13 +93,13 @@ debiasedATT(
 - B:
 
   Integer; the number of wild-bootstrap replicates (default `1000`).
-  Ignored unless `se_method = "wild_bootstrap"`.
+  Ignored unless `method = "bootstrap"`.
 
 - seed:
 
   `NULL` (draw from the ambient RNG, the default) or a single integer
   for a reproducible bootstrap (the RNG state is saved and restored).
-  Ignored unless `se_method = "wild_bootstrap"`.
+  Ignored unless `method = "bootstrap"`.
 
 - multiplier:
 
@@ -110,8 +110,7 @@ debiasedATT(
   value is floored at the Gaussian quantile, the multiplier only affects
   the near-homogeneous case where the bootstrap widens above the floor;
   in the small-`N` / heterogeneous regime the interval is the analytic
-  one regardless of the weight. Ignored unless
-  `se_method = "wild_bootstrap"`.
+  one regardless of the weight. Ignored unless `method = "bootstrap"`.
 
 - lambda_c:
 
@@ -150,11 +149,11 @@ a `tidy` method) with elements:
 
 - ci_low, ci_high:
 
-  Numeric; the `1 - alpha` interval. With `se_method = "analytic"`
+  Numeric; the `1 - alpha` interval. With `method = "analytic"`
   (default) this is the Wald interval `att +/- qnorm(1 - alpha/2) * se`;
-  with `se_method = "wild_bootstrap"` the critical value is the
-  bootstrap `crit_value` (floored at `qnorm(1 - alpha/2)`, so never
-  narrower than the Wald interval) in place of `qnorm(1 - alpha/2)`.
+  with `method = "bootstrap"` the critical value is the bootstrap
+  `crit_value` (floored at `qnorm(1 - alpha/2)`, so never narrower than
+  the Wald interval) in place of `qnorm(1 - alpha/2)`.
 
 - var_reg:
 
@@ -182,10 +181,10 @@ diagnostics (the grid, the per-grid feasibility flags and CV losses, and
 whether the theory-scale fallback fired). These are absent for `p < NT`
 fits.
 
-With `se_method = "wild_bootstrap"` the list additionally contains
-`se_method`, `crit_value` (the studentized wild-bootstrap critical
-value, floored at `qnorm(1 - alpha/2)`), `B`, `multiplier`, and `alpha`.
-The analytic default adds none of these, so its
+With `method = "bootstrap"` the list additionally contains `method`,
+`crit_value` (the studentized wild-bootstrap critical value, floored at
+`qnorm(1 - alpha/2)`), `B`, `multiplier`, and `alpha`. The analytic
+default adds none of these, so its
 [`names()`](https://rdrr.io/r/base/names.html) are unchanged.
 
 ## Details
@@ -242,7 +241,7 @@ The uniformly-valid SE relies on the hypotheses of paper Theorem
   cluster approximation is poor and the interval can under-cover; a
   genuine few-clusters correction (a restricted wild-cluster bootstrap-t
   or a CR2-type analytic adjustment, \#361) is future work. The
-  `se_method = "wild_bootstrap"` option does *not* remedy this (see its
+  `method = "bootstrap"` option does *not* remedy this (see its
   documentation).
 
 - **Regularity / two regimes.** When `p < NT` (Theorem
