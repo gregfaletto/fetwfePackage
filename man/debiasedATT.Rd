@@ -7,7 +7,7 @@
 debiasedATT(
   fit,
   alpha = NULL,
-  se_method = c("analytic", "wild_bootstrap"),
+  method = c("analytic", "bootstrap"),
   B = 1000L,
   seed = NULL,
   multiplier = c("webb", "rademacher", "mammen"),
@@ -27,9 +27,9 @@ construction is specific to the FETWFE transformed-coefficient space).}
 \item{alpha}{Numeric in \verb{(0, 1)}; the confidence level is \code{1 - alpha}.
 Defaults to the \code{alpha} stored on the fit.}
 
-\item{se_method}{How to form the confidence interval. \code{"analytic"} (default)
+\item{method}{How to form the confidence interval. \code{"analytic"} (default)
 uses the two-channel unit-clustered sandwich SE with a Gaussian critical
-value. \code{"wild_bootstrap"} replaces the Gaussian critical value with a
+value. \code{"bootstrap"} replaces the Gaussian critical value with a
 studentized score / influence-function \strong{wild cluster bootstrap} (#360),
 \strong{floored at the Gaussian quantile} so the interval is never narrower than
 the analytic Wald interval. The point estimate and the reported \code{se} are
@@ -41,17 +41,16 @@ wild-cluster bootstrap-t, and under heterogeneous cluster influence its
 critical value (before the floor) falls \emph{below} the Gaussian --- so under the
 floor it reduces to the analytic interval exactly in the small-\code{N} regime; it
 only ever \emph{widens} the interval when cluster influence is near-homogeneous.
-For a
-genuine few-clusters correction the restricted bootstrap-t or a CR2-type
+For a genuine few-clusters correction the restricted bootstrap-t or a CR2-type
 analytic adjustment is required (tracked as future work, #361). Not supported
 for \code{indep_counts} (two-sample) fits.}
 
 \item{B}{Integer; the number of wild-bootstrap replicates (default \code{1000}).
-Ignored unless \code{se_method = "wild_bootstrap"}.}
+Ignored unless \code{method = "bootstrap"}.}
 
 \item{seed}{\code{NULL} (draw from the ambient RNG, the default) or a single
 integer for a reproducible bootstrap (the RNG state is saved and restored).
-Ignored unless \code{se_method = "wild_bootstrap"}.}
+Ignored unless \code{method = "bootstrap"}.}
 
 \item{multiplier}{The wild-bootstrap weight distribution: \code{"webb"} (default),
 \code{"rademacher"}, or \code{"mammen"}. \code{"rademacher"} (\verb{±1}) gives a constant
@@ -60,7 +59,7 @@ studentization denominator (a \emph{percentile} bootstrap); \code{"webb"} and
 floored at the Gaussian quantile, the multiplier only affects the
 near-homogeneous case where the bootstrap widens above the floor; in the
 small-\code{N} / heterogeneous regime the interval is the analytic one regardless
-of the weight. Ignored unless \code{se_method = "wild_bootstrap"}.}
+of the weight. Ignored unless \code{method = "bootstrap"}.}
 
 \item{lambda_c}{The leading constant of the high-dimensional (\code{p >= NT})
 nodewise penalty \verb{lambda_node = lambda_c * max(|a|) * sqrt(log(p) / N)} (\code{N} =
@@ -86,8 +85,8 @@ and a \code{tidy} method) with elements:
 \item{se}{Numeric scalar; the uniformly-valid standard error,
 \code{sqrt(var_reg + var_weight)}.}
 \item{ci_low, ci_high}{Numeric; the \code{1 - alpha} interval. With
-\code{se_method = "analytic"} (default) this is the Wald interval
-\verb{att +/- qnorm(1 - alpha/2) * se}; with \code{se_method = "wild_bootstrap"}
+\code{method = "analytic"} (default) this is the Wald interval
+\verb{att +/- qnorm(1 - alpha/2) * se}; with \code{method = "bootstrap"}
 the critical value is the bootstrap \code{crit_value} (floored at
 \code{qnorm(1 - alpha/2)}, so never narrower than the Wald interval) in place
 of \code{qnorm(1 - alpha/2)}.}
@@ -111,8 +110,8 @@ also contains \code{lambda_cv}, the cross-validation diagnostics (the grid, the
 per-grid feasibility flags and CV losses, and whether the theory-scale
 fallback fired). These are absent for \code{p < NT} fits.
 
-With \code{se_method = "wild_bootstrap"} the list additionally contains
-\code{se_method}, \code{crit_value} (the studentized wild-bootstrap critical value,
+With \code{method = "bootstrap"} the list additionally contains
+\code{method}, \code{crit_value} (the studentized wild-bootstrap critical value,
 floored at \code{qnorm(1 - alpha/2)}), \code{B}, \code{multiplier}, and \code{alpha}. The analytic
 default adds none of these, so its \code{names()} are unchanged.
 }
@@ -191,7 +190,7 @@ and cancels in the OLS-identity case.
 cluster approximation is poor and the interval can under-cover; a genuine
 few-clusters correction (a restricted wild-cluster bootstrap-t or a
 CR2-type analytic adjustment, #361) is future work. The
-\code{se_method = "wild_bootstrap"} option does \emph{not} remedy this (see its
+\code{method = "bootstrap"} option does \emph{not} remedy this (see its
 documentation).
 \item \strong{Regularity / two regimes.} When \code{p < NT} (Theorem
 \code{debiased.att.thm}) the full design Gram is nonsingular and the debiasing

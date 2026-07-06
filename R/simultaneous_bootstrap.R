@@ -64,7 +64,7 @@
 #' @description Shared validation for the bootstrap replicate count `B` (a single
 #'   positive integer) and `seed` (`NULL` or a single integer) used by both
 #'   `simultaneousCIs(method = "bootstrap")` and
-#'   `debiasedATT(se_method = "wild_bootstrap")`, so the two cannot silently drift
+#'   `debiasedATT(method = "bootstrap")`, so the two cannot silently drift
 #'   on what they accept. `seed` must be integer-valued (a non-integer would be
 #'   silently truncated by `set.seed()`).
 #' @param B,seed The arguments to validate.

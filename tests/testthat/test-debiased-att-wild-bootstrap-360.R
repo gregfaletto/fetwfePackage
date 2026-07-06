@@ -3,14 +3,14 @@ library(fetwfe)
 
 # ------------------------------------------------------------------------------
 # #360 / #363: the debiased overall ATT via a studentized score /
-# influence-function WILD CLUSTER BOOTSTRAP (se_method = "wild_bootstrap"),
+# influence-function WILD CLUSTER BOOTSTRAP (method = "bootstrap"),
 # re-signing the per-unit influence summands (V1 regression `unit_scores` + V2
 # cohort-weight, built from a_att_G = (catt - att_hat)/S) WITHOUT a refit per
 # replicate. Point estimate and reported `se` are unchanged; only the critical
 # value changes, and it is FLOORED at qnorm(1 - alpha/2) (#363) so the interval is
 # never narrower than the analytic Wald interval -- this is NOT a few-clusters
 # remedy (an unrestricted no-refit score bootstrap narrows below the Gaussian
-# under heterogeneous cluster influence). Default se_method = "analytic" is
+# under heterogeneous cluster influence). Default method = "analytic" is
 # byte-identical to the previous behavior.
 # ------------------------------------------------------------------------------
 
@@ -62,12 +62,12 @@ library(fetwfe)
 test_that("analytic default is unchanged and adds no bootstrap fields (#360)", {
 	for (fit in list(.wb_fixedp, .wb_highdim)) {
 		a0 <- debiasedATT(fit)
-		a1 <- debiasedATT(fit, se_method = "analytic")
-		# se_method = "analytic" is the default and is identical.
+		a1 <- debiasedATT(fit, method = "analytic")
+		# method = "analytic" is the default and is identical.
 		expect_identical(a0, a1)
 		# No bootstrap fields on the analytic object.
 		expect_false(any(
-			c("se_method", "crit_value", "B", "multiplier") %in% names(a0)
+			c("method", "crit_value", "B", "multiplier") %in% names(a0)
 		))
 	}
 	# fixed-p analytic keeps EXACTLY the documented names (the #326 contract).
@@ -80,10 +80,10 @@ test_that("analytic default is unchanged and adds no bootstrap fields (#360)", {
 test_that("wild bootstrap leaves att and se unchanged, only the CI changes (#360)", {
 	for (fit in list(.wb_fixedp, .wb_highdim)) {
 		a <- debiasedATT(fit)
-		w <- debiasedATT(fit, se_method = "wild_bootstrap", seed = 1)
+		w <- debiasedATT(fit, method = "bootstrap", seed = 1)
 		expect_equal(w$att, a$att)
 		expect_equal(w$se, a$se) # analytic sandwich SE is reused verbatim
-		expect_identical(w$se_method, "wild_bootstrap")
+		expect_identical(w$method, "bootstrap")
 		expect_true(all(
 			c("crit_value", "B", "multiplier", "alpha") %in% names(w)
 		))
@@ -120,22 +120,22 @@ test_that("the V2 cohort-weight influence function reproduces var_weight (the an
 
 test_that("wild bootstrap is reproducible with a seed and ambient without (#360)", {
 	fit <- .wb_fixedp
-	w1 <- debiasedATT(fit, se_method = "wild_bootstrap", seed = 42)
-	w2 <- debiasedATT(fit, se_method = "wild_bootstrap", seed = 42)
+	w1 <- debiasedATT(fit, method = "bootstrap", seed = 42)
+	w2 <- debiasedATT(fit, method = "bootstrap", seed = 42)
 	expect_identical(w1$crit_value, w2$crit_value)
 	expect_identical(w1$ci_low, w2$ci_low)
 	# A different seed (almost surely) gives a different critical value.
-	w3 <- debiasedATT(fit, se_method = "wild_bootstrap", seed = 7)
+	w3 <- debiasedATT(fit, method = "bootstrap", seed = 7)
 	expect_false(isTRUE(all.equal(w1$crit_value, w3$crit_value)))
 	# seed = NULL draws from the ambient stream and still returns a finite crit.
 	set.seed(1)
-	w_null <- debiasedATT(fit, se_method = "wild_bootstrap")
+	w_null <- debiasedATT(fit, method = "bootstrap")
 	expect_true(is.finite(w_null$crit_value) && w_null$crit_value > 0)
 	# Seeded draw does not disturb the ambient RNG stream (.with_preserved_rng).
 	set.seed(100)
 	u_before <- runif(1)
 	set.seed(100)
-	invisible(debiasedATT(fit, se_method = "wild_bootstrap", seed = 42))
+	invisible(debiasedATT(fit, method = "bootstrap", seed = 42))
 	u_after <- runif(1)
 	expect_identical(u_before, u_after)
 })
@@ -145,7 +145,7 @@ test_that("all three multiplier types produce finite critical values (#360)", {
 	for (m in c("rademacher", "mammen", "webb")) {
 		w <- debiasedATT(
 			fit,
-			se_method = "wild_bootstrap",
+			method = "bootstrap",
 			multiplier = m,
 			seed = 1
 		)
@@ -182,7 +182,7 @@ test_that("wild bootstrap errors on indep_counts (two-sample) fits (#360)", {
 	expect_s3_class(debiasedATT(fit_ic), "debiased_att")
 	# The wild bootstrap refuses, with an actionable message.
 	expect_error(
-		debiasedATT(fit_ic, se_method = "wild_bootstrap"),
+		debiasedATT(fit_ic, method = "bootstrap"),
 		"indep_counts"
 	)
 })
@@ -190,24 +190,24 @@ test_that("wild bootstrap errors on indep_counts (two-sample) fits (#360)", {
 test_that("wild bootstrap validates B and seed (#360)", {
 	fit <- .wb_fixedp
 	expect_error(
-		debiasedATT(fit, se_method = "wild_bootstrap", B = -1),
+		debiasedATT(fit, method = "bootstrap", B = -1),
 		"`B`"
 	)
 	expect_error(
-		debiasedATT(fit, se_method = "wild_bootstrap", B = 2.5),
+		debiasedATT(fit, method = "bootstrap", B = 2.5),
 		"`B`"
 	)
 	expect_error(
-		debiasedATT(fit, se_method = "wild_bootstrap", seed = c(1, 2)),
+		debiasedATT(fit, method = "bootstrap", seed = c(1, 2)),
 		"`seed`"
 	)
 	# A non-integer seed is rejected (it would be silently truncated by set.seed).
 	expect_error(
-		debiasedATT(fit, se_method = "wild_bootstrap", seed = 1.5),
+		debiasedATT(fit, method = "bootstrap", seed = 1.5),
 		"`seed`"
 	)
 	expect_error(
-		debiasedATT(fit, se_method = "wild_bootstrap", multiplier = "gaussian")
+		debiasedATT(fit, method = "bootstrap", multiplier = "gaussian")
 	)
 })
 
@@ -215,7 +215,7 @@ test_that("the default wild-bootstrap multiplier is webb (#360, review 1)", {
 	# Webb is kept as the default (a studentized statistic, vs rademacher's constant
 	# denominator); given the #363 floor the multiplier choice only matters in the
 	# near-homogeneous case where the bootstrap widens above the floor.
-	w <- debiasedATT(.wb_fixedp, se_method = "wild_bootstrap", seed = 1)
+	w <- debiasedATT(.wb_fixedp, method = "bootstrap", seed = 1)
 	expect_identical(w$multiplier, "webb")
 })
 
@@ -242,7 +242,7 @@ test_that("wild bootstrap handles a single-cohort fit, var_weight = 0 (#360, rev
 	)
 	a <- debiasedATT(fit)
 	expect_equal(a$var_weight, 0)
-	w <- debiasedATT(fit, se_method = "wild_bootstrap", seed = 1)
+	w <- debiasedATT(fit, method = "bootstrap", seed = 1)
 	expect_equal(w$se, a$se)
 	expect_true(is.finite(w$crit_value) && w$crit_value > 0)
 	expect_equal(w$ci_high - w$att, w$crit_value * w$se)
@@ -265,7 +265,7 @@ test_that("print.debiased_att surfaces the bootstrap method and level (#360)", {
 	fit <- .wb_fixedp
 	w <- debiasedATT(
 		fit,
-		se_method = "wild_bootstrap",
+		method = "bootstrap",
 		multiplier = "webb",
 		seed = 1
 	)
@@ -283,7 +283,7 @@ test_that("the wild-bootstrap crit is floored at the Gaussian quantile (#363)", 
 	z <- stats::qnorm(0.975)
 	# The (floored) crit is never below z on any fit.
 	for (fit in list(.wb_fixedp, .wb_highdim)) {
-		w <- debiasedATT(fit, se_method = "wild_bootstrap", seed = 1)
+		w <- debiasedATT(fit, method = "bootstrap", seed = 1)
 		expect_gte(w$crit_value, z)
 	}
 	# The floor BITES: on a heterogeneous few-cluster fit whose pre-floor crit is
@@ -311,7 +311,7 @@ test_that("the wild-bootstrap crit is floored at the Gaussian quantile (#363)", 
 	)
 	w_het <- debiasedATT(
 		fit_het,
-		se_method = "wild_bootstrap",
+		method = "bootstrap",
 		multiplier = "webb",
 		seed = 1,
 		B = 2000
@@ -326,7 +326,7 @@ test_that("the wild-bootstrap crit is floored at the Gaussian quantile (#363)", 
 	# here.
 	w_het_90 <- debiasedATT(
 		fit_het,
-		se_method = "wild_bootstrap",
+		method = "bootstrap",
 		multiplier = "webb",
 		seed = 1,
 		B = 2000,
