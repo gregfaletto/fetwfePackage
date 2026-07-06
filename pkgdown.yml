@@ -3,11 +3,11 @@ pkgdown: 2.2.0
 pkgdown_sha: ~
 articles:
   etwfe_betwfe_vignette: etwfe_betwfe_vignette.html
+  fetwfe: fetwfe.html
   fusion_structure_vignette: fusion_structure_vignette.html
   inference_vignette: inference_vignette.html
   simulation_vignette: simulation_vignette.html
-  vignette: vignette.html
-last_built: 2026-07-06T05:05Z
+last_built: 2026-07-06T06:54Z
 urls:
   reference: https://gregfaletto.github.io/fetwfePackage/reference
   article: https://gregfaletto.github.io/fetwfePackage/articles

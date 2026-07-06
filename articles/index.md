@@ -1,10 +1,5 @@
 # Articles
 
-### Get started
-
-- [fetwfe: A Package for Fused Extended Two-Way Fixed
-  Effects](https://gregfaletto.github.io/fetwfePackage/articles/vignette.md):
-
 ### Topics
 
 Deeper dives into fusion structures, inference, simulation, and the
