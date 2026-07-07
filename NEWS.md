@@ -13,8 +13,8 @@
   full `riesz_max_iter` --- and **bails** a grid point whose fold solve fails to
   converge; (2) builds each fold's train/test Gram once instead of once per grid
   point; and (3) accepts an opt-in `cv_time_budget` (seconds; default `Inf`)
-  wall-clock backstop that falls back to the best-scored constant so far (or the
-  theory scale) with a warning. Selection is **byte-identical for normal fits** (the
+  wall-clock backstop that falls back to the theory scale with a warning.
+  Selection is **byte-identical for normal fits** (the
   fold cap is a no-op at the default `riesz_max_iter`) and stays deterministic /
   reproducible unless a finite `cv_time_budget` fires. The same fix applies to the
   `simultaneousCIs()` high-dimensional band, which shares this cross-validation.

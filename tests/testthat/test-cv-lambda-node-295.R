@@ -141,11 +141,11 @@ test_that(".cv_lambda_node selection is invariant to the fold cap on a normal fi
 
 test_that(".cv_lambda_node wall-clock backstop stops early and falls back (#384)", {
 	s <- .cv295_synth()
-	# A vanishing time budget: the CV cannot fully score any grid point before the
-	# budget expires, so it stops and falls back to the theory scale with a warning.
-	# (The default `cv_time_budget = Inf` path is deterministic and exercised by the
-	# other tests; a finite budget can be machine-dependent, so we assert only the
-	# fallback + warning, not the exact scored set.)
+	# A vanishing time budget leaves the fold sweep incomplete, so nothing is fully
+	# scored and it falls back to the theory scale with a warning. WHETHER the budget
+	# fires is machine-timed, but the OUTCOME once it fires is deterministic (partial
+	# sweep -> theory scale), so we assert the full fallback. (The default Inf path is
+	# deterministic and exercised by the other tests.)
 	expect_warning(
 		r <- .cv_lambda_node(
 			s$Sig,
@@ -157,13 +157,9 @@ test_that(".cv_lambda_node wall-clock backstop stops early and falls back (#384)
 		),
 		"cv_time_budget"
 	)
-	# Depending on how many points score before the budget, it either falls back to
-	# the theory scale ("time") or keeps the best scored so far ("time_partial") --
-	# both flagged with a time reason. The exact split is intentionally machine-timed.
-	expect_true(r$fallback_reason %in% c("time", "time_partial"))
-	if (r$fallback) {
-		expect_identical(r$lambda_c, 1.0)
-	}
+	expect_true(r$fallback)
+	expect_identical(r$fallback_reason, "time")
+	expect_identical(r$lambda_c, 1.0)
 })
 
 # ===================== end-to-end tests on a real p >= NT fit =================

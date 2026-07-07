@@ -168,12 +168,12 @@ lambda_node_default <- function(p, N, const = 1.0, scale = 1.0) {
 #'   raised (#384). A fold solve hitting this cap without converging bails its
 #'   grid point.
 #' @param cv_time_budget Numeric; wall-clock backstop in seconds (`Inf` = off,
-#'   fully deterministic). On exhaustion the CV stops and returns the best-scored
-#'   constant so far (or the theory-scale fallback) with a warning.
+#'   fully deterministic). If it fires, the CV stops and falls back to the theory
+#'   scale (`lambda_c = 1.0`) with a warning.
 #' @return A list: `lambda_c` (the selected constant, or `1.0` on fallback),
 #'   `fallback` (logical), `fallback_reason` (`"infeasible"` / `"all_bailed"` /
-#'   `"time"` / `"time_partial"` / `NA`), `cv_loss` / `feasible` / `bailed`
-#'   (length-`mult_grid`), `mult_grid`.
+#'   `"time"` / `NA`), `cv_loss` / `feasible` / `bailed` (length-`mult_grid`),
+#'   `mult_grid`.
 #' @keywords internal
 #' @noRd
 .cv_lambda_node <- function(
@@ -265,100 +265,90 @@ lambda_node_default <- function(p, N, const = 1.0, scale = 1.0) {
 		sample(rep(seq_len(nfolds), length.out = N_units))
 	)
 	unit_of_row <- rep(seq_len(N_units), each = T)
-	# The train/test Grams depend only on the fold, not on lambda -- build them ONCE
-	# per fold instead of once per (grid, fold) pair (#384: this O(n p^2) crossprod is
-	# the dominant non-iteration cost, which the iteration caps do not touch).
-	fold_grams <- lapply(seq_len(nfolds), function(f) {
-		test_rows <- unit_of_row %in% which(fold == f)
-		X_tr <- X[!test_rows, , drop = FALSE]
-		X_te <- X[test_rows, , drop = FALSE]
-		list(
-			Sig_tr = crossprod(X_tr) / nrow(X_tr),
-			Sig_te = crossprod(X_te) / nrow(X_te)
-		)
-	})
-
-	# Score feasible grid points in DESCENDING lambda order (well-conditioned first),
-	# so under the wall-clock backstop the fast, reliable candidates are scored before
-	# the pathological small-lambda ones -- letting the best-scored-so-far result land
-	# on a good constant rather than the mid-grid theory scale (#384). Losses are stored
-	# by ORIGINAL grid index, so selection is order-independent when nothing bails.
-	cv_loss <- rep(NA_real_, length(mult_grid))
-	feas_desc <- feas_idx[order(lambdas[feas_idx], decreasing = TRUE)]
+	# CV of the Riesz loss over the feasible grid points, looped FOLD-OUTER / grid-inner:
+	# each fold's train/test Gram is built ONCE (the ~|grid|x crossprod saving) yet only
+	# the CURRENT fold's two p x p Grams are ever live. A grid-outer loop with all nfolds
+	# Grams hoisted was ~nfolds x peak memory (~5.7 GB at p = 8438), risking OOM at the
+	# very p >> n scale this fix targets (#384 review); fold-outer keeps the saving AND
+	# the ~1-fold footprint. Each grid point accumulates its fold losses across the outer
+	# loop; a fold solve that hits the cap without converging BAILS its point (excluded,
+	# and skipped in the remaining folds) rather than scoring a non-converged direction.
+	loss_sum <- rep(0, length(mult_grid))
 	t0 <- proc.time()[["elapsed"]]
 	timed_out <- FALSE
 	over_budget <- function() {
 		is.finite(cv_time_budget) &&
 			(proc.time()[["elapsed"]] - t0) > cv_time_budget
 	}
-	for (gi in feas_desc) {
+	for (f in seq_len(nfolds)) {
 		if (over_budget()) {
 			timed_out <- TRUE
 			break
 		}
-		lam <- lambdas[gi]
-		fold_losses <- numeric(nfolds)
-		point_ok <- TRUE
-		for (f in seq_len(nfolds)) {
+		test_rows <- unit_of_row %in% which(fold == f)
+		X_tr <- X[!test_rows, , drop = FALSE]
+		X_te <- X[test_rows, , drop = FALSE]
+		Sig_tr <- crossprod(X_tr) / nrow(X_tr)
+		Sig_te <- crossprod(X_te) / nrow(X_te)
+		for (gi in feas_idx) {
+			if (bailed[gi]) {
+				next
+			}
 			if (over_budget()) {
 				timed_out <- TRUE
-				point_ok <- FALSE
 				break
 			}
-			fg <- fold_grams[[f]]
 			v_tr <- riesz_lasso(
-				fg$Sig_tr,
+				Sig_tr,
 				a,
-				lam,
+				lambdas[gi],
 				max_iter = cv_fold_max_iter,
 				tol = riesz_tol
 			)
 			if (!isTRUE(attr(v_tr, "converged"))) {
 				# Non-convergence bail (#384): a fold direction that hit the cap without
-				# converging would give a held-out loss computed from an unreliable
-				# direction, which can win the argmin. Exclude this grid point (skip its
+				# converging would give a held-out loss from an unreliable direction,
+				# which can win the argmin. Exclude this grid point (and skip it in the
 				# remaining folds) rather than score garbage.
 				bailed[gi] <- TRUE
-				point_ok <- FALSE
-				break
+				next
 			}
-			# Held-out Riesz loss 0.5 v' Sig_te v - a' v.
-			fold_losses[f] <- 0.5 *
-				as.numeric(crossprod(v_tr, fg$Sig_te %*% v_tr)) -
+			# Held-out Riesz loss 0.5 v' Sig_te v - a' v, summed across folds.
+			loss_sum[gi] <- loss_sum[gi] +
+				0.5 * as.numeric(crossprod(v_tr, Sig_te %*% v_tr)) -
 				sum(a * v_tr)
 		}
 		if (timed_out) {
 			break
 		}
-		if (point_ok) {
-			cv_loss[gi] <- mean(fold_losses)
-		}
 	}
 
-	scored <- which(!is.na(cv_loss))
+	# A feasible point is fully scored iff it converged in EVERY fold (never bailed) and
+	# the sweep ran all folds (no time-out); its loss is the fold mean, kept by original
+	# grid index. A `cv_time_budget` that fires leaves the sweep incomplete, so nothing
+	# is fully scored -> theory-scale fallback (the bail already keeps the budget from
+	# being spent on non-converging points, so a best-so-far is unnecessary).
+	cv_loss <- rep(NA_real_, length(mult_grid))
 	if (timed_out) {
 		warning(
 			"The lambda_c cross-validation reached `cv_time_budget` (",
 			signif(cv_time_budget, 3),
-			"s) and stopped early; ",
-			if (length(scored) == 0L) {
-				"fell back to the theory scale (lambda_c = 1.0)."
-			} else {
-				"the selected lambda_c uses only the grid points scored before the budget."
-			},
+			"s) and stopped early; fell back to the theory scale (lambda_c = 1.0).",
 			call. = FALSE
 		)
+		return(.fallback("time"))
 	}
-	if (length(scored) == 0L) {
-		# Every feasible grid point bailed, or the budget expired before any was fully
-		# scored -> theory-scale fallback.
-		return(.fallback(if (timed_out) "time" else "all_bailed"))
+	fully_scored <- feas_idx[!bailed[feas_idx]]
+	cv_loss[fully_scored] <- loss_sum[fully_scored] / nfolds
+	if (length(fully_scored) == 0L) {
+		# Every feasible grid point bailed -> theory-scale fallback.
+		return(.fallback("all_bailed"))
 	}
-	best <- scored[which.min(cv_loss[scored])]
+	best <- fully_scored[which.min(cv_loss[fully_scored])]
 	list(
 		lambda_c = mult_grid[best],
 		fallback = FALSE,
-		fallback_reason = if (timed_out) "time_partial" else NA_character_,
+		fallback_reason = NA_character_,
 		cv_loss = cv_loss,
 		feasible = feasible,
 		bailed = bailed,

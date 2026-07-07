@@ -225,10 +225,10 @@
 #' @param cv_time_budget Numeric; a wall-clock backstop (in seconds) for the
 #'   `lambda_c = "cv"` cross-validation. `Inf` (the default) leaves selection
 #'   fully deterministic / reproducible; a finite value stops the CV early and
-#'   falls back to the best-scored constant so far (or the theory scale) with a
-#'   warning, so an adversarial high-dimensional draw cannot spin indefinitely
-#'   (#384). A finite budget can make the selected `lambda_c` depend on machine
-#'   speed. Ignored unless `lambda_c = "cv"`.
+#'   falls back to the theory scale (`lambda_c = 1.0`) with a warning, so an
+#'   adversarial high-dimensional draw cannot spin indefinitely (#384). Whether a
+#'   finite budget fires depends on machine speed, so the result can too. Ignored
+#'   unless `lambda_c = "cv"`.
 #'
 #' @return An object of S3 class `"debiased_att"` (a named list, with a `print`
 #'   and a `tidy` method) with elements:
