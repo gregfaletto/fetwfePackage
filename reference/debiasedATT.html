@@ -51,7 +51,7 @@ Faletto (2025); see Assumptions).'></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">fetwfe</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.4</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -117,7 +117,8 @@ Faletto (2025); see Assumptions).</p>
 <span>  multiplier <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"webb"</span>, <span class="st">"rademacher"</span>, <span class="st">"mammen"</span><span class="op">)</span>,</span>
 <span>  lambda_c <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  riesz_max_iter <span class="op">=</span> <span class="fl">5000L</span>,</span>
-<span>  riesz_tol <span class="op">=</span> <span class="fl">1e-09</span></span>
+<span>  riesz_tol <span class="op">=</span> <span class="fl">1e-09</span>,</span>
+<span>  cv_time_budget <span class="op">=</span> <span class="cn">Inf</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -198,6 +199,16 @@ treat the <code>p &gt;= NT</code> path as experimental outside that regime.</p><
 <dt id="arg-riesz-max-iter-riesz-tol">riesz_max_iter, riesz_tol<a class="anchor" aria-label="anchor" href="#arg-riesz-max-iter-riesz-tol"></a></dt>
 <dd><p>Integer / numeric; coordinate-descent controls
 for the high-dimensional nodewise solver. <strong>Ignored when <code>p &lt; NT</code>.</strong></p></dd>
+
+
+<dt id="arg-cv-time-budget">cv_time_budget<a class="anchor" aria-label="anchor" href="#arg-cv-time-budget"></a></dt>
+<dd><p>Numeric; a wall-clock backstop (in seconds) for the
+<code>lambda_c = "cv"</code> cross-validation. <code>Inf</code> (the default) leaves selection
+fully deterministic / reproducible; a finite value stops the CV early and
+falls back to the theory scale (<code>lambda_c = 1.0</code>) with a warning, so an
+adversarial high-dimensional draw cannot spin indefinitely (#384). Whether a
+finite budget fires depends on machine speed, so the result can too. Ignored
+unless <code>lambda_c = "cv"</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">

@@ -8,7 +8,7 @@ articles:
   inference_vignette: inference_vignette.html
   migrating_from_did_and_etwfe: migrating_from_did_and_etwfe.html
   simulation_vignette: simulation_vignette.html
-last_built: 2026-07-07T01:59Z
+last_built: 2026-07-07T06:36Z
 urls:
   reference: https://gregfaletto.github.io/fetwfePackage/reference
   article: https://gregfaletto.github.io/fetwfePackage/articles
