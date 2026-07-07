@@ -1,5 +1,24 @@
 # NEWS
 
+## Version 1.56.4
+
+### Bug fixes
+
+- **`debiasedATT(lambda_c = "cv")` can no longer hang on adversarial
+  high-dimensional draws (#384).** In the `p >= NT` regime the cross-validation
+  over `lambda_c` could burn unbounded wall-time (observed: ~16 h at 100% CPU on a
+  single fit) because the per-solve iteration cap did not bound the CV grid x folds.
+  The CV now (1) caps the fold solves at their own budget (`min(riesz_max_iter,
+  5000)`) --- they only rank candidates, while the final deployed solve keeps the
+  full `riesz_max_iter` --- and **bails** a grid point whose fold solve fails to
+  converge; (2) builds each fold's train/test Gram once instead of once per grid
+  point; and (3) accepts an opt-in `cv_time_budget` (seconds; default `Inf`)
+  wall-clock backstop that falls back to the best-scored constant so far (or the
+  theory scale) with a warning. Selection is **byte-identical for normal fits** (the
+  fold cap is a no-op at the default `riesz_max_iter`) and stays deterministic /
+  reproducible unless a finite `cv_time_budget` fires. The same fix applies to the
+  `simultaneousCIs()` high-dimensional band, which shares this cross-validation.
+
 ## Version 1.56.3
 
 - Scoped the high-dimensional (`p >= NT`) coverage / theory documentation to what
