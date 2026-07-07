@@ -1,5 +1,20 @@
 # NEWS
 
+## Version 1.56.3
+
+- Scoped the high-dimensional (`p >= NT`) coverage / theory documentation to what
+  is currently established (#364). Forward-references to the not-yet-public
+  high-dimensional theorem ("Theorem 6.6" / `debiased.highdim.thm`) are softened
+  to a neutral description of the desparsified high-dimensional FETWFE theory
+  pending the paper revision. The `p >= NT` print banner (shared by
+  `print.debiased_att` and `print.simultaneous_cis`) no longer claims coverage
+  validation unconditionally: it now references the overall-ATT coverage validated
+  with the **CV-selected** penalty and flags that (for band objects) the
+  family-wise coverage is not itself simulation-validated and (for the scalar
+  interval) coverage at other penalties is not separately validated. The inference
+  vignette's high-dimensional example now uses the validated `lambda_c = "cv"`
+  penalty rather than the default fixed `1.0`.
+
 ## Version 1.56.2
 
 - Renamed `debiasedATT()`'s bootstrap-CI argument from `se_method` to `method`

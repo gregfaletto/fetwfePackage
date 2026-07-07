@@ -62,9 +62,11 @@ need not exist -- the bootstrap uses the full-design \strong{desparsified}
 construction of \code{debiasedATT()} (per-effect nodewise directions) generalized
 to the family. This desparsified \code{p >= NT} path is \strong{experimental}
 (\code{fetwfe()} fits only): it generalizes the \code{debiasedATT()} construction
-whose overall-ATT coverage is validated near-nominally at the \code{p >= NT}
-anchor of Faletto (2025), but the family-wise \emph{band} coverage here is not
-itself simulation-validated, so inspect the returned \code{feasibility} /
+whose overall-ATT coverage was validated near-nominally (with the
+CV-selected penalty) at the \code{p >= NT} anchor of Faletto (2025), but the
+family-wise
+\emph{band} coverage here is not itself simulation-validated, so inspect the
+returned \code{feasibility} /
 \code{converged} diagnostics. A
 non-\code{fetwfe()} \code{p >= NT}
 fit (e.g. \code{betwfe()}) has no desparsified band, so it instead falls back to
@@ -77,7 +79,7 @@ unreliable (use a \code{fetwfe()} fit for valid high-dimensional bands). The
 desparsified path covers all
 four families (a high-dimensional \code{family = "event_study"} fit additionally
 carries the propensity channel \code{F_pi}). In the high-dimensional regime the
-band is centered on the \strong{debiased} estimate (the Theorem 6.6 correction,
+band is centered on the \strong{debiased} estimate (the high-dimensional FETWFE theory correction,
 equal to \code{debiasedATT()}'s point estimate for the matching contrast), not
 the post-selection bridge estimate; fixed-p bands center on the (unbiased)
 bridge estimate as before. Because this desparsified bootstrap band is

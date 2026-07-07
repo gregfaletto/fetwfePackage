@@ -15,7 +15,7 @@
 # `Sigma_2` is zero, so `F = F_reg`. Phase 2 added the `event_study` family (the
 # per-unit propensity IF `F_pi`) and the high-dimensional (`p >= NT`) regime --
 # including their combination (high-dim `event_study` uses BOTH channels), and
-# the high-dim band center is debiased (Theorem 6.6) on an internal q=1
+# the high-dim band center is debiased (the high-dimensional FETWFE theory) on an internal q=1
 # fused-lasso nuisance (#303), not the raw q<1 bridge.
 
 #' Draw multiplier-bootstrap weights
@@ -151,8 +151,8 @@
 #' `F[i,k] = sum_t (x_{it}' v_k) * resid_{it}` -- exactly `debiasedATT()`'s
 #' high-dim per-unit score, one direction per effect. `targets[,k]` is effect
 #' `k`'s direction in the full theta-space (`A' a_beta_k`). NOT post-selection:
-#' uniformly valid under the desparsified-lasso conditions of paper Theorem
-#' `debiased.highdim.thm` (experimental). `lambda_node = lambda_c * max(|target|)
+#' uniformly valid under the desparsified-lasso conditions of the
+#' high-dimensional FETWFE theory (experimental). `lambda_node = lambda_c * max(|target|)
 #' * sqrt(log p / N)`.
 #'
 #' @param X Numeric `NT x p`; the FULL (uncentered) design.
@@ -232,7 +232,7 @@
 #' propensity channel matches the debiased center.
 #'
 #' Each cell value mirrors `debiasedATT()` (`att_db = sum(a*theta) + mean(score)`,
-#' paper Theorem `debiased.highdim.thm`): `tau_db[j] = cell_targets[,j]' theta_q1
+#' the high-dimensional FETWFE theory): `tau_db[j] = cell_targets[,j]' theta_q1
 #' + mean_n((X v_j) * resid)`, with `v_j = riesz_lasso(Sig, cell_targets[,j],
 #' lambda_node_j)` -- the SAME q=1 nuisance / residuals / nodewise machinery the
 #' regression channel uses (`.build_regression_if_highdim()`). Center and variance
@@ -570,7 +570,7 @@
 #' / `G`. The propensity channel composes regime-agnostically, so high-dim
 #' `event_study` (the desparsified `targets` path) carries `F_pi` too. In the
 #' high-dim regime the band center is the debiased estimate
-#' (`estimates + colSums(F_mat)/(N*T)`, the Theorem 6.6 realization matching
+#' (`estimates + colSums(F_mat)/(N*T)`, the high-dimensional FETWFE theory realization matching
 #' `debiasedATT()`); fixed-p centers on the (unbiased) bridge estimate unchanged.
 #' @keywords internal
 #' @noRd
@@ -622,7 +622,7 @@
 	if (!is.null(targets)) {
 		# High-dim nuisance (#303): an internal q=1 fused lasso (NOT the q<1 bridge
 		# theta_hat), the SAME nuisance debiasedATT() uses -- its l1 rate is what
-		# Theorem `debiased.highdim.thm` controls the orthogonalization remainder
+		# the high-dimensional FETWFE theory controls the orthogonalization remainder
 		# through, and the fixed seed makes it byte-identical to debiasedATT()'s
 		# nuisance so the debiased center below matches debiasedATT()$att exactly.
 		theta_q1 <- .fit_q1_nuisance(X_final, y_final[seq_len(n)], N, T)
@@ -673,7 +673,7 @@
 			riesz_tol = riesz_tol,
 			Sig = Sig_hd
 		)
-		# Debias the band center (Theorem 6.6): the q=1 plug-in plus the per-effect
+		# Debias the band center (the high-dimensional FETWFE theory): the q=1 plug-in plus the per-effect
 		# desparsified correction `colSums(F_mat)/(N*T)` (exactly `debiasedATT()`'s
 		# `mean(score)`, the per-effect generalization of `att_db = sum(a*theta) +
 		# mean(score)`), so `estimates_used` equals `debiasedATT()$att` for the

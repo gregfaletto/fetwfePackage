@@ -4,7 +4,7 @@
 # inverse v = (Sigma_hat + tiny*I)^{-1} a, which is invalid once p >= NT
 # (Sigma_hat = X'X/n is singular and the tiny ridge yields an unstable v). In the
 # high-dimensional regime v is instead the nodewise (desparsified) Riesz
-# representer of paper Theorem `debiased.highdim.thm`, computed as the
+# representer of the high-dimensional FETWFE theory, computed as the
 # l1-penalized solve below. Ported verbatim from the validated reference
 # `simulations/highdim_functions.R::riesz_lasso` in the FETWFE paper repo.
 
@@ -14,7 +14,7 @@
 #' Solves `v_hat = argmin_v (1/2) v' Sig v - a' v + lambda * ||v||_1` by
 #' coordinate descent. By the KKT conditions the minimizer satisfies
 #' `|| Sig %*% v_hat - a ||_inf <= lambda` --- the relaxed-inverse feasibility the
-#' Theorem `debiased.highdim.thm` remainder bound uses --- and as `lambda -> 0`
+#' high-dimensional FETWFE theory remainder bound uses --- and as `lambda -> 0`
 #' with `Sig` nonsingular it returns the exact inverse `Sig^{-1} a` (the fixed-p
 #' boundary). `O(p^2)` per sweep via a rank-1 maintenance of `Sig %*% v`.
 #'
@@ -80,7 +80,7 @@ riesz_lasso <- function(Sig, a, lambda, max_iter = 5000L, tol = 1e-9) {
 
 #' Theory-scaled nodewise penalty `lambda_node = c * scale * sqrt(log p / N)`
 #'
-#' @description The Theorem `debiased.highdim.thm` rate scale. The effective
+#' @description The high-dimensional FETWFE theory rate scale. The effective
 #'   sample size is the number of clusters `N` (units), not `n = NT`. `scale`
 #'   rescales to the units of the constraint `||Sig v - a||_inf` (the accessor
 #'   passes `scale = max(abs(a))`).
