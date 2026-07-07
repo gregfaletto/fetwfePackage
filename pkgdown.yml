@@ -6,8 +6,9 @@ articles:
   fetwfe: fetwfe.html
   fusion_structure_vignette: fusion_structure_vignette.html
   inference_vignette: inference_vignette.html
+  migrating_from_did_and_etwfe: migrating_from_did_and_etwfe.html
   simulation_vignette: simulation_vignette.html
-last_built: 2026-07-07T01:56Z
+last_built: 2026-07-07T01:59Z
 urls:
   reference: https://gregfaletto.github.io/fetwfePackage/reference
   article: https://gregfaletto.github.io/fetwfePackage/articles

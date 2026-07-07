@@ -194,6 +194,25 @@ overall average treatment effect, cohort-specific treatment effects,
 standard errors (when available), and various diagnostic quantities.</p>
 <p>You can get the full documentation details by using
 <code><a href="../reference/fetwfe.html">?fetwfe</a></code> in R when you have the package loaded.</p>
+<p><strong>The workflow in three moves.</strong> Working with a fit
+comes down to:</p>
+<ol style="list-style-type: decimal">
+<li>
+<strong>Fit</strong> — call <code><a href="../reference/fetwfe.html">fetwfe()</a></code> on your
+panel.</li>
+<li>
+<strong>Extract</strong> — pull out the treatment effects by the
+view you want: <code><a href="../reference/cohortStudy.html">cohortStudy()</a></code> (per adoption cohort),
+<code><a href="../reference/eventStudy.html">eventStudy()</a></code> (per time since treatment), or
+<code><a href="../reference/cohortTimeATTs.html">cohortTimeATTs()</a></code> (the fully disaggregated cohort-by-time
+cells); the overall ATT is on the fit as <code>att_hat</code> /
+<code>att_se</code>.</li>
+<li>
+<strong>Plot</strong> — visualize them with
+<code>plot(fit, type = "event_study")</code> or
+<code>plot(fit, type = "catt")</code>.</li>
+</ol>
+<p>The rest of this vignette expands on each of these.</p>
 <p>For a detailed discussion of how the package’s standard errors are
 computed, the assumptions they rely on, and an experimental
 cluster-robust option (<code>se_type = "cluster"</code>) suitable as a
@@ -684,6 +703,29 @@ cell family, use
 <span><span class="co">## 6  0.0000000    FALSE</span></span></code></pre>
 </div>
 <div class="section level3">
+<h3 id="plotting-the-effects">Plotting the effects<a class="anchor" aria-label="anchor" href="#plotting-the-effects"></a>
+</h3>
+<p>The built-in <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> method draws the effects directly —
+the event-study view (<code>type = "event_study"</code>, the default) or
+the per-cohort view (<code>type = "catt"</code>), each with confidence
+intervals:</p>
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">res_demo</span>, type <span class="op">=</span> <span class="st">"event_study"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="fetwfe_files/figure-html/plot-event-study-1.png" class="r-plt" alt="" width="672"></p>
+<p>Reading it: each point is the average treatment effect at a given
+number of periods since adoption (the <em>event time</em>), with its
+confidence interval. The plot begins at event time 0 (treatment onset)
+and traces how the effect evolves over the post-treatment periods —
+FETWFE does not estimate pre-treatment placebo coefficients (they are
+out of scope; see <code><a href="../reference/eventStudy.html">?eventStudy</a></code>), so there is no pre-trends
+panel here. Swap in <code>type = "catt"</code> for the
+per-adoption-cohort effects, where any cohort the fusion penalty pooled
+to zero appears pinned exactly at zero — a visual signature of the
+fusion. (The <code>broom</code> route in the next section is the
+do-it-yourself alternative when you want full <code>ggplot2</code>
+control.)</p>
+</div>
+<div class="section level3">
 <h3 id="tidy-outputs-with-broom">Tidy outputs with broom<a class="anchor" aria-label="anchor" href="#tidy-outputs-with-broom"></a>
 </h3>
 <p>If you use the tidyverse, the fitted object also plays nicely with
@@ -694,7 +736,7 @@ long data frame with the standard <code>term</code> /
 / <code>p.value</code> / <code>conf.low</code> / <code>conf.high</code>
 columns, plus a <code>selected</code> flag (see “Testing the zero-effect
 null” below):</p>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://broom.tidymodels.org/" class="external-link">broom</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">tidy_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span></span>
@@ -712,7 +754,7 @@ null” below):</p>
 <p><code><a href="https://generics.r-lib.org/reference/glance.html" class="external-link">glance()</a></code> returns a one-row model-level summary —
 panel-shape counts, the bridge-regression tuning, the variance
 components, and the inference settings:</p>
-<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://generics.r-lib.org/reference/glance.html" class="external-link">glance</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">##   nobs n_units n_periods n_cohorts n_covs n_features lambda_star</span></span>
 <span><span class="co">## 1  600      30        20         3      3        223  0.03085978</span></span>
@@ -724,7 +766,7 @@ components, and the inference settings:</p>
 <code>.resid</code> columns to your panel (auto-aligned to the design
 the estimator actually fit on, so the same raw <code>pdata</code> you
 handed to <code><a href="../reference/fetwfe.html">fetwfe()</a></code> works):</p>
-<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://generics.r-lib.org/reference/augment.html" class="external-link">augment</a></span><span class="op">(</span><span class="va">result</span>, data <span class="op">=</span> <span class="va">pdata</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">##   time unit treated  response       cov1      cov2       cov3  .fitted</span></span>
 <span><span class="co">## 1    1    1       0 1.3403587 -0.8962503 0.1582893 -0.5019485 37.87288</span></span>
@@ -743,7 +785,7 @@ handed to <code><a href="../reference/fetwfe.html">fetwfe()</a></code> works):</
 <p>From there, the tidied output goes straight into <code>ggplot2</code>
 or <code>modelsummary</code> without needing to read the package’s class
 documentation:</p>
-<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span>
 <span><span class="va">tidy_res</span> <span class="op">|&gt;</span> </span>
 <span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">term</span> <span class="op">!=</span> <span class="st">"ATT"</span><span class="op">)</span> <span class="op">|&gt;</span></span>

@@ -124,6 +124,24 @@ You can get the full documentation details by using
 [`?fetwfe`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)
 in R when you have the package loaded.
 
+**The workflow in three moves.** Working with a fit comes down to:
+
+1.  **Fit** — call
+    [`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)
+    on your panel.
+2.  **Extract** — pull out the treatment effects by the view you want:
+    [`cohortStudy()`](https://gregfaletto.github.io/fetwfePackage/reference/cohortStudy.md)
+    (per adoption cohort),
+    [`eventStudy()`](https://gregfaletto.github.io/fetwfePackage/reference/eventStudy.md)
+    (per time since treatment), or
+    [`cohortTimeATTs()`](https://gregfaletto.github.io/fetwfePackage/reference/cohortTimeATTs.md)
+    (the fully disaggregated cohort-by-time cells); the overall ATT is
+    on the fit as `att_hat` / `att_se`.
+3.  **Plot** — visualize them with `plot(fit, type = "event_study")` or
+    `plot(fit, type = "catt")`.
+
+The rest of this vignette expands on each of these.
+
 For a detailed discussion of how the package’s standard errors are
 computed, the assumptions they rely on, and an experimental
 cluster-robust option (`se_type = "cluster"`) suitable as a sensitivity
@@ -686,6 +704,32 @@ head(broom::tidy(cta))
     ## 4 -1.7598718     TRUE
     ## 5  0.6458769     TRUE
     ## 6  0.0000000    FALSE
+
+### Plotting the effects
+
+The built-in [`plot()`](https://rdrr.io/r/graphics/plot.default.html)
+method draws the effects directly — the event-study view
+(`type = "event_study"`, the default) or the per-cohort view
+(`type = "catt"`), each with confidence intervals:
+
+``` r
+
+plot(res_demo, type = "event_study")
+```
+
+![](fetwfe_files/figure-html/plot-event-study-1.png)
+
+Reading it: each point is the average treatment effect at a given number
+of periods since adoption (the *event time*), with its confidence
+interval. The plot begins at event time 0 (treatment onset) and traces
+how the effect evolves over the post-treatment periods — FETWFE does not
+estimate pre-treatment placebo coefficients (they are out of scope; see
+[`?eventStudy`](https://gregfaletto.github.io/fetwfePackage/reference/eventStudy.md)),
+so there is no pre-trends panel here. Swap in `type = "catt"` for the
+per-adoption-cohort effects, where any cohort the fusion penalty pooled
+to zero appears pinned exactly at zero — a visual signature of the
+fusion. (The `broom` route in the next section is the do-it-yourself
+alternative when you want full `ggplot2` control.)
 
 ### Tidy outputs with broom
 

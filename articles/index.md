@@ -2,9 +2,11 @@
 
 ### Topics
 
-Deeper dives into fusion structures, inference, simulation, and the
-comparison estimators.
+Migrating from other DiD packages, plus deeper dives into fusion
+structures, inference, simulation, and the comparison estimators.
 
+- [Coming from did or etwfe? Bringing your data into
+  fetwfe](https://gregfaletto.github.io/fetwfePackage/articles/migrating_from_did_and_etwfe.md):
 - [Choosing a fusion structure: cohort vs. event-study
   penalties](https://gregfaletto.github.io/fetwfePackage/articles/fusion_structure_vignette.md):
 - [Inference in fetwfe: standard errors, simultaneous bands, and
