@@ -16,9 +16,10 @@ navbar:
 articles:
 - title: Topics
   desc: >
-    Deeper dives into fusion structures, inference, simulation, and the
-    comparison estimators.
+    Migrating from other DiD packages, plus deeper dives into fusion structures,
+    inference, simulation, and the comparison estimators.
   contents:
+  - migrating_from_did_and_etwfe
   - fusion_structure_vignette
   - inference_vignette
   - simulation_vignette
