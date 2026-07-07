@@ -87,6 +87,81 @@ test_that(".cv_lambda_node falls back to the theory scale when nothing is feasib
 	expect_true(all(is.na(r$cv_loss)))
 })
 
+test_that(".cv_lambda_node bails feasible points whose fold solves don't converge (#384)", {
+	s <- .cv295_synth()
+	# A tiny fold-solve cap: feasible grid points whose fold directions need real
+	# iterations can no longer converge, so they BAIL (are excluded) rather than being
+	# scored from a non-converged direction -- and it returns instantly instead of
+	# spinning at the full `riesz_max_iter` (the #384 hang).
+	r <- .cv_lambda_node(s$Sig, s$a, s$X, s$N_units, s$T, cv_fold_max_iter = 1L)
+	# The mechanism is exercised (at least one feasible point bailed).
+	expect_true(any(r$bailed))
+	# Among feasible grid points, a missing CV loss is EXACTLY the bailed set -- the
+	# bail is the reason a feasible point has no score.
+	feas <- r$feasible
+	expect_identical(is.na(r$cv_loss[feas]), r$bailed[feas])
+	# The selected constant is never a bailed point (unless we fell back to 1.0).
+	if (!r$fallback) {
+		expect_false(r$bailed[match(r$lambda_c, r$mult_grid)])
+	}
+	# Deterministic.
+	r2 <- .cv_lambda_node(
+		s$Sig,
+		s$a,
+		s$X,
+		s$N_units,
+		s$T,
+		cv_fold_max_iter = 1L
+	)
+	expect_identical(r$bailed, r2$bailed)
+	expect_identical(r$lambda_c, r2$lambda_c)
+})
+
+test_that(".cv_lambda_node selection is invariant to the fold cap on a normal fit (#384 no-op)", {
+	s <- .cv295_synth()
+	# A converged nodewise solve is identical regardless of the cap, and this fit's
+	# fold solves converge in far fewer than 100 sweeps -- so the selected lambda_c and
+	# every `cv_loss` are byte-identical across a wide range of `cv_fold_max_iter`. The
+	# guard is a no-op for normal fits; only pathological non-converging folds change.
+	base <- .cv_lambda_node(s$Sig, s$a, s$X, s$N_units, s$T)
+	for (cap in c(500L, 5000L, 20000L)) {
+		r <- .cv_lambda_node(
+			s$Sig,
+			s$a,
+			s$X,
+			s$N_units,
+			s$T,
+			cv_fold_max_iter = cap
+		)
+		expect_identical(r$lambda_c, base$lambda_c)
+		expect_identical(r$cv_loss, base$cv_loss)
+		expect_false(any(r$bailed))
+	}
+})
+
+test_that(".cv_lambda_node wall-clock backstop stops early and falls back (#384)", {
+	s <- .cv295_synth()
+	# A vanishing time budget leaves the fold sweep incomplete, so nothing is fully
+	# scored and it falls back to the theory scale with a warning. WHETHER the budget
+	# fires is machine-timed, but the OUTCOME once it fires is deterministic (partial
+	# sweep -> theory scale), so we assert the full fallback. (The default Inf path is
+	# deterministic and exercised by the other tests.)
+	expect_warning(
+		r <- .cv_lambda_node(
+			s$Sig,
+			s$a,
+			s$X,
+			s$N_units,
+			s$T,
+			cv_time_budget = 1e-6
+		),
+		"cv_time_budget"
+	)
+	expect_true(r$fallback)
+	expect_identical(r$fallback_reason, "time")
+	expect_identical(r$lambda_c, 1.0)
+})
+
 # ===================== end-to-end tests on a real p >= NT fit =================
 # A genuine high-dim fetwfe fit (N=20, T=8, d=12 => p=376 >> NT=160). The
 # simulator enforces N >= (G+1)(d+1), so build the raw panel directly and supply

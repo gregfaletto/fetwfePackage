@@ -156,12 +156,24 @@ lambda_node_default <- function(p, N, const = 1.0, scale = 1.0) {
 #' @param mult_grid Numeric; multipliers of the theory scale to search (the grid
 #'   spans below and above `1.0` so the CV sees the feasibility edge).
 #' @param nfolds Integer; CV folds over units.
-#' @param riesz_max_iter,riesz_tol Passed to `riesz_lasso()` for the fold solves.
+#' @param riesz_max_iter,riesz_tol Nodewise-solver controls; `riesz_tol` is the
+#'   convergence tolerance and `riesz_max_iter` the default source for
+#'   `cv_fold_max_iter` (below).
 #' @param gate_max_iter Integer; iteration cap for the full-data feasibility gate
 #'   ONLY (the gate just classifies feasible/infeasible, so a smaller cap is
 #'   cheap); floored at `riesz_max_iter` if that is smaller.
+#' @param cv_fold_max_iter Integer or `NULL`; iteration cap for the CV *fold*
+#'   solves (which only rank grid points). `NULL` -> `min(riesz_max_iter, 5000L)`:
+#'   a no-op at the default `riesz_max_iter`, but it bounds fold work when that is
+#'   raised (#384). A fold solve hitting this cap without converging bails its
+#'   grid point.
+#' @param cv_time_budget Numeric; wall-clock backstop in seconds (`Inf` = off,
+#'   fully deterministic). If it fires, the CV stops and falls back to the theory
+#'   scale (`lambda_c = 1.0`) with a warning.
 #' @return A list: `lambda_c` (the selected constant, or `1.0` on fallback),
-#'   `fallback` (logical), `cv_loss` / `feasible` (length-`mult_grid`), `mult_grid`.
+#'   `fallback` (logical), `fallback_reason` (`"infeasible"` / `"all_bailed"` /
+#'   `"time"` / `NA`), `cv_loss` / `feasible` / `bailed` (length-`mult_grid`),
+#'   `mult_grid`.
 #' @keywords internal
 #' @noRd
 .cv_lambda_node <- function(
@@ -174,9 +186,20 @@ lambda_node_default <- function(p, N, const = 1.0, scale = 1.0) {
 	nfolds = 5L,
 	riesz_max_iter = 5000L,
 	riesz_tol = 1e-9,
-	gate_max_iter = 500L
+	gate_max_iter = 500L,
+	cv_fold_max_iter = NULL,
+	cv_time_budget = Inf
 ) {
 	p <- length(a)
+	# The CV fold solves only RANK grid points, so they get their own iteration cap
+	# (#384), decoupled from `riesz_max_iter` (the FINAL deployed solve keeps that in
+	# full). Capped at 5000: a converged nodewise solve is identical regardless of the
+	# cap, well-conditioned folds converge in << 5000 sweeps, and pathological
+	# (adversarial p >> n) folds never converge -- so it is a no-op for normal fits and
+	# bounds the fold work on the hard draws. Never exceeds `riesz_max_iter`.
+	if (is.null(cv_fold_max_iter)) {
+		cv_fold_max_iter <- min(as.integer(riesz_max_iter), 5000L)
+	}
 	# Theory anchor; the grid is `mult_grid * lam0` (pure-constant units).
 	lam0 <- lambda_node_default(
 		p = p,
@@ -213,15 +236,22 @@ lambda_node_default <- function(p, N, const = 1.0, scale = 1.0) {
 		logical(1)
 	)
 	feas_idx <- which(feasible)
-	if (length(feas_idx) == 0L) {
-		# No feasible grid point -> documented theory-scale fallback.
-		return(list(
+
+	bailed <- rep(FALSE, length(mult_grid))
+	.fallback <- function(reason) {
+		list(
 			lambda_c = 1.0,
 			fallback = TRUE,
+			fallback_reason = reason,
 			cv_loss = rep(NA_real_, length(mult_grid)),
 			feasible = feasible,
+			bailed = bailed,
 			mult_grid = mult_grid
-		))
+		)
+	}
+	if (length(feas_idx) == 0L) {
+		# No feasible grid point -> documented theory-scale fallback.
+		return(.fallback("infeasible"))
 	}
 
 	# --- Unit-fold CV of the Riesz loss over the feasible grid points. ---
@@ -235,39 +265,93 @@ lambda_node_default <- function(p, N, const = 1.0, scale = 1.0) {
 		sample(rep(seq_len(nfolds), length.out = N_units))
 	)
 	unit_of_row <- rep(seq_len(N_units), each = T)
-	cv_loss <- rep(NA_real_, length(mult_grid))
-	for (gi in feas_idx) {
-		lam <- lambdas[gi]
-		fold_losses <- vapply(
-			seq_len(nfolds),
-			function(f) {
-				test_rows <- unit_of_row %in% which(fold == f)
-				X_tr <- X[!test_rows, , drop = FALSE]
-				X_te <- X[test_rows, , drop = FALSE]
-				Sig_tr <- crossprod(X_tr) / nrow(X_tr)
-				Sig_te <- crossprod(X_te) / nrow(X_te)
-				v_tr <- riesz_lasso(
-					Sig_tr,
-					a,
-					lam,
-					max_iter = riesz_max_iter,
-					tol = riesz_tol
-				)
-				# Held-out Riesz loss 0.5 v' Sig_te v - a' v.
-				0.5 *
-					as.numeric(crossprod(v_tr, Sig_te %*% v_tr)) -
-					sum(a * v_tr)
-			},
-			numeric(1)
-		)
-		cv_loss[gi] <- mean(fold_losses)
+	# CV of the Riesz loss over the feasible grid points, looped FOLD-OUTER / grid-inner:
+	# each fold's train/test Gram is built ONCE (the ~|grid|x crossprod saving) yet only
+	# the CURRENT fold's two p x p Grams are ever live. A grid-outer loop with all nfolds
+	# Grams hoisted was ~nfolds x peak memory (~5.7 GB at p = 8438), risking OOM at the
+	# very p >> n scale this fix targets (#384 review); fold-outer keeps the saving AND
+	# the ~1-fold footprint. Each grid point accumulates its fold losses across the outer
+	# loop; a fold solve that hits the cap without converging BAILS its point (excluded,
+	# and skipped in the remaining folds) rather than scoring a non-converged direction.
+	loss_sum <- rep(0, length(mult_grid))
+	t0 <- proc.time()[["elapsed"]]
+	timed_out <- FALSE
+	over_budget <- function() {
+		is.finite(cv_time_budget) &&
+			(proc.time()[["elapsed"]] - t0) > cv_time_budget
 	}
-	best <- feas_idx[which.min(cv_loss[feas_idx])]
+	for (f in seq_len(nfolds)) {
+		if (over_budget()) {
+			timed_out <- TRUE
+			break
+		}
+		test_rows <- unit_of_row %in% which(fold == f)
+		X_tr <- X[!test_rows, , drop = FALSE]
+		X_te <- X[test_rows, , drop = FALSE]
+		Sig_tr <- crossprod(X_tr) / nrow(X_tr)
+		Sig_te <- crossprod(X_te) / nrow(X_te)
+		for (gi in feas_idx) {
+			if (bailed[gi]) {
+				next
+			}
+			if (over_budget()) {
+				timed_out <- TRUE
+				break
+			}
+			v_tr <- riesz_lasso(
+				Sig_tr,
+				a,
+				lambdas[gi],
+				max_iter = cv_fold_max_iter,
+				tol = riesz_tol
+			)
+			if (!isTRUE(attr(v_tr, "converged"))) {
+				# Non-convergence bail (#384): a fold direction that hit the cap without
+				# converging would give a held-out loss from an unreliable direction,
+				# which can win the argmin. Exclude this grid point (and skip it in the
+				# remaining folds) rather than score garbage.
+				bailed[gi] <- TRUE
+				next
+			}
+			# Held-out Riesz loss 0.5 v' Sig_te v - a' v, summed across folds.
+			loss_sum[gi] <- loss_sum[gi] +
+				0.5 * as.numeric(crossprod(v_tr, Sig_te %*% v_tr)) -
+				sum(a * v_tr)
+		}
+		if (timed_out) {
+			break
+		}
+	}
+
+	# A feasible point is fully scored iff it converged in EVERY fold (never bailed) and
+	# the sweep ran all folds (no time-out); its loss is the fold mean, kept by original
+	# grid index. A `cv_time_budget` that fires leaves the sweep incomplete, so nothing
+	# is fully scored -> theory-scale fallback (the bail already keeps the budget from
+	# being spent on non-converging points, so a best-so-far is unnecessary).
+	cv_loss <- rep(NA_real_, length(mult_grid))
+	if (timed_out) {
+		warning(
+			"The lambda_c cross-validation reached `cv_time_budget` (",
+			signif(cv_time_budget, 3),
+			"s) and stopped early; fell back to the theory scale (lambda_c = 1.0).",
+			call. = FALSE
+		)
+		return(.fallback("time"))
+	}
+	fully_scored <- feas_idx[!bailed[feas_idx]]
+	cv_loss[fully_scored] <- loss_sum[fully_scored] / nfolds
+	if (length(fully_scored) == 0L) {
+		# Every feasible grid point bailed -> theory-scale fallback.
+		return(.fallback("all_bailed"))
+	}
+	best <- fully_scored[which.min(cv_loss[fully_scored])]
 	list(
 		lambda_c = mult_grid[best],
 		fallback = FALSE,
+		fallback_reason = NA_character_,
 		cv_loss = cv_loss,
 		feasible = feasible,
+		bailed = bailed,
 		mult_grid = mult_grid
 	)
 }

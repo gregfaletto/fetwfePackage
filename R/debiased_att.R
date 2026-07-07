@@ -222,6 +222,13 @@
 #'   treat the `p >= NT` path as experimental outside that regime.
 #' @param riesz_max_iter,riesz_tol Integer / numeric; coordinate-descent controls
 #'   for the high-dimensional nodewise solver. **Ignored when `p < NT`.**
+#' @param cv_time_budget Numeric; a wall-clock backstop (in seconds) for the
+#'   `lambda_c = "cv"` cross-validation. `Inf` (the default) leaves selection
+#'   fully deterministic / reproducible; a finite value stops the CV early and
+#'   falls back to the theory scale (`lambda_c = 1.0`) with a warning, so an
+#'   adversarial high-dimensional draw cannot spin indefinitely (#384). Whether a
+#'   finite budget fires depends on machine speed, so the result can too. Ignored
+#'   unless `lambda_c = "cv"`.
 #'
 #' @return An object of S3 class `"debiased_att"` (a named list, with a `print`
 #'   and a `tidy` method) with elements:
@@ -285,7 +292,8 @@ debiasedATT <- function(
 	multiplier = c("webb", "rademacher", "mammen"),
 	lambda_c = 1.0,
 	riesz_max_iter = 5000L,
-	riesz_tol = 1e-9
+	riesz_tol = 1e-9,
+	cv_time_budget = Inf
 ) {
 	method <- match.arg(method)
 	multiplier <- match.arg(multiplier)
@@ -359,6 +367,18 @@ debiasedATT <- function(
 	) {
 		stop(
 			"debiasedATT(): `riesz_max_iter` must be a single positive integer.",
+			call. = FALSE
+		)
+	}
+	if (
+		!is.numeric(cv_time_budget) ||
+			length(cv_time_budget) != 1L ||
+			is.na(cv_time_budget) ||
+			cv_time_budget <= 0
+	) {
+		stop(
+			"debiasedATT(): `cv_time_budget` must be a single positive number ",
+			"(seconds) or `Inf`.",
 			call. = FALSE
 		)
 	}
@@ -571,7 +591,8 @@ debiasedATT <- function(
 				N_units,
 				T,
 				riesz_max_iter = riesz_max_iter,
-				riesz_tol = riesz_tol
+				riesz_tol = riesz_tol,
+				cv_time_budget = cv_time_budget
 			)
 			lambda_c_used <- lambda_cv$lambda_c
 		}
@@ -622,7 +643,14 @@ debiasedATT <- function(
 				"fixed"
 			},
 			lambda_cv = if (!is.null(lambda_cv)) {
-				lambda_cv[c("cv_loss", "feasible", "mult_grid", "fallback")]
+				lambda_cv[c(
+					"cv_loss",
+					"feasible",
+					"mult_grid",
+					"fallback",
+					"fallback_reason",
+					"bailed"
+				)]
 			} else {
 				NULL
 			}

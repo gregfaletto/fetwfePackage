@@ -13,7 +13,8 @@ debiasedATT(
   multiplier = c("webb", "rademacher", "mammen"),
   lambda_c = 1,
   riesz_max_iter = 5000L,
-  riesz_tol = 1e-09
+  riesz_tol = 1e-09,
+  cv_time_budget = Inf
 )
 }
 \arguments{
@@ -76,6 +77,14 @@ treat the \code{p >= NT} path as experimental outside that regime.}
 
 \item{riesz_max_iter, riesz_tol}{Integer / numeric; coordinate-descent controls
 for the high-dimensional nodewise solver. \strong{Ignored when \code{p < NT}.}}
+
+\item{cv_time_budget}{Numeric; a wall-clock backstop (in seconds) for the
+\code{lambda_c = "cv"} cross-validation. \code{Inf} (the default) leaves selection
+fully deterministic / reproducible; a finite value stops the CV early and
+falls back to the theory scale (\code{lambda_c = 1.0}) with a warning, so an
+adversarial high-dimensional draw cannot spin indefinitely (#384). Whether a
+finite budget fires depends on machine speed, so the result can too. Ignored
+unless \code{lambda_c = "cv"}.}
 }
 \value{
 An object of S3 class \code{"debiased_att"} (a named list, with a \code{print}
