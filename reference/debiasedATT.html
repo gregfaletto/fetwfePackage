@@ -16,11 +16,12 @@ as a separate accessor (rather than a se_type option) precisely because the
 debiased SE accompanies a different point estimate than the fused one.
 When p &amp;gt;= NT the unrestricted ETWFE is infeasible, so the OLS identity no
 longer applies; the accessor instead builds the debiasing direction by a
-nodewise (desparsified-lasso) relaxed inverse (paper Theorem
-debiased.highdim.thm). The point estimate, SE formula, and return value are
+nodewise (desparsified-lasso) relaxed inverse (the high-dimensional FETWFE
+theory). The point estimate, SE formula, and return value are
 otherwise identical — "one estimator, two regimes." This high-dimensional
 branch is experimental (its overall-ATT coverage is validated
-near-nominally at the p &amp;gt;= NT anchor of Faletto (2025); see Assumptions).'><meta property="og:description" content='Computes a debiased estimate of the overall average treatment effect on the
+near-nominally, with the CV-selected penalty, at the p &amp;gt;= NT anchor of
+Faletto (2025); see Assumptions).'><meta property="og:description" content='Computes a debiased estimate of the overall average treatment effect on the
 treated (ATT) from a fitted fetwfe() object, together with a
 uniformly-valid standard error. This is a complement to the fused plug-in
 interval reported on the fit (fit$att_hat / fit$att_se): the fused SE is
@@ -37,11 +38,12 @@ as a separate accessor (rather than a se_type option) precisely because the
 debiased SE accompanies a different point estimate than the fused one.
 When p &amp;gt;= NT the unrestricted ETWFE is infeasible, so the OLS identity no
 longer applies; the accessor instead builds the debiasing direction by a
-nodewise (desparsified-lasso) relaxed inverse (paper Theorem
-debiased.highdim.thm). The point estimate, SE formula, and return value are
+nodewise (desparsified-lasso) relaxed inverse (the high-dimensional FETWFE
+theory). The point estimate, SE formula, and return value are
 otherwise identical — "one estimator, two regimes." This high-dimensional
 branch is experimental (its overall-ATT coverage is validated
-near-nominally at the p &amp;gt;= NT anchor of Faletto (2025); see Assumptions).'></head><body>
+near-nominally, with the CV-selected penalty, at the p &amp;gt;= NT anchor of
+Faletto (2025); see Assumptions).'></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -49,7 +51,7 @@ near-nominally at the p &amp;gt;= NT anchor of Faletto (2025); see Assumptions).
 
     <a class="navbar-brand me-2" href="../index.html">fetwfe</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -96,11 +98,12 @@ as a separate accessor (rather than a <code>se_type</code> option) precisely bec
 debiased SE accompanies a different point estimate than the fused one.</p>
 <p>When <code>p &gt;= NT</code> the unrestricted ETWFE is infeasible, so the OLS identity no
 longer applies; the accessor instead builds the debiasing direction by a
-nodewise (desparsified-lasso) relaxed inverse (paper Theorem
-<code>debiased.highdim.thm</code>). The point estimate, SE formula, and return value are
+nodewise (desparsified-lasso) relaxed inverse (the high-dimensional FETWFE
+theory). The point estimate, SE formula, and return value are
 otherwise identical — "one estimator, two regimes." This high-dimensional
 branch is <strong>experimental</strong> (its overall-ATT coverage is validated
-near-nominally at the <code>p &gt;= NT</code> anchor of Faletto (2025); see Assumptions).</p>
+near-nominally, with the CV-selected penalty, at the <code>p &gt;= NT</code> anchor of
+Faletto (2025); see Assumptions).</p>
     </div>
 
     <div class="section level2">
@@ -296,14 +299,14 @@ documentation).</p></li>
 <li><p><strong>Regularity / two regimes.</strong> When <code>p &lt; NT</code> (Theorem
 <code>debiased.att.thm</code>) the full design Gram is nonsingular and the debiasing
 direction is the exact inverse; the accessor reduces to debiased ETWFE.
-When <code>p &gt;= NT</code> (Theorem <code>debiased.highdim.thm</code>) the Gram is singular and the
+When <code>p &gt;= NT</code> (the high-dimensional FETWFE theory) the Gram is singular and the
 direction is the <strong>nodewise (desparsified-lasso) relaxed inverse</strong> of
 equation <code>debiased.highdim.v</code> (the same estimate and SE, only <code>v</code> differs
 — "one estimator, two regimes"); it requires sparsity
 (<code>s_N log(p_N) / sqrt(N) -&gt; 0</code>), a restricted-eigenvalue condition over
 sparse cones, <code>||v*||_1 = O(1)</code>, and a bounded limiting variance
-<code>a' Sigma_theta^(-1) a</code>. The high-dimensional branch realizes Theorem
-<code>debiased.highdim.thm</code> with the theory-scaled penalty; its finite-sample
+<code>a' Sigma_theta^(-1) a</code>. The high-dimensional branch realizes the
+high-dimensional FETWFE theory with the theory-scaled penalty; its finite-sample
 <strong>coverage is validated near-nominally</strong> at the <code>p &gt;= NT</code> anchor of Faletto
 (2025) with the feasibility-appropriate penalty, but not yet across regimes
 or at the default theory-scale <code>lambda_c</code>; treat the <code>p &gt;= NT</code> path as
@@ -314,7 +317,7 @@ fit's bridge (<code>q &lt; 1</code>) <code>theta_hat</code>: Theorem <code>debia
 <em>consistency</em> of the nuisance, and with the exact inverse this is the OLS
 identity. The <strong>high-dimensional</strong> branch instead fits an internal <code>q = 1</code>
 fused lasso (<code>grpreg::cv.grpreg(penalty = "gBridge", gamma = 1)</code>, CV-selected
-<code>lambda</code>) as the nuisance, because Theorem <code>debiased.highdim.thm</code> controls the
+<code>lambda</code>) as the nuisance, because the high-dimensional FETWFE theory controls the
 orthogonalization remainder through the nuisance's <code>l1</code> <em>rate</em>
 (<code>||theta_hat - theta*||_1 = O_p(s_N lambda_theta)</code>) — the rate the <code>q = 1</code>
 fused lasso enjoys under a restricted-eigenvalue condition (the standard

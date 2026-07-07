@@ -37,7 +37,7 @@ differences, where effects share the regression-coefficient variance piece)."></
 
     <a class="navbar-brand me-2" href="../index.html">fetwfe</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -157,9 +157,11 @@ need not exist – the bootstrap uses the full-design <strong>desparsified</stro
 construction of <code><a href="debiasedATT.html">debiasedATT()</a></code> (per-effect nodewise directions) generalized
 to the family. This desparsified <code>p &gt;= NT</code> path is <strong>experimental</strong>
 (<code><a href="fetwfe.html">fetwfe()</a></code> fits only): it generalizes the <code><a href="debiasedATT.html">debiasedATT()</a></code> construction
-whose overall-ATT coverage is validated near-nominally at the <code>p &gt;= NT</code>
-anchor of Faletto (2025), but the family-wise <em>band</em> coverage here is not
-itself simulation-validated, so inspect the returned <code>feasibility</code> /
+whose overall-ATT coverage was validated near-nominally (with the
+CV-selected penalty) at the <code>p &gt;= NT</code> anchor of Faletto (2025), but the
+family-wise
+<em>band</em> coverage here is not itself simulation-validated, so inspect the
+returned <code>feasibility</code> /
 <code>converged</code> diagnostics. A
 non-<code><a href="fetwfe.html">fetwfe()</a></code> <code>p &gt;= NT</code>
 fit (e.g. <code><a href="betwfe.html">betwfe()</a></code>) has no desparsified band, so it instead falls back to
@@ -172,7 +174,7 @@ unreliable (use a <code><a href="fetwfe.html">fetwfe()</a></code> fit for valid 
 desparsified path covers all
 four families (a high-dimensional <code>family = "event_study"</code> fit additionally
 carries the propensity channel <code>F_pi</code>). In the high-dimensional regime the
-band is centered on the <strong>debiased</strong> estimate (the Theorem 6.6 correction,
+band is centered on the <strong>debiased</strong> estimate (the high-dimensional FETWFE theory correction,
 equal to <code><a href="debiasedATT.html">debiasedATT()</a></code>'s point estimate for the matching contrast), not
 the post-selection bridge estimate; fixed-p bands center on the (unbiased)
 bridge estimate as before. Because this desparsified bootstrap band is

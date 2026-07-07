@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">fetwfe</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -57,7 +57,7 @@
                         <h4 data-toc-skip class="author">Gregory
 Faletto</h4>
             
-            <h4 data-toc-skip class="date">2026-07-06</h4>
+            <h4 data-toc-skip class="date">2026-07-07</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/gregfaletto/fetwfePackage/blob/main/vignettes/inference_vignette.Rmd" class="external-link"><code>vignettes/inference_vignette.Rmd</code></a></small>
       <div class="d-none name"><code>inference_vignette.Rmd</code></div>
@@ -775,18 +775,18 @@ When the (full) design is high-dimensional — where the analytic Gram
 inverse need not exist, so there is no analytic sup-t band — the
 bootstrap automatically switches to the full-design
 <strong>desparsified</strong> construction of <code><a href="../reference/debiasedATT.html">debiasedATT()</a></code>
-(paper Theorem 6.6): each effect’s debiasing direction becomes a
-nodewise (<code>riesz_lasso</code>) relaxed inverse over the singular
-Gram, with the bridge residuals. This is <em>uniformly valid</em> (not
-post-selection) and is the only route to simultaneous bands in that
-regime. It is <strong>experimental</strong> (<code><a href="../reference/fetwfe.html">fetwfe()</a></code> fits
-only): its underlying overall-ATT coverage is validated near-nominally
-at the <code>p &gt; NT</code> anchor of Faletto (2025), but the
-family-wise band coverage is not itself simulation-validated, so the
-returned object carries a <code>regime</code> field and per-effect
-<code>feasibility</code> / <code>converged</code> /
-<code>lambda_node</code> diagnostics, and <code>lambda_c</code> tunes
-the nodewise penalty
+(the high-dimensional FETWFE theory): each effect’s debiasing direction
+becomes a nodewise (<code>riesz_lasso</code>) relaxed inverse over the
+singular Gram, with the bridge residuals. This is <em>uniformly
+valid</em> (not post-selection) and is the only route to simultaneous
+bands in that regime. It is <strong>experimental</strong>
+(<code><a href="../reference/fetwfe.html">fetwfe()</a></code> fits only): its underlying overall-ATT coverage
+is validated near-nominally at the <code>p &gt; NT</code> anchor of
+Faletto (2025), but the family-wise band coverage is not itself
+simulation-validated, so the returned object carries a
+<code>regime</code> field and per-effect <code>feasibility</code> /
+<code>converged</code> / <code>lambda_node</code> diagnostics, and
+<code>lambda_c</code> tunes the nodewise penalty
 <code>lambda_node = lambda_c * max(|a|) * sqrt(log(p) / N)</code> —
 too-small values leave the directions infeasible and trigger a warning.
 <code>lambda_c</code> accepts either a fixed positive number (default
@@ -806,10 +806,10 @@ the high-dimensional regime, additionally carrying the per-unit
 propensity channel (the two-channel
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi mathvariant="normal">Σ</mi><mn>1</mn></msub><mo>+</mo><msub><mi mathvariant="normal">Σ</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">\Sigma_1 + \Sigma_2</annotation></semantics></math>
 bootstrap). In the high-dimensional regime the band is <strong>centered
-on the debiased estimate</strong> (the Theorem 6.6 correction, matching
-<code><a href="../reference/debiasedATT.html">debiasedATT()</a></code>) rather than the post-selection bridge
-estimate, which would otherwise carry the selection bias. The
-desparsified path is <code><a href="../reference/fetwfe.html">fetwfe()</a></code>-only; a
+on the debiased estimate</strong> (the high-dimensional FETWFE theory
+correction, matching <code><a href="../reference/debiasedATT.html">debiasedATT()</a></code>) rather than the
+post-selection bridge estimate, which would otherwise carry the
+selection bias. The desparsified path is <code><a href="../reference/fetwfe.html">fetwfe()</a></code>-only; a
 non-<code><a href="../reference/fetwfe.html">fetwfe()</a></code>
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>≥</mo><mi>N</mi><mi>T</mi></mrow><annotation encoding="application/x-tex">p \geq NT</annotation></semantics></math>
 fit (e.g. <code><a href="../reference/betwfe.html">betwfe()</a></code>) has no debiased band, so it falls back
@@ -1092,9 +1092,9 @@ selection.</p></li>
 <li><p><code><a href="../reference/debiasedATT.html">debiasedATT()</a></code> returns a <strong>uniformly
 valid</strong> confidence interval for the overall ATT by
 <em>desparsifying</em> the fit (the nodewise relaxed-inverse
-construction of Theorem 6.6 in Faletto 2025), which removes the
-regularization bias. This is “one estimator, two regimes”: the call and
-the returned object are identical to the
+construction of the high-dimensional FETWFE theory in Faletto 2025),
+which removes the regularization bias. This is “one estimator, two
+regimes”: the call and the returned object are identical to the
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>&lt;</mo><mi>N</mi><mi>T</mi></mrow><annotation encoding="application/x-tex">p &lt; NT</annotation></semantics></math>
 case; only the internal nuisance changes.</p></li>
 </ol>
@@ -1121,18 +1121,23 @@ regime arises with many covariates, short panels, or many cohorts.
 <span><span class="co">#&gt;    att     se </span></span>
 <span><span class="co">#&gt; -2.416  0.186</span></span></code></pre></div>
 <p>That fused estimate is post-selection. For uniformly valid inference,
-pass the fit to <code><a href="../reference/debiasedATT.html">debiasedATT()</a></code>:</p>
+pass the fit to <code><a href="../reference/debiasedATT.html">debiasedATT()</a></code>, selecting the nodewise
+penalty by cross-validation (<code>lambda_c = "cv"</code>) — the
+configuration whose overall-ATT coverage was validated at the anchor
+below. (The default fixed <code>lambda_c = 1.0</code> is a starting
+point, not the validated penalty.)</p>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">db</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/debiasedATT.html">debiasedATT</a></span><span class="op">(</span><span class="va">fit_hd</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">db</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/debiasedATT.html">debiasedATT</a></span><span class="op">(</span><span class="va">fit_hd</span>, lambda_c <span class="op">=</span> <span class="st">"cv"</span><span class="op">)</span></span>
 <span><span class="va">db</span></span>
 <span><span class="co">#&gt; Debiased overall ATT (high-dimensional regime)</span></span>
-<span><span class="co">#&gt;   Estimate:   -2.3815</span></span>
-<span><span class="co">#&gt;   Std. Error: 0.1429</span></span>
-<span><span class="co">#&gt;   95% CI: [-2.6617, -2.1014]</span></span>
-<span><span class="co">#&gt; High-dimensional (p &gt;= NT) desparsified band [EXPERIMENTAL: overall-ATT</span></span>
-<span><span class="co">#&gt;   coverage validated near-nominally at the studied p &gt;= NT anchor</span></span>
-<span><span class="co">#&gt;   (Faletto 2025) -- inspect the diagnostics below]</span></span>
-<span><span class="co">#&gt;   nodewise penalty: lambda_c = 1 (fixed); lambda_node in [0.3672, 0.3672]</span></span>
+<span><span class="co">#&gt;   Estimate:   -2.3684</span></span>
+<span><span class="co">#&gt;   Std. Error: 0.2507</span></span>
+<span><span class="co">#&gt;   95% CI: [-2.8597, -1.8771]</span></span>
+<span><span class="co">#&gt; High-dimensional (p &gt;= NT) desparsified interval [EXPERIMENTAL:</span></span>
+<span><span class="co">#&gt;   overall-ATT coverage was validated near-nominally at a p &gt;= NT anchor</span></span>
+<span><span class="co">#&gt;   with the CV-selected penalty (Faletto 2025), but</span></span>
+<span><span class="co">#&gt;   coverage at other penalties is not separately validated -- inspect the diagnostics below]</span></span>
+<span><span class="co">#&gt;   nodewise penalty: lambda_c = 0.5 (CV-selected); lambda_node in [0.1836, 0.1836]</span></span>
 <span><span class="co">#&gt;   nodewise directions: 1/1 converged, 1/1 KKT-feasible (worst feasibility/lambda_node = 1)</span></span></code></pre></div>
 <p>The print surfaces the high-dimensional diagnostics worth inspecting:
 the resolved nodewise penalty (<code>lambda_c</code> /
@@ -1160,7 +1165,8 @@ anchor (<a href="https://github.com/gregfaletto/fetwfe/issues/88" class="externa
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td>Debiased (<code><a href="../reference/debiasedATT.html">debiasedATT()</a></code>, Theorem 6.6)</td>
+<td>Debiased (<code><a href="../reference/debiasedATT.html">debiasedATT()</a></code> with
+<code>lambda_c = "cv"</code>)</td>
 <td><strong>≈ 93%</strong></td>
 </tr>
 <tr class="even">

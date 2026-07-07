@@ -100,10 +100,11 @@ simultaneousCIs(
   ([`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)
   fits only): it generalizes the
   [`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)
-  construction whose overall-ATT coverage is validated near-nominally at
-  the `p >= NT` anchor of Faletto (2025), but the family-wise *band*
-  coverage here is not itself simulation-validated, so inspect the
-  returned `feasibility` / `converged` diagnostics. A
+  construction whose overall-ATT coverage was validated near-nominally
+  (with the CV-selected penalty) at the `p >= NT` anchor of Faletto
+  (2025), but the family-wise *band* coverage here is not itself
+  simulation-validated, so inspect the returned `feasibility` /
+  `converged` diagnostics. A
   non-[`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)
   `p >= NT` fit (e.g.
   [`betwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/betwfe.md))
@@ -120,7 +121,7 @@ simultaneousCIs(
   all four families (a high-dimensional `family = "event_study"` fit
   additionally carries the propensity channel `F_pi`). In the
   high-dimensional regime the band is centered on the **debiased**
-  estimate (the Theorem 6.6 correction, equal to
+  estimate (the high-dimensional FETWFE theory correction, equal to
   [`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)'s
   point estimate for the matching contrast), not the post-selection
   bridge estimate; fixed-p bands center on the (unbiased) bridge
