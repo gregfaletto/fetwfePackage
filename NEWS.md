@@ -1,5 +1,25 @@
 # NEWS
 
+## Version 1.56.5
+
+### Documentation
+
+- Split the long inference vignette into three focused vignettes, one topic each:
+  `vignette("inference_vignette")` (standard errors and the variance decomposition,
+  including the `se_type` options), `vignette("simultaneous_cis_vignette")`
+  (family-wise simultaneous confidence bands and the selection-consistency
+  zero-effect test), and `vignette("high_dimensional_vignette")` (the
+  high-dimensional `p >= NT` debiased path of `debiasedATT()`). The prose and code
+  are unchanged apart from the conservative-SE trim below; internal
+  cross-references now link across the three vignettes.
+- Trimmed the `se_type = "conservative"` treatment in the standard-errors vignette
+  from a standalone section with a worked example down to a short note. The
+  conservative Cauchy-Schwarz SE is an opt-in fallback for propensity-score
+  estimators that violate assumption (Psi-IF); the package ships none such (its
+  default cohort-sample-proportions weights satisfy (Psi-IF)), so under the default
+  estimator there is no practical reason to set it. The `se_type = "conservative"`
+  option itself and its documentation on the estimator help pages are unchanged.
+
 ## Version 1.56.4
 
 ### Bug fixes
