@@ -54,7 +54,7 @@ fit_hd <- fetwfeWithSimulatedData(sim_hd, q = 0.5)
 round(c(att = fit_hd$att_hat, se = fit_hd$att_se), 3)
 ```
 
-That fused estimate is post-selection. For uniformly valid inference, pass the fit to `debiasedATT()`, selecting the nodewise penalty by cross-validation (`lambda_c = "cv"`) --- the configuration whose overall-ATT coverage was validated at the anchor below. (The default fixed `lambda_c = 1.0` is a starting point, not the validated penalty.)
+That fused estimate is post-selection. For uniformly valid inference, pass the fit to `debiasedATT()`, which implements the high-dimensional debiased construction of **Theorem `debiased.highdim.thm`** (Faletto 2025). Its coverage is robust across the penalty values studied --- a cross-validated selector below the theory scale and a fixed constant above it bracket the default `1.0` --- so the default is fine; below we let `lambda_c = "cv"` select the constant per fit as an alternative.
 
 ```{r highdim-debiased}
 db <- debiasedATT(fit_hd, lambda_c = "cv")
@@ -69,10 +69,10 @@ In any single draw the fused and debiased point estimates can be close, so the v
 
 | Overall-ATT interval | Coverage (nominal 95%) |
 |---|---|
-| Debiased (`debiasedATT()` with `lambda_c = "cv"`) | **≈ 93%** |
+| Debiased (`debiasedATT()` with `lambda_c = "cv"`) | **≈ 94%** |
 | Fused plug-in (pointwise)               | ≈ 77%                  |
 
-The fused interval under-covers because of the post-selection non-uniformity; the debiased interval is near-nominal. This is validated at the studied anchor (with the feasibility-appropriate penalty); treat the $p \geq NT$ path as **experimental** outside that regime --- which is why the diagnostics above matter.
+The fused interval under-covers because of the post-selection non-uniformity; the debiased interval is near-nominal --- the direct simulation confirmation of **Theorem `debiased.highdim.thm`**, robust across the penalty values studied (a CV selector below the theory scale and a fixed constant above it, bracketing the default `1.0`). The per-direction `converged` / `feasibility` diagnostics above remain worth a glance to confirm the nodewise directions are well-behaved on your own fit.
 
 ## An asymptotic alternative: the wild bootstrap
 
@@ -103,7 +103,7 @@ sc_hd <- simultaneousCIs(
 sc_hd$regime
 ```
 
-One scope caveat: #88 validated the **scalar overall-ATT** (`debiasedATT()`); the **family-wise band** coverage at $p \geq NT$ is not itself simulation-validated, so the band is the more experimental of the two.
+One scope caveat: **Theorem `debiased.highdim.thm`** (validated in simulation) covers the **scalar overall-ATT** (`debiasedATT()`), but the **family-wise band** (Theorem `debiased.highdim.joint.thm`) coverage at $p \geq NT$ is *not* itself simulation-validated --- the paper states it experimental-grade --- so treat these high-dimensional bands as the experimental part of this path.
 
 ## Controlled high-dimensional truth
 

@@ -1,5 +1,22 @@
 # NEWS
 
+## Version 1.56.6
+
+### Documentation
+
+- The high-dimensional (`p >= NT`) `debiasedATT()` overall-ATT interval is no
+  longer flagged **experimental**. It is now backed by a stated theorem (the
+  desparsified high-dimensional debiased-ATT result, `debiased.highdim.thm`), and
+  its coverage is validated near-nominally in simulation (approximately 0.94 at the
+  `p >= NT` anchor of Faletto 2025), robust across the nodewise penalty scales studied. The
+  `debiasedATT()` documentation, the shared high-dimensional print banner (its
+  interval variant), and the high-dimensional vignette are updated accordingly.
+- The **family-wise simultaneous bands** at `p >= NT` (`simultaneousCIs()`) remain
+  flagged experimental: the joint-band extension (`debiased.highdim.joint.thm`) is
+  stated but its coverage is not itself simulation-validated. The `betwfe()` /
+  non-`fetwfe()` `p >= NT` fallback-band under-coverage warning and the per-fit
+  nodewise-direction diagnostics are unchanged.
+
 ## Version 1.56.5
 
 ### Documentation

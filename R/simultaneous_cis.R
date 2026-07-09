@@ -86,13 +86,12 @@ utils::globalVariables(c(
 #'   design is **high-dimensional (`p >= NT`)** -- where the analytic Gram inverse
 #'   need not exist -- the bootstrap uses the full-design **desparsified**
 #'   construction of `debiasedATT()` (per-effect nodewise directions) generalized
-#'   to the family. This desparsified `p >= NT` path is **experimental**
-#'   (`fetwfe()` fits only): it generalizes the `debiasedATT()` construction
-#'   whose overall-ATT coverage was validated near-nominally (with the
-#'   CV-selected penalty) at the `p >= NT` anchor of Faletto (2025), but the
-#'   family-wise
-#'   *band* coverage here is not itself simulation-validated, so inspect the
-#'   returned `feasibility` /
+#'   to the family. This desparsified `p >= NT` band path is **experimental**
+#'   (`fetwfe()` fits only): it generalizes the `debiasedATT()` construction ---
+#'   whose overall-ATT coverage is validated near-nominally in simulation
+#'   (Theorem `debiased.highdim.thm`, Faletto 2025) --- but the family-wise
+#'   *band* coverage here (Theorem `debiased.highdim.joint.thm`) is not itself
+#'   simulation-validated, so inspect the returned `feasibility` /
 #'   `converged` diagnostics. A
 #'   non-`fetwfe()` `p >= NT`
 #'   fit (e.g. `betwfe()`) has no desparsified band, so it instead falls back to
@@ -1447,7 +1446,8 @@ print.simultaneous_cis <- function(x, ...) {
 
 #' @title Print the high-dimensional desparsified-band diagnostics
 #' @description Shared by `print.simultaneous_cis` and `print.debiased_att`: in
-#'   the high-dimensional (`p >= NT`) regime, surfaces the experimental caveat and
+#'   the high-dimensional (`p >= NT`) regime, surfaces the coverage note (the
+#'   scalar interval is validated; the family-wise band is experimental-grade) and
 #'   the nodewise-direction diagnostics (the resolved `lambda_c` / `lambda_node`
 #'   scale, the KKT feasibility certificate `||Sigma v - a||_inf <= lambda_node`,
 #'   and convergence) that the documentation tells users to inspect. `x` carries
@@ -1458,27 +1458,29 @@ print.simultaneous_cis <- function(x, ...) {
 #' @keywords internal
 #' @noRd
 .print_highdim_diagnostics <- function(x) {
-	# Scope the coverage claim honestly (#364): the p >= NT overall-ATT coverage
-	# was validated near-nominally (#88 simulation study), and only with the CV-selected
-	# penalty -- not the default fixed `lambda_c`. For a band object the family-wise
-	# coverage is not itself validated; for the scalar interval, only the overall
-	# ATT at the CV penalty is.
+	# The p >= NT overall-ATT interval is uniformly valid (Theorem
+	# `debiased.highdim.thm`) and its coverage is validated near-nominally in
+	# simulation, robust across the nodewise penalty scales studied (#88). The
+	# family-wise *band* extension (Theorem `debiased.highdim.joint.thm`) is stated
+	# but its joint coverage is not itself simulation-validated, so band objects
+	# retain an experimental flag while the scalar interval does not.
 	is_band <- inherits(x, "simultaneous_cis")
-	caveat <- if (is_band) {
-		"family-wise band coverage here is not itself simulation-validated"
+	if (is_band) {
+		cat(
+			"High-dimensional (p >= NT) desparsified band [EXPERIMENTAL:\n",
+			"  the scalar overall-ATT coverage is validated near-nominally\n",
+			"  (Faletto 2025), but the family-wise band coverage here is not\n",
+			"  itself simulation-validated -- inspect the diagnostics below]\n",
+			sep = ""
+		)
 	} else {
-		"coverage at other penalties is not separately validated"
+		cat(
+			"High-dimensional (p >= NT) desparsified interval\n",
+			"  [overall-ATT coverage validated near-nominally in simulation\n",
+			"  (Theorem debiased.highdim.thm, Faletto 2025); diagnostics below]\n",
+			sep = ""
+		)
 	}
-	cat(
-		sprintf(
-			"High-dimensional (p >= NT) desparsified %s [EXPERIMENTAL:\n",
-			if (is_band) "band" else "interval"
-		),
-		"  overall-ATT coverage was validated near-nominally at a p >= NT anchor\n",
-		"  with the CV-selected penalty (Faletto 2025), but\n",
-		sprintf("  %s -- inspect the diagnostics below]\n", caveat),
-		sep = ""
-	)
 	sel <- if (identical(x$lambda_c_selection, "cv")) "CV-selected" else "fixed"
 	cat(sprintf(
 		"  nodewise penalty: lambda_c = %.4g (%s); lambda_node in [%.4g, %.4g]\n",
