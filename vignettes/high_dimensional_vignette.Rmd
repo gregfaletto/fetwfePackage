@@ -65,7 +65,7 @@ The print surfaces the high-dimensional diagnostics worth inspecting: the resolv
 
 ## Why debiased, and how well it covers
 
-In any single draw the fused and debiased point estimates can be close, so the value of `debiasedATT()` is not visible from one fit --- it is a **repeated-sampling** guarantee. A coverage study at a $p > NT$ anchor ([issue #88](https://github.com/gregfaletto/fetwfe/issues/88)) found:
+In any single draw the fused and debiased point estimates can be close, so the value of `debiasedATT()` is not visible from one fit --- it is a **repeated-sampling** guarantee. A coverage study at a $p > NT$ anchor (reported in Faletto 2025) found:
 
 | Overall-ATT interval | Coverage (nominal 95%) |
 |---|---|

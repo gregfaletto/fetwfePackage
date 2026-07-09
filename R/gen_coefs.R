@@ -584,6 +584,15 @@ genCoefs <- function(
 #'         coefficients corresponding to the treatment dummies for each cohort.
 #'         Intrinsic to \eqn{\beta}{beta}; does not depend on the assignment
 #'         DGP.}
+#'   \item{actual_event_time_tes}{A named numeric vector of length \code{T - 1}
+#'         giving the true treatment effect at each event time (periods since
+#'         adoption) \code{e = 0, 1, ..., T - 2}, with names
+#'         \code{"0", ..., "T-2"}. Each event time's effect is the
+#'         mean of the true per-\code{(g, t)} cell effects over the cohorts still
+#'         observed at that event time, weighted in proportion to
+#'         \code{cohort_weights} --- the same aggregation
+#'         \code{\link{eventStudy}()} estimates on a fitted panel. \code{NA} at an
+#'         event time no cohort reaches. New in 1.56.7.}
 #'   \item{cohort_times}{An integer vector of length \code{G} giving the calendar
 #'         time period at which each treated cohort first adopts treatment. In
 #'         the simulator's convention cohort \code{g} adopts at calendar time
@@ -644,6 +653,9 @@ genCoefs <- function(
 #'
 #' # Cohort-specific treatment effects:
 #' print(te_results$actual_cohort_tes)
+#'
+#' # True effect at each event time (periods since adoption):
+#' print(te_results$actual_event_time_tes)
 #'
 #' # Or use the new print method for a self-describing display:
 #' print(te_results)
@@ -748,9 +760,23 @@ getTes <- function(coefs_obj) {
 	# same scheme that `tidy.<estimator>` uses on a fitted panel.
 	cohort_times <- as.integer(seq_len(G) + 1L)
 
+	# True per-event-time effects (periods since adoption): the same aggregation
+	# `.event_study_fetwfe()` targets, applied to the DGP's true cells. For a
+	# synthetic genCoefs DGP cohorts adopt consecutively (offsets 2..G+1) and
+	# `first_inds = getFirstInds(G, T)`; these equal a fit's resolved indices, so
+	# this truth matches `eventStudy()`'s estimand (bound by test, #388).
+	actual_event_time_tes <- .true_event_time_effects(
+		cell_effects = beta[treat_inds],
+		first_inds = first_inds,
+		cohort_offsets_int = seq.int(2L, G + 1L),
+		cohort_probs = cohort_weights,
+		T = T
+	)
+
 	out <- list(
 		att_true = att_true,
 		actual_cohort_tes = actual_cohort_tes,
+		actual_event_time_tes = actual_event_time_tes,
 		G = G,
 		R = G,
 		T = T,

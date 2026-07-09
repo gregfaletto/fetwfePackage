@@ -24,6 +24,15 @@ true cohort-specific treatment effects, calculated by averaging the
 coefficients corresponding to the treatment dummies for each cohort.
 Intrinsic to \eqn{\beta}{beta}; does not depend on the assignment
 DGP.}
+\item{actual_event_time_tes}{A named numeric vector of length \code{T - 1}
+giving the true treatment effect at each event time (periods since
+adoption) \code{e = 0, 1, ..., T - 2}, with names
+\code{"0", ..., "T-2"}. Each event time's effect is the
+mean of the true per-\code{(g, t)} cell effects over the cohorts still
+observed at that event time, weighted in proportion to
+\code{cohort_weights} --- the same aggregation
+\code{\link{eventStudy}()} estimates on a fitted panel. \code{NA} at an
+event time no cohort reaches. New in 1.56.7.}
 \item{cohort_times}{An integer vector of length \code{G} giving the calendar
 time period at which each treated cohort first adopts treatment. In
 the simulator's convention cohort \code{g} adopts at calendar time
@@ -90,6 +99,9 @@ print(te_results$att_true)
 
 # Cohort-specific treatment effects:
 print(te_results$actual_cohort_tes)
+
+# True effect at each event time (periods since adoption):
+print(te_results$actual_event_time_tes)
 
 # Or use the new print method for a self-describing display:
 print(te_results)
