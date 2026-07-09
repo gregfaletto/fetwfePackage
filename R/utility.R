@@ -1864,8 +1864,8 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #'   Note: when `se_type = "cluster"`, `V_1` is the Liang-Zeger
 #'   cluster-sandwich quadratic form rather than the Kock-2013 model-
 #'   based formula; the `V_1 + V_2` combination structure is the same.
-#'   See `vignettes/inference_vignette.Rmd` section 4 for the
-#'   cluster-path V_1 definition.
+#'   See the cluster-robust standard errors section of
+#'   `vignettes/inference_vignette.Rmd` for the cluster-path V_1 definition.
 #' * `tilde_v_N`, `hat_v_N`: paper-notation unit-scaled (`tilde_v_N`) and
 #'   un-scaled (`hat_v_N`) total variance, where `tilde_v_N := hat_v_N / T`
 #'   (paper line 2004). The Wald CI is

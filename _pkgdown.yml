@@ -22,6 +22,8 @@ articles:
   - migrating_from_did_and_etwfe
   - fusion_structure_vignette
   - inference_vignette
+  - simultaneous_cis_vignette
+  - high_dimensional_vignette
   - simulation_vignette
   - etwfe_betwfe_vignette
 
