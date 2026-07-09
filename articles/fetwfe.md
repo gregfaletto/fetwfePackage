@@ -145,7 +145,14 @@ The rest of this vignette expands on each of these.
 For a detailed discussion of how the package’s standard errors are
 computed, the assumptions they rely on, and an experimental
 cluster-robust option (`se_type = "cluster"`) suitable as a sensitivity
-check, see the companion vignette `inference_vignette`.
+check, see the companion vignette `inference_vignette`. Two further
+companion vignettes cover family-wise simultaneous confidence bands
+([`simultaneousCIs()`](https://gregfaletto.github.io/fetwfePackage/reference/simultaneousCIs.md))
+and the selection-consistency zero-effect test
+(`simultaneous_cis_vignette`), and high-dimensional debiased inference
+via
+[`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)
+(`high_dimensional_vignette`).
 
 In the next sections, we’ll walk through examples of how
 [`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)

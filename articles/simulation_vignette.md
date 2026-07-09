@@ -583,8 +583,8 @@ positive cohort-weight variance $`V_2 > 0`$ (and, for the
 `n_signal_cohorts` form, a guaranteed non-zero overall ATT — a free-form
 `treat_base_levels` with mixed-sign levels could cancel to a zero ATT) —
 the data-generating process behind the high-dimensional debiased-ATT
-coverage study (see the high-dimensional section of
-[`vignette("inference_vignette", package = "fetwfe")`](https://gregfaletto.github.io/fetwfePackage/articles/inference_vignette.md)
+coverage study (see
+[`vignette("high_dimensional_vignette", package = "fetwfe")`](https://gregfaletto.github.io/fetwfePackage/articles/high_dimensional_vignette.md)
 and
 [`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)).
 
