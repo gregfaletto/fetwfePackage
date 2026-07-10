@@ -1,5 +1,27 @@
 # NEWS
 
+## Version 1.56.8
+
+### Documentation
+
+- The high-dimensional (`p >= NT`) simultaneous confidence band from
+  `simultaneousCIs(method = "bootstrap")` is no longer flagged **experimental**.
+  Theorem `debiased.highdim.joint.thm` (the desparsified sup-t band) is now
+  validated near-nominally in simulation --- family-wise coverage approximately
+  0.92 over the event-study family (`K = 7`) at the `p >= NT` anchor of Faletto
+  (2025), tighter than Bonferroni --- the band sibling of the scalar
+  `debiasedATT()` result. The band documentation, the high-dimensional print
+  banner (its band variant), the bootstrap warnings, and the vignettes are
+  updated to cite the theorem and validated coverage. The `betwfe()` /
+  non-`fetwfe()` fallback-band under-coverage warning, `se_type = "cluster"`, the
+  per-fit nodewise-direction feasibility diagnostics, and the sparsity /
+  restricted-eigenvalue assumptions are unchanged.
+- Documented the high-dimensional band routing: at `p >= NT` the valid
+  simultaneous band is `simultaneousCIs(method = "bootstrap")`; the analytic
+  default (and `eventStudy(ci_type = "simultaneous")`) return the post-selection
+  band on the selected support, which under-covers, and a `gls = FALSE` fit has
+  no analytic band. Completes #388.
+
 ## Version 1.56.7
 
 ### Minor enhancements

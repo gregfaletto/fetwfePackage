@@ -86,13 +86,17 @@ utils::globalVariables(c(
 #'   design is **high-dimensional (`p >= NT`)** -- where the analytic Gram inverse
 #'   need not exist -- the bootstrap uses the full-design **desparsified**
 #'   construction of `debiasedATT()` (per-effect nodewise directions) generalized
-#'   to the family. This desparsified `p >= NT` band path is **experimental**
-#'   (`fetwfe()` fits only): it generalizes the `debiasedATT()` construction ---
-#'   whose overall-ATT coverage is validated near-nominally in simulation
-#'   (Theorem `debiased.highdim.thm`, Faletto 2025) --- but the family-wise
-#'   *band* coverage here (Theorem `debiased.highdim.joint.thm`) is not itself
-#'   simulation-validated, so inspect the returned `feasibility` /
-#'   `converged` diagnostics. A
+#'   to the family. This desparsified `p >= NT` band path (`fetwfe()` fits only)
+#'   generalizes the `debiasedATT()` construction --- whose overall-ATT coverage
+#'   is validated near-nominally in simulation (Theorem `debiased.highdim.thm`,
+#'   Faletto 2025) --- to a family of functionals. Its family-wise coverage is
+#'   likewise validated near-nominally (Theorem `debiased.highdim.joint.thm`):
+#'   ~0.92 over the **event-study** family (`K = 7`) at the `p >= NT` anchor of
+#'   Faletto (2025), the band sibling of the scalar result (~0.94); the cohort and
+#'   all-post-treatment families are covered by the same theorem but were not
+#'   separately simulated. As with the scalar, validity rests on the sparsity /
+#'   restricted-eigenvalue primitives (assumed, not proved), so inspect the
+#'   returned `feasibility` / `converged` diagnostics. A
 #'   non-`fetwfe()` `p >= NT`
 #'   fit (e.g. `betwfe()`) has no desparsified band, so it instead falls back to
 #'   the fixed-`p` selected-support band and emits a `warning()`: a #308 coverage
@@ -113,6 +117,12 @@ utils::globalVariables(c(
 #'   **`gls = FALSE`** fetwfe fit (`calc_ses = FALSE`), the band analog of
 #'   `debiasedATT()`'s Omega-free SE (#307, #313). `method = "analytic"` still
 #'   requires valid analytic SEs (a `q < 1`, `gls = TRUE`, rank-satisfied fit).
+#'   **At `p >= NT`, `method = "bootstrap"` is the valid simultaneous band** ---
+#'   the desparsified Theorem `debiased.highdim.joint.thm` band above. A
+#'   `method = "analytic"` call there instead returns the analytic band on the
+#'   *selected support*: a post-selection band that under-covers (it is not the
+#'   uniformly-valid desparsified band), and a `gls = FALSE` fit has no analytic
+#'   SEs at all --- so pass `method = "bootstrap"` for high-dimensional bands.
 #' @param B Integer; number of multiplier-bootstrap replicates
 #'   (`method = "bootstrap"` only). Default `1000`.
 #' @param seed Optional integer; if supplied, the bootstrap draws are
@@ -133,8 +143,9 @@ utils::globalVariables(c(
 #'   constant serves the point estimate and every band effect; #295). **Smaller
 #'   fixed values can leave directions infeasible (a warning fires and those bands
 #'   are unreliable).** Ignored when `p < NT` or `method = "analytic"`. The default
-#'   stays the fixed `1.0` (the `"cv"` mechanism is opt-in pending coverage
-#'   validation).
+#'   stays the fixed `1.0`; the family-wise coverage validated in Faletto (2025)
+#'   used the `"cv"` selector (`lambda_c` ~ 0.54, feasibility 1.0), the same
+#'   constant that serves the scalar `debiasedATT()` and every band effect.
 #' @return An object of S3 class `"simultaneous_cis"`: a list with
 #'   \describe{
 #'     \item{ci}{A data frame with columns `effect`, `estimate`,
@@ -1447,7 +1458,7 @@ print.simultaneous_cis <- function(x, ...) {
 #' @title Print the high-dimensional desparsified-band diagnostics
 #' @description Shared by `print.simultaneous_cis` and `print.debiased_att`: in
 #'   the high-dimensional (`p >= NT`) regime, surfaces the coverage note (the
-#'   scalar interval is validated; the family-wise band is experimental-grade) and
+#'   scalar interval and the family-wise band are both validated in simulation) and
 #'   the nodewise-direction diagnostics (the resolved `lambda_c` / `lambda_node`
 #'   scale, the KKT feasibility certificate `||Sigma v - a||_inf <= lambda_node`,
 #'   and convergence) that the documentation tells users to inspect. `x` carries
@@ -1458,19 +1469,18 @@ print.simultaneous_cis <- function(x, ...) {
 #' @keywords internal
 #' @noRd
 .print_highdim_diagnostics <- function(x) {
-	# The p >= NT overall-ATT interval is uniformly valid (Theorem
-	# `debiased.highdim.thm`) and its coverage is validated near-nominally in
-	# simulation, robust across the nodewise penalty scales studied (#88). The
-	# family-wise *band* extension (Theorem `debiased.highdim.joint.thm`) is stated
-	# but its joint coverage is not itself simulation-validated, so band objects
-	# retain an experimental flag while the scalar interval does not.
+	# The p >= NT overall-ATT interval (Theorem `debiased.highdim.thm`, #88) and
+	# the family-wise *band* extension (Theorem `debiased.highdim.joint.thm`,
+	# #105/#113, ~0.92 family-wise coverage over the event-study family) are both
+	# validated near-nominally in simulation, so neither carries an experimental
+	# flag. The nodewise diagnostics below flag per-fit feasibility either way.
 	is_band <- inherits(x, "simultaneous_cis")
 	if (is_band) {
 		cat(
-			"High-dimensional (p >= NT) desparsified band [EXPERIMENTAL:\n",
-			"  the scalar overall-ATT coverage is validated near-nominally\n",
-			"  (Faletto 2025), but the family-wise band coverage here is not\n",
-			"  itself simulation-validated -- inspect the diagnostics below]\n",
+			"High-dimensional (p >= NT) desparsified band\n",
+			"  [family-wise coverage validated near-nominally over the event-study\n",
+			"  family (Theorem debiased.highdim.joint.thm, Faletto 2025); diagnostics\n",
+			"  below]\n",
 			sep = ""
 		)
 	} else {
@@ -1492,7 +1502,7 @@ print.simultaneous_cis <- function(x, ...) {
 	nk <- length(x$converged)
 	# KKT-feasible iff `||Sigma v - a||_inf <= lambda_node` to within the shared
 	# `.riesz_feasible()` tolerance (the band's feasibility gate and the
-	# experimental warning use the same helper), so "K/K KKT-feasible" here means
+	# per-fit feasibility warning use the same helper), so "K/K KKT-feasible" here means
 	# "no feasibility warning fired".
 	nfeas <- sum(.riesz_feasible(x$feasibility, x$lambda_node))
 	feas_ratio <- x$feasibility / x$lambda_node

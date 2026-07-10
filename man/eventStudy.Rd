@@ -25,7 +25,14 @@ critical-value multiplier, and the \code{p_value} differ (under
 \code{"simultaneous"} the \code{p_value} is the single-step max-T multiplicity-
 adjusted dual of the band, under \code{"pointwise"} the per-effect Wald
 p-value; #200). Degenerate event times (no valid contributing cohorts)
-carry \code{NA} bounds and \code{NA} \code{p_value} under both settings.}
+carry \code{NA} bounds and \code{NA} \code{p_value} under both settings.
+
+\strong{High-dimensional (\code{p >= NT}):} the \code{"simultaneous"} band here is the
+analytic post-selection band on the selected support (or \code{NA} bounds on a
+\code{gls = FALSE} fit), \emph{not} the uniformly-valid desparsified band. For the
+valid high-dimensional event-study band call \code{\link[=simultaneousCIs]{simultaneousCIs()}} with
+\code{family = "event_study"}, \code{method = "bootstrap"} (Theorem
+\code{debiased.highdim.joint.thm}, validated near-nominally in Faletto 2025).}
 }
 \value{
 A data frame with class \code{c("eventStudy", "data.frame")} and

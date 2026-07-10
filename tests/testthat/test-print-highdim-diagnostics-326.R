@@ -1,5 +1,5 @@
 # Tests for #326: print.simultaneous_cis / print.debiased_att surface the
-# experimental high-dimensional (p >= NT) desparsified-band diagnostics, and
+# high-dimensional (p >= NT) desparsified-band diagnostics, and
 # debiasedATT() returns a classed "debiased_att" object.
 #
 # Both are additive UX changes: no behavior change to returned values. The class
@@ -109,7 +109,7 @@ test_that("print.debiased_att shows the high-dim diagnostics only in the high-di
 	out_fp <- capture.output(print(debiasedATT(.fp_fit_326)))
 	expect_true(any(grepl("Debiased overall ATT \\(fixed-p regime\\)", out_fp)))
 	expect_true(any(grepl("Estimate:", out_fp)))
-	# fixed-p: NO experimental diagnostics block.
+	# fixed-p: NO high-dim diagnostics block.
 	expect_false(any(grepl("EXPERIMENTAL|nodewise", out_fp)))
 
 	db_hd <- suppressWarnings(debiasedATT(.hd_fit_326, lambda_c = "cv"))
@@ -119,7 +119,8 @@ test_that("print.debiased_att shows the high-dim diagnostics only in the high-di
 	# The scalar overall-ATT interval was de-experimented in #387 (Theorem
 	# `debiased.highdim.thm` validated in simulation): the interval banner no
 	# longer says EXPERIMENTAL -- it cites the theorem + validated coverage. (The
-	# family-wise *band* banner keeps EXPERIMENTAL; see the simultaneous_cis test.)
+	# family-wise *band* banner was likewise de-experimented in #388/#113; see the
+	# simultaneous_cis test below.)
 	expect_false(any(grepl("EXPERIMENTAL", out_hd)))
 	expect_true(any(grepl("validated near-nominally", out_hd)))
 	expect_true(any(grepl("nodewise penalty: lambda_c", out_hd)))
@@ -158,6 +159,11 @@ test_that("print.simultaneous_cis shows the high-dim diagnostics block only in t
 		"High-dimensional \\(p >= NT\\) desparsified band",
 		out_hd
 	)))
+	# #388/#113: the band was de-experimented (Theorem debiased.highdim.joint.thm
+	# validated) -- the banner no longer says EXPERIMENTAL; it cites the joint
+	# theorem + validated family-wise coverage.
+	expect_false(any(grepl("EXPERIMENTAL", out_hd)))
+	expect_true(any(grepl("family-wise coverage validated", out_hd)))
 	expect_true(any(grepl(
 		"nodewise directions:.*converged.*KKT-feasible",
 		out_hd

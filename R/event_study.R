@@ -51,6 +51,13 @@ utils::globalVariables(c("event_time", "estimate", "ci_low", "ci_high"))
 #'   adjusted dual of the band, under `"pointwise"` the per-effect Wald
 #'   p-value; #200). Degenerate event times (no valid contributing cohorts)
 #'   carry `NA` bounds and `NA` `p_value` under both settings.
+#'
+#'   **High-dimensional (`p >= NT`):** the `"simultaneous"` band here is the
+#'   analytic post-selection band on the selected support (or `NA` bounds on a
+#'   `gls = FALSE` fit), *not* the uniformly-valid desparsified band. For the
+#'   valid high-dimensional event-study band call [simultaneousCIs()] with
+#'   `family = "event_study"`, `method = "bootstrap"` (Theorem
+#'   `debiased.highdim.joint.thm`, validated near-nominally in Faletto 2025).
 #' @return A data frame with class `c("eventStudy", "data.frame")` and
 #'   columns:
 #'   \describe{

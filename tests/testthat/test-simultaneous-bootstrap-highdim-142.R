@@ -2,7 +2,7 @@
 # multiplier bootstrap (#142 Phase 2). There the analytic Gram inverse need not
 # exist, so the bootstrap uses the FULL-design desparsified construction
 # (debiasedATT()'s #31 nodewise directions generalized to K effects -- uniformly
-# valid, NOT post-selection). EXPERIMENTAL. The simulator can make full p > NT
+# valid, NOT post-selection). The simulator can make full p > NT
 # panels since #293 (small cohorts).
 
 .make_highdim_sim_fit <- function() {
@@ -392,7 +392,7 @@ test_that("high-dim all-zero-bridge bootstrap returns an INFORMATIVE band, not t
 	# and the band is informative.
 	# Capture warnings: assert NO degenerate ("zeroed out every") warning fires (the
 	# #304 fall-through is taken, not the all-zero early-exit), while tolerating the
-	# standing high-dim experimental-feasibility warning (orthogonal; fit-specific).
+	# standing high-dim feasibility warning (orthogonal; fit-specific).
 	w <- character(0)
 	bo <- withCallingHandlers(
 		simultaneousCIs(
@@ -498,7 +498,7 @@ test_that("gls=FALSE high-dim all-zero-bridge: calc_ses=FALSE, analytic errors, 
 		"calc_ses = FALSE"
 	)
 	# Part A: bootstrap still falls through to the informative desparsified band
-	# (no degenerate warning; the experimental-feasibility warning is tolerated).
+	# (no degenerate warning; the feasibility warning is tolerated).
 	wF <- character(0)
 	boF <- withCallingHandlers(
 		simultaneousCIs(
