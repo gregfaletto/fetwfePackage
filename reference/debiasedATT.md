@@ -22,12 +22,13 @@ different point estimate than the fused one.
 
 When `p >= NT` the unrestricted ETWFE is infeasible, so the OLS identity
 no longer applies; the accessor instead builds the debiasing direction
-by a nodewise (desparsified-lasso) relaxed inverse (the high-dimensional
-FETWFE theory). The point estimate, SE formula, and return value are
-otherwise identical — "one estimator, two regimes." This
-high-dimensional branch is **experimental** (its overall-ATT coverage is
-validated near-nominally, with the CV-selected penalty, at the `p >= NT`
-anchor of Faletto (2025); see Assumptions).
+by a nodewise (desparsified-lasso) relaxed inverse (**Theorem
+`debiased.highdim.thm`** of Faletto (2025)). The point estimate, SE
+formula, and return value are otherwise identical — "one estimator, two
+regimes." The high-dimensional overall-ATT interval is **uniformly
+valid** under that theorem, and its coverage is validated near-nominally
+in simulation (0.94 at the `p >= NT` anchor of Faletto (2025), robust
+across the nodewise penalty scales studied); see Assumptions.
 
 ## Usage
 
@@ -125,9 +126,11 @@ debiasedATT(
   Chernozhukov-Newey-Singh), falling back to the theory scale `1.0` when
   no grid penalty is feasible (#295). Larger values shrink the debiasing
   direction more. **Ignored when `p < NT`.** The default stays the fixed
-  `1.0` (the `"cv"` mechanism is opt-in; it selects the
-  feasibility-appropriate constant validated at the anchor of Faletto
-  2025); treat the `p >= NT` path as experimental outside that regime.
+  `1.0` (the theory scale); the high-dimensional coverage validated in
+  Faletto (2025) is robust across the penalty values studied — a
+  cross-validated selector below the theory scale and a fixed constant
+  above it, which bracket the default `1.0` — so it needs no tuning for
+  valid inference.
 
 - riesz_max_iter, riesz_tol:
 
@@ -265,14 +268,13 @@ The uniformly-valid SE relies on the hypotheses of paper Theorem
   "one estimator, two regimes"); it requires sparsity
   (`s_N log(p_N) / sqrt(N) -> 0`), a restricted-eigenvalue condition
   over sparse cones, `||v*||_1 = O(1)`, and a bounded limiting variance
-  `a' Sigma_theta^(-1) a`. The high-dimensional branch realizes the
-  high-dimensional FETWFE theory with the theory-scaled penalty; its
-  finite-sample **coverage is validated near-nominally** at the
-  `p >= NT` anchor of Faletto (2025) with the feasibility-appropriate
-  penalty, but not yet across regimes or at the default theory-scale
-  `lambda_c`; treat the `p >= NT` path as **experimental** outside that
-  setting and inspect the returned `feasibility` / `converged`
-  diagnostics.
+  `a' Sigma_theta^(-1) a`. The high-dimensional branch realizes
+  **Theorem `debiased.highdim.thm`** (Faletto 2025) with the
+  theory-scaled penalty; its overall-ATT interval is **uniformly
+  valid**, with coverage validated near-nominally in simulation (0.94 at
+  the `p >= NT` anchor, robust across the nodewise penalty scales
+  studied). Inspect the returned `feasibility` / `converged` diagnostics
+  to confirm the per-fit nodewise directions are well-behaved.
 
 The two regimes use different nuisances. The **fixed-`p`** branch uses
 the fit's bridge (`q < 1`) `theta_hat`: Theorem `debiased.att.thm` needs

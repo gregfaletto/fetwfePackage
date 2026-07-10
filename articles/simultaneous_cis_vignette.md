@@ -225,24 +225,25 @@ Gram, with the bridge residuals. This is *uniformly valid* (not
 post-selection) and is the only route to simultaneous bands in that
 regime. It is **experimental**
 ([`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)
-fits only): its underlying overall-ATT coverage is validated
-near-nominally at the `p > NT` anchor of Faletto (2025), but the
-family-wise band coverage is not itself simulation-validated, so the
-returned object carries a `regime` field and per-effect `feasibility` /
-`converged` / `lambda_node` diagnostics, and `lambda_c` tunes the
-nodewise penalty `lambda_node = lambda_c * max(|a|) * sqrt(log(p) / N)`
-— too-small values leave the directions infeasible and trigger a
-warning. `lambda_c` accepts either a fixed positive number (default the
-theory scale `1.0`) or the string `"cv"`, which selects the constant
-**per fit** by cross-validating the Riesz loss over the KKT-feasible
-region (the desparsified-lasso / auto-DML standard), falling back to
-`1.0` when no grid penalty is feasible; one constant then serves both
-the
+fits only): the underlying scalar overall-ATT coverage is validated
+(Theorem `debiased.highdim.thm`, Faletto 2025), but the family-wise
+*band* coverage (Theorem `debiased.highdim.joint.thm`) is not itself
+simulation-validated, so the returned object carries a `regime` field
+and per-effect `feasibility` / `converged` / `lambda_node` diagnostics,
+and `lambda_c` tunes the nodewise penalty
+`lambda_node = lambda_c * max(|a|) * sqrt(log(p) / N)` — too-small
+values leave the directions infeasible and trigger a warning. `lambda_c`
+accepts either a fixed positive number (default the theory scale `1.0`)
+or the string `"cv"`, which selects the constant **per fit** by
+cross-validating the Riesz loss over the KKT-feasible region (the
+desparsified-lasso / auto-DML standard), falling back to `1.0` when no
+grid penalty is feasible; one constant then serves both the
 [`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)
 point estimate and every bootstrap band effect (issue \#295). The
-default stays the fixed `1.0` (the opt-in CV selector picks the
-feasibility-appropriate constant; \#88 validated overall-ATT coverage
-with it at the studied anchor). The simulator can generate the `p > NT`
+default stays the fixed `1.0`; the overall-ATT coverage validated in
+Faletto (2025) is robust across the penalty values studied (a CV
+selector below the theory scale and a fixed constant above it,
+bracketing the default `1.0`). The simulator can generate the `p > NT`
 panels this needs (see the
 [`simulateData()`](https://gregfaletto.github.io/fetwfePackage/reference/simulateData.md)
 documentation). `family = "event_study"` uses this desparsified path too

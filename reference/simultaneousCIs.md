@@ -96,15 +96,15 @@ simultaneousCIs(
   bootstrap uses the full-design **desparsified** construction of
   [`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)
   (per-effect nodewise directions) generalized to the family. This
-  desparsified `p >= NT` path is **experimental**
+  desparsified `p >= NT` band path is **experimental**
   ([`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)
   fits only): it generalizes the
   [`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)
-  construction whose overall-ATT coverage was validated near-nominally
-  (with the CV-selected penalty) at the `p >= NT` anchor of Faletto
-  (2025), but the family-wise *band* coverage here is not itself
-  simulation-validated, so inspect the returned `feasibility` /
-  `converged` diagnostics. A
+  construction — whose overall-ATT coverage is validated near-nominally
+  in simulation (Theorem `debiased.highdim.thm`, Faletto 2025) — but the
+  family-wise *band* coverage here (Theorem
+  `debiased.highdim.joint.thm`) is not itself simulation-validated, so
+  inspect the returned `feasibility` / `converged` diagnostics. A
   non-[`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)
   `p >= NT` fit (e.g.
   [`betwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/betwfe.md))

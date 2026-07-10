@@ -37,7 +37,7 @@ differences, where effects share the regression-coefficient variance piece)."></
 
     <a class="navbar-brand me-2" href="../index.html">fetwfe</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.5</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.6</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -155,13 +155,12 @@ cohorts weighted by the estimated cohort probabilities). When the (full)
 design is <strong>high-dimensional (<code>p &gt;= NT</code>)</strong> – where the analytic Gram inverse
 need not exist – the bootstrap uses the full-design <strong>desparsified</strong>
 construction of <code><a href="debiasedATT.html">debiasedATT()</a></code> (per-effect nodewise directions) generalized
-to the family. This desparsified <code>p &gt;= NT</code> path is <strong>experimental</strong>
-(<code><a href="fetwfe.html">fetwfe()</a></code> fits only): it generalizes the <code><a href="debiasedATT.html">debiasedATT()</a></code> construction
-whose overall-ATT coverage was validated near-nominally (with the
-CV-selected penalty) at the <code>p &gt;= NT</code> anchor of Faletto (2025), but the
-family-wise
-<em>band</em> coverage here is not itself simulation-validated, so inspect the
-returned <code>feasibility</code> /
+to the family. This desparsified <code>p &gt;= NT</code> band path is <strong>experimental</strong>
+(<code><a href="fetwfe.html">fetwfe()</a></code> fits only): it generalizes the <code><a href="debiasedATT.html">debiasedATT()</a></code> construction —
+whose overall-ATT coverage is validated near-nominally in simulation
+(Theorem <code>debiased.highdim.thm</code>, Faletto 2025) — but the family-wise
+<em>band</em> coverage here (Theorem <code>debiased.highdim.joint.thm</code>) is not itself
+simulation-validated, so inspect the returned <code>feasibility</code> /
 <code>converged</code> diagnostics. A
 non-<code><a href="fetwfe.html">fetwfe()</a></code> <code>p &gt;= NT</code>
 fit (e.g. <code><a href="betwfe.html">betwfe()</a></code>) has no desparsified band, so it instead falls back to

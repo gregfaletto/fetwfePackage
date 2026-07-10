@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">fetwfe</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.5</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.6</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -57,7 +57,7 @@
                         <h4 data-toc-skip class="author">Gregory
 Faletto</h4>
             
-            <h4 data-toc-skip class="date">2026-07-09</h4>
+            <h4 data-toc-skip class="date">2026-07-10</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/gregfaletto/fetwfePackage/blob/main/vignettes/simultaneous_cis_vignette.Rmd" class="external-link"><code>vignettes/simultaneous_cis_vignette.Rmd</code></a></small>
       <div class="d-none name"><code>simultaneous_cis_vignette.Rmd</code></div>
@@ -301,9 +301,10 @@ becomes a nodewise (<code>riesz_lasso</code>) relaxed inverse over the
 singular Gram, with the bridge residuals. This is <em>uniformly
 valid</em> (not post-selection) and is the only route to simultaneous
 bands in that regime. It is <strong>experimental</strong>
-(<code><a href="../reference/fetwfe.html">fetwfe()</a></code> fits only): its underlying overall-ATT coverage
-is validated near-nominally at the <code>p &gt; NT</code> anchor of
-Faletto (2025), but the family-wise band coverage is not itself
+(<code><a href="../reference/fetwfe.html">fetwfe()</a></code> fits only): the underlying scalar overall-ATT
+coverage is validated (Theorem <code>debiased.highdim.thm</code>,
+Faletto 2025), but the family-wise <em>band</em> coverage (Theorem
+<code>debiased.highdim.joint.thm</code>) is not itself
 simulation-validated, so the returned object carries a
 <code>regime</code> field and per-effect <code>feasibility</code> /
 <code>converged</code> / <code>lambda_node</code> diagnostics, and
@@ -317,9 +318,10 @@ the Riesz loss over the KKT-feasible region (the desparsified-lasso /
 auto-DML standard), falling back to <code>1.0</code> when no grid
 penalty is feasible; one constant then serves both the
 <code><a href="../reference/debiasedATT.html">debiasedATT()</a></code> point estimate and every bootstrap band
-effect (issue #295). The default stays the fixed <code>1.0</code> (the
-opt-in CV selector picks the feasibility-appropriate constant; #88
-validated overall-ATT coverage with it at the studied anchor). The
+effect (issue #295). The default stays the fixed <code>1.0</code>; the
+overall-ATT coverage validated in Faletto (2025) is robust across the
+penalty values studied (a CV selector below the theory scale and a fixed
+constant above it, bracketing the default <code>1.0</code>). The
 simulator can generate the <code>p &gt; NT</code> panels this needs (see
 the <code><a href="../reference/simulateData.html">simulateData()</a></code> documentation).
 <code>family = "event_study"</code> uses this desparsified path too in

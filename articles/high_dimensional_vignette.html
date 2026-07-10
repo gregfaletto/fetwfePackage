@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">fetwfe</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.5</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.6</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -57,7 +57,7 @@
                         <h4 data-toc-skip class="author">Gregory
 Faletto</h4>
             
-            <h4 data-toc-skip class="date">2026-07-09</h4>
+            <h4 data-toc-skip class="date">2026-07-10</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/gregfaletto/fetwfePackage/blob/main/vignettes/high_dimensional_vignette.Rmd" class="external-link"><code>vignettes/high_dimensional_vignette.Rmd</code></a></small>
       <div class="d-none name"><code>high_dimensional_vignette.Rmd</code></div>
@@ -135,11 +135,14 @@ regime arises with many covariates, short panels, or many cohorts.
 <span><span class="co">#&gt;    att     se </span></span>
 <span><span class="co">#&gt; -2.416  0.186</span></span></code></pre></div>
 <p>That fused estimate is post-selection. For uniformly valid inference,
-pass the fit to <code><a href="../reference/debiasedATT.html">debiasedATT()</a></code>, selecting the nodewise
-penalty by cross-validation (<code>lambda_c = "cv"</code>) — the
-configuration whose overall-ATT coverage was validated at the anchor
-below. (The default fixed <code>lambda_c = 1.0</code> is a starting
-point, not the validated penalty.)</p>
+pass the fit to <code><a href="../reference/debiasedATT.html">debiasedATT()</a></code>, which implements the
+high-dimensional debiased construction of <strong>Theorem
+<code>debiased.highdim.thm</code></strong> (Faletto 2025). Its coverage
+is robust across the penalty values studied — a cross-validated selector
+below the theory scale and a fixed constant above it bracket the default
+<code>1.0</code> — so the default is fine; below we let
+<code>lambda_c = "cv"</code> select the constant per fit as an
+alternative.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">db</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/debiasedATT.html">debiasedATT</a></span><span class="op">(</span><span class="va">fit_hd</span>, lambda_c <span class="op">=</span> <span class="st">"cv"</span><span class="op">)</span></span>
 <span><span class="va">db</span></span>
@@ -147,10 +150,9 @@ point, not the validated penalty.)</p>
 <span><span class="co">#&gt;   Estimate:   -2.3684</span></span>
 <span><span class="co">#&gt;   Std. Error: 0.2507</span></span>
 <span><span class="co">#&gt;   95% CI: [-2.8597, -1.8771]</span></span>
-<span><span class="co">#&gt; High-dimensional (p &gt;= NT) desparsified interval [EXPERIMENTAL:</span></span>
-<span><span class="co">#&gt;   overall-ATT coverage was validated near-nominally at a p &gt;= NT anchor</span></span>
-<span><span class="co">#&gt;   with the CV-selected penalty (Faletto 2025), but</span></span>
-<span><span class="co">#&gt;   coverage at other penalties is not separately validated -- inspect the diagnostics below]</span></span>
+<span><span class="co">#&gt; High-dimensional (p &gt;= NT) desparsified interval</span></span>
+<span><span class="co">#&gt;   [overall-ATT coverage validated near-nominally in simulation</span></span>
+<span><span class="co">#&gt;   (Theorem debiased.highdim.thm, Faletto 2025); diagnostics below]</span></span>
 <span><span class="co">#&gt;   nodewise penalty: lambda_c = 0.5 (CV-selected); lambda_node in [0.1836, 0.1836]</span></span>
 <span><span class="co">#&gt;   nodewise directions: 1/1 converged, 1/1 KKT-feasible (worst feasibility/lambda_node = 1)</span></span></code></pre></div>
 <p>The print surfaces the high-dimensional diagnostics worth inspecting:
@@ -181,7 +183,7 @@ anchor (<a href="https://github.com/gregfaletto/fetwfe/issues/88" class="externa
 <tr class="odd">
 <td>Debiased (<code><a href="../reference/debiasedATT.html">debiasedATT()</a></code> with
 <code>lambda_c = "cv"</code>)</td>
-<td><strong>≈ 93%</strong></td>
+<td><strong>≈ 94%</strong></td>
 </tr>
 <tr class="even">
 <td>Fused plug-in (pointwise)</td>
@@ -190,12 +192,14 @@ anchor (<a href="https://github.com/gregfaletto/fetwfe/issues/88" class="externa
 </tbody>
 </table>
 <p>The fused interval under-covers because of the post-selection
-non-uniformity; the debiased interval is near-nominal. This is validated
-at the studied anchor (with the feasibility-appropriate penalty); treat
-the
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>≥</mo><mi>N</mi><mi>T</mi></mrow><annotation encoding="application/x-tex">p \geq NT</annotation></semantics></math>
-path as <strong>experimental</strong> outside that regime — which is why
-the diagnostics above matter.</p>
+non-uniformity; the debiased interval is near-nominal — the direct
+simulation confirmation of <strong>Theorem
+<code>debiased.highdim.thm</code></strong>, robust across the penalty
+values studied (a CV selector below the theory scale and a fixed
+constant above it, bracketing the default <code>1.0</code>). The
+per-direction <code>converged</code> / <code>feasibility</code>
+diagnostics above remain worth a glance to confirm the nodewise
+directions are well-behaved on your own fit.</p>
 </div>
 <div class="section level3">
 <h3 id="an-asymptotic-alternative-the-wild-bootstrap">An asymptotic alternative: the wild bootstrap<a class="anchor" aria-label="anchor" href="#an-asymptotic-alternative-the-wild-bootstrap"></a>
@@ -251,12 +255,15 @@ not exist when
 <span><span class="op">)</span></span>
 <span><span class="va">sc_hd</span><span class="op">$</span><span class="va">regime</span></span>
 <span><span class="co">#&gt; [1] "high-dimensional"</span></span></code></pre></div>
-<p>One scope caveat: #88 validated the <strong>scalar
-overall-ATT</strong> (<code><a href="../reference/debiasedATT.html">debiasedATT()</a></code>); the
-<strong>family-wise band</strong> coverage at
+<p>One scope caveat: <strong>Theorem
+<code>debiased.highdim.thm</code></strong> (validated in simulation)
+covers the <strong>scalar overall-ATT</strong>
+(<code><a href="../reference/debiasedATT.html">debiasedATT()</a></code>), but the <strong>family-wise band</strong>
+(Theorem <code>debiased.highdim.joint.thm</code>) coverage at
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>≥</mo><mi>N</mi><mi>T</mi></mrow><annotation encoding="application/x-tex">p \geq NT</annotation></semantics></math>
-is not itself simulation-validated, so the band is the more experimental
-of the two.</p>
+is <em>not</em> itself simulation-validated — the paper states it
+experimental-grade — so treat these high-dimensional bands as the
+experimental part of this path.</p>
 </div>
 <div class="section level3">
 <h3 id="controlled-high-dimensional-truth">Controlled high-dimensional truth<a class="anchor" aria-label="anchor" href="#controlled-high-dimensional-truth"></a>

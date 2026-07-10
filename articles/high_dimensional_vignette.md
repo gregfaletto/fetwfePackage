@@ -78,10 +78,12 @@ round(c(att = fit_hd$att_hat, se = fit_hd$att_se), 3)
 That fused estimate is post-selection. For uniformly valid inference,
 pass the fit to
 [`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md),
-selecting the nodewise penalty by cross-validation (`lambda_c = "cv"`) —
-the configuration whose overall-ATT coverage was validated at the anchor
-below. (The default fixed `lambda_c = 1.0` is a starting point, not the
-validated penalty.)
+which implements the high-dimensional debiased construction of **Theorem
+`debiased.highdim.thm`** (Faletto 2025). Its coverage is robust across
+the penalty values studied — a cross-validated selector below the theory
+scale and a fixed constant above it bracket the default `1.0` — so the
+default is fine; below we let `lambda_c = "cv"` select the constant per
+fit as an alternative.
 
 ``` r
 
@@ -91,10 +93,9 @@ db
 #>   Estimate:   -2.3684
 #>   Std. Error: 0.2507
 #>   95% CI: [-2.8597, -1.8771]
-#> High-dimensional (p >= NT) desparsified interval [EXPERIMENTAL:
-#>   overall-ATT coverage was validated near-nominally at a p >= NT anchor
-#>   with the CV-selected penalty (Faletto 2025), but
-#>   coverage at other penalties is not separately validated -- inspect the diagnostics below]
+#> High-dimensional (p >= NT) desparsified interval
+#>   [overall-ATT coverage validated near-nominally in simulation
+#>   (Theorem debiased.highdim.thm, Faletto 2025); diagnostics below]
 #>   nodewise penalty: lambda_c = 0.5 (CV-selected); lambda_node in [0.1836, 0.1836]
 #>   nodewise directions: 1/1 converged, 1/1 KKT-feasible (worst feasibility/lambda_node = 1)
 ```
@@ -117,14 +118,17 @@ coverage study at a $`p > NT`$ anchor ([issue
 
 | Overall-ATT interval | Coverage (nominal 95%) |
 |----|----|
-| Debiased ([`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md) with `lambda_c = "cv"`) | **≈ 93%** |
+| Debiased ([`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md) with `lambda_c = "cv"`) | **≈ 94%** |
 | Fused plug-in (pointwise) | ≈ 77% |
 
 The fused interval under-covers because of the post-selection
-non-uniformity; the debiased interval is near-nominal. This is validated
-at the studied anchor (with the feasibility-appropriate penalty); treat
-the $`p \geq NT`$ path as **experimental** outside that regime — which
-is why the diagnostics above matter.
+non-uniformity; the debiased interval is near-nominal — the direct
+simulation confirmation of **Theorem `debiased.highdim.thm`**, robust
+across the penalty values studied (a CV selector below the theory scale
+and a fixed constant above it, bracketing the default `1.0`). The
+per-direction `converged` / `feasibility` diagnostics above remain worth
+a glance to confirm the nodewise directions are well-behaved on your own
+fit.
 
 ### An asymptotic alternative: the wild bootstrap
 
@@ -182,10 +186,13 @@ sc_hd$regime
 #> [1] "high-dimensional"
 ```
 
-One scope caveat: \#88 validated the **scalar overall-ATT**
-([`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md));
-the **family-wise band** coverage at $`p \geq NT`$ is not itself
-simulation-validated, so the band is the more experimental of the two.
+One scope caveat: **Theorem `debiased.highdim.thm`** (validated in
+simulation) covers the **scalar overall-ATT**
+([`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)),
+but the **family-wise band** (Theorem `debiased.highdim.joint.thm`)
+coverage at $`p \geq NT`$ is *not* itself simulation-validated — the
+paper states it experimental-grade — so treat these high-dimensional
+bands as the experimental part of this path.
 
 ### Controlled high-dimensional truth
 

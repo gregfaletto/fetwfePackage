@@ -16,12 +16,13 @@ as a separate accessor (rather than a se_type option) precisely because the
 debiased SE accompanies a different point estimate than the fused one.
 When p &amp;gt;= NT the unrestricted ETWFE is infeasible, so the OLS identity no
 longer applies; the accessor instead builds the debiasing direction by a
-nodewise (desparsified-lasso) relaxed inverse (the high-dimensional FETWFE
-theory). The point estimate, SE formula, and return value are
-otherwise identical — "one estimator, two regimes." This high-dimensional
-branch is experimental (its overall-ATT coverage is validated
-near-nominally, with the CV-selected penalty, at the p &amp;gt;= NT anchor of
-Faletto (2025); see Assumptions).'><meta property="og:description" content='Computes a debiased estimate of the overall average treatment effect on the
+nodewise (desparsified-lasso) relaxed inverse (Theorem
+debiased.highdim.thm of Faletto (2025)). The point estimate, SE formula,
+and return value are otherwise identical — "one estimator, two regimes."
+The high-dimensional overall-ATT interval is uniformly valid under that
+theorem, and its coverage is validated near-nominally in simulation (0.94 at
+the p &amp;gt;= NT anchor of Faletto (2025), robust across the nodewise penalty
+scales studied); see Assumptions.'><meta property="og:description" content='Computes a debiased estimate of the overall average treatment effect on the
 treated (ATT) from a fitted fetwfe() object, together with a
 uniformly-valid standard error. This is a complement to the fused plug-in
 interval reported on the fit (fit$att_hat / fit$att_se): the fused SE is
@@ -38,12 +39,13 @@ as a separate accessor (rather than a se_type option) precisely because the
 debiased SE accompanies a different point estimate than the fused one.
 When p &amp;gt;= NT the unrestricted ETWFE is infeasible, so the OLS identity no
 longer applies; the accessor instead builds the debiasing direction by a
-nodewise (desparsified-lasso) relaxed inverse (the high-dimensional FETWFE
-theory). The point estimate, SE formula, and return value are
-otherwise identical — "one estimator, two regimes." This high-dimensional
-branch is experimental (its overall-ATT coverage is validated
-near-nominally, with the CV-selected penalty, at the p &amp;gt;= NT anchor of
-Faletto (2025); see Assumptions).'></head><body>
+nodewise (desparsified-lasso) relaxed inverse (Theorem
+debiased.highdim.thm of Faletto (2025)). The point estimate, SE formula,
+and return value are otherwise identical — "one estimator, two regimes."
+The high-dimensional overall-ATT interval is uniformly valid under that
+theorem, and its coverage is validated near-nominally in simulation (0.94 at
+the p &amp;gt;= NT anchor of Faletto (2025), robust across the nodewise penalty
+scales studied); see Assumptions.'></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -51,7 +53,7 @@ Faletto (2025); see Assumptions).'></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">fetwfe</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.5</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.6</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -98,12 +100,13 @@ as a separate accessor (rather than a <code>se_type</code> option) precisely bec
 debiased SE accompanies a different point estimate than the fused one.</p>
 <p>When <code>p &gt;= NT</code> the unrestricted ETWFE is infeasible, so the OLS identity no
 longer applies; the accessor instead builds the debiasing direction by a
-nodewise (desparsified-lasso) relaxed inverse (the high-dimensional FETWFE
-theory). The point estimate, SE formula, and return value are
-otherwise identical — "one estimator, two regimes." This high-dimensional
-branch is <strong>experimental</strong> (its overall-ATT coverage is validated
-near-nominally, with the CV-selected penalty, at the <code>p &gt;= NT</code> anchor of
-Faletto (2025); see Assumptions).</p>
+nodewise (desparsified-lasso) relaxed inverse (<strong>Theorem
+<code>debiased.highdim.thm</code></strong> of Faletto (2025)). The point estimate, SE formula,
+and return value are otherwise identical — "one estimator, two regimes."
+The high-dimensional overall-ATT interval is <strong>uniformly valid</strong> under that
+theorem, and its coverage is validated near-nominally in simulation (0.94 at
+the <code>p &gt;= NT</code> anchor of Faletto (2025), robust across the nodewise penalty
+scales studied); see Assumptions.</p>
     </div>
 
     <div class="section level2">
@@ -191,9 +194,11 @@ number of units). Either a single positive number (a fixed constant; default
 auto-DML standard; van de Geer; Chernozhukov-Newey-Singh), falling back to
 the theory scale <code>1.0</code> when no grid penalty is feasible (#295). Larger values
 shrink the debiasing direction more. <strong>Ignored when <code>p &lt; NT</code>.</strong> The default
-stays the fixed <code>1.0</code> (the <code>"cv"</code> mechanism is opt-in; it selects the
-feasibility-appropriate constant validated at the anchor of Faletto 2025);
-treat the <code>p &gt;= NT</code> path as experimental outside that regime.</p></dd>
+stays the fixed <code>1.0</code> (the theory scale); the high-dimensional coverage
+validated in Faletto (2025) is robust across the penalty values studied —
+a cross-validated selector below the theory scale and a fixed constant above
+it, which bracket the default <code>1.0</code> — so it needs no tuning for valid
+inference.</p></dd>
 
 
 <dt id="arg-riesz-max-iter-riesz-tol">riesz_max_iter, riesz_tol<a class="anchor" aria-label="anchor" href="#arg-riesz-max-iter-riesz-tol"></a></dt>
@@ -316,13 +321,13 @@ equation <code>debiased.highdim.v</code> (the same estimate and SE, only <code>v
 — "one estimator, two regimes"); it requires sparsity
 (<code>s_N log(p_N) / sqrt(N) -&gt; 0</code>), a restricted-eigenvalue condition over
 sparse cones, <code>||v*||_1 = O(1)</code>, and a bounded limiting variance
-<code>a' Sigma_theta^(-1) a</code>. The high-dimensional branch realizes the
-high-dimensional FETWFE theory with the theory-scaled penalty; its finite-sample
-<strong>coverage is validated near-nominally</strong> at the <code>p &gt;= NT</code> anchor of Faletto
-(2025) with the feasibility-appropriate penalty, but not yet across regimes
-or at the default theory-scale <code>lambda_c</code>; treat the <code>p &gt;= NT</code> path as
-<strong>experimental</strong> outside that setting and inspect the returned
-<code>feasibility</code> / <code>converged</code> diagnostics.</p></li>
+<code>a' Sigma_theta^(-1) a</code>. The high-dimensional branch realizes <strong>Theorem
+<code>debiased.highdim.thm</code></strong> (Faletto 2025) with the theory-scaled penalty; its
+overall-ATT interval is <strong>uniformly valid</strong>, with coverage validated
+near-nominally in simulation (0.94 at the <code>p &gt;= NT</code> anchor, robust across
+the nodewise penalty scales studied). Inspect the returned <code>feasibility</code> /
+<code>converged</code> diagnostics to confirm the per-fit nodewise directions are
+well-behaved.</p></li>
 </ul><p>The two regimes use different nuisances. The <strong>fixed-<code>p</code></strong> branch uses the
 fit's bridge (<code>q &lt; 1</code>) <code>theta_hat</code>: Theorem <code>debiased.att.thm</code> needs only
 <em>consistency</em> of the nuisance, and with the exact inverse this is the OLS
