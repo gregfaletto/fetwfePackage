@@ -60,13 +60,17 @@ cohorts weighted by the estimated cohort probabilities). When the (full)
 design is \strong{high-dimensional (\code{p >= NT})} -- where the analytic Gram inverse
 need not exist -- the bootstrap uses the full-design \strong{desparsified}
 construction of \code{debiasedATT()} (per-effect nodewise directions) generalized
-to the family. This desparsified \code{p >= NT} band path is \strong{experimental}
-(\code{fetwfe()} fits only): it generalizes the \code{debiasedATT()} construction ---
-whose overall-ATT coverage is validated near-nominally in simulation
-(Theorem \code{debiased.highdim.thm}, Faletto 2025) --- but the family-wise
-\emph{band} coverage here (Theorem \code{debiased.highdim.joint.thm}) is not itself
-simulation-validated, so inspect the returned \code{feasibility} /
-\code{converged} diagnostics. A
+to the family. This desparsified \code{p >= NT} band path (\code{fetwfe()} fits only)
+generalizes the \code{debiasedATT()} construction --- whose overall-ATT coverage
+is validated near-nominally in simulation (Theorem \code{debiased.highdim.thm},
+Faletto 2025) --- to a family of functionals. Its family-wise coverage is
+likewise validated near-nominally (Theorem \code{debiased.highdim.joint.thm}):
+~0.92 over the \strong{event-study} family (\code{K = 7}) at the \code{p >= NT} anchor of
+Faletto (2025), the band sibling of the scalar result (~0.94); the cohort and
+all-post-treatment families are covered by the same theorem but were not
+separately simulated. As with the scalar, validity rests on the sparsity /
+restricted-eigenvalue primitives (assumed, not proved), so inspect the
+returned \code{feasibility} / \code{converged} diagnostics. A
 non-\code{fetwfe()} \code{p >= NT}
 fit (e.g. \code{betwfe()}) has no desparsified band, so it instead falls back to
 the fixed-\code{p} selected-support band and emits a \code{warning()}: a #308 coverage
@@ -86,7 +90,13 @@ built from the empirical per-unit influence function -- needing neither GLS
 whitening nor \code{sig_eps_sq} -- it also accepts a high-dimensional
 \strong{\code{gls = FALSE}} fetwfe fit (\code{calc_ses = FALSE}), the band analog of
 \code{debiasedATT()}'s Omega-free SE (#307, #313). \code{method = "analytic"} still
-requires valid analytic SEs (a \code{q < 1}, \code{gls = TRUE}, rank-satisfied fit).}
+requires valid analytic SEs (a \code{q < 1}, \code{gls = TRUE}, rank-satisfied fit).
+\strong{At \code{p >= NT}, \code{method = "bootstrap"} is the valid simultaneous band} ---
+the desparsified Theorem \code{debiased.highdim.joint.thm} band above. A
+\code{method = "analytic"} call there instead returns the analytic band on the
+\emph{selected support}: a post-selection band that under-covers (it is not the
+uniformly-valid desparsified band), and a \code{gls = FALSE} fit has no analytic
+SEs at all --- so pass \code{method = "bootstrap"} for high-dimensional bands.}
 
 \item{B}{Integer; number of multiplier-bootstrap replicates
 (\code{method = "bootstrap"} only). Default \code{1000}.}
@@ -111,8 +121,9 @@ string \code{"cv"}, which selects the constant \strong{per fit} by cross-validat
 constant serves the point estimate and every band effect; #295). \strong{Smaller
 fixed values can leave directions infeasible (a warning fires and those bands
 are unreliable).} Ignored when \code{p < NT} or \code{method = "analytic"}. The default
-stays the fixed \code{1.0} (the \code{"cv"} mechanism is opt-in pending coverage
-validation).}
+stays the fixed \code{1.0}; the family-wise coverage validated in Faletto (2025)
+used the \code{"cv"} selector (\code{lambda_c} ~ 0.54, feasibility 1.0), the same
+constant that serves the scalar \code{debiasedATT()} and every band effect.}
 }
 \value{
 An object of S3 class \code{"simultaneous_cis"}: a list with

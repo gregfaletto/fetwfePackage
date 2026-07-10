@@ -152,7 +152,7 @@
 #' high-dim per-unit score, one direction per effect. `targets[,k]` is effect
 #' `k`'s direction in the full theta-space (`A' a_beta_k`). NOT post-selection:
 #' uniformly valid under the desparsified-lasso conditions of the
-#' high-dimensional FETWFE theory (experimental). `lambda_node = lambda_c * max(|target|)
+#' high-dimensional FETWFE theory (Theorem `debiased.highdim.joint.thm`). `lambda_node = lambda_c * max(|target|)
 #' * sqrt(log p / N)`.
 #'
 #' @param X Numeric `NT x p`; the FULL (uncentered) design.
@@ -649,7 +649,7 @@
 		# is on the overall-ATT direction `a_att` only, so a per-cell propensity
 		# direction is not guaranteed KKT-feasible at this shared constant; that is
 		# surfaced by the per-cell `propensity_feasibility` / `converged` diagnostics
-		# and the experimental-regime warning (a #88 coverage consideration).
+		# and the per-fit feasibility warning (a #88 coverage consideration).
 		lambda_c_used <- lambda_c
 		if (identical(lambda_c, "cv")) {
 			lambda_c_used <- .cv_lambda_node(
@@ -771,7 +771,7 @@
 		NULL
 	}
 
-	# High-dimensional regime is EXPERIMENTAL: warn if any per-effect nodewise
+	# High-dimensional regime: warn if any per-effect nodewise
 	# direction did not meet its KKT feasibility constraint or converge (its band
 	# may be unreliable; the returned diagnostics flag which effects).
 	if (isTRUE(attr(F_mat, "highdim"))) {
@@ -802,8 +802,7 @@
 				"those simultaneous bands may be unreliable. Raise `riesz_max_iter` ",
 				"and/or `lambda_c` and inspect the returned `feasibility` / ",
 				"`converged` (per-effect) and `propensity_feasibility` / ",
-				"`propensity_converged` (per-cohort-cell) diagnostics. The p >= NT ",
-				"path is experimental.",
+				"`propensity_converged` (per-cohort-cell) diagnostics.",
 				call. = FALSE
 			)
 		}
@@ -896,7 +895,7 @@
 		}
 		# The high-dim event_study propensity channel desparsifies num_treats extra
 		# per-cohort-cell directions (#309); they also feed the band (via Sigma_2)
-		# and the experimental-regime warning, so expose their diagnostics too --
+		# and the per-fit feasibility warning, so expose their diagnostics too --
 		# otherwise a cell-direction infeasibility trips the warning but has no entry
 		# in the per-effect `feasibility` / `converged` the user is told to inspect.
 		if (!is.null(cell_diag)) {
