@@ -17,7 +17,7 @@
 \description{
 Compact display of \code{\link[=debiasedATT]{debiasedATT()}}'s estimate, standard error, and
 Wald confidence interval. In the high-dimensional (\code{p >= NT}) regime it also
-surfaces the experimental caveat and the nodewise-direction diagnostics
+surfaces the nodewise-direction diagnostics
 (\code{lambda_c} / \code{lambda_node}, KKT feasibility, convergence) the documentation
 tells users to inspect; the fixed-\code{p} print shows only the estimate block.
 }
