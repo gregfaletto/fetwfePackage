@@ -58,6 +58,29 @@ NULL
 	invisible(NULL)
 }
 
+# Render the "Event-time effects:" block shared by print.FETWFE_tes and
+# print.summary.FETWFE_tes (#388). Gated on the presence of the
+# `actual_event_time_tes` slot, so FETWFE_tes objects created before 1.56.7
+# (which lack it) render nothing and their output is unchanged.
+#' @keywords internal
+#' @noRd
+.cat_tes_event_time_effects <- function(x) {
+	ev <- x$actual_event_time_tes
+	if (is.null(ev)) {
+		return(invisible(NULL))
+	}
+	cat("Event-time effects:\n")
+	for (k in seq_along(ev)) {
+		cat(sprintf(
+			"  Event time %s: %s\n",
+			names(ev)[k],
+			if (is.na(ev[k])) "<NA>" else sprintf("%.4f", ev[k])
+		))
+	}
+	cat("\n")
+	invisible(NULL)
+}
+
 # Render the "Generated from:" footer shared by print.FETWFE_tes and
 # print.summary.FETWFE_tes (#270).
 #' @keywords internal
@@ -83,6 +106,7 @@ print.FETWFE_tes <- function(x, ...) {
 	)
 	cat(sprintf("Overall true ATT: %.4f\n\n", x$att_true))
 	.cat_tes_cohort_effects(x)
+	.cat_tes_event_time_effects(x)
 	.cat_tes_assignment_dgp(x)
 	.cat_tes_generated_from(x)
 	invisible(x)
@@ -97,6 +121,7 @@ summary.FETWFE_tes <- function(object, ...) {
 	out <- list(
 		att_true = object$att_true,
 		actual_cohort_tes = tes,
+		actual_event_time_tes = object$actual_event_time_tes,
 		G = object$G,
 		R = object$G,
 		T = object$T,
@@ -125,6 +150,7 @@ print.summary.FETWFE_tes <- function(x, ...) {
 	)
 	cat(sprintf("Overall true ATT: %.4f\n\n", x$att_true))
 	.cat_tes_cohort_effects(x)
+	.cat_tes_event_time_effects(x)
 	cat("Cohort effect dispersion:\n")
 	cat(sprintf("  min    : %.4f\n", x$cohort_te_stats["min"]))
 	cat(sprintf("  max    : %.4f\n", x$cohort_te_stats["max"]))

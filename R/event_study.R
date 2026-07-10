@@ -160,6 +160,59 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	}
 }
 
+#' True per-event-time treatment effects from cohort-time cell effects
+#'
+#' @description The point-estimate aggregation of `.event_study_fetwfe()` (the
+#'   `estimates[k]` loop) factored out for reuse by [getTes()]: given the
+#'   per-`(g, t)` treatment-effect cells and the cohort structure, returns the
+#'   event-time effects `tau_E(e) = sum_{g in V_e} w_g * cell(g, e)`, where `V_e`
+#'   is the set of cohorts still observed at event time `e`, `w_g` is cohort
+#'   `g`'s probability normalized within `V_e`, and
+#'   `cell(g, e) = cell_effects[first_inds[g] + e]`. Feeding a fit's estimated
+#'   cells reproduces `eventStudy(fit)$estimate` (verified to machine precision);
+#'   feeding a DGP's true cells (`coefs$beta[treat_inds]`) gives the true
+#'   event-time effects. An event time with no contributing cohort returns `NA`
+#'   (the truth is undefined there; the estimator reports `0`).
+#' @param cell_effects Numeric length `num_treats`; per-`(g, t)` effects in
+#'   `treat_inds` order.
+#' @param first_inds Integer length `G`; index within `cell_effects` of each
+#'   cohort's event-time-0 cell.
+#' @param cohort_offsets_int Integer length `G`; each cohort's adoption offset
+#'   (calendar adoption time), used to decide which cohorts reach event time `e`.
+#' @param cohort_probs Numeric length `G`; cohort probabilities (any positive
+#'   scaling; normalized within `V_e`).
+#' @param T Integer; number of time periods. Event times run `0:(T - 2)`.
+#' @return Named numeric length `T - 1`; the event-time effects with names
+#'   `as.character(0:(T - 2))`, `NA` where no cohort reaches that event time.
+#' @keywords internal
+#' @noRd
+.true_event_time_effects <- function(
+	cell_effects,
+	first_inds,
+	cohort_offsets_int,
+	cohort_probs,
+	T
+) {
+	event_times <- 0:(T - 2L)
+	out <- rep(NA_real_, length(event_times))
+	for (k in seq_along(event_times)) {
+		e <- event_times[k]
+		V_e <- which(cohort_offsets_int <= T - e)
+		if (length(V_e) == 0L) {
+			next
+		}
+		probs_Ve <- cohort_probs[V_e]
+		S_V <- sum(probs_Ve)
+		if (!is.finite(S_V) || S_V <= 0) {
+			next
+		}
+		weights_Ve <- probs_Ve / S_V
+		out[k] <- sum(weights_Ve * cell_effects[first_inds[V_e] + e])
+	}
+	names(out) <- as.character(event_times)
+	out
+}
+
 #' Event-study aggregation for ETWFE / BETWFE
 #' @keywords internal
 #' @noRd

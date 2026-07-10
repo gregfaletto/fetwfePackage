@@ -1,5 +1,17 @@
 # NEWS
 
+## Version 1.56.7
+
+### Minor enhancements
+
+- `getTes()` now returns `actual_event_time_tes`, the true treatment effect at
+  each event time (periods since adoption), alongside the existing per-cohort
+  `actual_cohort_tes`. It is the cohort-probability-weighted aggregation of the
+  true per-`(g, t)` cell effects --- the same estimand `eventStudy()` targets on a
+  fitted panel --- giving simulation studies that validate the event-study family a
+  canonical truth to compare against. `print()` and `summary()` on the returned
+  object display the new event-time block.
+
 ## Version 1.56.6
 
 ### Documentation
