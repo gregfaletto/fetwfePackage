@@ -592,7 +592,8 @@ genCoefs <- function(
 #'         observed at that event time, weighted in proportion to
 #'         \code{cohort_weights} --- the same aggregation
 #'         \code{\link{eventStudy}()} estimates on a fitted panel. \code{NA} at an
-#'         event time no cohort reaches. New in 1.56.7.}
+#'         event time no cohort reaches (where \code{\link{eventStudy}()}
+#'         instead reports \code{0}). New in 1.56.7.}
 #'   \item{cohort_times}{An integer vector of length \code{G} giving the calendar
 #'         time period at which each treated cohort first adopts treatment. In
 #'         the simulator's convention cohort \code{g} adopts at calendar time

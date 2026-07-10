@@ -116,7 +116,12 @@ test_that("print.debiased_att shows the high-dim diagnostics only in the high-di
 	expect_s3_class(db_hd, "debiased_att")
 	out_hd <- capture.output(print(db_hd))
 	expect_true(any(grepl("high-dimensional regime", out_hd)))
-	expect_true(any(grepl("EXPERIMENTAL", out_hd)))
+	# The scalar overall-ATT interval was de-experimented in #387 (Theorem
+	# `debiased.highdim.thm` validated in simulation): the interval banner no
+	# longer says EXPERIMENTAL -- it cites the theorem + validated coverage. (The
+	# family-wise *band* banner keeps EXPERIMENTAL; see the simultaneous_cis test.)
+	expect_false(any(grepl("EXPERIMENTAL", out_hd)))
+	expect_true(any(grepl("validated near-nominally", out_hd)))
 	expect_true(any(grepl("nodewise penalty: lambda_c", out_hd)))
 	expect_true(any(grepl("converged.*KKT-feasible", out_hd)))
 
