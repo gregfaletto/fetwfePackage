@@ -96,14 +96,19 @@ simultaneousCIs(
   bootstrap uses the full-design **desparsified** construction of
   [`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)
   (per-effect nodewise directions) generalized to the family. This
-  desparsified `p >= NT` band path is **experimental**
+  desparsified `p >= NT` band path
   ([`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)
-  fits only): it generalizes the
+  fits only) generalizes the
   [`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)
   construction — whose overall-ATT coverage is validated near-nominally
-  in simulation (Theorem `debiased.highdim.thm`, Faletto 2025) — but the
-  family-wise *band* coverage here (Theorem
-  `debiased.highdim.joint.thm`) is not itself simulation-validated, so
+  in simulation (Theorem `debiased.highdim.thm`, Faletto 2025) — to a
+  family of functionals. Its family-wise coverage is likewise validated
+  near-nominally (Theorem `debiased.highdim.joint.thm`): ~0.92 over the
+  **event-study** family (`K = 7`) at the `p >= NT` anchor of Faletto
+  (2025), the band sibling of the scalar result (~0.94); the cohort and
+  all-post-treatment families are covered by the same theorem but were
+  not separately simulated. As with the scalar, validity rests on the
+  sparsity / restricted-eigenvalue primitives (assumed, not proved), so
   inspect the returned `feasibility` / `converged` diagnostics. A
   non-[`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)
   `p >= NT` fit (e.g.
@@ -131,7 +136,14 @@ simultaneousCIs(
   **`gls = FALSE`** fetwfe fit (`calc_ses = FALSE`), the band analog of
   [`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)'s
   Omega-free SE (#307, \#313). `method = "analytic"` still requires
-  valid analytic SEs (a `q < 1`, `gls = TRUE`, rank-satisfied fit).
+  valid analytic SEs (a `q < 1`, `gls = TRUE`, rank-satisfied fit). **At
+  `p >= NT`, `method = "bootstrap"` is the valid simultaneous band** —
+  the desparsified Theorem `debiased.highdim.joint.thm` band above. A
+  `method = "analytic"` call there instead returns the analytic band on
+  the *selected support*: a post-selection band that under-covers (it is
+  not the uniformly-valid desparsified band), and a `gls = FALSE` fit
+  has no analytic SEs at all — so pass `method = "bootstrap"` for
+  high-dimensional bands.
 
 - B:
 
@@ -167,8 +179,11 @@ simultaneousCIs(
   estimate and every band effect; \#295). **Smaller fixed values can
   leave directions infeasible (a warning fires and those bands are
   unreliable).** Ignored when `p < NT` or `method = "analytic"`. The
-  default stays the fixed `1.0` (the `"cv"` mechanism is opt-in pending
-  coverage validation).
+  default stays the fixed `1.0`; the family-wise coverage validated in
+  Faletto (2025) used the `"cv"` selector (`lambda_c` ~ 0.54,
+  feasibility 1.0), the same constant that serves the scalar
+  [`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)
+  and every band effect.
 
 ## Value
 

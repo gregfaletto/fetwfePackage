@@ -223,21 +223,22 @@ to the full-design **desparsified** construction of
 becomes a nodewise (`riesz_lasso`) relaxed inverse over the singular
 Gram, with the bridge residuals. This is *uniformly valid* (not
 post-selection) and is the only route to simultaneous bands in that
-regime. It is **experimental**
+regime. It is validated in simulation
 ([`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)
-fits only): the underlying scalar overall-ATT coverage is validated
-(Theorem `debiased.highdim.thm`, Faletto 2025), but the family-wise
-*band* coverage (Theorem `debiased.highdim.joint.thm`) is not itself
-simulation-validated, so the returned object carries a `regime` field
-and per-effect `feasibility` / `converged` / `lambda_node` diagnostics,
-and `lambda_c` tunes the nodewise penalty
-`lambda_node = lambda_c * max(|a|) * sqrt(log(p) / N)` — too-small
-values leave the directions infeasible and trigger a warning. `lambda_c`
-accepts either a fixed positive number (default the theory scale `1.0`)
-or the string `"cv"`, which selects the constant **per fit** by
-cross-validating the Riesz loss over the KKT-feasible region (the
-desparsified-lasso / auto-DML standard), falling back to `1.0` when no
-grid penalty is feasible; one constant then serves both the
+fits only): the scalar overall-ATT coverage (Theorem
+`debiased.highdim.thm`) and the family-wise *band* coverage (Theorem
+`debiased.highdim.joint.thm`, ≈0.92 over the event-study family at the
+$`p > NT`$ anchor of Faletto 2025) are both near-nominal, so the
+returned object carries a `regime` field and per-effect `feasibility` /
+`converged` / `lambda_node` diagnostics, and `lambda_c` tunes the
+nodewise penalty `lambda_node = lambda_c * max(|a|) * sqrt(log(p) / N)`
+— too-small values leave the directions infeasible and trigger a
+warning. `lambda_c` accepts either a fixed positive number (default the
+theory scale `1.0`) or the string `"cv"`, which selects the constant
+**per fit** by cross-validating the Riesz loss over the KKT-feasible
+region (the desparsified-lasso / auto-DML standard), falling back to
+`1.0` when no grid penalty is feasible; one constant then serves both
+the
 [`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)
 point estimate and every bootstrap band effect (issue \#295). The
 default stays the fixed `1.0`; the overall-ATT coverage validated in

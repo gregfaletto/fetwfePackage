@@ -170,7 +170,11 @@ not `indep_counts` two-sample fits.
 [`simultaneousCIs()`](https://gregfaletto.github.io/fetwfePackage/reference/simultaneousCIs.md)
 also switches to the desparsified construction in the high-dimensional
 regime (via `method = "bootstrap"`; the analytic Gram-inverse band does
-not exist when $`p \geq NT`$):
+not exist when $`p \geq NT`$). **Pass `method = "bootstrap"`** for the
+valid band: the analytic default — and
+`eventStudy(ci_type = "simultaneous")` — instead return the
+*post-selection* band on the selected support, which under-covers. On a
+`gls = FALSE` fit only the bootstrap band is available.
 
 ``` r
 
@@ -185,13 +189,18 @@ sc_hd$regime
 #> [1] "high-dimensional"
 ```
 
-One scope caveat: **Theorem `debiased.highdim.thm`** (validated in
-simulation) covers the **scalar overall-ATT**
-([`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)),
-but the **family-wise band** (Theorem `debiased.highdim.joint.thm`)
-coverage at $`p \geq NT`$ is *not* itself simulation-validated — the
-paper states it experimental-grade — so treat these high-dimensional
-bands as the experimental part of this path.
+Both regimes are now simulation-validated: **Theorem
+`debiased.highdim.thm`** covers the **scalar overall-ATT**
+([`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md),
+≈0.94), and **Theorem `debiased.highdim.joint.thm`** covers the
+**family-wise band** (`simultaneousCIs(method = "bootstrap")`) —
+family-wise coverage ≈0.92 over the event-study family ($`K = 7`$),
+tighter than Bonferroni — both at the $`p > NT`$ anchor of Faletto
+(2025). Like the scalar, the band is validated at a single
+high-dimensional anchor and rests on the sparsity /
+restricted-eigenvalue assumptions (assumed, not proved); the cohort and
+all-post-treatment families are covered by the same theorem but were not
+separately simulated.
 
 ### Controlled high-dimensional truth
 

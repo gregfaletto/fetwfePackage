@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">fetwfe</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.7</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.8</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -300,15 +300,17 @@ bootstrap automatically switches to the full-design
 becomes a nodewise (<code>riesz_lasso</code>) relaxed inverse over the
 singular Gram, with the bridge residuals. This is <em>uniformly
 valid</em> (not post-selection) and is the only route to simultaneous
-bands in that regime. It is <strong>experimental</strong>
-(<code><a href="../reference/fetwfe.html">fetwfe()</a></code> fits only): the underlying scalar overall-ATT
-coverage is validated (Theorem <code>debiased.highdim.thm</code>,
-Faletto 2025), but the family-wise <em>band</em> coverage (Theorem
-<code>debiased.highdim.joint.thm</code>) is not itself
-simulation-validated, so the returned object carries a
-<code>regime</code> field and per-effect <code>feasibility</code> /
-<code>converged</code> / <code>lambda_node</code> diagnostics, and
-<code>lambda_c</code> tunes the nodewise penalty
+bands in that regime. It is validated in simulation
+(<code><a href="../reference/fetwfe.html">fetwfe()</a></code> fits only): the scalar overall-ATT coverage
+(Theorem <code>debiased.highdim.thm</code>) and the family-wise
+<em>band</em> coverage (Theorem <code>debiased.highdim.joint.thm</code>,
+≈0.92 over the event-study family at the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>&gt;</mo><mi>N</mi><mi>T</mi></mrow><annotation encoding="application/x-tex">p &gt; NT</annotation></semantics></math>
+anchor of Faletto 2025) are both near-nominal, so the returned object
+carries a <code>regime</code> field and per-effect
+<code>feasibility</code> / <code>converged</code> /
+<code>lambda_node</code> diagnostics, and <code>lambda_c</code> tunes
+the nodewise penalty
 <code>lambda_node = lambda_c * max(|a|) * sqrt(log(p) / N)</code> —
 too-small values leave the directions infeasible and trigger a warning.
 <code>lambda_c</code> accepts either a fixed positive number (default

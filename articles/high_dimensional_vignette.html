@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">fetwfe</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.7</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.8</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -243,7 +243,13 @@ single-sample), not <code>indep_counts</code> two-sample fits.</p>
 construction in the high-dimensional regime (via
 <code>method = "bootstrap"</code>; the analytic Gram-inverse band does
 not exist when
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>≥</mo><mi>N</mi><mi>T</mi></mrow><annotation encoding="application/x-tex">p \geq NT</annotation></semantics></math>):</p>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>≥</mo><mi>N</mi><mi>T</mi></mrow><annotation encoding="application/x-tex">p \geq NT</annotation></semantics></math>).
+<strong>Pass <code>method = "bootstrap"</code></strong> for the valid
+band: the analytic default — and
+<code>eventStudy(ci_type = "simultaneous")</code> — instead return the
+<em>post-selection</em> band on the selected support, which
+under-covers. On a <code>gls = FALSE</code> fit only the bootstrap band
+is available.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sc_hd</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/simultaneousCIs.html">simultaneousCIs</a></span><span class="op">(</span></span>
 <span>  <span class="va">fit_hd</span>,</span>
@@ -254,15 +260,21 @@ not exist when
 <span><span class="op">)</span></span>
 <span><span class="va">sc_hd</span><span class="op">$</span><span class="va">regime</span></span>
 <span><span class="co">#&gt; [1] "high-dimensional"</span></span></code></pre></div>
-<p>One scope caveat: <strong>Theorem
-<code>debiased.highdim.thm</code></strong> (validated in simulation)
-covers the <strong>scalar overall-ATT</strong>
-(<code><a href="../reference/debiasedATT.html">debiasedATT()</a></code>), but the <strong>family-wise band</strong>
-(Theorem <code>debiased.highdim.joint.thm</code>) coverage at
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>≥</mo><mi>N</mi><mi>T</mi></mrow><annotation encoding="application/x-tex">p \geq NT</annotation></semantics></math>
-is <em>not</em> itself simulation-validated — the paper states it
-experimental-grade — so treat these high-dimensional bands as the
-experimental part of this path.</p>
+<p>Both regimes are now simulation-validated: <strong>Theorem
+<code>debiased.highdim.thm</code></strong> covers the <strong>scalar
+overall-ATT</strong> (<code><a href="../reference/debiasedATT.html">debiasedATT()</a></code>, ≈0.94), and
+<strong>Theorem <code>debiased.highdim.joint.thm</code></strong> covers
+the <strong>family-wise band</strong>
+(<code>simultaneousCIs(method = "bootstrap")</code>) — family-wise
+coverage ≈0.92 over the event-study family
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>K</mi><mo>=</mo><mn>7</mn></mrow><annotation encoding="application/x-tex">K = 7</annotation></semantics></math>),
+tighter than Bonferroni — both at the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>&gt;</mo><mi>N</mi><mi>T</mi></mrow><annotation encoding="application/x-tex">p &gt; NT</annotation></semantics></math>
+anchor of Faletto (2025). Like the scalar, the band is validated at a
+single high-dimensional anchor and rests on the sparsity /
+restricted-eigenvalue assumptions (assumed, not proved); the cohort and
+all-post-treatment families are covered by the same theorem but were not
+separately simulated.</p>
 </div>
 <div class="section level3">
 <h3 id="controlled-high-dimensional-truth">Controlled high-dimensional truth<a class="anchor" aria-label="anchor" href="#controlled-high-dimensional-truth"></a>

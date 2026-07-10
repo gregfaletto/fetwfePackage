@@ -37,7 +37,7 @@ differences, where effects share the regression-coefficient variance piece)."></
 
     <a class="navbar-brand me-2" href="../index.html">fetwfe</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.7</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.8</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -155,13 +155,17 @@ cohorts weighted by the estimated cohort probabilities). When the (full)
 design is <strong>high-dimensional (<code>p &gt;= NT</code>)</strong> – where the analytic Gram inverse
 need not exist – the bootstrap uses the full-design <strong>desparsified</strong>
 construction of <code><a href="debiasedATT.html">debiasedATT()</a></code> (per-effect nodewise directions) generalized
-to the family. This desparsified <code>p &gt;= NT</code> band path is <strong>experimental</strong>
-(<code><a href="fetwfe.html">fetwfe()</a></code> fits only): it generalizes the <code><a href="debiasedATT.html">debiasedATT()</a></code> construction —
-whose overall-ATT coverage is validated near-nominally in simulation
-(Theorem <code>debiased.highdim.thm</code>, Faletto 2025) — but the family-wise
-<em>band</em> coverage here (Theorem <code>debiased.highdim.joint.thm</code>) is not itself
-simulation-validated, so inspect the returned <code>feasibility</code> /
-<code>converged</code> diagnostics. A
+to the family. This desparsified <code>p &gt;= NT</code> band path (<code><a href="fetwfe.html">fetwfe()</a></code> fits only)
+generalizes the <code><a href="debiasedATT.html">debiasedATT()</a></code> construction — whose overall-ATT coverage
+is validated near-nominally in simulation (Theorem <code>debiased.highdim.thm</code>,
+Faletto 2025) — to a family of functionals. Its family-wise coverage is
+likewise validated near-nominally (Theorem <code>debiased.highdim.joint.thm</code>):
+~0.92 over the <strong>event-study</strong> family (<code>K = 7</code>) at the <code>p &gt;= NT</code> anchor of
+Faletto (2025), the band sibling of the scalar result (~0.94); the cohort and
+all-post-treatment families are covered by the same theorem but were not
+separately simulated. As with the scalar, validity rests on the sparsity /
+restricted-eigenvalue primitives (assumed, not proved), so inspect the
+returned <code>feasibility</code> / <code>converged</code> diagnostics. A
 non-<code><a href="fetwfe.html">fetwfe()</a></code> <code>p &gt;= NT</code>
 fit (e.g. <code><a href="betwfe.html">betwfe()</a></code>) has no desparsified band, so it instead falls back to
 the fixed-<code>p</code> selected-support band and emits a <code><a href="https://rdrr.io/r/base/warning.html" class="external-link">warning()</a></code>: a #308 coverage
@@ -181,7 +185,13 @@ built from the empirical per-unit influence function – needing neither GLS
 whitening nor <code>sig_eps_sq</code> – it also accepts a high-dimensional
 <strong><code>gls = FALSE</code></strong> fetwfe fit (<code>calc_ses = FALSE</code>), the band analog of
 <code><a href="debiasedATT.html">debiasedATT()</a></code>'s Omega-free SE (#307, #313). <code>method = "analytic"</code> still
-requires valid analytic SEs (a <code>q &lt; 1</code>, <code>gls = TRUE</code>, rank-satisfied fit).</p></dd>
+requires valid analytic SEs (a <code>q &lt; 1</code>, <code>gls = TRUE</code>, rank-satisfied fit).
+<strong>At <code>p &gt;= NT</code>, <code>method = "bootstrap"</code> is the valid simultaneous band</strong> —
+the desparsified Theorem <code>debiased.highdim.joint.thm</code> band above. A
+<code>method = "analytic"</code> call there instead returns the analytic band on the
+<em>selected support</em>: a post-selection band that under-covers (it is not the
+uniformly-valid desparsified band), and a <code>gls = FALSE</code> fit has no analytic
+SEs at all — so pass <code>method = "bootstrap"</code> for high-dimensional bands.</p></dd>
 
 
 <dt id="arg-b">B<a class="anchor" aria-label="anchor" href="#arg-b"></a></dt>
@@ -214,8 +224,9 @@ string <code>"cv"</code>, which selects the constant <strong>per fit</strong> by
 constant serves the point estimate and every band effect; #295). <strong>Smaller
 fixed values can leave directions infeasible (a warning fires and those bands
 are unreliable).</strong> Ignored when <code>p &lt; NT</code> or <code>method = "analytic"</code>. The default
-stays the fixed <code>1.0</code> (the <code>"cv"</code> mechanism is opt-in pending coverage
-validation).</p></dd>
+stays the fixed <code>1.0</code>; the family-wise coverage validated in Faletto (2025)
+used the <code>"cv"</code> selector (<code>lambda_c</code> ~ 0.54, feasibility 1.0), the same
+constant that serves the scalar <code><a href="debiasedATT.html">debiasedATT()</a></code> and every band effect.</p></dd>
 
 </dl></div>
     <div class="section level2">

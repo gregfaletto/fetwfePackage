@@ -47,7 +47,7 @@ regardless of se_type (two-sample regime, Theorem (b))."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">fetwfe</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.7</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.8</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -132,7 +132,13 @@ critical-value multiplier, and the <code>p_value</code> differ (under
 <code>"simultaneous"</code> the <code>p_value</code> is the single-step max-T multiplicity-
 adjusted dual of the band, under <code>"pointwise"</code> the per-effect Wald
 p-value; #200). Degenerate event times (no valid contributing cohorts)
-carry <code>NA</code> bounds and <code>NA</code> <code>p_value</code> under both settings.</p></dd>
+carry <code>NA</code> bounds and <code>NA</code> <code>p_value</code> under both settings.</p>
+<p><strong>High-dimensional (<code>p &gt;= NT</code>):</strong> the <code>"simultaneous"</code> band here is the
+analytic post-selection band on the selected support (or <code>NA</code> bounds on a
+<code>gls = FALSE</code> fit), <em>not</em> the uniformly-valid desparsified band. For the
+valid high-dimensional event-study band call <code><a href="simultaneousCIs.html">simultaneousCIs()</a></code> with
+<code>family = "event_study"</code>, <code>method = "bootstrap"</code> (Theorem
+<code>debiased.highdim.joint.thm</code>, validated near-nominally in Faletto 2025).</p></dd>
 
 </dl></div>
     <div class="section level2">

@@ -64,6 +64,15 @@ eventStudy(x, alpha = NULL, ci_type = NULL)
   contributing cohorts) carry `NA` bounds and `NA` `p_value` under both
   settings.
 
+  **High-dimensional (`p >= NT`):** the `"simultaneous"` band here is
+  the analytic post-selection band on the selected support (or `NA`
+  bounds on a `gls = FALSE` fit), *not* the uniformly-valid desparsified
+  band. For the valid high-dimensional event-study band call
+  [`simultaneousCIs()`](https://gregfaletto.github.io/fetwfePackage/reference/simultaneousCIs.md)
+  with `family = "event_study"`, `method = "bootstrap"` (Theorem
+  `debiased.highdim.joint.thm`, validated near-nominally in Faletto
+  2025).
+
 ## Value
 
 A data frame with class `c("eventStudy", "data.frame")` and columns:
