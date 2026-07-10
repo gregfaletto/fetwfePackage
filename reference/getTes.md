@@ -45,6 +45,20 @@ elements:
   corresponding to the treatment dummies for each cohort. Intrinsic to
   \\\beta\\; does not depend on the assignment DGP.
 
+- actual_event_time_tes:
+
+  A named numeric vector of length `T - 1` giving the true treatment
+  effect at each event time (periods since adoption)
+  `e = 0, 1, ..., T - 2`, with names `"0", ..., "T-2"`. Each event
+  time's effect is the mean of the true per-`(g, t)` cell effects over
+  the cohorts still observed at that event time, weighted in proportion
+  to `cohort_weights` — the same aggregation
+  [`eventStudy()`](https://gregfaletto.github.io/fetwfePackage/reference/eventStudy.md)
+  estimates on a fitted panel. `NA` at an event time no cohort reaches
+  (where
+  [`eventStudy()`](https://gregfaletto.github.io/fetwfePackage/reference/eventStudy.md)
+  instead reports `0`). New in 1.56.7.
+
 - cohort_times:
 
   An integer vector of length `G` giving the calendar time period at
@@ -124,6 +138,9 @@ print(te_results$att_true)
 
 # Cohort-specific treatment effects:
 print(te_results$actual_cohort_tes)
+
+# True effect at each event time (periods since adoption):
+print(te_results$actual_event_time_tes)
 
 # Or use the new print method for a self-describing display:
 print(te_results)

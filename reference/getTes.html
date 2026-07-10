@@ -25,7 +25,7 @@ integration over the covariate distribution."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">fetwfe</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.6</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.7</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -97,6 +97,18 @@ true cohort-specific treatment effects, calculated by averaging the
 coefficients corresponding to the treatment dummies for each cohort.
 Intrinsic to \(\beta\); does not depend on the assignment
 DGP.</p></dd>
+
+<dt>actual_event_time_tes</dt>
+<dd><p>A named numeric vector of length <code>T - 1</code>
+giving the true treatment effect at each event time (periods since
+adoption) <code>e = 0, 1, ..., T - 2</code>, with names
+<code>"0", ..., "T-2"</code>. Each event time's effect is the
+mean of the true per-<code>(g, t)</code> cell effects over the cohorts still
+observed at that event time, weighted in proportion to
+<code>cohort_weights</code> — the same aggregation
+<code><a href="eventStudy.html">eventStudy()</a></code> estimates on a fitted panel. <code>NA</code> at an
+event time no cohort reaches (where <code><a href="eventStudy.html">eventStudy()</a></code>
+instead reports <code>0</code>). New in 1.56.7.</p></dd>
 
 <dt>cohort_times</dt>
 <dd><p>An integer vector of length <code>G</code> giving the calendar
@@ -173,6 +185,9 @@ Difference-in-Differences with Staggered Adoptions.
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Cohort-specific treatment effects:</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">te_results</span><span class="op">$</span><span class="va">actual_cohort_tes</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># True effect at each event time (periods since adoption):</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">te_results</span><span class="op">$</span><span class="va">actual_event_time_tes</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Or use the new print method for a self-describing display:</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">te_results</span><span class="op">)</span></span></span>

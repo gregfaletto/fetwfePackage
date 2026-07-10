@@ -113,8 +113,7 @@ In any single draw the fused and debiased point estimates can be close,
 so the value of
 [`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)
 is not visible from one fit — it is a **repeated-sampling** guarantee. A
-coverage study at a $`p > NT`$ anchor ([issue
-\#88](https://github.com/gregfaletto/fetwfe/issues/88)) found:
+coverage study at a $`p > NT`$ anchor (reported in Faletto 2025) found:
 
 | Overall-ATT interval | Coverage (nominal 95%) |
 |----|----|
