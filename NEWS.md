@@ -1,5 +1,18 @@
 # NEWS
 
+## Version 1.56.9
+
+### Internal
+
+- Folded the previously-triplicated event-time point-estimate aggregation
+  (`tau_E(e) = sum_{g in V_e} w_g * cell(g, e)`) into the shared internal helper
+  `.true_event_time_effects()`; `eventStudy()` for `fetwfe`, `etwfe`, and
+  `betwfe` now computes its point estimates through that single source (#389).
+  `eventStudy()` output is byte-identical to before. Because the helper adopts
+  the estimator loops' exact summation form, `getTes()`'s `actual_event_time_tes`
+  may differ from prior versions by a floating-point rounding step (a small
+  multiple of `1e-16`, i.e. a few ULP) on some data-generating processes.
+
 ## Version 1.56.8
 
 ### Documentation

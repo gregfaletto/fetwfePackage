@@ -1,7 +1,10 @@
 # Tests for getTes()'s `actual_event_time_tes` accessor and the internal
 # `.true_event_time_effects()` helper (#388). The load-bearing test binds the
-# helper to the estimator's `eventStudy()` estimand; the aggregation is otherwise
-# duplicated (the estimator's inline loop is intentionally un-refactored).
+# helper to the estimator's `eventStudy()` estimand. As of #389 the two estimator
+# event-study loops (`.event_study_fetwfe()` / `.event_study_etwfe_betwfe()`) are
+# folded onto this helper (single source of truth); the byte-exact test below
+# locks that `eventStudy()`'s estimand IS the helper's output for all three
+# estimators.
 
 # Helper: the event-time effects the estimator targets, computed from a fit's
 # estimated cells + resolved cohort structure.
@@ -163,4 +166,79 @@ test_that(".true_event_time_effects returns NA at an event time no cohort reache
 	expect_false(is.na(res[["0"]]))
 	expect_true(is.na(res[["2"]]))
 	expect_true(is.na(res[["4"]]))
+})
+
+test_that(".true_event_time_effects() single-sources eventStudy()'s estimand byte-exactly (fetwfe/etwfe/betwfe, #389)", {
+	# After #389 both estimator loops compute their point estimates by calling
+	# `.true_event_time_effects()` (with `empty_value = 0`), using the SAME
+	# sparse-weight crossprod form, so `eventStudy(fit)$estimate` equals the
+	# helper's output BIT-FOR-BIT. Loop seeds 1-6: whether the old inline `sum`
+	# form diverged from `crossprod` is BLAS/DGP-dependent (e.g. betwfe seed 3
+	# does not diverge on some platforms), so a single pinned seed could make an
+	# estimator's assertion vacuous; looping guarantees the mutation-check bites.
+	for (seed in 1:6) {
+		coefs <- genCoefs(
+			G = 3,
+			T = 5,
+			d = 2,
+			density = 0.5,
+			eff_size = 2,
+			seed = seed
+		)
+		sim <- simulateData(
+			coefs,
+			N = 400,
+			sig_eps_sq = 1,
+			sig_eps_c_sq = 0.5,
+			seed = seed
+		)
+		fits <- list(
+			fetwfeWithSimulatedData(sim),
+			etwfeWithSimulatedData(sim),
+			betwfeWithSimulatedData(sim)
+		)
+		for (fit in fits) {
+			offs <- fetwfe:::.resolve_cohort_offsets_and_first_inds(
+				fit,
+				fit$G,
+				fit$T
+			)
+			est_via_helper <- unname(fetwfe:::.true_event_time_effects(
+				cell_effects = fit$beta_hat[fit$treat_inds],
+				first_inds = offs$first_inds,
+				cohort_offsets_int = offs$cohort_offsets_int,
+				cohort_probs = fit$cohort_probs_overall,
+				T = fit$T,
+				empty_value = 0
+			))
+			# expect_identical (not expect_equal): byte-for-byte is the point.
+			# unname() is load-bearing -- a named vector would flip the data
+			# frame's row.names, failing df-level identical().
+			expect_identical(est_via_helper, eventStudy(fit)$estimate)
+		}
+	}
+})
+
+test_that(".true_event_time_effects() `empty_value` controls the unreached-event-time fill (#389)", {
+	# Synthetic offsets 5,6 with T=6: event times 2,3,4 are reached by no cohort
+	# (V_e empty). The default fills NA (truth convention); the estimator loops
+	# pass empty_value = 0 (a zero pooled estimate). Reached rows are unaffected.
+	args <- list(
+		cell_effects = rep(1, 20),
+		first_inds = c(1L, 6L),
+		cohort_offsets_int = c(5L, 6L),
+		cohort_probs = c(0.5, 0.5),
+		T = 6L
+	)
+	res_na <- do.call(fetwfe:::.true_event_time_effects, args)
+	res_0 <- do.call(
+		fetwfe:::.true_event_time_effects,
+		c(args, list(empty_value = 0))
+	)
+	expect_true(is.na(res_na[["2"]]))
+	expect_true(is.na(res_na[["4"]]))
+	expect_identical(res_0[["2"]], 0)
+	expect_identical(res_0[["4"]], 0)
+	expect_false(is.na(res_0[["0"]]))
+	expect_identical(res_na[["0"]], res_0[["0"]])
 })

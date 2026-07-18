@@ -167,19 +167,20 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	}
 }
 
-#' True per-event-time treatment effects from cohort-time cell effects
+#' True (or estimated) per-event-time treatment effects from cohort-time cells
 #'
-#' @description The point-estimate aggregation of `.event_study_fetwfe()` (the
-#'   `estimates[k]` loop) factored out for reuse by [getTes()]: given the
-#'   per-`(g, t)` treatment-effect cells and the cohort structure, returns the
-#'   event-time effects `tau_E(e) = sum_{g in V_e} w_g * cell(g, e)`, where `V_e`
-#'   is the set of cohorts still observed at event time `e`, `w_g` is cohort
-#'   `g`'s probability normalized within `V_e`, and
-#'   `cell(g, e) = cell_effects[first_inds[g] + e]`. Feeding a fit's estimated
-#'   cells reproduces `eventStudy(fit)$estimate` (verified to machine precision);
-#'   feeding a DGP's true cells (`coefs$beta[treat_inds]`) gives the true
-#'   event-time effects. An event time with no contributing cohort returns `NA`
-#'   (the truth is undefined there; the estimator reports `0`).
+#' @description The single source of truth for the event-time point-estimate
+#'   aggregation `tau_E(e) = sum_{g in V_e} w_g * cell(g, e)`, where `V_e` is the
+#'   set of cohorts still observed at event time `e`, `w_g` is cohort `g`'s
+#'   probability normalized within `V_e`, and
+#'   `cell(g, e) = cell_effects[first_inds[g] + e]`. Called by both estimator
+#'   event-study loops (`.event_study_fetwfe()` / `.event_study_etwfe_betwfe()`,
+#'   with `empty_value = 0`) and by [getTes()] (truth side, default
+#'   `empty_value = NA`); #389 folded the previously-triplicated aggregation
+#'   here. Feeding a fit's estimated cells reproduces `eventStudy(fit)$estimate`
+#'   bit-for-bit (the aggregation uses the same sparse-weight `crossprod` form
+#'   the loops use); feeding a DGP's true cells (`coefs$beta[treat_inds]`) gives
+#'   the true event-time effects.
 #' @param cell_effects Numeric length `num_treats`; per-`(g, t)` effects in
 #'   `treat_inds` order.
 #' @param first_inds Integer length `G`; index within `cell_effects` of each
@@ -189,8 +190,14 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #' @param cohort_probs Numeric length `G`; cohort probabilities (any positive
 #'   scaling; normalized within `V_e`).
 #' @param T Integer; number of time periods. Event times run `0:(T - 2)`.
+#' @param empty_value Numeric scalar written at an event time no cohort reaches
+#'   (`length(V_e) == 0`) or where the within-`V_e` probability mass is
+#'   non-positive/non-finite. Defaults to `NA_real_` (the truth convention: the
+#'   effect is undefined there); the estimator loops pass `0` (they report a
+#'   zero pooled estimate for an empty event time).
 #' @return Named numeric length `T - 1`; the event-time effects with names
-#'   `as.character(0:(T - 2))`, `NA` where no cohort reaches that event time.
+#'   `as.character(0:(T - 2))`, `empty_value` where no cohort reaches that event
+#'   time.
 #' @keywords internal
 #' @noRd
 .true_event_time_effects <- function(
@@ -198,10 +205,12 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	first_inds,
 	cohort_offsets_int,
 	cohort_probs,
-	T
+	T,
+	empty_value = NA_real_
 ) {
+	num_treats <- length(cell_effects)
 	event_times <- 0:(T - 2L)
-	out <- rep(NA_real_, length(event_times))
+	out <- rep(empty_value, length(event_times))
 	for (k in seq_along(event_times)) {
 		e <- event_times[k]
 		V_e <- which(cohort_offsets_int <= T - e)
@@ -214,7 +223,17 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 			next
 		}
 		weights_Ve <- probs_Ve / S_V
-		out[k] <- sum(weights_Ve * cell_effects[first_inds[V_e] + e])
+		# Same sparse-weight `crossprod` form the estimator loops in
+		# `.event_study_fetwfe()` / `.event_study_etwfe_betwfe()` use, so those
+		# loops -- which now call this helper -- reproduce `eventStudy()`'s
+		# estimand BIT-FOR-BIT. A length-|V_e| `sum(weights * cells)` diverges
+		# from the estimator `crossprod` by up to a couple of ULP on some DGPs
+		# (#389).
+		psi <- numeric(num_treats)
+		for (j in seq_along(V_e)) {
+			psi[first_inds[V_e[j]] + e] <- weights_Ve[j]
+		}
+		out[k] <- as.numeric(crossprod(psi, cell_effects))
 	}
 	names(out) <- as.character(event_times)
 	out
@@ -318,7 +337,19 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 
 	max_event <- T - 2L
 	event_times <- 0:max_event
-	estimates <- numeric(length(event_times))
+	# Point estimates: single-sourced through the shared aggregation helper
+	# (#389). `empty_value = 0` matches the loop's degenerate convention (a zero
+	# pooled estimate for an empty event time). The SE loop below recomputes
+	# `V_e` / `weights_Ve` (and, for etwfe/betwfe, `psi_e_tes`) for the variance
+	# terms; only the point estimate is factored out here.
+	estimates <- unname(.true_event_time_effects(
+		cell_effects = tes,
+		first_inds = first_inds,
+		cohort_offsets_int = cohort_offsets_int,
+		cohort_probs = cohort_probs_overall,
+		T = T,
+		empty_value = 0
+	))
 	ses <- numeric(length(event_times))
 	n_cohorts <- integer(length(event_times))
 
@@ -333,7 +364,6 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 		V_e <- which(cohort_offsets_int <= T - e)
 		n_cohorts[k] <- length(V_e)
 		if (length(V_e) == 0L) {
-			estimates[k] <- 0
 			ses[k] <- NA_real_
 			next
 		}
@@ -342,20 +372,18 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 		probs_Ve <- cohort_probs_overall[V_e]
 		S_V <- sum(probs_Ve)
 		if (S_V <= 0) {
-			estimates[k] <- 0
 			ses[k] <- NA_real_
 			next
 		}
 		weights_Ve <- probs_Ve / S_V
 
-		# psi_e_tes (length num_treats): weight at idx(g, e) for g in V_e, 0 elsewhere
+		# psi_e_tes (length num_treats): weight at idx(g, e) for g in V_e, 0
+		# elsewhere. Feeds the SE terms below; the point estimate is
+		# single-sourced through `.true_event_time_effects()` above (#389).
 		psi_e_tes <- numeric(num_treats)
 		for (j in seq_along(V_e)) {
 			psi_e_tes[first_inds[V_e[j]] + e] <- weights_Ve[j]
 		}
-
-		# Point estimate
-		estimates[k] <- as.numeric(crossprod(psi_e_tes, tes))
 
 		if (!calc_ses) {
 			ses[k] <- NA_real_
@@ -562,7 +590,19 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 
 	max_event <- T - 2L
 	event_times <- 0:max_event
-	estimates <- numeric(length(event_times))
+	# Point estimates: single-sourced through the shared aggregation helper
+	# (#389). `empty_value = 0` matches the loop's degenerate convention (a zero
+	# pooled estimate for an empty event time). The SE loop below recomputes
+	# `V_e` / `weights_Ve` (and, for etwfe/betwfe, `psi_e_tes`) for the variance
+	# terms; only the point estimate is factored out here.
+	estimates <- unname(.true_event_time_effects(
+		cell_effects = tes,
+		first_inds = first_inds,
+		cohort_offsets_int = cohort_offsets_int,
+		cohort_probs = cohort_probs_overall,
+		T = T,
+		empty_value = 0
+	))
 	ses <- numeric(length(event_times))
 	n_cohorts <- integer(length(event_times))
 
@@ -573,7 +613,6 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 		V_e <- which(cohort_offsets_int <= T - e)
 		n_cohorts[k] <- length(V_e)
 		if (length(V_e) == 0L) {
-			estimates[k] <- 0
 			ses[k] <- NA_real_
 			next
 		}
@@ -581,19 +620,10 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 		probs_Ve <- cohort_probs_overall[V_e]
 		S_V <- sum(probs_Ve)
 		if (S_V <= 0) {
-			estimates[k] <- 0
 			ses[k] <- NA_real_
 			next
 		}
 		weights_Ve <- probs_Ve / S_V
-
-		# Point estimate: weighted sum of per-cell tes (which already
-		# incorporates d_inv_treat times theta_hat under the FETWFE fit).
-		psi_e_tes <- numeric(num_treats)
-		for (j in seq_along(V_e)) {
-			psi_e_tes[first_inds[V_e[j]] + e] <- weights_Ve[j]
-		}
-		estimates[k] <- as.numeric(crossprod(psi_e_tes, tes))
 
 		if (!calc_ses) {
 			ses[k] <- NA_real_
