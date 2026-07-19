@@ -549,6 +549,15 @@
 			names = FALSE,
 			type = 7
 		)
+		# Floor the Monte-Carlo sup-t quantile at the pointwise Gaussian value
+		# (#393). The true sup-t quantile is >= qnorm(1 - alpha/2) (a sup over
+		# K >= 1 standardized effects stochastically dominates a single |Z|), but
+		# the B-draw MC estimate can dip below it under strong cross-effect
+		# correlation, returning a "simultaneous" band strictly inside its own
+		# pointwise band. Mirrors the K <= 1 branch above and the scalar wild-
+		# bootstrap floor (`.debiased_att_wild_boot()`, #363). Free when the MC
+		# estimate is already >= z.
+		crit <- max(crit, stats::qnorm(1 - alpha / 2))
 	}
 
 	list(crit = crit, ses = ses, nondeg = nondeg, boot_max = boot_max)
@@ -845,6 +854,15 @@
 			numeric(1)
 		)
 	}
+	# Floor the adjusted p-values at the pointwise two-sided p (#393) -- the dual
+	# of the crit floor in `.simultaneous_bootstrap_crit()`. The single-step
+	# max-T p is population-level >= the pointwise p (the sup over K >= 1 effects
+	# dominates |Z|), but the MC estimate `mean(boot_max >= t)` can dip below it
+	# under strong cross-effect correlation. Flooring BOTH crit and the p keeps
+	# the documented duality "outside band iff adjusted p < alpha" exact at the
+	# boundary. No-op for the K <= 1 branch (already the pointwise value) and
+	# NA-preserving for degenerate effects (`t_stat` is NA there -> pmax(NA, NA)).
+	adjusted_p_values <- pmax(adjusted_p_values, 2 * stats::pnorm(-abs(t_stat)))
 
 	# Band center `estimates_used`: the bridge `estimates` in fixed-p, the debiased
 	# `estimates + colSums(F_mat)/(N*T)` in the high-dim regime (see the regime
