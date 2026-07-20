@@ -1,5 +1,21 @@
 # NEWS
 
+## Version 1.56.11
+
+### Bug fixes
+
+- `genFullInvFusionTransformMat()` --- the standalone full inverse-fusion basis
+  matrix --- built its three covariate-interaction blocks (cohort x X, time x X,
+  treatment x X) with the wrong Kronecker order (feature-major `I_d (x) block`
+  instead of the package's level-major `block (x) I_d`), so it disagreed with the
+  authoritative `untransformCoefImproved()` for `d >= 2`. The only estimator path
+  that consumes this builder is the ridge augmentation, so **`fetwfe(add_ridge =
+  TRUE)` with `d >= 2` covariates** was penalizing a coordinate-permuted
+  coefficient vector rather than the documented untransformed coefficients. Fixed;
+  affected fits shift by a small numeric amount (~`1e-7` at the default
+  `lambda_ridge`, growing with `lambda_ridge`). `add_ridge = FALSE` fits,
+  `debiasedATT()`, and the simultaneous-band paths are byte-identical. (#394)
+
 ## Version 1.56.10
 
 ### Bug fixes
