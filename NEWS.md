@@ -1,5 +1,20 @@
 # NEWS
 
+## Version 1.56.10
+
+### Bug fixes
+
+- `simultaneousCIs(method = "bootstrap")` now floors the `K >= 2` sup-t critical
+  value **and** its dual single-step max-T adjusted p-value at the pointwise
+  Gaussian value (`qnorm(1 - alpha/2)` and `2 * pnorm(-|t|)`). Under strong
+  cross-effect correlation the raw Monte-Carlo estimate of either could dip below
+  the pointwise value, returning a "simultaneous" band strictly inside its own
+  pointwise band (or an adjusted p-value smaller than the pointwise p) ---
+  anti-conservative in the one quantity a simultaneous band exists to guarantee.
+  Flooring both restores "simultaneous never narrower / more significant than
+  pointwise" and keeps the band / adjusted-p duality exact. Mirrors the scalar
+  wild-bootstrap floor (#363) and the `K <= 1` branch. (#393)
+
 ## Version 1.56.9
 
 ### Internal
