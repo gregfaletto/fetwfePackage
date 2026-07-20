@@ -570,6 +570,12 @@ genCoefs <- function(
 #'
 #' @param coefs_obj An object of class \code{"FETWFE_coefs"} containing the coefficient vector
 #' and simulation parameters.
+#' @param distribution Character; the covariate distribution to integrate the
+#'   propensity-weighted truth over. Must match the \code{distribution} passed to
+#'   \code{\link{simulateData}} for the panel whose truth you want. One of
+#'   \code{"gaussian"} (default) or \code{"uniform"}. Only affects
+#'   covariate-dependent assignment (\code{assignment_type != "marginal"}); it is
+#'   ignored under marginal assignment, where the cohort weights are uniform.
 #'
 #' @return An object of class \code{"FETWFE_tes"}, which is a list with the
 #' following elements:
@@ -630,8 +636,9 @@ genCoefs <- function(
 #' weights under the marginal DGP, propensity weights otherwise).
 #'
 #' Under non-marginal DGPs, \eqn{E[\pi_g(X)]}{E[pi_g(X)]} is estimated by
-#' Monte Carlo integration over the X distribution (Gaussian by default) with
-#' \code{M = 10000} draws. The Monte Carlo seed is offset from the main
+#' Monte Carlo integration over the X distribution set by \code{distribution}
+#' (\code{"gaussian"} by default) with \code{M = 10000} draws. The Monte Carlo
+#' seed is offset from the main
 #' \code{coefs_obj$seed} by \code{+ 2L} per the documented seed-offset
 #' convention.
 #'
@@ -671,7 +678,7 @@ genCoefs <- function(
 #' }
 #'
 #' @export
-getTes <- function(coefs_obj) {
+getTes <- function(coefs_obj, distribution = "gaussian") {
 	if (!inherits(coefs_obj, "FETWFE_coefs")) {
 		stop(
 			"coefs_obj must be an object of class 'FETWFE_coefs'; got class: ",
@@ -679,6 +686,7 @@ getTes <- function(coefs_obj) {
 			call. = FALSE
 		)
 	}
+	distribution <- match.arg(distribution, c("gaussian", "uniform"))
 
 	# Unpack components from the coefs object
 	beta <- coefs_obj$beta
@@ -742,7 +750,7 @@ getTes <- function(coefs_obj) {
 			.expected_cohort_probs(
 				assignment_coefs = coefs_obj$assignment_coefs,
 				d = d,
-				distribution = "gaussian",
+				distribution = distribution,
 				M = 10000L,
 				seed = NULL
 			)

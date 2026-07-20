@@ -4,11 +4,18 @@
 \alias{getTes}
 \title{Compute True Treatment Effects}
 \usage{
-getTes(coefs_obj)
+getTes(coefs_obj, distribution = "gaussian")
 }
 \arguments{
 \item{coefs_obj}{An object of class \code{"FETWFE_coefs"} containing the coefficient vector
 and simulation parameters.}
+
+\item{distribution}{Character; the covariate distribution to integrate the
+propensity-weighted truth over. Must match the \code{distribution} passed to
+\code{\link{simulateData}} for the panel whose truth you want. One of
+\code{"gaussian"} (default) or \code{"uniform"}. Only affects
+covariate-dependent assignment (\code{assignment_type != "marginal"}); it is
+ignored under marginal assignment, where the cohort weights are uniform.}
 }
 \value{
 An object of class \code{"FETWFE_tes"}, which is a list with the
@@ -82,8 +89,9 @@ is computed as a weighted average of the cohort-specific effects (uniform
 weights under the marginal DGP, propensity weights otherwise).
 
 Under non-marginal DGPs, \eqn{E[\pi_g(X)]}{E[pi_g(X)]} is estimated by
-Monte Carlo integration over the X distribution (Gaussian by default) with
-\code{M = 10000} draws. The Monte Carlo seed is offset from the main
+Monte Carlo integration over the X distribution set by \code{distribution}
+(\code{"gaussian"} by default) with \code{M = 10000} draws. The Monte Carlo
+seed is offset from the main
 \code{coefs_obj$seed} by \code{+ 2L} per the documented seed-offset
 convention.
 }
