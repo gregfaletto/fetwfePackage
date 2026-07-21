@@ -1,5 +1,23 @@
 # NEWS
 
+## Version 1.56.15
+
+### Bug fixes
+
+- `attgtToFetwfeDf()` / `etwfeToFetwfeDf()` no longer emit a spurious "unit(s)
+  switch from treated back to untreated" warning. The check measured only the
+  input data frame's row order (a treated-to-untreated reversal is impossible by
+  construction, since the first-treatment period is constant within a unit), so
+  it fired falsely on valid time-descending input; it has been removed. These
+  converters also now accept a first-treatment period of `Inf` (a common
+  never-treated encoding), mapping it to `0` instead of erroring with a
+  misleading "Missing values" message.
+- The estimator input validator now reports a named, actionable violation for a
+  missing (`NA`) value in the response or time column (previously an `NA`
+  response surfaced as a bare internal `all(!is.na(data)) is not TRUE`), and for
+  a mixed-`NA` `indep_counts` vector (previously "missing value where TRUE/FALSE
+  needed"). (#397)
+
 ## Version 1.56.14
 
 ### Bug fixes

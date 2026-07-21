@@ -32,7 +32,8 @@ integer). This becomes \code{time_var} in the returned dataframe.}
 character and returned as \code{unit_var}.}
 
 \item{gname}{Character scalar. Name of the \emph{group} variable holding the
-first period of treatment. Values must be 0 for never-treated, or a
+first period of treatment. Values must be 0 (or \code{Inf}, a common
+never-treated encoding, which is mapped to 0) for never-treated, or a
 positive integer representing the first treated period.}
 
 \item{covars}{Character vector of additional covariate column names to carry
