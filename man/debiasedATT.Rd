@@ -43,8 +43,11 @@ critical value (before the floor) falls \emph{below} the Gaussian --- so under t
 floor it reduces to the analytic interval exactly in the small-\code{N} regime; it
 only ever \emph{widens} the interval when cluster influence is near-homogeneous.
 For a genuine few-clusters correction the restricted bootstrap-t or a CR2-type
-analytic adjustment is required (tracked as future work, #361). Not supported
-for \code{indep_counts} (two-sample) fits.}
+analytic adjustment is required (tracked as future work, #361). Supported for
+both single-sample and \code{indep_counts} (two-sample) fits: for a two-sample fit
+the cohort-weight channel is perturbed on its own independent multiplier stream
+over the \code{N} count-sample units (\code{sum(indep_counts) == N} is enforced), yielding
+the two-sample propensity variance.}
 
 \item{B}{Integer; the number of wild-bootstrap replicates (default \code{1000}).
 Ignored unless \code{method = "bootstrap"}.}

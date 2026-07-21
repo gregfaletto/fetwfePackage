@@ -146,6 +146,14 @@ utils::globalVariables(c(
 #'   stays the fixed `1.0`; the family-wise coverage validated in Faletto (2025)
 #'   used the `"cv"` selector (`lambda_c` ~ 0.54, feasibility 1.0), the same
 #'   constant that serves the scalar `debiasedATT()` and every band effect.
+#' @param cv_time_budget Numeric; a wall-clock backstop (in seconds) for the
+#'   `lambda_c = "cv"` cross-validation (the same #384 backstop `debiasedATT()`
+#'   offers). `Inf` (the default) leaves selection fully deterministic /
+#'   reproducible; a finite value stops the CV early and falls back to the theory
+#'   scale (`lambda_c = 1.0`) with a warning, so an adversarial high-dimensional
+#'   draw cannot spin indefinitely (#384). Whether a finite budget fires depends
+#'   on machine speed, so the result can too. Ignored unless `lambda_c = "cv"` and
+#'   `p >= NT`.
 #' @return An object of S3 class `"simultaneous_cis"`: a list with
 #'   \describe{
 #'     \item{ci}{A data frame with columns `effect`, `estimate`,
@@ -176,7 +184,10 @@ utils::globalVariables(c(
 #'   `"high-dimensional"` fit additionally carries per-effect `feasibility`,
 #'   `converged`, and `lambda_node` (the nodewise-direction diagnostics), plus
 #'   `lambda_c` (the leading constant used) and `lambda_c_selection` (`"fixed"`
-#'   or `"cv"`).
+#'   or `"cv"`). When `lambda_c = "cv"` it also carries `lambda_cv`, the
+#'   cross-validation diagnostics (the grid, the per-grid feasibility flags and CV
+#'   losses, and whether the theory-scale fallback fired), matching
+#'   `debiasedATT()`'s `lambda_cv`.
 #' @details
 #' **Family resolution and `K`.** `"event_study"` resolves to one effect per
 #' post-treatment event time `e = 0, ..., T - 2` (`K = T - 1`); `"cohort"` to
@@ -268,7 +279,8 @@ simultaneousCIs <- function(
 	multiplier = c("rademacher", "mammen", "webb"),
 	lambda_c = 1.0,
 	riesz_max_iter = 5000L,
-	riesz_tol = 1e-9
+	riesz_tol = 1e-9,
+	cv_time_budget = Inf
 ) {
 	UseMethod("simultaneousCIs")
 }
@@ -295,7 +307,8 @@ simultaneousCIs.fetwfe <- function(
 	multiplier = c("rademacher", "mammen", "webb"),
 	lambda_c = 1.0,
 	riesz_max_iter = 5000L,
-	riesz_tol = 1e-9
+	riesz_tol = 1e-9,
+	cv_time_budget = Inf
 ) {
 	contract <- .check_for_simultaneous_cis(result)
 	family <- match.arg(family)
@@ -311,7 +324,8 @@ simultaneousCIs.fetwfe <- function(
 		multiplier = match.arg(multiplier),
 		lambda_c = lambda_c,
 		riesz_max_iter = riesz_max_iter,
-		riesz_tol = riesz_tol
+		riesz_tol = riesz_tol,
+		cv_time_budget = cv_time_budget
 	)
 }
 
@@ -327,7 +341,8 @@ simultaneousCIs.etwfe <- function(
 	multiplier = c("rademacher", "mammen", "webb"),
 	lambda_c = 1.0,
 	riesz_max_iter = 5000L,
-	riesz_tol = 1e-9
+	riesz_tol = 1e-9,
+	cv_time_budget = Inf
 ) {
 	contract <- .check_for_simultaneous_cis(result)
 	family <- match.arg(family)
@@ -343,7 +358,8 @@ simultaneousCIs.etwfe <- function(
 		multiplier = match.arg(multiplier),
 		lambda_c = lambda_c,
 		riesz_max_iter = riesz_max_iter,
-		riesz_tol = riesz_tol
+		riesz_tol = riesz_tol,
+		cv_time_budget = cv_time_budget
 	)
 }
 
@@ -359,7 +375,8 @@ simultaneousCIs.betwfe <- function(
 	multiplier = c("rademacher", "mammen", "webb"),
 	lambda_c = 1.0,
 	riesz_max_iter = 5000L,
-	riesz_tol = 1e-9
+	riesz_tol = 1e-9,
+	cv_time_budget = Inf
 ) {
 	contract <- .check_for_simultaneous_cis(result)
 	family <- match.arg(family)
@@ -375,7 +392,8 @@ simultaneousCIs.betwfe <- function(
 		multiplier = match.arg(multiplier),
 		lambda_c = lambda_c,
 		riesz_max_iter = riesz_max_iter,
-		riesz_tol = riesz_tol
+		riesz_tol = riesz_tol,
+		cv_time_budget = cv_time_budget
 	)
 }
 
@@ -400,7 +418,8 @@ simultaneousCIs.twfeCovs <- function(
 	multiplier = c("rademacher", "mammen", "webb"),
 	lambda_c = 1.0,
 	riesz_max_iter = 5000L,
-	riesz_tol = 1e-9
+	riesz_tol = 1e-9,
+	cv_time_budget = Inf
 ) {
 	contract <- .check_for_simultaneous_cis(result)
 	family <- match.arg(family)
@@ -416,7 +435,8 @@ simultaneousCIs.twfeCovs <- function(
 		multiplier = match.arg(multiplier),
 		lambda_c = lambda_c,
 		riesz_max_iter = riesz_max_iter,
-		riesz_tol = riesz_tol
+		riesz_tol = riesz_tol,
+		cv_time_budget = cv_time_budget
 	)
 }
 
@@ -449,6 +469,7 @@ simultaneousCIs.twfeCovs <- function(
 	lambda_c = 1.0,
 	riesz_max_iter = 5000L,
 	riesz_tol = 1e-9,
+	cv_time_budget = Inf,
 	# Severity of the high-dim (p >= NT) all-zero degenerate early-exit: a direct
 	# user accessor call warns (default); the silent fit-time band precompute
 	# (`.apply_simultaneous_catt_band()`, wrapped in suppressMessages()) passes
@@ -505,6 +526,18 @@ simultaneousCIs.twfeCovs <- function(
 	) {
 		stop(
 			"simultaneousCIs(): `riesz_tol` must be a single positive number.",
+			call. = FALSE
+		)
+	}
+	if (
+		!is.numeric(cv_time_budget) ||
+			length(cv_time_budget) != 1L ||
+			is.na(cv_time_budget) ||
+			cv_time_budget <= 0
+	) {
+		stop(
+			"simultaneousCIs(): `cv_time_budget` must be a single positive number ",
+			"(seconds) or `Inf`.",
 			call. = FALSE
 		)
 	}
@@ -861,6 +894,7 @@ simultaneousCIs.twfeCovs <- function(
 			lambda_c = lambda_c,
 			riesz_max_iter = riesz_max_iter,
 			riesz_tol = riesz_tol,
+			cv_time_budget = cv_time_budget,
 			X_final = X_final,
 			y_final = y_final,
 			N = N,

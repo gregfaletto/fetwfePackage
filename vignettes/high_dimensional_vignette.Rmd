@@ -81,12 +81,12 @@ The fused interval under-covers because of the post-selection non-uniformity; th
 **It is not a few-clusters remedy.** The analytic sandwich SE is downward-biased with few clusters, but this bootstrap does not fix that: as an *unrestricted, no-refit* score bootstrap it does not reproduce the tail inflation the *restricted* wild-cluster bootstrap-t uses for few-cluster coverage, and under heterogeneous cluster influence its critical value (before the floor) actually falls *below* the Gaussian --- so the floor reduces it to the analytic interval in exactly the small-`N` regime. Its only effect is to *widen* the interval when cluster influence is near-homogeneous. For genuine few-clusters inference a restricted bootstrap-t or a CR2-type analytic correction is required (future work).
 
 ```{r highdim-wild-boot, eval = FALSE}
-# `fit` must be a single-sample fetwfe() fit -- not an `indep_counts` fit, which
-# the worked example above (via fetwfeWithSimulatedData) happens to be.
+# Works on both single-sample and two-sample (`indep_counts`) fits -- e.g. the
+# fetwfeWithSimulatedData() fit from the worked example above (a two-sample fit).
 debiasedATT(fit, method = "bootstrap", multiplier = "webb", seed = 1)
 ```
 
-The `multiplier` (`"webb"`, the default; `"rademacher"`; or `"mammen"`) only affects the near-homogeneous case where the bootstrap widens above the floor --- in the small-`N` / heterogeneous regime the interval is the analytic one regardless of the weight. The bootstrap is defined only for **single-sample** fits (real observational panels are single-sample), not `indep_counts` two-sample fits.
+The `multiplier` (`"webb"`, the default; `"rademacher"`; or `"mammen"`) only affects the near-homogeneous case where the bootstrap widens above the floor --- in the small-`N` / heterogeneous regime the interval is the analytic one regardless of the weight. The bootstrap supports both single-sample fits (real observational panels are single-sample) and `indep_counts` two-sample fits (the cohort-weight channel is perturbed on its own independent multiplier stream over the reconstructed count-sample units).
 
 ## Simultaneous bands at $p \geq NT$
 

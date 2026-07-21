@@ -194,8 +194,11 @@
 #'   floor it reduces to the analytic interval exactly in the small-`N` regime; it
 #'   only ever *widens* the interval when cluster influence is near-homogeneous.
 #'   For a genuine few-clusters correction the restricted bootstrap-t or a CR2-type
-#'   analytic adjustment is required (tracked as future work, #361). Not supported
-#'   for `indep_counts` (two-sample) fits.
+#'   analytic adjustment is required (tracked as future work, #361). Supported for
+#'   both single-sample and `indep_counts` (two-sample) fits: for a two-sample fit
+#'   the cohort-weight channel is perturbed on its own independent multiplier stream
+#'   over the `N` count-sample units (`sum(indep_counts) == N` is enforced), yielding
+#'   the two-sample propensity variance.
 #' @param B Integer; the number of wild-bootstrap replicates (default `1000`).
 #'   Ignored unless `method = "bootstrap"`.
 #' @param seed `NULL` (draw from the ambient RNG, the default) or a single
@@ -318,18 +321,6 @@ debiasedATT <- function(
 
 	if (method == "bootstrap") {
 		B <- .validate_boot_args(B, seed, "debiasedATT")
-		if (isTRUE(fit$indep_counts_used)) {
-			stop(
-				"debiasedATT(method = \"bootstrap\") is not supported for ",
-				"`indep_counts` (two-sample) fits: the cohort-weight variance ",
-				"channel is estimated from the separate count sample, so it has no ",
-				"per-unit influence-function decomposition over the main sample's ",
-				"clusters. Use the analytic SE (the default) here, or refit without ",
-				"`indep_counts` -- a simulation-only feature -- to use the wild ",
-				"bootstrap (real single-sample panels are supported directly).",
-				call. = FALSE
-			)
-		}
 	}
 
 	# High-dimensional nodewise-solver controls. These only affect the p >= NT

@@ -1,5 +1,24 @@
 # NEWS
 
+## Version 1.56.17
+
+### New features
+
+- `simultaneousCIs()` gains a `cv_time_budget` argument (default `Inf`) --- the same
+  wall-clock backstop `debiasedATT()` already offered (#384). Under `lambda_c = "cv"`
+  it caps the cross-validation that selects the high-dimensional (`p >= NT`) nodewise
+  penalty, falling back to the theory scale (`lambda_c = 1.0`) with a warning if the
+  budget fires, so an adversarial high-dimensional draw cannot spin indefinitely
+  through the band path. When `lambda_c = "cv"` the band object now also carries
+  `$lambda_cv` (the cross-validation diagnostics), matching `debiasedATT()`. (#402)
+
+- `debiasedATT(method = "bootstrap")` now supports `indep_counts` (two-sample) fits,
+  which it previously refused. The wild bootstrap perturbs the cohort-weight channel
+  on its own independent multiplier stream over the reconstructed count-sample units
+  (`sum(indep_counts) == N` is enforced), reproducing the two-sample propensity
+  variance --- the identical construction `simultaneousCIs()` already ran on such
+  fits. The default analytic SE is unchanged. (#402)
+
 ## Version 1.56.16
 
 ### Bug fixes
