@@ -330,7 +330,26 @@ checkEtwfeInputs <- function(
 	beta_hat_slopes <- coef(fit) / scale_scale
 
 	stopifnot(length(beta_hat_slopes) == p_eff)
-	stopifnot(all(!is.na(beta_hat_slopes)))
+	# A rank-deficient design (perfectly collinear covariates -- e.g. one covariate
+	# a linear function of another -- or an otherwise singular design) makes `lm()`
+	# return NA coefficients for the aliased columns. Report the cause and the
+	# `add_ridge` escape hatch instead of the bare `all(!is.na(...))` assertion
+	# (#395). Column names are positional here, so they are not named. The
+	# small-cohort cause is caught earlier by `.check_cohort_rank_for_ols()` (for
+	# `etwfe()`); this covers every other rank-deficiency cause, for both estimators.
+	if (anyNA(beta_hat_slopes)) {
+		stop(
+			"The design matrix is rank-deficient: the ordinary-least-squares fit ",
+			"could not identify ",
+			sum(is.na(beta_hat_slopes)),
+			" coefficient(s) (aliased columns receive NA estimates). This happens ",
+			"when covariates are perfectly collinear or the design is otherwise ",
+			"singular; standard errors are unavailable. Drop the redundant ",
+			"covariate(s), or set `add_ridge = TRUE` to estimate treatment effects ",
+			"with a small amount of ridge regularization.",
+			call. = FALSE
+		)
+	}
 
 	# If using ridge regularization, multiply the "naive" estimated coefficients
 	# by 1 + lambda_ridge, similar to suggestion in original elastic net paper.

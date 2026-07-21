@@ -2390,12 +2390,22 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 	treatment,
 	covs_orig
 ) {
-	.check_cohort_rank_for_ols(
-		in_sample_counts = prep$in_sample_counts,
-		G = prep$G,
-		d = prep$d,
-		add_ridge = add_ridge
-	)
+	# The d + 1 units-per-cohort condition is a rank requirement of the FULL ETWFE
+	# design (each cohort's cohort x covariate interaction block needs >= d + 1
+	# units). twfeCovs() fits the COLLAPSED design (cohort FE + time FE + covariate
+	# mains + pooled treatment dummies -- no cohort x covariate or treatment x
+	# covariate interactions), which does not need it. A genuinely singular
+	# collapsed design is caught downstream: getGramInv() degrades calc_ses to
+	# FALSE, and the OLS core errors informatively on NA coefficients. So the gate
+	# is etwfe-only (#395).
+	if (!identical(class_name, "twfeCovs")) {
+		.check_cohort_rank_for_ols(
+			in_sample_counts = prep$in_sample_counts,
+			G = prep$G,
+			d = prep$d,
+			add_ridge = add_ridge
+		)
+	}
 
 	res <- core_fn(
 		X_ints = prep$X_ints,

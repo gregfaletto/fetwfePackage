@@ -820,51 +820,42 @@ test_that("tibbles work as input to twfeCovs", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 30: Error when a cohort contains fewer than d + 1 units
+# Test 30: a small-cohort covariate design fits (the d+1 gate is etwfe-only, #395)
 # ------------------------------------------------------------------------------
-test_that("twfeCovs throws error when a cohort contains fewer than d + 1 units", {
+test_that("twfeCovs fits a small-cohort covariate design without the d+1 gate (#395)", {
+	# R = 9 cohorts across N = 30 units includes cohort(s) with fewer than
+	# d + 1 (= 3) units. The d+1-per-cohort rank condition is a requirement of the
+	# FULL ETWFE design (each cohort's cohort x covariate interaction block);
+	# twfeCovs() fits the COLLAPSED design (no such blocks), which is full column
+	# rank here -- so the fit now SUCCEEDS where it previously hard-stopped (#395).
 	df <- generate_panel_data(N = 30, T = 10, R = 9, seed = 123)
-
-	expect_error(
-		twfeCovs(
-			pdata = df,
-			time_var = "time",
-			unit_var = "unit",
-			treatment = "treatment",
-			covs = c("cov1", "cov2"),
-			response = "y",
-			verbose = FALSE
-		),
-		"At least one cohort contains fewer than d \\+ 1 units\\. The design matrix is rank-deficient\\. Calculating standard errors will not be possible, and estimating treatment effects is only possible using add_ridge = TRUE\\."
-	)
-
-	expect_warning(
-		twfeCovs(
-			pdata = df,
-			time_var = "time",
-			unit_var = "unit",
-			treatment = "treatment",
-			covs = c("cov1", "cov2"),
-			response = "y",
-			verbose = FALSE,
-			add_ridge = TRUE
-		),
-		"At least one cohort contains fewer than d \\+ 1 units\\. The design matrix is rank-deficient\\. Calculating standard errors will not be possible, and estimating treatment effects is only possible using add_ridge = TRUE\\."
-	)
-
-	res <- suppressWarnings(twfeCovs(
+	args <- list(
 		pdata = df,
 		time_var = "time",
 		unit_var = "unit",
 		treatment = "treatment",
 		covs = c("cov1", "cov2"),
 		response = "y",
-		verbose = FALSE,
-		add_ridge = TRUE
-	))
+		verbose = FALSE
+	)
 
-	expect_true(!is.na(res$att_hat))
-	expect_true(res$att_hat != 0)
+	res <- do.call(twfeCovs, args)
+	expect_s3_class(res, "twfeCovs")
+	expect_true(is.finite(res$att_hat) && res$att_hat != 0)
+	# The collapsed design is full column rank, so standard errors are available.
+	expect_true(is.finite(res$att_se))
+
+	# add_ridge = TRUE still succeeds AND no longer emits the d+1 gate warning
+	# (that warning is now etwfe-only). Reverting the twfeCovs gate-skip would make
+	# the no-ridge fit error and re-introduce this warning.
+	w <- testthat::capture_warnings(
+		res_r <- do.call(
+			twfeCovs,
+			c(args, list(add_ridge = TRUE))
+		)
+	)
+	expect_false(any(grepl("fewer than d", w)))
+	expect_true(is.finite(res_r$att_hat) && res_r$att_hat != 0)
 })
 
 # ------------------------------------------------------------------------------

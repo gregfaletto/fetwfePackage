@@ -1,5 +1,23 @@
 # NEWS
 
+## Version 1.56.14
+
+### Bug fixes
+
+- `etwfe()` and `twfeCovs()` now report an informative error when the design is
+  rank-deficient for a reason other than a small cohort (e.g. perfectly collinear
+  covariates, where `lm()` returns `NA` for the aliased column), instead of the
+  opaque `all(!is.na(beta_hat_slopes)) is not TRUE` assertion. The message names
+  the cause and points to dropping the redundant covariate(s) or setting
+  `add_ridge = TRUE`.
+- `twfeCovs()` no longer refuses fits with fewer than `d + 1` units in some
+  cohort. That `d + 1`-per-cohort rank condition is a requirement of the full
+  ETWFE design (its cohort-by-covariate interaction blocks), not of the collapsed
+  design `twfeCovs()` fits, so small-cohort covariate fits --- a core `twfeCovs()`
+  use case (e.g. single-state cohorts) --- now succeed, with valid standard
+  errors where the collapsed design is full rank. The gate is retained for
+  `etwfe()`, whose full design genuinely needs it. (#395)
+
 ## Version 1.56.13
 
 ### Bug fixes
