@@ -21,10 +21,10 @@
 #'       (D^{(1)}(G))^{-1},\;
 #'       (D^{(1)}(T-1))^{-1},\;
 #'       I_{d},\;
-#'       I_{d}\otimes(D^{(1)}(G))^{-1},\;
-#'       I_{d}\otimes(D^{(1)}(T-1))^{-1},\;
+#'       (D^{(1)}(G))^{-1}\otimes I_{d},\;
+#'       (D^{(1)}(T-1))^{-1}\otimes I_{d},\;
 #'       (D^{(2)}(\mathcal G))^{-1},\;
-#'       I_{d}\otimes(D^{(2)}(\mathcal G))^{-1}
+#'       (D^{(2)}(\mathcal G))^{-1}\otimes I_{d}
 #'     \bigr).
 #' }
 #' The result is a matrix ready for vanilla bridge regression (Lasso,
@@ -255,10 +255,10 @@ transformXintImproved <- function(
 #'        (D^{(1)}(G))^{-1},\;
 #'        (D^{(1)}(T\!-\!1))^{-1},\;
 #'        I_d,\;
-#'        I_d\!\otimes\!(D^{(1)}(G))^{-1},\;
-#'        I_d\!\otimes\!(D^{(1)}(T\!-\!1))^{-1},\;
+#'        (D^{(1)}(G))^{-1}\!\otimes\!I_d,\;
+#'        (D^{(1)}(T\!-\!1))^{-1}\!\otimes\!I_d,\;
 #'        (D^{(2)}(\mathcal G))^{-1},\;
-#'        I_d\!\otimes\!(D^{(2)}(\mathcal G))^{-1}
+#'        (D^{(2)}(\mathcal G))^{-1}\!\otimes\!I_d
 #'     \Bigr)
 #' }
 #' corresponds to seven consecutive blocks in the column ordering used by
@@ -282,10 +282,10 @@ transformXintImproved <- function(
 #' | cohort FE | `genBackwardsInvFusionTransformMat(G)` | \((D^{(1)}(G))^{-1}\) |
 #' | time FE | `genBackwardsInvFusionTransformMat(T-1)` | \((D^{(1)}(T-1))^{-1}\) |
 #' | covariate blocks | identity copy | \(I_d\) |
-#' | covariate x cohort | same helper, repeated for each feature | \(I_d\otimes(D^{(1)}(G))^{-1}\) |
-#' | covariate x time | idem with \(T-1\) | \(I_d\otimes(D^{(1)}(T-1))^{-1}\) |
+#' | covariate x cohort | same helper, one copy per feature (interleaved, level-major) | \((D^{(1)}(G))^{-1}\otimes I_d\) |
+#' | covariate x time | idem with \(T-1\) | \((D^{(1)}(T-1))^{-1}\otimes I_d\) |
 #' | base treatment | `genInvTwoWayFusionTransformMat()` | \((D^{(2)}(\mathcal G))^{-1}\) |
-#' | covariate x treatment | same two-way helper for each feature | \(I_d\otimes(D^{(2)}(\mathcal G))^{-1}\) |
+#' | covariate x treatment | same two-way helper per feature (interleaved, level-major) | \((D^{(2)}(\mathcal G))^{-1}\otimes I_d\) |
 #'
 #' @param beta_hat_mod Numeric vector (length \eqn{p}).
 #'   Estimated coefficients returned by a penalised fit on the transformed
@@ -601,7 +601,7 @@ genBackwardsInvFusionTransformMat <- function(n_vars) {
 	## -- self-test: D_inv %*% D  ==  I
 	D <- genBackwardsFusionTransformMat(n_vars)
 	tol <- 1e-12
-	if (!all.equal(D_inv %*% D, diag(n_vars), tolerance = tol)) {
+	if (!isTRUE(all.equal(D_inv %*% D, diag(n_vars), tolerance = tol))) {
 		stop(
 			"genBackwardsInvFusionTransformMat(): self-test failed - ",
 			"result is not the matrix inverse of D."
@@ -632,7 +632,7 @@ genBackwardsInvFusionTransformMat <- function(n_vars) {
 #' two-level fusion penalty on \eqn{\beta}.
 #'
 #' @details
-#' * The returned matrix is **upper-triangular with 1s** on and above the main
+#' * The returned matrix is **lower-triangular with 1s** on and below the main
 #'   diagonal and zeros elsewhere, except for extra 1s that implement the
 #'   cross-cohort link on the first effect of each cohort (see paper, Eq. (18)).
 #' * Its inverse contains only \{-1,0,1\} and recreates Eq. (17) of the paper.
@@ -1049,10 +1049,10 @@ genInvEventStudyFusionTransformMat <- function(n_vars, first_inds, G) {
 #'         (D^{(1)}(G))^{-1},                          # 1. cohort FEs
 #'         (D^{(1)}(T-1))^{-1},                        # 2. time  FEs
 #'         I_d,                                        # 3. X main effects
-#'         I_d ⊗ (D^{(1)}(G))^{-1},                   # 4. cohort × X
-#'         I_d ⊗ (D^{(1)}(T-1))^{-1},                 # 5. time   × X
+#'         (D^{(1)}(G))^{-1} ⊗ I_d,                   # 4. cohort × X
+#'         (D^{(1)}(T-1))^{-1} ⊗ I_d,                 # 5. time   × X
 #'         (D^{(2)}(G))^{-1},                         # 6. base τ_{g,t}
-#'         I_d ⊗ (D^{(2)}(G))^{-1} )                  # 7. τ_{g,t} × X
+#'         (D^{(2)}(G))^{-1} ⊗ I_d )                  # 7. τ_{g,t} × X
 #' }
 #'
 #' @section Block dimensions:
@@ -1069,7 +1069,7 @@ genInvEventStudyFusionTransformMat <- function(n_vars, first_inds, G) {
 #' @param first_inds Integer vector (length \code{G}).
 #'   `first_inds[g]` is the 1-based column index of the first base
 #'   treatment-effect parameter \(\tau_{g,0}\) for cohort \code{g}.
-#' @param T Integer. Total number of time periods \(\ge 3\).
+#' @param T Integer. Total number of time periods \(\ge 2\).
 #' @param G Integer. Number of treated cohorts (\(\ge 1\)).
 #'   The function stops if you accidentally pass \code{G = 0}.
 #' @param d Integer. Number of time-invariant covariates (can be 0).
@@ -1120,16 +1120,16 @@ genFullInvFusionTransformMat <- function(
 	##———— 3. Covariate main effects:      I_d ————————————————
 	block3 <- if (d > 0) diag(d) else NULL
 
-	##———— 4. Cohort × X interactions:     I_d ⊗ (D^{(1)}(G))^{-1} ——
+	##———— 4. Cohort × X interactions:     (D^{(1)}(G))^{-1} ⊗ I_d ——
 	block4 <- if (d > 0) {
-		kronecker(diag(d), genBackwardsInvFusionTransformMat(G))
+		kronecker(genBackwardsInvFusionTransformMat(G), diag(d))
 	} else {
 		NULL
 	}
 
-	##———— 5. Time × X interactions:       I_d ⊗ (D^{(1)}(T-1))^{-1} —
+	##———— 5. Time × X interactions:       (D^{(1)}(T-1))^{-1} ⊗ I_d —
 	block5 <- if (d > 0) {
-		kronecker(diag(d), genBackwardsInvFusionTransformMat(T - 1))
+		kronecker(genBackwardsInvFusionTransformMat(T - 1), diag(d))
 	} else {
 		NULL
 	}
@@ -1143,17 +1143,17 @@ genFullInvFusionTransformMat <- function(
 		d_inv_treat = d_inv_treat
 	)
 
-	##———— 7. Treatment × X interactions:  I_d ⊗ (D^{(2)}(G))^{-1} ——
+	##———— 7. Treatment × X interactions:  (D^{(2)}(G))^{-1} ⊗ I_d ——
 	block7 <- if (d > 0) {
 		kronecker(
-			diag(d),
 			.gen_inv_treat_block(
 				num_treats = num_treats,
 				first_inds = first_inds,
 				G = G,
 				fusion_structure = fusion_structure,
 				d_inv_treat = d_inv_treat
-			)
+			),
+			diag(d)
 		)
 	} else {
 		NULL
