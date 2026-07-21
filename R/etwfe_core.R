@@ -251,7 +251,6 @@ checkEtwfeInputs <- function(
 
 	X_final_scaled <- res$X_final_scaled
 	y_final <- res$y_final
-	scale_center <- res$scale_center
 	scale_scale <- res$scale_scale
 	cohort_probs <- res$cohort_probs
 	cohort_probs_overall <- res$cohort_probs_overall

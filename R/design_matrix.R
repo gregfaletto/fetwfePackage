@@ -50,12 +50,21 @@ processFactors <- function(pdata, covs) {
 			# produces one dummy column per factor level and no intercept; we
 			# drop the first dummy below to serve as the baseline category.
 			dummies <- stats::model.matrix(~ pdata[[v]] - 1)
+			# Map columns to factor levels. `model.matrix(~ f - 1)` emits one
+			# column per `levels(f)` in order (empty levels included), so the
+			# retained columns correspond 1:1 to those level names. Naming from
+			# `levels()` (not `colnames(dummies)`, which leaks the
+			# `model.matrix` term label such as `pdata[[v]]B`) yields the
+			# documented `factorVar_levelName` scheme (#399).
+			lvls <- levels(pdata[[v]])
 			# If there is more than one level, drop the first column to use it as baseline.
 			if (ncol(dummies) > 1) {
 				dummies <- dummies[, -1, drop = FALSE]
+				kept_levels <- lvls[-1]
+			} else {
+				kept_levels <- lvls[1]
 			}
-			# Rename the dummy columns: for example, if v = "group", new names will be "group_level2", etc.
-			dummy_names <- paste(v, colnames(dummies), sep = "_")
+			dummy_names <- paste(v, kept_levels, sep = "_")
 			colnames(dummies) <- dummy_names
 			# Remove the original factor column from pdata
 			pdata[[v]] <- NULL
@@ -278,8 +287,6 @@ prepXints <- function(
 	y_mean <- ret$y_mean # mean of pre-centered response (preserved on output)
 	cohort_treat_names <- ret$cohort_treat_names # List of names of treatment
 	# dummies for each cohort
-	time_var_names <- ret$time_var_names # Names of time dummies
-	cohort_vars <- ret$cohort_vars # Names of cohort dummies
 	first_inds <- ret$first_inds # Among blocks of treatment variables, indices
 	# of first treatment effects corresponding to each cohort
 	cohort_var_mat <- ret$cohort_var_mat # Cohort dummies; G columns total

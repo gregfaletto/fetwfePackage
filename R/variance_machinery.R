@@ -231,8 +231,9 @@ getSecondVarTermOLS <- function(
 
 	# Construct Jacobian matrix corresponding to the mapping from the
 	# individual cohort probabilities to the proportions calculated for the ATT.
-	# See the Proof of Theorem 6.1 (Consistency of FETWFE), paper_arxiv.tex:2678,
-	# for the explicit form (verified #325). Consolidated into `.build_jacobian()`
+	# See the Proof of Theorem 6.1 (Consistency of FETWFE) --- paper label
+	# `main.te.cons.thm` --- for the explicit form (verified #325).
+	# Consolidated into `.build_jacobian()`
 	# (#192, WORKFLOW_LESSONS §14 Class A); the OLS-family path (d_inv = NULL)
 	# returns the G x G column-indexed Jacobian byte-identically.
 	jacobian_mat <- .build_jacobian(
@@ -250,7 +251,7 @@ getSecondVarTermOLS <- function(
 	# Finally, calculate variance term for ATT from Sigma_pi_hat, Jacobian
 	# matrix, psi_mat, and beta_hat. This is the estimated-propensity variance
 	# term: see Theorem 6.4(b) (Asymptotic Confidence Intervals for FETWFE),
-	# eq. (v.n.r.t.att.rand) at paper_arxiv.tex:2876, for details (was a stale
+	# eq. `v.n.r.t.att.rand` (paper label), for details (was a stale
 	# "Theorem D.2" reference; corrected #325).
 
 	# Issue #127: floor `att_var_2` at zero, mirroring the `att_var_1`
@@ -377,7 +378,6 @@ getPsiGUnfused <- function(
 	stopifnot(nrow(X_S) == N * T)
 	stopifnot(length(residuals) == N * T)
 	X_S_centered <- scale(X_S, center = TRUE, scale = FALSE)
-	p_S <- ncol(X_S_centered)
 	# Issue #84 item 10: convert the LAPACK rank-deficiency error from
 	# `solve(crossprod(X_S_centered))` into the same user-facing message
 	# that `getGramInv()` emits, so a cluster-SE fit on a rank-deficient
@@ -988,7 +988,7 @@ getSecondVarTermDataApp <- function(
 	stopifnot(nrow(Sigma_pi_hat) == G)
 	stopifnot(ncol(Sigma_pi_hat) == G)
 
-	# Jacobian (paper Theorem 6.1 proof, paper_arxiv.tex:2678; was a stale
+	# Jacobian (paper Theorem 6.1 proof, label `main.te.cons.thm`; was a stale
 	# "Theorem 6.3 / 2577-2592" reference, corrected #325):
 	##
 	## J_{rs} =  (S-pi_g)/S^2      if g = s
@@ -1053,7 +1053,7 @@ getSecondVarTermDataApp <- function(
 #' the third copy triggers a refactor). All four sites implement the same
 #' delta-method gradient of \eqn{f_g(\pi)=\pi_g/\sum_k \pi_k}; the column-index
 #' off-diagonal coefficient \eqn{J_{rs}=-\pi_s/S^2} matches the explicit Jacobian
-#' in the proof of paper Theorem 6.1 (`paper_arxiv.tex:2678`; was a stale
+#' in the proof of paper Theorem 6.1 (label `main.te.cons.thm`; was a stale
 #' "Theorem 6.3 / 2577-2592" reference, corrected #325). Prior to v1.8.0 the
 #' off-diagonal used the outer-loop row index; see issue #46.
 #' @param cohort_probs_overall Numeric vector of length `G`; marginal cohort
@@ -1483,7 +1483,6 @@ getCohortATTsFinal <- function(
 	stopifnot(all(!is.na(tes)))
 
 	stopifnot(nrow(X_final) == N * T)
-	X_to_pass <- X_final
 
 	# Translate the OLS-caller `sel_feat_inds = NULL` sentinel to the value
 	# each downstream helper expects: `getGramInv()` uses NA as its "all
@@ -1498,7 +1497,7 @@ getCohortATTsFinal <- function(
 		res <- getGramInv(
 			N = N,
 			T = T,
-			X_final = X_to_pass,
+			X_final = X_final,
 			sel_feat_inds = gram_sel_feat,
 			treat_inds = treat_inds,
 			num_treats = num_treats,

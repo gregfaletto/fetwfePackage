@@ -207,7 +207,7 @@ getBetaBIC <- function(fit, N, T, p, X_mod, y, scale_center, scale_scale) {
 #'   \item{lambda_star_ind}{Integer; the index of the selected lambda in
 #'     `cv_fit$fit$lambda`.}
 #'   \item{lambda_star_model_size}{Integer; the number of non-zero
-#'     coefficients (including intercept) at the selected lambda.}
+#'     coefficients (excluding the intercept) at the selected lambda.}
 #' @keywords internal
 #' @noRd
 getBetaCV <- function(

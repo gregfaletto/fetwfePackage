@@ -238,10 +238,6 @@ plot.twfeCovs <- function(x, ...) {
 	if (!is.null(alpha)) {
 		.validate_alpha_arg(alpha, "plot")
 		z <- stats::qnorm(1 - alpha / 2)
-		# Use unclass() so .subset2() / direct $-access can mutate the
-		# data.frame without triggering catt_df's helpful-error layer on
-		# new column writes (which doesn't intercept these but is safer
-		# to avoid).
 		catt$ci_low <- catt$estimate - z * catt$se
 		catt$ci_high <- catt$estimate + z * catt$se
 	}

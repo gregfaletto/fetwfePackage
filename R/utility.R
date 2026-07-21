@@ -352,14 +352,12 @@ idCohorts <- function(df, time_var, unit_var, treat_var) {
 		if (length(first_year_cohort_units) > 0) {
 			df <- df[!(df[, unit_var] %in% first_year_cohort_units), ]
 			units <- unique(df[, unit_var]) # Update units
-			if (length(first_year_cohort_units) > 0) {
-				# N is original N
-				warning(paste(
-					length(first_year_cohort_units),
-					"units were removed because they were treated in the first time period:",
-					paste(first_year_cohort_units, collapse = ", ")
-				))
-			}
+			# N is original N
+			warning(paste(
+				length(first_year_cohort_units),
+				"units were removed because they were treated in the first time period:",
+				paste(first_year_cohort_units, collapse = ", ")
+			))
 		}
 		cohorts[[first_time_val_char]] <- NULL # Remove this cohort entry
 	}
