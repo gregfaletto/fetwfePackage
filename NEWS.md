@@ -1,5 +1,19 @@
 # NEWS
 
+## Version 1.56.12
+
+### Bug fixes
+
+- `getTes()` gained a `distribution` argument (default `"gaussian"`) so the
+  propensity-weighted ground truth (`att_true`, `cohort_weights`, and
+  `actual_event_time_tes`) integrates `E[pi_g(X)]` over the covariate
+  distribution the panel was actually simulated from. Previously the integration
+  was always over a Gaussian X, so a `simulateData(distribution = "uniform")` panel
+  with covariate-dependent cohort assignment reported a truth integrated over the
+  wrong distribution (an ~0.7% ATT gap in that cell). Pass the same
+  `distribution` to `getTes()` that you passed to `simulateData()`; the default
+  preserves the previous (Gaussian) output for every existing call. (#398)
+
 ## Version 1.56.11
 
 ### Bug fixes
