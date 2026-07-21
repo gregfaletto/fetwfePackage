@@ -922,11 +922,11 @@ genCoefsCore <- function(
 
 	fusion_structure <- match.arg(fusion_structure)
 
-	# Defensive re-validation (genCoefsCore is exported and callable directly);
-	# pure checks, no RNG, before `.apply_seed` (#332).
+	# Defensive re-validation (genCoefsCore is exported and callable directly).
+	# All argument validation runs before `.apply_seed()` so an invalid-arg
+	# error does not advance the caller's ambient RNG (#399); the
+	# targeted-sparsity check in particular is a pure, RNG-free check (#332).
 	.validate_targeted_sparsity(n_signal_cohorts, treat_base_levels, G)
-
-	.apply_seed(seed)
 
 	# Check that T is a numeric scalar and at least 2.
 	if (!is.numeric(T) || length(T) != 1 || T < 2) {
@@ -968,6 +968,10 @@ genCoefsCore <- function(
 	stopifnot(G >= 1)
 	stopifnot(T >= 2)
 	stopifnot(G <= T - 1)
+
+	# Seed only after all argument validation, so an invalid-arg error does not
+	# advance the caller's ambient RNG (#399).
+	.apply_seed(seed)
 
 	num_treats <- getNumTreats(G = G, T = T)
 
@@ -1166,7 +1170,16 @@ genCoefsCore <- function(
 			coefs = beta,
 			num_treats = num_treats
 		)
-		if (all(catt_built == 0)) {
+		# Scale-relative degeneracy tolerance (#399): `catt_built` is a linear
+		# map of the treatment coefficients `beta[treat_inds]`, so a
+		# floating-point cancellation (e.g. equal-and-opposite
+		# `treat_base_levels`) lands many orders of magnitude below the
+		# coefficient scale, while a legitimately small `eff_size` DGP stays AT
+		# the coefficient scale. Comparing to `tol * max(1, scale)` (not exact
+		# `== 0`) rejects the former without false-rejecting the latter.
+		catt_tol <- sqrt(.Machine$double.eps) *
+			max(1, max(abs(beta[treat_inds])))
+		if (all(abs(catt_built) < catt_tol)) {
 			stop(
 				"genCoefs() targeted mode produced all-zero cohort effects ",
 				"(att == 0). Supply a nonzero `eff_size` (count mode) or a ",
@@ -1174,7 +1187,7 @@ genCoefsCore <- function(
 				call. = FALSE
 			)
 		}
-		if (length(unique(catt_built)) == 1L) {
+		if (max(catt_built) - min(catt_built) < catt_tol) {
 			stop(
 				"genCoefs() targeted mode produced homogeneous cohort effects ",
 				"(V2 == 0): all cohorts have the same effect, so there is no ",

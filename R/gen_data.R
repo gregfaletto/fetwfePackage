@@ -412,8 +412,6 @@ simulateDataCore <- function(
 	# directly.
 	G <- .resolve_cohort_count_arg(G, R, "simulateDataCore")
 
-	.apply_seed(seed)
-
 	# Normalize assignment_type defensively (backward-compat for callers
 	# that pass NULL directly).
 	if (is.null(assignment_type)) {
@@ -444,6 +442,10 @@ simulateDataCore <- function(
 	p_expected <- res$p_expected
 
 	rm(res)
+
+	# Seed only after all argument validation, so an invalid-arg error does not
+	# advance the caller's ambient RNG (#399).
+	.apply_seed(seed)
 
 	# Generate base effects and covariates. Marginal path keeps the
 	# pre-1.14.0 byte-identical behavior; covariate path samples per-unit

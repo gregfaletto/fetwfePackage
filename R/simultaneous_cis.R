@@ -823,7 +823,6 @@ simultaneousCIs.twfeCovs <- function(
 				K = K,
 				G = G,
 				T = T_,
-				num_treats = num_treats,
 				cohort_offsets_int = cohort_offsets_int,
 				first_inds = first_inds,
 				cohort_probs_overall = cohort_probs_overall,
@@ -845,7 +844,6 @@ simultaneousCIs.twfeCovs <- function(
 				K = K,
 				G = G,
 				T = T_,
-				num_treats = num_treats,
 				cohort_offsets_int = cohort_offsets_int,
 				first_inds = first_inds,
 				cohort_probs_overall = cohort_probs_overall,
@@ -950,7 +948,6 @@ simultaneousCIs.twfeCovs <- function(
 		K = K,
 		G = G,
 		T = T_,
-		num_treats = num_treats,
 		cohort_offsets_int = cohort_offsets_int,
 		first_inds = first_inds,
 		cohort_probs_overall = cohort_probs_overall,
@@ -1385,7 +1382,7 @@ simultaneousCIs.twfeCovs <- function(
 #'   is anti-conservative (not conservative) for a contrast that pools across
 #'   cohorts in a probability-weighted way, which does carry cohort-probability
 #'   variance.
-#' @param family,K,G,T,num_treats,cohort_offsets_int,first_inds,cohort_probs_overall,d_inv_treat_sel
+#' @param family,K,G,T,cohort_offsets_int,first_inds,cohort_probs_overall,d_inv_treat_sel
 #'   See `.simultaneous_cis_impl()`.
 #' @return A length-K list of numeric matrices (each `G x ncol(d_inv_treat_sel)`).
 #' @keywords internal
@@ -1395,7 +1392,6 @@ simultaneousCIs.twfeCovs <- function(
 	K,
 	G,
 	T,
-	num_treats,
 	cohort_offsets_int,
 	first_inds,
 	cohort_probs_overall,

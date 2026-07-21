@@ -67,7 +67,7 @@
 #'   - `seed + 2L` -> Monte Carlo integration in `getTes()` for
 #'                    `E[pi_g(X)]`.
 #'
-#' @param G Integer >= 2. Number of treated cohorts.
+#' @param G Integer >= 1. Number of treated cohorts.
 #' @param d Integer >= 1. Number of covariates. Only called when
 #'   `type != "marginal"`, which requires `d >= 1`.
 #' @param type Character. One of `"multinomial"` or `"ordered"`. The
@@ -143,7 +143,6 @@
 	interaction_strength = NULL,
 	seed = NULL
 ) {
-	.apply_seed(seed)
 	.validate_strength_arg(strength, "assignment_strength")
 	if (!(type %in% c("multinomial", "ordered"))) {
 		stop(sprintf(
@@ -156,6 +155,7 @@
 			"Covariate-dependent cohort assignment requires d >= 1 (at least one covariate)"
 		)
 	}
+	.apply_seed(seed)
 	K <- if (is.null(interactions)) 0L else length(interactions)
 	effective_int_strength <- if (is.null(interaction_strength)) {
 		strength
@@ -580,23 +580,34 @@
 			break
 		}
 		if (attempt >= max_iters) {
+			if (guarantee_rank_condition) {
+				bar_desc <- "the rank condition (min count >= d + 1)"
+				suggestion <- paste0(
+					"Try a larger N, a smaller assignment_strength, or set ",
+					"guarantee_rank_condition = FALSE."
+				)
+			} else {
+				bar_desc <- "a non-empty count in every cohort (min count >= 1)"
+				suggestion <- "Try a larger N or a smaller assignment_strength."
+			}
 			msg <- sprintf(
 				paste0(
-					"Failed to draw %scohort assignments satisfying the rank condition ",
-					"(min count >= d + 1) after %d attempts at assignment_type = '%s', ",
+					"Failed to draw %scohort assignments satisfying %s ",
+					"after %d attempts at assignment_type = '%s', ",
 					"assignment_strength = %g, N = %d, G = %d, d = %d. ",
 					"Under covariate-dependent assignment with strong covariate-cohort ",
 					"coupling, the smallest treated cohorts can have arbitrarily small ",
-					"counts. Try a larger N, a smaller assignment_strength, or set ",
-					"guarantee_rank_condition = FALSE."
+					"counts. %s"
 				),
 				label,
+				bar_desc,
 				max_iters,
 				assignment_coefs$type,
 				assignment_coefs$strength,
 				N,
 				G,
-				d
+				d,
+				suggestion
 			)
 			# When interactions are present (K > 0L), .gen_assignment_coefs()
 			# stores the effective interaction strength on assignment_coefs.

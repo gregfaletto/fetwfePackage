@@ -1,5 +1,22 @@
 # NEWS
 
+## Version 1.56.16
+
+### Bug fixes
+
+- `processFactors()` (used when a `fetwfe()` / `etwfe()` / `betwfe()` /
+  `twfeCovs()` fit includes factor covariates) now names the dummy columns with
+  the documented `factorVar_levelName` scheme (e.g. `group_B`), instead of
+  leaking the internal `model.matrix` term label (e.g. `group_pdata[[v]]B`).
+  This corrects the constructed design-matrix column names
+  (`colnames(fit$internal$X_ints)`); the returned coefficient vector is unnamed,
+  so `summary()` / `coef()` output is unchanged. (#399)
+- `genCoefs()` / `simulateData()` no longer advance the caller's ambient
+  random-number stream when they reject an invalid argument. Seeding is now
+  applied only after all argument validation succeeds, so a call that errors
+  (e.g. an invalid `T`, `G`, or `density`) leaves `.Random.seed` untouched.
+  (#399)
+
 ## Version 1.56.15
 
 ### Bug fixes

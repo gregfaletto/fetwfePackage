@@ -510,7 +510,6 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	N <- x$N
 	T <- x$T
 	G <- x$G
-	d <- x$d
 	p <- x$p
 	sig_eps_sq <- x$sig_eps_sq
 	cohort_probs_overall <- x$cohort_probs_overall
@@ -671,7 +670,6 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 			d_inv_treat_sel = d_inv_treat_sel,
 			cohort_probs_overall = cohort_probs_overall,
 			first_inds = first_inds,
-			num_treats = num_treats,
 			N = N,
 			T = T,
 			G = G
@@ -734,7 +732,6 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	d_inv_treat_sel,
 	cohort_probs_overall,
 	first_inds,
-	num_treats,
 	N,
 	T,
 	G

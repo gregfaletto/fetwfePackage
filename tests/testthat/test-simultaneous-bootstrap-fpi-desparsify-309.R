@@ -86,7 +86,6 @@ hd309 <- .make_hd309_fit()
 		K = Tt - 1L,
 		G = G,
 		T = Tt,
-		num_treats = nt,
 		cohort_offsets_int = offs$cohort_offsets_int,
 		first_inds = offs$first_inds,
 		cohort_probs_overall = hd$cohort_probs_overall,

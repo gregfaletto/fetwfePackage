@@ -106,7 +106,6 @@
 		K = K,
 		G = G,
 		T = T_,
-		num_treats = num_treats,
 		cohort_offsets_int = cohort_offsets_int,
 		first_inds = first_inds,
 		cohort_probs_overall = cohort_probs_overall,

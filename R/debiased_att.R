@@ -425,7 +425,9 @@ debiasedATT <- function(
 			"debiasedATT() requires a fit computed with q < 1 (bridge selection) in ",
 			"the fixed-p (p < NT) regime when the design is GLS-whitened ",
 			"(`gls = TRUE`), so a valid debiased standard error exists. This fit has ",
-			"calc_ses = FALSE (q >= 1). Re-fit with q < 1 (e.g. q = 0.5), or with ",
+			"calc_ses = FALSE, either because q >= 1 (no bridge-selection SE is ",
+			"available) or because a q < 1 fit's selected-support Gram was singular. ",
+			"Re-fit with q < 1 (e.g. q = 0.5) on a well-conditioned support, or with ",
 			"`gls = FALSE` for the cluster-robust SE.",
 			call. = FALSE
 		)
