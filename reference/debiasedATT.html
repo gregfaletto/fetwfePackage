@@ -53,7 +53,7 @@ scales studied); see Assumptions.'></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">fetwfe</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.16</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.17</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -158,8 +158,11 @@ critical value (before the floor) falls <em>below</em> the Gaussian — so under
 floor it reduces to the analytic interval exactly in the small-<code>N</code> regime; it
 only ever <em>widens</em> the interval when cluster influence is near-homogeneous.
 For a genuine few-clusters correction the restricted bootstrap-t or a CR2-type
-analytic adjustment is required (tracked as future work, #361). Not supported
-for <code>indep_counts</code> (two-sample) fits.</p></dd>
+analytic adjustment is required (tracked as future work, #361). Supported for
+both single-sample and <code>indep_counts</code> (two-sample) fits: for a two-sample fit
+the cohort-weight channel is perturbed on its own independent multiplier stream
+over the <code>N</code> count-sample units (<code>sum(indep_counts) == N</code> is enforced), yielding
+the two-sample propensity variance.</p></dd>
 
 
 <dt id="arg-b">B<a class="anchor" aria-label="anchor" href="#arg-b"></a></dt>

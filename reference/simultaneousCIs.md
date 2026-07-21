@@ -35,7 +35,8 @@ simultaneousCIs(
   multiplier = c("rademacher", "mammen", "webb"),
   lambda_c = 1,
   riesz_max_iter = 5000L,
-  riesz_tol = 1e-09
+  riesz_tol = 1e-09,
+  cv_time_budget = Inf
 )
 ```
 
@@ -185,6 +186,18 @@ simultaneousCIs(
   [`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)
   and every band effect.
 
+- cv_time_budget:
+
+  Numeric; a wall-clock backstop (in seconds) for the `lambda_c = "cv"`
+  cross-validation (the same \#384 backstop
+  [`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)
+  offers). `Inf` (the default) leaves selection fully deterministic /
+  reproducible; a finite value stops the CV early and falls back to the
+  theory scale (`lambda_c = 1.0`) with a warning, so an adversarial
+  high-dimensional draw cannot spin indefinitely (#384). Whether a
+  finite budget fires depends on machine speed, so the result can too.
+  Ignored unless `lambda_c = "cv"` and `p >= NT`.
+
 ## Value
 
 An object of S3 class `"simultaneous_cis"`: a list with
@@ -243,6 +256,11 @@ from the analytic homoskedastic band). A `"high-dimensional"` fit
 additionally carries per-effect `feasibility`, `converged`, and
 `lambda_node` (the nodewise-direction diagnostics), plus `lambda_c` (the
 leading constant used) and `lambda_c_selection` (`"fixed"` or `"cv"`).
+When `lambda_c = "cv"` it also carries `lambda_cv`, the cross-validation
+diagnostics (the grid, the per-grid feasibility flags and CV losses, and
+whether the theory-scale fallback fired), matching
+[`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)'s
+`lambda_cv`.
 
 ## Details
 

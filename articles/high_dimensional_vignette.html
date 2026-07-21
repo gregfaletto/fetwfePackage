@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">fetwfe</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.16</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.17</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -224,16 +224,18 @@ near-homogeneous. For genuine few-clusters inference a restricted
 bootstrap-t or a CR2-type analytic correction is required (future
 work).</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># `fit` must be a single-sample fetwfe() fit -- not an `indep_counts` fit, which</span></span>
-<span><span class="co"># the worked example above (via fetwfeWithSimulatedData) happens to be.</span></span>
+<code class="sourceCode R"><span><span class="co"># Works on both single-sample and two-sample (`indep_counts`) fits -- e.g. the</span></span>
+<span><span class="co"># fetwfeWithSimulatedData() fit from the worked example above (a two-sample fit).</span></span>
 <span><span class="fu"><a href="../reference/debiasedATT.html">debiasedATT</a></span><span class="op">(</span><span class="va">fit</span>, method <span class="op">=</span> <span class="st">"bootstrap"</span>, multiplier <span class="op">=</span> <span class="st">"webb"</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></code></pre></div>
 <p>The <code>multiplier</code> (<code>"webb"</code>, the default;
 <code>"rademacher"</code>; or <code>"mammen"</code>) only affects the
 near-homogeneous case where the bootstrap widens above the floor — in
 the small-<code>N</code> / heterogeneous regime the interval is the
-analytic one regardless of the weight. The bootstrap is defined only for
-<strong>single-sample</strong> fits (real observational panels are
-single-sample), not <code>indep_counts</code> two-sample fits.</p>
+analytic one regardless of the weight. The bootstrap supports both
+single-sample fits (real observational panels are single-sample) and
+<code>indep_counts</code> two-sample fits (the cohort-weight channel is
+perturbed on its own independent multiplier stream over the
+reconstructed count-sample units).</p>
 </div>
 <div class="section level3">
 <h3 id="simultaneous-bands-at-p-geq-nt">Simultaneous bands at

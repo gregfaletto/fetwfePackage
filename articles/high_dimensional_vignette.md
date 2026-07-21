@@ -153,17 +153,19 @@ required (future work).
 
 ``` r
 
-# `fit` must be a single-sample fetwfe() fit -- not an `indep_counts` fit, which
-# the worked example above (via fetwfeWithSimulatedData) happens to be.
+# Works on both single-sample and two-sample (`indep_counts`) fits -- e.g. the
+# fetwfeWithSimulatedData() fit from the worked example above (a two-sample fit).
 debiasedATT(fit, method = "bootstrap", multiplier = "webb", seed = 1)
 ```
 
 The `multiplier` (`"webb"`, the default; `"rademacher"`; or `"mammen"`)
 only affects the near-homogeneous case where the bootstrap widens above
 the floor — in the small-`N` / heterogeneous regime the interval is the
-analytic one regardless of the weight. The bootstrap is defined only for
-**single-sample** fits (real observational panels are single-sample),
-not `indep_counts` two-sample fits.
+analytic one regardless of the weight. The bootstrap supports both
+single-sample fits (real observational panels are single-sample) and
+`indep_counts` two-sample fits (the cohort-weight channel is perturbed
+on its own independent multiplier stream over the reconstructed
+count-sample units).
 
 ### Simultaneous bands at $`p \geq NT`$
 

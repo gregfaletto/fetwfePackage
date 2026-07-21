@@ -89,8 +89,12 @@ debiasedATT(
   exactly in the small-`N` regime; it only ever *widens* the interval
   when cluster influence is near-homogeneous. For a genuine few-clusters
   correction the restricted bootstrap-t or a CR2-type analytic
-  adjustment is required (tracked as future work, \#361). Not supported
-  for `indep_counts` (two-sample) fits.
+  adjustment is required (tracked as future work, \#361). Supported for
+  both single-sample and `indep_counts` (two-sample) fits: for a
+  two-sample fit the cohort-weight channel is perturbed on its own
+  independent multiplier stream over the `N` count-sample units
+  (`sum(indep_counts) == N` is enforced), yielding the two-sample
+  propensity variance.
 
 - B:
 
