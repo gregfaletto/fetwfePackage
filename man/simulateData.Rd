@@ -28,7 +28,8 @@ random effects).}
 
 \item{distribution}{Character. Distribution to generate covariates.
 Defaults to \code{"gaussian"}. If set to \code{"uniform"}, covariates are drawn uniformly
-from \eqn{[-\sqrt{3}, \sqrt{3}]}.}
+from \eqn{[-\sqrt{3}, \sqrt{3}]}. To obtain a matching ground truth from
+\code{\link{getTes}}, pass the same \code{distribution} value there.}
 
 \item{guarantee_rank_condition}{(Optional). Logical. If TRUE, the returned
 data set is guaranteed to have at least \code{d + 1} units per cohort, which is

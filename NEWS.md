@@ -16,6 +16,35 @@
   alphabetically. Previously, for panels whose adoption times cross a digit-width
   boundary, cohorts `2, 3, ..., 10, 11` rendered in string order
   (`10, 11, 2, ...`). (#396)
+## Version 1.56.12
+
+### Bug fixes
+
+- `getTes()` gained a `distribution` argument (default `"gaussian"`) so the
+  propensity-weighted ground truth (`att_true`, `cohort_weights`, and
+  `actual_event_time_tes`) integrates `E[pi_g(X)]` over the covariate
+  distribution the panel was actually simulated from. Previously the integration
+  was always over a Gaussian X, so a `simulateData(distribution = "uniform")` panel
+  with covariate-dependent cohort assignment reported a truth integrated over the
+  wrong distribution (an ~0.7% ATT gap in that cell). Pass the same
+  `distribution` to `getTes()` that you passed to `simulateData()`; the default
+  preserves the previous (Gaussian) output for every existing call. (#398)
+
+## Version 1.56.11
+
+### Bug fixes
+
+- `genFullInvFusionTransformMat()` --- the standalone full inverse-fusion basis
+  matrix --- built its three covariate-interaction blocks (cohort x X, time x X,
+  treatment x X) with the wrong Kronecker order (feature-major `I_d (x) block`
+  instead of the package's level-major `block (x) I_d`), so it disagreed with the
+  authoritative `untransformCoefImproved()` for `d >= 2`. The only estimator path
+  that consumes this builder is the ridge augmentation, so **`fetwfe(add_ridge =
+  TRUE)` with `d >= 2` covariates** was penalizing a coordinate-permuted
+  coefficient vector rather than the documented untransformed coefficients. Fixed;
+  affected fits shift by a small numeric amount (~`1e-7` at the default
+  `lambda_ridge`, growing with `lambda_ridge`). `add_ridge = FALSE` fits,
+  `debiasedATT()`, and the simultaneous-band paths are byte-identical. (#394)
 
 ## Version 1.56.10
 

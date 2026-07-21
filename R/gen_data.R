@@ -25,7 +25,8 @@
 #'   random effects).
 #' @param distribution Character. Distribution to generate covariates.
 #'   Defaults to \code{"gaussian"}. If set to \code{"uniform"}, covariates are drawn uniformly
-#'   from \eqn{[-\sqrt{3}, \sqrt{3}]}.
+#'   from \eqn{[-\sqrt{3}, \sqrt{3}]}. To obtain a matching ground truth from
+#'   \code{\link{getTes}}, pass the same \code{distribution} value there.
 #' @param guarantee_rank_condition (Optional). Logical. If TRUE, the returned
 #' data set is guaranteed to have at least `d + 1` units per cohort, which is
 #' necessary for the final design matrix to have full column rank. Default is
@@ -280,7 +281,8 @@ simulateData <- function(
 #'   if \code{FALSE} (the default), generate a design matrix without any interaction terms.
 #' @param distribution Character. Distribution to generate covariates.
 #'   Defaults to \code{"gaussian"}. If set to \code{"uniform"}, covariates are drawn uniformly
-#'   from \eqn{[-\sqrt{3}, \sqrt{3}]}.
+#'   from \eqn{[-\sqrt{3}, \sqrt{3}]}. To obtain a matching ground truth from
+#'   \code{\link{getTes}}, pass the same \code{distribution} value there.
 #' @param guarantee_rank_condition (Optional). Logical. If TRUE, the returned
 #' data set is guaranteed to have at least `d + 1` units per cohort, which is
 #' necessary for the final design matrix to have full column rank. Default is
