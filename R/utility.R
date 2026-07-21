@@ -522,6 +522,14 @@ idCohorts <- function(df, time_var, unit_var, treat_var) {
 				paste(class(pdata[[time_var]]), collapse = "/")
 			)
 		)
+	} else if (pdata_ok && anyNA(pdata[[time_var]])) {
+		violations <- c(
+			violations,
+			sprintf(
+				"the time_var column '%s' must not contain missing (NA) values",
+				time_var
+			)
+		)
 	}
 
 	# --- unit_var --------------------------------------------------------
@@ -676,6 +684,14 @@ idCohorts <- function(df, time_var, unit_var, treat_var) {
 				paste(class(pdata[[response]]), collapse = "/")
 			)
 		)
+	} else if (pdata_ok && anyNA(pdata[[response]])) {
+		violations <- c(
+			violations,
+			sprintf(
+				"the response column '%s' must not contain missing (NA) values",
+				response
+			)
+		)
 	}
 
 	# --- indep_counts ----------------------------------------------------
@@ -690,6 +706,11 @@ idCohorts <- function(df, time_var, unit_var, treat_var) {
 					"indep_counts must be an integer vector; got %s",
 					paste(class(indep_counts), collapse = "/")
 				)
+			)
+		} else if (anyNA(indep_counts)) {
+			violations <- c(
+				violations,
+				"indep_counts must not contain missing (NA) values"
 			)
 		} else if (any(indep_counts <= 0)) {
 			# Original message preserved verbatim (also surfaced in

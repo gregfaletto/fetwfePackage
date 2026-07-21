@@ -21,7 +21,8 @@
 #' @param idname Character scalar. Name of the unit identifier. Converted to
 #'   character and returned as `unit_var`.
 #' @param gname  Character scalar. Name of the *group* variable holding the
-#'   first period of treatment. Values must be 0 for never-treated, or a
+#'   first period of treatment. Values must be 0 (or `Inf`, a common
+#'   never-treated encoding, which is mapped to 0) for never-treated, or a
 #'   positive integer representing the first treated period.
 #' @param covars Character vector of additional covariate column names to carry
 #'   through (default `character(0)`). These columns are left untouched and
@@ -125,7 +126,7 @@ attgtToFetwfeDf <- function(
 #' @param idvar Character. Column name of the unit identifier (the variable you would
 #'   cluster on, or pass to `etwfe(..., ivar = idvar)` if you were using unit FEs).
 #' @param gvar Character. Column name of the "first treated" cohort variable passed to `etwfe()` as `gvar`.
-#'   Must be `0` for never-treated units, or the (strictly positive) first treated period.
+#'   Must be `0` (or `Inf`, which is mapped to `0`) for never-treated units, or the (strictly positive) first treated period.
 #' @param covars Character vector of *additional* covariate columns to keep (default `character(0)`).
 #' @param drop_first_period_treated Logical. Should units already treated in the very first
 #'   sample period be removed?  (`fetwfe()` will drop them internally anyway, but doing it
@@ -261,9 +262,11 @@ etwfeToFetwfeDf <- function(
 #'     (irreversible treatment).
 #'   \item `time` and `g` are coerced to `integer`; `unit` to `character`.
 #' }
-#' If any unit ever switches from treated back to untreated
-#' (`diff(treatment) < 0`), a warning is thrown because those units will be
-#' silently dropped by [fetwfe::fetwfe()].
+#' Because `g` is constant within a unit (rule 2) and the absorbing-state dummy
+#' is `1{g > 0 & t >= g}`, treatment is monotone within a unit by construction,
+#' so a treated-to-untreated reversal cannot occur and no reversal check is
+#' performed. A first-treatment period of `Inf` (a common never-treated encoding)
+#' is accepted and mapped to `0`.
 #'
 #' @keywords internal
 #' @noRd
@@ -308,6 +311,11 @@ etwfeToFetwfeDf <- function(
 	## ---------- enforce types --------------------------------------------------
 	df <- data[, unique(c(required, covars))]
 	df[[vars$t]] <- as.integer(df[[vars$t]])
+	# Several ecosystems (fect, staggered, some `did` paths) encode never-treated
+	# as `g = Inf`; the documented contract here is 0. Map Inf -> 0 before the
+	# integer coercion (as.integer(Inf) is NA, which would misleadingly trip the
+	# "Missing values" stop below). (#397)
+	df[[vars$g]][is.infinite(df[[vars$g]])] <- 0
 	df[[vars$g]] <- as.integer(df[[vars$g]])
 	df[[vars$id]] <- as.character(df[[vars$id]])
 
@@ -359,17 +367,11 @@ etwfeToFetwfeDf <- function(
 		1L,
 		0L
 	)
-	bad_units <- with(
-		df,
-		tapply(treat_dummy, df[[vars$id]], function(z) any(diff(z) < 0))
-	)
-	if (any(bad_units)) {
-		warning(
-			sum(bad_units),
-			" unit(s) switch from treated back to untreated. ",
-			"They will be dropped by `fetwfe()`."
-		)
-	}
+	# No treated-to-untreated reversal check: `g` is unit-constant (rule 2 in the
+	# @details), so `treat_dummy = 1{g > 0 & t >= g}` is monotone within a unit by
+	# construction -- a reversal is impossible. The previous `diff()` check ran in
+	# input row order (rows are not sorted until below), so it only measured the
+	# input's row order and fired falsely on time-descending input (#397).
 
 	## ---------- assemble tidy dataframe ---------------------------------------
 	res <- data.frame(

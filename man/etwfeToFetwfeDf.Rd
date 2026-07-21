@@ -29,7 +29,7 @@ etwfeToFetwfeDf(
 cluster on, or pass to \code{etwfe(..., ivar = idvar)} if you were using unit FEs).}
 
 \item{gvar}{Character. Column name of the "first treated" cohort variable passed to \code{etwfe()} as \code{gvar}.
-Must be \code{0} for never-treated units, or the (strictly positive) first treated period.}
+Must be \code{0} (or \code{Inf}, which is mapped to \code{0}) for never-treated units, or the (strictly positive) first treated period.}
 
 \item{covars}{Character vector of \emph{additional} covariate columns to keep (default \code{character(0)}).}
 
