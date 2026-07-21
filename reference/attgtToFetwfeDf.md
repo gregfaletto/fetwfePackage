@@ -66,8 +66,9 @@ attgtToFetwfeDf(
 - gname:
 
   Character scalar. Name of the *group* variable holding the first
-  period of treatment. Values must be 0 for never-treated, or a positive
-  integer representing the first treated period.
+  period of treatment. Values must be 0 (or `Inf`, a common
+  never-treated encoding, which is mapped to 0) for never-treated, or a
+  positive integer representing the first treated period.
 
 - covars:
 

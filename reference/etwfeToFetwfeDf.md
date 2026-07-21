@@ -65,8 +65,8 @@ etwfeToFetwfeDf(
   Character. Column name of the "first treated" cohort variable passed
   to
   [`etwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/etwfe.md)
-  as `gvar`. Must be `0` for never-treated units, or the (strictly
-  positive) first treated period.
+  as `gvar`. Must be `0` (or `Inf`, which is mapped to `0`) for
+  never-treated units, or the (strictly positive) first treated period.
 
 - covars:
 
