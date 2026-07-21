@@ -464,7 +464,7 @@ simultaneousCIs.twfeCovs <- function(
 	if (is.null(alpha)) {
 		alpha <- .alpha_of(x)
 	}
-	stopifnot(is.numeric(alpha), length(alpha) == 1L, alpha > 0, alpha < 1)
+	.validate_alpha_arg(alpha, "simultaneousCIs")
 	method <- match.arg(method, c("analytic", "bootstrap"))
 	# `lambda_c` is validated unconditionally (symmetric with debiasedATT()). It is
 	# only USED on the high-dim bootstrap path, but a malformed value should error
@@ -479,6 +479,32 @@ simultaneousCIs.twfeCovs <- function(
 		stop(
 			"simultaneousCIs(): `lambda_c` must be a single positive number ",
 			"or the string \"cv\".",
+			call. = FALSE
+		)
+	}
+	# `riesz_max_iter` / `riesz_tol` validated unconditionally, symmetric with
+	# debiasedATT() (#396): they only affect the high-dim bootstrap nodewise
+	# solve, but a malformed value should fail loudly rather than error cryptically
+	# inside `seq_len()` or silently yield a degenerate debiasing direction.
+	if (
+		!is.numeric(riesz_max_iter) ||
+			length(riesz_max_iter) != 1L ||
+			is.na(riesz_max_iter) ||
+			riesz_max_iter < 1
+	) {
+		stop(
+			"simultaneousCIs(): `riesz_max_iter` must be a single positive integer.",
+			call. = FALSE
+		)
+	}
+	if (
+		!is.numeric(riesz_tol) ||
+			length(riesz_tol) != 1L ||
+			is.na(riesz_tol) ||
+			riesz_tol <= 0
+	) {
+		stop(
+			"simultaneousCIs(): `riesz_tol` must be a single positive number.",
 			call. = FALSE
 		)
 	}

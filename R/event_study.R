@@ -252,6 +252,7 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	if (is.null(alpha)) {
 		alpha <- x$alpha
 	}
+	.validate_alpha_arg(alpha, "eventStudy")
 	z <- stats::qnorm(1 - alpha / 2)
 	# Resolve the band type (#197): NULL inherits the fit's stored ci_type
 	# (pointwise for pre-1.16.0 objects); an explicit value overrides.
@@ -491,6 +492,7 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	if (is.null(alpha)) {
 		alpha <- x$alpha
 	}
+	.validate_alpha_arg(alpha, "eventStudy")
 	z <- stats::qnorm(1 - alpha / 2)
 	# Resolve the band type (#197): NULL inherits the fit's stored ci_type
 	# (pointwise for pre-1.16.0 objects); an explicit value overrides.

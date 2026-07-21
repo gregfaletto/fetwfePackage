@@ -236,6 +236,7 @@ plot.twfeCovs <- function(x, ...) {
 	# estimate +/- qnorm(1 - alpha/2) * se. Otherwise use the CI columns
 	# already in catt_df (computed at fit time using the fit's alpha).
 	if (!is.null(alpha)) {
+		.validate_alpha_arg(alpha, "plot")
 		z <- stats::qnorm(1 - alpha / 2)
 		# Use unclass() so .subset2() / direct $-access can mutate the
 		# data.frame without triggering catt_df's helpful-error layer on
@@ -244,6 +245,16 @@ plot.twfeCovs <- function(x, ...) {
 		catt$ci_low <- catt$estimate - z * catt$se
 		catt$ci_high <- catt$estimate + z * catt$se
 	}
+	# Order the discrete x-axis numerically: cohorts are as.character(integer
+	# adoption time), so a bare character axis sorts "10" before "2" (#396).
+	# Reuse the numeric-first composite key from .truncate_catt().
+	catt$cohort <- factor(
+		catt$cohort,
+		levels = {
+			lv <- unique(catt$cohort)
+			lv[order(suppressWarnings(as.numeric(lv)), lv)]
+		}
+	)
 	p <- ggplot2::ggplot(
 		catt,
 		ggplot2::aes(x = cohort, y = estimate)

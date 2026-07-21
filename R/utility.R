@@ -2,6 +2,36 @@
 #' @importFrom Matrix bdiag
 #' @importFrom stats qnorm pnorm predict coef model.matrix setNames lm
 
+#' @title Validate an `alpha` significance-level argument
+#' @description Shared guard for the `alpha` argument of the CI accessors
+#'   (`eventStudy()`, `cohortTimeATTs()`, `debiasedATT()`, `simultaneousCIs()`,
+#'   and the `plot()` catt recompute). Errors unless `alpha` is a single number
+#'   strictly inside `(0, 1)`. Single-sources the previously-duplicated stanzas
+#'   and closes the event-study / plot paths, which formerly accepted an invalid
+#'   `alpha` and silently produced inverted intervals (`qnorm(1 - alpha/2) < 0`
+#'   when `alpha >= 1`).
+#' @param alpha The value to validate (already resolved from any `NULL` default).
+#' @param fn_name Character; the calling function's name, for the message.
+#' @return `invisible(alpha)`; errors via `stop()` on an invalid value.
+#' @keywords internal
+#' @noRd
+.validate_alpha_arg <- function(alpha, fn_name) {
+	if (
+		!is.numeric(alpha) ||
+			length(alpha) != 1L ||
+			is.na(alpha) ||
+			alpha <= 0 ||
+			alpha >= 1
+	) {
+		stop(
+			fn_name,
+			"(): `alpha` must be a single number in (0, 1).",
+			call. = FALSE
+		)
+	}
+	invisible(alpha)
+}
+
 #' @title Resolve the cohort-count argument (G canonical, R deprecated)
 #' @description Internal helper for the `R -> G` user-facing rename (#41).
 #'   Returns the canonical cohort count. If the deprecated `R` argument is
