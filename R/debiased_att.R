@@ -314,18 +314,7 @@ debiasedATT <- function(
 	if (is.null(alpha)) {
 		alpha <- fit$alpha
 	}
-	if (
-		!is.numeric(alpha) ||
-			length(alpha) != 1L ||
-			is.na(alpha) ||
-			alpha <= 0 ||
-			alpha >= 1
-	) {
-		stop(
-			"debiasedATT(): `alpha` must be a single number in (0, 1).",
-			call. = FALSE
-		)
-	}
+	.validate_alpha_arg(alpha, "debiasedATT")
 
 	if (method == "bootstrap") {
 		B <- .validate_boot_args(B, seed, "debiasedATT")

@@ -1,5 +1,21 @@
 # NEWS
 
+## Version 1.56.13
+
+### Bug fixes
+
+- `eventStudy()` and `plot()` now reject an invalid `alpha` (outside `(0, 1)`,
+  `NA`, or non-scalar) instead of silently returning inverted confidence
+  intervals (`qnorm(1 - alpha/2)` is negative once `alpha >= 1`). A shared
+  internal guard now backs every confidence-interval accessor (`eventStudy()`,
+  `cohortTimeATTs()`, `debiasedATT()`, `simultaneousCIs()`, and `plot()`), so
+  they all reject a bad `alpha` with the same message. `simultaneousCIs()`
+  likewise now validates its `riesz_max_iter` / `riesz_tol` nodewise controls,
+  matching `debiasedATT()`.
+- `plot(type = "catt")` now orders the cohort axis numerically rather than
+  alphabetically. Previously, for panels whose adoption times cross a digit-width
+  boundary, cohorts `2, 3, ..., 10, 11` rendered in string order
+  (`10, 11, 2, ...`). (#396)
 ## Version 1.56.12
 
 ### Bug fixes

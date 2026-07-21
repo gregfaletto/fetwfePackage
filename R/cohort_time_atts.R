@@ -150,18 +150,7 @@ cohortTimeATTs <- function(result, alpha = NULL) {
 	if (is.null(alpha)) {
 		alpha <- x$alpha
 	}
-	if (
-		!is.numeric(alpha) ||
-			length(alpha) != 1L ||
-			is.na(alpha) ||
-			alpha <= 0 ||
-			alpha >= 1
-	) {
-		stop(
-			"cohortTimeATTs(): `alpha` must be a single number in (0, 1).",
-			call. = FALSE
-		)
-	}
+	.validate_alpha_arg(alpha, "cohortTimeATTs")
 	z <- stats::qnorm(1 - alpha / 2)
 
 	# ---- Shared quantities ------------------------------------------------
