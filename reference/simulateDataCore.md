@@ -100,7 +100,10 @@ simulateDataCore(
 
   Character. Distribution to generate covariates. Defaults to
   `"gaussian"`. If set to `"uniform"`, covariates are drawn uniformly
-  from \\\[-\sqrt{3}, \sqrt{3}\]\\.
+  from \\\[-\sqrt{3}, \sqrt{3}\]\\. To obtain a matching ground truth
+  from
+  [`getTes`](https://gregfaletto.github.io/fetwfePackage/reference/getTes.md),
+  pass the same `distribution` value there.
 
 - guarantee_rank_condition:
 

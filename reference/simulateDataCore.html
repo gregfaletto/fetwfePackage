@@ -31,7 +31,7 @@ See the simulation studies section of Faletto (2025) for details.'></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">fetwfe</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.11</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.56.12</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -150,7 +150,8 @@ if <code>FALSE</code> (the default), generate a design matrix without any intera
 <dt id="arg-distribution">distribution<a class="anchor" aria-label="anchor" href="#arg-distribution"></a></dt>
 <dd><p>Character. Distribution to generate covariates.
 Defaults to <code>"gaussian"</code>. If set to <code>"uniform"</code>, covariates are drawn uniformly
-from \([-\sqrt{3}, \sqrt{3}]\).</p></dd>
+from \([-\sqrt{3}, \sqrt{3}]\). To obtain a matching ground truth from
+<code><a href="getTes.html">getTes</a></code>, pass the same <code>distribution</code> value there.</p></dd>
 
 
 <dt id="arg-guarantee-rank-condition">guarantee_rank_condition<a class="anchor" aria-label="anchor" href="#arg-guarantee-rank-condition"></a></dt>

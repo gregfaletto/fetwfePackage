@@ -16,7 +16,7 @@ covariate distribution.
 ## Usage
 
 ``` r
-getTes(coefs_obj)
+getTes(coefs_obj, distribution = "gaussian")
 ```
 
 ## Arguments
@@ -25,6 +25,17 @@ getTes(coefs_obj)
 
   An object of class `"FETWFE_coefs"` containing the coefficient vector
   and simulation parameters.
+
+- distribution:
+
+  Character; the covariate distribution to integrate the
+  propensity-weighted truth over. Must match the `distribution` passed
+  to
+  [`simulateData`](https://gregfaletto.github.io/fetwfePackage/reference/simulateData.md)
+  for the panel whose truth you want. One of `"gaussian"` (default) or
+  `"uniform"`. Only affects covariate-dependent assignment
+  (`assignment_type != "marginal"`); it is ignored under marginal
+  assignment, where the cohort weights are uniform.
 
 ## Value
 
@@ -113,9 +124,10 @@ of the cohort-specific effects (uniform weights under the marginal DGP,
 propensity weights otherwise).
 
 Under non-marginal DGPs, \\E\[\pi_g(X)\]\\ is estimated by Monte Carlo
-integration over the X distribution (Gaussian by default) with
-`M = 10000` draws. The Monte Carlo seed is offset from the main
-`coefs_obj$seed` by `+ 2L` per the documented seed-offset convention.
+integration over the X distribution set by `distribution` (`"gaussian"`
+by default) with `M = 10000` draws. The Monte Carlo seed is offset from
+the main `coefs_obj$seed` by `+ 2L` per the documented seed-offset
+convention.
 
 ## References
 
