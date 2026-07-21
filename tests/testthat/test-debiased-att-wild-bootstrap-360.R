@@ -165,9 +165,12 @@ test_that(".draw_multipliers webb has the right support and moments (#360)", {
 	expect_equal(mean(w^2), 1, tolerance = 0.02) # unit variance
 })
 
-test_that("wild bootstrap errors on indep_counts (two-sample) fits (#360)", {
-	# fetwfeWithSimulatedData() uses the simulator's indep_counts, so its fits are
-	# two-sample: the single-sample per-unit V2 IF cannot reproduce var_weight.
+test_that("wild bootstrap now supports indep_counts (two-sample) fits (#402)", {
+	# #360 originally REFUSED the bootstrap on two-sample fits; #402 lifted that
+	# gate after verifying the per-unit two-sample propensity IF reproduces the
+	# two-sample var_weight (the runtime V2 anchor enforces this to 1e-6). The
+	# comprehensive proof (IF reconstruction vs att_var_2) lives in
+	# test-align-bootstrap-accessors-402.R; here we pin that the call now succeeds.
 	cf <- genCoefs(G = 3, T = 5, d = 2, density = 0.5, eff_size = 2, seed = 3)
 	sim <- simulateData(
 		cf,
@@ -180,11 +183,10 @@ test_that("wild bootstrap errors on indep_counts (two-sample) fits (#360)", {
 	expect_true(isTRUE(fit_ic$indep_counts_used))
 	# Analytic still works on indep_counts fits.
 	expect_s3_class(debiasedATT(fit_ic), "debiased_att")
-	# The wild bootstrap refuses, with an actionable message.
-	expect_error(
-		debiasedATT(fit_ic, method = "bootstrap"),
-		"indep_counts"
-	)
+	# The wild bootstrap now runs (previously errored with "indep_counts").
+	res <- debiasedATT(fit_ic, method = "bootstrap", seed = 1)
+	expect_s3_class(res, "debiased_att")
+	expect_identical(res$method, "bootstrap")
 })
 
 test_that("wild bootstrap validates B and seed (#360)", {

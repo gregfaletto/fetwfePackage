@@ -592,6 +592,7 @@
 	lambda_c,
 	riesz_max_iter,
 	riesz_tol,
+	cv_time_budget,
 	X_final,
 	y_final,
 	N,
@@ -628,6 +629,7 @@
 	# back to the post-selection `J_list %*% theta_sel` construction.
 	A_db <- NULL
 	cell_diag <- NULL
+	lambda_cv <- NULL
 	if (!is.null(targets)) {
 		# High-dim nuisance (#303): an internal q=1 fused lasso (NOT the q<1 bridge
 		# theta_hat), the SAME nuisance debiasedATT() uses -- its l1 rate is what
@@ -661,15 +663,17 @@
 		# and the per-fit feasibility warning (a #88 coverage consideration).
 		lambda_c_used <- lambda_c
 		if (identical(lambda_c, "cv")) {
-			lambda_c_used <- .cv_lambda_node(
+			lambda_cv <- .cv_lambda_node(
 				Sig_hd,
 				a_att,
 				X_final,
 				N,
 				T,
 				riesz_max_iter = riesz_max_iter,
-				riesz_tol = riesz_tol
-			)$lambda_c
+				riesz_tol = riesz_tol,
+				cv_time_budget = cv_time_budget
+			)
+			lambda_c_used <- lambda_cv$lambda_c
 		}
 		F_mat <- .build_regression_if_highdim(
 			X_final,
@@ -910,6 +914,19 @@
 			"cv"
 		} else {
 			"fixed"
+		}
+		# When lambda_c = "cv", surface the CV diagnostics (grid, per-grid
+		# feasibility / CV losses, and whether the theory-scale fallback fired),
+		# matching debiasedATT()'s `$lambda_cv` (one node, resolved on a_att; #402).
+		if (!is.null(lambda_cv)) {
+			out$lambda_cv <- lambda_cv[c(
+				"cv_loss",
+				"feasible",
+				"mult_grid",
+				"fallback",
+				"fallback_reason",
+				"bailed"
+			)]
 		}
 		# The high-dim event_study propensity channel desparsifies num_treats extra
 		# per-cohort-cell directions (#309); they also feed the band (via Sigma_2)

@@ -16,7 +16,8 @@ simultaneousCIs(
   multiplier = c("rademacher", "mammen", "webb"),
   lambda_c = 1,
   riesz_max_iter = 5000L,
-  riesz_tol = 1e-09
+  riesz_tol = 1e-09,
+  cv_time_budget = Inf
 )
 }
 \arguments{
@@ -124,6 +125,15 @@ are unreliable).} Ignored when \code{p < NT} or \code{method = "analytic"}. The 
 stays the fixed \code{1.0}; the family-wise coverage validated in Faletto (2025)
 used the \code{"cv"} selector (\code{lambda_c} ~ 0.54, feasibility 1.0), the same
 constant that serves the scalar \code{debiasedATT()} and every band effect.}
+
+\item{cv_time_budget}{Numeric; a wall-clock backstop (in seconds) for the
+\code{lambda_c = "cv"} cross-validation (the same #384 backstop \code{debiasedATT()}
+offers). \code{Inf} (the default) leaves selection fully deterministic /
+reproducible; a finite value stops the CV early and falls back to the theory
+scale (\code{lambda_c = 1.0}) with a warning, so an adversarial high-dimensional
+draw cannot spin indefinitely (#384). Whether a finite budget fires depends
+on machine speed, so the result can too. Ignored unless \code{lambda_c = "cv"} and
+\code{p >= NT}.}
 }
 \value{
 An object of S3 class \code{"simultaneous_cis"}: a list with
@@ -156,7 +166,10 @@ the bootstrap band may differ from the analytic homoskedastic band). A
 \code{"high-dimensional"} fit additionally carries per-effect \code{feasibility},
 \code{converged}, and \code{lambda_node} (the nodewise-direction diagnostics), plus
 \code{lambda_c} (the leading constant used) and \code{lambda_c_selection} (\code{"fixed"}
-or \code{"cv"}).
+or \code{"cv"}). When \code{lambda_c = "cv"} it also carries \code{lambda_cv}, the
+cross-validation diagnostics (the grid, the per-grid feasibility flags and CV
+losses, and whether the theory-scale fallback fired), matching
+\code{debiasedATT()}'s \code{lambda_cv}.
 }
 \description{
 Computes simultaneous (family-wise) confidence intervals for a user-
