@@ -193,45 +193,23 @@ cohortTimeATTs <- function(result, alpha = NULL) {
 	# `selected` column (mirrors getCohortATTsFinal()'s include_selected).
 	do_selected <- is_fetwfe || is_betwfe
 
-	# For FETWFE the per-cell psi lives in the transformed (theta) coordinate
-	# space, mapped through the treatment block of the inverse fusion transform
-	# D^{-1}. For the OLS-family and BETWFE it is a unit selector in the
-	# original (beta) coordinate space.
-	d_inv_treat_sel <- NULL
-	if (is_fetwfe) {
-		X_final <- x$internal$X_final
-		y_final <- x$internal$y_final
-		p <- x$p
-		theta_hat_slopes <- x$internal$theta_hat[2:(p + 1)]
-		sel_feat_inds <- which(theta_hat_slopes != 0)
-		sel_treat_inds_shifted <- which(theta_hat_slopes[treat_inds] != 0)
-		# Treatment block of D^{-1}, threading any user-supplied fusion matrix
-		# (#236) so this accessor uses the SAME transform as the fit.
-		d_inv_treat <- .gen_inv_treat_block(
-			num_treats = num_treats,
-			first_inds = first_inds,
-			G = G,
-			fusion_structure = x$fusion_structure,
-			d_inv_treat = x$internal$d_inv_treat
-		)
-		if (length(sel_treat_inds_shifted) > 0) {
-			d_inv_treat_sel <- d_inv_treat[,
-				sel_treat_inds_shifted,
-				drop = FALSE
-			]
-		}
-	} else if (is_betwfe) {
-		X_final <- x$X_final
-		y_final <- x$y_final
-		sel_feat_inds <- which(beta_hat != 0)
-		sel_treat_inds_shifted <- which(beta_hat[treat_inds] != 0)
-	} else {
-		# etwfe: unpenalized OLS, no selection.
-		X_final <- x$X_final
-		y_final <- x$y_final
-		sel_feat_inds <- NA
-		sel_treat_inds_shifted <- seq_len(num_treats)
-	}
+	# X_final / y_final live on x$internal for FETWFE, on x$ for the OLS family.
+	X_final <- if (is_fetwfe) x$internal$X_final else x$X_final
+	y_final <- if (is_fetwfe) x$internal$y_final else x$y_final
+	# Selected support + treatment-block map, single-sourced across accessors
+	# (#400). cohortTimeATTs indexes per cell, so it ignores theta_sel.
+	sup <- .resolve_selected_support(
+		x,
+		treat_inds = treat_inds,
+		num_treats = num_treats,
+		first_inds = first_inds,
+		G = G,
+		beta_hat = beta_hat,
+		tes = tes
+	)
+	sel_feat_inds <- sup$sel_feat_inds
+	sel_treat_inds_shifted <- sup$sel_treat_inds_shifted
+	d_inv_treat_sel <- sup$d_inv_treat_sel
 
 	# ---- Recompute the Gram inverse (+ cluster sandwich) on the selected support;
 	#      single-sourced across the accessors (#400) -----------------------

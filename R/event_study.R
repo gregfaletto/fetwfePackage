@@ -290,15 +290,18 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	first_inds <- offs$first_inds
 	tes <- beta_hat[treat_inds]
 
-	# Determine the selected support
-	if (inherits(x, "etwfe")) {
-		sel_feat_inds <- NA
-		sel_treat_inds_shifted <- seq_len(num_treats)
-	} else {
-		# betwfe: selection is in beta-space
-		sel_feat_inds <- which(beta_hat != 0)
-		sel_treat_inds_shifted <- which(beta_hat[treat_inds] != 0)
-	}
+	# Determine the selected support (single-sourced across accessors, #400).
+	sup <- .resolve_selected_support(
+		x,
+		treat_inds = treat_inds,
+		num_treats = num_treats,
+		first_inds = first_inds,
+		G = G,
+		beta_hat = beta_hat,
+		tes = tes
+	)
+	sel_feat_inds <- sup$sel_feat_inds
+	sel_treat_inds_shifted <- sup$sel_treat_inds_shifted
 
 	# Recompute the Gram inverse (+ cluster sandwich if se_type = "cluster") on the
 	# selected support; single-sourced across the accessors (#400).
@@ -500,12 +503,10 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	N <- x$N
 	T <- x$T
 	G <- x$G
-	p <- x$p
 	sig_eps_sq <- x$sig_eps_sq
 	cohort_probs_overall <- x$cohort_probs_overall
 	X_final <- x$internal$X_final
 	y_final <- x$internal$y_final
-	theta_hat_full <- x$internal$theta_hat
 	se_type <- if (is.null(x$se_type)) "default" else x$se_type
 	is_indep <- isTRUE(x$indep_counts_used)
 	# v1.13.3 (#174): offset resolution lives in the shared helper
@@ -517,32 +518,20 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	first_inds <- offs$first_inds
 	tes <- beta_hat[treat_inds]
 
-	# Selected support in theta-space (slopes only; drop intercept)
-	theta_hat_slopes <- theta_hat_full[2:(p + 1)]
-	sel_feat_inds <- which(theta_hat_slopes != 0)
-	sel_treat_inds_shifted <- which(theta_hat_slopes[treat_inds] != 0)
-	theta_hat_treat_sel <- theta_hat_slopes[treat_inds][sel_treat_inds_shifted]
-
-	# d_inv_treat: the treatment-block of D^{-1}, then restrict columns to selected.
-	# A user-supplied custom fusion matrix (#236), if any, is stored inverted on
-	# `x$internal$d_inv_treat`; pass it through so this accessor uses the SAME
-	# transform as the fit (otherwise it would fall back to the built-in dispatch
-	# and silently disagree with the fitted effects).
-	d_inv_treat <- .gen_inv_treat_block(
+	# Selected support + treatment-block map, single-sourced (#400).
+	sup <- .resolve_selected_support(
+		x,
+		treat_inds = treat_inds,
 		num_treats = num_treats,
 		first_inds = first_inds,
 		G = G,
-		fusion_structure = x$fusion_structure,
-		d_inv_treat = x$internal$d_inv_treat
+		beta_hat = beta_hat,
+		tes = tes
 	)
-	if (length(sel_treat_inds_shifted) > 0) {
-		d_inv_treat_sel <- d_inv_treat[,
-			sel_treat_inds_shifted,
-			drop = FALSE
-		]
-	} else {
-		d_inv_treat_sel <- NULL
-	}
+	sel_feat_inds <- sup$sel_feat_inds
+	sel_treat_inds_shifted <- sup$sel_treat_inds_shifted
+	theta_hat_treat_sel <- sup$theta_sel
+	d_inv_treat_sel <- sup$d_inv_treat_sel
 
 	# Recompute the Gram inverse (+ cluster sandwich if se_type = "cluster") on the
 	# selected support; single-sourced across the accessors (#400).
