@@ -368,6 +368,39 @@
 	)
 }
 
+#' @title Top-level C6 dimension + C8 calc_ses contract checks (class-invariant)
+#' @description The C6 (length / nrow) and C8 (`calc_ses`) top-level contract
+#'   checks shared byte-identically by the etwfe / betwfe / twfeCovs validators.
+#'   Single-sourced (#401) so a future C6 invariant added to one class cannot
+#'   silently skip the others. fetwfe's variant is nested and adds C11, so it
+#'   stays separate.
+#' @param x A fitted object.
+#' @param cls The object's class label, used in the assertion messages.
+#' @keywords internal
+#' @noRd
+.check_c6_dims_toplevel <- function(x, cls) {
+	.assert_contract(
+		length(x$beta_hat) == x$p,
+		"C6 length(beta_hat) == p",
+		cls
+	)
+	.assert_contract(
+		length(x$y) == x$N * x$T,
+		"C6 length(y) == N * T",
+		cls
+	)
+	.assert_contract(
+		nrow(x$X_ints) == x$N * x$T,
+		"C6 nrow(X_ints) == N * T",
+		cls
+	)
+	.assert_contract(
+		is.logical(x$calc_ses) && length(x$calc_ses) == 1L,
+		"C8 calc_ses is length-1 logical",
+		cls
+	)
+}
+
 #' @title C7 -- Lambda monotonicity (fetwfe / betwfe only)
 #' @description
 #' Larger lambda -> smaller model, so model-size direction is REVERSED from
