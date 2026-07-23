@@ -921,47 +921,31 @@ simultaneousCIs.twfeCovs <- function(
 
 	# --- 9. (analytic only) getGramInv() + (if cluster) the cluster-robust
 	#        sandwich, reusing the eventStudy machinery. ---
-	gram_sel_feat <- if (any(!is.na(sel_feat_inds))) sel_feat_inds else NA
-	gram_sel_treat <- if (any(!is.na(sel_feat_inds))) {
-		sel_treat_inds_shifted
-	} else {
-		NA
-	}
-	res_gram <- getGramInv(
+	# Single-sourced across the accessors (#400). simultaneousCIs STOPs on a
+	# singular selected-support Gram (the event-study / cohort-time accessors
+	# degrade to NA instead) -- the one genuine policy difference, carried by
+	# `on_singular`. The NA/`sel_treat_inds_shifted` sentinel mapping the inline
+	# form used only gated optional `stopifnot`s in getGramInv, never `gram_inv`.
+	gs <- .recompute_gram_and_sandwich(
+		X_final = X_final,
+		y_final = y_final,
 		N = N,
 		T = T_,
-		X_final = X_final,
-		sel_feat_inds = gram_sel_feat,
 		treat_inds = treat_inds,
 		num_treats = num_treats,
-		sel_treat_inds_shifted = gram_sel_treat,
-		calc_ses = TRUE
-	)
-	gram_inv <- res_gram$gram_inv
-	if (!isTRUE(res_gram$calc_ses)) {
-		stop(
+		sel_feat_inds = sel_feat_inds,
+		sel_treat_inds_shifted = sel_treat_inds_shifted,
+		se_type = se_type,
+		on_singular = "stop",
+		stop_message = paste0(
 			"simultaneousCIs(): the Gram matrix on the selected support is not ",
 			"invertible; the analytic method's assumptions are not satisfied. ",
-			"For a high-dimensional (p >= NT) design, use method = 'bootstrap'.",
-			call. = FALSE
+			"For a high-dimensional (p >= NT) design, use method = 'bootstrap'."
 		)
-	}
-
-	sandwich_full <- NULL
-	treat_block_mask <- NULL
-	if (identical(se_type, "cluster")) {
-		sel_arg <- if (any(!is.na(sel_feat_inds))) sel_feat_inds else NULL
-		res_cl <- .assemble_cluster_robust_sandwich(
-			X_final = X_final,
-			y_final = y_final,
-			N = N,
-			T = T_,
-			treat_inds = treat_inds,
-			sel_feat_inds = sel_arg
-		)
-		sandwich_full <- res_cl$sandwich_full
-		treat_block_mask <- res_cl$treat_block_mask
-	}
+	)
+	gram_inv <- gs$gram_inv
+	sandwich_full <- gs$sandwich_full
+	treat_block_mask <- gs$treat_block_mask
 
 	Sigma_1 <- .assemble_joint_cov_var1(
 		Psi = Psi,

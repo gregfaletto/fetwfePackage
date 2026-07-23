@@ -233,41 +233,30 @@ cohortTimeATTs <- function(result, alpha = NULL) {
 		sel_treat_inds_shifted <- seq_len(num_treats)
 	}
 
-	# ---- Recompute the Gram inverse on the selected support ---------------
+	# ---- Recompute the Gram inverse (+ cluster sandwich) on the selected support;
+	#      single-sourced across the accessors (#400) -----------------------
 	calc_ses <- contract$has_valid_ses
 	gram_inv <- NULL
-	if (calc_ses && length(sel_treat_inds_shifted) > 0) {
-		res_gram <- getGramInv(
-			N = N,
-			T = T,
-			X_final = X_final,
-			sel_feat_inds = sel_feat_inds,
-			treat_inds = treat_inds,
-			num_treats = num_treats,
-			sel_treat_inds_shifted = sel_treat_inds_shifted,
-			calc_ses = TRUE
-		)
-		gram_inv <- res_gram$gram_inv
-		calc_ses <- res_gram$calc_ses
-	} else {
-		calc_ses <- FALSE
-	}
-
-	# ---- Optional cluster-robust sandwich ---------------------------------
 	sandwich_full <- NULL
 	treat_block_mask <- NULL
-	if (identical(se_type, "cluster") && calc_ses) {
-		sel_arg <- if (any(!is.na(sel_feat_inds))) sel_feat_inds else NULL
-		res <- .assemble_cluster_robust_sandwich(
+	if (calc_ses && length(sel_treat_inds_shifted) > 0) {
+		gs <- .recompute_gram_and_sandwich(
 			X_final = X_final,
 			y_final = y_final,
 			N = N,
 			T = T,
 			treat_inds = treat_inds,
-			sel_feat_inds = sel_arg
+			num_treats = num_treats,
+			sel_feat_inds = sel_feat_inds,
+			sel_treat_inds_shifted = sel_treat_inds_shifted,
+			se_type = se_type
 		)
-		sandwich_full <- res$sandwich_full
-		treat_block_mask <- res$treat_block_mask
+		gram_inv <- gs$gram_inv
+		calc_ses <- gs$calc_ses
+		sandwich_full <- gs$sandwich_full
+		treat_block_mask <- gs$treat_block_mask
+	} else {
+		calc_ses <- FALSE
 	}
 
 	# ---- Per-cell enumeration ---------------------------------------------
