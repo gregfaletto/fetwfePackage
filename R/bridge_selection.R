@@ -260,13 +260,7 @@ getBetaCV <- function(
 		)
 	})
 
-	lambda_star <- cv_fit$lambda.min
-	lam_idx <- which(cv_fit$fit$lambda == lambda_star)
-	if (length(lam_idx) != 1L) {
-		# Fall back to nearest match in case of floating-point comparison drift.
-		lam_idx <- which.min(abs(cv_fit$fit$lambda - lambda_star))
-	}
-	stopifnot(length(lam_idx) == 1L)
+	lam_idx <- .cv_grpreg_at_min(cv_fit)
 	stopifnot(nrow(cv_fit$fit$beta) == p + 1L)
 
 	theta_hat_full <- cv_fit$fit$beta[, lam_idx]
@@ -349,13 +343,8 @@ getBetaCV <- function(
 			nfolds = cv_folds
 		)
 	})
-	lambda_star <- cv_fit$lambda.min
-	lam_idx <- which(cv_fit$fit$lambda == lambda_star)
-	if (length(lam_idx) != 1L) {
-		# Fall back to nearest match in case of floating-point comparison drift.
-		lam_idx <- which.min(abs(cv_fit$fit$lambda - lambda_star))
-	}
-	stopifnot(length(lam_idx) == 1L, nrow(cv_fit$fit$beta) == p + 1L)
+	lam_idx <- .cv_grpreg_at_min(cv_fit)
+	stopifnot(nrow(cv_fit$fit$beta) == p + 1L)
 	theta_scaled <- cv_fit$fit$beta[, lam_idx]
 	stopifnot(length(theta_scaled) == p + 1L, all(!is.na(theta_scaled)))
 	.untransform_scaled_theta(
@@ -364,4 +353,26 @@ getBetaCV <- function(
 		scale_center = scale_center,
 		scale_scale = scale_scale
 	)
+}
+
+#' @title Column index of cv.grpreg's lambda.min (exact match, float-drift fallback)
+#' @description The lockstep-critical step shared by the two cross-validation
+#'   call sites (`getBetaCV()` and `.fit_q1_nuisance()`): map `cv.grpreg()`'s
+#'   `lambda.min` to its column index in `cv_fit$fit$lambda`, falling back to the
+#'   nearest match under floating-point comparison drift. Single-sourced (#401)
+#'   because a fix applied to one copy would silently select the wrong lambda in
+#'   the other.
+#' @param cv_fit A `cv.grpreg` fit (with `$lambda.min` and `$fit$lambda`).
+#' @return The integer column index (guaranteed length 1).
+#' @keywords internal
+#' @noRd
+.cv_grpreg_at_min <- function(cv_fit) {
+	lambda_star <- cv_fit$lambda.min
+	lam_idx <- which(cv_fit$fit$lambda == lambda_star)
+	if (length(lam_idx) != 1L) {
+		# Fall back to nearest match in case of floating-point comparison drift.
+		lam_idx <- which.min(abs(cv_fit$fit$lambda - lambda_star))
+	}
+	stopifnot(length(lam_idx) == 1L)
+	lam_idx
 }

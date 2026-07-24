@@ -162,25 +162,6 @@ print.summary.betwfe <- function(x, ...) {
 	.check_ci_band_width(x, cls)
 	.check_cohort_probs(x, cls)
 	.check_lambda_monotonicity(x, cls)
-	.assert_contract(
-		length(x$beta_hat) == x$p,
-		"C6 length(beta_hat) == p",
-		cls
-	)
-	.assert_contract(
-		length(x$y) == x$N * x$T,
-		"C6 length(y) == N * T",
-		cls
-	)
-	.assert_contract(
-		nrow(x$X_ints) == x$N * x$T,
-		"C6 nrow(X_ints) == N * T",
-		cls
-	)
-	.assert_contract(
-		is.logical(x$calc_ses) && length(x$calc_ses) == 1L,
-		"C8 calc_ses is length-1 logical",
-		cls
-	)
+	.check_c6_dims_toplevel(x, cls)
 	invisible(x)
 }
