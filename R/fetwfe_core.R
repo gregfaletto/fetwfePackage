@@ -820,70 +820,47 @@ fetwfe_core <- function(
 	# sel_treat_inds contains global indices of selected transformed features that are treatment effects
 	theta_hat_treat_sel_for_att <- theta_hat_slopes[sel_treat_inds]
 
-	in_sample_te_results <- getTeResults2(
-		sig_eps_sq = sig_eps_sq,
-		N = N,
-		T = T,
-		G = G,
-		num_treats = num_treats,
-		cohort_tes = cohort_tes, # CATTs (point estimates)
-		cohort_probs = cohort_probs, # In-sample pi_g | treated
-		psi_mat = psi_mat,
-		gram_inv = gram_inv,
-		sel_treat_inds_shifted = sel_treat_inds_shifted,
-		d_inv_treat_sel = d_inv_treat_sel,
-		cohort_probs_overall = cohort_probs_overall, # In-sample pi_g (unconditional on treated)
-		first_inds = first_inds,
-		theta_hat_treat_sel = theta_hat_treat_sel_for_att, # Selected non-zero transformed treat coefs
-		calc_ses = calc_ses,
-		indep_probs = FALSE,
-		se_type = se_type,
-		sandwich_full = sandwich_full,
-		treat_block_mask = treat_block_mask
-	)
-
-	in_sample_att_hat <- in_sample_te_results$att_hat
-	in_sample_att_se <- in_sample_te_results$att_te_se
-	in_sample_att_se_no_prob <- in_sample_te_results$att_te_se_no_prob
-	in_sample_att_var_1 <- in_sample_te_results$att_var_1
-	in_sample_att_var_2 <- in_sample_te_results$att_var_2
-
-	if ((q < 1) & calc_ses) {
-		stopifnot(!is.na(in_sample_att_se))
-	}
-
-	if (indep_count_data_available) {
-		indep_te_results <- getTeResults2(
+	att_pair <- .compute_att_pair(
+		te_fn = getTeResults2,
+		base_args = list(
 			sig_eps_sq = sig_eps_sq,
 			N = N,
 			T = T,
 			G = G,
 			num_treats = num_treats,
-			cohort_tes = cohort_tes,
-			cohort_probs = indep_cohort_probs, # indep pi_g | treated
+			cohort_tes = cohort_tes, # CATTs (point estimates)
 			psi_mat = psi_mat,
 			gram_inv = gram_inv,
 			sel_treat_inds_shifted = sel_treat_inds_shifted,
 			d_inv_treat_sel = d_inv_treat_sel,
-			cohort_probs_overall = indep_cohort_probs_overall, # indep pi_g (unconditional)
 			first_inds = first_inds,
-			theta_hat_treat_sel = theta_hat_treat_sel_for_att,
+			theta_hat_treat_sel = theta_hat_treat_sel_for_att, # Selected non-zero transformed treat coefs
 			calc_ses = calc_ses,
-			indep_probs = TRUE,
 			se_type = se_type,
 			sandwich_full = sandwich_full,
 			treat_block_mask = treat_block_mask
-		)
-		indep_att_hat <- indep_te_results$att_hat
-		indep_att_se <- indep_te_results$att_te_se
-		indep_att_var_1 <- indep_te_results$att_var_1
-		indep_att_var_2 <- indep_te_results$att_var_2
-	} else {
-		indep_att_hat <- NA
-		indep_att_se <- NA
-		indep_att_var_1 <- NA
-		indep_att_var_2 <- NA
-	}
+		),
+		in_sample_probs = list(
+			cohort_probs = cohort_probs, # In-sample pi_g | treated
+			cohort_probs_overall = cohort_probs_overall # In-sample pi_g (unconditional on treated)
+		),
+		indep_probs_args = list(
+			cohort_probs = indep_cohort_probs, # indep pi_g | treated
+			cohort_probs_overall = indep_cohort_probs_overall # indep pi_g (unconditional)
+		),
+		indep_count_data_available = indep_count_data_available,
+		assert_att_se = (q < 1) & calc_ses
+	)
+
+	in_sample_att_hat <- att_pair$in_sample_att_hat
+	in_sample_att_se <- att_pair$in_sample_att_se
+	in_sample_att_se_no_prob <- att_pair$in_sample_att_se_no_prob
+	in_sample_att_var_1 <- att_pair$in_sample_att_var_1
+	in_sample_att_var_2 <- att_pair$in_sample_att_var_2
+	indep_att_hat <- att_pair$indep_att_hat
+	indep_att_se <- att_pair$indep_att_se
+	indep_att_var_1 <- att_pair$indep_att_var_1
+	indep_att_var_2 <- att_pair$indep_att_var_2
 
 	return(list(
 		in_sample_att_hat = in_sample_att_hat,

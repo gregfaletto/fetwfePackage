@@ -420,60 +420,43 @@ checkEtwfeInputs <- function(
 	stopifnot(length(tes) == num_treats_eff)
 	stopifnot(nrow(psi_mat) == length(tes))
 
-	in_sample_te_results <- getTeResultsOLS(
-		sig_eps_sq = sig_eps_sq,
-		N = N,
-		T = T,
-		G = G,
-		num_treats = num_treats_eff,
-		cohort_tes = cohort_tes, # CATTs (point estimates)
-		cohort_probs = cohort_probs, # In-sample pi_g | treated
-		psi_mat = psi_mat,
-		gram_inv = gram_inv,
-		tes = tes, # Untransformed treatment effect estimates beta_hat[treat_inds]
-		cohort_probs_overall = cohort_probs_overall, # In-sample pi_g (unconditional on treated)
-		calc_ses = calc_ses,
-		indep_probs = FALSE,
-		se_type = se_type,
-		sandwich_full = sandwich_full,
-		treat_block_mask = treat_block_mask
-	)
-
-	in_sample_att_hat <- in_sample_te_results$att_hat
-	in_sample_att_se <- in_sample_te_results$att_te_se
-	in_sample_att_se_no_prob <- in_sample_te_results$att_te_se_no_prob
-	in_sample_att_var_1 <- in_sample_te_results$att_var_1
-	in_sample_att_var_2 <- in_sample_te_results$att_var_2
-
-	if (indep_count_data_available) {
-		indep_te_results <- getTeResultsOLS(
+	att_pair <- .compute_att_pair(
+		te_fn = getTeResultsOLS,
+		base_args = list(
 			sig_eps_sq = sig_eps_sq,
 			N = N,
 			T = T,
 			G = G,
 			num_treats = num_treats_eff,
-			cohort_tes = cohort_tes,
-			cohort_probs = indep_cohort_probs, # indep pi_g | treated
+			cohort_tes = cohort_tes, # CATTs (point estimates)
 			psi_mat = psi_mat,
 			gram_inv = gram_inv,
-			tes = tes,
-			cohort_probs_overall = indep_cohort_probs_overall, # indep pi_g (unconditional)
+			tes = tes, # Untransformed treatment effect estimates beta_hat[treat_inds]
 			calc_ses = calc_ses,
-			indep_probs = TRUE,
 			se_type = se_type,
 			sandwich_full = sandwich_full,
 			treat_block_mask = treat_block_mask
-		)
-		indep_att_hat <- indep_te_results$att_hat
-		indep_att_se <- indep_te_results$att_te_se
-		indep_att_var_1 <- indep_te_results$att_var_1
-		indep_att_var_2 <- indep_te_results$att_var_2
-	} else {
-		indep_att_hat <- NA
-		indep_att_se <- NA
-		indep_att_var_1 <- NA
-		indep_att_var_2 <- NA
-	}
+		),
+		in_sample_probs = list(
+			cohort_probs = cohort_probs, # In-sample pi_g | treated
+			cohort_probs_overall = cohort_probs_overall # In-sample pi_g (unconditional on treated)
+		),
+		indep_probs_args = list(
+			cohort_probs = indep_cohort_probs, # indep pi_g | treated
+			cohort_probs_overall = indep_cohort_probs_overall # indep pi_g (unconditional)
+		),
+		indep_count_data_available = indep_count_data_available
+	)
+
+	in_sample_att_hat <- att_pair$in_sample_att_hat
+	in_sample_att_se <- att_pair$in_sample_att_se
+	in_sample_att_se_no_prob <- att_pair$in_sample_att_se_no_prob
+	in_sample_att_var_1 <- att_pair$in_sample_att_var_1
+	in_sample_att_var_2 <- att_pair$in_sample_att_var_2
+	indep_att_hat <- att_pair$indep_att_hat
+	indep_att_se <- att_pair$indep_att_se
+	indep_att_var_1 <- att_pair$indep_att_var_1
+	indep_att_var_2 <- att_pair$indep_att_var_2
 
 	return(list(
 		in_sample_att_hat = in_sample_att_hat,
