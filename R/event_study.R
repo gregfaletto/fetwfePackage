@@ -450,25 +450,16 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 		))
 	}
 
-	# Simultaneous band (#197): when ci_type == "simultaneous" and SEs are
-	# available, override the pointwise bounds with the event-study-family
-	# simultaneous band (degrading to pointwise on any error, and preserving
-	# NA on degenerate rows). `calc_ses` here is the LOCAL value (FALSE if the
-	# Gram on the selected support was singular), which is the right gate.
-	sb <- if (identical(ci_type, "simultaneous") && calc_ses) {
-		.event_study_simultaneous_bounds(x, alpha, estimates, ses)
-	} else {
-		NULL
-	}
-	.assemble_event_study_df(
+	.finish_event_study(
+		x,
+		alpha,
+		ci_type,
+		calc_ses,
 		event_times,
 		n_cohorts,
 		estimates,
 		ses,
-		z,
-		ci_low = sb$ci_low,
-		ci_high = sb$ci_high,
-		p_value = sb$adjusted_p_values
+		z
 	)
 }
 
@@ -657,23 +648,16 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 		))
 	}
 
-	# Simultaneous band (#197): see the matching block in
-	# `.event_study_etwfe_betwfe()`. `calc_ses` is the LOCAL value (FALSE if
-	# the selected-support Gram was singular).
-	sb <- if (identical(ci_type, "simultaneous") && calc_ses) {
-		.event_study_simultaneous_bounds(x, alpha, estimates, ses)
-	} else {
-		NULL
-	}
-	.assemble_event_study_df(
+	.finish_event_study(
+		x,
+		alpha,
+		ci_type,
+		calc_ses,
 		event_times,
 		n_cohorts,
 		estimates,
 		ses,
-		z,
-		ci_low = sb$ci_low,
-		ci_high = sb$ci_high,
-		p_value = sb$adjusted_p_values
+		z
 	)
 }
 
@@ -802,6 +786,54 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	out
 }
 
+#' Finish an event-study aggregation: attach the simultaneous band + assemble
+#'
+#' @description Shared tail of the two event-study workers
+#'   (`.event_study_etwfe_betwfe()` and `.event_study_fetwfe()`). When
+#'   `ci_type == "simultaneous"` and SEs are available (`calc_ses` -- the LOCAL
+#'   value, FALSE if the selected-support Gram was singular), overrides the
+#'   pointwise bounds with the event-study-family simultaneous band (degrading
+#'   to pointwise on any error, preserving `NA` on degenerate rows); then builds
+#'   the event-study data frame via `.assemble_event_study_df()`. Consolidated
+#'   from a byte-identical tail previously duplicated across the two workers
+#'   (#401 item 1).
+#' @param x A fully-classed `fetwfe`/`etwfe`/`betwfe` object.
+#' @param alpha Numeric significance level.
+#' @param ci_type `"simultaneous"` or `"pointwise"`.
+#' @param calc_ses Logical; the LOCAL SE-availability gate.
+#' @param event_times,n_cohorts,estimates,ses,z Assembled by the worker loop and
+#'   forwarded to `.assemble_event_study_df()`.
+#' @return The event-study data frame from `.assemble_event_study_df()`.
+#' @keywords internal
+#' @noRd
+.finish_event_study <- function(
+	x,
+	alpha,
+	ci_type,
+	calc_ses,
+	event_times,
+	n_cohorts,
+	estimates,
+	ses,
+	z
+) {
+	sb <- if (identical(ci_type, "simultaneous") && calc_ses) {
+		.event_study_simultaneous_bounds(x, alpha, estimates, ses)
+	} else {
+		NULL
+	}
+	.assemble_event_study_df(
+		event_times,
+		n_cohorts,
+		estimates,
+		ses,
+		z,
+		ci_low = sb$ci_low,
+		ci_high = sb$ci_high,
+		p_value = sb$adjusted_p_values
+	)
+}
+
 #' Compute event-study-family simultaneous CI bounds at fit time
 #'
 #' @description Internal helper for the `ci_type = "simultaneous"` default
@@ -834,35 +866,17 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #' @keywords internal
 #' @noRd
 .event_study_simultaneous_bounds <- function(x, alpha, estimates, ses) {
-	sci <- tryCatch(
-		suppressMessages(
-			.simultaneous_cis_impl(
-				x = x,
-				family = "event_study",
-				alpha = alpha,
-				contrasts = NULL,
-				has_valid_ses = TRUE,
-				# Silent band-attach helper (like .apply_simultaneous_catt_band):
-				# keep the high-dim degenerate notice a message() rather than a
-				# warning(). The user gets the warning by calling simultaneousCIs()
-				# directly. (In practice an all-zeroed fit has all-NA event-time SEs
-				# so this path is skipped; FALSE keeps it silent defensively.) #304.
-				warn_degenerate_highdim = FALSE
-			)
-		),
-		error = function(e) NULL
-	)
-	if (is.null(sci)) {
-		return(NULL)
-	}
 	# Positional alignment: `.build_psi_tes_for_family(family = "event_study")`
 	# iterates over event_times 0:(T-2), the SAME order the eventStudy() loop
-	# produces. Assert the row count defensively before mapping.
-	if (nrow(sci$ci) != length(estimates)) {
+	# produces, so the worker's rows map to `estimates` by position.
+	# `.fit_band_for_family()` runs the worker silently (#304), degrades to NULL
+	# on error, and asserts the row count (`length(estimates)`) defensively.
+	band <- .fit_band_for_family(x, "event_study", alpha, length(estimates))
+	if (is.null(band)) {
 		return(NULL)
 	}
-	ci_low <- sci$ci$simultaneous_ci_low
-	ci_high <- sci$ci$simultaneous_ci_high
+	ci_low <- band$ci_low
+	ci_high <- band$ci_high
 	# BLOCKER FIX (#197 round 1): preserve NA on degenerate event-time rows.
 	# `eventStudy()`'s loop sets se = NA -> NA bounds for an empty/degenerate
 	# valid-cohort-set event time; the worker returns 0/0 there. Mapping the
@@ -873,7 +887,7 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	# Single-step max-T adjusted p-values (#200) -- the dual of the band.
 	# Force NA on the same degenerate rows the bounds are NA'd on, mirroring
 	# `.compute_p_values()` (which returns NA wherever se is NA).
-	adjusted_p_values <- sci$adjusted_p_values
+	adjusted_p_values <- band$adjusted_p_values
 	adjusted_p_values[na_rows] <- NA_real_
 	list(
 		ci_low = ci_low,
