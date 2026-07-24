@@ -1035,8 +1035,8 @@ genCoefsCore <- function(
 				theta[inds_j]
 		}
 
-		stopifnot(all(!is.na(beta[1:(G + T - 1 + d + G * d + (T - 1) * d)])))
-		stopifnot(all(is.na(beta[(G + T - 1 + d + G * d + (T - 1) * d + 1):p])))
+		stopifnot(all(!is.na(beta[1:(.base_cols(G, T, d))])))
+		stopifnot(all(is.na(beta[(.base_cols(G, T, d) + 1):p])))
 	}
 
 	# Base treatment effects: need to identify indices of first treatment
@@ -1056,23 +1056,18 @@ genCoefsCore <- function(
 		theta[treat_inds]
 
 	stopifnot(all(
-		!is.na(beta[1:(G + T - 1 + d + G * d + (T - 1) * d + num_treats)])
+		!is.na(beta[1:(.base_cols(G, T, d) + num_treats)])
 	))
 
 	if (d > 0) {
 		stopifnot(all(is.na(beta[
-			(G + T - 1 + d + G * d + (T - 1) * d + num_treats + 1):p
+			(.base_cols(G, T, d) + num_treats + 1):p
 		])))
 
 		# Treatment effect-X interactions
 		for (j in 1:d) {
-			first_ind_j <- G + T - 1 + d + G * d + (T - 1) * d + num_treats + j
-			last_ind_j <- G +
-				T -
-				1 +
-				d +
-				G * d +
-				(T - 1) * d +
+			first_ind_j <- .base_cols(G, T, d) + num_treats + j
+			last_ind_j <- .base_cols(G, T, d) +
 				num_treats +
 				(num_treats - 1) * d +
 				j
