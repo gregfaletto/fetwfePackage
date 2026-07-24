@@ -478,6 +478,92 @@ getPsiGUnfused <- function(
 }
 
 
+#' @title Recompute the Gram inverse and optional cluster sandwich on a selected
+#'   support
+#' @description Single-sources the "recompute `getGramInv()` on the selected
+#'   support, then (if `se_type = "cluster"`) build the cluster-robust sandwich"
+#'   sequence that every access-time SE path shares (`eventStudy()`,
+#'   `cohortTimeATTs()`, `simultaneousCIs()`). These accessors MUST stay in
+#'   lockstep: a drift here would make them report inconsistent SEs for the same
+#'   fit (guarded by `test-cross-accessor-scaffold-guardrail-400.R`). This wraps
+#'   `getGramInv()` and `.assemble_cluster_robust_sandwich()` UNCHANGED (preserving
+#'   their exact numerics and the "all features" NA/NULL sentinel translation); it
+#'   only unifies the surrounding recompute.
+#'
+#'   The one genuine policy difference between callers is `on_singular`: when the
+#'   recomputed Gram is singular, `eventStudy()` / `cohortTimeATTs()` DEGRADE
+#'   (return `calc_ses = FALSE`, so their SEs become `NA`), whereas
+#'   `simultaneousCIs()` STOPs. That branch is defensive-only -- it is unreachable
+#'   through any public fit (a fit with valid SEs already inverted its Gram on this
+#'   support), so it is exercised only by the helper's direct unit test.
+#' @param X_final,y_final,N,T,treat_inds,num_treats Fit-design pieces, forwarded to
+#'   `getGramInv()` / `.assemble_cluster_robust_sandwich()`.
+#' @param sel_feat_inds Integer indices of the selected features, or the scalar
+#'   `NA` "all features" sentinel `getGramInv()` expects (translated to `NULL` for
+#'   the NULL-native sandwich).
+#' @param sel_treat_inds_shifted Integer indices of the selected treatment
+#'   coefficients within the treatment block.
+#' @param se_type `"cluster"` builds the sandwich; anything else skips it.
+#' @param on_singular `"degrade"` (default) returns `calc_ses = FALSE` on a
+#'   singular Gram; `"stop"` errors with `stop_message`.
+#' @param stop_message The exact error string for `on_singular = "stop"`.
+#' @return A list: `gram_inv`, `calc_ses` (logical), `sandwich_full` (or `NULL`),
+#'   `treat_block_mask` (or `NULL`).
+#' @keywords internal
+#' @noRd
+.recompute_gram_and_sandwich <- function(
+	X_final,
+	y_final,
+	N,
+	T,
+	treat_inds,
+	num_treats,
+	sel_feat_inds,
+	sel_treat_inds_shifted,
+	se_type,
+	on_singular = c("degrade", "stop"),
+	stop_message = NULL
+) {
+	on_singular <- match.arg(on_singular)
+	res_gram <- getGramInv(
+		N = N,
+		T = T,
+		X_final = X_final,
+		sel_feat_inds = sel_feat_inds,
+		treat_inds = treat_inds,
+		num_treats = num_treats,
+		sel_treat_inds_shifted = sel_treat_inds_shifted,
+		calc_ses = TRUE
+	)
+	gram_inv <- res_gram$gram_inv
+	calc_ses <- res_gram$calc_ses
+	if (!isTRUE(calc_ses) && on_singular == "stop") {
+		stop(stop_message, call. = FALSE)
+	}
+	sandwich_full <- NULL
+	treat_block_mask <- NULL
+	if (identical(se_type, "cluster") && isTRUE(calc_ses)) {
+		sel_arg <- if (any(!is.na(sel_feat_inds))) sel_feat_inds else NULL
+		res_cl <- .assemble_cluster_robust_sandwich(
+			X_final = X_final,
+			y_final = y_final,
+			N = N,
+			T = T,
+			treat_inds = treat_inds,
+			sel_feat_inds = sel_arg
+		)
+		sandwich_full <- res_cl$sandwich_full
+		treat_block_mask <- res_cl$treat_block_mask
+	}
+	list(
+		gram_inv = gram_inv,
+		calc_ses = calc_ses,
+		sandwich_full = sandwich_full,
+		treat_block_mask = treat_block_mask
+	)
+}
+
+
 # getTeResults2
 #' @title Calculate Overall ATT and its Standard Error (Version 2)
 #' @description Computes the overall Average Treatment Effect on the Treated

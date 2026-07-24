@@ -300,40 +300,30 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 		sel_treat_inds_shifted <- which(beta_hat[treat_inds] != 0)
 	}
 
+	# Recompute the Gram inverse (+ cluster sandwich if se_type = "cluster") on the
+	# selected support; single-sourced across the accessors (#400).
 	calc_ses <- contract$has_valid_ses
 	gram_inv <- NULL
-	if (calc_ses && length(sel_treat_inds_shifted) > 0) {
-		res_gram <- getGramInv(
-			N = N,
-			T = T,
-			X_final = X_final,
-			sel_feat_inds = sel_feat_inds,
-			treat_inds = treat_inds,
-			num_treats = num_treats,
-			sel_treat_inds_shifted = sel_treat_inds_shifted,
-			calc_ses = TRUE
-		)
-		gram_inv <- res_gram$gram_inv
-		calc_ses <- res_gram$calc_ses
-	} else {
-		calc_ses <- FALSE
-	}
-
-	# Cluster-robust sandwich (recomputed from existing slots)
 	sandwich_full <- NULL
 	treat_block_mask <- NULL
-	if (identical(se_type, "cluster") && calc_ses) {
-		sel_arg <- if (any(!is.na(sel_feat_inds))) sel_feat_inds else NULL
-		res <- .assemble_cluster_robust_sandwich(
+	if (calc_ses && length(sel_treat_inds_shifted) > 0) {
+		gs <- .recompute_gram_and_sandwich(
 			X_final = X_final,
 			y_final = y_final,
 			N = N,
 			T = T,
 			treat_inds = treat_inds,
-			sel_feat_inds = sel_arg
+			num_treats = num_treats,
+			sel_feat_inds = sel_feat_inds,
+			sel_treat_inds_shifted = sel_treat_inds_shifted,
+			se_type = se_type
 		)
-		sandwich_full <- res$sandwich_full
-		treat_block_mask <- res$treat_block_mask
+		gram_inv <- gs$gram_inv
+		calc_ses <- gs$calc_ses
+		sandwich_full <- gs$sandwich_full
+		treat_block_mask <- gs$treat_block_mask
+	} else {
+		calc_ses <- FALSE
 	}
 
 	max_event <- T - 2L
@@ -554,39 +544,30 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 		d_inv_treat_sel <- NULL
 	}
 
+	# Recompute the Gram inverse (+ cluster sandwich if se_type = "cluster") on the
+	# selected support; single-sourced across the accessors (#400).
 	calc_ses <- contract$has_valid_ses
 	gram_inv <- NULL
-	if (calc_ses && length(sel_treat_inds_shifted) > 0) {
-		res_gram <- getGramInv(
-			N = N,
-			T = T,
-			X_final = X_final,
-			sel_feat_inds = sel_feat_inds,
-			treat_inds = treat_inds,
-			num_treats = num_treats,
-			sel_treat_inds_shifted = sel_treat_inds_shifted,
-			calc_ses = TRUE
-		)
-		gram_inv <- res_gram$gram_inv
-		calc_ses <- res_gram$calc_ses
-	} else {
-		calc_ses <- FALSE
-	}
-
-	# Cluster-robust sandwich (recomputed in theta-space on the selected support)
 	sandwich_full <- NULL
 	treat_block_mask <- NULL
-	if (identical(se_type, "cluster") && calc_ses) {
-		res <- .assemble_cluster_robust_sandwich(
+	if (calc_ses && length(sel_treat_inds_shifted) > 0) {
+		gs <- .recompute_gram_and_sandwich(
 			X_final = X_final,
 			y_final = y_final,
 			N = N,
 			T = T,
 			treat_inds = treat_inds,
-			sel_feat_inds = sel_feat_inds
+			num_treats = num_treats,
+			sel_feat_inds = sel_feat_inds,
+			sel_treat_inds_shifted = sel_treat_inds_shifted,
+			se_type = se_type
 		)
-		sandwich_full <- res$sandwich_full
-		treat_block_mask <- res$treat_block_mask
+		gram_inv <- gs$gram_inv
+		calc_ses <- gs$calc_ses
+		sandwich_full <- gs$sandwich_full
+		treat_block_mask <- gs$treat_block_mask
+	} else {
+		calc_ses <- FALSE
 	}
 
 	max_event <- T - 2L
