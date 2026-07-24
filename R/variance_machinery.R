@@ -847,6 +847,84 @@ getTeResults2 <- function(
 	))
 }
 
+#' @title Compute the in-sample / independent overall-ATT pair
+#' @description Single-sources the ATT-pair tail shared by the three estimator
+#'   cores (`fetwfe_core`, `betwfe_core`, `.ols_estimator_core`): call the
+#'   treatment-effect function once in-sample (`indep_probs = FALSE`), pull the
+#'   five in-sample ATT fields, then — when independent count data is available —
+#'   call it again with the independent cohort probabilities (`indep_probs =
+#'   TRUE`) for the four independent fields, else `NA`-fill them. The two cores
+#'   using `getTeResultsOLS()` and the one using `getTeResults2()` differ only in
+#'   the treatment-effect function and its per-function arguments, so the
+#'   function is passed as `te_fn` and its arguments are threaded through
+#'   `do.call()`.
+#' @param te_fn The treatment-effect function to call ([getTeResults2()] or
+#'   [getTeResultsOLS()]).
+#' @param base_args Named list of the arguments common to both calls (everything
+#'   except `cohort_probs`, `cohort_probs_overall`, and `indep_probs`).
+#' @param in_sample_probs Named list `list(cohort_probs = ..., cohort_probs_overall
+#'   = ...)` for the in-sample call.
+#' @param indep_probs_args Named list `list(cohort_probs = ..., cohort_probs_overall
+#'   = ...)` for the independent call.
+#' @param indep_count_data_available Logical; if `FALSE`, the four independent
+#'   fields are `NA` and `te_fn` is called only once.
+#' @param assert_att_se Logical; when `TRUE`, `stopifnot(!is.na(att_se))` after the
+#'   in-sample call (the `(q < 1) & calc_ses` guard the bridge cores apply).
+#' @param indep_precheck Optional zero-argument function run at the top of the
+#'   independent branch (betwfe's `psi_mat`/`tes` dimension check); `NULL` to skip.
+#' @return A named list with `in_sample_att_hat`, `in_sample_att_se`,
+#'   `in_sample_att_se_no_prob`, `in_sample_att_var_1`, `in_sample_att_var_2`,
+#'   `indep_att_hat`, `indep_att_se`, `indep_att_var_1`, `indep_att_var_2`.
+#' @keywords internal
+#' @noRd
+.compute_att_pair <- function(
+	te_fn,
+	base_args,
+	in_sample_probs,
+	indep_probs_args,
+	indep_count_data_available,
+	assert_att_se = FALSE,
+	indep_precheck = NULL
+) {
+	in_sample_te_results <- do.call(
+		te_fn,
+		c(base_args, in_sample_probs, list(indep_probs = FALSE))
+	)
+
+	out <- list(
+		in_sample_att_hat = in_sample_te_results$att_hat,
+		in_sample_att_se = in_sample_te_results$att_te_se,
+		in_sample_att_se_no_prob = in_sample_te_results$att_te_se_no_prob,
+		in_sample_att_var_1 = in_sample_te_results$att_var_1,
+		in_sample_att_var_2 = in_sample_te_results$att_var_2
+	)
+
+	if (assert_att_se) {
+		stopifnot(!is.na(out$in_sample_att_se))
+	}
+
+	if (indep_count_data_available) {
+		if (!is.null(indep_precheck)) {
+			indep_precheck()
+		}
+		indep_te_results <- do.call(
+			te_fn,
+			c(base_args, indep_probs_args, list(indep_probs = TRUE))
+		)
+		out$indep_att_hat <- indep_te_results$att_hat
+		out$indep_att_se <- indep_te_results$att_te_se
+		out$indep_att_var_1 <- indep_te_results$att_var_1
+		out$indep_att_var_2 <- indep_te_results$att_var_2
+	} else {
+		out$indep_att_hat <- NA
+		out$indep_att_se <- NA
+		out$indep_att_var_1 <- NA
+		out$indep_att_var_2 <- NA
+	}
+
+	out
+}
+
 #' @title Compute the first ATT variance term (theta-convergence)
 #' @description Shared by [getTeResultsOLS()] and [getTeResults2()]: the
 #'   `att_var_1` piece of the overall-ATT variance. The cluster branch floors the
