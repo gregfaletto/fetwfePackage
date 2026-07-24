@@ -329,73 +329,13 @@ simultaneousCIs.fetwfe <- function(
 	)
 }
 
+#' @method simultaneousCIs etwfe
 #' @export
-simultaneousCIs.etwfe <- function(
-	result,
-	family = c("event_study", "cohort", "all_post_treatment", "custom"),
-	alpha = NULL,
-	contrasts = NULL,
-	method = c("analytic", "bootstrap"),
-	B = 1000L,
-	seed = NULL,
-	multiplier = c("rademacher", "mammen", "webb"),
-	lambda_c = 1.0,
-	riesz_max_iter = 5000L,
-	riesz_tol = 1e-9,
-	cv_time_budget = Inf
-) {
-	contract <- .check_for_simultaneous_cis(result)
-	family <- match.arg(family)
-	.simultaneous_cis_impl(
-		x = result,
-		family = family,
-		alpha = alpha,
-		contrasts = contrasts,
-		has_valid_ses = contract$has_valid_ses,
-		method = match.arg(method),
-		B = B,
-		seed = seed,
-		multiplier = match.arg(multiplier),
-		lambda_c = lambda_c,
-		riesz_max_iter = riesz_max_iter,
-		riesz_tol = riesz_tol,
-		cv_time_budget = cv_time_budget
-	)
-}
+simultaneousCIs.etwfe <- simultaneousCIs.fetwfe
 
+#' @method simultaneousCIs betwfe
 #' @export
-simultaneousCIs.betwfe <- function(
-	result,
-	family = c("event_study", "cohort", "all_post_treatment", "custom"),
-	alpha = NULL,
-	contrasts = NULL,
-	method = c("analytic", "bootstrap"),
-	B = 1000L,
-	seed = NULL,
-	multiplier = c("rademacher", "mammen", "webb"),
-	lambda_c = 1.0,
-	riesz_max_iter = 5000L,
-	riesz_tol = 1e-9,
-	cv_time_budget = Inf
-) {
-	contract <- .check_for_simultaneous_cis(result)
-	family <- match.arg(family)
-	.simultaneous_cis_impl(
-		x = result,
-		family = family,
-		alpha = alpha,
-		contrasts = contrasts,
-		has_valid_ses = contract$has_valid_ses,
-		method = match.arg(method),
-		B = B,
-		seed = seed,
-		multiplier = match.arg(multiplier),
-		lambda_c = lambda_c,
-		riesz_max_iter = riesz_max_iter,
-		riesz_tol = riesz_tol,
-		cv_time_budget = cv_time_budget
-	)
-}
+simultaneousCIs.betwfe <- simultaneousCIs.fetwfe
 
 #' @note `twfeCovs` is documented as biased in its own roxygen header. The
 #'   simultaneous CIs returned here are still mathematically well-defined on
@@ -406,39 +346,9 @@ simultaneousCIs.betwfe <- function(
 #'   event-time structure), so only `family = "cohort"` and
 #'   `family = "custom"` are defined for it; `"event_study"` and
 #'   `"all_post_treatment"` raise an error.
+#' @method simultaneousCIs twfeCovs
 #' @export
-simultaneousCIs.twfeCovs <- function(
-	result,
-	family = c("event_study", "cohort", "all_post_treatment", "custom"),
-	alpha = NULL,
-	contrasts = NULL,
-	method = c("analytic", "bootstrap"),
-	B = 1000L,
-	seed = NULL,
-	multiplier = c("rademacher", "mammen", "webb"),
-	lambda_c = 1.0,
-	riesz_max_iter = 5000L,
-	riesz_tol = 1e-9,
-	cv_time_budget = Inf
-) {
-	contract <- .check_for_simultaneous_cis(result)
-	family <- match.arg(family)
-	.simultaneous_cis_impl(
-		x = result,
-		family = family,
-		alpha = alpha,
-		contrasts = contrasts,
-		has_valid_ses = contract$has_valid_ses,
-		method = match.arg(method),
-		B = B,
-		seed = seed,
-		multiplier = match.arg(multiplier),
-		lambda_c = lambda_c,
-		riesz_max_iter = riesz_max_iter,
-		riesz_tol = riesz_tol,
-		cv_time_budget = cv_time_budget
-	)
-}
+simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 
 #' @title Shared worker for simultaneousCIs()
 #' @description Reconstructs the K x K joint covariance from the fit's stored
@@ -706,7 +616,7 @@ simultaneousCIs.twfeCovs <- function(
 			pointwise_ci_high = estimates,
 			stringsAsFactors = FALSE
 		)
-		out <- list(
+		return(.assemble_simultaneous_cis_result(
 			ci = ci,
 			adjusted_p_values = rep(NA_real_, K),
 			critical_value = pointwise_crit,
@@ -715,9 +625,7 @@ simultaneousCIs.twfeCovs <- function(
 			family = family,
 			alpha = alpha,
 			K = K
-		)
-		class(out) <- "simultaneous_cis"
-		return(out)
+		))
 	}
 
 	# --- 8. Shape Psi (p_sel x K): map each effect's per-cell contrast into the
@@ -1086,7 +994,7 @@ simultaneousCIs.twfeCovs <- function(
 		stringsAsFactors = FALSE
 	)
 
-	out <- list(
+	.assemble_simultaneous_cis_result(
 		ci = ci,
 		adjusted_p_values = adjusted_p_values,
 		critical_value = crit,
@@ -1096,8 +1004,6 @@ simultaneousCIs.twfeCovs <- function(
 		alpha = alpha,
 		K = K
 	)
-	class(out) <- "simultaneous_cis"
-	out
 }
 
 # .maxt_adjusted_p_nd
@@ -1164,6 +1070,106 @@ simultaneousCIs.twfeCovs <- function(
 	sqrt(v1 + v2 + 2 * sqrt(v1 * v2))
 }
 
+#' @title Assemble a `simultaneous_cis` result object
+#' @description Single-sources the shared out-list schema of the three
+#'   `simultaneous_cis` assembly sites: the normal analytic return and the
+#'   degenerate all-zero early return in `.simultaneous_cis_impl()`, and the
+#'   bootstrap return in `R/simultaneous_bootstrap.R`. All three carry the same
+#'   eight core fields; the bootstrap path additionally passes `extras`
+#'   (`method`/`B`/`seed`/`multiplier`/`regime`) and appends its high-dim
+#'   diagnostics AFTER this call. Keeping the schema single-sourced keeps the
+#'   analytic and bootstrap objects aligned for `print`/`tidy`/`plot` (#401
+#'   item 6).
+#' @param ci The per-effect CI data frame.
+#' @param adjusted_p_values Numeric vector (length `K`) of adjusted p-values.
+#' @param critical_value,pointwise_critical_value,bonferroni_critical_value
+#'   Numeric scalars; the simultaneous, pointwise, and Bonferroni critical
+#'   values.
+#' @param family Character; the CI family.
+#' @param alpha Numeric; the significance level.
+#' @param K Integer; the number of effects.
+#' @param extras Named list of fields appended after the core eight (e.g. the
+#'   bootstrap `method`/`B`/`seed`/`multiplier`/`regime`). Default empty.
+#' @return A list with class `"simultaneous_cis"`.
+#' @keywords internal
+#' @noRd
+.assemble_simultaneous_cis_result <- function(
+	ci,
+	adjusted_p_values,
+	critical_value,
+	pointwise_critical_value,
+	bonferroni_critical_value,
+	family,
+	alpha,
+	K,
+	extras = list()
+) {
+	out <- c(
+		list(
+			ci = ci,
+			adjusted_p_values = adjusted_p_values,
+			critical_value = critical_value,
+			pointwise_critical_value = pointwise_critical_value,
+			bonferroni_critical_value = bonferroni_critical_value,
+			family = family,
+			alpha = alpha,
+			K = K
+		),
+		extras
+	)
+	class(out) <- "simultaneous_cis"
+	out
+}
+
+#' @title Fit a simultaneous band for one CI family (silent, fault-tolerant)
+#' @description Single-sources the band-attach skeleton shared by the two
+#'   fit-time band helpers: `.apply_simultaneous_catt_band()` (cohort family,
+#'   this file) and `.event_study_simultaneous_bounds()` (`R/event_study.R`,
+#'   event-study family). Calls the #192 worker under `suppressMessages()` and
+#'   a `tryCatch()` that degrades to `NULL`, then defensively checks the row
+#'   count. The `warn_degenerate_highdim = FALSE` silence policy (#304) -- keep
+#'   the high-dim degenerate notice a `message()` the user only gets by calling
+#'   `simultaneousCIs()` / `eventStudy()` directly -- is the lockstep concern
+#'   single-sourced here (#401 item 7). Each caller keeps its own specifics (the
+#'   cohort `has_valid_ses` guard; the event-study `NA`-masking on degenerate
+#'   rows).
+#' @param x A fully-classed estimator object.
+#' @param family Character; `"cohort"` or `"event_study"`.
+#' @param alpha Numeric; the significance level.
+#' @param expected_rows Integer; the row count `sci$ci` must have to be usable
+#'   (`nrow(x$catt_df)` for cohort, `length(estimates)` for event study); a
+#'   mismatch returns `NULL`.
+#' @return A list `list(ci_low, ci_high, adjusted_p_values)`, or `NULL` to fall
+#'   back to pointwise.
+#' @keywords internal
+#' @noRd
+.fit_band_for_family <- function(x, family, alpha, expected_rows) {
+	sci <- tryCatch(
+		suppressMessages(
+			.simultaneous_cis_impl(
+				x = x,
+				family = family,
+				alpha = alpha,
+				contrasts = NULL,
+				has_valid_ses = TRUE,
+				warn_degenerate_highdim = FALSE
+			)
+		),
+		error = function(e) NULL
+	)
+	if (is.null(sci)) {
+		return(NULL)
+	}
+	if (nrow(sci$ci) != expected_rows) {
+		return(NULL)
+	}
+	list(
+		ci_low = sci$ci$simultaneous_ci_low,
+		ci_high = sci$ci$simultaneous_ci_high,
+		adjusted_p_values = sci$adjusted_p_values
+	)
+}
+
 #' @title Recompute a fit's cohort-family CIs as simultaneous bands (fit-time)
 #' @description Internal helper for the `ci_type = "simultaneous"` default
 #'   (#197). Calls the #192 worker `.simultaneous_cis_impl()` for the cohort
@@ -1190,46 +1196,15 @@ simultaneousCIs.twfeCovs <- function(
 	if (!isTRUE(has_valid_ses)) {
 		return(NULL)
 	}
-	# Cohort family. Wrap in tryCatch: a rank-deficient or degenerate family
-	# should NOT abort the fit -> fall back to pointwise (NULL).
-	# suppressMessages(): under se_type = "conservative" the worker emits a
-	# Bonferroni-substitution message(); we do NOT want unprompted chatter on
-	# every conservative fit (verbose-gating convention). The user retains the
-	# note by calling simultaneousCIs() directly. See Decision Log "Q1 / R2".
-	sci <- tryCatch(
-		suppressMessages(
-			.simultaneous_cis_impl(
-				x = x,
-				family = "cohort",
-				alpha = alpha,
-				contrasts = NULL,
-				has_valid_ses = TRUE,
-				# Fit-time precompute stays silent: keep the high-dim degenerate
-				# notice a message() (swallowed by suppressMessages above) rather
-				# than a warning(). The user gets the warning by calling
-				# simultaneousCIs() / eventStudy() directly. See #304.
-				warn_degenerate_highdim = FALSE
-			)
-		),
-		error = function(e) NULL
-	)
-	if (is.null(sci)) {
-		return(NULL)
-	}
-	# Positional alignment: `.build_psi_tes_for_family(family = "cohort")`
-	# iterates g = 1:G in cohort-block order, the SAME order
-	# `getCohortATTsFinal()` builds `catt_df`. So `sci$ci` is already
-	# row-aligned to `catt_df`. The `effect` labels differ
-	# ("Cohort <offset>" vs `catt_df$cohort` = `c_names`), so rely on
-	# position, not labels; assert the row count defensively.
-	if (nrow(sci$ci) != nrow(x$catt_df)) {
-		return(NULL)
-	}
-	list(
-		ci_low = sci$ci$simultaneous_ci_low,
-		ci_high = sci$ci$simultaneous_ci_high,
-		adjusted_p_values = sci$adjusted_p_values
-	)
+	# Cohort family. Positional alignment: `.build_psi_tes_for_family(family =
+	# "cohort")` iterates g = 1:G in cohort-block order, the SAME order
+	# `getCohortATTsFinal()` builds `catt_df`, so the worker's `sci$ci` is
+	# already row-aligned to `catt_df` (the `effect` labels differ --
+	# "Cohort <offset>" vs `catt_df$cohort` = `c_names` -- so rely on position,
+	# not labels). `.fit_band_for_family()` runs the worker silently
+	# (suppressMessages + warn_degenerate_highdim = FALSE, #304), degrades to
+	# NULL on error, and asserts the row count defensively.
+	.fit_band_for_family(x, "cohort", alpha, nrow(x$catt_df))
 }
 
 #' @title Apply the fit's `ci_type` to its cohort-family bounds (fit-time)

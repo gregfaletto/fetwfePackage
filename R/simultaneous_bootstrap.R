@@ -881,7 +881,7 @@
 		pointwise_ci_high = estimates_used + pointwise_crit * ses,
 		stringsAsFactors = FALSE
 	)
-	out <- list(
+	out <- .assemble_simultaneous_cis_result(
 		ci = ci,
 		adjusted_p_values = adjusted_p_values,
 		critical_value = crit,
@@ -890,15 +890,17 @@
 		family = family,
 		alpha = alpha,
 		K = K,
-		method = "bootstrap",
-		B = B,
-		seed = seed,
-		multiplier = multiplier,
-		regime = if (isTRUE(attr(F_mat, "highdim"))) {
-			"high-dimensional"
-		} else {
-			"fixed-p"
-		}
+		extras = list(
+			method = "bootstrap",
+			B = B,
+			seed = seed,
+			multiplier = multiplier,
+			regime = if (isTRUE(attr(F_mat, "highdim"))) {
+				"high-dimensional"
+			} else {
+				"fixed-p"
+			}
+		)
 	)
 	# High-dimensional fits append the per-effect nodewise-direction diagnostics
 	# (feasibility = ||Sig v - a||_inf, the KKT certificate; convergence flags;
