@@ -478,6 +478,89 @@ getPsiGUnfused <- function(
 }
 
 
+#' @title Resolve the selected treatment support across estimator classes
+#' @description Single-sources the class dispatch that every access-time SE path
+#'   shares (`eventStudy()`, `cohortTimeATTs()`, `simultaneousCIs()`): given a
+#'   fitted object, determine the selected support and the treatment-block map
+#'   used to build the per-effect psi vectors. FETWFE selects in theta (fused)
+#'   space and carries the treatment block of the inverse fusion transform
+#'   `D^{-1}`; BETWFE selects in beta space with the identity map restricted to
+#'   the selected cells; the OLS family (etwfe / twfeCovs) is unpenalized (all
+#'   cells selected, identity map). This returns the `simultaneousCIs()`
+#'   SUPERSET, so each caller takes the subset it needs (the event-study /
+#'   cohort-time paths ignore `theta_sel`; the beta-space paths that index cells
+#'   with a unit selector ignore `d_inv_treat_sel`, while `simultaneousCIs()`
+#'   consumes it for every class via the identity map). Returns only the SELECTION
+#'   fields -- callers keep their own `X_final` / `y_final` slot reads (those are
+#'   needed before `first_inds` is resolved, so folding them would reorder reads).
+#' @param x A validated fitted estimator object.
+#' @param treat_inds,num_treats,first_inds,G Design pieces already resolved by the
+#'   caller (`first_inds` / `G` feed `.gen_inv_treat_block()` for FETWFE).
+#' @param beta_hat,tes The fit's coefficient vector and treatment effects
+#'   (`tes = beta_hat[treat_inds]`), used by the beta-space (BETWFE / OLS) branches.
+#' @return A list: `sel_feat_inds` (integer indices, or the scalar `NA` "all
+#'   features" sentinel for the OLS family), `sel_treat_inds_shifted`, `theta_sel`
+#'   (selected treatment coefficients), and `d_inv_treat_sel` (the `drop = FALSE`
+#'   treatment-block map on the selected columns, or `NULL` when the support is
+#'   empty).
+#' @keywords internal
+#' @noRd
+.resolve_selected_support <- function(
+	x,
+	treat_inds,
+	num_treats,
+	first_inds,
+	G,
+	beta_hat,
+	tes
+) {
+	if (inherits(x, "fetwfe")) {
+		# Selected support in theta-space (slopes only; drop intercept).
+		theta_hat_slopes <- x$internal$theta_hat[2:(x$p + 1)]
+		sel_feat_inds <- which(theta_hat_slopes != 0)
+		sel_treat_inds_shifted <- which(theta_hat_slopes[treat_inds] != 0)
+		theta_sel <- theta_hat_slopes[treat_inds][sel_treat_inds_shifted]
+		# Treatment block of D^{-1}, threading any user-supplied fusion matrix
+		# (#236) so this accessor uses the SAME transform as the fit.
+		d_inv_treat <- .gen_inv_treat_block(
+			num_treats = num_treats,
+			first_inds = first_inds,
+			G = G,
+			fusion_structure = x$fusion_structure,
+			d_inv_treat = x$internal$d_inv_treat
+		)
+		d_inv_treat_sel <- if (length(sel_treat_inds_shifted) > 0) {
+			d_inv_treat[, sel_treat_inds_shifted, drop = FALSE]
+		} else {
+			NULL
+		}
+	} else if (inherits(x, "betwfe")) {
+		sel_feat_inds <- which(beta_hat != 0)
+		sel_treat_inds_shifted <- which(beta_hat[treat_inds] != 0)
+		# OLS-family unification: tes lives in beta-space, so the fusion-inverse
+		# map is the identity restricted to the selected cells.
+		theta_sel <- tes[sel_treat_inds_shifted]
+		d_inv_treat_sel <- if (length(sel_treat_inds_shifted) > 0) {
+			diag(num_treats)[, sel_treat_inds_shifted, drop = FALSE]
+		} else {
+			NULL
+		}
+	} else {
+		# etwfe / twfeCovs: pure OLS, all cells selected.
+		sel_feat_inds <- NA
+		sel_treat_inds_shifted <- seq_len(num_treats)
+		theta_sel <- tes
+		d_inv_treat_sel <- diag(num_treats)
+	}
+	list(
+		sel_feat_inds = sel_feat_inds,
+		sel_treat_inds_shifted = sel_treat_inds_shifted,
+		theta_sel = theta_sel,
+		d_inv_treat_sel = d_inv_treat_sel
+	)
+}
+
+
 #' @title Recompute the Gram inverse and optional cluster sandwich on a selected
 #'   support
 #' @description Single-sources the "recompute `getGramInv()` on the selected

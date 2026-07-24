@@ -549,7 +549,6 @@ simultaneousCIs.twfeCovs <- function(
 	is_fetwfe <- inherits(x, "fetwfe")
 	X_final <- if (is_fetwfe) x$internal$X_final else x$X_final
 	y_final <- if (is_fetwfe) x$internal$y_final else x$y_final
-	theta_hat_full <- if (is_fetwfe) x$internal$theta_hat else NULL
 	beta_hat <- x$beta_hat
 	treat_inds <- x$treat_inds
 	num_treats <- length(treat_inds)
@@ -647,44 +646,21 @@ simultaneousCIs.twfeCovs <- function(
 	}
 
 	# --- 6. Determine the selected support (theta-space for FETWFE, beta-space
-	#        for the OLS family + BETWFE). Mirrors event_study.R. ---
-	if (is_fetwfe) {
-		theta_hat_slopes <- theta_hat_full[2:(p + 1)]
-		sel_feat_inds <- which(theta_hat_slopes != 0)
-		sel_treat_inds_shifted <- which(theta_hat_slopes[treat_inds] != 0)
-		theta_sel <- theta_hat_slopes[treat_inds][sel_treat_inds_shifted]
-		# #236: reuse the custom inverted block stored on the fit (NULL for
-		# non-custom fits -> byte-identical `fusion_structure` dispatch).
-		d_inv_treat <- .gen_inv_treat_block(
-			num_treats = num_treats,
-			first_inds = first_inds,
-			G = G,
-			fusion_structure = x$fusion_structure,
-			d_inv_treat = x$internal$d_inv_treat
-		)
-		d_inv_treat_sel <- if (length(sel_treat_inds_shifted) > 0) {
-			d_inv_treat[, sel_treat_inds_shifted, drop = FALSE]
-		} else {
-			NULL
-		}
-	} else if (inherits(x, "betwfe")) {
-		sel_feat_inds <- which(beta_hat != 0)
-		sel_treat_inds_shifted <- which(beta_hat[treat_inds] != 0)
-		# OLS-family unification: tes lives in beta-space, so the fusion-
-		# inverse map is the identity restricted to the selected cells.
-		theta_sel <- tes[sel_treat_inds_shifted]
-		d_inv_treat_sel <- if (length(sel_treat_inds_shifted) > 0) {
-			diag(num_treats)[, sel_treat_inds_shifted, drop = FALSE]
-		} else {
-			NULL
-		}
-	} else {
-		# etwfe / twfeCovs: pure OLS, all cells selected.
-		sel_feat_inds <- NA
-		sel_treat_inds_shifted <- seq_len(num_treats)
-		theta_sel <- tes
-		d_inv_treat_sel <- diag(num_treats)
-	}
+	#        for the OLS family + BETWFE); single-sourced via
+	#        .resolve_selected_support(). ---
+	sup <- .resolve_selected_support(
+		x,
+		treat_inds = treat_inds,
+		num_treats = num_treats,
+		first_inds = first_inds,
+		G = G,
+		beta_hat = beta_hat,
+		tes = tes
+	)
+	sel_feat_inds <- sup$sel_feat_inds
+	sel_treat_inds_shifted <- sup$sel_treat_inds_shifted
+	theta_sel <- sup$theta_sel
+	d_inv_treat_sel <- sup$d_inv_treat_sel
 
 	# --- 7. Degenerate support: the bridge zeroed every treatment effect. Normally
 	#        return a degenerate all-zero band. EXCEPT the high-dim (p >= NT) fetwfe
