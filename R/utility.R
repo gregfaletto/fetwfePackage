@@ -963,6 +963,31 @@ getNumTreats <- function(G, T) {
 	return(as.integer(T * G - (G * (G + 1)) / 2))
 }
 
+# .base_cols
+#' @title Number of design-matrix columns before the treatment-effect block
+#' @description The FETWFE / ETWFE / BETWFE design matrix `X_ints` orders its
+#'   columns as cohort fixed effects (`G`) + time fixed effects (`T - 1`) +
+#'   covariate main effects (`d`) + cohort x covariate (`G * d`) + time x
+#'   covariate (`(T - 1) * d`), and THEN the `num_treats` base treatment effects
+#'   followed by the treatment x covariate interactions. This returns the count
+#'   of those preceding columns, i.e. the offset such that the base
+#'   treatment-effect block occupies columns `(.base_cols(G, T, d) + 1)` through
+#'   `(.base_cols(G, T, d) + num_treats)`. The `d`-terms vanish at `d == 0`, so
+#'   the single unbranched expression is correct for all `d >= 0`.
+#'
+#'   Single-sources the layout formula that MUST match the design matrix
+#'   everywhere; previously re-derived inline across `R/fusion_transforms.R` and
+#'   in `getTreatInds()` (issue #401 item 9).
+#' @param G Integer; the number of treated cohorts.
+#' @param T Integer; the number of time periods.
+#' @param d Integer; the number of time-invariant covariates.
+#' @return The number of pre-treatment columns (same numeric type as the inputs).
+#' @keywords internal
+#' @noRd
+.base_cols <- function(G, T, d) {
+	G + T - 1 + d + G * d + (T - 1) * d
+}
+
 # getTreatInds
 #' @title Get Indices of Base Treatment Effect Parameters
 #' @description Determines the column indices in the full design matrix `X_ints` (or
@@ -988,11 +1013,7 @@ getNumTreats <- function(G, T) {
 #' @keywords internal
 #' @noRd
 getTreatInds <- function(G, T, d, num_treats) {
-	base_cols <- if (d > 0) {
-		G + (T - 1) + d + d * G + d * (T - 1)
-	} else {
-		G + (T - 1)
-	}
+	base_cols <- .base_cols(G, T, d)
 
 	# #185 SB6: as.integer() so the indices honor the @return contract
 	# (`seq()` returns a double vector here).

@@ -163,9 +163,9 @@ transformXintImproved <- function(
 			X_mod[, feat_inds_j] <- X_int[, feat_inds_j] %*%
 				genBackwardsInvFusionTransformMat(T - 1)
 		}
-		stopifnot(all(!is.na(X_mod[, 1:(G + T - 1 + d + G * d + (T - 1) * d)])))
+		stopifnot(all(!is.na(X_mod[, 1:(.base_cols(G, T, d))])))
 		stopifnot(all(is.na(X_mod[,
-			(G + T - 1 + d + G * d + (T - 1) * d + 1):p
+			(.base_cols(G, T, d) + 1):p
 		])))
 	}
 
@@ -174,13 +174,7 @@ transformXintImproved <- function(
 	# treatment effect of this cohort to base of previous cohort. New function
 	# genTransformedMatTwoWayFusion does this.
 
-	feat_inds <- (G + T - 1 + d + G * d + (T - 1) * d + 1):(G +
-		T -
-		1 +
-		d +
-		G * d +
-		(T - 1) * d +
-		num_treats)
+	feat_inds <- (.base_cols(G, T, d) + 1):(.base_cols(G, T, d) + num_treats)
 
 	# Now ready to generate the appropriate transformed matrix
 	stopifnot(all(is.na(X_mod[, feat_inds])))
@@ -206,7 +200,7 @@ transformXintImproved <- function(
 			# j + 2*d, ..., j + (num_treats - 1)*d.
 			inds_j <- seq(j, j + (num_treats - 1) * d, by = d)
 			stopifnot(length(inds_j) == num_treats)
-			inds_j <- inds_j + G + T - 1 + d + G * d + (T - 1) * d + num_treats
+			inds_j <- inds_j + .base_cols(G, T, d) + num_treats
 
 			# Now ready to generate the appropriate transformed matrix
 			stopifnot(all(is.na(X_mod[, inds_j])))
@@ -428,22 +422,16 @@ untransformCoefImproved <- function(
 			stopifnot(all(!is.na(beta_hat[feat_inds_j])))
 		}
 		stopifnot(all(
-			!is.na(beta_hat[1:(G + T - 1 + d + G * d + (T - 1) * d)])
+			!is.na(beta_hat[1:(.base_cols(G, T, d))])
 		))
 		stopifnot(all(is.na(beta_hat[
-			(G + T - 1 + d + G * d + (T - 1) * d + 1):p
+			(.base_cols(G, T, d) + 1):p
 		])))
 	}
 
 	# Now base treatment effects.
 
-	feat_inds <- (G + T - 1 + d + G * d + (T - 1) * d + 1):(G +
-		T -
-		1 +
-		d +
-		G * d +
-		(T - 1) * d +
-		num_treats)
+	feat_inds <- (.base_cols(G, T, d) + 1):(.base_cols(G, T, d) + num_treats)
 
 	stopifnot(all(is.na(beta_hat[feat_inds])))
 
@@ -459,11 +447,11 @@ untransformCoefImproved <- function(
 	if (d > 0) {
 		stopifnot(all(
 			!is.na(beta_hat[
-				1:(G + T - 1 + d + G * d + (T - 1) * d + num_treats)
+				1:(.base_cols(G, T, d) + num_treats)
 			])
 		))
 		stopifnot(all(is.na(beta_hat[
-			(G + T - 1 + d + G * d + (T - 1) * d + num_treats + 1):p
+			(.base_cols(G, T, d) + num_treats + 1):p
 		])))
 		# Lastly, interactions between each treatment effect and each feature.
 		# Feature-wise, we can do this with untransformTwoWayFusionCoefs, in the same
@@ -476,7 +464,7 @@ untransformCoefImproved <- function(
 			# j + 2*d, ..., j + (num_treats - 1)*d.
 			inds_j <- seq(j, j + (num_treats - 1) * d, by = d)
 			stopifnot(length(inds_j) == num_treats)
-			inds_j <- inds_j + G + T - 1 + d + G * d + (T - 1) * d + num_treats
+			inds_j <- inds_j + .base_cols(G, T, d) + num_treats
 
 			# Now ready to untransform the estimated coefficients
 			stopifnot(all(is.na(beta_hat[inds_j])))
