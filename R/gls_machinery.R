@@ -360,7 +360,11 @@ getGramInv <- function(
 
 	stopifnot(all(!is.na(gram_inv)))
 
-	gram_inv <- gram_inv[sel_treat_inds, sel_treat_inds]
+	# `drop = FALSE`: with a single selected treatment feature the subset would
+	# otherwise degrade to a scalar, so the nrow()/ncol() dimension guards below
+	# would compare against NULL and pass vacuously in exactly the degenerate
+	# case they exist to catch (#403).
+	gram_inv <- gram_inv[sel_treat_inds, sel_treat_inds, drop = FALSE]
 
 	stopifnot(nrow(gram_inv) <= num_treats)
 	stopifnot(nrow(gram_inv) == ncol(gram_inv))

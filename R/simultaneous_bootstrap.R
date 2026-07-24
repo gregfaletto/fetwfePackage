@@ -132,9 +132,23 @@
 	Sig <- crossprod(X_sel_c) / n
 	K <- ncol(Psi_full)
 	V <- matrix(0, ncol(X_sel_c), K)
-	for (k in seq_len(K)) {
-		V[, k] <- solve(Sig, Psi_full[, k])
-	}
+	# Route a singular centered Gram through an actionable message rather than
+	# solve()'s bare LAPACK "system is computationally singular" error, matching
+	# the analytic path's getGramInv() "not invertible" handling (#403).
+	tryCatch(
+		for (k in seq_len(K)) {
+			V[, k] <- solve(Sig, Psi_full[, k])
+		},
+		error = function(e) {
+			stop(
+				"simultaneousCIs(method = \"bootstrap\"): the centered Gram ",
+				"matrix on the selected support is not invertible, so the ",
+				"regression influence function cannot be formed (the selected ",
+				"support is rank-deficient, e.g. collinear selected columns).",
+				call. = FALSE
+			)
+		}
+	)
 	F_mat <- XEps %*% V
 	attr(F_mat, "highdim") <- FALSE
 	F_mat
@@ -417,7 +431,15 @@
 	c0 <- as.numeric(crossprod(pi_hat, A))
 	n_g <- round(N * pi_hat)
 	n_never <- N - sum(n_g)
-	if (n_never < 0L || sum(n_g) + n_never != N) {
+	# `N * pi_hat` must actually be (near-)integral: a corrupted
+	# `cohort_probs_overall` with non-integral `N * pi_hat` would otherwise round
+	# and silently absorb the residual into the never-treated row. The old
+	# `sum(n_g) + n_never != N` check was identically FALSE (n_never = N -
+	# sum(n_g)) and never bit; `abs(N * pi_hat - n_g)` does (#403).
+	if (
+		n_never < 0L ||
+			any(abs(N * pi_hat - n_g) > sqrt(.Machine$double.eps))
+	) {
 		stop(
 			"simultaneousCIs(): could not recover integer cohort counts from ",
 			"`cohort_probs_overall` for the event_study propensity influence ",

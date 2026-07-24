@@ -448,17 +448,18 @@
 	M = 10000L,
 	seed = NULL
 ) {
+	# Validate `distribution` BEFORE seeding: `.apply_seed()` mutates the ambient
+	# RNG, so validating after it (the old `else stop()`) would advance the
+	# caller's stream on a bad `distribution` + non-NULL `seed` before erroring
+	# (the #399 seed-before-validation anti-pattern's doubly-masked sibling; #403).
+	distribution <- match.arg(distribution, c("gaussian", "uniform"))
 	.apply_seed(seed)
 	X_mc <- if (distribution == "gaussian") {
 		matrix(rnorm(M * d), nrow = M, ncol = d)
-	} else if (distribution == "uniform") {
+	} else {
+		# "uniform" (validated above)
 		a <- sqrt(3)
 		matrix(stats::runif(M * d, min = -a, max = a), nrow = M, ncol = d)
-	} else {
-		stop(sprintf(
-			"Unsupported distribution '%s'. Choose 'gaussian' or 'uniform'.",
-			distribution
-		))
 	}
 	probs <- .compute_cohort_prob_matrix(X_mc, assignment_coefs)
 	colMeans(probs)

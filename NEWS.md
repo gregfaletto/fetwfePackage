@@ -1,5 +1,32 @@
 # NEWS
 
+## Version 1.56.18
+
+### Bug fixes
+
+- Defense-in-depth hardening (#403). Seven latent robustness fixes --- none
+  reachable as a live bug through the shipped entry points, but each a trap for
+  future changes or unusual-but-legal inputs:
+  - `getBetaBIC()` (the `lambda_selection = "bic"` path) now floors the residual
+    MSE at `.Machine$double.eps` and warns when a lambda interpolates the
+    response (residual MSE ~ 0), instead of producing `BIC = -Inf` (which would
+    win the selection unconditionally, ignoring model size). Reachable only in
+    the `p >= NT` / `gls = FALSE` corner.
+  - `getGramInv()` no longer drops its selected-treatment Gram sub-matrix to a
+    scalar when a single treatment feature is selected, so its dimension
+    assertions actually check that degenerate case.
+  - `simultaneousCIs(method = "bootstrap")` now reports an actionable
+    "not invertible" error (instead of a bare LAPACK error) when the centered
+    Gram on the selected support is singular, and its internal event-study
+    cohort-count guard now actually rejects a non-integral
+    `N * cohort_probs_overall`.
+  - `augment()` no longer requires the unused `covs` slot, so a `d = 0`
+    (covariate-free) or legacy fit with `covs = NULL` is accepted.
+  - The internal expected-cohort-probability helper validates its `distribution`
+    argument before seeding, so an invalid `distribution` combined with a
+    non-`NULL` seed no longer advances the caller's random-number stream before
+    erroring (the counterpart of the #399 seed-before-validation fix).
+
 ## Version 1.56.17
 
 ### New features

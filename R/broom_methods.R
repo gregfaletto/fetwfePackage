@@ -258,9 +258,12 @@ NULL
 
 	X <- .get_X_ints(x)
 
-	# The four metadata slots are needed both for auto-trim (idCohorts) and
-	# for sorting `data` into X_ints' row order. Validate them up front.
-	needed_slots <- c("time_var", "unit_var", "treatment", "covs")
+	# These metadata slots are needed both for auto-trim (idCohorts) and for
+	# sorting `data` into X_ints' row order. Validate them up front. `covs` is
+	# NOT required: the body never consumes it, and the C8 validator allows
+	# `covs = NULL` (a d = 0 fit), which this list would otherwise reject
+	# spuriously (#403).
+	needed_slots <- c("time_var", "unit_var", "treatment")
 	missing_slots <- needed_slots[
 		vapply(needed_slots, function(s) is.null(x[[s]]), logical(1))
 	]

@@ -133,7 +133,25 @@ getBetaBIC <- function(fit, N, T, p, X_mod, y, scale_center, scale_scale) {
 	# coercion here. No regression test: the bug fires only at panel
 	# sizes too large to construct in CI (#178).
 	nt_double <- as.numeric(N) * as.numeric(T)
-	BICs <- nt_double * log(mse_hat) + model_sizes * log(nt_double)
+	# Floor mse_hat (and warn): an interpolating lambda (mse_hat == 0, which
+	# sse_bridge()'s `>= 0` allows in the p >= NT / gls = FALSE corner) would give
+	# log(0) = -Inf and win the argmin unconditionally, ignoring model size. The
+	# floor keeps BICs finite/comparable -- so a sufficiently sparse
+	# non-interpolating lambda can now win where -Inf always picked the
+	# interpolator -- but a near-zero MSE may still not be overcome by the size
+	# penalty, so the warning flags that the selected lambda may over-fit. (#403)
+	if (any(mse_hat <= .Machine$double.eps)) {
+		warning(
+			"getBetaBIC(): at least one lambda interpolates the response ",
+			"(residual MSE ~ 0), which would make its BIC -Inf; flooring MSE at ",
+			".Machine$double.eps. This occurs in the p >= NT / gls = FALSE ",
+			"corner; the BIC-selected lambda may over-fit.",
+			call. = FALSE
+		)
+	}
+	BICs <- nt_double *
+		log(pmax(mse_hat, .Machine$double.eps)) +
+		model_sizes * log(nt_double)
 
 	lambda_star_ind <- which(BICs == min(BICs))
 	if (length(lambda_star_ind) == 1) {
@@ -250,6 +268,15 @@ getBetaCV <- function(
 	# (issue #177 — without this, every default-path fetwfe() / betwfe()
 	# call would silently mutate the user's seed, a v1.13.0 regression
 	# vs the v1.12.x BIC default).
+	#
+	# NOTE (#403): when add_ridge = TRUE, X_final_scaled already carries the p
+	# appended sqrt(lambda_ridge)-scale ridge pseudo-rows (response 0), so they
+	# participate in cv.grpreg()'s fold assignment and CV error. Accepted as-is:
+	# at the default lambda_ridge (~1e-5 scale) the contamination is numerically
+	# negligible. Excluding them (CV on the first N*T rows, then refit at the
+	# selected lambda on the augmented design) would change the selected lambda,
+	# so it is a separate behavior-changing enhancement, not a behavior-neutral
+	# hardening fix.
 	cv_fit <- .with_preserved_rng(cv_seed, {
 		grpreg::cv.grpreg(
 			X = X_final_scaled,
