@@ -2,16 +2,16 @@
 
 ## Version 1.56.18
 
-### Bug fixes
+### Defensive improvements
 
-- Defense-in-depth hardening (#403). Seven latent robustness fixes --- none
-  reachable as a live bug through the shipped entry points, but each a trap for
-  future changes or unusual-but-legal inputs:
+- Defense-in-depth hardening (#403). Six latent robustness fixes (plus one
+  documented acceptance) --- none reachable as a live bug through the shipped
+  entry points, but each a trap for future changes or unusual-but-legal inputs:
   - `getBetaBIC()` (the `lambda_selection = "bic"` path) now floors the residual
-    MSE at `.Machine$double.eps` and warns when a lambda interpolates the
-    response (residual MSE ~ 0), instead of producing `BIC = -Inf` (which would
-    win the selection unconditionally, ignoring model size). Reachable only in
-    the `p >= NT` / `gls = FALSE` corner.
+    MSE at `.Machine$double.eps * var(y)` and warns when a lambda interpolates
+    the response, instead of producing `BIC = -Inf` (which would win the
+    selection unconditionally, ignoring model size). The floor is relative to
+    the response's own scale, so it is invariant to the units of `y`.
   - `getGramInv()` no longer drops its selected-treatment Gram sub-matrix to a
     scalar when a single treatment feature is selected, so its dimension
     assertions actually check that degenerate case.
@@ -20,8 +20,10 @@
     Gram on the selected support is singular, and its internal event-study
     cohort-count guard now actually rejects a non-integral
     `N * cohort_probs_overall`.
-  - `augment()` no longer requires the unused `covs` slot, so a `d = 0`
-    (covariate-free) or legacy fit with `covs = NULL` is accepted.
+  - `augment()` no longer requires the unused `covs` slot, so a hand-built or
+    legacy fit carrying `covs = NULL` is accepted. (A covariate-free `d = 0`
+    fit from the shipped entry points stores `character(0)` and was already
+    accepted.)
   - The internal expected-cohort-probability helper validates its `distribution`
     argument before seeding, so an invalid `distribution` combined with a
     non-`NULL` seed no longer advances the caller's random-number stream before

@@ -37,6 +37,107 @@ test_that("getBetaBIC() warns and floors when a lambda interpolates (mse ~ 0) (#
 	)
 })
 
+# The item-1 floor must be RELATIVE to the response scale. `mse_hat` carries the
+# raw units of `y`, so an absolute floor turns a pure change of units into a
+# spurious "interpolates" warning AND a different selected lambda -- on a fit
+# that is identical up to scale. Here rescaling by 1e-10 drops every mse_hat
+# below an absolute .Machine$double.eps, which floors ALL of them to the same
+# value and hands the argmin to the smallest model. Red on an absolute floor
+# (warning fires; lambda_star_ind flips 1 -> 2), green on the var(y)-relative
+# floor. (#403)
+test_that("getBetaBIC() lambda selection is invariant to rescaling y (#403)", {
+	N <- 10L
+	T <- 2L
+	p <- 3L
+	set.seed(4031)
+	X_mod <- matrix(stats::rnorm(N * T * p), nrow = N * T, ncol = p)
+	beta_true <- c(1.5, -0.5, 2)
+	# Noise -> no lambda interpolates, so neither call should warn at all.
+	y <- as.numeric(X_mod %*% beta_true) + stats::rnorm(N * T)
+	# Col 1: the (non-exact) 3-feature fit. Col 2: the null model.
+	fit <- list(beta = cbind(c(0, beta_true), c(mean(y), 0, 0, 0)))
+
+	call_bic <- function(fit, y) {
+		getBetaBIC(
+			fit,
+			N = N,
+			T = T,
+			p = p,
+			X_mod = X_mod,
+			y = y,
+			scale_center = rep(0, p),
+			scale_scale = rep(1, p)
+		)
+	}
+
+	# Scaling y by c and the coefficients by c is the same fit in new units: it
+	# multiplies every mse_hat by c^2, which shifts every BIC by the constant
+	# N * T * 2 * log(c) and so cannot change the argmin.
+	scale_c <- 1e-10
+	fit_scaled <- list(beta = fit$beta * scale_c)
+
+	res <- expect_silent(call_bic(fit, y))
+	res_scaled <- expect_silent(call_bic(fit_scaled, y * scale_c))
+
+	expect_identical(res_scaled$lambda_star_ind, res$lambda_star_ind)
+	expect_identical(
+		res_scaled$lambda_star_model_size,
+		res$lambda_star_model_size
+	)
+})
+
+# The two degenerate-var(y) branches of the relative floor. Neither is reachable
+# from a shipped entry point, but both are exactly the branches a future
+# "simplify to eps * var(y)" refactor would delete, and neither is covered by the
+# rescaling test above. (#403)
+test_that("getBetaBIC() floor survives a degenerate var(y) (#403)", {
+	N <- 10L
+	T <- 2L
+	p <- 2L
+	set.seed(4032)
+	X_mod <- matrix(stats::rnorm(N * T * p), nrow = N * T, ncol = p)
+
+	call_bic <- function(fit, y) {
+		getBetaBIC(
+			fit,
+			N = N,
+			T = T,
+			p = p,
+			X_mod = X_mod,
+			y = y,
+			scale_center = rep(0, p),
+			scale_scale = rep(1, p)
+		)
+	}
+
+	# (a) var(y) == 0 (constant response): the floor falls back to
+	# .Machine$double.xmin, so the interpolating lambda's BIC stays finite
+	# instead of going -Inf and winning unconditionally.
+	y_const <- rep(4.2, N * T)
+	fit_const <- list(
+		beta = cbind(c(4.2, 0, 0), c(0, 0, 0)) # col 1 interpolates exactly
+	)
+	res_const <- expect_warning(call_bic(fit_const, y_const), "interpolates")
+	expect_true(all(is.finite(res_const$theta_hat)))
+	expect_identical(res_const$lambda_star_ind, 1L)
+
+	# (b) var(y) == Inf (|y| beyond ~1.3e154): an Inf floor would floor EVERY
+	# lambda alike and hand the choice to the smallest-model tie-break. The
+	# lambdas below have finite, distinct MSEs differing by ~100x, so the
+	# larger/better-fitting model must win on BIC.
+	y_huge <- 1e155 * X_mod[, 1]
+	fit_huge <- list(
+		beta = cbind(
+			c(0, 1e155 - 1e152, 0), # size 1, residual ~1e152 * x1
+			c(0, 1e155 - 1e151, 1e-300) # size 2, residual ~1e151 * x1
+		)
+	)
+	expect_true(is.infinite(mean((y_huge - mean(y_huge))^2)))
+	res_huge <- expect_silent(call_bic(fit_huge, y_huge))
+	expect_identical(res_huge$lambda_star_ind, 2L)
+	expect_identical(res_huge$lambda_star_model_size, 2L)
+})
+
 # --- Item 3: getGramInv() keeps a 1x1 matrix with one selected treat feature ---
 test_that("getGramInv() returns a matrix (not a scalar) with one selected treatment feature (#403)", {
 	N <- 40L

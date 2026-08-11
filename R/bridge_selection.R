@@ -87,6 +87,9 @@
 #'   4. It computes the BIC value: `N*T*log(SSE/(N*T)) + s*log(N*T)`, where `s`
 #'      is the number of non-zero coefficients (excluding the always-present
 #'      intercept; a constant offset that does not affect which lambda minimizes BIC).
+#'      `SSE/(N*T)` is floored at `.Machine$double.eps * var(y)` (a
+#'      response-scale-relative floor) so that an interpolating lambda gives a
+#'      finite BIC instead of `-Inf` (#403).
 #'   The set of coefficients corresponding to the minimum BIC is chosen. If multiple
 #'   lambdas yield the same minimum BIC, the one resulting in the smallest model
 #'   size (fewest non-zero coefficients) is selected.
@@ -140,17 +143,40 @@ getBetaBIC <- function(fit, N, T, p, X_mod, y, scale_center, scale_scale) {
 	# non-interpolating lambda can now win where -Inf always picked the
 	# interpolator -- but a near-zero MSE may still not be overcome by the size
 	# penalty, so the warning flags that the selected lambda may over-fit. (#403)
-	if (any(mse_hat <= .Machine$double.eps)) {
+	#
+	# The floor is RELATIVE to the response's own scale. `mse_hat` is in the raw
+	# (unstandardized) units of `y`, so a fixed absolute cut is not
+	# scale-equivariant: rescaling `y` by c rescales every mse_hat by c^2, and an
+	# absolute .Machine$double.eps threshold would fire on a merely small-scale
+	# response (a change of units) while leaving the fit itself untouched --
+	# warning about "interpolation" on, and re-ranking the lambdas of, a fit that
+	# is nowhere near interpolating. Scaling by var(y) makes the criterion
+	# "residual MSE is zero to double precision relative to the variation being
+	# explained" (R^2 >= 1 - eps), which is invariant to the units of `y`.
+	# `.Machine$double.xmin` keeps the floor strictly positive (hence log() finite)
+	# for a constant or vanishingly-dispersed response.
+	var_y <- mean((y - mean(y))^2)
+	mse_floor <- max(.Machine$double.eps * var_y, .Machine$double.xmin)
+	# `var_y` overflows to Inf once max|y - mean(y)| exceeds ~1.3e154. An
+	# infinite floor would floor EVERY lambda to the same value, collapsing the
+	# whole BIC ranking onto the smallest-model tie-break below -- strictly worse
+	# than the absolute floor this replaced. Fall back to the smallest positive
+	# double: it floors nothing, and log() stays finite. (#403)
+	if (!is.finite(mse_floor)) {
+		mse_floor <- .Machine$double.xmin
+	}
+	if (any(mse_hat <= mse_floor)) {
 		warning(
 			"getBetaBIC(): at least one lambda interpolates the response ",
-			"(residual MSE ~ 0), which would make its BIC -Inf; flooring MSE at ",
-			".Machine$double.eps. This occurs in the p >= NT / gls = FALSE ",
-			"corner; the BIC-selected lambda may over-fit.",
+			"(residual MSE is zero to double precision relative to var(y)), ",
+			"which would make its BIC -Inf; flooring MSE at ",
+			".Machine$double.eps * var(y). This most often arises in the ",
+			"p >= NT / gls = FALSE corner; the BIC-selected lambda may over-fit.",
 			call. = FALSE
 		)
 	}
 	BICs <- nt_double *
-		log(pmax(mse_hat, .Machine$double.eps)) +
+		log(pmax(mse_hat, mse_floor)) +
 		model_sizes * log(nt_double)
 
 	lambda_star_ind <- which(BICs == min(BICs))
