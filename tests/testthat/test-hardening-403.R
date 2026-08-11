@@ -217,6 +217,45 @@ test_that(".build_regression_if() routes a singular centered Gram to an actionab
 		),
 		"not invertible"
 	)
+	# The handler must CARRY the underlying error text, not swallow it. Without
+	# the `conditionMessage(e)` append the message stops at "collinear selected
+	# columns)." and the two assertions below both go red, while the
+	# "not invertible" match above passes either way.
+	msg <- tryCatch(
+		.build_regression_if(
+			X_sel = X_sel,
+			y = y,
+			N = N,
+			T = T,
+			Psi_full = Psi_full
+		),
+		error = conditionMessage
+	)
+	expect_match(msg, "Original error: ", fixed = TRUE)
+	expect_match(msg, "singular")
+
+	# The handler wraps EVERY error from the solve loop, not only rank
+	# deficiency, which is the whole reason the original text has to survive: a
+	# `Psi_full` whose row count does not match the selected support raises a
+	# dimension error from `solve()`, and reporting only "rank-deficient" would
+	# misdirect the diagnosis. (`Sig` here is well conditioned, so rank is not
+	# the problem.) NOTE: a NON-FINITE `Psi_full` is NOT such a case --
+	# `solve()` propagates NA/NaN silently rather than erroring -- so it cannot
+	# be tested here.
+	X_ok <- matrix(stats::rnorm(n * 3), nrow = n, ncol = 3) # full rank
+	expect_gt(rcond(crossprod(scale(X_ok, TRUE, FALSE)) / n), 1e-6)
+	msg_dim <- tryCatch(
+		.build_regression_if(
+			X_sel = X_ok,
+			y = y,
+			N = N,
+			T = T,
+			Psi_full = matrix(1, nrow = 2, ncol = 1) # 2 rows vs 3 columns
+		),
+		error = conditionMessage
+	)
+	expect_match(msg_dim, "not invertible")
+	expect_match(msg_dim, "must be compatible with", fixed = TRUE)
 })
 
 # --- Item 5: .build_propensity_if() count guard actually bites -----------------
@@ -282,6 +321,60 @@ test_that(".build_propensity_if() rejects non-integral N * cohort_probs (#403)",
 		),
 		"^debiasedATT\\(\\): could not recover integer cohort counts"
 	)
+})
+
+# The cases above pin the TIGHT end of the cohort-count tolerance (it must not
+# false-positive on a legitimate n_g / N). This pins the LOOSE end, which is the
+# end that silently dies: `n_g = round(N * pi_hat)` bounds `abs(N * pi_hat -
+# n_g)` by 0.5 BY CONSTRUCTION, so any tolerance reaching 0.5 makes the guard
+# identically FALSE. An `N`-proportional `sqrt(.Machine$double.eps) * N` reaches
+# 0.5 at N = 2^25 = 33,554,432, so it stopped guarding above that -- red on the
+# pre-fix line (no error at all: the helper happily builds a 3.4e7-row matrix),
+# green under the `min(0.25, .)` ceiling. Kept cheap because the guard fires
+# before any allocation. (#403)
+test_that(".build_propensity_if() count guard survives a large N (#403)", {
+	G <- 3L
+	# Just past the N = 2^25 crossover where an `sqrt(eps) * N` tolerance
+	# reaches the 0.5 construction bound and the guard goes vacuous.
+	N <- 34000000L
+	expect_gt(N, 2^25)
+	T <- 5L
+	A <- matrix(c(1, -1, 0.5), nrow = G, ncol = 1L)
+	# 34e6 * 0.23456781 = 7975305.54 -- genuinely non-integral, and its deviation
+	# from the nearest integer (0.46) sits ABOVE the 0.25 ceiling, so this case
+	# must be rejected no matter how large N grows. Guard against the trap of a
+	# "corrupted" probability that happens to be exact: 34e6 * 0.3 is an integer
+	# and would test nothing.
+	bad <- c(0.23456781, 0.3, 0.4)
+	expect_false(isTRUE(all.equal(N * bad[1], round(N * bad[1]))))
+	expect_gt(abs(N * bad[1] - round(N * bad[1])), 0.25)
+	expect_error(
+		.build_propensity_if(
+			cohort_probs_overall = bad,
+			G = G,
+			N = N,
+			T = T,
+			A = A
+		),
+		"could not recover integer cohort counts"
+	)
+	# Control on the tight end, with a probability whose round-trip error is
+	# genuinely NON-ZERO. (N, n_g) = (4099, 4065) is the exhaustive worst case
+	# over every N <= 6000: `4099 * (4065 / 4099) - 4065` = 4.5e-13, so a future
+	# change that tightened the tolerance toward 0 would go red here. The
+	# control cannot be run at the large N above: the helper allocates N rows,
+	# and it only stays cheap there because the guard fires first.
+	N_rt <- 4099L
+	pi_rt <- 4065L / N_rt
+	expect_gt(abs(N_rt * pi_rt - round(N_rt * pi_rt)), 0)
+	F_pi <- .build_propensity_if(
+		cohort_probs_overall = pi_rt,
+		G = 1L,
+		N = N_rt,
+		T = T,
+		A = matrix(1, nrow = 1L, ncol = 1L)
+	)
+	expect_identical(dim(F_pi), c(N_rt, 1L))
 })
 
 # --- Item 6: augment() accepts a fit whose covs slot is NULL (d = 0 / legacy) --

@@ -5,7 +5,7 @@
 ### Defensive improvements
 
 - Defense-in-depth hardening (#403). Six latent robustness fixes, one per bullet
-  below, plus one documented acceptance that needed no code change --- none
+  below, plus one documented acceptance that needed no behavior change --- none
   reachable as a live bug through the shipped entry points, but each a trap for
   future changes or unusual-but-legal inputs:
   - `getBetaBIC()` (the `lambda_selection = "bic"` path) now floors the residual
@@ -32,7 +32,10 @@
   - The internal expected-cohort-probability helper validates its `distribution`
     argument before seeding, so an invalid `distribution` combined with a
     non-`NULL` seed no longer advances the caller's random-number stream before
-    erroring (the counterpart of the #399 seed-before-validation fix).
+    erroring (the counterpart of the #399 seed-before-validation fix). The
+    validation now goes through `match.arg()` (the package idiom), so the
+    argument also accepts unambiguous partial matches --- `"gauss"` resolves to
+    `"gaussian"` --- where it previously required an exact string.
 
 ## Version 1.56.17
 
