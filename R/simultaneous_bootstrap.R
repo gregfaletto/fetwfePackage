@@ -140,11 +140,17 @@
 			V[, k] <- solve(Sig, Psi_full[, k])
 		},
 		error = function(e) {
+			# Carry the original message: this handler catches EVERY error from
+			# the loop, not only rank deficiency (a non-finite entry in
+			# `Psi_full` raises "NA/NaN/Inf in foreign function call"), and
+			# relabelling that as a rank problem would misdirect the diagnosis.
 			stop(
 				"simultaneousCIs(method = \"bootstrap\"): the centered Gram ",
 				"matrix on the selected support is not invertible, so the ",
 				"regression influence function cannot be formed (the selected ",
-				"support is rank-deficient, e.g. collinear selected columns).",
+				"support is rank-deficient, e.g. collinear selected columns). ",
+				"Original error: ",
+				conditionMessage(e),
 				call. = FALSE
 			)
 		}
@@ -402,7 +408,8 @@
 	G,
 	N,
 	T,
-	A = NULL
+	A = NULL,
+	caller = "simultaneousCIs()"
 ) {
 	pi_hat <- cohort_probs_overall[seq_len(G)]
 	# A = [a_1 ... a_K] (G x K). Fixed-p / post-selection builds it as
@@ -436,14 +443,22 @@
 	# and silently absorb the residual into the never-treated row. The old
 	# `sum(n_g) + n_never != N` check was identically FALSE (n_never = N -
 	# sum(n_g)) and never bit; `abs(N * pi_hat - n_g)` does (#403).
+	#
+	# The tolerance scales with N. `pi_hat` reaches here as `n_g / N`, so the
+	# round-trip `N * (n_g / N) - n_g` carries O(N * eps) float error, while
+	# genuine corruption produces an O(1) deviation. A fixed absolute cut would
+	# be dimensionally an absolute constant compared against a count, and would
+	# start false-positiving at N ~ 6.7e7. (#403)
 	if (
 		n_never < 0L ||
-			any(abs(N * pi_hat - n_g) > sqrt(.Machine$double.eps))
+			any(
+				abs(N * pi_hat - n_g) > sqrt(.Machine$double.eps) * max(1, N)
+			)
 	) {
 		stop(
-			"simultaneousCIs(): could not recover integer cohort counts from ",
-			"`cohort_probs_overall` for the event_study propensity influence ",
-			"function.",
+			caller,
+			": could not recover integer cohort counts from ",
+			"`cohort_probs_overall` for the propensity influence function.",
 			call. = FALSE
 		)
 	}

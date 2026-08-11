@@ -220,7 +220,7 @@ NULL
 #' `.resid = data[[x$response_col_name]] - .fitted`, then column-binds to
 #' the (possibly auto-trimmed) panel. If `nrow(data) != nrow(X_ints)`, the
 #' method calls the package's internal cohort-identification routine on
-#' `data` using the `time_var` / `unit_var` / `treatment` / `covs` slots
+#' `data` using the `time_var` / `unit_var` / `treatment` slots
 #' stashed at fit time, which drops units treated in the first time
 #' period (their treatment effect is unidentifiable). The returned data
 #' frame therefore corresponds to the panel the estimator actually fit

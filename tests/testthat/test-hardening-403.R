@@ -86,6 +86,42 @@ test_that("getBetaBIC() lambda selection is invariant to rescaling y (#403)", {
 	)
 })
 
+# The floor must not bite a merely EXCELLENT fit. The rescaling test above pins
+# the scale axis; this pins the tightness axis. Nothing else in the suite would
+# notice a future change from `.Machine$double.eps * var(y)` to, say,
+# `1e-8 * var(y)` -- which would keep every existing test green while warning
+# about "interpolation" on, and re-ranking the lambdas of, well-fit panels. (#403)
+test_that("getBetaBIC() floor does not fire on a near-deterministic fit (#403)", {
+	N <- 10L
+	T <- 2L
+	p <- 3L
+	set.seed(4033)
+	X_mod <- matrix(stats::rnorm(N * T * p), nrow = N * T, ncol = p)
+	beta_true <- c(1.5, -0.5, 2)
+	signal <- as.numeric(X_mod %*% beta_true)
+	# R^2 = 1 - 1e-9: far tighter than any real panel, and still ~7 orders of
+	# magnitude above the .Machine$double.eps floor.
+	resid_sd <- sqrt(1e-9 * mean((signal - mean(signal))^2))
+	y <- signal + resid_sd * stats::rnorm(N * T)
+	fit <- list(beta = cbind(c(0, beta_true), c(mean(y), 0, 0, 0)))
+
+	res <- expect_silent(
+		getBetaBIC(
+			fit,
+			N = N,
+			T = T,
+			p = p,
+			X_mod = X_mod,
+			y = y,
+			scale_center = rep(0, p),
+			scale_scale = rep(1, p)
+		)
+	)
+	# The excellent fit must still win on BIC, not be flattened onto the floor.
+	expect_identical(res$lambda_star_ind, 1L)
+	expect_identical(res$lambda_star_model_size, 3L)
+})
+
 # The two degenerate-var(y) branches of the relative floor. Neither is reachable
 # from a shipped entry point, but both are exactly the branches a future
 # "simplify to eps * var(y)" refactor would delete, and neither is covered by the
@@ -215,6 +251,36 @@ test_that(".build_propensity_if() rejects non-integral N * cohort_probs (#403)",
 			A = A
 		),
 		NA
+	)
+	# Control 2: the guard must survive a probability vector whose N * pi_hat
+	# round-trip carries real float error. `pi_hat` always arrives as n_g / N, so
+	# this is the shape of every legitimate input; an absolute tolerance that a
+	# future change tightened toward 0 would break every real event-study
+	# bootstrap while leaving the `bad` case above green.
+	n_g_real <- c(19L, 27L, 24L)
+	N_real <- 90L
+	expect_error(
+		.build_propensity_if(
+			cohort_probs_overall = n_g_real / N_real,
+			G = G,
+			N = N_real,
+			T = T,
+			A = A
+		),
+		NA
+	)
+	# The helper is shared by simultaneousCIs() and debiasedATT(); the error must
+	# name whichever one the user actually called, not a hardcoded default.
+	expect_error(
+		.build_propensity_if(
+			cohort_probs_overall = bad,
+			G = G,
+			N = N,
+			T = T,
+			A = A,
+			caller = "debiasedATT()"
+		),
+		"^debiasedATT\\(\\): could not recover integer cohort counts"
 	)
 })
 

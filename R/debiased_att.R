@@ -795,7 +795,8 @@ debiasedATT <- function(
 		G = G,
 		N = N,
 		T = T,
-		A = matrix(a_att_G, nrow = G, ncol = 1L)
+		A = matrix(a_att_G, nrow = G, ncol = 1L),
+		caller = "debiasedATT()"
 	))
 	# Anchor: the per-unit V2 IF must reproduce the analytic cohort-weight
 	# variance. A mismatch means the V2 gradient / probabilities are inconsistent

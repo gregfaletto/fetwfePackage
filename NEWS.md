@@ -4,9 +4,10 @@
 
 ### Defensive improvements
 
-- Defense-in-depth hardening (#403). Six latent robustness fixes (plus one
-  documented acceptance) --- none reachable as a live bug through the shipped
-  entry points, but each a trap for future changes or unusual-but-legal inputs:
+- Defense-in-depth hardening (#403). Six latent robustness fixes, one per bullet
+  below, plus one documented acceptance that needed no code change --- none
+  reachable as a live bug through the shipped entry points, but each a trap for
+  future changes or unusual-but-legal inputs:
   - `getBetaBIC()` (the `lambda_selection = "bic"` path) now floors the residual
     MSE at `.Machine$double.eps * var(y)` and warns when a lambda interpolates
     the response, instead of producing `BIC = -Inf` (which would win the
@@ -17,9 +18,13 @@
     assertions actually check that degenerate case.
   - `simultaneousCIs(method = "bootstrap")` now reports an actionable
     "not invertible" error (instead of a bare LAPACK error) when the centered
-    Gram on the selected support is singular, and its internal event-study
-    cohort-count guard now actually rejects a non-integral
-    `N * cohort_probs_overall`.
+    Gram on the selected support is singular, and carries the underlying error
+    text along with it.
+  - The internal propensity influence-function helper's cohort-count guard now
+    actually rejects a non-integral `N * cohort_probs_overall` (the previous
+    condition was a tautology and never fired). The helper is shared by
+    `simultaneousCIs(method = "bootstrap")` and `debiasedATT(method =
+    "bootstrap")`, and its error now names whichever of the two you called.
   - `augment()` no longer requires the unused `covs` slot, so a hand-built or
     legacy fit carrying `covs = NULL` is accepted. (A covariate-free `d = 0`
     fit from the shipped entry points stores `character(0)` and was already
