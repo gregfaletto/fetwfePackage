@@ -34,6 +34,13 @@ library(fetwfe)
 }
 
 test_that("a public etwfe() fit reaches the fit-time singular-Gram degrade (#400)", {
+	# The fixture straddles a ~1-decade window between the two rank tolerances,
+	# and getGramInv()'s side of it compares a Gram eigenvalue against
+	# max(dim) * .Machine$double.eps. That margin is BLAS/LAPACK-dependent, and
+	# the package has no CI, so a cross-platform shift would first surface as a
+	# CRAN failure. Keep the assertions strict, but only run them locally.
+	skip_on_cran()
+
 	df <- .singular_gram_panel(1e-6)
 
 	expect_warning(
@@ -60,6 +67,11 @@ test_that("tighter collinearity is intercepted by the #395 rank gate instead (#4
 	# #395 errors before the Gram is ever formed. Pins the ordering of the two
 	# tolerances -- a future change to either threshold moves this boundary, and
 	# without this nothing would notice.
+	#
+	# Same BLAS/no-CI caveat as above: the boundary this pins is only meaningful
+	# on the eigenvalue margin this machine's LAPACK produces.
+	skip_on_cran()
+
 	df <- .singular_gram_panel(1e-8)
 
 	expect_error(
@@ -71,6 +83,12 @@ test_that("tighter collinearity is intercepted by the #395 rank gate instead (#4
 			covs = c("x1", "x2"),
 			response = "y",
 			se_type = "cluster"
-		)
+		),
+		# Must be the #395 gate specifically. R/utility.R's
+		# .check_cohort_rank_for_ols() message also says "rank-deficient", so
+		# match the phrase unique to #395's anyNA(beta_hat_slopes) branch in
+		# R/etwfe_core.R. A bare expect_error() here would accept ANY failure
+		# and so would pin nothing.
+		regexp = "rank-deficient.*aliased columns receive NA estimates"
 	)
 })

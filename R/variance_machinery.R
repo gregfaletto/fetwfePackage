@@ -597,8 +597,13 @@ getPsiGUnfused <- function(
 #'     collinear at `1e-6` land between the two: `lm()` identifies every
 #'     coefficient, the centered Gram does not invert, and `etwfe()` returns
 #'     `att_se = NA` with `calc_ses = FALSE` plus the standard warning. Tighten the
-#'     collinearity to `1e-8` and `#395` errors first instead; an exact duplicate
-#'     is always caught by `#395`. Regression test:
+#'     collinearity to `1e-8` and `#395` errors first instead. An exact duplicate
+#'     is always caught by `#395` **in the OLS cores only**: the
+#'     `anyNA(beta_hat_slopes)` gate lives in `R/etwfe_core.R`, so `etwfe()` and
+#'     `twfeCovs()` error on an exactly duplicated covariate while the bridge
+#'     estimators `fetwfe()` and `betwfe()` fit it without complaint and report
+#'     `calc_ses = TRUE` with finite SEs (verified for both
+#'     `se_type = "default"` and `"cluster"`). Regression test:
 #'     `test-fit-time-singular-gram-degrade-400.R`.
 #' @param X_final,y_final,N,T,treat_inds,num_treats Fit-design pieces, forwarded to
 #'   `getGramInv()` / `.assemble_cluster_robust_sandwich()`.
@@ -1771,7 +1776,12 @@ getCohortATTsFinal <- function(
 	treat_block_mask <- NULL
 	if (calc_ses) {
 		# Cluster inputs are defensive-only (y_final is always supplied when a
-		# cluster fit has calc_ses = TRUE); validate before the sandwich uses it.
+		# cluster fit has calc_ses = TRUE). Note what moved in #400: this
+		# validation now runs BEFORE the Gram recompute, whereas pre-#400 it sat
+		# after getGramInv(), so a singular-Gram degrade (calc_ses -> FALSE)
+		# would skip it. That relocation is the single semantic difference the
+		# fold introduces, and it is inert precisely because calc_ses = TRUE
+		# always supplies a full-length y_final.
 		if (identical(se_type, "cluster")) {
 			stopifnot(!is.null(y_final))
 			stopifnot(length(y_final) >= N * T)
