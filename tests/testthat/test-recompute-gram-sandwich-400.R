@@ -1,9 +1,13 @@
 # Direct unit test for the extracted scaffold helper .recompute_gram_and_sandwich()
 # (#400 Phase 2a). Its one genuine policy axis -- `on_singular` (degrade vs stop
-# on a singular recomputed Gram) -- is DEFENSIVE-ONLY and unreachable through any
-# public fit (a fit with valid SEs already inverted its Gram on this support; see
-# the note in test-cross-accessor-scaffold-guardrail-400.R). So the asymmetry can
-# only be exercised here, by feeding the helper a rank-deficient selected support.
+# on a singular recomputed Gram) -- is DEFENSIVE-ONLY. For the ACCESS-TIME callers
+# it is unreachable through any public fit (a fit with valid SEs already inverted
+# its Gram on this support). The FIT-TIME caller getCohortATTsFinal() performs the
+# first inversion, so that argument does not cover it; its unreachability rests on
+# the upstream #395 rank guards instead, and is not proven. See the roxygen on
+# .recompute_gram_and_sandwich() in R/variance_machinery.R. Either way the
+# asymmetry can only be exercised here, by feeding the helper a rank-deficient
+# selected support.
 
 test_that(".recompute_gram_and_sandwich() degrades vs stops on a singular selected-support Gram (#400)", {
 	# Rank-deficient support: feature columns 1 and 2 are identical, so the centered

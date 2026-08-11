@@ -166,9 +166,12 @@ test_that("an SE-unavailable fit degrades consistently: accessors -> NA, simulta
 
 	# NB: the *shared-scaffold* singular-Gram branch (recomputed selected-support
 	# Gram singular -> res_gram$calc_ses = FALSE; the two accessors degrade to NA
-	# while simultaneousCIs STOPs "not invertible") is defensive-only and
-	# UNREACHABLE through any public fit -- has_valid_ses = TRUE already implies the
-	# fit's own getGramInv() on that support succeeded. Phase 2 guards that
+	# while simultaneousCIs STOPs "not invertible") is defensive-only. From the
+	# ACCESS-TIME callers exercised here it is UNREACHABLE -- has_valid_ses = TRUE
+	# already implies the fit's own getGramInv() on that support succeeded. That
+	# argument does NOT extend to the fit-time caller getCohortATTsFinal(), which
+	# performs the first inversion; see the roxygen on
+	# .recompute_gram_and_sandwich() in R/variance_machinery.R. Phase 2 guards the
 	# on_singular = c("degrade", "stop") policy with a direct unit test of the
 	# extracted helper (feeding it a rank-deficient support), which is the only
 	# place the asymmetry can be exercised.
