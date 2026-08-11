@@ -577,24 +577,29 @@ getPsiGUnfused <- function(
 #'   The one genuine policy difference between callers is `on_singular`: when the
 #'   recomputed Gram is singular, `getCohortATTsFinal()` / `eventStudy()` /
 #'   `cohortTimeATTs()` DEGRADE (return `calc_ses = FALSE`, so their SEs become
-#'   `NA`), whereas `simultaneousCIs()` STOPs. That branch is defensive-only, but
-#'   the reason differs by caller and only the access-time reason is airtight:
+#'   `NA`), whereas `simultaneousCIs()` STOPs. The two kinds of caller reach that
+#'   branch very differently, and only one of them cannot:
 #'
 #'   - **Access-time** callers cannot reach it. `has_valid_ses = TRUE` already
 #'     implies the fit's own `getGramInv()` succeeded on this exact support, so
-#'     the recompute is re-inverting a matrix known to be invertible.
-#'   - **Fit time** (`getCohortATTsFinal()`) performs the FIRST inversion, so the
-#'     argument above does not apply to it. Its unreachability rests instead on
-#'     the upstream `#395` rank guards intercepting a rank-deficient support
-#'     earlier. That is NOT proven: attempts to reach it (an `etwfe()` fit with
-#'     `p` near `NT`, and a `fetwfe()` fit on `bacondecomp::divorce` with an
-#'     exactly-collinear duplicated covariate) were each intercepted by those
-#'     guards, which is consistent with unreachable but does not establish it.
-#'     Per `PROFILE.md` § 12.1 a singular Gram is this package's signature
-#'     failure mode -- if you find a public fit that reaches this branch, that is
-#'     a real finding, not a curiosity.
-#'
-#'   Either way the branch is exercised only by the helper's direct unit test.
+#'     the recompute is re-inverting a matrix known to be invertible. For them
+#'     the branch is genuinely defensive, and is exercised only by the helper's
+#'     direct unit test.
+#'   - **Fit time** (`getCohortATTsFinal()`) performs the FIRST inversion, and its
+#'     degrade branch IS REACHABLE through an ordinary public fit -- it is the
+#'     designed backstop, not a defensive nicety. `R/utility.R`'s `#395` note says
+#'     so outright: "A genuinely singular collapsed design is caught downstream:
+#'     getGramInv() degrades calc_ses to FALSE." The gap the `#395` gate leaves is
+#'     a tolerance gap, not an oversight: that gate runs
+#'     `anyNA(coef(lm(y ~ . + 0, df)))` on the UNCENTERED, column-scaled design at
+#'     `lm.fit`'s `1e-7` QR tolerance, while `getGramInv()` tests the CENTERED Gram
+#'     at `max(dim) * .Machine$double.eps` relative (~9e-15 here). Two covariates
+#'     collinear at `1e-6` land between the two: `lm()` identifies every
+#'     coefficient, the centered Gram does not invert, and `etwfe()` returns
+#'     `att_se = NA` with `calc_ses = FALSE` plus the standard warning. Tighten the
+#'     collinearity to `1e-8` and `#395` errors first instead; an exact duplicate
+#'     is always caught by `#395`. Regression test:
+#'     `test-fit-time-singular-gram-degrade-400.R`.
 #' @param X_final,y_final,N,T,treat_inds,num_treats Fit-design pieces, forwarded to
 #'   `getGramInv()` / `.assemble_cluster_robust_sandwich()`.
 #' @param sel_feat_inds Integer indices of the selected features, or the scalar
@@ -642,6 +647,12 @@ getPsiGUnfused <- function(
 	sandwich_full <- NULL
 	treat_block_mask <- NULL
 	if (identical(se_type, "cluster") && isTRUE(calc_ses)) {
+		# The "all features" sentinel is a scalar NA (or NULL); an EMPTY support
+		# would fall through this test to `NULL` and be read as "all features" --
+		# the exact inverse. Unreachable today (both bridge cores assert
+		# `length(sel_feat_inds) > 0` immediately before calling, and the OLS core
+		# passes NULL), so this asserts rather than handles it.
+		stopifnot(is.null(sel_feat_inds) || length(sel_feat_inds) > 0L)
 		sel_arg <- if (any(!is.na(sel_feat_inds))) sel_feat_inds else NULL
 		res_cl <- .assemble_cluster_robust_sandwich(
 			X_final = X_final,
