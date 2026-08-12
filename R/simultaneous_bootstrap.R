@@ -132,9 +132,32 @@
 	Sig <- crossprod(X_sel_c) / n
 	K <- ncol(Psi_full)
 	V <- matrix(0, ncol(X_sel_c), K)
-	for (k in seq_len(K)) {
-		V[, k] <- solve(Sig, Psi_full[, k])
-	}
+	# Route a singular centered Gram through an actionable message rather than
+	# solve()'s bare LAPACK "system is computationally singular" error, matching
+	# the analytic path's getGramInv() "not invertible" handling (#403).
+	tryCatch(
+		for (k in seq_len(K)) {
+			V[, k] <- solve(Sig, Psi_full[, k])
+		},
+		error = function(e) {
+			# Carry the original message: this handler catches EVERY error from
+			# the loop, not only rank deficiency (a `Psi_full` whose row count
+			# does not match the selected support raises "'b' (m x 1) must be
+			# compatible with 'a' (p x p)"), and relabelling that as a rank
+			# problem would misdirect the diagnosis. (Note: a NON-FINITE entry in
+			# `Psi_full` does NOT error here -- `solve()` propagates NA/NaN
+			# silently -- so it is not an example of this, #403 review round 4.)
+			stop(
+				"simultaneousCIs(method = \"bootstrap\"): the centered Gram ",
+				"matrix on the selected support is not invertible, so the ",
+				"regression influence function cannot be formed (the selected ",
+				"support is rank-deficient, e.g. collinear selected columns). ",
+				"Original error: ",
+				conditionMessage(e),
+				call. = FALSE
+			)
+		}
+	)
 	F_mat <- XEps %*% V
 	attr(F_mat, "highdim") <- FALSE
 	F_mat
@@ -378,6 +401,11 @@
 #'   supplied (the high-dim `event_study` path, #309) it is the DEBIASED cohort
 #'   effect matrix and `J_list` / `theta_sel` are ignored; when `NULL` (fixed-p) it
 #'   is built from `J_list %*% theta_sel` (post-selection, byte-identical to before).
+#' @param caller Character scalar; the user-facing entry point on whose behalf
+#'   this helper runs, prefixed to the cohort-count guard's error message so the
+#'   user sees the function they actually called. The helper is shared by
+#'   `simultaneousCIs(method = "bootstrap")` (the default) and
+#'   `debiasedATT(method = "bootstrap")`; it affects the error text only.
 #' @return `F_pi`, an `N x K` numeric matrix (`K = ncol(A)`).
 #' @keywords internal
 #' @noRd
@@ -388,7 +416,8 @@
 	G,
 	N,
 	T,
-	A = NULL
+	A = NULL,
+	caller = "simultaneousCIs()"
 ) {
 	pi_hat <- cohort_probs_overall[seq_len(G)]
 	# A = [a_1 ... a_K] (G x K). Fixed-p / post-selection builds it as
@@ -417,11 +446,40 @@
 	c0 <- as.numeric(crossprod(pi_hat, A))
 	n_g <- round(N * pi_hat)
 	n_never <- N - sum(n_g)
-	if (n_never < 0L || sum(n_g) + n_never != N) {
+	# `N * pi_hat` must actually be (near-)integral: a corrupted
+	# `cohort_probs_overall` with non-integral `N * pi_hat` would otherwise round
+	# and silently absorb the residual into the never-treated row. The old
+	# `sum(n_g) + n_never != N` check was identically FALSE (n_never = N -
+	# sum(n_g)) and never bit; `abs(N * pi_hat - n_g)` does (#403).
+	#
+	# The tolerance needs BOTH a floor and a CEILING, and the ceiling is the
+	# load-bearing half:
+	#   Ceiling (0.25). `n_g = round(N * pi_hat)`, so `abs(N * pi_hat - n_g)` is
+	#     <= 0.5 BY CONSTRUCTION. Any tolerance that reaches 0.5 therefore makes
+	#     this condition identically FALSE -- the same dead-guard defect the
+	#     check replaced, just at the other end of the range. A bare
+	#     `sqrt(.Machine$double.eps) * N` reaches 0.5 at N = 2^25 = 33,554,432,
+	#     so it silently stopped guarding large panels; `min(0.25, .)` cannot.
+	#   Body (`8 * N * eps`). `pi_hat` always arrives as `n_g / N` (see
+	#     `.compute_cohort_probs()`), so the only LEGITIMATE deviation is the
+	#     `N * (n_g / N) - n_g` round-trip error, bounded by `n_g * eps <= N *
+	#     eps`. Measured: exactly 0 on real fits; exhaustively over every
+	#     `(N <= 5000, n_g <= N)` the worst case is 4.5e-13, and sampling up to
+	#     N = 1e12 leaves >= 16x headroom under `8 * N * eps`.
+	#   Floor (`sqrt(.Machine$double.eps)`). Dominates for N < 2^23 = 8,388,608,
+	#     preserving the pre-existing small-N behavior so this cannot introduce a
+	#     NEW false positive on any panel size seen in practice.
+	# Genuine corruption produces an O(1) deviation, orders of magnitude above
+	# either end. (#403)
+	tol <- min(
+		0.25,
+		max(sqrt(.Machine$double.eps), 8 * N * .Machine$double.eps)
+	)
+	if (n_never < 0L || any(abs(N * pi_hat - n_g) > tol)) {
 		stop(
-			"simultaneousCIs(): could not recover integer cohort counts from ",
-			"`cohort_probs_overall` for the event_study propensity influence ",
-			"function.",
+			caller,
+			": could not recover integer cohort counts from ",
+			"`cohort_probs_overall` for the propensity influence function.",
 			call. = FALSE
 		)
 	}

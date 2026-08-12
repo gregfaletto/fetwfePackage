@@ -1,0 +1,430 @@
+library(testthat)
+library(fetwfe)
+
+# ------------------------------------------------------------------------------
+# #403 defense-in-depth hardening batch. Each test reproduces a latent trap that
+# is NOT reachable as a live bug through today's shipped entry points, so it
+# drives the internal function directly with a constructed edge input. Each is
+# red-green: it FAILS on the pre-fix line and PASSES after (mutation-checked
+# during development). Item 2 (CV ridge pseudo-rows) is resolved by documenting
+# the acceptance -> behavior-neutral, no test.
+# ------------------------------------------------------------------------------
+
+# --- Item 1: getBetaBIC() warns + floors on an interpolating lambda -----------
+test_that("getBetaBIC() warns and floors when a lambda interpolates (mse ~ 0) (#403)", {
+	N <- 10L
+	T <- 2L
+	p <- 3L
+	set.seed(403)
+	X_mod <- matrix(stats::rnorm(N * T * p), nrow = N * T, ncol = p)
+	beta_true <- c(1.5, -0.5, 2)
+	y <- as.numeric(X_mod %*% beta_true) # exact fit -> one lambda interpolates
+	# fit$beta is (p + 1) x n_lambda: col 1 interpolates (eta = 0, beta_true);
+	# col 2 is the null model (eta = mean(y), zero slopes).
+	fit <- list(beta = cbind(c(0, beta_true), c(mean(y), 0, 0, 0)))
+	expect_warning(
+		getBetaBIC(
+			fit,
+			N = N,
+			T = T,
+			p = p,
+			X_mod = X_mod,
+			y = y,
+			scale_center = rep(0, p),
+			scale_scale = rep(1, p)
+		),
+		"interpolates"
+	)
+})
+
+# The item-1 floor must be RELATIVE to the response scale. `mse_hat` carries the
+# raw units of `y`, so an absolute floor turns a pure change of units into a
+# spurious "interpolates" warning AND a different selected lambda -- on a fit
+# that is identical up to scale. Here rescaling by 1e-10 drops every mse_hat
+# below an absolute .Machine$double.eps, which floors ALL of them to the same
+# value and hands the argmin to the smallest model. Red on an absolute floor
+# (warning fires; lambda_star_ind flips 1 -> 2), green on the var(y)-relative
+# floor. (#403)
+test_that("getBetaBIC() lambda selection is invariant to rescaling y (#403)", {
+	N <- 10L
+	T <- 2L
+	p <- 3L
+	set.seed(4031)
+	X_mod <- matrix(stats::rnorm(N * T * p), nrow = N * T, ncol = p)
+	beta_true <- c(1.5, -0.5, 2)
+	# Noise -> no lambda interpolates, so neither call should warn at all.
+	y <- as.numeric(X_mod %*% beta_true) + stats::rnorm(N * T)
+	# Col 1: the (non-exact) 3-feature fit. Col 2: the null model.
+	fit <- list(beta = cbind(c(0, beta_true), c(mean(y), 0, 0, 0)))
+
+	call_bic <- function(fit, y) {
+		getBetaBIC(
+			fit,
+			N = N,
+			T = T,
+			p = p,
+			X_mod = X_mod,
+			y = y,
+			scale_center = rep(0, p),
+			scale_scale = rep(1, p)
+		)
+	}
+
+	# Scaling y by c and the coefficients by c is the same fit in new units: it
+	# multiplies every mse_hat by c^2, which shifts every BIC by the constant
+	# N * T * 2 * log(c) and so cannot change the argmin.
+	scale_c <- 1e-10
+	fit_scaled <- list(beta = fit$beta * scale_c)
+
+	res <- expect_silent(call_bic(fit, y))
+	res_scaled <- expect_silent(call_bic(fit_scaled, y * scale_c))
+
+	expect_identical(res_scaled$lambda_star_ind, res$lambda_star_ind)
+	expect_identical(
+		res_scaled$lambda_star_model_size,
+		res$lambda_star_model_size
+	)
+})
+
+# The floor must not bite a merely EXCELLENT fit. The rescaling test above pins
+# the scale axis; this pins the tightness axis. Nothing else in the suite would
+# notice a future change from `.Machine$double.eps * var(y)` to, say,
+# `1e-8 * var(y)` -- which would keep every existing test green while warning
+# about "interpolation" on, and re-ranking the lambdas of, well-fit panels. (#403)
+test_that("getBetaBIC() floor does not fire on a near-deterministic fit (#403)", {
+	N <- 10L
+	T <- 2L
+	p <- 3L
+	set.seed(4033)
+	X_mod <- matrix(stats::rnorm(N * T * p), nrow = N * T, ncol = p)
+	beta_true <- c(1.5, -0.5, 2)
+	signal <- as.numeric(X_mod %*% beta_true)
+	# R^2 = 1 - 1e-9: far tighter than any real panel, and still ~7 orders of
+	# magnitude above the .Machine$double.eps floor.
+	resid_sd <- sqrt(1e-9 * mean((signal - mean(signal))^2))
+	y <- signal + resid_sd * stats::rnorm(N * T)
+	fit <- list(beta = cbind(c(0, beta_true), c(mean(y), 0, 0, 0)))
+
+	res <- expect_silent(
+		getBetaBIC(
+			fit,
+			N = N,
+			T = T,
+			p = p,
+			X_mod = X_mod,
+			y = y,
+			scale_center = rep(0, p),
+			scale_scale = rep(1, p)
+		)
+	)
+	# The excellent fit must still win on BIC, not be flattened onto the floor.
+	expect_identical(res$lambda_star_ind, 1L)
+	expect_identical(res$lambda_star_model_size, 3L)
+})
+
+# The two degenerate-var(y) branches of the relative floor. Neither is reachable
+# from a shipped entry point, but both are exactly the branches a future
+# "simplify to eps * var(y)" refactor would delete, and neither is covered by the
+# rescaling test above. (#403)
+test_that("getBetaBIC() floor survives a degenerate var(y) (#403)", {
+	N <- 10L
+	T <- 2L
+	p <- 2L
+	set.seed(4032)
+	X_mod <- matrix(stats::rnorm(N * T * p), nrow = N * T, ncol = p)
+
+	call_bic <- function(fit, y) {
+		getBetaBIC(
+			fit,
+			N = N,
+			T = T,
+			p = p,
+			X_mod = X_mod,
+			y = y,
+			scale_center = rep(0, p),
+			scale_scale = rep(1, p)
+		)
+	}
+
+	# (a) var(y) == 0 (constant response): the floor falls back to
+	# .Machine$double.xmin, so the interpolating lambda's BIC stays finite
+	# instead of going -Inf and winning unconditionally.
+	y_const <- rep(4.2, N * T)
+	fit_const <- list(
+		beta = cbind(c(4.2, 0, 0), c(0, 0, 0)) # col 1 interpolates exactly
+	)
+	res_const <- expect_warning(call_bic(fit_const, y_const), "interpolates")
+	expect_true(all(is.finite(res_const$theta_hat)))
+	expect_identical(res_const$lambda_star_ind, 1L)
+
+	# (b) var(y) == Inf (|y| beyond ~1.3e154): an Inf floor would floor EVERY
+	# lambda alike and hand the choice to the smallest-model tie-break. The
+	# lambdas below have finite, distinct MSEs differing by ~100x, so the
+	# larger/better-fitting model must win on BIC.
+	y_huge <- 1e155 * X_mod[, 1]
+	fit_huge <- list(
+		beta = cbind(
+			c(0, 1e155 - 1e152, 0), # size 1, residual ~1e152 * x1
+			c(0, 1e155 - 1e151, 1e-300) # size 2, residual ~1e151 * x1
+		)
+	)
+	expect_true(is.infinite(mean((y_huge - mean(y_huge))^2)))
+	res_huge <- expect_silent(call_bic(fit_huge, y_huge))
+	expect_identical(res_huge$lambda_star_ind, 2L)
+	expect_identical(res_huge$lambda_star_model_size, 2L)
+})
+
+# --- Item 3: getGramInv() keeps a 1x1 matrix with one selected treat feature ---
+test_that("getGramInv() returns a matrix (not a scalar) with one selected treatment feature (#403)", {
+	N <- 40L
+	T <- 2L
+	set.seed(403)
+	# Well-conditioned 3-column design so getGramInv succeeds (calc_ses = TRUE).
+	X_final <- matrix(stats::rnorm(N * T * 3), nrow = N * T, ncol = 3)
+	res <- getGramInv(
+		N = N,
+		T = T,
+		X_final = X_final,
+		treat_inds = 1L, # column 1 is the single treatment feature
+		num_treats = 1L,
+		calc_ses = TRUE
+	)
+	expect_true(res$calc_ses)
+	# Pre-fix: gram_inv[TRUE-once, TRUE-once] drops to a scalar (is.matrix FALSE),
+	# so the following nrow()/ncol() guards compare NULL and pass vacuously.
+	expect_true(is.matrix(res$gram_inv))
+	expect_identical(dim(res$gram_inv), c(1L, 1L))
+})
+
+# --- Item 4: .build_regression_if() gives an actionable singular-Gram error ----
+test_that(".build_regression_if() routes a singular centered Gram to an actionable error (#403)", {
+	N <- 20L
+	T <- 2L
+	n <- N * T
+	set.seed(403)
+	z <- stats::rnorm(n)
+	X_sel <- cbind(z, z, stats::rnorm(n)) # duplicated column -> singular Sig
+	y <- stats::rnorm(n)
+	Psi_full <- matrix(stats::rnorm(3 * 2), nrow = 3, ncol = 2)
+	# Pre-fix: bare LAPACK "system is computationally singular" (does not match).
+	expect_error(
+		.build_regression_if(
+			X_sel = X_sel,
+			y = y,
+			N = N,
+			T = T,
+			Psi_full = Psi_full
+		),
+		"not invertible"
+	)
+	# The handler must CARRY the underlying error text, not swallow it. Without
+	# the `conditionMessage(e)` append the message stops at "collinear selected
+	# columns)." and the two assertions below both go red, while the
+	# "not invertible" match above passes either way.
+	msg <- tryCatch(
+		.build_regression_if(
+			X_sel = X_sel,
+			y = y,
+			N = N,
+			T = T,
+			Psi_full = Psi_full
+		),
+		error = conditionMessage
+	)
+	expect_match(msg, "Original error: ", fixed = TRUE)
+	expect_match(msg, "singular")
+
+	# The handler wraps EVERY error from the solve loop, not only rank
+	# deficiency, which is the whole reason the original text has to survive: a
+	# `Psi_full` whose row count does not match the selected support raises a
+	# dimension error from `solve()`, and reporting only "rank-deficient" would
+	# misdirect the diagnosis. (`Sig` here is well conditioned, so rank is not
+	# the problem.) NOTE: a NON-FINITE `Psi_full` is NOT such a case --
+	# `solve()` propagates NA/NaN silently rather than erroring -- so it cannot
+	# be tested here.
+	X_ok <- matrix(stats::rnorm(n * 3), nrow = n, ncol = 3) # full rank
+	expect_gt(rcond(crossprod(scale(X_ok, TRUE, FALSE)) / n), 1e-6)
+	msg_dim <- tryCatch(
+		.build_regression_if(
+			X_sel = X_ok,
+			y = y,
+			N = N,
+			T = T,
+			Psi_full = matrix(1, nrow = 2, ncol = 1) # 2 rows vs 3 columns
+		),
+		error = conditionMessage
+	)
+	expect_match(msg_dim, "not invertible")
+	expect_match(msg_dim, "must be compatible with", fixed = TRUE)
+})
+
+# --- Item 5: .build_propensity_if() count guard actually bites -----------------
+test_that(".build_propensity_if() rejects non-integral N * cohort_probs (#403)", {
+	G <- 3L
+	N <- 100L
+	T <- 5L
+	K <- 2L
+	set.seed(403)
+	A <- matrix(stats::rnorm(G * K), nrow = G, ncol = K)
+	# Non-integral N * pi_hat: N * 0.234 = 23.4. Pre-fix the tautological
+	# `sum(n_g) + n_never != N` never fires; the integrality check does.
+	bad <- c(0.234, 0.3, 0.4)
+	expect_error(
+		.build_propensity_if(
+			cohort_probs_overall = bad,
+			G = G,
+			N = N,
+			T = T,
+			A = A
+		),
+		"could not recover integer cohort counts"
+	)
+	# Control: integral N * pi_hat must NOT trip the guard.
+	good <- c(0.2, 0.3, 0.4)
+	expect_error(
+		.build_propensity_if(
+			cohort_probs_overall = good,
+			G = G,
+			N = N,
+			T = T,
+			A = A
+		),
+		NA
+	)
+	# Control 2: the guard must survive a probability vector whose N * pi_hat
+	# round-trip carries real float error. `pi_hat` always arrives as n_g / N, so
+	# this is the shape of every legitimate input; an absolute tolerance that a
+	# future change tightened toward 0 would break every real event-study
+	# bootstrap while leaving the `bad` case above green.
+	n_g_real <- c(19L, 27L, 24L)
+	N_real <- 90L
+	expect_error(
+		.build_propensity_if(
+			cohort_probs_overall = n_g_real / N_real,
+			G = G,
+			N = N_real,
+			T = T,
+			A = A
+		),
+		NA
+	)
+	# The helper is shared by simultaneousCIs() and debiasedATT(); the error must
+	# name whichever one the user actually called, not a hardcoded default.
+	expect_error(
+		.build_propensity_if(
+			cohort_probs_overall = bad,
+			G = G,
+			N = N,
+			T = T,
+			A = A,
+			caller = "debiasedATT()"
+		),
+		"^debiasedATT\\(\\): could not recover integer cohort counts"
+	)
+})
+
+# The cases above pin the TIGHT end of the cohort-count tolerance (it must not
+# false-positive on a legitimate n_g / N). This pins the LOOSE end, which is the
+# end that silently dies: `n_g = round(N * pi_hat)` bounds `abs(N * pi_hat -
+# n_g)` by 0.5 BY CONSTRUCTION, so any tolerance reaching 0.5 makes the guard
+# identically FALSE. An `N`-proportional `sqrt(.Machine$double.eps) * N` reaches
+# 0.5 at N = 2^25 = 33,554,432, so it stopped guarding above that -- red on the
+# pre-fix line (no error at all: the helper happily builds a 3.4e7-row matrix),
+# green under the `min(0.25, .)` ceiling. Kept cheap because the guard fires
+# before any allocation. (#403)
+test_that(".build_propensity_if() count guard survives a large N (#403)", {
+	G <- 3L
+	# Just past the N = 2^25 crossover where an `sqrt(eps) * N` tolerance
+	# reaches the 0.5 construction bound and the guard goes vacuous.
+	N <- 34000000L
+	expect_gt(N, 2^25)
+	T <- 5L
+	A <- matrix(c(1, -1, 0.5), nrow = G, ncol = 1L)
+	# 34e6 * 0.23456781 = 7975305.54 -- genuinely non-integral, and its deviation
+	# from the nearest integer (0.46) sits ABOVE the 0.25 ceiling, so this case
+	# must be rejected no matter how large N grows. Guard against the trap of a
+	# "corrupted" probability that happens to be exact: 34e6 * 0.3 is an integer
+	# and would test nothing.
+	bad <- c(0.23456781, 0.3, 0.4)
+	expect_false(isTRUE(all.equal(N * bad[1], round(N * bad[1]))))
+	expect_gt(abs(N * bad[1] - round(N * bad[1])), 0.25)
+	expect_error(
+		.build_propensity_if(
+			cohort_probs_overall = bad,
+			G = G,
+			N = N,
+			T = T,
+			A = A
+		),
+		"could not recover integer cohort counts"
+	)
+	# Control on the tight end, with a probability whose round-trip error is
+	# genuinely NON-ZERO. (N, n_g) = (4099, 4065) is the exhaustive worst case
+	# over every N <= 6000: `4099 * (4065 / 4099) - 4065` = 4.5e-13, so a future
+	# change that tightened the tolerance toward 0 would go red here. The
+	# control cannot be run at the large N above: the helper allocates N rows,
+	# and it only stays cheap there because the guard fires first.
+	N_rt <- 4099L
+	pi_rt <- 4065L / N_rt
+	expect_gt(abs(N_rt * pi_rt - round(N_rt * pi_rt)), 0)
+	F_pi <- .build_propensity_if(
+		cohort_probs_overall = pi_rt,
+		G = 1L,
+		N = N_rt,
+		T = T,
+		A = matrix(1, nrow = 1L, ncol = 1L)
+	)
+	expect_identical(dim(F_pi), c(N_rt, 1L))
+})
+
+# --- Item 6: augment() accepts a fit whose covs slot is NULL (d = 0 / legacy) --
+test_that("augment() does not require the unused covs slot (#403)", {
+	cf <- genCoefs(G = 3, T = 4, d = 0, density = 0.5, eff_size = 2, seed = 403)
+	sim <- simulateData(
+		cf,
+		N = 120,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = 403
+	)
+	fit <- fetwfe(
+		pdata = sim$pdata,
+		time_var = sim$time_var,
+		unit_var = sim$unit_var,
+		treatment = sim$treatment,
+		response = sim$response,
+		covs = sim$covs,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		verbose = FALSE
+	)
+	# A d = 0 fit stores covs = character(0); a hand-built / legacy object can
+	# legitimately carry covs = NULL (the C8 validator allows it). Use
+	# `fit["covs"] <- list(NULL)` so the slot stays PRESENT with a NULL value
+	# (`fit$covs <- NULL` would delete the slot and trip the class validator).
+	fit["covs"] <- list(NULL)
+	stopifnot(is.null(fit$covs), "covs" %in% names(fit))
+	# Pre-fix: augment() errors "missing slots covs ... earlier dev build".
+	au <- augment(fit, data = sim$pdata)
+	expect_s3_class(au, "data.frame")
+	expect_true(all(c(".fitted", ".resid") %in% names(au)))
+})
+
+# --- Item 7: .expected_cohort_probs() validates distribution before seeding ----
+test_that(".expected_cohort_probs() does not touch the RNG on an invalid distribution (#403)", {
+	assignment_coefs <- matrix(0, nrow = 3, ncol = 4) # unused before the error
+	set.seed(999)
+	before <- .Random.seed
+	# Pre-fix: .apply_seed(seed = 1) runs BEFORE the distribution is validated, so
+	# the ambient RNG is advanced before the error. Post-fix: match.arg() errors
+	# first, leaving .Random.seed untouched.
+	expect_error(
+		.expected_cohort_probs(
+			assignment_coefs = assignment_coefs,
+			d = 2L,
+			distribution = "not_a_distribution",
+			seed = 1L
+		)
+	)
+	expect_identical(.Random.seed, before)
+})

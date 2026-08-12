@@ -220,7 +220,7 @@ NULL
 #' `.resid = data[[x$response_col_name]] - .fitted`, then column-binds to
 #' the (possibly auto-trimmed) panel. If `nrow(data) != nrow(X_ints)`, the
 #' method calls the package's internal cohort-identification routine on
-#' `data` using the `time_var` / `unit_var` / `treatment` / `covs` slots
+#' `data` using the `time_var` / `unit_var` / `treatment` slots
 #' stashed at fit time, which drops units treated in the first time
 #' period (their treatment effect is unidentifiable). The returned data
 #' frame therefore corresponds to the panel the estimator actually fit
@@ -258,9 +258,14 @@ NULL
 
 	X <- .get_X_ints(x)
 
-	# The four metadata slots are needed both for auto-trim (idCohorts) and
-	# for sorting `data` into X_ints' row order. Validate them up front.
-	needed_slots <- c("time_var", "unit_var", "treatment", "covs")
+	# These metadata slots are needed both for auto-trim (idCohorts) and for
+	# sorting `data` into X_ints' row order. Validate them up front. `covs` is
+	# NOT required: the body never consumes it, and the C8 validator allows
+	# `covs = NULL`, which this list would otherwise reject spuriously. Note a
+	# covariate-free (d = 0) fit from the shipped entry points stores
+	# `character(0)`, not `NULL`, so it was already accepted; the slot only goes
+	# `NULL` on a hand-built or legacy object. (#403)
+	needed_slots <- c("time_var", "unit_var", "treatment")
 	missing_slots <- needed_slots[
 		vapply(needed_slots, function(s) is.null(x[[s]]), logical(1))
 	]

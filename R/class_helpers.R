@@ -497,7 +497,8 @@
 			cls
 		)
 	}
-	# covs is NULL when d == 0, character otherwise.
+	# A d == 0 fit from the shipped entry points stores character(0), NOT NULL;
+	# NULL is allowed here only for hand-built or legacy objects. (#403)
 	.assert_contract(
 		is.null(x$covs) || is.character(x$covs),
 		"C8 covs is NULL or character",
