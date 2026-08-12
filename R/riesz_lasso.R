@@ -90,6 +90,58 @@ lambda_node_default <- function(p, N, const = 1.0, scale = 1.0) {
 	const * scale * sqrt(log(p) / N)
 }
 
+#' @title Solve one high-dimensional nodewise (desparsified-lasso) direction
+#' @description The single desparsification primitive shared by `debiasedATT()`
+#'   and the two high-dim bootstrap channels (`.build_regression_if_highdim()`
+#'   and `.build_debiased_treat_cells_highdim()`): scale the theory penalty by
+#'   `max(abs(a))`, solve the L1-penalized Riesz representer, and read back the
+#'   KKT `feasibility` / `converged` diagnostics. The `gregfaletto/fetwfe#88`
+#'   coverage validity relies on the point estimate and both band channels
+#'   solving the IDENTICAL direction, so this contract is single-sourced here
+#'   (the callers diverge only on what they do with `v`). Theory: Theorem
+#'   `debiased.highdim.joint.thm` of `paper_arxiv.tex`. (#366)
+#'
+#'   **Lockstep partner:** `.cv_lambda_node()` searches `mult_grid * lam0` with
+#'   `lam0 = lambda_node_default(..., scale = max(abs(a)))`. Its selected
+#'   `lambda_c` is only transferable to the solve deployed here because BOTH use
+#'   `scale = max(abs(a))` -- that is the #295 D2 "one `lambda_c` for the point
+#'   estimate AND the band" claim. Change the scaling here and the CV anchor
+#'   silently drifts with nothing erroring; change it in both or neither.
+#' @param Sig Numeric `p x p`; the (singular, uncentered) Gram `crossprod(X) / n`.
+#' @param a Numeric length `p`; the target loading (theta-space direction).
+#' @param p,N Integers; passed to `lambda_node_default()` (`N` = clusters = n / T).
+#'   `p` is redundant with `length(a)` at every call site and is asserted against
+#'   it below: an inconsistent `p` would otherwise yield a silently wrong penalty,
+#'   which is the exact failure this consolidation exists to make impossible.
+#' @param lambda_c Numeric; the leading penalty constant.
+#' @param max_iter,tol `riesz_lasso()` coordinate-descent controls.
+#' @return A list with `v` (the direction), `lambda_node` (the penalty used),
+#'   `feasibility` (`||Sig v - a||_inf`), and `converged`.
+#' @keywords internal
+#' @noRd
+.solve_nodewise <- function(Sig, a, p, N, lambda_c, max_iter, tol) {
+	stopifnot(length(a) == p, ncol(Sig) == p)
+	lambda_node <- lambda_node_default(
+		p = p,
+		N = N,
+		const = lambda_c,
+		scale = max(abs(a))
+	)
+	v <- riesz_lasso(
+		Sig,
+		a,
+		lambda_node,
+		max_iter = max_iter,
+		tol = tol
+	)
+	list(
+		v = v,
+		lambda_node = lambda_node,
+		feasibility = attr(v, "feasibility"),
+		converged = attr(v, "converged")
+	)
+}
+
 # Relative tolerance for the high-dim nodewise KKT feasibility certificate. The
 # desparsified L1 direction BINDS its constraint by construction
 # (||Sig v - a||_inf = lambda_node at the L1 optimum), so a converged solver

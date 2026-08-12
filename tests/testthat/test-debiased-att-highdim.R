@@ -505,3 +505,68 @@ test_that("the att_var_2 path is byte-unchanged: supplied-var var_weight == att_
 # "#312 follow-up" placeholder error -- now lives in its own file,
 # test-debiased-att-fixedp-gls-false-312.R, with consecutive-cohort fixtures the
 # debiasedATT ATT-identity guard supports.)
+
+# ---- .solve_nodewise() direct contract pin (#366) -----------------------------
+# The three high-dim callers (debiasedATT(), .build_regression_if_highdim(),
+# .build_debiased_treat_cells_highdim()) now share one nodewise primitive, so its
+# three contract clauses -- the penalty scale, the sample-size argument, and the
+# diagnostic pass-through -- live in exactly one place.
+#
+# Before #366 the FIRST of those was untested: mutating `scale = max(abs(a))` to
+# a constant 1.0 left every test file in the package green. That is structural,
+# not luck -- every high-dim FIXTURE in the suite has max(abs(a)) == 1 exactly,
+# because the targets are indicator directions through a 0/1 triangular
+# inverse-fusion transform. So this test deliberately uses a target with
+# max(abs(a)) far from 1; that is the whole point of the `7 *` below.
+#
+# Mutation-checked: `scale = 1.0` and `N = 2 * N` each fail the lambda_node
+# assertion; dropping the attribute reads fails the two diagnostic assertions.
+# Note the riesz_lasso round-trip is NOT a mutation detector (it recomputes with
+# whatever lambda_node the helper returned) -- it pins argument order and the
+# max_iter/tol pass-through.
+test_that(".solve_nodewise() pins scale, N and the diagnostic contract (#366)", {
+	Sig <- .psd_gram(p = 40L)
+	set.seed(101)
+	a <- 7 * stats::rnorm(40) # max|a| ~ 14.5, deliberately far from 1
+
+	r <- fetwfe:::.solve_nodewise(
+		Sig,
+		a,
+		p = 40L,
+		N = 25,
+		lambda_c = 1,
+		max_iter = 5000L,
+		tol = 1e-9
+	)
+
+	expect_equal(
+		r$lambda_node,
+		lambda_node_default(p = 40L, N = 25, const = 1, scale = max(abs(a)))
+	)
+	expect_identical(
+		r$v,
+		riesz_lasso(Sig, a, r$lambda_node, max_iter = 5000L, tol = 1e-9)
+	)
+	expect_identical(r$feasibility, attr(r$v, "feasibility"))
+	expect_identical(r$converged, attr(r$v, "converged"))
+})
+
+# The `p` argument is redundant with length(a) at every call site; the guard
+# turns that convention into an enforced invariant, so a future caller cannot
+# hand the helper an inconsistent p and get a silently wrong penalty.
+test_that(".solve_nodewise() rejects an inconsistent p (#366)", {
+	Sig <- .psd_gram(p = 40L)
+	a <- stats::rnorm(40)
+	expect_error(
+		fetwfe:::.solve_nodewise(
+			Sig,
+			a,
+			p = 39L,
+			N = 25,
+			lambda_c = 1,
+			max_iter = 100L,
+			tol = 1e-6
+		),
+		"length\\(a\\) == p"
+	)
+})

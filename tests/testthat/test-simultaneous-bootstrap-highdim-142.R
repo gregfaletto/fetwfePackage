@@ -172,8 +172,19 @@ test_that("too-small lambda_c warns for high-dim event_study (experimental)", {
 # contrast that matches debiasedATT()'s overall-ATT direction (cohort g loads its
 # treat_inds cells with cohort_probs[g] / (#cells in cohort g)), that center must
 # equal debiasedATT(fit)$att. RHS is the independently-validated single-effect
-# debiased ATT; LHS is the simultaneousCIs high-dim center -- an independent path,
-# not a round-trip. Mutation-checkable against the `colSums(F_mat)/(N*T)` line.
+# debiased ATT; LHS is the simultaneousCIs high-dim center.
+#
+# SCOPE OF THE INDEPENDENCE (narrowed by #366). This comment used to claim the two
+# sides were "an independent path, not a round-trip". That is no longer true of the
+# NODEWISE LEG: since #366 both sides obtain their direction from the single
+# `.solve_nodewise()` primitive, so a change to the penalty scale or the diagnostic
+# contract moves both sides together and cannot be detected here. That leg is now
+# pinned directly instead, by the `.solve_nodewise()` contract test in
+# test-debiased-att-highdim.R (mutation-checked: scale, N and the attribute reads).
+#
+# What this test still compares independently, and why it keeps its place: the
+# contrast-to-`a_th` mapping, `colSums(F_mat)/(N*T)` versus `mean(score)`, and the
+# q=1 plug-in assembly. Mutation-checkable against the `colSums(F_mat)/(N*T)` line.
 # ------------------------------------------------------------------------------
 test_that("high-dim debiased band center equals debiasedATT()$att for the overall-ATT contrast", {
 	G <- hd_fit$G

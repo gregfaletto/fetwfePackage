@@ -1,5 +1,14 @@
 # NEWS
 
+## fetwfe (development version)
+
+### Internal
+
+- The high-dimensional nodewise (desparsified-lasso) solve is now single-sourced
+  in one internal primitive shared by `debiasedATT()` and both simultaneous-band
+  bootstrap channels, so the point estimate and the bands cannot drift apart on
+  the penalty scale or the convergence diagnostics (#366).
+
 ## Version 1.56.18
 
 ### Defensive improvements
