@@ -315,3 +315,46 @@ test_that("lambda_c rejects anything but a positive number or 'cv'", {
 		simultaneousCIs(hd295, method = "analytic", lambda_c = "garbage")
 	)
 })
+
+# ---- Absolute pin on the theory anchor `lam0` (#366) --------------------------
+# `.cv_lambda_node()` is the FOURTH live copy of the penalty-scale convention
+# `scale = max(abs(a))` (the other three were folded into .solve_nodewise() by
+# #366). Its selected `lambda_c` is only transferable to the deployed solve
+# because both anchor on the same scale -- the #295 Decision D2 claim that one
+# `lambda_c` serves the point estimate AND the band.
+#
+# The anchor is NOT unguarded today -- measured, not assumed. Mutating
+# `scale = max(abs(a))` to `1.0` inside .cv_lambda_node() fails 4 assertions in
+# this file (at :49, :137 and :138 twice) against 0 unmutated. Those catches are
+# INCIDENTAL, though: they are scale-invariant relations about the selection that
+# happen to break because rescaling `lam0` shifts which grid points clear the
+# feasibility gate. Change the grid, the fixture, or the gate budget and they
+# could stop biting without anyone noticing.
+#
+# This assertion is the direct one. It pins `lam0`'s observable consequence
+# rather than `lam0` itself, since the function does not return it: the feasible
+# set is exactly the grid points whose KKT certificate clears `mult_grid[k] *
+# lam0`, reconstructed here from `max(abs(a))` independently.
+test_that(".cv_lambda_node's grid anchors on scale = max(abs(a)) (#366)", {
+	s <- .cv295_synth()
+	expect_gt(abs(max(abs(s$a)) - 1), 0.5) # guard: the fixture is not the max|a| == 1 trap
+
+	r <- .cv_lambda_node(s$Sig, s$a, s$X, s$N_units, s$T)
+
+	lam0 <- lambda_node_default(
+		p = ncol(s$Sig),
+		N = s$N_units,
+		const = 1.0,
+		scale = max(abs(s$a))
+	)
+	feasible_expected <- vapply(
+		r$mult_grid,
+		function(m) {
+			v <- riesz_lasso(s$Sig, s$a, m * lam0, max_iter = 500L, tol = 1e-9)
+			isTRUE(attr(v, "converged")) &&
+				.riesz_feasible(attr(v, "feasibility"), m * lam0)
+		},
+		logical(1)
+	)
+	expect_identical(r$feasible, feasible_expected)
+})

@@ -184,7 +184,21 @@ test_that("too-small lambda_c warns for high-dim event_study (experimental)", {
 #
 # What this test still compares independently, and why it keeps its place: the
 # contrast-to-`a_th` mapping, `colSums(F_mat)/(N*T)` versus `mean(score)`, and the
-# q=1 plug-in assembly. Mutation-checkable against the `colSums(F_mat)/(N*T)` line.
+# q=1 plug-in assembly -- all three verified still mutation-detectable here.
+#
+# MOST IMPORTANTLY, and the reason this test is not marginal: it is the only check
+# that the two channels pass EQUIVALENT ARGUMENTS to the shared primitive.
+# debiasedATT() passes N = N_units and its own lambda_c; .build_regression_if_highdim()
+# passes its own N, lambda_c, riesz_max_iter and riesz_tol. The .solve_nodewise()
+# contract test pins the helper GIVEN its arguments and structurally cannot see
+# caller-side divergence -- which is exactly the gregfaletto/fetwfe#88 lockstep.
+# `test-aatt-scattered-cv-323.R` carries the same band-center-vs-debiasedATT()
+# comparison and is the second (only other) witness to that argument contract.
+#
+# FOR FUTURE CONSOLIDATIONS (#366 A2/A3/B and beyond): if the contrast construction
+# or the center assembly is ever folded onto a shared helper too, this assertion and
+# 323's go fully tautological and the caller-side argument contract loses its last
+# oracle. Replace it with an absolute pin before doing that, not after.
 # ------------------------------------------------------------------------------
 test_that("high-dim debiased band center equals debiasedATT()$att for the overall-ATT contrast", {
 	G <- hd_fit$G

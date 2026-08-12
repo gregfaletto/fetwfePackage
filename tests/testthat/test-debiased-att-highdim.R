@@ -519,11 +519,18 @@ test_that("the att_var_2 path is byte-unchanged: supplied-var var_weight == att_
 # inverse-fusion transform. So this test deliberately uses a target with
 # max(abs(a)) far from 1; that is the whole point of the `7 *` below.
 #
-# Mutation-checked: `scale = 1.0` and `N = 2 * N` each fail the lambda_node
-# assertion; dropping the attribute reads fails the two diagnostic assertions.
-# Note the riesz_lasso round-trip is NOT a mutation detector (it recomputes with
-# whatever lambda_node the helper returned) -- it pins argument order and the
+# Mutation-checked, whole-suite counts: `scale = 1.0` -> 1 failure (this test, and
+# ONLY this test, in 4602 assertions); `N = 2 * N` -> 7; `const = lambda_c -> 1.0`
+# -> 4; dropping the attribute reads -> 2 failures plus 51 errors across 15 files.
+# The riesz_lasso round-trip is NOT a mutation detector -- it recomputes with
+# whatever lambda_node the helper returned -- it pins argument order and the
 # max_iter/tol pass-through.
+#
+# DO NOT DELETE OR WEAKEN. The `scale` measurement above is the point: this is the
+# only assertion in the package that sees that clause. Removing it silently returns
+# the package to the pre-#366 state, where mutating the penalty scale left all 106
+# test files green. `lambda_c` is deliberately 2.3 and `max(abs(a))` deliberately
+# ~14.5; setting either to 1 makes the corresponding clause vacuous here.
 test_that(".solve_nodewise() pins scale, N and the diagnostic contract (#366)", {
 	Sig <- .psd_gram(p = 40L)
 	set.seed(101)
@@ -534,14 +541,14 @@ test_that(".solve_nodewise() pins scale, N and the diagnostic contract (#366)", 
 		a,
 		p = 40L,
 		N = 25,
-		lambda_c = 1,
+		lambda_c = 2.3, # NOT 1: else const = lambda_c is vacuous here
 		max_iter = 5000L,
 		tol = 1e-9
 	)
 
 	expect_equal(
 		r$lambda_node,
-		lambda_node_default(p = 40L, N = 25, const = 1, scale = max(abs(a)))
+		lambda_node_default(p = 40L, N = 25, const = 2.3, scale = max(abs(a)))
 	)
 	expect_identical(
 		r$v,
@@ -556,6 +563,7 @@ test_that(".solve_nodewise() pins scale, N and the diagnostic contract (#366)", 
 # hand the helper an inconsistent p and get a silently wrong penalty.
 test_that(".solve_nodewise() rejects an inconsistent p (#366)", {
 	Sig <- .psd_gram(p = 40L)
+	set.seed(202)
 	a <- stats::rnorm(40)
 	expect_error(
 		fetwfe:::.solve_nodewise(
@@ -568,5 +576,22 @@ test_that(".solve_nodewise() rejects an inconsistent p (#366)", {
 			tol = 1e-6
 		),
 		"length\\(a\\) == p"
+	)
+
+	# Second clause. Not redundant with the first: pre-guard, riesz_lasso() sets
+	# p <- length(a) internally and does `Sv + Sig[, j] * dv`, so a short `a`
+	# against a wider Sig RECYCLES SILENTLY and returns a wrong v with only a
+	# recycling warning -- a wrong answer, not a crash.
+	expect_error(
+		fetwfe:::.solve_nodewise(
+			.psd_gram(p = 41L),
+			a,
+			p = 40L,
+			N = 25,
+			lambda_c = 1,
+			max_iter = 100L,
+			tol = 1e-6
+		),
+		"ncol\\(Sig\\) == p"
 	)
 })

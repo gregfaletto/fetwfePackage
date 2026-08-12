@@ -98,18 +98,25 @@ lambda_node_default <- function(p, N, const = 1.0, scale = 1.0) {
 #'   KKT `feasibility` / `converged` diagnostics. The `gregfaletto/fetwfe#88`
 #'   coverage validity relies on the point estimate and both band channels
 #'   solving the IDENTICAL direction, so this contract is single-sourced here
-#'   (the callers diverge only on what they do with `v`). Theory: Theorem
-#'   `debiased.highdim.joint.thm` of `paper_arxiv.tex`. (#366)
+#'   (the callers diverge only on what they do with `v`). Theory: the relaxed-inverse
+#'   constraint `||Sig v - a||_inf <= lambda_node` this solves is eq.
+#'   `debiased.highdim.v` inside Theorem `debiased.highdim.thm` (uniformly valid
+#'   debiased ATT) of `paper_arxiv.tex`; Theorem `debiased.highdim.joint.thm`
+#'   (simultaneous bands) derives its per-functional representation from that one,
+#'   which is why the same primitive serves the point estimate and both bands. (#366)
 #'
 #'   **Lockstep partner:** `.cv_lambda_node()` searches `mult_grid * lam0` with
 #'   `lam0 = lambda_node_default(..., scale = max(abs(a)))`. Its selected
 #'   `lambda_c` is only transferable to the solve deployed here because BOTH use
-#'   `scale = max(abs(a))` -- that is the #295 D2 "one `lambda_c` for the point
-#'   estimate AND the band" claim. Change the scaling here and the CV anchor
-#'   silently drifts with nothing erroring; change it in both or neither.
+#'   `scale = max(abs(a))` -- that is the (#295, Decision D2) "one `lambda_c` for
+#'   the point estimate AND the band" claim. Change the scaling here and the CV
+#'   anchor drifts; change it in both or neither. Both sides are pinned: this one
+#'   by the `.solve_nodewise()` contract test in `test-debiased-att-highdim.R`,
+#'   `.cv_lambda_node()`'s by the anchor test in `test-cv-lambda-node-295.R`.
 #' @param Sig Numeric `p x p`; the (singular, uncentered) Gram `crossprod(X) / n`.
 #' @param a Numeric length `p`; the target loading (theta-space direction).
-#' @param p,N Integers; passed to `lambda_node_default()` (`N` = clusters = n / T).
+#' @param p,N Numeric; passed to `lambda_node_default()` (`N` = clusters = n / T,
+#'   a double at every call site).
 #'   `p` is redundant with `length(a)` at every call site and is asserted against
 #'   it below: an inconsistent `p` would otherwise yield a silently wrong penalty,
 #'   which is the exact failure this consolidation exists to make impossible.
