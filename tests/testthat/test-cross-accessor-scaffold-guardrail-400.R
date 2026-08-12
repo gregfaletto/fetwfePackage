@@ -150,6 +150,58 @@ test_that("scaffold SEs match pinned pre-refactor values on the fetwfe/default f
 	)
 })
 
+# The cluster fixture needs its own ABSOLUTE pins, and the reason is structural.
+# Anchor C (Part 1) cross-checks fit-time cohortStudy() against access-time
+# simultaneousCIs(). Before the #400 fold those were two independent
+# implementations, so that comparison detected drift in either. After the fold
+# BOTH sides call .recompute_gram_and_sandwich(), so Anchor C compares the helper
+# against itself and a change inside the helper moves both sides together. Proven
+# by mutation: perturbing sandwich_full by 5% inside the helper fails Anchor C on
+# pre-fold code (3 failures) and passes it entirely on post-fold code.
+#
+# The general lesson, worth remembering beyond this file: a cross-implementation
+# parity test loses ALL of its power the moment the two implementations it
+# compares are consolidated. Absolute pins do not have that failure mode.
+#
+# Part 2 above pins only fetwfe/default, leaving no absolute cluster-sandwich
+# value anywhere -- and the one other test that catches such a mutation
+# (test-getCohortATTsFinal-unification.R) covers only the OLS branch
+# (sel_feat_inds = NULL), so the BRIDGE cluster path had no check at all. Values
+# below were computed on this branch and verified byte-identical on origin/main.
+test_that("scaffold SEs match pinned pre-refactor values on the fetwfe/cluster fixture (#400 guardrail)", {
+	fit <- .g400_fits[["fetwfe/cluster"]]
+	expect_equal(
+		cohortStudy(fit)$se,
+		c(0.1853167, 0.1275883, 0.1469086, 0.1456402),
+		tolerance = 1e-6
+	)
+	expect_equal(
+		eventStudy(fit)$se,
+		c(0.1466590, 0.2003153, 0.2334116, 0.2379342, 0.2090416),
+		tolerance = 1e-6
+	)
+	expect_equal(
+		cohortTimeATTs(fit)$se,
+		c(
+			0.1985337,
+			0.1985337,
+			0.1985337,
+			0.2090416,
+			0.2090416,
+			0.1382049,
+			0.1764362,
+			0.1764362,
+			0.2351856,
+			0.1382049,
+			0.1930629,
+			0.1930629,
+			0.1382049,
+			0.2308755
+		),
+		tolerance = 1e-6
+	)
+})
+
 # --- Part 3: SE-unavailable fits degrade consistently ---------------------------
 
 test_that("an SE-unavailable fit degrades consistently: accessors -> NA, simultaneousCIs -> stop (#400 guardrail)", {
@@ -166,9 +218,12 @@ test_that("an SE-unavailable fit degrades consistently: accessors -> NA, simulta
 
 	# NB: the *shared-scaffold* singular-Gram branch (recomputed selected-support
 	# Gram singular -> res_gram$calc_ses = FALSE; the two accessors degrade to NA
-	# while simultaneousCIs STOPs "not invertible") is defensive-only and
-	# UNREACHABLE through any public fit -- has_valid_ses = TRUE already implies the
-	# fit's own getGramInv() on that support succeeded. Phase 2 guards that
+	# while simultaneousCIs STOPs "not invertible") is UNREACHABLE from the
+	# ACCESS-TIME callers exercised here -- has_valid_ses = TRUE already implies
+	# the fit's own getGramInv() on that support succeeded. It is reachable from
+	# the fit-time caller getCohortATTsFinal(); see the roxygen on
+	# .recompute_gram_and_sandwich() in R/variance_machinery.R and
+	# test-fit-time-singular-gram-degrade-400.R. Phase 2 guards the
 	# on_singular = c("degrade", "stop") policy with a direct unit test of the
 	# extracted helper (feeding it a rank-deficient support), which is the only
 	# place the asymmetry can be exercised.

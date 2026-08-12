@@ -565,8 +565,9 @@ getPsiGUnfused <- function(
 #'   support
 #' @description Single-sources the "recompute `getGramInv()` on the selected
 #'   support, then (if `se_type = "cluster"`) build the cluster-robust sandwich"
-#'   sequence that every access-time SE path shares (`eventStudy()`,
-#'   `cohortTimeATTs()`, `simultaneousCIs()`). These accessors MUST stay in
+#'   sequence shared by the fit-time path (`getCohortATTsFinal()`, which is where
+#'   the sequence originates) and every access-time SE path (`eventStudy()`,
+#'   `cohortTimeATTs()`, `simultaneousCIs()`). These MUST stay in
 #'   lockstep: a drift here would make them report inconsistent SEs for the same
 #'   fit (guarded by `test-cross-accessor-scaffold-guardrail-400.R`). This wraps
 #'   `getGramInv()` and `.assemble_cluster_robust_sandwich()` UNCHANGED (preserving
@@ -574,11 +575,36 @@ getPsiGUnfused <- function(
 #'   only unifies the surrounding recompute.
 #'
 #'   The one genuine policy difference between callers is `on_singular`: when the
-#'   recomputed Gram is singular, `eventStudy()` / `cohortTimeATTs()` DEGRADE
-#'   (return `calc_ses = FALSE`, so their SEs become `NA`), whereas
-#'   `simultaneousCIs()` STOPs. That branch is defensive-only -- it is unreachable
-#'   through any public fit (a fit with valid SEs already inverted its Gram on this
-#'   support), so it is exercised only by the helper's direct unit test.
+#'   recomputed Gram is singular, `getCohortATTsFinal()` / `eventStudy()` /
+#'   `cohortTimeATTs()` DEGRADE (return `calc_ses = FALSE`, so their SEs become
+#'   `NA`), whereas `simultaneousCIs()` STOPs. The two kinds of caller reach that
+#'   branch very differently, and only one of them cannot:
+#'
+#'   - **Access-time** callers cannot reach it. `has_valid_ses = TRUE` already
+#'     implies the fit's own `getGramInv()` succeeded on this exact support, so
+#'     the recompute is re-inverting a matrix known to be invertible. For them
+#'     the branch is genuinely defensive, and is exercised only by the helper's
+#'     direct unit test.
+#'   - **Fit time** (`getCohortATTsFinal()`) performs the FIRST inversion, and its
+#'     degrade branch IS REACHABLE through an ordinary public fit -- it is the
+#'     designed backstop, not a defensive nicety. `R/utility.R`'s `#395` note says
+#'     so outright: "A genuinely singular collapsed design is caught downstream:
+#'     getGramInv() degrades calc_ses to FALSE." The gap the `#395` gate leaves is
+#'     a tolerance gap, not an oversight: that gate runs
+#'     `anyNA(coef(lm(y ~ . + 0, df)))` on the UNCENTERED, column-scaled design at
+#'     `lm.fit`'s `1e-7` QR tolerance, while `getGramInv()` tests the CENTERED Gram
+#'     at `max(dim) * .Machine$double.eps` relative (~9e-15 here). Two covariates
+#'     collinear at `1e-6` land between the two: `lm()` identifies every
+#'     coefficient, the centered Gram does not invert, and `etwfe()` returns
+#'     `att_se = NA` with `calc_ses = FALSE` plus the standard warning. Tighten the
+#'     collinearity to `1e-8` and `#395` errors first instead. An exact duplicate
+#'     is always caught by `#395` **in the OLS cores only**: the
+#'     `anyNA(beta_hat_slopes)` gate lives in `R/etwfe_core.R`, so `etwfe()` and
+#'     `twfeCovs()` error on an exactly duplicated covariate while the bridge
+#'     estimators `fetwfe()` and `betwfe()` fit it without complaint and report
+#'     `calc_ses = TRUE` with finite SEs (verified for both
+#'     `se_type = "default"` and `"cluster"`). Regression test:
+#'     `test-fit-time-singular-gram-degrade-400.R`.
 #' @param X_final,y_final,N,T,treat_inds,num_treats Fit-design pieces, forwarded to
 #'   `getGramInv()` / `.assemble_cluster_robust_sandwich()`.
 #' @param sel_feat_inds Integer indices of the selected features, or the scalar
@@ -626,6 +652,12 @@ getPsiGUnfused <- function(
 	sandwich_full <- NULL
 	treat_block_mask <- NULL
 	if (identical(se_type, "cluster") && isTRUE(calc_ses)) {
+		# The "all features" sentinel is a scalar NA (or NULL); an EMPTY support
+		# would fall through this test to `NULL` and be read as "all features" --
+		# the exact inverse. Unreachable today (both bridge cores assert
+		# `length(sel_feat_inds) > 0` immediately before calling, and the OLS core
+		# passes NULL), so this asserts rather than handles it.
+		stopifnot(is.null(sel_feat_inds) || length(sel_feat_inds) > 0L)
 		sel_arg <- if (any(!is.na(sel_feat_inds))) sel_feat_inds else NULL
 		res_cl <- .assemble_cluster_robust_sandwich(
 			X_final = X_final,
@@ -1731,60 +1763,63 @@ getCohortATTsFinal <- function(
 
 	stopifnot(nrow(X_final) == N * T)
 
-	# Translate the OLS-caller `sel_feat_inds = NULL` sentinel to the value
-	# each downstream helper expects: `getGramInv()` uses NA as its "all
-	# features" sentinel, while `.assemble_cluster_robust_sandwich()` uses
-	# NULL. See #118 round-1 plan review for the empirical equivalence
-	# verification.
+	# Translate the OLS-caller `sel_feat_inds = NULL` sentinel to the NA "all
+	# features" value `getGramInv()` expects; `.recompute_gram_and_sandwich()`
+	# maps NA back to NULL for the NULL-native cluster sandwich. See #118 round-1
+	# plan review for the empirical equivalence verification.
 	gram_sel_feat <- if (is.null(sel_feat_inds)) NA else sel_feat_inds
 	gram_sel_treat <- if (is.null(sel_feat_inds)) NA else sel_treat_inds_shifted
 
-	# Start by getting Gram matrix needed for standard errors
-	if (calc_ses) {
-		res <- getGramInv(
-			N = N,
-			T = T,
-			X_final = X_final,
-			sel_feat_inds = gram_sel_feat,
-			treat_inds = treat_inds,
-			num_treats = num_treats,
-			sel_treat_inds_shifted = gram_sel_treat,
-			calc_ses = calc_ses
-		)
-
-		gram_inv <- res$gram_inv
-		calc_ses <- res$calc_ses
-	} else {
-		gram_inv <- NA
-	}
-
-	# Cluster-robust sandwich (computed once outside the cohort loop and
-	# reused for the overall ATT in getTeResults2() / getTeResultsOLS()).
+	# Cluster-robust sandwich is computed once here (outside the cohort loop) and
+	# reused for the overall ATT in getTeResults2() / getTeResultsOLS().
 	sandwich_full <- NULL
 	treat_block_mask <- NULL
-
-	if (identical(se_type, "cluster") && calc_ses) {
-		stopifnot(!is.null(y_final))
-		stopifnot(length(y_final) >= N * T)
-		res <- .assemble_cluster_robust_sandwich(
+	if (calc_ses) {
+		# Cluster inputs are defensive-only (y_final is always supplied when a
+		# cluster fit has calc_ses = TRUE). Note what moved in #400: this
+		# validation now runs BEFORE the Gram recompute, whereas pre-#400 it sat
+		# after getGramInv(), so a singular-Gram degrade (calc_ses -> FALSE)
+		# would skip it. That relocation is the single semantic difference the
+		# fold introduces, and it is inert precisely because calc_ses = TRUE
+		# always supplies a full-length y_final.
+		if (identical(se_type, "cluster")) {
+			stopifnot(!is.null(y_final))
+			stopifnot(length(y_final) >= N * T)
+		}
+		# Single-source the "recompute the Gram inverse on the selected support,
+		# then (for cluster) build the sandwich" scaffold shared with the
+		# access-time accessors (#400). Fit-time DEGRADES on a singular Gram
+		# (calc_ses -> FALSE); the access-time simultaneousCIs() path is the only
+		# one that stops.
+		scaffold <- .recompute_gram_and_sandwich(
 			X_final = X_final,
 			y_final = y_final,
 			N = N,
 			T = T,
 			treat_inds = treat_inds,
-			sel_feat_inds = sel_feat_inds
+			num_treats = num_treats,
+			sel_feat_inds = gram_sel_feat,
+			sel_treat_inds_shifted = gram_sel_treat,
+			se_type = se_type,
+			on_singular = "degrade"
 		)
-		sandwich_full <- res$sandwich_full
-		treat_block_mask <- res$treat_block_mask
-		# Branch-aware mask-length check: in the OLS-caller path the mask
-		# spans ncol(X_final); in the bridge path it spans length(sel_feat_inds).
-		expected_mask_len <- if (is.null(sel_feat_inds)) {
-			ncol(X_final)
-		} else {
-			length(sel_feat_inds)
+		gram_inv <- scaffold$gram_inv
+		calc_ses <- scaffold$calc_ses
+		sandwich_full <- scaffold$sandwich_full
+		treat_block_mask <- scaffold$treat_block_mask
+		if (identical(se_type, "cluster") && calc_ses) {
+			# Branch-aware mask-length check: the OLS-caller mask spans
+			# ncol(X_final); the bridge mask spans length(sel_feat_inds).
+			expected_mask_len <- if (is.null(sel_feat_inds)) {
+				ncol(X_final)
+			} else {
+				length(sel_feat_inds)
+			}
+			stopifnot(length(treat_block_mask) == expected_mask_len)
+			stopifnot(sum(treat_block_mask) == length(sel_treat_inds_shifted))
 		}
-		stopifnot(length(treat_block_mask) == expected_mask_len)
-		stopifnot(sum(treat_block_mask) == length(sel_treat_inds_shifted))
+	} else {
+		gram_inv <- NA
 	}
 
 	## We need the tau sub-matrix of D^{-1} ONLY if we are in fused workflow
