@@ -519,7 +519,7 @@ test_that("the att_var_2 path is byte-unchanged: supplied-var var_weight == att_
 # inverse-fusion transform. So this test deliberately uses a target with
 # max(abs(a)) far from 1; that is the whole point of the `7 *` below.
 #
-# Mutation-checked. ALL COUNTS BELOW ARE WHOLE-SUITE (4609 assertions across 109
+# Mutation-checked. ALL COUNTS BELOW ARE WHOLE-SUITE (4612 assertions across 109
 # files, NOT_CRAN=true) -- do not quote a single-file count here, which is a
 # mistake this comment has already made twice:
 #
