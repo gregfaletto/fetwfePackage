@@ -192,13 +192,20 @@ test_that("too-small lambda_c warns for high-dim event_study (experimental)", {
 # passes its own N, lambda_c, riesz_max_iter and riesz_tol. The .solve_nodewise()
 # contract test pins the helper GIVEN its arguments and structurally cannot see
 # caller-side divergence -- which is exactly the gregfaletto/fetwfe#88 lockstep.
-# `test-aatt-scattered-cv-323.R` carries the same band-center-vs-debiasedATT()
-# comparison and is the second (only other) witness to that argument contract.
+#
+# The full witness set, measured by mutating the band channel's lambda_c to diverge
+# from debiasedATT()'s (6 assertions in 4 files fire):
+#   test-simultaneous-bootstrap-highdim-142.R:231, :290, :482  (here)
+#   test-simultaneous-bootstrap-gls-false-313.R:133   -- the identical cross-check
+#                                                        on a gls = FALSE high-dim fit
+#   test-simultaneous-bootstrap-fpi-desparsify-309.R:317 -- hand-rolled SE reconstruction
+#   test-aatt-scattered-cv-323.R:112                  -- scattered-adoption panel
 #
 # FOR FUTURE CONSOLIDATIONS (#366 A2/A3/B and beyond): if the contrast construction
-# or the center assembly is ever folded onto a shared helper too, this assertion and
-# 323's go fully tautological and the caller-side argument contract loses its last
-# oracle. Replace it with an absolute pin before doing that, not after.
+# or the center assembly is ever folded onto a shared helper too, ALL SIX of those go
+# tautological together -- they are one witness set, not independent ones, because
+# they all compare the band center against debiasedATT() through the same two
+# channels. Replace them with absolute pins before doing that, not after.
 # ------------------------------------------------------------------------------
 test_that("high-dim debiased band center equals debiasedATT()$att for the overall-ATT contrast", {
 	G <- hd_fit$G
@@ -607,4 +614,46 @@ test_that("non-fetwfe (betwfe) high-dim bootstrap uses the fixed-p band, not an 
 		expect_true(all(is.finite(bo$ci$simultaneous_ci_low)))
 		expect_true(all(is.finite(bo$ci$simultaneous_ci_high)))
 	}
+})
+
+# ---- The penalty scale is LIVE in production on family = "custom" (#366) ------
+# `.solve_nodewise()` scales its penalty by max(abs(a)). For the built-in families
+# that is always exactly 1 -- the targets are indicator directions through a 0/1
+# triangular inverse-fusion transform -- which is why mutating the clause to a
+# constant 1.0 was invisible to the whole suite before #366, and why the direct
+# contract test in test-debiased-att-highdim.R uses a hand-built target.
+#
+# `family = "custom"` is the one shipped path where the scale is genuinely the
+# user's: the contrast carries its own magnitude. Every other high-dim custom test
+# in the package (here at :231 and :290, plus 313:126 and 323:100) uses
+# ATT-direction weights that sum to 1, so all of them land back on scale 1 and none
+# of them sees the clause either.
+#
+# This is the end-to-end witness. It pins scale-EQUIVARIANCE rather than a value,
+# so it needs no reconstruction of `a`: scaling the contrast by c must scale
+# lambda_node by exactly c. Under `scale = 1.0` both calls return the identical
+# lambda_node and the ratio collapses to 1.
+test_that("high-dim custom-family lambda_node scales with the contrast (#366)", {
+	nt <- length(hd_fit$treat_inds)
+	C1 <- rbind(c(1, rep(0, nt - 1)), c(rep(0, nt - 1), 1))
+	kk <- 3.5
+
+	boot_at <- function(C) {
+		simultaneousCIs(
+			hd_fit,
+			family = "custom",
+			contrasts = C,
+			method = "bootstrap",
+			B = 40,
+			seed = 3,
+			lambda_c = 1.0 # fixed, so lambda_node moves only with the scale
+		)
+	}
+	b1 <- boot_at(C1)
+	b2 <- boot_at(kk * C1)
+
+	expect_identical(b1$regime, "high-dimensional")
+	expect_equal(b2$lambda_node, kk * b1$lambda_node, tolerance = 1e-12)
+	# Guard against a vacuous pass if lambda_node ever becomes constant.
+	expect_gt(min(b2$lambda_node), min(b1$lambda_node))
 })

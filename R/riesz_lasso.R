@@ -100,7 +100,7 @@ lambda_node_default <- function(p, N, const = 1.0, scale = 1.0) {
 #'   solving the IDENTICAL direction, so this contract is single-sourced here
 #'   (the callers diverge only on what they do with `v`). Theory: the relaxed-inverse
 #'   constraint `||Sig v - a||_inf <= lambda_node` this solves is eq.
-#'   `debiased.highdim.v` inside Theorem `debiased.highdim.thm` (uniformly valid
+#'   `debiased.highdim.v`, cited by Theorem `debiased.highdim.thm` (uniformly valid
 #'   debiased ATT) of `paper_arxiv.tex`; Theorem `debiased.highdim.joint.thm`
 #'   (simultaneous bands) derives its per-functional representation from that one,
 #'   which is why the same primitive serves the point estimate and both bands. (#366)
@@ -115,8 +115,9 @@ lambda_node_default <- function(p, N, const = 1.0, scale = 1.0) {
 #'   `.cv_lambda_node()`'s by the anchor test in `test-cv-lambda-node-295.R`.
 #' @param Sig Numeric `p x p`; the (singular, uncentered) Gram `crossprod(X) / n`.
 #' @param a Numeric length `p`; the target loading (theta-space direction).
-#' @param p,N Numeric; passed to `lambda_node_default()` (`N` = clusters = n / T,
-#'   a double at every call site).
+#' @param p,N Numeric; passed to `lambda_node_default()` (`N` = clusters = n / T).
+#'   `N` arrives as a double from `debiasedATT()` and as an integer from the two
+#'   band channels; `sqrt(log(p) / N)` is unaffected either way.
 #'   `p` is redundant with `length(a)` at every call site and is asserted against
 #'   it below: an inconsistent `p` would otherwise yield a silently wrong penalty,
 #'   which is the exact failure this consolidation exists to make impossible.

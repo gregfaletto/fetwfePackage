@@ -347,10 +347,25 @@ test_that(".cv_lambda_node's grid anchors on scale = max(abs(a)) (#366)", {
 		const = 1.0,
 		scale = max(abs(s$a))
 	)
+	# Read the gate's budget from the function under test rather than re-deriving
+	# it from literals. Hardcoding 500L / 1e-9 was measured to fail SILENTLY when
+	# either default moves: changing gate_max_iter to 1000L, or riesz_tol to 1e-8,
+	# left this file green while the reconstruction quietly stopped mirroring the
+	# gate it claims to reconstruct.
+	.fm <- formals(fetwfe:::.cv_lambda_node)
+	gate_iter <- eval(.fm$gate_max_iter)
+	gate_tol <- eval(.fm$riesz_tol)
+
 	feasible_expected <- vapply(
 		r$mult_grid,
 		function(m) {
-			v <- riesz_lasso(s$Sig, s$a, m * lam0, max_iter = 500L, tol = 1e-9)
+			v <- riesz_lasso(
+				s$Sig,
+				s$a,
+				m * lam0,
+				max_iter = gate_iter,
+				tol = gate_tol
+			)
 			isTRUE(attr(v, "converged")) &&
 				.riesz_feasible(attr(v, "feasibility"), m * lam0)
 		},

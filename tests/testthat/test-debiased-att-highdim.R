@@ -519,18 +519,35 @@ test_that("the att_var_2 path is byte-unchanged: supplied-var var_weight == att_
 # inverse-fusion transform. So this test deliberately uses a target with
 # max(abs(a)) far from 1; that is the whole point of the `7 *` below.
 #
-# Mutation-checked, whole-suite counts: `scale = 1.0` -> 1 failure (this test, and
-# ONLY this test, in 4602 assertions); `N = 2 * N` -> 7; `const = lambda_c -> 1.0`
-# -> 4; dropping the attribute reads -> 2 failures plus 51 errors across 15 files.
+# Mutation-checked. ALL COUNTS BELOW ARE WHOLE-SUITE (4609 assertions across 109
+# files, NOT_CRAN=true) -- do not quote a single-file count here, which is a
+# mistake this comment has already made twice:
+#
+#   scale = max(abs(a)) -> 1.0   ->  3 failures: this test, plus 2 in the
+#                                    custom-family end-to-end witness in
+#                                    test-simultaneous-bootstrap-highdim-142.R
+#   N -> 2 * N                   ->  7 failures across 3 files
+#   const = lambda_c -> 1.0      ->  8 failures across 3 files
+#   drop the attribute reads     ->  2 failures + 51 errors across 13 files
+#
 # The riesz_lasso round-trip is NOT a mutation detector -- it recomputes with
 # whatever lambda_node the helper returned -- it pins argument order and the
 # max_iter/tol pass-through.
 #
-# DO NOT DELETE OR WEAKEN. The `scale` measurement above is the point: this is the
-# only assertion in the package that sees that clause. Removing it silently returns
-# the package to the pre-#366 state, where mutating the penalty scale left all 106
-# test files green. `lambda_c` is deliberately 2.3 and `max(abs(a))` deliberately
-# ~14.5; setting either to 1 makes the corresponding clause vacuous here.
+# DO NOT DELETE OR WEAKEN. Before #366, mutating the penalty scale left all 109
+# test files green; this test was the first thing in the package to see that clause.
+# `lambda_c` is deliberately 2.3 and `max(abs(a))` deliberately ~14.5 -- setting
+# either to 1 makes the corresponding clause vacuous here, which is the trap this
+# test exists to escape and which an earlier draft of it fell into for `lambda_c`.
+#
+# It is no longer the ONLY witness, and that is deliberate. "Every high-dim fixture
+# has max(abs(a)) == 1" holds for the BUILT-IN families, but `family = "custom"`
+# carries the user's own contrast scale, so the clause is genuinely live there in
+# production. The end-to-end witness is
+# `test-simultaneous-bootstrap-highdim-142.R`'s "high-dim custom-family lambda_node
+# scales with the contrast (#366)" -- it pins scale-equivariance through the public
+# API. Keep both: this one is a fast unit pin needing no fit; that one proves the
+# clause matters to a user.
 test_that(".solve_nodewise() pins scale, N and the diagnostic contract (#366)", {
 	Sig <- .psd_gram(p = 40L)
 	set.seed(101)
