@@ -581,21 +581,19 @@ debiasedATT <- function(
 			)
 			lambda_c_used <- lambda_cv$lambda_c
 		}
-		lambda_node <- lambda_node_default(
-			p = p,
-			N = N_units,
-			const = lambda_c_used,
-			scale = max(abs(a_th))
-		)
-		v <- riesz_lasso(
+		nodewise <- .solve_nodewise(
 			Sig,
 			a_th,
-			lambda_node,
+			p = p,
+			N = N_units,
+			lambda_c = lambda_c_used,
 			max_iter = riesz_max_iter,
 			tol = riesz_tol
 		)
-		feasibility <- attr(v, "feasibility")
-		converged <- attr(v, "converged")
+		v <- nodewise$v
+		lambda_node <- nodewise$lambda_node
+		feasibility <- nodewise$feasibility
+		converged <- nodewise$converged
 		# The KKT certificate ||Sig v - a||_inf <= lambda_node is exactly the
 		# relaxed-inverse feasibility the high-dimensional FETWFE theory remainder bound needs.
 		if (!.riesz_feasible(feasibility, lambda_node)) {

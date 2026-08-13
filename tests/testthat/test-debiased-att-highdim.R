@@ -505,3 +505,110 @@ test_that("the att_var_2 path is byte-unchanged: supplied-var var_weight == att_
 # "#312 follow-up" placeholder error -- now lives in its own file,
 # test-debiased-att-fixedp-gls-false-312.R, with consecutive-cohort fixtures the
 # debiasedATT ATT-identity guard supports.)
+
+# ---- .solve_nodewise() direct contract pin (#366) -----------------------------
+# The three high-dim callers (debiasedATT(), .build_regression_if_highdim(),
+# .build_debiased_treat_cells_highdim()) now share one nodewise primitive, so its
+# three contract clauses -- the penalty scale, the sample-size argument, and the
+# diagnostic pass-through -- live in exactly one place.
+#
+# Before #366 the FIRST of those was untested: mutating `scale = max(abs(a))` to
+# a constant 1.0 left every test file in the package green. That is structural,
+# not luck -- every high-dim FIXTURE in the suite has max(abs(a)) == 1 exactly,
+# because the targets are indicator directions through a 0/1 triangular
+# inverse-fusion transform. So this test deliberately uses a target with
+# max(abs(a)) far from 1; that is the whole point of the `7 *` below.
+#
+# Mutation-checked. ALL COUNTS BELOW ARE WHOLE-SUITE (4612 assertions across 109
+# files, NOT_CRAN=true) -- do not quote a single-file count here, which is a
+# mistake this comment has already made twice:
+#
+#   scale = max(abs(a)) -> 1.0   ->  3 failures: this test, plus 2 in the
+#                                    custom-family end-to-end witness in
+#                                    test-simultaneous-bootstrap-highdim-142.R
+#   N -> 2 * N                   ->  7 failures across 3 files
+#   const = lambda_c -> 1.0      ->  8 failures across 3 files
+#   drop the attribute reads     ->  2 failures + 51 errors across 13 files
+#
+# The riesz_lasso round-trip is NOT a mutation detector -- it recomputes with
+# whatever lambda_node the helper returned -- it pins argument order and the
+# max_iter/tol pass-through.
+#
+# DO NOT DELETE OR WEAKEN. Before #366, mutating the penalty scale left all 109
+# test files green; this test was the first thing in the package to see that clause.
+# `lambda_c` is deliberately 2.3 and `max(abs(a))` deliberately ~14.5 -- setting
+# either to 1 makes the corresponding clause vacuous here, which is the trap this
+# test exists to escape and which an earlier draft of it fell into for `lambda_c`.
+#
+# It is no longer the ONLY witness, and that is deliberate. "Every high-dim fixture
+# has max(abs(a)) == 1" holds for the BUILT-IN families, but `family = "custom"`
+# carries the user's own contrast scale, so the clause is genuinely live there in
+# production. The end-to-end witness is
+# `test-simultaneous-bootstrap-highdim-142.R`'s "high-dim custom-family lambda_node
+# scales with the contrast (#366)" -- it pins scale-equivariance through the public
+# API. Keep both: this one is a fast unit pin needing no fit; that one proves the
+# clause matters to a user.
+test_that(".solve_nodewise() pins scale, N and the diagnostic contract (#366)", {
+	Sig <- .psd_gram(p = 40L)
+	set.seed(101)
+	a <- 7 * stats::rnorm(40) # max|a| ~ 14.5, deliberately far from 1
+
+	r <- fetwfe:::.solve_nodewise(
+		Sig,
+		a,
+		p = 40L,
+		N = 25,
+		lambda_c = 2.3, # NOT 1: else const = lambda_c is vacuous here
+		max_iter = 5000L,
+		tol = 1e-9
+	)
+
+	expect_equal(
+		r$lambda_node,
+		lambda_node_default(p = 40L, N = 25, const = 2.3, scale = max(abs(a)))
+	)
+	expect_identical(
+		r$v,
+		riesz_lasso(Sig, a, r$lambda_node, max_iter = 5000L, tol = 1e-9)
+	)
+	expect_identical(r$feasibility, attr(r$v, "feasibility"))
+	expect_identical(r$converged, attr(r$v, "converged"))
+})
+
+# The `p` argument is redundant with length(a) at every call site; the guard
+# turns that convention into an enforced invariant, so a future caller cannot
+# hand the helper an inconsistent p and get a silently wrong penalty.
+test_that(".solve_nodewise() rejects an inconsistent p (#366)", {
+	Sig <- .psd_gram(p = 40L)
+	set.seed(202)
+	a <- stats::rnorm(40)
+	expect_error(
+		fetwfe:::.solve_nodewise(
+			Sig,
+			a,
+			p = 39L,
+			N = 25,
+			lambda_c = 1,
+			max_iter = 100L,
+			tol = 1e-6
+		),
+		"length\\(a\\) == p"
+	)
+
+	# Second clause. Not redundant with the first: pre-guard, riesz_lasso() sets
+	# p <- length(a) internally and does `Sv + Sig[, j] * dv`, so a short `a`
+	# against a wider Sig RECYCLES SILENTLY and returns a wrong v with only a
+	# recycling warning -- a wrong answer, not a crash.
+	expect_error(
+		fetwfe:::.solve_nodewise(
+			.psd_gram(p = 41L),
+			a,
+			p = 40L,
+			N = 25,
+			lambda_c = 1,
+			max_iter = 100L,
+			tol = 1e-6
+		),
+		"ncol\\(Sig\\) == p"
+	)
+})

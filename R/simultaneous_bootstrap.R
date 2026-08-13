@@ -215,24 +215,21 @@
 	converged <- logical(K)
 	lambda_node <- numeric(K)
 	for (k in seq_len(K)) {
-		a_k <- targets[, k]
-		lambda_node[k] <- lambda_node_default(
+		nodewise <- .solve_nodewise(
+			Sig,
+			targets[, k],
 			p = p,
 			N = N,
-			const = lambda_c,
-			scale = max(abs(a_k))
-		)
-		v_k <- riesz_lasso(
-			Sig,
-			a_k,
-			lambda_node[k],
+			lambda_c = lambda_c,
 			max_iter = riesz_max_iter,
 			tol = riesz_tol
 		)
+		v_k <- nodewise$v
+		lambda_node[k] <- nodewise$lambda_node
+		feasibility[k] <- nodewise$feasibility
+		converged[k] <- nodewise$converged
 		score_k <- as.numeric((X %*% v_k) * resid)
 		F_mat[, k] <- rowsum(score_k, group = unit, reorder = FALSE)
-		feasibility[k] <- attr(v_k, "feasibility")
-		converged[k] <- attr(v_k, "converged")
 	}
 	attr(F_mat, "highdim") <- TRUE
 	attr(F_mat, "diagnostics") <- list(
@@ -315,26 +312,24 @@
 	lambda_node <- numeric(num_treats)
 	for (j in seq_len(num_treats)) {
 		a_j <- cell_targets[, j]
-		lambda_node[j] <- lambda_node_default(
-			p = p,
-			N = N,
-			const = lambda_c,
-			scale = max(abs(a_j))
-		)
-		v_j <- riesz_lasso(
+		nodewise <- .solve_nodewise(
 			Sig,
 			a_j,
-			lambda_node[j],
+			p = p,
+			N = N,
+			lambda_c = lambda_c,
 			max_iter = riesz_max_iter,
 			tol = riesz_tol
 		)
+		v_j <- nodewise$v
+		lambda_node[j] <- nodewise$lambda_node
+		feasibility[j] <- nodewise$feasibility
+		converged[j] <- nodewise$converged
 		# q=1 plug-in + desparsified correction mean_n((X v_j) * resid). The mean
 		# is over all n = N*T rows (matching debiasedATT()'s mean(score) and
 		# colSums(F_reg)/(N*T)), NOT over units.
 		corr_j <- sum((X %*% v_j) * resid) / n
 		tau_db[j] <- as.numeric(crossprod(a_j, theta_q1_slopes)) + corr_j
-		feasibility[j] <- attr(v_j, "feasibility")
-		converged[j] <- attr(v_j, "converged")
 	}
 	list(
 		tau_db = tau_db,
