@@ -21,9 +21,14 @@
   `debiasedATT(method = "bootstrap")`. An out-of-range `B` previously became
   `NA_integer_` and surfaced several frames later as the cryptic `vector size
   cannot be NA`. The boundary is strict, so exactly `.Machine$integer.max` is
-  still accepted, and `NULL` / `NA` / `NaN` still mean "draw from the ambient
-  generator". This is a **range** check only --- a non-integral seed such as
-  `1.5` is still truncated silently by `set.seed()`, as before.
+  still accepted. On the four data-generation doors, `NULL` / `NA` / `NaN` still
+  mean "draw from the ambient generator", and this is a **range** check only ---
+  a non-integral seed such as `1.5` is still truncated silently by `set.seed()`,
+  as before; `cv_seed` and the bootstrap `B` / `seed` reject those values as
+  they always have. The one input that used to work and no longer does is a
+  non-integral magnitude between `.Machine$integer.max` and `2147483648`
+  (`2147483647.9`, say), which previously truncated to `2147483647L` and drew
+  from a different seed than the one supplied.
 
 ### Internal
 
@@ -37,6 +42,12 @@
   `.format_int_max_range()`, so the boundary cannot later be tightened in one
   copy only and the value-formatting guards cannot be applied to some sites but
   not others (#440).
+
+- `simultaneousCIs()` and `debiasedATT()` now report the `B` error ahead of the
+  `seed` error when both arguments are invalid, because the new `B` range check
+  precedes the pre-existing whole-number check on `seed`. Previously a call with
+  an out-of-range `B` and a non-integral `seed` reported the `seed` message
+  (#440).
 
 - The four `*WithSimulatedData()` wrappers no longer repeat the `match.arg()`
   calls their estimator cores already perform --- nine deletions across

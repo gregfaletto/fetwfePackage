@@ -22,8 +22,10 @@ library(fetwfe)
 #      states, expect_no_warning() re-raises that error out of the expectation,
 #      and the test reports an ERROR rather than a pass -- red before AND after.
 #
-# Groups B, C, and G are unchanged-behavior anchors and pass in both states;
-# Groups A, D, E, F, H, and I flip.
+# Groups B, C, and G are unchanged-behavior anchors and pass in both states,
+# and Groups D and E each END with an anchor block ("unchanged-behavior
+# anchors" and "cv_seed = .Machine$integer.max is not rejected"). Everything
+# else in Groups A, D, E, F, H, and I flips.
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
@@ -63,6 +65,57 @@ test_that("Group A: .apply_seed() rejects out-of-range seeds", {
 test_that("Group A: the base-R coercion warning no longer fires", {
 	# try() is load-bearing here -- see rule 2 in the header.
 	expect_no_warning(try(fetwfe:::.apply_seed(3e9), silent = TRUE))
+})
+
+test_that("Group A: the non-integral sliver above the ceiling is rejected", {
+	# The ONLY input this guard newly rejects that set.seed() would have
+	# accepted. On main, set.seed(2147483647.9) truncated to 2147483647L and
+	# drew successfully -- from a different seed than the one supplied, which
+	# is why erroring is the right outcome for a reproducibility argument.
+	# The magnitude test fires before truncation can happen.
+	#
+	# This assertion is also the only thing in the suite that fails if the
+	# `digits = 15` guard in .format_int_max_range() is ever dropped: without
+	# it the echoed value rounds to 2147483648, one ABOVE the stated limit,
+	# reading like an off-by-one in the guard itself.
+	expect_error(
+		fetwfe:::.apply_seed(2147483647.9),
+		"got 2147483647.9",
+		fixed = TRUE
+	)
+	expect_error(
+		fetwfe:::.apply_seed(-2147483647.9),
+		"got -2147483647.9",
+		fixed = TRUE
+	)
+})
+
+test_that("Group A: an absurd magnitude does not produce an absurd message", {
+	# format(1e300, scientific = FALSE) is a 301-character number, and the
+	# error path is exactly where absurd magnitudes live. The `1e15` band
+	# guard in .format_int_max_range() is what keeps this readable.
+	msg <- tryCatch(fetwfe:::.apply_seed(1e300), error = conditionMessage)
+	expect_match(msg, "integer.max", fixed = TRUE)
+	# Pin the echoed VALUE, not the total message length: the value is what the
+	# guard controls, and a length bound would break on any future rewording.
+	# Without the band guard this reads as 300 digits (the value portion alone
+	# goes from 6 characters to 359).
+	expect_match(msg, "got 1e+300", fixed = TRUE)
+	expect_lt(nchar(msg), 250)
+})
+
+test_that("Group A: the shared predicate is NA-safe by contract", {
+	# .exceeds_integer_max()'s roxygen promises "Never NA", and its
+	# !is.finite() term is what delivers that -- `abs(NA) > .Machine$integer.max`
+	# is NA and `if (NA)` throws. Group C cannot witness this: those inputs
+	# return at .apply_seed()'s early returns and never reach the predicate.
+	# Asserted directly so the term is not deleted as "redundant".
+	expect_true(fetwfe:::.exceeds_integer_max(NA))
+	expect_true(fetwfe:::.exceeds_integer_max(NA_real_))
+	expect_true(fetwfe:::.exceeds_integer_max(NA_integer_))
+	expect_true(fetwfe:::.exceeds_integer_max(NaN))
+	expect_true(fetwfe:::.exceeds_integer_max(Inf))
+	expect_false(fetwfe:::.exceeds_integer_max(.Machine$integer.max))
 })
 
 # ==============================================================================
@@ -275,8 +328,25 @@ test_that("Group E: the cv_seed violation joins the collect-all list", {
 		),
 		error = conditionMessage
 	)
-	expect_true(grepl("integer.max", msg, fixed = TRUE))
-	expect_true(grepl("cv_folds must be an integer >= 2", msg, fixed = TRUE))
+	expect_match(msg, "integer.max", fixed = TRUE)
+	expect_match(msg, "cv_folds must be an integer >= 2", fixed = TRUE)
+})
+
+test_that("Group E: the *WithSimulatedData() wrappers forward cv_seed", {
+	# Two of the ten doors that gained a @param clause reach the validator only
+	# by forwarding. Group F applies exactly this reasoning to simulateData(),
+	# so apply it here too rather than trusting a bare `cv_seed = cv_seed`.
+	# No fit runs -- the violation fires during input validation.
+	expect_error(
+		fetwfeWithSimulatedData(sim, cv_seed = 3e9),
+		"integer.max",
+		fixed = TRUE
+	)
+	expect_error(
+		betwfeWithSimulatedData(sim, cv_seed = 3e9),
+		"integer.max",
+		fixed = TRUE
+	)
 })
 
 test_that("Group E: cv_seed = .Machine$integer.max is not rejected", {
@@ -426,19 +496,23 @@ test_that("Group G: a bad se_type still errors, from the core's match.arg()", {
 	# Cheap: the core's match.arg() fires before any fitting.
 	expect_error(
 		fetwfeWithSimulatedData(sim, se_type = "bogus"),
-		"should be one of"
+		"should be one of",
+		fixed = TRUE
 	)
 	expect_error(
 		betwfeWithSimulatedData(sim, se_type = "bogus"),
-		"should be one of"
+		"should be one of",
+		fixed = TRUE
 	)
 	expect_error(
 		etwfeWithSimulatedData(sim, se_type = "bogus"),
-		"should be one of"
+		"should be one of",
+		fixed = TRUE
 	)
 	expect_error(
 		twfeCovsWithSimulatedData(sim, se_type = "bogus"),
-		"should be one of"
+		"should be one of",
+		fixed = TRUE
 	)
 })
 

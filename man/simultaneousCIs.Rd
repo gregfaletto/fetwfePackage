@@ -100,11 +100,11 @@ uniformly-valid desparsified band), and a \code{gls = FALSE} fit has no analytic
 SEs at all --- so pass \code{method = "bootstrap"} for high-dimensional bands.}
 
 \item{B}{Integer; number of multiplier-bootstrap replicates
-(\code{method = "bootstrap"} only). Must be within
-\verb{+/- .Machine$integer.max}. Default \code{1000}.}
+(\code{method = "bootstrap"} only). Must be a positive integer no greater than
+\code{.Machine$integer.max}. Default \code{1000}.}
 
-\item{seed}{Optional integer; if supplied, must be within
-\verb{+/- .Machine$integer.max}, and the bootstrap draws are
+\item{seed}{Optional integer within \verb{+/- .Machine$integer.max}. If supplied,
+the bootstrap draws are
 reproducible (the ambient random-number stream is saved and restored around
 them). If \code{NULL} (default), the draws come from the ambient generator, so
 results vary run to run. Ignored when \code{method = "analytic"}.}

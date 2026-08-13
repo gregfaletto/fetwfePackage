@@ -200,8 +200,8 @@
 #'   over the `N` count-sample units (`sum(indep_counts) == N` is enforced), yielding
 #'   the two-sample propensity variance.
 #' @param B Integer; the number of wild-bootstrap replicates (default `1000`).
-#'   Must be within `+/- .Machine$integer.max`. Ignored unless
-#'   `method = "bootstrap"`.
+#'   Must be a positive integer no greater than `.Machine$integer.max`. Ignored
+#'   unless `method = "bootstrap"`.
 #' @param seed `NULL` (draw from the ambient RNG, the default) or a single
 #'   integer within `+/- .Machine$integer.max` for a reproducible bootstrap
 #'   (the RNG state is saved and restored).

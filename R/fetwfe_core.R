@@ -252,11 +252,11 @@ checkFetwfeInputs <- function(
 			# deliberate asymmetry with getBetaCV(), which *clips with a
 			# warning* when the package's own `N * T` default overflows: user
 			# input is rejected, a package-computed default is not. Composed
-			# with paste() (no trailing period) to match its siblings above.
+			# with sprintf() and no trailing period to match its siblings above.
 			# (#440)
 			violations <- c(
 				violations,
-				paste("cv_seed", .format_int_max_range(cv_seed))
+				sprintf("cv_seed %s", .format_int_max_range(cv_seed))
 			)
 		}
 	}

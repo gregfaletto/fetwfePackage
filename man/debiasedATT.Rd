@@ -50,8 +50,8 @@ over the \code{N} count-sample units (\code{sum(indep_counts) == N} is enforced)
 the two-sample propensity variance.}
 
 \item{B}{Integer; the number of wild-bootstrap replicates (default \code{1000}).
-Must be within \verb{+/- .Machine$integer.max}. Ignored unless
-\code{method = "bootstrap"}.}
+Must be a positive integer no greater than \code{.Machine$integer.max}. Ignored
+unless \code{method = "bootstrap"}.}
 
 \item{seed}{\code{NULL} (draw from the ambient RNG, the default) or a single
 integer within \verb{+/- .Machine$integer.max} for a reproducible bootstrap

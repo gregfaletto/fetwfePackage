@@ -1430,6 +1430,16 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #'   uniform. Closing that gap is a user-visible breaking change to
 #'   `simulateData()` / `genCoefs()` and deserves its own decision.
 #'
+#'   One narrow exception, and the **only** input this check newly rejects that
+#'   `set.seed()` would have accepted: a non-integral magnitude strictly between
+#'   `.Machine$integer.max` and `2147483648` -- `2147483647.9`, say -- used to
+#'   truncate to `2147483647L` and draw successfully. The magnitude test fires
+#'   before `set.seed()` gets its chance to truncate, so it now errors. That is
+#'   the right outcome for a *seed* argument, whose entire purpose is
+#'   reproducibility: the old path silently drew from a different seed than the
+#'   one supplied. No internal caller can reach it -- all three clip sites emit
+#'   exact integers.
+#'
 #'   The non-finite values the check rejects are `+/-Inf` specifically. `NaN`,
 #'   like `NA`, is caught by the `is.na()` early return above and remains a
 #'   supported "use the ambient generator" value -- so this function does *not*
@@ -1452,11 +1462,19 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 		# hoisting this would turn every supported `seed = NA` call into an
 		# error.
 		if (.exceeds_integer_max(seed)) {
+			# The trailing clause covers both rejected shapes, which fail
+			# differently: `3e9` coerces to NA, whereas a non-integral value in
+			# the sliver just above the ceiling (`2147483647.9`) truncates to a
+			# *valid but different* seed. Saying only "becomes NA" would be
+			# false for the latter -- and silently reseeding from a different
+			# value is the more insidious of the two for a reproducibility
+			# argument. (#440)
 			stop(
 				"seed ",
 				.format_int_max_range(seed),
-				". set.seed() coerces its argument to integer, so larger ",
-				"magnitudes become NA."
+				". set.seed() coerces its argument to integer, so a larger ",
+				"magnitude either becomes NA or is silently truncated to a ",
+				"different seed."
 			)
 		}
 		set.seed(seed)

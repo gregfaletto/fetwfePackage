@@ -69,7 +69,10 @@
 #'   silently truncated by `set.seed()`), and **both** arguments are
 #'   range-checked against `+/- .Machine$integer.max` via
 #'   `.exceeds_integer_max()`, so neither can reach `as.integer()` and become
-#'   `NA` (#440).
+#'   `NA` (#440). When **both** arguments are invalid the `B` error is reported
+#'   first, because its range branch precedes `seed`'s integrality branch --- a
+#'   reordering relative to pre-#440, where a bad `seed` alongside an
+#'   out-of-range `B` reported the `seed` message (#440).
 #' @param B,seed The arguments to validate.
 #' @param fn_name Character; the caller's name, for the error message prefix.
 #' @return `B` coerced to integer.
