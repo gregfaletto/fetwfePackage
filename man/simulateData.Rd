@@ -43,7 +43,8 @@ coefficient vector; recovering the truth requires an adequate number of units).}
 \item{seed}{(Optional) Controls the random-number generator for the simulated
 panel. As of fetwfe 1.24.0 the default is \code{NULL}, which draws from the
 ambient random-number generator (respecting any preceding \code{set.seed()})
-and emits a warning; pass an integer for a reproducible panel, or \code{NA}
+and emits a warning; pass an integer within
+\code{+/- .Machine$integer.max} for a reproducible panel, or \code{NA}
 to draw from the ambient generator silently. \code{simulateData()} no longer
 reuses \code{coefs_obj$seed} (the seed \code{genCoefs()} used to build the
 coefficients). Default \code{NULL}.}

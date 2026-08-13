@@ -66,7 +66,10 @@
 #'   `simultaneousCIs(method = "bootstrap")` and
 #'   `debiasedATT(method = "bootstrap")`, so the two cannot silently drift
 #'   on what they accept. `seed` must be integer-valued (a non-integer would be
-#'   silently truncated by `set.seed()`).
+#'   silently truncated by `set.seed()`), and **both** arguments are
+#'   range-checked against `+/- .Machine$integer.max` via
+#'   `.exceeds_integer_max()`, so neither can reach `as.integer()` and become
+#'   `NA` (#440).
 #' @param B,seed The arguments to validate.
 #' @param fn_name Character; the caller's name, for the error message prefix.
 #' @return `B` coerced to integer.
@@ -85,6 +88,21 @@
 			call. = FALSE
 		)
 	}
+	# `Inf` slips through the branch above entirely -- `Inf < 1` is FALSE and
+	# `Inf != round(Inf)` is FALSE -- and reaches `as.integer()`. The
+	# `!is.finite()` term inside `.exceeds_integer_max()` is what catches it.
+	# Using the shared abs()-based predicate here is also deliberately
+	# defensive: the positivity branch above already establishes `B >= 1`, but
+	# if it is ever reordered, relaxed, or moved behind a flag, this predicate
+	# still rejects a huge negative `B`, where a bare `>` would pass it to
+	# `as.integer()` and reproduce the `NA_integer_` bug this branch exists to
+	# fix. (#440)
+	if (.exceeds_integer_max(B)) {
+		stop(
+			sprintf("%s(): `B` %s.", fn_name, .format_int_max_range(B)),
+			call. = FALSE
+		)
+	}
 	if (
 		!is.null(seed) &&
 			(!is.numeric(seed) ||
@@ -94,6 +112,15 @@
 	) {
 		stop(
 			sprintf("%s(): `seed` must be NULL or a single integer.", fn_name),
+			call. = FALSE
+		)
+	}
+	# Keeps the friendly `fn_name`-flavoured front door for the bootstrap path,
+	# rather than falling through to `.apply_seed()`'s generic wording several
+	# frames later. (#440)
+	if (!is.null(seed) && .exceeds_integer_max(seed)) {
+		stop(
+			sprintf("%s(): `seed` %s.", fn_name, .format_int_max_range(seed)),
 			call. = FALSE
 		)
 	}

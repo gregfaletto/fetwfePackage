@@ -48,7 +48,8 @@ on the value of \code{gen_ints}:
 \eqn{p = G + (T-1) + d + num\_treats}.
 }}
 
-\item{seed}{(Optional) Integer. Seed for reproducibility.}
+\item{seed}{(Optional) Integer. Seed for reproducibility. If supplied, must
+be within \code{+/- .Machine$integer.max}.}
 
 \item{gen_ints}{Logical. If \code{TRUE}, generate the full design matrix with interactions;
 if \code{FALSE} (the default), generate a design matrix without any interaction terms.}

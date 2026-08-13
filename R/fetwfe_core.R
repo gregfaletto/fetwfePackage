@@ -31,9 +31,10 @@
 #'   = "cv"`. Default `10L`.
 #' @param cv_seed Integer or NULL; the seed to pass to `set.seed()`
 #'   before calling `grpreg::cv.grpreg()` so CV fold assignment is
-#'   reproducible. `NULL` defaults to `as.integer(N * T)` (clipped to
-#'   `.Machine$integer.max` with a warning on overflow). Default
-#'   `NULL`.
+#'   reproducible. If supplied, must be within
+#'   `+/- .Machine$integer.max`. `NULL` defaults to `as.integer(N * T)`
+#'   (clipped to `.Machine$integer.max` with a warning on overflow).
+#'   Default `NULL`.
 #' @return A list with two elements:
 #'   - `pdata`: the (possibly tibble-coerced) panel data frame.
 #'   - `indep_count_data_available`: logical; `TRUE` if a valid
@@ -243,6 +244,19 @@ checkFetwfeInputs <- function(
 					"cv_seed must be an integer (or NULL); got %s",
 					format(cv_seed)
 				)
+			)
+		} else if (.exceeds_integer_max(cv_seed)) {
+			# Catches an explicitly supplied cv_seed at input validation, so it
+			# fails alongside every other bad argument in the same call rather
+			# than part-way through the fit at the CV fold seeding. Note the
+			# deliberate asymmetry with getBetaCV(), which *clips with a
+			# warning* when the package's own `N * T` default overflows: user
+			# input is rejected, a package-computed default is not. Composed
+			# with paste() (no trailing period) to match its siblings above.
+			# (#440)
+			violations <- c(
+				violations,
+				paste("cv_seed", .format_int_max_range(cv_seed))
 			)
 		}
 	}

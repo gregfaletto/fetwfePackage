@@ -533,11 +533,12 @@ etwfeWithSimulatedData <- function(
 	se_type = "default",
 	ci_type = c("simultaneous", "pointwise")
 ) {
-	se_type <- match.arg(
-		se_type,
-		c("default", "conservative", "cluster")
-	)
-	ci_type <- match.arg(ci_type)
+	# `se_type` and `ci_type` are deliberately forwarded UNRESOLVED: `etwfe()`
+	# runs the same `match.arg()` calls on them, so repeating them here would
+	# validate each argument twice. Partial matches ("conserv", "point") and the
+	# untouched length-2 `ci_type` default both resolve identically downstream,
+	# because the callee's formal defaults are byte-identical to this wrapper's.
+	# Do not restore them (#440).
 
 	sim <- .unpack_simulated_obj(simulated_obj)
 

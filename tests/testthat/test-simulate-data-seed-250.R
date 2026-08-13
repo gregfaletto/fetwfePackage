@@ -9,7 +9,9 @@ library(fetwfe)
 #   - seed = NULL (default): draw from the ambient RNG AND emit a warning whose
 #     text contains "ambient".
 #   - seed = NA: draw from the ambient RNG silently (caller-controlled RNG).
-#   - seed = <numeric scalar>: set.seed(seed) -> reproducible panel.
+#   - seed = <numeric scalar within +/- .Machine$integer.max>: set.seed(seed)
+#     -> reproducible panel. A larger magnitude is an error naming the limit
+#     (#440); see test-seed-range-guard-440.R.
 #   - anything else: stop("seed must be ...").
 #
 # These default-path calls (the bare simulateData(coefs, ...) without an

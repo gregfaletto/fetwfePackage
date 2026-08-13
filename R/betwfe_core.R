@@ -136,7 +136,8 @@
 #' @param cv_folds Integer; number of folds for the CV path. Ignored when
 #'   `lambda_selection = "bic"`. Default is 10.
 #' @param cv_seed Integer or `NULL`; the seed passed to `set.seed()`
-#'   immediately before the `cv.grpreg()` call. If `NULL` (the default),
+#'   immediately before the `cv.grpreg()` call. If supplied, must be
+#'   within `+/- .Machine$integer.max`. If `NULL` (the default),
 #'   the seed defaults internally to `as.integer(N * T)`. Ignored when
 #'   `lambda_selection = "bic"`.
 #' @param ci_type Character; one of `"simultaneous"` (default) or
@@ -576,7 +577,8 @@ betwfe <- function(
 #' @param cv_folds Integer; number of folds for the CV path. Ignored when
 #'   `lambda_selection = "bic"`. Default is 10.
 #' @param cv_seed Integer or `NULL`; the seed passed to `set.seed()`
-#'   immediately before the `cv.grpreg()` call. If `NULL` (the default),
+#'   immediately before the `cv.grpreg()` call. If supplied, must be
+#'   within `+/- .Machine$integer.max`. If `NULL` (the default),
 #'   the seed defaults internally to `as.integer(N * T)`. Ignored when
 #'   `lambda_selection = "bic"`.
 #' @param ci_type Character; one of `"simultaneous"` (default) or
@@ -770,13 +772,13 @@ betwfeWithSimulatedData <- function(
 	cv_seed = NULL,
 	ci_type = c("simultaneous", "pointwise")
 ) {
-	se_type <- match.arg(
-		se_type,
-		c("default", "conservative", "cluster")
-	)
-	ci_type <- match.arg(ci_type)
-	# `lambda_selection` validated downstream by `checkFetwfeInputs()`
-	# (collect-all-violations pattern).
+	# `se_type` and `ci_type` are deliberately forwarded UNRESOLVED: `betwfe()`
+	# runs the same `match.arg()` calls on them, so repeating them here would
+	# validate each argument twice. Partial matches ("conserv", "point") and the
+	# untouched length-2 `ci_type` default both resolve identically downstream,
+	# because the callee's formal defaults are byte-identical to this wrapper's.
+	# Do not restore them (#440). `lambda_selection` is likewise validated
+	# downstream by `checkFetwfeInputs()` (collect-all-violations pattern).
 
 	sim <- .unpack_simulated_obj(simulated_obj)
 

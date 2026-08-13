@@ -158,7 +158,8 @@
 #'   `lambda_selection = "bic"`. Default is 10.
 #' @param cv_seed Integer or `NULL`; the seed passed to `set.seed()`
 #'   immediately before the `cv.grpreg()` call, controlling fold
-#'   assignment. If `NULL` (the default), the seed defaults internally to
+#'   assignment. If supplied, must be within `+/- .Machine$integer.max`.
+#'   If `NULL` (the default), the seed defaults internally to
 #'   `as.integer(N * T)` so consecutive calls on the same dataset are
 #'   reproducible without the user having to specify a seed. The seed
 #'   actually used is stored on the returned object as `cv_seed`.
@@ -661,7 +662,8 @@ fetwfe <- function(
 #'   `lambda_selection = "bic"`. Default is 10.
 #' @param cv_seed Integer or `NULL`; the seed passed to `set.seed()`
 #'   immediately before the `cv.grpreg()` call, controlling fold
-#'   assignment. If `NULL` (the default), the seed defaults internally to
+#'   assignment. If supplied, must be within `+/- .Machine$integer.max`.
+#'   If `NULL` (the default), the seed defaults internally to
 #'   `as.integer(N * T)` so consecutive calls on the same dataset are
 #'   reproducible without the user having to specify a seed. The seed
 #'   actually used is stored on the returned object as `cv_seed`.
@@ -831,14 +833,14 @@ fetwfeWithSimulatedData <- function(
 	fusion_matrix = NULL,
 	gls = TRUE
 ) {
-	se_type <- match.arg(
-		se_type,
-		c("default", "conservative", "cluster")
-	)
-	ci_type <- match.arg(ci_type)
-	fusion_structure <- match.arg(fusion_structure)
-	# `lambda_selection` validated downstream by `checkFetwfeInputs()`
-	# (collect-all-violations pattern).
+	# `se_type`, `ci_type` and `fusion_structure` are deliberately forwarded
+	# UNRESOLVED: `fetwfe()` runs the same `match.arg()` calls on them, so
+	# repeating them here would validate each argument twice. Partial matches
+	# ("conserv", "point", "event") and the untouched length-2 defaults both
+	# resolve identically downstream, because the callee's formal defaults are
+	# byte-identical to this wrapper's. Do not restore them (#440).
+	# `lambda_selection` is likewise validated downstream by
+	# `checkFetwfeInputs()` (collect-all-violations pattern).
 
 	sim <- .unpack_simulated_obj(simulated_obj)
 

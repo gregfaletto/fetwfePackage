@@ -1345,13 +1345,97 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 	)
 }
 
+# .exceeds_integer_max
+#' @title Is a numeric scalar outside the range `set.seed()` can represent?
+#' @description The single source of truth for the `+/- .Machine$integer.max`
+#'   range rule, shared by `.apply_seed()` (this file),
+#'   `.validate_boot_args()` (`R/simultaneous_bootstrap.R`), and
+#'   `checkFetwfeInputs()` (`R/fetwfe_core.R`). Named rather than inlined so the
+#'   boundary cannot later be tightened in one copy only. Note the boundary is
+#'   strict: exactly `.Machine$integer.max` is accepted, because `getBetaCV()`
+#'   and `.fit_q1_nuisance()` (`R/bridge_selection.R`) and `.cv_lambda_node()`
+#'   (`R/riesz_lasso.R`) all clip a computed default seed to exactly that value.
+#'   R's integer *minimum* is `-2147483647`, so the negative side overflows one
+#'   value earlier than a two's-complement reader expects -- hence `abs()`
+#'   rather than a bare `>`. (#440)
+#' @param x A numeric scalar.
+#' @return `TRUE` if `x` is non-finite or `abs(x)` exceeds
+#'   `.Machine$integer.max`; `FALSE` otherwise. Never `NA`.
+#' @keywords internal
+#' @noRd
+.exceeds_integer_max <- function(x) {
+	# `!is.finite(x)` makes this NA-safe: without it, `.exceeds_integer_max(NA)`
+	# evaluates `abs(NA) > .Machine$integer.max`, which is NA, and `if (NA)`
+	# throws. Every current caller filters NA/NaN upstream and
+	# `abs(+/-Inf) > .Machine$integer.max` is already TRUE, so the term is not
+	# load-bearing *today* -- it is what keeps the predicate safe for the next
+	# caller that filters less.
+	!is.finite(x) || abs(x) > .Machine$integer.max
+}
+
+# .format_int_max_range
+#' @title The shared message tail for an out-of-range integer-valued argument
+#' @description Returns the common middle of the four `.exceeds_integer_max()`
+#'   error messages, so each call site supplies only its own prefix (a bare
+#'   `"seed "`, a `sprintf("%s(): \`B\` ...")` wrapper, or an append to
+#'   `checkFetwfeInputs()`'s `violations` vector). One builder means the
+#'   value-formatting guards below cannot be applied to some sites but not
+#'   others. Named to match this file's existing `.format_input_violations()`.
+#'   (#440)
+#' @param value The offending numeric scalar, echoed back to the user.
+#' @return A character scalar beginning `"must be within +/- ..."`, with no
+#'   leading argument name and no trailing period.
+#' @keywords internal
+#' @noRd
+.format_int_max_range <- function(value) {
+	sprintf(
+		"must be within +/- .Machine$integer.max (%s); got %s",
+		format(.Machine$integer.max, scientific = FALSE),
+		# Two guards, two different defects. `scientific = FALSE` is what makes
+		# 3e9 echo as 3000000000 rather than 3e+09 -- but
+		# format(1e300, scientific = FALSE) is a 301-character number, and this
+		# is the error path, where absurd magnitudes live. And inside the band,
+		# format()'s default of 7 significant digits rounds 2147483647.9 to
+		# 2147483648, which against a stated limit of 2147483647 reads like an
+		# off-by-one in the guard. That corner is reachable precisely because
+		# .apply_seed() deliberately permits non-integral seeds.
+		if (is.finite(value) && abs(value) < 1e15) {
+			format(value, scientific = FALSE, digits = 15)
+		} else {
+			format(value)
+		}
+	)
+}
+
 # .apply_seed
 #' @title Apply a seed argument: `set.seed()`, draw from the ambient RNG, or error
 #' @description The canonical seed-to-RNG mapping shared by the data-generation
 #'   functions and `.with_preserved_rng()`. `NULL` or a scalar `NA` mean "use the
-#'   ambient random-number generator" (no `set.seed()`); a single numeric value is
-#'   passed to `set.seed()`; anything else is an error. (#254)
-#' @param seed `NULL`, a scalar `NA`, or a single numeric value.
+#'   ambient random-number generator" (no `set.seed()`); a single numeric value
+#'   whose magnitude is at most `.Machine$integer.max` is passed to `set.seed()`;
+#'   anything else is an error. (#254, #440)
+#' @details The `.Machine$integer.max` range check (#440) **errors** rather than
+#'   warning and clipping the way `getBetaCV()` does for its own computed
+#'   default. The distinction is deliberate: `getBetaCV()`'s offending value is a
+#'   *package-computed* default the user never supplied, so erroring would punish
+#'   the user for the package's arithmetic, whereas `seed` here is *user input*,
+#'   and silently substituting a different seed would destroy the reproducibility
+#'   the argument exists to provide. The boundary is strict (`>`, not `>=`), so
+#'   exactly `.Machine$integer.max` is still accepted -- three call sites clip
+#'   their computed default to that value on purpose.
+#'
+#'   This is a **range** check only. `.apply_seed()` still lets `set.seed()`
+#'   silently truncate a non-integral seed such as `1.5`, while
+#'   `.validate_boot_args()` rejects it, so the two contracts are **not**
+#'   uniform. Closing that gap is a user-visible breaking change to
+#'   `simulateData()` / `genCoefs()` and deserves its own decision.
+#'
+#'   The non-finite values the check rejects are `+/-Inf` specifically. `NaN`,
+#'   like `NA`, is caught by the `is.na()` early return above and remains a
+#'   supported "use the ambient generator" value -- so this function does *not*
+#'   reject non-finite seeds in general.
+#' @param seed `NULL`, a scalar `NA`, or a single numeric value within
+#'   `+/- .Machine$integer.max`.
 #' @return Invisibly `NULL`; called for its `set.seed()` side effect (or none).
 #' @keywords internal
 #' @noRd
@@ -1363,6 +1447,18 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 		return(invisible(NULL))
 	}
 	if (is.numeric(seed) && length(seed) == 1L) {
+		# Must stay INSIDE this branch, after the NULL/NA early returns:
+		# `abs(NA) > .Machine$integer.max` is NA and `if (NA)` throws, so
+		# hoisting this would turn every supported `seed = NA` call into an
+		# error.
+		if (.exceeds_integer_max(seed)) {
+			stop(
+				"seed ",
+				.format_int_max_range(seed),
+				". set.seed() coerces its argument to integer, so larger ",
+				"magnitudes become NA."
+			)
+		}
 		set.seed(seed)
 		return(invisible(NULL))
 	}
@@ -1380,9 +1476,10 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #'   assignment), `.simultaneous_cis_impl()` (#192 / #200, the `mvtnorm`
 #'   Genz-Bretz quasi-Monte-Carlo integration), and `getTes()` (#254, the
 #'   expected-cohort-probability truth computation). (#195)
-#' @param seed A single numeric seed (passed to `set.seed()` before `expr`), or
-#'   `NULL` / `NA` to draw from the ambient RNG without reseeding. Either way the
-#'   caller's `.Random.seed` is saved and restored.
+#' @param seed A single numeric seed within `+/- .Machine$integer.max` (passed
+#'   to `set.seed()` before `expr`; a larger magnitude is an error from
+#'   `.apply_seed()`), or `NULL` / `NA` to draw from the ambient RNG without
+#'   reseeding. Either way the caller's `.Random.seed` is saved and restored.
 #' @param expr Expression to evaluate (lazily -- it runs after the caller's seed
 #'   is saved and `set.seed(seed)` is applied). Its value is returned.
 #' @return The value of `expr`.

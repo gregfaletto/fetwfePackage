@@ -49,7 +49,8 @@ deterministically on the per-cohort fused base levels for a sparse,
 non-degenerate, heterogeneous high-dimensional DGP. See \code{genCoefs()} for
 the full description; the two are mutually exclusive.}
 
-\item{seed}{(Optional) Integer. Seed for reproducibility. \code{NA} (or
+\item{seed}{(Optional) Integer. Seed for reproducibility. If supplied, must
+be within \code{+/- .Machine$integer.max}. \code{NA} (or
 \code{NULL}) means "draw from the ambient random-number generator" --- no
 \code{set.seed()} is called.}
 
