@@ -182,7 +182,8 @@ for details.}
 \code{lambda_selection = "bic"}. Default is 10.}
 
 \item{cv_seed}{Integer or \code{NULL}; the seed passed to \code{set.seed()}
-immediately before the \code{cv.grpreg()} call. If \code{NULL} (the default),
+immediately before the \code{cv.grpreg()} call. If supplied, must be
+within \verb{+/- .Machine$integer.max}. If \code{NULL} (the default),
 the seed defaults internally to \code{as.integer(N * T)}. Ignored when
 \code{lambda_selection = "bic"}.}
 

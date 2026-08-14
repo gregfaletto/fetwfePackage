@@ -196,7 +196,8 @@ reproducing analyses run against v1.12.0 or earlier --- pass
 
 \item{cv_seed}{Integer or \code{NULL}; the seed passed to \code{set.seed()}
 immediately before the \code{cv.grpreg()} call, controlling fold
-assignment. If \code{NULL} (the default), the seed defaults internally to
+assignment. If supplied, must be within \verb{+/- .Machine$integer.max}.
+If \code{NULL} (the default), the seed defaults internally to
 \code{as.integer(N * T)} so consecutive calls on the same dataset are
 reproducible without the user having to specify a seed. The seed
 actually used is stored on the returned object as \code{cv_seed}.

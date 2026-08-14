@@ -38,7 +38,8 @@
 #' @param seed (Optional) Controls the random-number generator for the simulated
 #'   panel. As of fetwfe 1.24.0 the default is \code{NULL}, which draws from the
 #'   ambient random-number generator (respecting any preceding \code{set.seed()})
-#'   and emits a warning; pass an integer for a reproducible panel, or \code{NA}
+#'   and emits a warning; pass an integer within
+#'   \code{+/- .Machine$integer.max} for a reproducible panel, or \code{NA}
 #'   to draw from the ambient generator silently. \code{simulateData()} no longer
 #'   reuses \code{coefs_obj$seed} (the seed \code{genCoefs()} used to build the
 #'   coefficients). Default \code{NULL}.
@@ -276,7 +277,8 @@ simulateData <- function(
 #'     \item If \code{gen_ints = FALSE}, the expected length is
 #'       \eqn{p = G + (T-1) + d + num\_treats}.
 #'   }
-#' @param seed (Optional) Integer. Seed for reproducibility.
+#' @param seed (Optional) Integer. Seed for reproducibility. If supplied, must
+#'   be within \code{+/- .Machine$integer.max}.
 #' @param gen_ints Logical. If \code{TRUE}, generate the full design matrix with interactions;
 #'   if \code{FALSE} (the default), generate a design matrix without any interaction terms.
 #' @param distribution Character. Distribution to generate covariates.

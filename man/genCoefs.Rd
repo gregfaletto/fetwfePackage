@@ -136,7 +136,10 @@ map. The result must be non-degenerate and heterogeneous (\eqn{V_2 > 0}); an
 all-zero or constant-effect specification is rejected. Defaults to
 \code{NULL}. Mutually exclusive with \code{n_signal_cohorts}.}
 
-\item{seed}{(Optional) Integer. Seed for reproducibility. Three
+\item{seed}{(Optional) Integer. Seed for reproducibility. If supplied, must
+be within \code{+/- .Machine$integer.max} --- and because the two offsets
+below are derived from it, the usable maximum here is
+\code{.Machine$integer.max - 2}. Three
 deterministic offsets share this seed: the main coefficient draw uses
 \code{seed}; the assignment coefficients use \code{seed + 1L}; the
 Monte Carlo integration in \code{getTes()} uses \code{seed + 2L}.

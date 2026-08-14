@@ -2,12 +2,60 @@
 
 ## fetwfe (development version)
 
+### Defensive improvements
+
+- An out-of-range seed now fails with the package's own message, at every door
+  (#440). `set.seed()` can represent only a 32-bit signed integer, so a larger
+  magnitude previously produced base R's `NAs introduced by coercion to integer
+  range` warning followed by an opaque `supplied seed is not a valid integer`
+  error --- neither of which names the offending argument or states the limit.
+  Every argument that carries a seed into the random-number generator is now
+  range-checked against `+/- .Machine$integer.max` and reports, for example,
+  `seed must be within +/- .Machine$integer.max (2147483647); got 3000000000`.
+  The covered arguments are `seed` on `simulateData()`, `simulateDataCore()`,
+  `genCoefs()`, and `genCoefsCore()`; `cv_seed` on `fetwfe()` and `betwfe()`
+  (and their `*WithSimulatedData()` wrappers), which now fails during input
+  validation alongside any other bad argument in the same call instead of
+  part-way through the fit at the cross-validation fold seeding; and `B` and
+  `seed` on `simultaneousCIs(method = "bootstrap")` and
+  `debiasedATT(method = "bootstrap")`. An out-of-range `B` previously became
+  `NA_integer_` and surfaced several frames later as the cryptic `vector size
+  cannot be NA`. The boundary is strict, so exactly `.Machine$integer.max` is
+  still accepted. On the four data-generation doors, `NULL` / `NA` / `NaN` still
+  mean "draw from the ambient generator", and this is a **range** check only ---
+  a non-integral seed such as `1.5` is still truncated silently by `set.seed()`,
+  as before; `cv_seed` and the bootstrap `B` / `seed` reject those values as
+  they always have. The one input that used to work and no longer does is a
+  non-integral magnitude between `.Machine$integer.max` and `2147483648`
+  (`2147483647.9`, say), which previously truncated to `2147483647L` and drew
+  from a different seed than the one supplied.
+
 ### Internal
 
 - The high-dimensional nodewise (desparsified-lasso) solve is now single-sourced
   in one internal primitive shared by `debiasedATT()` and both simultaneous-band
   bootstrap channels, so the point estimate and the bands cannot drift apart on
   the penalty scale or the convergence diagnostics (#366).
+
+- The range rule above and its error wording are single-sourced in two new
+  internal helpers in `R/utility.R`, `.exceeds_integer_max()` and
+  `.format_int_max_range()`, so the boundary cannot later be tightened in one
+  copy only and the value-formatting guards cannot be applied to some sites but
+  not others (#440).
+
+- `simultaneousCIs()` and `debiasedATT()` now report the `B` error ahead of the
+  `seed` error when both arguments are invalid, because the new `B` range check
+  precedes the pre-existing whole-number check on `seed`. Previously a call with
+  an out-of-range `B` and a non-integral `seed` reported the `seed` message
+  (#440).
+
+- The four `*WithSimulatedData()` wrappers no longer repeat the `match.arg()`
+  calls their estimator cores already perform --- nine deletions across
+  `se_type`, `ci_type`, and `fusion_structure` --- so each of those arguments is
+  validated in exactly one place. Abbreviations still resolve
+  (`se_type = "conserv"` still yields `"conservative"`). One user-visible
+  consequence: when both `simulated_obj` and `se_type` are invalid, the reported
+  error is now the `simulated_obj` one rather than the `se_type` one (#440).
 
 ## Version 1.56.18
 
