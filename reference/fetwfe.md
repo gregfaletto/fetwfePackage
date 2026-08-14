@@ -259,11 +259,12 @@ fetwfe(
 
   Integer or `NULL`; the seed passed to
   [`set.seed()`](https://rdrr.io/r/base/Random.html) immediately before
-  the `cv.grpreg()` call, controlling fold assignment. If `NULL` (the
-  default), the seed defaults internally to `as.integer(N * T)` so
-  consecutive calls on the same dataset are reproducible without the
-  user having to specify a seed. The seed actually used is stored on the
-  returned object as `cv_seed`. Ignored when `lambda_selection = "bic"`.
+  the `cv.grpreg()` call, controlling fold assignment. If supplied, must
+  be within `+/- .Machine$integer.max`. If `NULL` (the default), the
+  seed defaults internally to `as.integer(N * T)` so consecutive calls
+  on the same dataset are reproducible without the user having to
+  specify a seed. The seed actually used is stored on the returned
+  object as `cv_seed`. Ignored when `lambda_selection = "bic"`.
 
 - ci_type:
 

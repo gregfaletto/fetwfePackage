@@ -237,7 +237,8 @@ betwfe(
 
   Integer or `NULL`; the seed passed to
   [`set.seed()`](https://rdrr.io/r/base/Random.html) immediately before
-  the `cv.grpreg()` call. If `NULL` (the default), the seed defaults
+  the `cv.grpreg()` call. If supplied, must be within
+  `+/- .Machine$integer.max`. If `NULL` (the default), the seed defaults
   internally to `as.integer(N * T)`. Ignored when
   `lambda_selection = "bic"`.
 
@@ -654,12 +655,12 @@ if (requireNamespace("bacondecomp", quietly = TRUE)) {
 #> No covariates provided; skipping covariate processing.
 #> Getting omega sqrt inverse estimate...
 #> Done! Time to estimate noise variances:
-#> 0.250649929046631
+#> 0.243488788604736
 #> Time to get sqrt inverse matrix:
-#> 0.0003204345703125
+#> 0.000264406204223633
 #> Estimating bridge regression with 10-fold CV...
 #> Done! Time for estimation:
-#> 0.116122245788574
+#> 0.110440015792847
 #> No treatment features selected; all treatment effects estimated to be 0.
 #>   cohort estimate se ci_low ci_high p_value selected
 #> 1   2005        0  0      0       0      NA    FALSE

@@ -185,7 +185,8 @@ for details.</p></dd>
 
 <dt id="arg-cv-seed">cv_seed<a class="anchor" aria-label="anchor" href="#arg-cv-seed"></a></dt>
 <dd><p>Integer or <code>NULL</code>; the seed passed to <code><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed()</a></code>
-immediately before the <code>cv.grpreg()</code> call. If <code>NULL</code> (the default),
+immediately before the <code>cv.grpreg()</code> call. If supplied, must be
+within <code>+/- .Machine$integer.max</code>. If <code>NULL</code> (the default),
 the seed defaults internally to <code>as.integer(N * T)</code>. Ignored when
 <code>lambda_selection = "bic"</code>.</p></dd>
 

@@ -168,10 +168,12 @@ genCoefs(
 
 - seed:
 
-  (Optional) Integer. Seed for reproducibility. Three deterministic
-  offsets share this seed: the main coefficient draw uses `seed`; the
-  assignment coefficients use `seed + 1L`; the Monte Carlo integration
-  in
+  (Optional) Integer. Seed for reproducibility. If supplied, must be
+  within `+/- .Machine$integer.max` — and because the two offsets below
+  are derived from it, the usable maximum here is
+  `.Machine$integer.max - 2`. Three deterministic offsets share this
+  seed: the main coefficient draw uses `seed`; the assignment
+  coefficients use `seed + 1L`; the Monte Carlo integration in
   [`getTes()`](https://gregfaletto.github.io/fetwfePackage/reference/getTes.md)
   uses `seed + 2L`. `NA` (or `NULL`) means "draw from the ambient
   random-number generator" — no

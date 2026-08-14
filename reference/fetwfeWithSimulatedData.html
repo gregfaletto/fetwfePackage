@@ -199,7 +199,8 @@ reproducing analyses run against v1.12.0 or earlier — pass
 <dt id="arg-cv-seed">cv_seed<a class="anchor" aria-label="anchor" href="#arg-cv-seed"></a></dt>
 <dd><p>Integer or <code>NULL</code>; the seed passed to <code><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed()</a></code>
 immediately before the <code>cv.grpreg()</code> call, controlling fold
-assignment. If <code>NULL</code> (the default), the seed defaults internally to
+assignment. If supplied, must be within <code>+/- .Machine$integer.max</code>.
+If <code>NULL</code> (the default), the seed defaults internally to
 <code>as.integer(N * T)</code> so consecutive calls on the same dataset are
 reproducible without the user having to specify a seed. The seed
 actually used is stored on the returned object as <code>cv_seed</code>.

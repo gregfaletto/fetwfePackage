@@ -128,7 +128,8 @@ coefficient vector; recovering the truth requires an adequate number of units).<
 <dd><p>(Optional) Controls the random-number generator for the simulated
 panel. As of fetwfe 1.24.0 the default is <code>NULL</code>, which draws from the
 ambient random-number generator (respecting any preceding <code><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed()</a></code>)
-and emits a warning; pass an integer for a reproducible panel, or <code>NA</code>
+and emits a warning; pass an integer within
+<code>+/- .Machine$integer.max</code> for a reproducible panel, or <code>NA</code>
 to draw from the ambient generator silently. <code>simulateData()</code> no longer
 reuses <code>coefs_obj$seed</code> (the seed <code><a href="genCoefs.html">genCoefs()</a></code> used to build the
 coefficients). Default <code>NULL</code>.</p></dd>

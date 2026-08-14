@@ -79,8 +79,9 @@ genCoefsCore(
 
 - seed:
 
-  (Optional) Integer. Seed for reproducibility. `NA` (or `NULL`) means
-  "draw from the ambient random-number generator" — no
+  (Optional) Integer. Seed for reproducibility. If supplied, must be
+  within `+/- .Machine$integer.max`. `NA` (or `NULL`) means "draw from
+  the ambient random-number generator" — no
   [`set.seed()`](https://rdrr.io/r/base/Random.html) is called.
 
 - R:

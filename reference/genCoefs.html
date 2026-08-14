@@ -210,7 +210,10 @@ all-zero or constant-effect specification is rejected. Defaults to
 
 
 <dt id="arg-seed">seed<a class="anchor" aria-label="anchor" href="#arg-seed"></a></dt>
-<dd><p>(Optional) Integer. Seed for reproducibility. Three
+<dd><p>(Optional) Integer. Seed for reproducibility. If supplied, must
+be within <code>+/- .Machine$integer.max</code> — and because the two offsets
+below are derived from it, the usable maximum here is
+<code>.Machine$integer.max - 2</code>. Three
 deterministic offsets share this seed: the main coefficient draw uses
 <code>seed</code>; the assignment coefficients use <code>seed + 1L</code>; the
 Monte Carlo integration in <code><a href="getTes.html">getTes()</a></code> uses <code>seed + 2L</code>.

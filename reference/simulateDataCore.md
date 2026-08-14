@@ -88,7 +88,8 @@ simulateDataCore(
 
 - seed:
 
-  (Optional) Integer. Seed for reproducibility.
+  (Optional) Integer. Seed for reproducibility. If supplied, must be
+  within `+/- .Machine$integer.max`.
 
 - gen_ints:
 

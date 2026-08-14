@@ -99,13 +99,15 @@ debiasedATT(
 - B:
 
   Integer; the number of wild-bootstrap replicates (default `1000`).
+  Must be a positive integer no greater than `.Machine$integer.max`.
   Ignored unless `method = "bootstrap"`.
 
 - seed:
 
   `NULL` (draw from the ambient RNG, the default) or a single integer
-  for a reproducible bootstrap (the RNG state is saved and restored).
-  Ignored unless `method = "bootstrap"`.
+  within `+/- .Machine$integer.max` for a reproducible bootstrap (the
+  RNG state is saved and restored). Ignored unless
+  `method = "bootstrap"`.
 
 - multiplier:
 

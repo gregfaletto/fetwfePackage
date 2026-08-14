@@ -167,12 +167,14 @@ the two-sample propensity variance.</p></dd>
 
 <dt id="arg-b">B<a class="anchor" aria-label="anchor" href="#arg-b"></a></dt>
 <dd><p>Integer; the number of wild-bootstrap replicates (default <code>1000</code>).
-Ignored unless <code>method = "bootstrap"</code>.</p></dd>
+Must be a positive integer no greater than <code>.Machine$integer.max</code>. Ignored
+unless <code>method = "bootstrap"</code>.</p></dd>
 
 
 <dt id="arg-seed">seed<a class="anchor" aria-label="anchor" href="#arg-seed"></a></dt>
 <dd><p><code>NULL</code> (draw from the ambient RNG, the default) or a single
-integer for a reproducible bootstrap (the RNG state is saved and restored).
+integer within <code>+/- .Machine$integer.max</code> for a reproducible bootstrap
+(the RNG state is saved and restored).
 Ignored unless <code>method = "bootstrap"</code>.</p></dd>
 
 

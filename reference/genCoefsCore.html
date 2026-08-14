@@ -121,7 +121,8 @@ the full description; the two are mutually exclusive.</p></dd>
 
 
 <dt id="arg-seed">seed<a class="anchor" aria-label="anchor" href="#arg-seed"></a></dt>
-<dd><p>(Optional) Integer. Seed for reproducibility. <code>NA</code> (or
+<dd><p>(Optional) Integer. Seed for reproducibility. If supplied, must
+be within <code>+/- .Machine$integer.max</code>. <code>NA</code> (or
 <code>NULL</code>) means "draw from the ambient random-number generator" — no
 <code><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed()</a></code> is called.</p></dd>
 

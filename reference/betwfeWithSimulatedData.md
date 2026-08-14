@@ -149,7 +149,8 @@ betwfeWithSimulatedData(
 
   Integer or `NULL`; the seed passed to
   [`set.seed()`](https://rdrr.io/r/base/Random.html) immediately before
-  the `cv.grpreg()` call. If `NULL` (the default), the seed defaults
+  the `cv.grpreg()` call. If supplied, must be within
+  `+/- .Machine$integer.max`. If `NULL` (the default), the seed defaults
   internally to `as.integer(N * T)`. Ignored when
   `lambda_selection = "bic"`.
 

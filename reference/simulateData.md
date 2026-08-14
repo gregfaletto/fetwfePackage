@@ -78,9 +78,9 @@ simulateData(
   panel. As of fetwfe 1.24.0 the default is `NULL`, which draws from the
   ambient random-number generator (respecting any preceding
   [`set.seed()`](https://rdrr.io/r/base/Random.html)) and emits a
-  warning; pass an integer for a reproducible panel, or `NA` to draw
-  from the ambient generator silently. `simulateData()` no longer reuses
-  `coefs_obj$seed` (the seed
+  warning; pass an integer within `+/- .Machine$integer.max` for a
+  reproducible panel, or `NA` to draw from the ambient generator
+  silently. `simulateData()` no longer reuses `coefs_obj$seed` (the seed
   [`genCoefs()`](https://gregfaletto.github.io/fetwfePackage/reference/genCoefs.md)
   used to build the coefficients). Default `NULL`.
 

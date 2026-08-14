@@ -149,14 +149,16 @@ simultaneousCIs(
 - B:
 
   Integer; number of multiplier-bootstrap replicates
-  (`method = "bootstrap"` only). Default `1000`.
+  (`method = "bootstrap"` only). Must be a positive integer no greater
+  than `.Machine$integer.max`. Default `1000`.
 
 - seed:
 
-  Optional integer; if supplied, the bootstrap draws are reproducible
-  (the ambient random-number stream is saved and restored around them).
-  If `NULL` (default), the draws come from the ambient generator, so
-  results vary run to run. Ignored when `method = "analytic"`.
+  Optional integer within `+/- .Machine$integer.max`. If supplied, the
+  bootstrap draws are reproducible (the ambient random-number stream is
+  saved and restored around them). If `NULL` (default), the draws come
+  from the ambient generator, so results vary run to run. Ignored when
+  `method = "analytic"`.
 
 - multiplier:
 
