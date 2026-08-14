@@ -76,8 +76,6 @@ NULL
 	.check_for_tidy(x)
 	.validate_conf_level(conf.level)
 
-	z <- stats::qnorm(1 - (1 - conf.level) / 2)
-
 	att_term <- "ATT"
 	att_estimate <- x$att_hat
 	att_se <- x$att_se
@@ -120,9 +118,14 @@ NULL
 
 	if (conf.int) {
 		# Overall-ATT row (K = 1) stays the scalar Wald interval at
-		# `conf.level` (pointwise == simultaneous for a scalar).
-		att_lo <- att_estimate - z * att_se
-		att_hi <- att_estimate + z * att_se
+		# `conf.level` (pointwise == simultaneous for a scalar). Shared with
+		# the print/summary paths via `.att_wald_ci()` (#439) -- note the
+		# semantic join: those two callers pass the fit-time `alpha`, this one
+		# passes `1 - conf.level` from the user's argument. Same arithmetic,
+		# two different notions of "the level".
+		att_ci <- .att_wald_ci(att_estimate, att_se, 1 - conf.level)
+		att_lo <- att_ci[1]
+		att_hi <- att_ci[2]
 		# Cohort rows pass through `catt_df`'s stored bounds (#197, Option B),
 		# so they reflect the fit's `ci_type` (simultaneous by default). `catt`
 		# is the SAME post-sort frame `cohort_estimates` / `cohort_ses` came

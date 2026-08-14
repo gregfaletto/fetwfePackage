@@ -685,9 +685,270 @@
 # (header text, gating flags, path-extractor functions, max_cohorts /
 # order_by) and delegates here. Issue #77 step 2 / PR following PR #90.
 #
-# Byte-identity of the output is enforced by the six snapshots at
-# tests/testthat/_snaps/print-method-snapshot.md (PR #90).
+# Byte-identity of the output is enforced by the snapshots at
+# tests/testthat/_snaps/print-method-snapshot.md (PR #90, extended by #439).
 #-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+# Shared rendering pieces (#439, issue #366 part A2).
+#
+# `print()` and `print(summary())` are meant to report the same facts in the same
+# layout. Before #439 each of the five pieces below was written twice, once per
+# function, kept in agreement only by snapshot tests that lock each copy
+# separately -- so an edit to one could land without the other and the package
+# would disagree with itself about, say, whether its intervals are simultaneous
+# or pointwise. Each is now emitted from one place.
+#
+# The callers keep the event-study GATE (`print` gates on a live `eventStudy(x)`
+# call, `summary` on the cached `x$event_study`); only the rendering skeleton is
+# shared. Absorbing the gate would collapse the two independent facts that
+# test-event-study-present-in-print-summary-174.R asserts into one.
+#-------------------------------------------------------------------------------
+
+#' @title Parenthetical naming the standard-error flavor
+#'
+#' @description
+#' Returns the qualifier the print and summary paths append after the words
+#' "Std. Error" / "SE" -- `" (cluster-robust)"`, `" (conservative)"`, or `""`
+#' for the default. The helper deliberately stops at the qualifier rather than
+#' returning a finished label, because **the two callers' literals differ**:
+#' `.print_estimator_output()` renders `"  Std. Error (cluster-robust): %.4f\n"`
+#' while `.print_summary_estimator_output()` renders `"SE (cluster-robust)"`.
+#' One shared finished label could not serve both without changing user-visible
+#' output, so each caller composes its own surrounding text.
+#'
+#' @param se_type Character scalar; the fit's `se_type` slot, one of
+#'   `"default"`, `"conservative"`, `"cluster"`.
+#' @return A length-1 character: the parenthetical including its leading space,
+#'   or `""` for anything other than `"cluster"` / `"conservative"`.
+#' @keywords internal
+#' @noRd
+.se_qualifier <- function(se_type) {
+	if (identical(se_type, "cluster")) {
+		" (cluster-robust)"
+	} else if (identical(se_type, "conservative")) {
+		" (conservative)"
+	} else {
+		""
+	}
+}
+
+#' @title Band-type label for a confidence-interval table header
+#'
+#' @description
+#' Returns `"simultaneous"` or `"pointwise"` for the `[<label> NN% CI]` suffix on
+#' the CATT and event-study preview headers (#197).
+#'
+#' Takes the **scalar** `ci_type`, never the object: the print path holds a
+#' `fetwfe`-family fit and the summary path a `summary.fetwfe`-family list, so a
+#' single object parameter would carry two unrelated shapes and could validate
+#' neither.
+#'
+#' @details
+#' `NULL` -- a pre-1.16.0 fit or summary carrying no `ci_type` slot -- returns
+#' `"pointwise"`. That is a **compatibility behavior, not a default**: those
+#' objects' stored bounds really are pointwise, so the label is accurate.
+#'
+#' The same compatibility rule is encoded independently by
+#' `.resolve_event_study_ci_type()` in `R/event_study.R`, with different control
+#' flow and a divergence on invalid input (this helper falls through to
+#' `"pointwise"`; that one raises a `match.arg()` error). If the rule is ever
+#' revisited, both must change.
+#'
+#' Not to be confused with the `identical(x$ci_type, "simultaneous")` tests in
+#' `.check_ci_band_width()` (this file) and in `R/event_study.R`. Those are
+#' **gates**, not labels; routing a gate through this helper would make a
+#' control-flow decision depend on a display string.
+#'
+#' @param ci_type Character scalar or `NULL`; the object's `ci_type` slot.
+#' @return A length-1 character, `"simultaneous"` or `"pointwise"`.
+#' @keywords internal
+#' @noRd
+.band_label <- function(ci_type) {
+	if (identical(ci_type, "simultaneous")) {
+		"simultaneous"
+	} else {
+		"pointwise"
+	}
+}
+
+#' @title Two-sided Wald interval for a scalar estimate
+#'
+#' @description
+#' Returns `estimate +/- qnorm(1 - alpha / 2) * se` as an unnamed length-2
+#' numeric, lower bound first. Value-returning rather than `cat()`-emitting
+#' because one of its three callers, `.tidy_estimator_output()` in
+#' `R/broom_methods.R`, writes the bounds into a data frame and never prints.
+#'
+#' @details
+#' **The `alpha` parameter carries two different notions of "the level."** The
+#' two rendering callers pass the fit-time `x$alpha`, the level the fit's own
+#' bands were built at; the `broom` caller passes `1 - conf.level` from the
+#' user's argument to `tidy()`. Both are correct for their site and the
+#' arithmetic is the same, but the join is worth naming.
+#'
+#' **The callers also disagree about what has been validated first.**
+#' `.tidy_estimator_output()` calls `.check_for_tidy(x)` before reaching here;
+#' the two rendering callers call no method-entry precondition, because the
+#' print / summary family has none (see `.workflow/PROFILE.md`). In particular
+#' nothing establishes `has_valid_ses`, so on a `q >= 1` fit `att_se` is `NA`,
+#' this helper propagates it, and the rendered interval is `[NA, NA]`. That is
+#' the status quo rather than a regression, but a reader of a shared helper is
+#' entitled to know its precondition differs by caller.
+#'
+#' `unname()` makes the documented return type true regardless of the caller:
+#' at the summary site the inputs are the *named* elements `x$att["estimate"]`
+#' and `x$att["se"]`, so without it this helper would return a named pair there
+#' and an unnamed one at the other two sites.
+#'
+#' @param estimate Numeric scalar; the point estimate.
+#' @param se Numeric scalar; its standard error. May be `NA`.
+#' @param alpha Numeric scalar in (0, 1); the two-sided level.
+#' @return An unnamed numeric of length 2: `c(lower, upper)`.
+#' @keywords internal
+#' @noRd
+.att_wald_ci <- function(estimate, se, alpha) {
+	z <- stats::qnorm(1 - alpha / 2)
+	unname(c(estimate - z * se, estimate + z * se))
+}
+
+#' @title Render one preview block: header, table, truncation footer, blank line
+#'
+#' @description
+#' The rendering skeleton shared by **four** sites: the CATT preview and the
+#' event-study preview, in each of `.print_estimator_output()` and
+#' `.print_summary_estimator_output()`. Its real value is that the
+#' `truncated` / `n_discarded` attribute protocol -- the contract between
+#' `.truncate_catt()` / `.truncate_event_study()` and the renderers -- had four
+#' independent readers and now has one.
+#'
+#' @details
+#' `header` arrives fully formatted, so this helper does **not** single-source
+#' the header text; `.band_label()` covers the part of it that can drift
+#' semantically.
+#'
+#' `more_fmt` has **four distinct correct values** across the four sites,
+#' varying on two axes at once -- `and` vs `+` (print vs summary) and `cohorts`
+#' vs `event times` (CATT vs event study):
+#'
+#' \preformatted{
+#'   print   / CATT         "  ... and %d more cohorts.\n"
+#'   print   / event study  "  ... and %d more event times.\n"
+#'   summary / CATT         "  ... + %d more cohorts.\n"
+#'   summary / event study  "  ... + %d more event times.\n"
+#' }
+#'
+#' Getting one wrong renders plausible-looking output at the wrong site, which
+#' is why all four are pinned in
+#' `tests/testthat/test-print-summary-single-source-439.R`.
+#'
+#' The `n_discarded` guard is not decorative: `sprintf("%d", NULL)` returns
+#' `character(0)` and `cat(character(0))` emits nothing, so a frame flagged
+#' `truncated` with no count would silently emit no footer at all -- in the
+#' helper whose whole purpose is that footer. Both producers set the pair
+#' together, but hand-built test fixtures need not.
+#'
+#' @param df A data frame to render, optionally carrying the attributes
+#'   `truncated` (logical) and `n_discarded` (integer).
+#' @param header Single pre-formatted string, passed verbatim to `cat()`.
+#' @param more_fmt A `sprintf` format taking one `%d`, used only when `df` is
+#'   flagged truncated.
+#' @return `invisible(NULL)`.
+#' @keywords internal
+#' @noRd
+.cat_preview_block <- function(df, header, more_fmt) {
+	cat(header)
+	.print_catt_tbl(df)
+	if (isTRUE(attr(df, "truncated"))) {
+		n_discarded <- attr(df, "n_discarded")
+		if (length(n_discarded) != 1L) {
+			stop(
+				".cat_preview_block(): `truncated` is TRUE but `n_discarded` ",
+				"is missing or not a scalar. This is a programmer-side ",
+				"contract violation -- please report at ",
+				"https://github.com/gregfaletto/fetwfePackage/issues.",
+				call. = FALSE
+			)
+		}
+		cat(sprintf(more_fmt, n_discarded))
+	}
+	cat("\n")
+	invisible(NULL)
+}
+
+#' @title Render the Model Details block
+#'
+#' @description
+#' The header plus five dimension rows, and -- when `show_lambda` is `TRUE` --
+#' the two bridge-selection rows. Shared by `.print_estimator_output()` and
+#' `.print_summary_estimator_output()`, which rendered byte-identical text from
+#' differently-named sources before #439.
+#'
+#' @details
+#' **`info` is a named list, never positional scalars.** Every dimension row is
+#' `%d` applied to a same-typed integer, so a positional `(N, T, G, d, p)`
+#' signature would accept any permutation of its arguments silently -- and every
+#' snapshot fixture predating #439 had `G == 2` and `d == 2`, so a G/d
+#' transposition would have rendered identically and been invisible to the whole
+#' suite. Passing names makes the transposition impossible to write.
+#'
+#' The summary caller passes `object$model_info` unmodified; the extra fields it
+#' carries (`R`, `sig_eps_sq`, `sig_eps_c_sq`) are ignored. The print caller
+#' builds the list from the fit's own slots, where the one vocabulary difference
+#' lives: the fit's slot is `lambda_star_model_size`, the field here is
+#' `model_size`.
+#'
+#' The required-name check exists because `sprintf("%d", NULL)` returns
+#' `character(0)` and `cat(character(0))` emits nothing, so a mis-*named* field
+#' would print this block silently missing a whole row. The required set is
+#' derived from `show_lambda` so the two optional fields are demanded exactly
+#' when they are read. Reads use `[[` rather than `$` for exact matching -- `$`
+#' partial-matches on lists, and this helper's contract tolerates extra names,
+#' which is the situation where a partial match can appear later. The two are
+#' independent improvements: `[[` on a list returns `NULL` for a missing name
+#' and never errors.
+#'
+#' Note the deliberate asymmetry with `.band_label()`, two helpers above, which
+#' *tolerates* a missing `ci_type` on a pre-1.16.0 object. A missing `ci_type`
+#' has a correct fallback -- those bounds really are pointwise -- whereas a
+#' missing `N` has none: there is no value to print and no way to guess one.
+#' Reachable in practice only from a `summary.<class>` object deserialized from
+#' a build predating the #222 `R` -> `G` rename, since `model_info` is built in
+#' exactly one place from an already-validated fit.
+#'
+#' @param info Named list with `N`, `T`, `G`, `d`, `p`, plus `model_size` and
+#'   `lambda_star` when `show_lambda` is `TRUE`. Extra names are ignored.
+#' @param show_lambda Logical; render the `Selected size` / `Lambda*` rows.
+#' @return `invisible(NULL)`.
+#' @keywords internal
+#' @noRd
+.cat_model_details <- function(info, show_lambda) {
+	required <- c("N", "T", "G", "d", "p")
+	if (show_lambda) {
+		required <- c(required, "model_size", "lambda_star")
+	}
+	missing_fields <- setdiff(required, names(info))
+	if (length(missing_fields) > 0) {
+		stop(
+			".cat_model_details(): missing field(s): ",
+			paste(missing_fields, collapse = ", "),
+			". This is a programmer-side contract violation -- please report ",
+			"at https://github.com/gregfaletto/fetwfePackage/issues.",
+			call. = FALSE
+		)
+	}
+	cat("Model Details:\n")
+	cat(sprintf("  Units (N)           : %d\n", info[["N"]]))
+	cat(sprintf("  Time periods (T)    : %d\n", info[["T"]]))
+	cat(sprintf("  Treated cohorts (G) : %d\n", info[["G"]]))
+	cat(sprintf("  Covariates (d)      : %d\n", info[["d"]]))
+	cat(sprintf("  Features (p)        : %d\n", info[["p"]]))
+	if (show_lambda) {
+		cat(sprintf("  Selected size       : %d\n", info[["model_size"]]))
+		cat(sprintf("  Lambda*             : %.4f\n", info[["lambda_star"]]))
+	}
+	invisible(NULL)
+}
 
 #' @title Consolidated body of `print.<class>` for the three estimator classes
 #'
@@ -753,25 +1014,18 @@
 
 	## Overall ATT
 	ci_pct <- 100 * (1 - x$alpha)
-	ci_low <- x$att_hat - qnorm(1 - x$alpha / 2) * x$att_se
-	ci_high <- x$att_hat + qnorm(1 - x$alpha / 2) * x$att_se
+	att_ci <- .att_wald_ci(x$att_hat, x$att_se, x$alpha)
+	ci_low <- att_ci[1]
+	ci_high <- att_ci[2]
 	cat(sprintf(
 		"Overall Average Treatment Effect (ATT):\n  Estimate:   %.4f\n",
 		x$att_hat
 	))
-	if (identical(x$se_type, "cluster")) {
-		cat(sprintf(
-			"  Std. Error (cluster-robust): %.4f\n",
-			x$att_se
-		))
-	} else if (identical(x$se_type, "conservative")) {
-		cat(sprintf(
-			"  Std. Error (conservative): %.4f\n",
-			x$att_se
-		))
-	} else {
-		cat(sprintf("  Std. Error: %.4f\n", x$att_se))
-	}
+	cat(sprintf(
+		"  Std. Error%s: %.4f\n",
+		.se_qualifier(x$se_type),
+		x$att_se
+	))
 	if (!is.null(x$att_p_value) && !is.na(x$att_p_value)) {
 		cat(sprintf("  P-value:    %.4g\n", x$att_p_value))
 	} else {
@@ -792,25 +1046,17 @@
 	# (family-wise) by default, or pointwise when the fit used
 	# ci_type = "pointwise". Older fits (pre-1.16.0) carry no ci_type slot
 	# and are labeled pointwise (their bounds are pointwise).
-	band_label <- if (identical(x$ci_type, "simultaneous")) {
-		"simultaneous"
-	} else {
-		"pointwise"
-	}
+	band_label <- .band_label(x$ci_type)
 	catt_df <- .truncate_catt(x$catt_df, max_cohorts, order_by)
-	cat(sprintf(
-		"Cohort Average Treatment Effects (CATT) [%s %.0f%% CI]:\n",
-		band_label,
-		100 * (1 - x$alpha)
-	))
-	.print_catt_tbl(catt_df)
-	if (isTRUE(attr(catt_df, "truncated"))) {
-		cat(sprintf(
-			"  ... and %d more cohorts.\n",
-			attr(catt_df, "n_discarded")
-		))
-	}
-	cat("\n")
+	.cat_preview_block(
+		catt_df,
+		sprintf(
+			"Cohort Average Treatment Effects (CATT) [%s %.0f%% CI]:\n",
+			band_label,
+			ci_pct
+		),
+		"  ... and %d more cohorts.\n"
+	)
 
 	## Event-study effects (#174 / #138). Strict policy: `eventStudy()`'s
 	## contract is "succeeds on any fit produced by `fetwfe()` /
@@ -827,32 +1073,33 @@
 	es <- if (isTRUE(include_event_study)) eventStudy(x) else NULL
 	if (!is.null(es) && nrow(es) > 0L) {
 		es_preview <- .truncate_event_study(es, max_event_times)
-		cat(sprintf(
-			"Event-Study Average Treatment Effects (per event time) [%s %.0f%% CI]:\n",
-			band_label,
-			100 * (1 - x$alpha)
-		))
-		.print_catt_tbl(es_preview)
-		if (isTRUE(attr(es_preview, "truncated"))) {
-			cat(sprintf(
-				"  ... and %d more event times.\n",
-				attr(es_preview, "n_discarded")
-			))
-		}
-		cat("\n")
+		.cat_preview_block(
+			es_preview,
+			sprintf(
+				"Event-Study Average Treatment Effects (per event time) [%s %.0f%% CI]:\n",
+				band_label,
+				ci_pct
+			),
+			"  ... and %d more event times.\n"
+		)
 	}
 
 	## Model info
-	cat("Model Details:\n")
-	cat(sprintf("  Units (N)           : %d\n", x$N))
-	cat(sprintf("  Time periods (T)    : %d\n", x$T))
-	cat(sprintf("  Treated cohorts (G) : %d\n", x$G))
-	cat(sprintf("  Covariates (d)      : %d\n", x$d))
-	cat(sprintf("  Features (p)        : %d\n", x$p))
-	if (show_lambda) {
-		cat(sprintf("  Selected size       : %d\n", x$lambda_star_model_size))
-		cat(sprintf("  Lambda*             : %.4f\n", x$lambda_star))
-	}
+	# Named fields, not positional scalars: every row is `%d` on a same-typed
+	# integer, so a G/d transposition would render identically. `model_size` is
+	# this caller's name for the fit's `lambda_star_model_size` slot.
+	.cat_model_details(
+		list(
+			N = x$N,
+			T = x$T,
+			G = x$G,
+			d = x$d,
+			p = x$p,
+			model_size = x$lambda_star_model_size,
+			lambda_star = x$lambda_star
+		),
+		show_lambda
+	)
 
 	if (show_internal) {
 		cat("\nInternal Details:\n")
@@ -1045,22 +1292,13 @@
 	ci_pct <- 100 * (1 - x$alpha)
 	# Band-type label (#197): simultaneous (family-wise) by default, pointwise
 	# under ci_type = "pointwise" or for pre-1.16.0 summaries with no slot.
-	band_label <- if (identical(x$ci_type, "simultaneous")) {
-		"simultaneous"
-	} else {
-		"pointwise"
-	}
-	ci_low <- x$att["estimate"] - qnorm(1 - x$alpha / 2) * x$att["se"]
-	ci_high <- x$att["estimate"] + qnorm(1 - x$alpha / 2) * x$att["se"]
+	band_label <- .band_label(x$ci_type)
+	att_ci <- .att_wald_ci(x$att["estimate"], x$att["se"], x$alpha)
+	ci_low <- att_ci[1]
+	ci_high <- att_ci[2]
 	p_val <- x$att["p_value"]
 	p_str <- if (is.na(p_val)) "NA" else sprintf("%.4g", p_val)
-	se_label <- if (identical(x$se_type, "cluster")) {
-		"SE (cluster-robust)"
-	} else if (identical(x$se_type, "conservative")) {
-		"SE (conservative)"
-	} else {
-		"SE"
-	}
+	se_label <- paste0("SE", .se_qualifier(x$se_type))
 	cat(sprintf(
 		"Overall ATT: %.4f  (%s = %.4f, p = %s, %.0f%% CI = [%.4f, %.4f])\n",
 		x$att["estimate"],
@@ -1077,16 +1315,15 @@
 		cat("\n")
 	}
 
-	cat(sprintf(
-		"CATT (preview) [%s %.0f%% CI]:\n",
-		band_label,
-		ci_pct
-	))
-	.print_catt_tbl(x$catt)
-	if (isTRUE(attr(x$catt, "truncated"))) {
-		cat(sprintf("  ... + %d more cohorts.\n", attr(x$catt, "n_discarded")))
-	}
-	cat("\n")
+	.cat_preview_block(
+		x$catt,
+		sprintf(
+			"CATT (preview) [%s %.0f%% CI]:\n",
+			band_label,
+			ci_pct
+		),
+		"  ... + %d more cohorts.\n"
+	)
 
 	## Event-study preview (#174 / #138). Reads from the cached field set
 	## by `.summary_estimator_output()`; no recompute. NULL means
@@ -1094,32 +1331,22 @@
 	## eventStudy() failure now propagates rather than being silently
 	## swallowed (strict policy, #174).
 	if (!is.null(x$event_study)) {
-		cat(sprintf(
-			"Event Study (preview) [%s %.0f%% CI]:\n",
-			band_label,
-			ci_pct
-		))
-		.print_catt_tbl(x$event_study)
-		if (isTRUE(attr(x$event_study, "truncated"))) {
-			cat(sprintf(
-				"  ... + %d more event times.\n",
-				attr(x$event_study, "n_discarded")
-			))
-		}
-		cat("\n")
+		.cat_preview_block(
+			x$event_study,
+			sprintf(
+				"Event Study (preview) [%s %.0f%% CI]:\n",
+				band_label,
+				ci_pct
+			),
+			"  ... + %d more event times.\n"
+		)
 	}
 
 	## Model info
-	cat("Model Details:\n")
-	cat(sprintf("  Units (N)           : %d\n", x$model_info$N))
-	cat(sprintf("  Time periods (T)    : %d\n", x$model_info$T))
-	cat(sprintf("  Treated cohorts (G) : %d\n", x$model_info$G))
-	cat(sprintf("  Covariates (d)      : %d\n", x$model_info$d))
-	cat(sprintf("  Features (p)        : %d\n", x$model_info$p))
-	if (show_lambda) {
-		cat(sprintf("  Selected size       : %d\n", x$model_info$model_size))
-		cat(sprintf("  Lambda*             : %.4f\n", x$model_info$lambda_star))
-	}
+	# `model_info` already carries exactly the names .cat_model_details() wants,
+	# so it is passed with no adapter; its extra fields (R, sig_eps_sq,
+	# sig_eps_c_sq) are ignored.
+	.cat_model_details(x$model_info, show_lambda)
 
 	invisible(x)
 }
