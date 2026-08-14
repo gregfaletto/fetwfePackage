@@ -37,6 +37,18 @@
   bootstrap channels, so the point estimate and the bands cannot drift apart on
   the penalty scale or the convergence diagnostics (#366).
 
+- The five rendering pieces shared by `print()` and `print(summary())` --- the
+  standard-error qualifier, the simultaneous-versus-pointwise band label, the
+  overall-ATT Wald interval, the truncated-preview block, and the Model Details
+  block --- are each now emitted from one place instead of being written twice,
+  so an edit to one report can no longer land without the other (#439). Printed
+  output is unchanged: byte-identity was verified across 28 renderings spanning
+  all four estimator classes, both report paths, every `se_type` and `ci_type`,
+  and all four truncation footers. The Wald-interval helper is shared with
+  `broom::tidy()`'s `conf.int` columns. `twfeCovs` gained the print and summary
+  snapshot tests it had never had, and the `"pointwise"`, `"cluster-robust"` and
+  `"conservative"` labels are now pinned on both report paths.
+
 - The range rule above and its error wording are single-sourced in two new
   internal helpers in `R/utility.R`, `.exceeds_integer_max()` and
   `.format_int_max_range()`, so the boundary cannot later be tightened in one

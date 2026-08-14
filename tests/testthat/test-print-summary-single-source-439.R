@@ -53,6 +53,58 @@ library(fetwfe)
 }
 
 # ------------------------------------------------------------------------------
+# Shared fixtures. Defined up here, before any test_that() block, because
+# testthat evaluates a file top to bottom: a block that references a fixture
+# defined further down fails with "object not found".
+# ------------------------------------------------------------------------------
+
+# The standard fixture the print-method snapshots use. NOTE its degeneracy: the
+# bridge selects nothing here, so `att_hat == att_se == 0` and the rendered ATT
+# interval is [0.0000, 0.0000] at EVERY alpha. Fine for label assertions, and
+# useless for any assertion about interval bounds -- see the alpha test below.
+.pdata_439 <- generate_panel_data(N = 30, T = 5, R = 2, seed = 123)
+
+.fit_439 <- function(...) {
+	fetwfe(
+		pdata = .pdata_439,
+		time_var = "time",
+		unit_var = "unit",
+		treatment = "treatment",
+		response = "y",
+		covs = c("cov1", "cov2"),
+		verbose = FALSE,
+		lambda_selection = "bic",
+		...
+	)
+}
+
+# The distinct-dimension fixture: N=40, T=6, G=3, d=1, p=41 -- five distinct
+# values, versus G == d == 2 on every fixture predating #439. `covs = "cov1"`
+# (one covariate, not two) is what makes d = 1. This call must stay
+# byte-identical to `fit_distinct` in tests/testthat/test-print-method-snapshot.R,
+# whose goldens lock the same Model Details lines group 3 asserts.
+#
+# It also has `att_se > 0`, which is what lets the alpha test below assert
+# interval BOUNDS rather than just labels.
+.pdata_distinct_439 <- generate_panel_data(N = 40, T = 6, R = 3, seed = 123)
+
+.fit_distinct_at <- function(alpha = 0.05) {
+	fetwfe(
+		pdata = .pdata_distinct_439,
+		time_var = "time",
+		unit_var = "unit",
+		treatment = "treatment",
+		response = "y",
+		covs = "cov1",
+		verbose = FALSE,
+		lambda_selection = "bic",
+		alpha = alpha
+	)
+}
+
+.fit_distinct_439 <- .fit_distinct_at()
+
+# ------------------------------------------------------------------------------
 # Group 1: direct helper contracts.
 #
 # Defends against: any helper stubbed to a constant. These are the only
@@ -187,22 +239,6 @@ test_that(".cat_preview_block() rejects a truncated frame with no discard count"
 # inside `.se_qualifier()`, via the paired absence assertions.
 # ------------------------------------------------------------------------------
 
-.pdata_439 <- generate_panel_data(N = 30, T = 5, R = 2, seed = 123)
-
-.fit_439 <- function(...) {
-	fetwfe(
-		pdata = .pdata_439,
-		time_var = "time",
-		unit_var = "unit",
-		treatment = "treatment",
-		response = "y",
-		covs = c("cov1", "cov2"),
-		verbose = FALSE,
-		lambda_selection = "bic",
-		...
-	)
-}
-
 test_that("se_type = 'cluster' and ci_type = 'pointwise' are rendered on both paths", {
 	fit <- .fit_439(se_type = "cluster", ci_type = "pointwise")
 
@@ -251,22 +287,46 @@ test_that("the default se_type renders an unqualified Std. Error on both paths",
 	.expect_absent(out_summary, " (conservative)")
 })
 
-test_that("a non-default alpha reaches BOTH rendered CI labels", {
+test_that("a non-default alpha changes the rendered ATT BOUNDS, not just the label", {
 	# Without this, `.att_wald_ci()` ignoring its `alpha` and hard-coding 0.05
-	# would be byte-identical at both rendering call sites: measured, nothing
-	# else in the repo renders a print or summary path at a non-default alpha.
-	# The broom site is covered by test-broom-methods.R's conf.level test.
-	fit <- .fit_439(alpha = 0.10)
+	# is byte-identical at both rendering call sites: measured, nothing else in
+	# the repo renders a print or summary path at a non-default alpha. The broom
+	# site is covered by test-broom-methods.R's conf.level test.
+	#
+	# TWO THINGS MAKE THIS BITE, and an earlier version of this test had
+	# neither:
+	#
+	# 1. The BOUNDS are asserted, not the label. The `NN% CI` label comes from
+	#    `ci_pct` in the caller, NOT from `.att_wald_ci()`, so an alpha-ignoring
+	#    helper would still render "90% CI:" -- with the 95% numbers beside it.
+	# 2. The fixture has `att_se > 0`. The group-2 fixture above has
+	#    `att_hat = att_se = 0` (the bridge selects nothing), so its interval is
+	#    [0.0000, 0.0000] at every alpha and no assertion on it can discriminate.
+	#
+	# The two expected pairs are hand-verified against the rendered output:
+	#   alpha = 0.05  ->  [-0.4566, 0.0489]
+	#   alpha = 0.10  ->  [-0.4160, 0.0083]
+	fit_05 <- .fit_distinct_439
+	fit_10 <- .fit_distinct_at(alpha = 0.10)
+	expect_gt(fit_10$att_se, 0) # guard: the assertion is vacuous if se == 0
 
-	out_print <- .render_print(fit)
-	expect_match(out_print, "90% CI:", fixed = TRUE)
-	expect_match(out_print, "[simultaneous 90% CI]", fixed = TRUE)
-	.expect_absent(out_print, "95% CI")
+	out_05 <- .render_print(fit_05)
+	expect_match(out_05, "  95% CI:    [-0.4566, 0.0489]", fixed = TRUE)
 
-	out_summary <- .render_summary(fit)
-	expect_match(out_summary, "90% CI = ", fixed = TRUE)
-	expect_match(out_summary, "[simultaneous 90% CI]", fixed = TRUE)
-	.expect_absent(out_summary, "95% CI")
+	out_10 <- .render_print(fit_10)
+	expect_match(out_10, "  90% CI:    [-0.4160, 0.0083]", fixed = TRUE)
+	expect_match(out_10, "[simultaneous 90% CI]", fixed = TRUE)
+	# The exact failure an alpha-ignoring helper would produce: the 90% label
+	# beside the 95% numbers.
+	.expect_absent(out_10, "  90% CI:    [-0.4566, 0.0489]")
+
+	sum_05 <- .render_summary(fit_05)
+	expect_match(sum_05, "95% CI = [-0.4566, 0.0489]", fixed = TRUE)
+
+	sum_10 <- .render_summary(fit_10)
+	expect_match(sum_10, "90% CI = [-0.4160, 0.0083]", fixed = TRUE)
+	expect_match(sum_10, "[simultaneous 90% CI]", fixed = TRUE)
+	.expect_absent(sum_10, "90% CI = [-0.4566, 0.0489]")
 })
 
 # ------------------------------------------------------------------------------
@@ -275,20 +335,11 @@ test_that("a non-default alpha reaches BOTH rendered CI labels", {
 # Defends against: a G/d (or N/T, or any other) transposition in
 # `.cat_model_details()`. Every snapshot fixture predating #439 had G == d == 2,
 # so a G/d swap rendered identically and the whole suite stayed green.
+#
+# `.pdata_distinct_439` / `.fit_distinct_439` are defined in the shared-fixtures
+# section at the top of this file, since the alpha test in group 2 needs them
+# too.
 # ------------------------------------------------------------------------------
-
-.pdata_distinct_439 <- generate_panel_data(N = 40, T = 6, R = 3, seed = 123)
-
-.fit_distinct_439 <- fetwfe(
-	pdata = .pdata_distinct_439,
-	time_var = "time",
-	unit_var = "unit",
-	treatment = "treatment",
-	response = "y",
-	covs = "cov1",
-	verbose = FALSE,
-	lambda_selection = "bic"
-)
 
 test_that("the distinct-dimension fixture really has five distinct dimensions", {
 	# Asserted first and separately so that if a future change to
