@@ -26,10 +26,10 @@ library(fetwfe)
 # any transposition among them changes the rendered output. It is fetwfe-only,
 # which is fine -- `.cat_model_details()` is class-agnostic.
 #
-# The `generate_panel_data()` body is verbatim from
-# `tests/testthat/test-fetwfe.R`; the duplication is acceptable so the
-# guardrail file is self-contained (see .plans/feat-print-snapshot-77/PLAN.md
-# Decision Log D3 / D4).
+# `generate_panel_data()` itself lives in `tests/testthat/helper-panel-fixture.R`,
+# which testthat sources before any test file (#91 consolidated what had been 14
+# inline copies). This comment previously said the body was duplicated verbatim
+# here; that stopped being true at #91.
 #
 # Snapshot tests require testthat edition 3 and skip under CRAN by default
 # (so `R CMD check --as-cran` shows SKIPs for these tests; `devtools::test()`

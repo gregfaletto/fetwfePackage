@@ -756,9 +756,10 @@
 #' revisited, both must change.
 #'
 #' Not to be confused with the `identical(x$ci_type, "simultaneous")` tests in
-#' `.check_ci_band_width()` (this file) and in `R/event_study.R`. Those are
-#' **gates**, not labels; routing a gate through this helper would make a
-#' control-flow decision depend on a display string.
+#' `.check_ci_band_width()` (this file), in `R/event_study.R`, and in
+#' `.finalize_ci_type()` (`R/simultaneous_cis.R`). Those are **gates**, not
+#' labels; routing a gate through this helper would make a control-flow decision
+#' depend on a display string.
 #'
 #' @param ci_type Character scalar or `NULL`; the object's `ci_type` slot.
 #' @return A length-1 character, `"simultaneous"` or `"pointwise"`.
@@ -845,8 +846,16 @@
 #' The `n_discarded` guard is not decorative: `sprintf("%d", NULL)` returns
 #' `character(0)` and `cat(character(0))` emits nothing, so a frame flagged
 #' `truncated` with no count would silently emit no footer at all -- in the
-#' helper whose whole purpose is that footer. Both producers set the pair
-#' together, but hand-built test fixtures need not.
+#' helper whose whole purpose is that footer.
+#'
+#' Reachability of that error, so it is not re-derived: both producers
+#' (`.truncate_catt()`, `.truncate_event_study()`) set `truncated` and
+#' `n_discarded` together, and every call site but one routes its frame through
+#' one of them, which overwrites any stale `truncated` attribute. The exception
+#' is `summary(object, full_catt = TRUE)`, which passes `object$catt_df`
+#' straight through un-truncated -- so a `catt_df` carrying a hand-set
+#' `truncated = TRUE` and no count would reach here. That still requires a
+#' mutated fit object; it is not reachable from a well-formed one.
 #'
 #' @param df A data frame to render, optionally carrying the attributes
 #'   `truncated` (logical) and `n_discarded` (integer).
@@ -898,9 +907,13 @@
 #' lives: the fit's slot is `lambda_star_model_size`, the field here is
 #' `model_size`.
 #'
-#' The required-name check exists because `sprintf("%d", NULL)` returns
-#' `character(0)` and `cat(character(0))` emits nothing, so a mis-*named* field
-#' would print this block silently missing a whole row. The required set is
+#' The required-field check exists because `sprintf("%d", NULL)` returns
+#' `character(0)` and `cat(character(0))` emits nothing, so a mis-named *or*
+#' `NULL`-valued field would print this block silently missing a whole row. It
+#' tests `length(info[[nm]]) == 1L` rather than name presence, because a
+#' names-only test would be inert at the `print()` call site: that caller builds
+#' the list from fit slots, so a renamed slot arrives as a present name bound to
+#' `NULL`. The required set is
 #' derived from `show_lambda` so the two optional fields are demanded exactly
 #' when they are read. Reads use `[[` rather than `$` for exact matching -- `$`
 #' partial-matches on lists, and this helper's contract tolerates extra names,
@@ -927,11 +940,23 @@
 	if (show_lambda) {
 		required <- c(required, "model_size", "lambda_star")
 	}
-	missing_fields <- setdiff(required, names(info))
-	if (length(missing_fields) > 0) {
+	# Checks LENGTH, not just presence of the name. A names-only check
+	# (`setdiff(required, names(info))`) is inert at the `print()` call site:
+	# that caller builds `info` as `list(N = x$N, ...)`, so a renamed or dropped
+	# slot arrives as a present name bound to `NULL` -- and `list(N = NULL)`
+	# retains the name. `setdiff` then returns nothing, `sprintf("%d", NULL)`
+	# returns `character(0)`, `cat(character(0))` emits nothing, and the row
+	# vanishes silently. `length(info[[nm]]) == 1L` catches the absent name and
+	# the NULL-valued name alike, so both callers are protected.
+	is_usable <- vapply(
+		required,
+		function(nm) length(info[[nm]]) == 1L,
+		logical(1)
+	)
+	if (!all(is_usable)) {
 		stop(
-			".cat_model_details(): missing field(s): ",
-			paste(missing_fields, collapse = ", "),
+			".cat_model_details(): missing or non-scalar field(s): ",
+			paste(required[!is_usable], collapse = ", "),
 			". This is a programmer-side contract violation -- please report ",
 			"at https://github.com/gregfaletto/fetwfePackage/issues.",
 			call. = FALSE

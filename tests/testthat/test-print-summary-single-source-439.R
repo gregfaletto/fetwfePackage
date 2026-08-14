@@ -184,22 +184,48 @@ test_that(".att_wald_ci() computes the Wald interval and reads its alpha", {
 
 test_that(".cat_model_details() rejects a mis-named field instead of dropping a row", {
 	ok <- list(N = 40, T = 6, G = 3, d = 1, p = 41)
-	expect_silent(invisible(capture.output(
+	# Assert the ROWS, not just that nothing was thrown: an
+	# `expect_silent(capture.output(...))` happy path passes on a helper that
+	# emits nothing at all, which is the exact failure this block exists to
+	# detect.
+	out_ok <- capture.output(
 		fetwfe:::.cat_model_details(ok, show_lambda = FALSE)
-	)))
+	)
+	expect_length(out_ok, 6L) # header + 5 dimension rows
+	expect_identical(out_ok[[1]], "Model Details:")
 
 	# `sprintf("%d", NULL)` returns character(0) and `cat(character(0))` emits
-	# nothing, so without the name check this would print a Model Details block
+	# nothing, so without the check this would print a Model Details block
 	# silently missing the Units row.
 	bad <- list(Ntotal = 40, T = 6, G = 3, d = 1, p = 41)
 	expect_error(
 		fetwfe:::.cat_model_details(bad, show_lambda = FALSE),
-		"missing field\\(s\\): N"
+		"missing or non-scalar field\\(s\\): N"
 	)
+	# A present name bound to NULL is the case a names-only check MISSES, and
+	# it is the one the print() caller can actually produce: that caller builds
+	# `list(N = x$N, ...)` from fit slots, and `list(N = NULL)` retains the
+	# name, so `setdiff(required, names(info))` would find nothing wrong while
+	# the Units row silently vanished.
+	null_valued <- list(N = NULL, T = 6, G = 3, d = 1, p = 41)
+	expect_error(
+		fetwfe:::.cat_model_details(null_valued, show_lambda = FALSE),
+		"missing or non-scalar field\\(s\\): N"
+	)
+	# ...and the same shape on an optional field, which only bites when read.
+	null_lambda <- c(ok, list(model_size = 1, lambda_star = NULL))
+	expect_error(
+		fetwfe:::.cat_model_details(null_lambda, show_lambda = TRUE),
+		"missing or non-scalar field\\(s\\): lambda_star"
+	)
+	expect_silent(invisible(capture.output(
+		fetwfe:::.cat_model_details(null_lambda, show_lambda = FALSE)
+	)))
+
 	# The two optional fields are required exactly when they are read.
 	expect_error(
 		fetwfe:::.cat_model_details(ok, show_lambda = TRUE),
-		"missing field\\(s\\): model_size, lambda_star"
+		"missing or non-scalar field\\(s\\): model_size, lambda_star"
 	)
 	# Extra names are ignored -- this is what lets the summary caller pass
 	# `model_info` (which also carries R / sig_eps_sq / sig_eps_c_sq) unadapted.
@@ -303,30 +329,58 @@ test_that("a non-default alpha changes the rendered ATT BOUNDS, not just the lab
 	#    `att_hat = att_se = 0` (the bridge selects nothing), so its interval is
 	#    [0.0000, 0.0000] at every alpha and no assertion on it can discriminate.
 	#
-	# The two expected pairs are hand-verified against the rendered output:
-	#   alpha = 0.05  ->  [-0.4566, 0.0489]
-	#   alpha = 0.10  ->  [-0.4160, 0.0083]
+	# The expected bounds are REBUILT from the fit's own slots rather than
+	# hard-coded as rendered digits. Hard-coding "[-0.4566, 0.0489]" would pin
+	# four decimals of a number that comes out of solve()/qr(), in a test that
+	# -- unlike the snapshot goldens -- does NOT skip under `--as-cran`, so a
+	# last-digit difference on another BLAS or a BIC grid-selection flip would
+	# fail on CRAN's machines.
+	#
+	# This is not a round-trip tautology. `.att_wald_ci()` is not used to build
+	# the expectation: `stats::qnorm` is applied here to the alpha the caller
+	# passed, so an `.att_wald_ci()` that ignored its alpha renders the 95%
+	# numbers under a 90% label and mismatches. Group 1 pins the arithmetic
+	# itself against hand-computed values.
+	expected_ci <- function(fit) {
+		z <- stats::qnorm(1 - fit$alpha / 2)
+		sprintf(
+			"[%.4f, %.4f]",
+			fit$att_hat - z * fit$att_se,
+			fit$att_hat + z * fit$att_se
+		)
+	}
+
 	fit_05 <- .fit_distinct_439
 	fit_10 <- .fit_distinct_at(alpha = 0.10)
 	expect_gt(fit_10$att_se, 0) # guard: the assertion is vacuous if se == 0
+	# Guard: the two levels must actually differ, or nothing below discriminates.
+	expect_false(identical(expected_ci(fit_05), expected_ci(fit_10)))
 
 	out_05 <- .render_print(fit_05)
-	expect_match(out_05, "  95% CI:    [-0.4566, 0.0489]", fixed = TRUE)
+	expect_match(
+		out_05,
+		paste0("  95% CI:    ", expected_ci(fit_05)),
+		fixed = TRUE
+	)
 
 	out_10 <- .render_print(fit_10)
-	expect_match(out_10, "  90% CI:    [-0.4160, 0.0083]", fixed = TRUE)
+	expect_match(
+		out_10,
+		paste0("  90% CI:    ", expected_ci(fit_10)),
+		fixed = TRUE
+	)
 	expect_match(out_10, "[simultaneous 90% CI]", fixed = TRUE)
 	# The exact failure an alpha-ignoring helper would produce: the 90% label
 	# beside the 95% numbers.
-	.expect_absent(out_10, "  90% CI:    [-0.4566, 0.0489]")
+	.expect_absent(out_10, paste0("  90% CI:    ", expected_ci(fit_05)))
 
 	sum_05 <- .render_summary(fit_05)
-	expect_match(sum_05, "95% CI = [-0.4566, 0.0489]", fixed = TRUE)
+	expect_match(sum_05, paste0("95% CI = ", expected_ci(fit_05)), fixed = TRUE)
 
 	sum_10 <- .render_summary(fit_10)
-	expect_match(sum_10, "90% CI = [-0.4160, 0.0083]", fixed = TRUE)
+	expect_match(sum_10, paste0("90% CI = ", expected_ci(fit_10)), fixed = TRUE)
 	expect_match(sum_10, "[simultaneous 90% CI]", fixed = TRUE)
-	.expect_absent(sum_10, "90% CI = [-0.4566, 0.0489]")
+	.expect_absent(sum_10, paste0("90% CI = ", expected_ci(fit_05)))
 })
 
 # ------------------------------------------------------------------------------

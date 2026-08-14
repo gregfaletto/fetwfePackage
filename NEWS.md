@@ -47,7 +47,11 @@
   and all four truncation footers. The Wald-interval helper is shared with
   `broom::tidy()`'s `conf.int` columns. `twfeCovs` gained the print and summary
   snapshot tests it had never had, and the `"pointwise"`, `"cluster-robust"` and
-  `"conservative"` labels are now pinned on both report paths.
+  `"conservative"` labels are now pinned on both report paths. The one behavior
+  change is on malformed input: a `Model Details` block whose dimension fields
+  are missing or `NULL` now raises a named error instead of silently omitting
+  the affected row, which in practice is reachable only from a `summary()`
+  object saved by a release predating the internal `R` -> `G` rename.
 
 - The range rule above and its error wording are single-sourced in two new
   internal helpers in `R/utility.R`, `.exceeds_integer_max()` and
