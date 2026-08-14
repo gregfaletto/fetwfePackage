@@ -132,6 +132,23 @@ test_that("broom::tidy() respects custom conf.level", {
 		(td_wide$conf.high - td_wide$conf.low) >=
 			(td_default$conf.high - td_default$conf.low) - 1e-10
 	))
+	# The ATT row (row 1) must be STRICTLY wider, not merely not-narrower.
+	#
+	# Load-bearing since #439: the ATT row's interval now comes from the shared
+	# `.att_wald_ci()`, and this is the only END-TO-END witness that this call
+	# site's `conf.level` reaches the arithmetic at all. Under the `>=` above it
+	# passes by EQUALITY, so a `.att_wald_ci()` that ignored its `alpha` and
+	# hard-coded 0.05 would go undetected here.
+	#
+	# The cohort rows deliberately stay `>=`: they pass through the fit-time
+	# `catt_df` bounds (#197 Option B) and do not vary with `conf.level`, so a
+	# strict test on them would be wrong, not merely stronger.
+	expect_equal(td_default$term[1], "ATT")
+	expect_gt(res$att_se, 0) # guard: the strict test is vacuous if se == 0
+	expect_gt(
+		td_wide$conf.high[1] - td_wide$conf.low[1],
+		td_default$conf.high[1] - td_default$conf.low[1]
+	)
 })
 
 test_that("broom::tidy() propagates NA std.error to statistic and p.value", {

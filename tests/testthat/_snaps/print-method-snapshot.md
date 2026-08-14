@@ -196,3 +196,123 @@
         Selected size       : 0
         Lambda*             : 0.0265
 
+# print.twfeCovs output is stable
+
+    Code
+      print(fit_twfecovs)
+    Output
+      TWFE (with covariates) Results
+      ==============================
+      
+      Overall Average Treatment Effect (ATT):
+        Estimate:   -0.3605
+        Std. Error: 0.3549
+        P-value:    0.3098
+        95% CI:    [-1.0561, 0.3351]
+      
+      Cohort Average Treatment Effects (CATT) [simultaneous 95% CI]:
+       cohort   estimate        se    ci_low   ci_high   p_value
+            2 -0.3090865 0.4615481 -1.339713 0.7215401 0.7493122
+            3 -0.4375667 0.4317387 -1.401630 0.5264962 0.5202684
+      
+      Model Details:
+        Units (N)           : 30
+        Time periods (T)    : 5
+        Treated cohorts (G) : 2
+        Covariates (d)      : 2
+        Features (p)        : 10
+
+# print.summary.twfeCovs output is stable
+
+    Code
+      print(summary(fit_twfecovs))
+    Output
+      Summary of TWFE (with covariates)
+      =================================
+      
+      Overall ATT: -0.3605  (SE = 0.3549, p = 0.3098, 95% CI = [-1.0561, 0.3351])
+      
+      CATT (preview) [simultaneous 95% CI]:
+       cohort   estimate        se    ci_low   ci_high   p_value
+            2 -0.3090865 0.4615481 -1.339713 0.7215401 0.7493122
+            3 -0.4375667 0.4317387 -1.401630 0.5264962 0.5202684
+      
+      Model Details:
+        Units (N)           : 30
+        Time periods (T)    : 5
+        Treated cohorts (G) : 2
+        Covariates (d)      : 2
+        Features (p)        : 10
+
+# print.fetwfe output is stable on a distinct-dimension fit
+
+    Code
+      print(fit_distinct)
+    Output
+      Fused Extended Two-Way Fixed Effects Results
+      ===========================================
+      
+      Overall Average Treatment Effect (ATT):
+        Estimate:   -0.2039
+        Std. Error: 0.1290
+        P-value:    0.1139
+        Selected:   TRUE
+        95% CI:    [-0.4566, 0.0489]
+      
+      Cohort Average Treatment Effects (CATT) [simultaneous 95% CI]:
+       cohort   estimate        se     ci_low    ci_high   p_value selected
+            2 -0.2038581 0.1289615 -0.4566691 0.04895278 0.1139313     TRUE
+            3 -0.2038581 0.1289615 -0.4566691 0.04895278 0.1139313     TRUE
+            4 -0.2038581 0.1289615 -0.4566691 0.04895278 0.1139313     TRUE
+      
+      Event-Study Average Treatment Effects (per event time) [simultaneous 95% CI]:
+       event_time n_cohorts   estimate        se     ci_low    ci_high   p_value
+                0         3 -0.2038581 0.1289615 -0.4566706 0.04895432 0.1139313
+                1         3 -0.2038581 0.1289615 -0.4566706 0.04895432 0.1139313
+                2         3 -0.2038581 0.1289615 -0.4566706 0.04895432 0.1139313
+                3         2 -0.2038581 0.1289615 -0.4566706 0.04895432 0.1139313
+                4         1 -0.2038581 0.1289615 -0.4566706 0.04895432 0.1139313
+      
+      Model Details:
+        Units (N)           : 40
+        Time periods (T)    : 6
+        Treated cohorts (G) : 3
+        Covariates (d)      : 1
+        Features (p)        : 41
+        Selected size       : 1
+        Lambda*             : 0.0396
+
+# print.summary.fetwfe output is stable on a distinct-dimension fit
+
+    Code
+      print(summary(fit_distinct))
+    Output
+      Summary of Fused Extended Two-Way Fixed Effects
+      ================================================
+      
+      Overall ATT: -0.2039  (SE = 0.1290, p = 0.1139, 95% CI = [-0.4566, 0.0489])
+      Selected: TRUE
+      
+      CATT (preview) [simultaneous 95% CI]:
+       cohort   estimate        se     ci_low    ci_high   p_value selected
+            2 -0.2038581 0.1289615 -0.4566691 0.04895278 0.1139313     TRUE
+            3 -0.2038581 0.1289615 -0.4566691 0.04895278 0.1139313     TRUE
+            4 -0.2038581 0.1289615 -0.4566691 0.04895278 0.1139313     TRUE
+      
+      Event Study (preview) [simultaneous 95% CI]:
+       event_time n_cohorts   estimate        se     ci_low    ci_high   p_value
+                0         3 -0.2038581 0.1289615 -0.4566706 0.04895432 0.1139313
+                1         3 -0.2038581 0.1289615 -0.4566706 0.04895432 0.1139313
+                2         3 -0.2038581 0.1289615 -0.4566706 0.04895432 0.1139313
+                3         2 -0.2038581 0.1289615 -0.4566706 0.04895432 0.1139313
+                4         1 -0.2038581 0.1289615 -0.4566706 0.04895432 0.1139313
+      
+      Model Details:
+        Units (N)           : 40
+        Time periods (T)    : 6
+        Treated cohorts (G) : 3
+        Covariates (d)      : 1
+        Features (p)        : 41
+        Selected size       : 1
+        Lambda*             : 0.0396
+
