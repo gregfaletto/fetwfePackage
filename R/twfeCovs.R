@@ -531,8 +531,8 @@ twfeCovsWithSimulatedData <- function(
 	se_type = "default",
 	ci_type = c("simultaneous", "pointwise")
 ) {
-	# `se_type` and `ci_type` are deliberately forwarded UNRESOLVED:
-	# `twfeCovs()` runs the same `match.arg()` calls on them, so repeating them
+	# `se_type` and `ci_type` are deliberately forwarded without `match.arg()`:
+	# `twfeCovs()` runs the same calls on them, so repeating them
 	# here would validate each argument twice. Partial matches ("conserv",
 	# "point") and the untouched length-2 `ci_type` default both resolve
 	# identically downstream, because the callee's formal defaults are

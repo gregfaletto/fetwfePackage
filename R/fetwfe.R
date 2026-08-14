@@ -834,7 +834,7 @@ fetwfeWithSimulatedData <- function(
 	gls = TRUE
 ) {
 	# `se_type`, `ci_type` and `fusion_structure` are deliberately forwarded
-	# UNRESOLVED: `fetwfe()` runs the same `match.arg()` calls on them, so
+	# without `match.arg()`: `fetwfe()` runs the same calls on them, so
 	# repeating them here would validate each argument twice. Partial matches
 	# ("conserv", "point", "event") and the untouched length-2 defaults both
 	# resolve identically downstream, because the callee's formal defaults are
