@@ -1,5 +1,12 @@
 # Tests for the shared S3-class helpers in R/class_helpers.R.
 #
+# SEE ALSO tests/testthat/test-print-summary-single-source-439.R, which covers
+# the five rendering pieces #439 factored out of `.print_estimator_output()` and
+# `.print_summary_estimator_output()` -- `.se_qualifier()`, `.band_label()`,
+# `.att_wald_ci()`, `.cat_preview_block()` and `.cat_model_details()`. The two
+# print-side truncation footers pinned below are also pinned there, alongside
+# the two summary-side ones this file does not reach.
+#
 # These exercise the cross-class invariant that the per-class options
 # `fetwfe.max_cohorts`, `etwfe.max_cohorts`, `betwfe.max_cohorts` remain
 # independent after `.truncate_catt` was deduplicated into a single
