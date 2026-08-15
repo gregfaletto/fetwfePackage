@@ -20,7 +20,10 @@
 #
 # Block 3 (sig_eps_c_sq = 0 edge case): same production-call shape as
 # Block 2, exercising the degenerate-covariance branch where the closed
-# form collapses to `(1/sqrt(sig_eps_sq)) * I_T`.
+# form collapses to `(1/sqrt(sig_eps_sq)) * I_T`. This block keeps
+# `tolerance = 0` where Block 2 no longer does, and that is deliberate: on
+# this branch `A` is exactly diagonal, so both operation orders are bit-equal
+# on any BLAS. See the comment at the assertions for why.
 
 library(testthat)
 
@@ -53,8 +56,14 @@ test_that("block-apply identity `(I_N kron A) %*% vec(M) = vec(A %*% M)` holds (
 	# BLAS. `tolerance = 0` here passed on macOS/Accelerate and Windows and failed
 	# on all four Linux jobs (#427), where the observed disagreement was 1-4 ULPs:
 	# max |diff| 4.44e-16 on values of order 1, mean 1.8e-16 to 1.96e-16. The
-	# tolerance below is ~22x that maximum and two orders under the 100x cap, so
-	# it still detects any error large enough to matter.
+	# tolerance below is ~22x that maximum and two orders under the 100x cap.
+	#
+	# The band was measured, not assumed: on this fixture `tolerance = 1e-14`
+	# passes a uniform relative perturbation of 1e-14 and fails at 5e-14, and a
+	# *single* element wrong by more than ~1e-14 fails -- `all.equal.numeric`
+	# defaults to `countEQ = FALSE`, so the mean is taken over only the differing
+	# entries and a localized error is not averaged away across the vector. Noise
+	# 4.4e-16, threshold 1e-14, any real defect at least twelve orders above.
 	expect_equal(y_block, y_kron, tolerance = 1e-14)
 	expect_equal(
 		X_block,
@@ -152,6 +161,15 @@ test_that(".estimate_variance_and_gls() handles sig_eps_c_sq = 0 (edge case)", {
 	A <- sqrt(sig_eps_sq) * Omega_sqrt_inv
 	big_kron <- kronecker(diag(N), A)
 
+	# `tolerance = 0` here is deliberate, not an oversight left behind when
+	# Blocks 1-2 were widened (#427). On this branch `sig_eps_c_sq = 0` makes
+	# `sig_eps_sq + T * sig_eps_c_sq` bit-identical to `sig_eps_sq`, so the two
+	# `1 / sqrt(...)` coefficients above are the same double and `A`'s
+	# off-diagonals cancel to *exactly* zero -- verified at T = 4, 5, 7. `A` is
+	# then exactly diagonal, every cross term in both operation orders is exactly
+	# zero, and `a + 0 = a` under any summation order. Byte-equality here is
+	# guaranteed by the branch condition rather than by the BLAS, so it is a real
+	# invariant worth pinning exactly.
 	expect_equal(res$y_gls, big_kron %*% y, tolerance = 0, ignore_attr = TRUE)
 	expect_equal(
 		res$X_gls,
