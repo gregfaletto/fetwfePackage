@@ -20,6 +20,7 @@ options(width = 100)
 # Fused Extended Two-Way Fixed Effects
 
 <!-- badges: start -->
+[![R-CMD-check](https://github.com/gregfaletto/fetwfePackage/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/gregfaletto/fetwfePackage/actions/workflows/R-CMD-check.yaml)
 [![CRAN status](https://www.r-pkg.org/badges/version/fetwfe)](https://CRAN.R-project.org/package=fetwfe)
 [![CRAN downloads](https://cranlogs.r-pkg.org/badges/grand-total/fetwfe)](https://CRAN.R-project.org/package=fetwfe)
 [![Lifecycle: stable](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://lifecycle.r-lib.org/articles/stages.html#stable)

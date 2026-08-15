@@ -1,0 +1,67 @@
+# Workflow derived from https://github.com/r-lib/actions/tree/v2/examples
+# Need help debugging build failures? Start at https://github.com/r-lib/actions#where-to-find-help
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+name: R-CMD-check.yaml
+
+permissions: read-all
+
+jobs:
+  R-CMD-check:
+    runs-on: ${{ matrix.config.os }}
+
+    name: ${{ matrix.config.os }} (${{ matrix.config.r }})
+
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {os: macos-latest,   r: 'release'}
+          - {os: windows-latest, r: 'release'}
+          - {os: ubuntu-latest,  r: 'devel', http-user-agent: 'release'}
+          - {os: ubuntu-latest,  r: 'release'}
+          - {os: ubuntu-latest,  r: 'oldrel-1'}
+          # Deviation from the stock template: this job covers the minimum R
+          # version DESCRIPTION declares. `oldrel-2` resolves to 4.4.3 today,
+          # matching `Depends: R (>= 4.4.0)`. It is a moving alias -- when R
+          # 4.7.0 ships it becomes 4.5.x and stops covering the floor, so
+          # re-check this pairing against DESCRIPTION at that point (#427).
+          - {os: ubuntu-latest,  r: 'oldrel-2'}
+
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: yes
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: r-lib/actions/setup-pandoc@v2
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: ${{ matrix.config.r }}
+          http-user-agent: ${{ matrix.config.http-user-agent }}
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::rcmdcheck
+          needs: check
+
+      - uses: r-lib/actions/check-r-package@v2
+        with:
+          upload-snapshots: true
+          build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
+          # Deviation from the stock template, which defaults to '"warning"'.
+          # This repo's local gate is devtools::check(error_on = "note"), and a
+          # CI that tolerated NOTEs would be weaker than the local check. The
+          # environmental NOTE classes are suppressed on these runners by the
+          # actions themselves: check-r-package sets _R_CHECK_CRAN_INCOMING_
+          # false (killing the incoming-feasibility and slow-example NOTEs) and
+          # passes --no-manual (killing the HTML/tidy NOTE, which R gates on the
+          # manual check); setup-r sets _R_CHECK_SYSTEM_CLOCK_ false (killing
+          # the "unable to verify current time" NOTE). So a NOTE here is a real
+          # finding. R-devel is the exception -- see the repo's maintainer notes.
+          error-on: '"note"'
