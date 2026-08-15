@@ -387,15 +387,14 @@ test_that("an SE-unavailable fit degrades consistently: accessors -> NA, simulta
 	expect_error(simultaneousCIs(fq, family = "event_study"), "calc_ses")
 	expect_error(simultaneousCIs(fq, family = "all_post_treatment"), "calc_ses")
 
-	# NB: the *shared-scaffold* singular-Gram branch (recomputed selected-support
+	# NB: the fits exercised here degrade because has_valid_ses = FALSE, which is
+	# NOT the *shared-scaffold* singular-Gram branch (recomputed selected-support
 	# Gram singular -> res_gram$calc_ses = FALSE; the two accessors degrade to NA
-	# while simultaneousCIs STOPs "not invertible") is UNREACHABLE from the
-	# ACCESS-TIME callers exercised here -- has_valid_ses = TRUE already implies
-	# the fit's own getGramInv() on that support succeeded. It is reachable from
-	# the fit-time caller getCohortATTsFinal(); see the roxygen on
-	# .recompute_gram_and_sandwich() in R/variance_machinery.R and
-	# test-fit-time-singular-gram-degrade-400.R. Phase 2 guards the
-	# on_singular = c("degrade", "stop") policy with a direct unit test of the
-	# extracted helper (feeding it a rank-deficient support), which is the only
-	# place the asymmetry can be exercised.
+	# while simultaneousCIs STOPs "not invertible"). An ordinary fit cannot reach
+	# that branch from an ACCESS-TIME caller -- has_valid_ses = TRUE already
+	# implies the fit's own getGramInv() on that support succeeded -- but a
+	# hand-modified one can, and the fit-time caller getCohortATTsFinal() reaches
+	# it outright. For the canonical statement of what is reachable from where,
+	# and the tests that pin each route, see the roxygen on
+	# .recompute_gram_and_sandwich() in R/variance_machinery.R.
 })
