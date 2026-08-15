@@ -595,7 +595,7 @@ getPsiGUnfused <- function(
 #'     with `.SINGULAR_GRAM_ANALYTIC_STOP_MSG`. The helper's own direct unit test
 #'     (`test-recompute-gram-sandwich-400.R`) covers the same axis synthetically.
 #'     **This paragraph is the canonical statement of what is reachable from
-#'     where**; the two test files cross-reference it rather than restating it.
+#'     where**; the test files point here for the canonical version.
 #'   - **Fit time** (`getCohortATTsFinal()`) performs the FIRST inversion, and its
 #'     degrade branch IS REACHABLE through an ordinary public fit -- it is the
 #'     designed backstop, not a defensive nicety. `R/utility.R`'s `#395` note says

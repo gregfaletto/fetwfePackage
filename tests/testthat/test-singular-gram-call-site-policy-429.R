@@ -54,8 +54,8 @@
 			)
 		}
 	),
-	# etwfe selects nothing, so it drives the scalar-NA "all features" sentinel
-	# branch of the scaffold rather than an index vector.
+	# etwfe performs no selection, so it drives the scalar-NA "all features"
+	# sentinel branch of the scaffold rather than an index vector.
 	list(
 		label = "etwfe",
 		fit = function() etwfeWithSimulatedData(.cs429_dat, verbose = FALSE)
@@ -77,11 +77,17 @@
 	}
 	x
 }
-# The selected support, derived the way .resolve_selected_support() derives it:
-# the nonzero theta entries after the intercept for the bridge estimators, and
-# every column for the OLS-family ones (whose support is the NA sentinel). A
-# wrong answer here fails safe -- it would leave the Gram invertible and turn
-# the degrade assertions red rather than green.
+# The selected support, derived the way .resolve_selected_support() derives it
+# for the two cases this file uses: the nonzero theta entries after the
+# intercept for `fetwfe`, and every column for `etwfe` (whose support is the NA
+# sentinel). A wrong answer here fails safe -- it would leave the Gram
+# invertible and turn the degrade assertions red rather than green.
+#
+# The branch is `fetwfe` vs everything-else, NOT bridge vs OLS. `betwfe` is a
+# bridge estimator but its class is "betwfe" alone -- it does not inherit
+# "fetwfe" -- so it would take the every-column branch and get the wrong
+# support. Adding a `betwfe` case means changing this predicate first; the
+# natural form is `if (!is.null(x$internal$theta_hat))`.
 .cs429_sel <- function(x) {
 	if (inherits(x, "fetwfe")) {
 		which(x$internal$theta_hat[2:(x$p + 1)] != 0)

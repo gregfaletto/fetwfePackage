@@ -87,9 +87,13 @@ test_that(".recompute_gram_and_sandwich() degrades vs stops on a singular select
 # Two properties of the helper's own signature, both of which used to be
 # invisible to the whole suite (#429 item 4): reordering the `on_singular`
 # default and dropping `call. = FALSE` from its stop() each left every test
-# green. The rank-deficient support is the same one the block above builds --
-# feature columns 1 and 2 identical, so the centered Gram on the selected
-# support {1, 2, 3} is singular.
+# green. This block rebuilds a rank-deficient support of the same shape as the
+# one above -- feature columns 1 and 2 identical, so the centered Gram on the
+# selected support {1, 2, 3} is singular. It is rebuilt rather than hoisted to
+# file scope because `T <- 2L` there would shadow base R's `T` for every other
+# block in the file. Nothing enforces that the two stay identical, and nothing
+# needs to: each block only requires *a* singular support, so an edit to one
+# does not invalidate the other.
 test_that(".recompute_gram_and_sandwich() defaults to degrade and errors without a call (#429)", {
 	N <- 4L
 	T <- 2L

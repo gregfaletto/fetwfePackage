@@ -1,11 +1,13 @@
 # Cross-accessor byte-identity guardrail for the shared access-time inference
 # scaffold (#400, Phase 1 -- the blocking prerequisite for the refactor).
 #
-# NB the next four sentences are STALE (tracked in #430): the sequence they
+# NB the next two sentences are STALE (tracked in #430): the sequence they
 # describe has been single-sourced in .recompute_gram_and_sandwich() since
 # #413/#414, so there are no longer several copies to drift apart. They are left
 # as written -- rewriting them is #430's job, not this file's -- but do not read
-# them as a description of the tree.
+# them as a description of the tree. The two sentences after those are still
+# accurate: this file does pin the anchors and the literal values, and there
+# genuinely was no unified cross-accessor fixture before it.
 #
 # The "resolve selected support -> recompute Gram inverse -> cluster sandwich"
 # sequence is duplicated across eventStudy(), cohortTimeATTs(), and
@@ -221,9 +223,12 @@ test_that("scaffold SEs match pinned pre-refactor values on the fetwfe/cluster f
 # mutation inside .recompute_gram_and_sandwich() reddened 3 of what should be 18
 # assertions -- Part 1's anchors having gone hollow, nothing else in the file
 # could see it. With all six pinned, scaling sandwich_full reddens the three
-# `cluster` blocks and scaling gram_inv reddens the three `default` ones (the
-# `default` SEs never touch sandwich_full at all, because
-# .compute_cluster_robust_sandwich() forms its own gram_inv_full internally).
+# `cluster` blocks (the `default` SEs never see it -- the helper returns
+# sandwich_full = NULL unless se_type == "cluster") and scaling gram_inv reddens
+# the three `default` ones (the `cluster` SEs never see it --
+# .compute_cluster_robust_sandwich() solves its own crossprod(X_S_centered) and
+# never touches the helper's gram_inv). The two mutations are exact
+# complements; together they reach 18 of 18 assertions.
 #
 # Two notes for the reader:
 #

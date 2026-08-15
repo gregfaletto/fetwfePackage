@@ -355,10 +355,19 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 #-------------------------------------------------------------------------------
 # The exact error simultaneousCIs() raises when the recomputed Gram on the
 # selected support is singular, on the ANALYTIC path only. Single-sourced
-# (#429): the live call site below and
-# tests/testthat/test-recompute-gram-sandwich-400.R both read this, so the two
-# cannot drift. Previously each wrote the literal out by hand, and no test read
-# the live copy -- rewriting it left the whole suite green.
+# (#429): the live call site below, tests/testthat/test-recompute-gram-sandwich-400.R
+# and tests/testthat/test-singular-gram-call-site-policy-429.R all read this, so
+# the copies cannot drift. Previously the live text and the test's were two
+# hand-kept literals and no test read the live one -- rewriting it left the
+# whole suite green.
+#
+# What pins the TEXT is narrower than what pins the routing. Every
+# expect_identical() against this constant is a tautology with respect to its
+# content, since both sides read the same symbol; those assertions pin that the
+# call site still routes THIS message through the helper unmodified (mutating
+# either reddens them). The only thing holding the wording itself is the pair of
+# grepl(..., fixed = TRUE) anchors in test-singular-gram-call-site-policy-429.R,
+# which run against the message a live simultaneousCIs() call actually raised.
 #
 # NOT for the bootstrap path: .simultaneous_cis_bootstrap()'s singular-Gram
 # error lives in R/simultaneous_bootstrap.R and says something different. This
