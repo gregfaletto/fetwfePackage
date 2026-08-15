@@ -43,15 +43,10 @@ test_that(".recompute_gram_and_sandwich() degrades vs stops on a singular select
 	expect_null(gs$treat_block_mask)
 
 	# on_singular = "stop" -> errors with EXACTLY the stop_message it is given
-	# (pins the helper's verbatim propagation). NB: the live call-site literal in
-	# .simultaneous_cis_impl() is a SEPARATE copy of this string, kept byte-identical
-	# by hand -- that singular-Gram path is unreachable through any public fit, so no
-	# integration test exercises it; edit one copy, edit both.
-	msg <- paste0(
-		"simultaneousCIs(): the Gram matrix on the selected support is not ",
-		"invertible; the analytic method's assumptions are not satisfied. ",
-		"For a high-dimensional (p >= NT) design, use method = 'bootstrap'."
-	)
+	# (pins the helper's verbatim propagation). The string below is the very
+	# object .simultaneous_cis_impl() passes at its live call site: since #429
+	# both read the package-level constant, so the two cannot drift apart.
+	msg <- fetwfe:::.SINGULAR_GRAM_ANALYTIC_STOP_MSG
 	err <- tryCatch(
 		suppressWarnings(fetwfe:::.recompute_gram_and_sandwich(
 			X_final = X_sing,

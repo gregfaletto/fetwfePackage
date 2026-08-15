@@ -352,6 +352,26 @@ simultaneousCIs.betwfe <- simultaneousCIs.fetwfe
 #' @export
 simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 
+#-------------------------------------------------------------------------------
+# The exact error simultaneousCIs() raises when the recomputed Gram on the
+# selected support is singular, on the ANALYTIC path only. Single-sourced
+# (#429): the live call site below and
+# tests/testthat/test-recompute-gram-sandwich-400.R both read this, so the two
+# cannot drift. Previously each wrote the literal out by hand, and no test read
+# the live copy -- rewriting it left the whole suite green.
+#
+# NOT for the bootstrap path: .simultaneous_cis_bootstrap()'s singular-Gram
+# error lives in R/simultaneous_bootstrap.R and says something different. This
+# message's remedy sentence is "use method = 'bootstrap'", which would be
+# nonsense there.
+#-------------------------------------------------------------------------------
+
+.SINGULAR_GRAM_ANALYTIC_STOP_MSG <- paste0(
+	"simultaneousCIs(): the Gram matrix on the selected support is not ",
+	"invertible; the analytic method's assumptions are not satisfied. ",
+	"For a high-dimensional (p >= NT) design, use method = 'bootstrap'."
+)
+
 #' @title Shared worker for simultaneousCIs()
 #' @description Reconstructs the K x K joint covariance from the fit's stored
 #'   slots, computes the simultaneous critical value via `mvtnorm::qmvnorm()`,
@@ -823,11 +843,7 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 		sel_treat_inds_shifted = sel_treat_inds_shifted,
 		se_type = se_type,
 		on_singular = "stop",
-		stop_message = paste0(
-			"simultaneousCIs(): the Gram matrix on the selected support is not ",
-			"invertible; the analytic method's assumptions are not satisfied. ",
-			"For a high-dimensional (p >= NT) design, use method = 'bootstrap'."
-		)
+		stop_message = .SINGULAR_GRAM_ANALYTIC_STOP_MSG
 	)
 	gram_inv <- gs$gram_inv
 	sandwich_full <- gs$sandwich_full
