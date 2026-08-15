@@ -1,6 +1,12 @@
 # Cross-accessor byte-identity guardrail for the shared access-time inference
 # scaffold (#400, Phase 1 -- the blocking prerequisite for the refactor).
 #
+# NB the next four sentences are STALE (tracked in #430): the sequence they
+# describe has been single-sourced in .recompute_gram_and_sandwich() since
+# #413/#414, so there are no longer several copies to drift apart. They are left
+# as written -- rewriting them is #430's job, not this file's -- but do not read
+# them as a description of the tree.
+#
 # The "resolve selected support -> recompute Gram inverse -> cluster sandwich"
 # sequence is duplicated across eventStudy(), cohortTimeATTs(), and
 # simultaneousCIs() (R/event_study.R, R/cohort_time_atts.R, R/simultaneous_cis.R).
@@ -64,7 +70,15 @@
 	(sci$ci$pointwise_ci_high - sci$ci$estimate) / sci$pointwise_critical_value
 }
 
-# --- Part 1: cross-accessor equality (the first-class regression guard) --------
+# --- Part 1: cross-accessor equality (no longer the first-class guard) ---------
+#
+# Measured at a45407b: BOTH mutations inside .recompute_gram_and_sandwich()
+# (scaling sandwich_full, scaling gram_inv) leave this entire block green,
+# because after the #400 fold both sides of every anchor call that helper -- so
+# each anchor now compares the helper against itself. The absolute pins in
+# Part 2 are the first-class regression guard now (#429). These anchors are
+# kept because they still catch a divergence introduced OUTSIDE the shared
+# helper, in an accessor's own assembly of the result.
 
 .g400_expect_anchors <- function(fit, label) {
 	a <- fit$alpha
@@ -197,6 +211,163 @@ test_that("scaffold SEs match pinned pre-refactor values on the fetwfe/cluster f
 			0.1930629,
 			0.1382049,
 			0.2308755
+		),
+		tolerance = 1e-6
+	)
+})
+
+# The remaining four fixtures, pinned for the same structural reason (#429).
+# Before this, Part 2 covered fetwfe/default and fetwfe/cluster only, so a
+# mutation inside .recompute_gram_and_sandwich() reddened 3 of what should be 18
+# assertions -- Part 1's anchors having gone hollow, nothing else in the file
+# could see it. With all six pinned, scaling sandwich_full reddens the three
+# `cluster` blocks and scaling gram_inv reddens the three `default` ones (the
+# `default` SEs never touch sandwich_full at all, because
+# .compute_cluster_robust_sandwich() forms its own gram_inv_full internally).
+#
+# Two notes for the reader:
+#
+#   * Six inline blocks here, while Part 1 loops one helper over all six
+#     fixtures. Deliberate: a separate test_that() gives each fixture its own
+#     name in the reporter, so "how many fixtures did this mutation reach?" is
+#     answered by counting failing test names rather than by parsing info=
+#     strings off one aggregated test.
+#   * betwfe's cohortTimeATTs()$se[4] is EXACTLY zero on both betwfe fixtures.
+#     That is a real pinned value, not a placeholder: the bridge selects that
+#     cell out (13 of 14 cells selected on this fixture -- see the comment at
+#     the top of this file).
+
+test_that("scaffold SEs match pinned pre-refactor values on the etwfe/default fixture (#400 guardrail, #429)", {
+	fit <- .g400_fits[["etwfe/default"]]
+	expect_equal(
+		eventStudy(fit)$se,
+		c(0.1639891, 0.2085174, 0.2833031, 0.2903975, 0.3223087),
+		tolerance = 1e-6
+	)
+	expect_equal(
+		cohortStudy(fit)$se,
+		c(0.2266507, 0.1954749, 0.1990295, 0.2088314),
+		tolerance = 1e-6
+	)
+	expect_equal(
+		cohortTimeATTs(fit)$se,
+		c(
+			0.2820758,
+			0.2887492,
+			0.2977382,
+			0.3223087,
+			0.3223087,
+			0.2606832,
+			0.2726312,
+			0.3009939,
+			0.3009939,
+			0.2648504,
+			0.2952462,
+			0.2952462,
+			0.2696002,
+			0.2696002
+		),
+		tolerance = 1e-6
+	)
+})
+
+test_that("scaffold SEs match pinned pre-refactor values on the betwfe/default fixture (#400 guardrail, #429)", {
+	fit <- .g400_fits[["betwfe/default"]]
+	expect_equal(
+		eventStudy(fit)$se,
+		c(0.1591995, 0.2037659, 0.2572252, 0.3070540, 0.2826046),
+		tolerance = 1e-6
+	)
+	expect_equal(
+		cohortStudy(fit)$se,
+		c(0.1490514, 0.1604112, 0.1738290, 0.1978270),
+		tolerance = 1e-6
+	)
+	expect_equal(
+		cohortTimeATTs(fit)$se,
+		c(
+			0.2515420,
+			0.2568852,
+			0.2661261,
+			0.0000000,
+			0.2826046,
+			0.2407671,
+			0.2529209,
+			0.2566070,
+			0.2715172,
+			0.2542477,
+			0.2581047,
+			0.2749440,
+			0.2484576,
+			0.2666360
+		),
+		tolerance = 1e-6
+	)
+})
+
+test_that("scaffold SEs match pinned pre-refactor values on the etwfe/cluster fixture (#400 guardrail, #429)", {
+	fit <- .g400_fits[["etwfe/cluster"]]
+	expect_equal(
+		eventStudy(fit)$se,
+		c(0.1594857, 0.2023723, 0.2713419, 0.2610870, 0.3509609),
+		tolerance = 1e-6
+	)
+	expect_equal(
+		cohortStudy(fit)$se,
+		c(0.2396085, 0.1776220, 0.1807051, 0.1994378),
+		tolerance = 1e-6
+	)
+	expect_equal(
+		cohortTimeATTs(fit)$se,
+		c(
+			0.2793386,
+			0.3315840,
+			0.2900008,
+			0.2623502,
+			0.3509609,
+			0.2679904,
+			0.2633195,
+			0.2752361,
+			0.2808612,
+			0.2747036,
+			0.2777359,
+			0.2615971,
+			0.2568748,
+			0.2671456
+		),
+		tolerance = 1e-6
+	)
+})
+
+test_that("scaffold SEs match pinned pre-refactor values on the betwfe/cluster fixture (#400 guardrail, #429)", {
+	fit <- .g400_fits[["betwfe/cluster"]]
+	expect_equal(
+		eventStudy(fit)$se,
+		c(0.1570818, 0.1998555, 0.2497265, 0.3059113, 0.3083088),
+		tolerance = 1e-6
+	)
+	expect_equal(
+		cohortStudy(fit)$se,
+		c(0.1648825, 0.1514423, 0.1534372, 0.2044426),
+		tolerance = 1e-6
+	)
+	expect_equal(
+		cohortTimeATTs(fit)$se,
+		c(
+			0.2422136,
+			0.2893479,
+			0.2629059,
+			0.0000000,
+			0.3083088,
+			0.2450568,
+			0.2540328,
+			0.2599244,
+			0.2661369,
+			0.2542525,
+			0.2623674,
+			0.2549319,
+			0.2640755,
+			0.2708483
 		),
 		tolerance = 1e-6
 	)
