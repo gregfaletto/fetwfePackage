@@ -21,15 +21,15 @@ jobs:
         config:
           - {os: macos-latest,   r: 'release'}
           - {os: windows-latest, r: 'release'}
-          - {os: ubuntu-latest,  r: 'devel', http-user-agent: 'release'}
-          - {os: ubuntu-latest,  r: 'release'}
-          - {os: ubuntu-latest,  r: 'oldrel-1'}
+          - {os: ubuntu-latest,   r: 'devel', http-user-agent: 'release'}
+          - {os: ubuntu-latest,   r: 'release'}
+          - {os: ubuntu-latest,   r: 'oldrel-1'}
           # Deviation from the stock template: this job covers the minimum R
           # version DESCRIPTION declares. `oldrel-2` resolves to 4.4.3 today,
           # matching `Depends: R (>= 4.4.0)`. It is a moving alias -- when R
           # 4.7.0 ships it becomes 4.5.x and stops covering the floor, so
           # re-check this pairing against DESCRIPTION at that point (#427).
-          - {os: ubuntu-latest,  r: 'oldrel-2'}
+          - {os: ubuntu-latest,   r: 'oldrel-2'}
 
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
@@ -57,11 +57,13 @@ jobs:
           # Deviation from the stock template, which defaults to '"warning"'.
           # This repo's local gate is devtools::check(error_on = "note"), and a
           # CI that tolerated NOTEs would be weaker than the local check. The
-          # environmental NOTE classes are suppressed on these runners by the
-          # actions themselves: check-r-package sets _R_CHECK_CRAN_INCOMING_
-          # false (killing the incoming-feasibility and slow-example NOTEs) and
-          # passes --no-manual (killing the HTML/tidy NOTE, which R gates on the
-          # manual check); setup-r sets _R_CHECK_SYSTEM_CLOCK_ false (killing
-          # the "unable to verify current time" NOTE). So a NOTE here is a real
-          # finding. R-devel is the exception -- see the repo's maintainer notes.
+          # four environmental NOTE classes that would otherwise cause noise are
+          # suppressed on these runners by the actions themselves:
+          # check-r-package sets _R_CHECK_CRAN_INCOMING_ false (killing the
+          # incoming-feasibility and slow-example NOTEs) and passes --no-manual
+          # (killing the HTML/tidy NOTE, which R gates on the manual check);
+          # setup-r sets _R_CHECK_SYSTEM_CLOCK_ false (killing the "unable to
+          # verify current time" NOTE). Those four therefore cannot occur here.
+          # Other NOTE classes are not ruled out -- notably R-devel's new checks,
+          # which land before CRAN rejects on them.
           error-on: '"note"'
