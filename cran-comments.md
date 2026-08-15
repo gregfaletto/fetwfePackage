@@ -63,7 +63,9 @@ infrastructure.
 
 ## Other notes
 - No compiled code; the package is pure R. No new system requirements.
-- Requires R (>= 4.1.0).
+- Requires R (>= 4.4.0), raised from 4.1.0. CRAN's current index carries exactly one
+  installable `Matrix` (1.7-6), which itself requires R (>= 4.4); the previous floor had
+  never been tested. The declared minimum is now covered by a continuous-integration job.
 
 –––
 Thank you for your time reviewing this submission.

@@ -2,6 +2,16 @@
 
 ## fetwfe (development version)
 
+### Breaking changes
+
+- The minimum supported R version is now 4.4.0, raised from 4.1.0 (#427). The
+  previous floor had never been tested. 4.4.0 is the oldest R for which CRAN
+  offers an installable `Matrix`, a hard dependency of `fetwfe`. Users on R
+  4.3.2 or 4.3.3, whose bundled `Matrix` (1.6-1.1 and 1.6-5 respectively)
+  already satisfies `fetwfe`'s constraint, could install until now and are the
+  ones this change affects. Continuous integration now runs the package's
+  checks on the declared minimum, so it is verified rather than asserted.
+
 ### Defensive improvements
 
 - An out-of-range seed now fails with the package's own message, at every door
@@ -72,6 +82,28 @@
   (`se_type = "conserv"` still yields `"conservative"`). One user-visible
   consequence: when both `simulated_obj` and `se_type` are invalid, the reported
   error is now the `simulated_obj` one rather than the `se_type` one (#440).
+
+- Every pull request and every push to `main` now runs `R CMD check --as-cran`
+  on six operating-system and R-version combinations --- macOS, Windows, and
+  Ubuntu on R release, plus Ubuntu on `devel`, `oldrel-1`, and `oldrel-2` ---
+  where previously the package was checked on one machine only (#427). A NOTE
+  fails the build, matching the local gate.
+
+- The first run of that matrix found four assertions in
+  `tests/testthat/test-gls-kronecker-block-apply-165.R` that required the
+  block-apply GLS transform to agree with an explicit-Kronecker reference
+  *exactly*, and they now allow round-off (`tolerance = 1e-14`) instead (#427).
+  The two sides are mathematically equal but are different sequences of
+  floating-point operations, so bit-identity between them is a property of the
+  linear-algebra library rather than of correctness: the assertions passed on
+  macOS and Windows and failed on all four Linux jobs, by 1 to 4 units in the
+  last place (max absolute difference 4.44e-16 on values of order 1). This
+  corrects the claim in the 1.10.0 entry for #165 that the identity was
+  "verified bit-identical (16-digit parity)" --- it is verified equal to
+  round-off, which is the strongest claim floating-point arithmetic supports.
+  No estimator behavior changed. The suite's other exact-equality assertions
+  are deliberately left exact, because they compare two runs of the same
+  operations rather than two ways of computing the same quantity.
 
 ## Version 1.56.18
 
