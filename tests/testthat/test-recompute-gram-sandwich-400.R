@@ -87,3 +87,62 @@ test_that(".recompute_gram_and_sandwich() degrades vs stops on a singular select
 	expect_false(is.null(gs_ok$sandwich_full))
 	expect_length(gs_ok$treat_block_mask, length(sel_feat_inds))
 })
+
+# Two properties of the helper's own signature, both of which used to be
+# invisible to the whole suite (#429 item 4): reordering the `on_singular`
+# default and dropping `call. = FALSE` from its stop() each left every test
+# green. The rank-deficient support is the same one the block above builds --
+# feature columns 1 and 2 identical, so the centered Gram on the selected
+# support {1, 2, 3} is singular.
+test_that(".recompute_gram_and_sandwich() defaults to degrade and errors without a call (#429)", {
+	N <- 4L
+	T <- 2L
+	n <- N * T
+	x1 <- as.double(seq_len(n))
+	X_sing <- cbind(x1, x1, rep(c(1, 0), n / 2))
+	shared <- list(
+		X_final = X_sing,
+		y_final = rep(0, n),
+		N = N,
+		T = T,
+		treat_inds = c(1L, 2L),
+		num_treats = 2L,
+		sel_feat_inds = c(1L, 2L, 3L),
+		sel_treat_inds_shifted = c(1L, 2L),
+		se_type = "default"
+	)
+
+	# match.arg() takes the first element, so the default IS the order of the
+	# formal. The structural half names the intent...
+	expect_identical(
+		eval(formals(fetwfe:::.recompute_gram_and_sandwich)$on_singular),
+		c("degrade", "stop")
+	)
+	# ...and the behavioral half is what catches a reorder: called on a singular
+	# support WITHOUT on_singular, the helper must degrade rather than error.
+	gs_default <- suppressWarnings(do.call(
+		fetwfe:::.recompute_gram_and_sandwich,
+		shared
+	))
+	expect_false(isTRUE(gs_default$calc_ses))
+
+	# call. = FALSE on the "stop" branch. Without it R attaches this internal
+	# helper's own call, so the user sees
+	# `Error in .recompute_gram_and_sandwich(X_final = ..., ...)` with the whole
+	# design matrix deparsed into it instead of the actionable message.
+	e <- tryCatch(
+		suppressWarnings(do.call(
+			fetwfe:::.recompute_gram_and_sandwich,
+			c(
+				shared,
+				list(
+					on_singular = "stop",
+					stop_message = fetwfe:::.SINGULAR_GRAM_ANALYTIC_STOP_MSG
+				)
+			)
+		)),
+		error = function(e) e
+	)
+	expect_s3_class(e, "error")
+	expect_null(conditionCall(e))
+})
