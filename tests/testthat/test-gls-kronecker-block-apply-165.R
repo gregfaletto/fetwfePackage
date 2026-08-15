@@ -8,8 +8,10 @@
 # optimisation relies on; this assertion is necessary but not sufficient.
 #
 # Block 2 (load-bearing): directly call `fetwfe:::.estimate_variance_and_gls()`
-# and assert its `y_gls` / `X_gls` are byte-equal (`tolerance = 0`) to an
-# explicit-Kronecker reference computed inline. A future refactor that
+# and assert its `y_gls` / `X_gls` match an explicit-Kronecker reference
+# computed inline, to round-off (`tolerance = 1e-14`, not 0 -- the two sides
+# are different floating-point operation orders, so bit-identity is a property
+# of the BLAS rather than of correctness; see #427). A future refactor that
 # silently breaks the production reshape — e.g. uses the wrong variance
 # component in `A`'s scale, drops the `matrix(..., nrow = T)` reshape, or
 # any other change that makes the transform not equal to (I_N kron A) %*% y
@@ -44,11 +46,20 @@ test_that("block-apply identity `(I_N kron A) %*% vec(M) = vec(A %*% M)` holds (
 	y_block <- as.vector(A %*% matrix(y, nrow = T))
 	X_block <- matrix(A %*% matrix(X, nrow = T), nrow = N * T, ncol = p)
 
-	expect_equal(y_block, y_kron, tolerance = 0)
+	# NOT `tolerance = 0`. The identity is exact in exact arithmetic, but the two
+	# sides are different sequences of floating-point operations -- an (N*T)x(N*T)
+	# matrix-vector product versus a TxT by Tx(N or p) product -- so they agree
+	# only up to round-off, and which way the last bits fall is a property of the
+	# BLAS. `tolerance = 0` here passed on macOS/Accelerate and Windows and failed
+	# on all four Linux jobs (#427), where the observed disagreement was 1-4 ULPs:
+	# max |diff| 4.44e-16 on values of order 1, mean 1.8e-16 to 1.96e-16. The
+	# tolerance below is ~22x that maximum and two orders under the 100x cap, so
+	# it still detects any error large enough to matter.
+	expect_equal(y_block, y_kron, tolerance = 1e-14)
 	expect_equal(
 		X_block,
 		matrix(X_kron, nrow = N * T, ncol = p),
-		tolerance = 0
+		tolerance = 1e-14
 	)
 })
 
@@ -97,8 +108,12 @@ test_that(".estimate_variance_and_gls() matches explicit Kronecker GLS form (loa
 	# matrix. `ignore_attr = TRUE` because `kronecker(...)` returns
 	# matrices without dimnames whereas the production return may carry
 	# names.
-	expect_equal(res$y_gls, y_gls_ref, tolerance = 0, ignore_attr = TRUE)
-	expect_equal(res$X_gls, X_gls_ref, tolerance = 0, ignore_attr = TRUE)
+	# `tolerance = 1e-14`, not 0, for the reason given in the prologue above: the
+	# production path applies `A` block-wise while the reference builds the full
+	# Kronecker product, so the two agree only to round-off. Observed on Linux
+	# (#427): max |diff| 4.44e-16, mean 1.05e-16, on values of order 1.
+	expect_equal(res$y_gls, y_gls_ref, tolerance = 1e-14, ignore_attr = TRUE)
+	expect_equal(res$X_gls, X_gls_ref, tolerance = 1e-14, ignore_attr = TRUE)
 	expect_identical(res$sig_eps_sq, sig_eps_sq)
 	expect_identical(res$sig_eps_c_sq, sig_eps_c_sq)
 })
