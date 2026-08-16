@@ -936,18 +936,20 @@ getTeResults2 <- function(
 #'   exactly the same value, but the call R records — and attaches to any
 #'   condition raised inside — carries short names instead of inlined matrices.
 #'
-#'   The obvious one-word repair — dispatching against the function's *name*
-#'   rather than the object — restores the name in the error but still inlines
-#'   every argument value, so it is not sufficient.
+#'   Do NOT "simplify" this back to `do.call("getTeResultsOLS", args)`. Passing
+#'   the name as a string rather than the function object restores the name in
+#'   the error, but `do.call()` still inlines every argument *value* into the
+#'   constructed call, so the megabyte-scale condition object comes back. That
+#'   one-word repair is the tempting and insufficient one (#431 item 2).
 #'
 #'   The `stopifnot()` pins what the construction needs: every argument named,
 #'   uniquely, and non-empty. It deliberately does NOT check syntactic validity
 #'   of the names, and does not need to — `as.name("not a name")` produces a
 #'   perfectly usable symbol, and the constructed call matches and evaluates
 #'   correctly for `"not a name"`, `"if"`, and `"_x"` (all measured). What the
-#'   guard adds over the old idiom is rejecting unnamed or partially-named
-#'   lists, which would previously have been matched positionally; no live call
-#'   site passes one, since all three build fully-named `base_args`.
+#'   guard adds over `do.call()` is rejecting unnamed or partially-named lists,
+#'   which `do.call()` would have matched positionally; no live call site passes
+#'   one, since all three build fully-named `base_args`.
 #' @param te_fn_name Character scalar; the name of the treatment-effect function
 #'   to call (`"getTeResults2"` or `"getTeResultsOLS"`).
 #' @param args Named list of arguments; every element must carry a unique,
