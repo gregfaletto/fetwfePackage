@@ -2471,19 +2471,26 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #' @noRd
 .compute_treat_inds <- function(G, T, d, num_treats, p) {
 	treat_inds <- getTreatInds(G = G, T = T, d = d, num_treats = num_treats)
-	# Deliberate independent re-derivation: cross-checks .base_cols(); do not
-	# fold. Folding would make these tautological and delete the only oracle for
-	# the formula.
+	# The guards below are about `p`, which getTreatInds() never sees: its
+	# signature is (G, T, d, num_treats), so the relationship between the
+	# treatment block and the total column count can only be checked here.
+	#
+	# They do NOT re-derive the column-count formula, and must not be extended to.
+	# getTreatInds() already asserts `max(treat_inds) == <formula>` on the line
+	# above (R/utility.R, both branches), and treat_inds is not touched in
+	# between -- so a formula assertion here is unreachable for every input. This
+	# function used to carry one, annotated as "the only oracle for the formula";
+	# that annotation was wrong on both counts and the assertion was dead.
+	# Measured (#431 PR review): 0 firings over 3,107 (G, T, d, num_treats, p)
+	# tuples plus 24 adversarial probes, and under a `+1L`-mutated .base_cols()
+	# the error's conditionCall() is getTreatInds(), never this frame. The real
+	# oracle is getTreatInds()'s own assertion; keep it there.
 	if (d > 0) {
 		stopifnot(max(treat_inds) + 1 <= p)
-		stopifnot(
-			max(treat_inds) == G + T - 1 + d + G * d + (T - 1) * d + num_treats
-		)
 		treat_int_inds <- (max(treat_inds) + 1):p
 		stopifnot(length(treat_int_inds) == num_treats * d)
 	} else {
 		stopifnot(max(treat_inds) <= p)
-		stopifnot(max(treat_inds) == G + T - 1 + num_treats)
 		treat_int_inds <- c()
 	}
 	list(treat_inds = treat_inds, treat_int_inds = treat_int_inds)

@@ -267,8 +267,9 @@
 #
 # What this does NOT protect: any expect_identical() against this symbol is a
 # tautology with respect to its CONTENT -- both sides move together when the
-# text is edited. The only thing holding the wording itself is the three
-# grepl(..., fixed = TRUE) anchors in tests/testthat/test-small-fixes-431.R.
+# text is edited. The only thing holding the wording itself is three
+# grepl(..., fixed = TRUE) anchors: two in tests/testthat/test-small-fixes-431.R
+# and one in tests/testthat/test-assemble-cluster-sandwich-78.R.
 # Single-sourcing prevents DRIFT between copies; it does not make the text
 # unable to change silently. (Same caveat as #429's constant -- see the banner
 # above .SINGULAR_GRAM_ANALYTIC_STOP_MSG in R/simultaneous_cis.R.)

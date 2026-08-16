@@ -929,17 +929,26 @@ getTeResults2 <- function(
 #'   carry a 258x258 `gram_inv` (run them against a `do.call()`-reverted tree to
 #'   reproduce):
 #'
-#'       fixture              old idiom            .call_te
-#'       OLS in-sample        215,423 ch / 569 KB    296 ch / 3.2 KB
-#'       bridge in-sample     215,657 ch / 572 KB    443 ch / 3.7 KB
-#'       bridge independent   215,657 ch / 731 KB    443 ch / 3.7 KB
+#'       fixture              old idiom    .call_te   reduction
+#'       OLS in-sample        215,423 ch     296 ch       728x
+#'       bridge in-sample     215,657 ch     443 ch       487x
+#'       bridge independent   215,657 ch     443 ch       487x
 #'
-#'   so roughly a 500-700x reduction in deparsed length, and the condition names
-#'   the function that actually failed (#431 item 2). Treat the absolute figures
-#'   as fixture-dependent rather than as constants: those fixtures use a ZERO
-#'   matrix, which deparses far more compactly than real data, and the live
-#'   `etwfe()` fit that motivated the issue measured ~1.35 M characters and
-#'   ~6.5 MB. The ratio is the durable part.
+#'   and the condition names the function that actually failed (#431 item 2).
+#'   Even these are fixture-dependent: the fixtures use a ZERO matrix, which
+#'   deparses far more compactly than real data, and the live `etwfe()` fit that
+#'   motivated the issue measured ~1.35 M characters. The ratio is the durable
+#'   part.
+#'
+#'   Deliberately NOT tabulated: `object.size()` of the condition. It is not a
+#'   stable property of the call -- the same fixture measures 571,720 B on the
+#'   first invocation in a session and 731,024 B on later ones, with a
+#'   byte-identical deparse both times (allocator/GC state, not ALTREP; the
+#'   matrix is a plain REALSXP). Three successive revisions of this comment
+#'   carried a wrong byte figure before anyone asked why a quantity that is not
+#'   reproducible was being pinned in a comment. If you want a size claim, use
+#'   `object.size()` of the inlined argument itself -- `gram_inv` is a stable
+#'   532,728 B -- not of the condition.
 #'
 #'   How it works: `list2env()` binds each argument's *value* to its own *name*
 #'   in a fresh environment whose parent is the package namespace

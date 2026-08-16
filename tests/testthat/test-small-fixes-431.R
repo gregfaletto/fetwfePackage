@@ -77,12 +77,14 @@ test_that("genCoefs()/genCoefsCore() scalar errors carry no call (#431 item 1)",
 # function OBJECT. do.call(f, args) with `f` a closure builds a call whose first
 # element is the entire function definition and whose remaining elements are the
 # argument VALUES -- so every stopifnot() condition raised inside `f` captures
-# the whole argument list (on these fixtures, a ~215,000-character deparse and a
-# 569-731 KB condition object, against 296-443 characters and ~3 KB through
-# .call_te(); on the live etwfe() fit that motivated the issue, ~1.35 M
-# characters and ~6.5 MB). The absolute sizes are fixture-dependent -- these
-# fixtures use a ZERO matrix, which deparses far more compactly than real data
-# -- so it is the ratio that matters, not the constants. It also reports
+# the whole argument list: on these fixtures a ~215,000-character deparse
+# against 296-443 characters through .call_te(), a 487x-728x reduction; on the
+# live etwfe() fit that motivated the issue, ~1.35 M characters. Sizes are
+# fixture-dependent -- these fixtures use a ZERO matrix, which deparses far more
+# compactly than real data -- so it is the ratio that matters. Do NOT add an
+# object.size() figure for the condition: it is order-dependent within a session
+# (571,720 B on the first call, 731,024 B afterwards, identical deparse both
+# times) and three revisions of this file shipped a wrong one. It also reports
 # `Error in (function (sig_eps_sq, N, T, G, num_treats, ...)` instead of naming
 # the function that crashed.
 #
@@ -580,8 +582,9 @@ test_that(".recompute_gram_and_sandwich() guards stop_message at entry (#431 ite
 # tautologies with respect to the message's CONTENT -- after the fold, both
 # sides read the same symbol, so they move together when the text is edited.
 # They exist to catch a REINTRODUCED INLINE LITERAL THAT DIFFERS, not a rewrite
-# of the constant. Only the two grepl(..., fixed = TRUE) anchors hold the
-# wording. Same caveat as #429's constant (see R/simultaneous_cis.R).
+# of the constant. Only the grepl(..., fixed = TRUE) anchors hold the wording:
+# the two below, plus one in test-assemble-cluster-sandwich-78.R. Same caveat as
+# #429's constant (see R/simultaneous_cis.R).
 # ------------------------------------------------------------------------------
 test_that("the singular-Gram no-SE message is single-sourced (#431 item 8)", {
 	msg <- fetwfe:::.SINGULAR_GRAM_NO_SE_MSG

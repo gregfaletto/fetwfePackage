@@ -380,15 +380,27 @@
 #' @noRd
 .check_c6_dims_toplevel <- function(x, cls) {
 	# #431 item 6: read every slot with `[[`, never `$`. `$` partial-matches on
-	# lists, so on a malformed object `x$y` silently resolves to the real
-	# top-level slot `y_mean` when `y` itself is absent -- exactly the trap
-	# tests/testthat/test-internal-slot-parity.R:88-90 documents and mandates
-	# `[[` for. All seven reads are converted, not just the four slot reads, so
-	# that no `$` remains inside the one function whose purpose is contract
-	# checking. Behavior-neutral for well-formed etwfe / betwfe / twfeCovs
-	# objects (each carries all seven slots exactly, so the two operators agree);
-	# it matters for a malformed object and for the class-agnostic future caller
-	# this helper's `_toplevel` name anticipates.
+	# lists, so a slot that is absent can silently resolve to a longer-named one
+	# -- the trap tests/testthat/test-internal-slot-parity.R:88-90 documents and
+	# mandates `[[` for. All seven reads are converted, not just the four the
+	# issue named, so no `$` remains in this function.
+	#
+	# Be precise about the hazard, because the obvious example does not apply
+	# here: on the three classes this function serves, an absent `y` does NOT
+	# resolve to `y_mean`, because `y_final` is also present and the prefix is
+	# therefore ambiguous -- `$` returns NULL just as `[[` does. The reads that
+	# can diverge are the ones with exactly one longer-named sibling, which is
+	# why the tests build one fixture per read (test-small-fixes-431.R item 6).
+	# So this is behavior-neutral for well-formed etwfe / betwfe / twfeCovs
+	# objects, which carry all seven slots exactly; it matters for a malformed
+	# object and for the class-agnostic future caller this helper's `_toplevel`
+	# name anticipates.
+	#
+	# NOT the only contract-checker in this file, and the others still use `$`
+	# with live prefix collisions (cohort_probs -> cohort_probs_overall on all
+	# four classes, att_se -> att_selected, three lambda.* pairs). Those are
+	# latent because .stop_if_missing_slots() runs an exact setdiff first on
+	# every validator path; converting them is its own change, filed separately.
 	.assert_contract(
 		length(x[["beta_hat"]]) == x[["p"]],
 		"C6 length(beta_hat) == p",
