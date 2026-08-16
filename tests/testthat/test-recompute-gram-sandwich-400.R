@@ -145,4 +145,11 @@ test_that(".recompute_gram_and_sandwich() defaults to degrade and errors without
 	)
 	expect_s3_class(e, "error")
 	expect_null(conditionCall(e))
+	# ...and that it is the RIGHT error, not merely a call-less one. Without
+	# this the block would pass on any error at all, including one raised
+	# before the on_singular branch was reached.
+	expect_identical(
+		conditionMessage(e),
+		fetwfe:::.SINGULAR_GRAM_ANALYTIC_STOP_MSG
+	)
 })

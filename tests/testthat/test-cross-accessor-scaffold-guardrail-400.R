@@ -81,6 +81,21 @@
 # Part 2 are the first-class regression guard now (#429). These anchors are
 # kept because they still catch a divergence introduced OUTSIDE the shared
 # helper, in an accessor's own assembly of the result.
+#
+# That residual is larger than it sounds, and is the reason not to delete them:
+# they are currently the ONLY assertions in this file covering simultaneousCIs()'s
+# SE path. None of the eighteen Part 2 pins goes through simultaneousCIs() at all
+# -- they read eventStudy(), cohortStudy() and cohortTimeATTs(). Measured on the
+# #451 review: scaling Sigma one level downstream of the scaffold
+# (`Sigma <- 1.5 * (Sigma_1 + Sigma_2)` in .simultaneous_cis_impl()) fires 18
+# failures, every one of them here and none in Part 2.
+#
+# Which sets up the same trap one layer up: .assemble_joint_cov_var1/2 are
+# ALREADY shared helpers, so the next consolidation routing both sides of these
+# anchors through one of them hollows this block exactly as the #400 fold
+# hollowed it against the scaffold -- and at that moment simultaneousCIs() SEs
+# have no absolute pin anywhere. Pre-empting that with a fourth pinned vector per
+# fixture (via .g400_se_of_sci()) is #429 PR B's job.
 
 .g400_expect_anchors <- function(fit, label) {
 	a <- fit$alpha
@@ -124,7 +139,7 @@
 	expect_lt(max(abs(cs$se - .g400_se_of_sci(co))), 1e-12)
 }
 
-test_that("the shared scaffold yields cross-accessor-consistent SEs across classes and se_types (#400 guardrail)", {
+test_that("cross-accessor routing anchors: accessors agree, but are blind to changes inside the shared scaffold (#400/#429)", {
 	for (label in names(.g400_fits)) {
 		.g400_expect_anchors(.g400_fits[[label]], label)
 	}
@@ -233,10 +248,15 @@ test_that("scaffold SEs match pinned pre-refactor values on the fetwfe/cluster f
 # Two notes for the reader:
 #
 #   * Six inline blocks here, while Part 1 loops one helper over all six
-#     fixtures. Deliberate: a separate test_that() gives each fixture its own
-#     name in the reporter, so "how many fixtures did this mutation reach?" is
+#     fixtures. The reason is consistency: the fetwfe/default and fetwfe/cluster
+#     blocks were already written this way, and matching them beats mixing two
+#     shapes in one section. What matters is that each fixture gets its own name
+#     in the reporter, so "how many fixtures did this mutation reach?" is
 #     answered by counting failing test names rather than by parsing info=
-#     strings off one aggregated test.
+#     strings off one aggregated test -- but a loop delivers that too, by
+#     building the name with paste0(), which is exactly what
+#     test-singular-gram-call-site-policy-429.R does. Either shape is fine here;
+#     inline is not load-bearing.
 #   * betwfe's cohortTimeATTs()$se[4] is EXACTLY zero on both betwfe fixtures.
 #     That is a real pinned value, not a placeholder: the bridge selects that
 #     cell out (13 of 14 cells selected on this fixture -- see the comment at

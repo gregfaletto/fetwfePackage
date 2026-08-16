@@ -152,8 +152,14 @@ for (.cs429_case in .cs429_cases) {
 			# expect_warning() OUTSIDE and tryCatch() INSIDE is the only order
 			# that works (suppressWarnings() inside makes the warning
 			# expectation fail; with no tryCatch the error escapes and aborts
-			# the block). expect_error() is unusable here because it treats its
-			# pattern as a regex and the message contains "(p >= NT)".
+			# the block).
+			#
+			# tryCatch rather than expect_error() because the caught condition
+			# is reused by the two content anchors below -- one call, three
+			# assertions. Note expect_error() would need fixed = TRUE if it were
+			# used: its pattern defaults to a regex and this message contains
+			# "(p >= NT)", so the default form does not match its own subject.
+			# Measured: default FAILS, fixed = TRUE PASSES.
 			e <- expect_warning(
 				tryCatch(
 					simultaneousCIs(fit_mod, family = "cohort"),
