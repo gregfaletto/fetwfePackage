@@ -645,6 +645,26 @@ getPsiGUnfused <- function(
 	stop_message = NULL
 ) {
 	on_singular <- match.arg(on_singular)
+	# #431 item 7: a caller asking for `on_singular = "stop"` must supply a usable
+	# message. Without this, `stop(NULL, call. = FALSE)` raises a condition whose
+	# message is "", so the user sees a bare `Error:` with no text. The `!is.na()`
+	# clause is not redundant -- `nzchar(NA)` is TRUE, so NA_character_ would
+	# otherwise pass and produce an error reading literally "NA". The `length ==
+	# 1L` clause is likewise load-bearing: `is.character()` admits a length-2
+	# vector, `nzchar()` on it returns two TRUEs and passes `stopifnot()`, and
+	# `stop()` would then paste the two strings together. This runs at entry
+	# rather than inside the `"stop"` branch: the branch is reached only when the
+	# Gram is actually singular, so a guard placed there would be nearly as
+	# unreachable as the defect it guards -- and a deleted in-branch guard is
+	# invisible to `expect_error()`, since `stop(NULL)` raises either way.
+	if (on_singular == "stop") {
+		stopifnot(
+			is.character(stop_message),
+			length(stop_message) == 1L,
+			!is.na(stop_message),
+			nzchar(stop_message)
+		)
+	}
 	res_gram <- getGramInv(
 		N = N,
 		T = T,

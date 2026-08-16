@@ -958,6 +958,18 @@ my_scale <- function(x) {
 #' @keywords internal
 #' @noRd
 getNumTreats <- function(G, T) {
+	# #431 item 4: reject non-scalar / non-numeric arguments rather than silently
+	# returning a wrong count. The specific hazard is a call written in a scope
+	# where `T` is unbound: it then resolves to `base::T` (i.e. TRUE), and
+	# `TRUE * G - ...` returns a plausible-looking number instead of erroring.
+	# `stopifnot()` keeps its default call-naming here on purpose -- these are
+	# programmer-side errors, and naming the helper is what a developer wants.
+	stopifnot(
+		is.numeric(G),
+		length(G) == 1L,
+		is.numeric(T),
+		length(T) == 1L
+	)
 	# #185 SB6: coerce to integer to honor the @return contract. The formula is
 	# exact (G * (G + 1) is always even), but `/ 2` yields a double.
 	return(as.integer(T * G - (G * (G + 1)) / 2))
@@ -985,6 +997,21 @@ getNumTreats <- function(G, T) {
 #' @keywords internal
 #' @noRd
 .base_cols <- function(G, T, d) {
+	# #431 item 4: reject non-scalar / non-numeric arguments rather than silently
+	# returning a wrong column count. `is.numeric(TRUE)` is FALSE, so a call
+	# written in a scope where `T` is unbound -- and therefore resolves to
+	# `base::T` -- now errors instead of returning 11 where 23 is correct. NULL
+	# and vector arguments are caught by the length test. `stopifnot()` keeps its
+	# default call-naming here on purpose: these are programmer-side errors, and
+	# naming the helper is what a developer wants.
+	stopifnot(
+		is.numeric(G),
+		length(G) == 1L,
+		is.numeric(T),
+		length(T) == 1L,
+		is.numeric(d),
+		length(d) == 1L
+	)
 	G + T - 1 + d + G * d + (T - 1) * d
 }
 

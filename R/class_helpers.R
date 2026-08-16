@@ -379,23 +379,33 @@
 #' @keywords internal
 #' @noRd
 .check_c6_dims_toplevel <- function(x, cls) {
+	# #431 item 6: read every slot with `[[`, never `$`. `$` partial-matches on
+	# lists, so on a malformed object `x$y` silently resolves to the real
+	# top-level slot `y_mean` when `y` itself is absent -- exactly the trap
+	# tests/testthat/test-internal-slot-parity.R:88-90 documents and mandates
+	# `[[` for. All seven reads are converted, not just the four slot reads, so
+	# that no `$` remains inside the one function whose purpose is contract
+	# checking. Behavior-neutral for well-formed etwfe / betwfe / twfeCovs
+	# objects (each carries all seven slots exactly, so the two operators agree);
+	# it matters for a malformed object and for the class-agnostic future caller
+	# this helper's `_toplevel` name anticipates.
 	.assert_contract(
-		length(x$beta_hat) == x$p,
+		length(x[["beta_hat"]]) == x[["p"]],
 		"C6 length(beta_hat) == p",
 		cls
 	)
 	.assert_contract(
-		length(x$y) == x$N * x$T,
+		length(x[["y"]]) == x[["N"]] * x[["T"]],
 		"C6 length(y) == N * T",
 		cls
 	)
 	.assert_contract(
-		nrow(x$X_ints) == x$N * x$T,
+		nrow(x[["X_ints"]]) == x[["N"]] * x[["T"]],
 		"C6 nrow(X_ints) == N * T",
 		cls
 	)
 	.assert_contract(
-		is.logical(x$calc_ses) && length(x$calc_ses) == 1L,
+		is.logical(x[["calc_ses"]]) && length(x[["calc_ses"]]) == 1L,
 		"C8 calc_ses is length-1 logical",
 		cls
 	)

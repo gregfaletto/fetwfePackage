@@ -1200,24 +1200,28 @@ getActualCohortTes <- function(G, first_inds, treat_inds, coefs, num_treats) {
 .validate_gen_coefs_scalars <- function(T, G, d, density, eff_size) {
 	# Check that T is a numeric scalar and at least 2.
 	if (!is.numeric(T) || length(T) != 1 || T < 2) {
-		stop("T must be a numeric value greater than or equal to 2")
+		stop(
+			"T must be a numeric value greater than or equal to 2",
+			call. = FALSE
+		)
 	}
 
 	# Check that G is a numeric scalar and at least 1.
 	if (!is.numeric(G) || length(G) != 1 || G < 1) {
 		stop(
-			"G must be a numeric value greater than or equal to 1 (at least one treated cohort)"
+			"G must be a numeric value greater than or equal to 1 (at least one treated cohort)",
+			call. = FALSE
 		)
 	}
 
 	# Check that G does not exceed T - 1.
 	if (G > T - 1) {
-		stop("G must be less than or equal to T - 1")
+		stop("G must be less than or equal to T - 1", call. = FALSE)
 	}
 
 	# Check that d is a numeric scalar and is non-negative.
 	if (!is.numeric(d) || length(d) != 1 || d < 0) {
-		stop("d must be a non-negative numeric value")
+		stop("d must be a non-negative numeric value", call. = FALSE)
 	}
 
 	# Check that density is a numeric scalar in (0, 1] (1 = fully dense, non-sparse).
@@ -1227,12 +1231,15 @@ getActualCohortTes <- function(G, first_inds, treat_inds, coefs, num_treats) {
 			density <= 0 ||
 			density > 1
 	) {
-		stop("density must be numeric, greater than 0 and at most 1")
+		stop(
+			"density must be numeric, greater than 0 and at most 1",
+			call. = FALSE
+		)
 	}
 
 	# Check that eff_size is numeric.
 	if (!is.numeric(eff_size) || length(eff_size) != 1) {
-		stop("eff_size must be a numeric value")
+		stop("eff_size must be a numeric value", call. = FALSE)
 	}
 
 	invisible()
