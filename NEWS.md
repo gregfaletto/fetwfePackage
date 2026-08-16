@@ -14,6 +14,25 @@
 
 ### Defensive improvements
 
+- Several errors raised from inside the package now say something useful (#431).
+  A bad `T`, `G`, `d`, `density` or `eff_size` passed to `genCoefs()` or
+  `genCoefsCore()` prints the message on its own, instead of prefixing it with
+  the name of an internal validator and a list of formal names that are not the
+  values you supplied. A failed internal assertion inside the
+  treatment-effect machinery now names the function that failed; previously it
+  reported an anonymous function and pasted every argument's value into the
+  error, so the printed message ran past a million characters and a caller who
+  captured the condition with `tryCatch()` held on to roughly half a megabyte of
+  matrices. Three latent hazards became loud rather than silent: two internal
+  size helpers reject a non-scalar or non-numeric argument instead of returning
+  a wrong count, the cross-validation helper checks that the penalty index it
+  selected really is the one cross-validation chose instead of quietly
+  substituting the nearest, and the standard-error recomputation helper requires
+  a usable message before it can fail with an empty one. Finally, the
+  "standard errors will not be calculated" message emitted when the Gram matrix
+  on the selected features is singular is now stored once and read by all three
+  places that emit it, so the copies cannot drift apart.
+
 - An out-of-range seed now fails with the package's own message, at every door
   (#440). `set.seed()` can represent only a 32-bit signed integer, so a larger
   magnitude previously produced base R's `NAs introduced by coercion to integer
@@ -41,6 +60,18 @@
   from a different seed than the one supplied.
 
 ### Internal
+
+- Eight small defects found by a late audit of the #400/#401 single-sourcing
+  work are fixed together (#431). Two of them finish that campaign: the
+  pre-treatment column-count formula, which an earlier off-by-one bug had
+  already been traced to, is now read from its single owner at the last two
+  places that still re-derived it inline, and the three sites that deliberately
+  re-derive it as a cross-check say so in a comment. The C6 dimension contract
+  checks shared by the `etwfe`, `betwfe` and `twfeCovs` validators now read
+  every slot exactly rather than by prefix, so a malformed object can no longer
+  match a differently-named slot and pass a check it should fail. Neither
+  changes any result: the estimators return numerically identical output on
+  both the simulated and the real-data examples.
 
 - The high-dimensional nodewise (desparsified-lasso) solve is now single-sourced
   in one internal primitive shared by `debiasedATT()` and both simultaneous-band

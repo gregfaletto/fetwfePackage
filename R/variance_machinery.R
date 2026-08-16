@@ -986,7 +986,7 @@ getTeResults2 <- function(
 #'   using `getTeResultsOLS()` and the one using `getTeResults2()` differ only in
 #'   the treatment-effect function and its per-function arguments, so the
 #'   function is named by `te_fn_name` and its arguments are threaded through
-#'   [.call_te()] — which calls it by name with symbol arguments, so an
+#'   `.call_te()` — which calls it by name with symbol arguments, so an
 #'   assertion failure inside it names that function and keeps its condition
 #'   object small (#431 item 2).
 #' @param te_fn_name Character scalar; the name of the treatment-effect function
