@@ -267,7 +267,7 @@
 #
 # What this does NOT protect: any expect_identical() against this symbol is a
 # tautology with respect to its CONTENT -- both sides move together when the
-# text is edited. The only thing holding the wording itself is the pair of
+# text is edited. The only thing holding the wording itself is the three
 # grepl(..., fixed = TRUE) anchors in tests/testthat/test-small-fixes-431.R.
 # Single-sourcing prevents DRIFT between copies; it does not make the text
 # unable to change silently. (Same caveat as #429's constant -- see the banner

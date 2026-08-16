@@ -920,12 +920,26 @@ getTeResults2 <- function(
 #'   element is the entire function definition and whose remaining elements are
 #'   the argument *values*, so anything capturing that call captures the inlined
 #'   values — and every `stopifnot()` inside `getTeResultsOLS()` /
-#'   `getTeResults2()` does. Measured on a 258x258 `gram_inv`: the resulting
-#'   condition reports `Error in (function (sig_eps_sq, N, T, G, num_treats, ...`
-#'   with a 1,276,681-character deparse, and a user who wraps the fit in
-#'   `tryCatch(..., error = function(e) e)` retains a ~570 KB condition object.
-#'   The same fixture through this helper deparses to 391 characters, an
-#'   object.size of 3,680 B, and names `getTeResultsOLS` (#431 item 2).
+#'   `getTeResults2()` does. The old idiom reports
+#'   `Error in (function (sig_eps_sq, N, T, G, num_treats, ...` and carries the
+#'   whole argument list; a user who wraps the fit in
+#'   `tryCatch(..., error = function(e) e)` retains all of it.
+#'
+#'   Measured on `tests/testthat/test-small-fixes-431.R`'s item-2 fixtures, which
+#'   carry a 258x258 `gram_inv` (run them against a `do.call()`-reverted tree to
+#'   reproduce):
+#'
+#'       fixture              old idiom            .call_te
+#'       OLS in-sample        215,423 ch / 569 KB    296 ch / 3.2 KB
+#'       bridge in-sample     215,657 ch / 572 KB    443 ch / 3.7 KB
+#'       bridge independent   215,657 ch / 731 KB    443 ch / 3.7 KB
+#'
+#'   so roughly a 500-700x reduction in deparsed length, and the condition names
+#'   the function that actually failed (#431 item 2). Treat the absolute figures
+#'   as fixture-dependent rather than as constants: those fixtures use a ZERO
+#'   matrix, which deparses far more compactly than real data, and the live
+#'   `etwfe()` fit that motivated the issue measured ~1.35 M characters and
+#'   ~6.5 MB. The ratio is the durable part.
 #'
 #'   How it works: `list2env()` binds each argument's *value* to its own *name*
 #'   in a fresh environment whose parent is the package namespace

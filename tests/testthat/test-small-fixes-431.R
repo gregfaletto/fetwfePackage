@@ -76,8 +76,13 @@ test_that("genCoefs()/genCoefsCore() scalar errors carry no call (#431 item 1)",
 # .call_te() (by name, with symbol arguments) rather than do.call() on a
 # function OBJECT. do.call(f, args) with `f` a closure builds a call whose first
 # element is the entire function definition and whose remaining elements are the
-# argument VALUES -- so every stopifnot() condition raised inside `f` captures a
-# ~1.28 million character deparse and a ~570 KB condition object, and reports
+# argument VALUES -- so every stopifnot() condition raised inside `f` captures
+# the whole argument list (on these fixtures, a ~215,000-character deparse and a
+# 569-731 KB condition object, against 296-443 characters and ~3 KB through
+# .call_te(); on the live etwfe() fit that motivated the issue, ~1.35 M
+# characters and ~6.5 MB). The absolute sizes are fixture-dependent -- these
+# fixtures use a ZERO matrix, which deparses far more compactly than real data
+# -- so it is the ratio that matters, not the constants. It also reports
 # `Error in (function (sig_eps_sq, N, T, G, num_treats, ...)` instead of naming
 # the function that crashed.
 #
@@ -86,9 +91,11 @@ test_that("genCoefs()/genCoefsCore() scalar errors carry no call (#431 item 1)",
 # non-matching string -- it RAISES ("cannot coerce type 'closure' to vector of
 # type 'character'"). Leading with the size bound and the is.name() check makes
 # the mutation register as real FAILURES first rather than only as an error that
-# aborts the block. The 2000-character bound is structural (5x headroom over the
-# measured 391 on the fixed path, against 1,276,681 on the mutant), not a pinned
-# exact length, and nothing stochastic is involved.
+# aborts the block. The 2000-character bound is structural (4.5x headroom over
+# the largest measured fixed-path deparse, 443, against ~215,000 on the mutant),
+# not a pinned exact length, and nothing stochastic is involved. It also catches
+# the tempting one-word repair do.call("getTeResults2", args), which restores the
+# NAME but still inlines every argument value (~214,000 characters).
 #
 # EACH FIXTURE MUST REACH A stopifnot() IN THE NAMED FUNCTION'S OWN FRAME, not a
 # conformability error on the way in: a fixture that trips a deeper frame names
@@ -173,6 +180,42 @@ test_that(".compute_att_pair() names the te function and stays small (#431 item 
 	expect_lt(nchar(paste(deparse(cl_bridge), collapse = "")), 2000)
 	expect_true(is.name(cl_bridge[[1]]))
 	expect_identical(as.character(cl_bridge[[1]]), "getTeResults2")
+
+	# --- The INDEPENDENT .call_te() call site. .compute_att_pair() has two, and
+	# the two fixtures above reach only the first: both pass
+	# indep_count_data_available = FALSE, and because .call_te is
+	# value-preserving no other test in the suite can observe the second one
+	# being reverted either. Without this fixture, reverting the independent
+	# site alone is an undetectable mutation.
+	#
+	# Reaching it needs the IN-SAMPLE call to succeed first. calc_ses = FALSE is
+	# what makes that cheap: getTeResults2() then computes att_hat and skips the
+	# entire variance branch, so a valid one-cohort probs vector is enough. The
+	# independent call then trips the same own-frame assertion via NA
+	# cohort_probs supplied through indep_probs_args.
+	indep_args <- bridge_args
+	indep_args$calc_ses <- FALSE
+	e_indep <- tryCatch(
+		fetwfe:::.compute_att_pair(
+			te_fn_name = "getTeResults2",
+			base_args = indep_args,
+			in_sample_probs = list(
+				cohort_probs = 1,
+				cohort_probs_overall = 0.1
+			),
+			indep_probs_args = list(
+				cohort_probs = NA_real_,
+				cohort_probs_overall = 0.1
+			),
+			indep_count_data_available = TRUE
+		),
+		error = function(e) e
+	)
+	expect_s3_class(e_indep, "error")
+	cl_indep <- conditionCall(e_indep)
+	expect_lt(nchar(paste(deparse(cl_indep), collapse = "")), 2000)
+	expect_true(is.name(cl_indep[[1]]))
+	expect_identical(as.character(cl_indep[[1]]), "getTeResults2")
 })
 
 # ------------------------------------------------------------------------------
@@ -201,43 +244,77 @@ test_that(".compute_att_pair() names the te function and stays small (#431 item 
 # distinct names removes the question entirely.
 # ------------------------------------------------------------------------------
 test_that(".base_cols() folds are algebraically identical to the inline forms (#431 item 3)", {
-	cells <- 0L
-	for (t_v in 2:20) {
-		for (g_v in 1:(t_v - 1)) {
-			for (d_v in 0:8) {
-				nt <- fetwfe:::getNumTreats(g_v, t_v)
-				expect_gt(nt, 0)
+	grid <- expand.grid(
+		d_v = 0:8,
+		g_v = 1:19,
+		t_v = 2:20,
+		KEEP.OUT.ATTRS = FALSE
+	)
+	grid <- grid[grid$g_v <= grid$t_v - 1L, ]
+	# The grid is non-empty and has the expected extent (a silently-empty or
+	# truncated grid would make every assertion below vacuous).
+	expect_identical(nrow(grid), 1710L)
 
-				# Oracle written out longhand; it does NOT call .base_cols(), so
-				# the comparison is not tautological.
-				oracle_p <- g_v +
-					(t_v - 1) +
-					d_v +
-					d_v * g_v +
-					d_v * (t_v - 1) +
-					nt +
-					nt * d_v
-				expect_identical(
-					fetwfe:::getP(g_v, t_v, d_v, nt),
-					oracle_p,
-					info = paste("getP", g_v, t_v, d_v)
-				)
+	# .base_cols() and getP() both carry scalar-argument guards (#431 item 4),
+	# so they cannot be handed vectors: build the actual values one cell at a
+	# time, then compare whole vectors. One assertion per identity covers the
+	# grid with the same mutation power as a per-cell loop -- an earlier draft
+	# of this block spent 5,131 assertions on it and more than doubled the
+	# suite's assertion count for two identities.
+	nt <- mapply(fetwfe:::getNumTreats, grid$g_v, grid$t_v)
+	expect_true(all(nt > 0)) # what arms the mutation; see the header
 
-				# The .collapse_design_for_twfe_covs() slice bound.
-				oracle_slice <- g_v + t_v - 1 + d_v * (1 + g_v + t_v - 1) + nt
-				expect_identical(
-					fetwfe:::.base_cols(g_v, t_v, d_v) + nt,
-					oracle_slice,
-					info = paste("slice", g_v, t_v, d_v)
-				)
-
-				cells <- cells + 1L
-			}
+	# Report the offending cell rather than "vectors differ" on failure.
+	whiff <- function(actual, oracle) {
+		i <- which(actual != oracle)
+		if (!length(i)) {
+			return("no mismatch")
 		}
+		paste0(
+			length(i),
+			" cell(s) differ; first at G=",
+			grid$g_v[i[1]],
+			" T=",
+			grid$t_v[i[1]],
+			" d=",
+			grid$d_v[i[1]],
+			": actual=",
+			actual[i[1]],
+			" oracle=",
+			oracle[i[1]]
+		)
 	}
-	# The grid is non-empty and the loop actually ran (a silently-empty grid
-	# would make every assertion above vacuous).
-	expect_identical(cells, 1710L)
+
+	# Oracles written out longhand; neither calls .base_cols(), so the
+	# comparisons are not tautological.
+	oracle_p <- grid$g_v +
+		(grid$t_v - 1) +
+		grid$d_v +
+		grid$d_v * grid$g_v +
+		grid$d_v * (grid$t_v - 1) +
+		nt +
+		nt * grid$d_v
+	actual_p <- mapply(fetwfe:::getP, grid$g_v, grid$t_v, grid$d_v, nt)
+	expect_identical(actual_p, oracle_p, info = whiff(actual_p, oracle_p))
+
+	# The .collapse_design_for_twfe_covs() slice bound.
+	oracle_slice <- grid$g_v +
+		grid$t_v -
+		1 +
+		grid$d_v * (1 + grid$g_v + grid$t_v - 1) +
+		nt
+	actual_slice <- mapply(
+		fetwfe:::.base_cols,
+		grid$g_v,
+		grid$t_v,
+		grid$d_v
+	) +
+		nt
+	expect_identical(
+		actual_slice,
+		oracle_slice,
+		info = whiff(actual_slice, oracle_slice)
+	)
 })
 
 # ------------------------------------------------------------------------------

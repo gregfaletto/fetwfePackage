@@ -991,8 +991,10 @@ getNumTreats <- function(G, T) {
 #'   wherever that offset is needed. Previously re-derived inline across
 #'   `R/fusion_transforms.R` and in `getTreatInds()` (issue #401 item 9); #431
 #'   item 3 folded the two remaining live re-derivations, so the callers are now
-#'   `R/fusion_transforms.R`, `getTreatInds()`, `getP()`, and
-#'   `.collapse_design_for_twfe_covs()` (`R/input_prep.R`).
+#'   `R/fusion_transforms.R` (`transformXintImproved()` and
+#'   `untransformCoefImproved()`), `genCoefsCore()` (`R/gen_coefs.R`),
+#'   `getTreatInds()`, `getP()`, and `.collapse_design_for_twfe_covs()`
+#'   (`R/input_prep.R`).
 #'
 #'   Three sites deliberately do NOT call this and must not be folded into it:
 #'   the two `stopifnot(max(treat_inds) == ...)` cross-checks in
@@ -1003,7 +1005,11 @@ getNumTreats <- function(G, T) {
 #' @param G Integer; the number of treated cohorts.
 #' @param T Integer; the number of time periods.
 #' @param d Integer; the number of time-invariant covariates.
-#' @return The number of pre-treatment columns (same numeric type as the inputs).
+#' @return The number of pre-treatment columns, always a **double** — never an
+#'   integer, even when `G`, `T`, and `d` are all integers, because the literal
+#'   `1` in `T - 1` is a double and promotes the whole expression. A caller
+#'   comparing the result with `identical()` must compare against a double
+#'   (`23`, not `23L`).
 #' @keywords internal
 #' @noRd
 .base_cols <- function(G, T, d) {
