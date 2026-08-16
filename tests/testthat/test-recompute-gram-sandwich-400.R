@@ -1,14 +1,10 @@
 # Direct unit test for the extracted scaffold helper .recompute_gram_and_sandwich()
 # (#400 Phase 2a). Its one genuine policy axis is `on_singular` (degrade vs stop
-# on a singular recomputed Gram). For the ACCESS-TIME callers that branch is
-# defensive-only and unreachable through any public fit (a fit with valid SEs
-# already inverted its Gram on this support). It is NOT defensive-only for the
-# fit-time caller getCohortATTsFinal(), which performs the first inversion and
-# where the degrade IS reachable -- see the roxygen on
-# .recompute_gram_and_sandwich() in R/variance_machinery.R and the end-to-end
-# regression test in test-fit-time-singular-gram-degrade-400.R. The degrade/stop
-# ASYMMETRY, though, can still only be exercised here, by feeding the helper a
-# rank-deficient selected support directly.
+# on a singular recomputed Gram). This file exercises that axis SYNTHETICALLY, by
+# feeding the helper a rank-deficient selected support directly. For which
+# callers can reach the branch through a public door, and how, see the roxygen on
+# .recompute_gram_and_sandwich() in R/variance_machinery.R -- it is the canonical
+# statement and it names the end-to-end tests.
 
 test_that(".recompute_gram_and_sandwich() degrades vs stops on a singular selected-support Gram (#400)", {
 	# Rank-deficient support: feature columns 1 and 2 are identical, so the centered
@@ -43,15 +39,10 @@ test_that(".recompute_gram_and_sandwich() degrades vs stops on a singular select
 	expect_null(gs$treat_block_mask)
 
 	# on_singular = "stop" -> errors with EXACTLY the stop_message it is given
-	# (pins the helper's verbatim propagation). NB: the live call-site literal in
-	# .simultaneous_cis_impl() is a SEPARATE copy of this string, kept byte-identical
-	# by hand -- that singular-Gram path is unreachable through any public fit, so no
-	# integration test exercises it; edit one copy, edit both.
-	msg <- paste0(
-		"simultaneousCIs(): the Gram matrix on the selected support is not ",
-		"invertible; the analytic method's assumptions are not satisfied. ",
-		"For a high-dimensional (p >= NT) design, use method = 'bootstrap'."
-	)
+	# (pins the helper's verbatim propagation). The string below is the very
+	# object .simultaneous_cis_impl() passes at its live call site: since #429
+	# both read the package-level constant, so the two cannot drift apart.
+	msg <- fetwfe:::.SINGULAR_GRAM_ANALYTIC_STOP_MSG
 	err <- tryCatch(
 		suppressWarnings(fetwfe:::.recompute_gram_and_sandwich(
 			X_final = X_sing,
@@ -91,4 +82,74 @@ test_that(".recompute_gram_and_sandwich() degrades vs stops on a singular select
 	expect_true(is.matrix(gs_ok$gram_inv))
 	expect_false(is.null(gs_ok$sandwich_full))
 	expect_length(gs_ok$treat_block_mask, length(sel_feat_inds))
+})
+
+# Two properties of the helper's own signature, both of which used to be
+# invisible to the whole suite (#429 item 4): reordering the `on_singular`
+# default and dropping `call. = FALSE` from its stop() each left every test
+# green. This block rebuilds a rank-deficient support of the same shape as the
+# one above -- feature columns 1 and 2 identical, so the centered Gram on the
+# selected support {1, 2, 3} is singular. It is rebuilt rather than hoisted to
+# file scope because `T <- 2L` there would shadow base R's `T` for every other
+# block in the file. Nothing enforces that the two stay identical, and nothing
+# needs to: each block only requires *a* singular support, so an edit to one
+# does not invalidate the other.
+test_that(".recompute_gram_and_sandwich() defaults to degrade and errors without a call (#429)", {
+	N <- 4L
+	T <- 2L
+	n <- N * T
+	x1 <- as.double(seq_len(n))
+	X_sing <- cbind(x1, x1, rep(c(1, 0), n / 2))
+	shared <- list(
+		X_final = X_sing,
+		y_final = rep(0, n),
+		N = N,
+		T = T,
+		treat_inds = c(1L, 2L),
+		num_treats = 2L,
+		sel_feat_inds = c(1L, 2L, 3L),
+		sel_treat_inds_shifted = c(1L, 2L),
+		se_type = "default"
+	)
+
+	# match.arg() takes the first element, so the default IS the order of the
+	# formal. The structural half names the intent...
+	expect_identical(
+		eval(formals(fetwfe:::.recompute_gram_and_sandwich)$on_singular),
+		c("degrade", "stop")
+	)
+	# ...and the behavioral half is what catches a reorder: called on a singular
+	# support WITHOUT on_singular, the helper must degrade rather than error.
+	gs_default <- suppressWarnings(do.call(
+		fetwfe:::.recompute_gram_and_sandwich,
+		shared
+	))
+	expect_false(isTRUE(gs_default$calc_ses))
+
+	# call. = FALSE on the "stop" branch. Without it R attaches this internal
+	# helper's own call, so the user sees
+	# `Error in .recompute_gram_and_sandwich(X_final = ..., ...)` with the whole
+	# design matrix deparsed into it instead of the actionable message.
+	e <- tryCatch(
+		suppressWarnings(do.call(
+			fetwfe:::.recompute_gram_and_sandwich,
+			c(
+				shared,
+				list(
+					on_singular = "stop",
+					stop_message = fetwfe:::.SINGULAR_GRAM_ANALYTIC_STOP_MSG
+				)
+			)
+		)),
+		error = function(e) e
+	)
+	expect_s3_class(e, "error")
+	expect_null(conditionCall(e))
+	# ...and that it is the RIGHT error, not merely a call-less one. Without
+	# this the block would pass on any error at all, including one raised
+	# before the on_singular branch was reached.
+	expect_identical(
+		conditionMessage(e),
+		fetwfe:::.SINGULAR_GRAM_ANALYTIC_STOP_MSG
+	)
 })

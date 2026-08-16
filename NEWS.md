@@ -83,6 +83,20 @@
   consequence: when both `simulated_obj` and `se_type` are invalid, the reported
   error is now the `simulated_obj` one rather than the `se_type` one (#440).
 
+- The error `simultaneousCIs()` raises on a singular Gram matrix is now written
+  once instead of twice (#429). The live text and the test that pins it were
+  two hand-kept copies of the same sentence, so rewriting the live one left the
+  whole test suite green. The shared internal constant is named for the
+  analytic method, because the bootstrap path raises a different error and this
+  one's advice --- switch to `method = "bootstrap"` --- would be wrong there.
+  The guardrail on the shared standard-error scaffold also regained the
+  detection power it lost when that scaffold was consolidated: absolute
+  standard errors are now pinned on all six of its fixtures rather than two, and
+  the policy that `eventStudy()` and `cohortTimeATTs()` report `NA` standard
+  errors where `simultaneousCIs()` raises an error is asserted at those three
+  functions rather than only at the internal helper behind them. No estimator
+  behavior changes.
+
 - Every pull request and every push to `main` now runs `R CMD check --as-cran`
   on six operating-system and R-version combinations --- macOS, Windows, and
   Ubuntu on R release, plus Ubuntu on `devel`, `oldrel-1`, and `oldrel-2` ---

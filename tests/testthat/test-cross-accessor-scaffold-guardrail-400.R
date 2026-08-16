@@ -1,6 +1,14 @@
 # Cross-accessor byte-identity guardrail for the shared access-time inference
 # scaffold (#400, Phase 1 -- the blocking prerequisite for the refactor).
 #
+# NB the next two sentences are STALE (tracked in #430): the sequence they
+# describe has been single-sourced in .recompute_gram_and_sandwich() since
+# #413/#414, so there are no longer several copies to drift apart. They are left
+# as written -- rewriting them is #430's job, not this file's -- but do not read
+# them as a description of the tree. The two sentences after those are still
+# accurate: this file does pin the anchors and the literal values, and there
+# genuinely was no unified cross-accessor fixture before it.
+#
 # The "resolve selected support -> recompute Gram inverse -> cluster sandwich"
 # sequence is duplicated across eventStudy(), cohortTimeATTs(), and
 # simultaneousCIs() (R/event_study.R, R/cohort_time_atts.R, R/simultaneous_cis.R).
@@ -64,7 +72,30 @@
 	(sci$ci$pointwise_ci_high - sci$ci$estimate) / sci$pointwise_critical_value
 }
 
-# --- Part 1: cross-accessor equality (the first-class regression guard) --------
+# --- Part 1: cross-accessor equality (no longer the first-class guard) ---------
+#
+# Measured at a45407b: BOTH mutations inside .recompute_gram_and_sandwich()
+# (scaling sandwich_full, scaling gram_inv) leave this entire block green,
+# because after the #400 fold both sides of every anchor call that helper -- so
+# each anchor now compares the helper against itself. The absolute pins in
+# Part 2 are the first-class regression guard now (#429). These anchors are
+# kept because they still catch a divergence introduced OUTSIDE the shared
+# helper, in an accessor's own assembly of the result.
+#
+# That residual is larger than it sounds, and is the reason not to delete them:
+# they are currently the ONLY assertions in this file covering simultaneousCIs()'s
+# SE path. None of the eighteen Part 2 pins goes through simultaneousCIs() at all
+# -- they read eventStudy(), cohortStudy() and cohortTimeATTs(). Measured on the
+# #451 review: scaling Sigma one level downstream of the scaffold
+# (`Sigma <- 1.5 * (Sigma_1 + Sigma_2)` in .simultaneous_cis_impl()) fires 18
+# failures, every one of them here and none in Part 2.
+#
+# Which sets up the same trap one layer up: .assemble_joint_cov_var1/2 are
+# ALREADY shared helpers, so the next consolidation routing both sides of these
+# anchors through one of them hollows this block exactly as the #400 fold
+# hollowed it against the scaffold -- and at that moment simultaneousCIs() SEs
+# have no absolute pin anywhere. Pre-empting that with a fourth pinned vector per
+# fixture (via .g400_se_of_sci()) is #429 PR B's job.
 
 .g400_expect_anchors <- function(fit, label) {
 	a <- fit$alpha
@@ -108,7 +139,7 @@
 	expect_lt(max(abs(cs$se - .g400_se_of_sci(co))), 1e-12)
 }
 
-test_that("the shared scaffold yields cross-accessor-consistent SEs across classes and se_types (#400 guardrail)", {
+test_that("cross-accessor routing anchors: accessors agree, but are blind to changes inside the shared scaffold (#400/#429)", {
 	for (label in names(.g400_fits)) {
 		.g400_expect_anchors(.g400_fits[[label]], label)
 	}
@@ -202,6 +233,171 @@ test_that("scaffold SEs match pinned pre-refactor values on the fetwfe/cluster f
 	)
 })
 
+# The remaining four fixtures, pinned for the same structural reason (#429).
+# Before this, Part 2 covered fetwfe/default and fetwfe/cluster only, so a
+# mutation inside .recompute_gram_and_sandwich() reddened 3 of what should be 18
+# assertions -- Part 1's anchors having gone hollow, nothing else in the file
+# could see it. With all six pinned, scaling sandwich_full reddens the three
+# `cluster` blocks (the `default` SEs never see it -- the helper returns
+# sandwich_full = NULL unless se_type == "cluster") and scaling gram_inv reddens
+# the three `default` ones (the `cluster` SEs never see it --
+# .compute_cluster_robust_sandwich() solves its own crossprod(X_S_centered) and
+# never touches the helper's gram_inv). The two mutations are exact
+# complements; together they reach 18 of 18 assertions.
+#
+# Two notes for the reader:
+#
+#   * Six inline blocks here, while Part 1 loops one helper over all six
+#     fixtures. The reason is consistency: the fetwfe/default and fetwfe/cluster
+#     blocks were already written this way, and matching them beats mixing two
+#     shapes in one section. What matters is that each fixture gets its own name
+#     in the reporter, so "how many fixtures did this mutation reach?" is
+#     answered by counting failing test names rather than by parsing info=
+#     strings off one aggregated test -- but a loop delivers that too, by
+#     building the name with paste0(), which is exactly what
+#     test-singular-gram-call-site-policy-429.R does. Either shape is fine here;
+#     inline is not load-bearing.
+#   * betwfe's cohortTimeATTs()$se[4] is EXACTLY zero on both betwfe fixtures.
+#     That is a real pinned value, not a placeholder: the bridge selects that
+#     cell out (13 of 14 cells selected on this fixture -- see the comment at
+#     the top of this file).
+
+test_that("scaffold SEs match pinned pre-refactor values on the etwfe/default fixture (#400 guardrail, #429)", {
+	fit <- .g400_fits[["etwfe/default"]]
+	expect_equal(
+		eventStudy(fit)$se,
+		c(0.1639891, 0.2085174, 0.2833031, 0.2903975, 0.3223087),
+		tolerance = 1e-6
+	)
+	expect_equal(
+		cohortStudy(fit)$se,
+		c(0.2266507, 0.1954749, 0.1990295, 0.2088314),
+		tolerance = 1e-6
+	)
+	expect_equal(
+		cohortTimeATTs(fit)$se,
+		c(
+			0.2820758,
+			0.2887492,
+			0.2977382,
+			0.3223087,
+			0.3223087,
+			0.2606832,
+			0.2726312,
+			0.3009939,
+			0.3009939,
+			0.2648504,
+			0.2952462,
+			0.2952462,
+			0.2696002,
+			0.2696002
+		),
+		tolerance = 1e-6
+	)
+})
+
+test_that("scaffold SEs match pinned pre-refactor values on the betwfe/default fixture (#400 guardrail, #429)", {
+	fit <- .g400_fits[["betwfe/default"]]
+	expect_equal(
+		eventStudy(fit)$se,
+		c(0.1591995, 0.2037659, 0.2572252, 0.3070540, 0.2826046),
+		tolerance = 1e-6
+	)
+	expect_equal(
+		cohortStudy(fit)$se,
+		c(0.1490514, 0.1604112, 0.1738290, 0.1978270),
+		tolerance = 1e-6
+	)
+	expect_equal(
+		cohortTimeATTs(fit)$se,
+		c(
+			0.2515420,
+			0.2568852,
+			0.2661261,
+			0.0000000,
+			0.2826046,
+			0.2407671,
+			0.2529209,
+			0.2566070,
+			0.2715172,
+			0.2542477,
+			0.2581047,
+			0.2749440,
+			0.2484576,
+			0.2666360
+		),
+		tolerance = 1e-6
+	)
+})
+
+test_that("scaffold SEs match pinned pre-refactor values on the etwfe/cluster fixture (#400 guardrail, #429)", {
+	fit <- .g400_fits[["etwfe/cluster"]]
+	expect_equal(
+		eventStudy(fit)$se,
+		c(0.1594857, 0.2023723, 0.2713419, 0.2610870, 0.3509609),
+		tolerance = 1e-6
+	)
+	expect_equal(
+		cohortStudy(fit)$se,
+		c(0.2396085, 0.1776220, 0.1807051, 0.1994378),
+		tolerance = 1e-6
+	)
+	expect_equal(
+		cohortTimeATTs(fit)$se,
+		c(
+			0.2793386,
+			0.3315840,
+			0.2900008,
+			0.2623502,
+			0.3509609,
+			0.2679904,
+			0.2633195,
+			0.2752361,
+			0.2808612,
+			0.2747036,
+			0.2777359,
+			0.2615971,
+			0.2568748,
+			0.2671456
+		),
+		tolerance = 1e-6
+	)
+})
+
+test_that("scaffold SEs match pinned pre-refactor values on the betwfe/cluster fixture (#400 guardrail, #429)", {
+	fit <- .g400_fits[["betwfe/cluster"]]
+	expect_equal(
+		eventStudy(fit)$se,
+		c(0.1570818, 0.1998555, 0.2497265, 0.3059113, 0.3083088),
+		tolerance = 1e-6
+	)
+	expect_equal(
+		cohortStudy(fit)$se,
+		c(0.1648825, 0.1514423, 0.1534372, 0.2044426),
+		tolerance = 1e-6
+	)
+	expect_equal(
+		cohortTimeATTs(fit)$se,
+		c(
+			0.2422136,
+			0.2893479,
+			0.2629059,
+			0.0000000,
+			0.3083088,
+			0.2450568,
+			0.2540328,
+			0.2599244,
+			0.2661369,
+			0.2542525,
+			0.2623674,
+			0.2549319,
+			0.2640755,
+			0.2708483
+		),
+		tolerance = 1e-6
+	)
+})
+
 # --- Part 3: SE-unavailable fits degrade consistently ---------------------------
 
 test_that("an SE-unavailable fit degrades consistently: accessors -> NA, simultaneousCIs -> stop (#400 guardrail)", {
@@ -216,15 +412,14 @@ test_that("an SE-unavailable fit degrades consistently: accessors -> NA, simulta
 	expect_error(simultaneousCIs(fq, family = "event_study"), "calc_ses")
 	expect_error(simultaneousCIs(fq, family = "all_post_treatment"), "calc_ses")
 
-	# NB: the *shared-scaffold* singular-Gram branch (recomputed selected-support
+	# NB: the fits exercised here degrade because has_valid_ses = FALSE, which is
+	# NOT the *shared-scaffold* singular-Gram branch (recomputed selected-support
 	# Gram singular -> res_gram$calc_ses = FALSE; the two accessors degrade to NA
-	# while simultaneousCIs STOPs "not invertible") is UNREACHABLE from the
-	# ACCESS-TIME callers exercised here -- has_valid_ses = TRUE already implies
-	# the fit's own getGramInv() on that support succeeded. It is reachable from
-	# the fit-time caller getCohortATTsFinal(); see the roxygen on
-	# .recompute_gram_and_sandwich() in R/variance_machinery.R and
-	# test-fit-time-singular-gram-degrade-400.R. Phase 2 guards the
-	# on_singular = c("degrade", "stop") policy with a direct unit test of the
-	# extracted helper (feeding it a rank-deficient support), which is the only
-	# place the asymmetry can be exercised.
+	# while simultaneousCIs STOPs "not invertible"). An ordinary fit cannot reach
+	# that branch from an ACCESS-TIME caller -- has_valid_ses = TRUE already
+	# implies the fit's own getGramInv() on that support succeeded -- but a
+	# hand-modified one can, and the fit-time caller getCohortATTsFinal() reaches
+	# it outright. For the canonical statement of what is reachable from where,
+	# and the tests that pin each route, see the roxygen on
+	# .recompute_gram_and_sandwich() in R/variance_machinery.R.
 })

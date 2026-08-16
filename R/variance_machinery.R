@@ -580,11 +580,22 @@ getPsiGUnfused <- function(
 #'   `NA`), whereas `simultaneousCIs()` STOPs. The two kinds of caller reach that
 #'   branch very differently, and only one of them cannot:
 #'
-#'   - **Access-time** callers cannot reach it. `has_valid_ses = TRUE` already
-#'     implies the fit's own `getGramInv()` succeeded on this exact support, so
-#'     the recompute is re-inverting a matrix known to be invertible. For them
-#'     the branch is genuinely defensive, and is exercised only by the helper's
-#'     direct unit test.
+#'   - **Access-time** callers cannot reach it on an ORDINARY fit.
+#'     `has_valid_ses = TRUE` already implies the fit's own `getGramInv()`
+#'     succeeded on this exact support, so the recompute is re-inverting a matrix
+#'     known to be invertible. They CAN reach it on an object hand-modified after
+#'     construction -- the case `R/class_helpers.R`'s validators are documented
+#'     to exist for ("defense-in-depth; the object may have been hand-modified
+#'     between construction and method call"), since no validator inspects the
+#'     rank of `X_final`. Duplicating one selected column of `X_final` onto
+#'     another makes the selected support rank-deficient while leaving the object
+#'     valid, and `test-singular-gram-call-site-policy-429.R` uses exactly that
+#'     to pin the degrade/stop split where a user observes it: `eventStudy()` and
+#'     `cohortTimeATTs()` return all-`NA` SEs while `simultaneousCIs()` errors
+#'     with `.SINGULAR_GRAM_ANALYTIC_STOP_MSG`. The helper's own direct unit test
+#'     (`test-recompute-gram-sandwich-400.R`) covers the same axis synthetically.
+#'     **This paragraph is the canonical statement of what is reachable from
+#'     where**; the test files point here for the canonical version.
 #'   - **Fit time** (`getCohortATTsFinal()`) performs the FIRST inversion, and its
 #'     degrade branch IS REACHABLE through an ordinary public fit -- it is the
 #'     designed backstop, not a defensive nicety. `R/utility.R`'s `#395` note says
