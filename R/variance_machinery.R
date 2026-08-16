@@ -384,12 +384,16 @@ getPsiGUnfused <- function(
 	# selected support produces a single coherent surface across both
 	# variance routes rather than an obscure "Lapack routine dgesv: system
 	# is exactly singular" trace.
+	#
+	# #431 item 8: "the same message" was a hand-kept byte-identical copy of
+	# getGramInv()'s literal, with nothing enforcing it. Both now read the
+	# package-level constant defined in R/gls_machinery.R, so the copies cannot
+	# drift. Note the constant backs a warning() there (degrade) and this stop()
+	# (abort); see the banner above its definition.
 	gram_inv_full <- tryCatch(
 		solve(crossprod(X_S_centered)),
 		error = function(e) {
-			stop(
-				"Gram matrix corresponding to selected features is not invertible. Assumptions needed for inference are not satisfied. Standard errors will not be calculated."
-			)
+			stop(.SINGULAR_GRAM_NO_SE_MSG)
 		}
 	)
 	# Vectorized assembly of the cluster meat. The original N-loop built up
