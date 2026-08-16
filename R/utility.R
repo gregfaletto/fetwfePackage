@@ -988,8 +988,18 @@ getNumTreats <- function(G, T) {
 #'   the single unbranched expression is correct for all `d >= 0`.
 #'
 #'   Single-sources the layout formula that MUST match the design matrix
-#'   everywhere; previously re-derived inline across `R/fusion_transforms.R` and
-#'   in `getTreatInds()` (issue #401 item 9).
+#'   wherever that offset is needed. Previously re-derived inline across
+#'   `R/fusion_transforms.R` and in `getTreatInds()` (issue #401 item 9); #431
+#'   item 3 folded the two remaining live re-derivations, so the callers are now
+#'   `R/fusion_transforms.R`, `getTreatInds()`, `getP()`, and
+#'   `.collapse_design_for_twfe_covs()` (`R/input_prep.R`).
+#'
+#'   Three sites deliberately do NOT call this and must not be folded into it:
+#'   the two `stopifnot(max(treat_inds) == ...)` cross-checks in
+#'   `getTreatInds()` and `.compute_treat_inds()`, which are independent
+#'   re-derivations acting as the formula's only oracle, and `R/gen_data.R`'s
+#'   local `base_cols`, which is a different quantity (the `gen_ints = FALSE`
+#'   no-interaction layout).
 #' @param G Integer; the number of treated cohorts.
 #' @param T Integer; the number of time periods.
 #' @param d Integer; the number of time-invariant covariates.
@@ -1047,6 +1057,10 @@ getTreatInds <- function(G, T, d, num_treats) {
 	treat_inds <- as.integer(seq(from = base_cols + 1, length.out = num_treats))
 
 	stopifnot(length(treat_inds) == num_treats)
+	# Deliberate independent re-derivation: cross-checks .base_cols(); do not
+	# fold. Folding would make these tautological and delete the only oracle for
+	# the formula -- substituting a `+1L`-mutated `.base_cols()` into this
+	# function's environment makes both the d == 0 and d > 0 branches throw.
 	if (d > 0) {
 		stopifnot(
 			max(treat_inds) == G + T - 1 + d + G * d + (T - 1) * d + num_treats
@@ -1084,7 +1098,10 @@ getTreatInds <- function(G, T, d, num_treats) {
 #' @keywords internal
 #' @noRd
 getP <- function(G, T, d, num_treats) {
-	return(G + (T - 1) + d + d * G + d * (T - 1) + num_treats + num_treats * d)
+	# #431 item 3: the first five terms ARE the pre-treatment column count, so
+	# read them from `.base_cols()` rather than re-deriving them here. The
+	# remaining `num_treats + num_treats * d` factors to `num_treats * (1 + d)`.
+	return(.base_cols(G, T, d) + num_treats * (1 + d))
 }
 
 #' Get Indices of First Treatment Effects for Each Cohort
@@ -2448,6 +2465,9 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #' @noRd
 .compute_treat_inds <- function(G, T, d, num_treats, p) {
 	treat_inds <- getTreatInds(G = G, T = T, d = d, num_treats = num_treats)
+	# Deliberate independent re-derivation: cross-checks .base_cols(); do not
+	# fold. Folding would make these tautological and delete the only oracle for
+	# the formula.
 	if (d > 0) {
 		stopifnot(max(treat_inds) + 1 <= p)
 		stopifnot(
