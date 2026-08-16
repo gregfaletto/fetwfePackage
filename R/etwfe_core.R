@@ -421,7 +421,7 @@ checkEtwfeInputs <- function(
 	stopifnot(nrow(psi_mat) == length(tes))
 
 	att_pair <- .compute_att_pair(
-		te_fn = getTeResultsOLS,
+		te_fn_name = "getTeResultsOLS",
 		base_args = list(
 			sig_eps_sq = sig_eps_sq,
 			N = N,

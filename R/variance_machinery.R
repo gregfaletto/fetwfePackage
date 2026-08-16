@@ -914,6 +914,68 @@ getTeResults2 <- function(
 	))
 }
 
+#' @title Call a treatment-effect function by NAME, with symbol arguments
+#' @description Replaces the pre-#431 idiom of dispatching an argument *list*
+#'   against a function *object*. That construction builds a call whose first
+#'   element is the entire function definition and whose remaining elements are
+#'   the argument *values*, so anything capturing that call captures the inlined
+#'   values — and every `stopifnot()` inside `getTeResultsOLS()` /
+#'   `getTeResults2()` does. Measured on a 258x258 `gram_inv`: the resulting
+#'   condition reports `Error in (function (sig_eps_sq, N, T, G, num_treats, ...`
+#'   with a 1,276,681-character deparse, and a user who wraps the fit in
+#'   `tryCatch(..., error = function(e) e)` retains a ~570 KB condition object.
+#'   The same fixture through this helper deparses to 391 characters, an
+#'   object.size of 3,680 B, and names `getTeResultsOLS` (#431 item 2).
+#'
+#'   How it works: `list2env()` binds each argument's *value* to its own *name*
+#'   in a fresh environment whose parent is the package namespace
+#'   (`parent.env(environment())` inside a package function is that function's
+#'   closure environment, i.e. `<namespace:fetwfe>`). `as.call()` then builds
+#'   `getTeResultsOLS(sig_eps_sq = sig_eps_sq, N = N, ...)` out of *symbols*,
+#'   and `eval()` runs it in that environment. Every argument resolves to
+#'   exactly the same value, but the call R records — and attaches to any
+#'   condition raised inside — carries short names instead of inlined matrices.
+#'
+#'   The obvious one-word repair — dispatching against the function's *name*
+#'   rather than the object — restores the name in the error but still inlines
+#'   every argument value, so it is not sufficient.
+#'
+#'   The `stopifnot()` pins what the construction needs: every argument named,
+#'   uniquely, and non-empty. It deliberately does NOT check syntactic validity
+#'   of the names, and does not need to — `as.name("not a name")` produces a
+#'   perfectly usable symbol, and the constructed call matches and evaluates
+#'   correctly for `"not a name"`, `"if"`, and `"_x"` (all measured). What the
+#'   guard adds over the old idiom is rejecting unnamed or partially-named
+#'   lists, which would previously have been matched positionally; no live call
+#'   site passes one, since all three build fully-named `base_args`.
+#' @param te_fn_name Character scalar; the name of the treatment-effect function
+#'   to call (`"getTeResults2"` or `"getTeResultsOLS"`).
+#' @param args Named list of arguments; every element must carry a unique,
+#'   non-empty name.
+#' @return Whatever the named function returns.
+#' @keywords internal
+#' @noRd
+.call_te <- function(te_fn_name, args) {
+	stopifnot(
+		is.character(te_fn_name),
+		length(te_fn_name) == 1L,
+		!is.na(te_fn_name),
+		nzchar(te_fn_name),
+		is.list(args),
+		!is.null(names(args)),
+		all(nzchar(names(args))),
+		!anyDuplicated(names(args))
+	)
+	env <- list2env(args, parent = parent.env(environment()))
+	eval(
+		as.call(c(
+			list(as.name(te_fn_name)),
+			stats::setNames(lapply(names(args), as.name), names(args))
+		)),
+		env
+	)
+}
+
 #' @title Compute the in-sample / independent overall-ATT pair
 #' @description Single-sources the ATT-pair tail shared by the three estimator
 #'   cores (`fetwfe_core`, `betwfe_core`, `.ols_estimator_core`): call the
@@ -923,10 +985,12 @@ getTeResults2 <- function(
 #'   TRUE`) for the four independent fields, else `NA`-fill them. The two cores
 #'   using `getTeResultsOLS()` and the one using `getTeResults2()` differ only in
 #'   the treatment-effect function and its per-function arguments, so the
-#'   function is passed as `te_fn` and its arguments are threaded through
-#'   `do.call()`.
-#' @param te_fn The treatment-effect function to call ([getTeResults2()] or
-#'   [getTeResultsOLS()]).
+#'   function is named by `te_fn_name` and its arguments are threaded through
+#'   [.call_te()] — which calls it by name with symbol arguments, so an
+#'   assertion failure inside it names that function and keeps its condition
+#'   object small (#431 item 2).
+#' @param te_fn_name Character scalar; the name of the treatment-effect function
+#'   to call (`"getTeResults2"` or `"getTeResultsOLS"`).
 #' @param base_args Named list of the arguments common to both calls (everything
 #'   except `cohort_probs`, `cohort_probs_overall`, and `indep_probs`).
 #' @param in_sample_probs Named list `list(cohort_probs = ..., cohort_probs_overall
@@ -934,7 +998,7 @@ getTeResults2 <- function(
 #' @param indep_probs_args Named list `list(cohort_probs = ..., cohort_probs_overall
 #'   = ...)` for the independent call.
 #' @param indep_count_data_available Logical; if `FALSE`, the four independent
-#'   fields are `NA` and `te_fn` is called only once.
+#'   fields are `NA` and the treatment-effect function is called only once.
 #' @param assert_att_se Logical; when `TRUE`, `stopifnot(!is.na(att_se))` after the
 #'   in-sample call (the `(q < 1) & calc_ses` guard the bridge cores apply).
 #' @param indep_precheck Optional zero-argument function run at the top of the
@@ -945,7 +1009,7 @@ getTeResults2 <- function(
 #' @keywords internal
 #' @noRd
 .compute_att_pair <- function(
-	te_fn,
+	te_fn_name,
 	base_args,
 	in_sample_probs,
 	indep_probs_args,
@@ -953,8 +1017,8 @@ getTeResults2 <- function(
 	assert_att_se = FALSE,
 	indep_precheck = NULL
 ) {
-	in_sample_te_results <- do.call(
-		te_fn,
+	in_sample_te_results <- .call_te(
+		te_fn_name,
 		c(base_args, in_sample_probs, list(indep_probs = FALSE))
 	)
 
@@ -974,8 +1038,8 @@ getTeResults2 <- function(
 		if (!is.null(indep_precheck)) {
 			indep_precheck()
 		}
-		indep_te_results <- do.call(
-			te_fn,
+		indep_te_results <- .call_te(
+			te_fn_name,
 			c(base_args, indep_probs_args, list(indep_probs = TRUE))
 		)
 		out$indep_att_hat <- indep_te_results$att_hat

@@ -835,7 +835,7 @@ fetwfe_core <- function(
 	theta_hat_treat_sel_for_att <- theta_hat_slopes[sel_treat_inds]
 
 	att_pair <- .compute_att_pair(
-		te_fn = getTeResults2,
+		te_fn_name = "getTeResults2",
 		base_args = list(
 			sig_eps_sq = sig_eps_sq,
 			N = N,
