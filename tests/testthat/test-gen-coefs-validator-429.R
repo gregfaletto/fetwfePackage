@@ -103,31 +103,54 @@ test_that("the unmodified base arguments succeed through both doors (#429 item 9
 test_that(".validate_gen_coefs_scalars() pins all sixteen conditions on both doors (#429 item 9)", {
 	expect_length(.gcv429_cells, 16L)
 
+	# CAPTURE, DO NOT expect_error()-AND-REUSE. A cell whose mutation makes the
+	# call SUCCEED has to fail this loop cleanly rather than abort it.
+	# expect_error() on a non-erroring call records its failure and returns the
+	# expression's VALUE, and conditionMessage() on that value raises -- which
+	# ends the whole test_that() block and silently skips every later cell.
+	#
+	# That is reachable, not hypothetical: with `length(eff_size) != 1` dropped,
+	# genCoefs(G = 3, T = 5, d = 2, density = 0.5, eff_size = c(1, 2)) succeeds
+	# and returns a FETWFE_coefs object (measured). It is harmless today ONLY
+	# because that condition is cell 16 of 16 -- add a cell after it, or reorder
+	# the list, and dropping that one check would hide every cell downstream of
+	# it. The mutation battery would still show the row as detected, because the
+	# aborted block reports a failure either way.
+	#
+	# The two accessors degrade to a readable value instead of raising, so all
+	# five assertions per cell still run and a red cell names itself.
+	msg_of <- function(x) {
+		if (inherits(x, "condition")) {
+			conditionMessage(x)
+		} else {
+			paste0("<no error; returned ", class(x)[1], ">")
+		}
+	}
+	call_of <- function(x) {
+		if (inherits(x, "condition")) {
+			conditionCall(x)
+		} else {
+			quote(NO_ERROR_RAISED)
+		}
+	}
+
 	for (cell in .gcv429_cells) {
 		args <- utils::modifyList(.gcv429_base, cell$over)
 
-		e_gc <- expect_error(
-			do.call(genCoefs, args),
-			cell$lit,
-			fixed = TRUE,
-			info = paste("genCoefs:", cell$id)
+		e_gc <- tryCatch(do.call(genCoefs, args), error = function(e) e)
+		e_core <- tryCatch(do.call(genCoefsCore, args), error = function(e) e)
+
+		expect_true(
+			grepl(cell$lit, msg_of(e_gc), fixed = TRUE),
+			info = paste("genCoefs:", cell$id, "--", msg_of(e_gc))
 		)
-		e_core <- expect_error(
-			do.call(genCoefsCore, args),
-			cell$lit,
-			fixed = TRUE,
-			info = paste("genCoefsCore:", cell$id)
+		expect_true(
+			grepl(cell$lit, msg_of(e_core), fixed = TRUE),
+			info = paste("genCoefsCore:", cell$id, "--", msg_of(e_core))
 		)
 
-		expect_identical(
-			conditionMessage(e_gc),
-			conditionMessage(e_core),
-			info = cell$id
-		)
-		expect_null(conditionCall(e_gc), info = paste("genCoefs:", cell$id))
-		expect_null(
-			conditionCall(e_core),
-			info = paste("genCoefsCore:", cell$id)
-		)
+		expect_identical(msg_of(e_gc), msg_of(e_core), info = cell$id)
+		expect_null(call_of(e_gc), info = paste("genCoefs:", cell$id))
+		expect_null(call_of(e_core), info = paste("genCoefsCore:", cell$id))
 	}
 })

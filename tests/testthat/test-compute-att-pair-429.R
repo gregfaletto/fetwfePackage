@@ -211,8 +211,17 @@ test_that(".compute_att_pair() runs indep_precheck once, before the independent 
 		cohort_probs_overall = c(0.2, 0.2)
 	)
 
-	# Half one: with NO precheck, the independent call itself raises.
-	expect_error(
+	# Half one: with NO precheck, the independent call itself raises -- and it
+	# raises something OTHER than the precheck's marker. That second clause is
+	# the whole content of this half, so it is what gets asserted.
+	#
+	# Deliberately NOT anchored on "non-conformable arguments": that is base R's
+	# wording for the `%*%` failure, not the package's, and CI runs R-devel. The
+	# assert_att_se anchor a hundred lines above was softened off a base-R
+	# stopifnot() deparse for exactly this reason, and pinning a different
+	# base-R string here would have been the same mistake with a different
+	# message.
+	e_no_pre <- tryCatch(
 		fetwfe:::.compute_att_pair(
 			"getTeResultsOLS",
 			.cap429_base_args,
@@ -220,9 +229,10 @@ test_that(".compute_att_pair() runs indep_precheck once, before the independent 
 			poisoned,
 			TRUE
 		),
-		"non-conformable arguments",
-		fixed = TRUE
+		error = function(e) e
 	)
+	expect_s3_class(e_no_pre, "error")
+	expect_false(grepl("PRECHECK", conditionMessage(e_no_pre), fixed = TRUE))
 
 	# Half two: with a precheck that stops, the precheck's error is the one that
 	# surfaces -- so the precheck DISPLACED an error the independent call would

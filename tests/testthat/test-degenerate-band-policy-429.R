@@ -11,9 +11,19 @@
 # Item 7. The degenerate early return's data.frame() (R/simultaneous_cis.R:
 # 641-649) had no absolute column-name pin on this arm. Adding, removing or
 # reordering a column there was invisible to the high-dim path.
-# (test-degenerate-jacobian-225.R now carries the same pin on the fixed-p arm;
-# the two arms enter the same data.frame() through different guards, so both are
-# needed.)
+# (test-degenerate-jacobian-225.R now carries the same pin on the fixed-p arm.)
+#
+# THE TWO PINS ARE REDUNDANT TODAY, and the honest reason to keep both is the
+# same one test-c6-toplevel-routing-429.R:20-23 gives for its nine redundant
+# cells. R/simultaneous_cis.R:623 is a SINGLE outer guard; the inner if/else
+# below it chooses only between warning() and message(), and both branches fall
+# through to one `ses <- rep(0, K)` and one data.frame() at :641-649. So either
+# pin alone catches an add, a remove or a reorder -- measured, 4 failures from
+# one and 3 from the other. They stop being redundant the moment that branch is
+# split per regime, which is exactly the shape #429 exists because of. (An
+# earlier draft of this comment claimed the two arms "enter the same
+# data.frame() through different guards, so both are needed" -- there is one
+# guard, and that reasoning was backwards.)
 #
 # FIXTURE FAILURE MODE, stated because CI is gating over four Linux/OpenBLAS
 # jobs: `p >= N*T` is deterministic, but `all(catt_hats == 0)` is the outcome of
@@ -45,9 +55,13 @@
 	seed = 55
 )
 
+# NO suppressWarnings() here, deliberately. Block (a) below asserts that these
+# exact calls emit no warning, so suppressing one here would contradict the
+# file's own claim and would hide a fixture that started warning -- the failure
+# this file exists to detect. Measured: both fits are warning-free.
 .dbp429_fits <- list(
-	fetwfe = suppressWarnings(fetwfeWithSimulatedData(.dbp429_sim, q = 0.5)),
-	betwfe = suppressWarnings(betwfeWithSimulatedData(.dbp429_sim, q = 0.5))
+	fetwfe = fetwfeWithSimulatedData(.dbp429_sim, q = 0.5),
+	betwfe = betwfeWithSimulatedData(.dbp429_sim, q = 0.5)
 )
 
 .dbp429_ci_names <- c(
@@ -167,6 +181,14 @@ test_that("the #304 policy keeps the fit silent while simultaneousCIs() warns (#
 
 # ------------------------------------------------------------------------------
 # (b) Item 7 -- the degenerate $ci schema, high-dim arm.
+#
+# THIS BLOCK IS NOT SELF-PROTECTING, and the dependency is declared rather than
+# assumed: a NON-degenerate fit returns these same six column names from the
+# ordinary path at R/simultaneous_cis.R:1014-1022, so nothing asserted below
+# would notice if the fixture stopped being degenerate. What rules that out is
+# the invariants block at the top of this file (`all(catt_hats == 0)` plus
+# `p >= N*T`), which fails loudly on the same run. Do not move these assertions
+# into a file that lacks those invariants.
 # ------------------------------------------------------------------------------
 test_that("the degenerate band's $ci carries exactly six columns in order (#429 item 7)", {
 	for (nm in names(.dbp429_fits)) {
