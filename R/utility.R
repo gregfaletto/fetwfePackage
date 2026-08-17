@@ -958,6 +958,18 @@ my_scale <- function(x) {
 #' @keywords internal
 #' @noRd
 getNumTreats <- function(G, T) {
+	# #431 item 4: reject non-scalar / non-numeric arguments rather than silently
+	# returning a wrong count. The specific hazard is a call written in a scope
+	# where `T` is unbound: it then resolves to `base::T` (i.e. TRUE), and
+	# `TRUE * G - ...` returns a plausible-looking number instead of erroring.
+	# `stopifnot()` keeps its default call-naming here on purpose -- these are
+	# programmer-side errors, and naming the helper is what a developer wants.
+	stopifnot(
+		is.numeric(G),
+		length(G) == 1L,
+		is.numeric(T),
+		length(T) == 1L
+	)
 	# #185 SB6: coerce to integer to honor the @return contract. The formula is
 	# exact (G * (G + 1) is always even), but `/ 2` yields a double.
 	return(as.integer(T * G - (G * (G + 1)) / 2))
@@ -976,15 +988,46 @@ getNumTreats <- function(G, T) {
 #'   the single unbranched expression is correct for all `d >= 0`.
 #'
 #'   Single-sources the layout formula that MUST match the design matrix
-#'   everywhere; previously re-derived inline across `R/fusion_transforms.R` and
-#'   in `getTreatInds()` (issue #401 item 9).
+#'   wherever that offset is needed. Previously re-derived inline across
+#'   `R/fusion_transforms.R` and in `getTreatInds()` (issue #401 item 9); #431
+#'   item 3 folded the two remaining live re-derivations, so the callers are now
+#'   `R/fusion_transforms.R` (`transformXintImproved()` and
+#'   `untransformCoefImproved()`), `genCoefsCore()` (`R/gen_coefs.R`),
+#'   `getTreatInds()`, `getP()`, and `.collapse_design_for_twfe_covs()`
+#'   (`R/input_prep.R`).
+#'
+#'   Three sites deliberately do NOT call this and must not be folded into it:
+#'   the two `stopifnot(max(treat_inds) == ...)` cross-checks in
+#'   `getTreatInds()` and `.compute_treat_inds()`, which are independent
+#'   re-derivations acting as the formula's only oracle, and `R/gen_data.R`'s
+#'   local `base_cols`, which is a different quantity (the `gen_ints = FALSE`
+#'   no-interaction layout).
 #' @param G Integer; the number of treated cohorts.
 #' @param T Integer; the number of time periods.
 #' @param d Integer; the number of time-invariant covariates.
-#' @return The number of pre-treatment columns (same numeric type as the inputs).
+#' @return The number of pre-treatment columns, always a **double** — never an
+#'   integer, even when `G`, `T`, and `d` are all integers, because the literal
+#'   `1` in `T - 1` is a double and promotes the whole expression. A caller
+#'   comparing the result with `identical()` must compare against a double
+#'   (`23`, not `23L`).
 #' @keywords internal
 #' @noRd
 .base_cols <- function(G, T, d) {
+	# #431 item 4: reject non-scalar / non-numeric arguments rather than silently
+	# returning a wrong column count. `is.numeric(TRUE)` is FALSE, so a call
+	# written in a scope where `T` is unbound -- and therefore resolves to
+	# `base::T` -- now errors instead of returning 11 where 23 is correct. NULL
+	# and vector arguments are caught by the length test. `stopifnot()` keeps its
+	# default call-naming here on purpose: these are programmer-side errors, and
+	# naming the helper is what a developer wants.
+	stopifnot(
+		is.numeric(G),
+		length(G) == 1L,
+		is.numeric(T),
+		length(T) == 1L,
+		is.numeric(d),
+		length(d) == 1L
+	)
 	G + T - 1 + d + G * d + (T - 1) * d
 }
 
@@ -1020,6 +1063,10 @@ getTreatInds <- function(G, T, d, num_treats) {
 	treat_inds <- as.integer(seq(from = base_cols + 1, length.out = num_treats))
 
 	stopifnot(length(treat_inds) == num_treats)
+	# Deliberate independent re-derivation: cross-checks .base_cols(); do not
+	# fold. Folding would make these tautological and delete the only oracle for
+	# the formula -- substituting a `+1L`-mutated `.base_cols()` into this
+	# function's environment makes both the d == 0 and d > 0 branches throw.
 	if (d > 0) {
 		stopifnot(
 			max(treat_inds) == G + T - 1 + d + G * d + (T - 1) * d + num_treats
@@ -1057,7 +1104,10 @@ getTreatInds <- function(G, T, d, num_treats) {
 #' @keywords internal
 #' @noRd
 getP <- function(G, T, d, num_treats) {
-	return(G + (T - 1) + d + d * G + d * (T - 1) + num_treats + num_treats * d)
+	# #431 item 3: the first five terms ARE the pre-treatment column count, so
+	# read them from `.base_cols()` rather than re-deriving them here. The
+	# remaining `num_treats + num_treats * d` factors to `num_treats * (1 + d)`.
+	return(.base_cols(G, T, d) + num_treats * (1 + d))
 }
 
 #' Get Indices of First Treatment Effects for Each Cohort
@@ -2421,16 +2471,26 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #' @noRd
 .compute_treat_inds <- function(G, T, d, num_treats, p) {
 	treat_inds <- getTreatInds(G = G, T = T, d = d, num_treats = num_treats)
+	# The guards below are about `p`, which getTreatInds() never sees: its
+	# signature is (G, T, d, num_treats), so the relationship between the
+	# treatment block and the total column count can only be checked here.
+	#
+	# They do NOT re-derive the column-count formula, and must not be extended to.
+	# getTreatInds() already asserts `max(treat_inds) == <formula>` on the line
+	# above (R/utility.R, both branches), and treat_inds is not touched in
+	# between -- so a formula assertion here is unreachable for every input. This
+	# function used to carry one, annotated as "the only oracle for the formula";
+	# that annotation was wrong on both counts and the assertion was dead.
+	# Measured (#431 PR review): 0 firings over 3,107 (G, T, d, num_treats, p)
+	# tuples plus 24 adversarial probes, and under a `+1L`-mutated .base_cols()
+	# the error's conditionCall() is getTreatInds(), never this frame. The real
+	# oracle is getTreatInds()'s own assertion; keep it there.
 	if (d > 0) {
 		stopifnot(max(treat_inds) + 1 <= p)
-		stopifnot(
-			max(treat_inds) == G + T - 1 + d + G * d + (T - 1) * d + num_treats
-		)
 		treat_int_inds <- (max(treat_inds) + 1):p
 		stopifnot(length(treat_int_inds) == num_treats * d)
 	} else {
 		stopifnot(max(treat_inds) <= p)
-		stopifnot(max(treat_inds) == G + T - 1 + num_treats)
 		treat_int_inds <- c()
 	}
 	list(treat_inds = treat_inds, treat_int_inds = treat_int_inds)

@@ -1264,7 +1264,7 @@ betwfe_core <- function(
 
 	# Get overal estimated ATT!
 	att_pair <- .compute_att_pair(
-		te_fn = getTeResultsOLS,
+		te_fn_name = "getTeResultsOLS",
 		base_args = list(
 			sig_eps_sq = sig_eps_sq,
 			N = N,

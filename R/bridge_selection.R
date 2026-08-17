@@ -408,13 +408,47 @@ getBetaCV <- function(
 	)
 }
 
-#' @title Column index of cv.grpreg's lambda.min (exact match, float-drift fallback)
+#' @title Column index of cv.grpreg's lambda.min (exact match, guarded fallback)
 #' @description The lockstep-critical step shared by the two cross-validation
 #'   call sites (`getBetaCV()` and `.fit_q1_nuisance()`): map `cv.grpreg()`'s
-#'   `lambda.min` to its column index in `cv_fit$fit$lambda`, falling back to the
-#'   nearest match under floating-point comparison drift. Single-sourced (#401)
-#'   because a fix applied to one copy would silently select the wrong lambda in
-#'   the other.
+#'   `lambda.min` to its column index in `cv_fit$fit$lambda`. Single-sourced
+#'   (#401) because a fix applied to one copy would silently select the wrong
+#'   lambda in the other.
+#'
+#'   **What the fallback is actually for (#431 item 5).** It is *not* for
+#'   floating-point drift, which the earlier version of this block claimed.
+#'   Read `grpreg::cv.grpreg` (measured against 3.5.0) at its tail: it sets
+#'   `lambda.min = lambda[min]` where `lambda` is a *subset of `fit$lambda`* and
+#'   `min` is a `which.min()` index, with no arithmetic applied anywhere. So
+#'   `lambda.min` is bit-identical to a grid element by construction and cannot
+#'   drift. `which(fit$lambda == lambda.min)` can therefore return a length
+#'   other than 1 only if (a) the grid contains duplicate values, or (b)
+#'   `grpreg` has broken that contract and `lambda.min` is absent from the grid
+#'   altogether.
+#'
+#'   Case (a) selects the **earliest column of `fit$beta`** — duplicates are
+#'   equal lambdas, so "the smallest lambda" would say nothing — and is
+#'   harmless. Case (b) is a broken upstream contract and must not be papered
+#'   over with the nearest grid point, which is what this function used to do
+#'   silently; the `all.equal()` assertion below now catches it.
+#'
+#'   Neither case is reachable with `grpreg` 3.5.0's `gBridge` grid **as
+#'   `fetwfe` calls it**. `grpreg:::setupLambda.gBridge`'s `lambda.min > 0`
+#'   branch — the only one reached, since neither call site forwards
+#'   `lambda.min` or `nlambda` — is a strictly monotone exponential sequence
+#'   with `distinct == length` at every resolution tested. (Its other branch,
+#'   taken when `lambda.min == 0`, *prepends* an explicit `0`; and the one
+#'   degenerate case that would collapse the grid, `lambda.max == 0`, errors
+#'   inside `seq()` before a grid exists at all.)
+#'
+#'   **Why the assertion is not a tautology.** The grid is geometric with ratio
+#'   `lambda.min^(-1/(nlambda - 1))`, so adjacent lambdas differ by several
+#'   percent — roughly 7% at `gBridge`'s `n > p` default (`lambda.min = 0.001`)
+#'   and roughly 3% at its `n <= p` default (`0.05`), this package's usual
+#'   regime. Either is six or seven orders of magnitude above `all.equal()`'s
+#'   `1.5e-8` relative tolerance, so a wrong neighbour is rejected with enormous
+#'   margin. Measured directly: the assertion accepts a `1e-8` relative
+#'   perturbation of `lambda_star` and rejects `1e-7`.
 #' @param cv_fit A `cv.grpreg` fit (with `$lambda.min` and `$fit$lambda`).
 #' @return The integer column index (guaranteed length 1).
 #' @keywords internal
@@ -423,9 +457,18 @@ getBetaCV <- function(
 	lambda_star <- cv_fit$lambda.min
 	lam_idx <- which(cv_fit$fit$lambda == lambda_star)
 	if (length(lam_idx) != 1L) {
-		# Fall back to nearest match in case of floating-point comparison drift.
+		# No exact match, or several. Take the nearest grid point, but assert
+		# that it really IS lambda.min (#431 item 5) rather than returning the
+		# nearest one silently. Deliberately inside the `if`: on the normal path
+		# `lam_idx` came from an exact `==` match, so re-asserting it there
+		# would be tautological.
 		lam_idx <- which.min(abs(cv_fit$fit$lambda - lambda_star))
+		stopifnot(isTRUE(all.equal(cv_fit$fit$lambda[lam_idx], lambda_star)))
 	}
+	# Residual role of this guard after the assertion above: on an EMPTY grid
+	# the new assertion pre-empts it, but a zero-length `lambda.min` against a
+	# non-empty grid still lands here, because `all.equal(numeric(0),
+	# numeric(0))` is TRUE.
 	stopifnot(length(lam_idx) == 1L)
 	lam_idx
 }

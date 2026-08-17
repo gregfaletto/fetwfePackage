@@ -588,6 +588,12 @@ simulateDataCore <- function(
 	# We know that when gen_ints = FALSE, the design matrix X is:
 	# X = [cohort_fe, time_fe, X_long, treat_mat_long]
 	# The base part (cohort_fe, time_fe, X_long) has (G + (T-1) + d) columns.
+	#
+	# This is DELIBERATELY NOT `.base_cols(G, T, d)` (#431 item 3). It is a
+	# different quantity: the `gen_ints = FALSE` no-interaction layout, which
+	# omits the `G*d` cohort x covariate and `(T-1)*d` time x covariate blocks
+	# that `.base_cols()` includes. Folding this into `.base_cols()` would
+	# over-count by `d * (G + T - 1)` whenever `d > 0`.
 	base_cols <- G + (T - 1) + d
 
 	# The treatment dummy block is in columns (base_cols + 1) : (base_cols + num_treats)

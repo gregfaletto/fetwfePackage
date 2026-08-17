@@ -379,23 +379,45 @@
 #' @keywords internal
 #' @noRd
 .check_c6_dims_toplevel <- function(x, cls) {
+	# #431 item 6: read every slot with `[[`, never `$`. `$` partial-matches on
+	# lists, so a slot that is absent can silently resolve to a longer-named one
+	# -- the trap tests/testthat/test-internal-slot-parity.R:88-90 documents and
+	# mandates `[[` for. All seven reads are converted, not just the four the
+	# issue named, so no `$` remains in this function.
+	#
+	# Be precise about the hazard, because the obvious example does not apply
+	# here: on the three classes this function serves, an absent `y` does NOT
+	# resolve to `y_mean`, because `y_final` is also present and the prefix is
+	# therefore ambiguous -- `$` returns NULL just as `[[` does. The reads that
+	# can diverge are the ones with exactly one longer-named sibling, which is
+	# why the tests build one fixture per read (test-small-fixes-431.R item 6).
+	# So this is behavior-neutral for well-formed etwfe / betwfe / twfeCovs
+	# objects, which carry all seven slots exactly; it matters for a malformed
+	# object and for the class-agnostic future caller this helper's `_toplevel`
+	# name anticipates.
+	#
+	# NOT the only contract-checker in this file, and the others still use `$`
+	# with live prefix collisions (cohort_probs -> cohort_probs_overall on all
+	# four classes, att_se -> att_selected, three lambda.* pairs). Those are
+	# latent because .stop_if_missing_slots() runs an exact setdiff first on
+	# every validator path; converting them is its own change, filed separately.
 	.assert_contract(
-		length(x$beta_hat) == x$p,
+		length(x[["beta_hat"]]) == x[["p"]],
 		"C6 length(beta_hat) == p",
 		cls
 	)
 	.assert_contract(
-		length(x$y) == x$N * x$T,
+		length(x[["y"]]) == x[["N"]] * x[["T"]],
 		"C6 length(y) == N * T",
 		cls
 	)
 	.assert_contract(
-		nrow(x$X_ints) == x$N * x$T,
+		nrow(x[["X_ints"]]) == x[["N"]] * x[["T"]],
 		"C6 nrow(X_ints) == N * T",
 		cls
 	)
 	.assert_contract(
-		is.logical(x$calc_ses) && length(x$calc_ses) == 1L,
+		is.logical(x[["calc_ses"]]) && length(x[["calc_ses"]]) == 1L,
 		"C8 calc_ses is length-1 logical",
 		cls
 	)

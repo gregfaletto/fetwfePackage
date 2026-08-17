@@ -248,6 +248,45 @@
 }
 
 
+#-------------------------------------------------------------------------------
+# The message emitted when the Gram matrix on the selected support is singular
+# and standard errors are therefore unavailable. Single-sourced (#431): the two
+# warning() calls in getGramInv() below, the stop() in
+# .compute_cluster_robust_sandwich() (R/variance_machinery.R), and the tests in
+# tests/testthat/ all read this, so the copies cannot drift. Previously two
+# hand-kept copies of this string backed three emission sites across two files,
+# and #84 item 10 (see R/variance_machinery.R, above the tryCatch) had already
+# made "keep these two byte-identical" a deliberate invariant with no mechanism.
+#
+# Note this constant now backs a warning() (getGramInv degrades: SEs become NA and
+# the fit continues) AND a stop() (the cluster sandwich aborts). "Standard errors
+# will not be calculated" is literally true of the first and loosely true of the
+# second, and single-sourcing couples them: rewording one rewords the other.
+# That coupling is accepted -- the two strings were already required to match --
+# but it is the thing to think about before editing the text.
+#
+# What this does NOT protect: any expect_identical() against this symbol is a
+# tautology with respect to its CONTENT -- both sides move together when the
+# text is edited. The only thing holding the wording itself is three
+# grepl(..., fixed = TRUE) anchors: two in tests/testthat/test-small-fixes-431.R
+# and one in tests/testthat/test-assemble-cluster-sandwich-78.R.
+# Single-sourcing prevents DRIFT between copies; it does not make the text
+# unable to change silently. (Same caveat as #429's constant -- see the banner
+# above .SINGULAR_GRAM_ANALYTIC_STOP_MSG in R/simultaneous_cis.R.)
+#
+# NOT for the bootstrap path: .build_regression_if()'s singular-Gram error in
+# R/simultaneous_bootstrap.R says something different and deliberately so, and
+# NOT for the analytic simultaneousCIs() stop path, which has its own constant
+# .SINGULAR_GRAM_ANALYTIC_STOP_MSG in R/simultaneous_cis.R (#429) whose remedy
+# sentence ("use method = 'bootstrap'") would be wrong here.
+#-------------------------------------------------------------------------------
+
+.SINGULAR_GRAM_NO_SE_MSG <- paste0(
+	"Gram matrix corresponding to selected features is not invertible. ",
+	"Assumptions needed for inference are not satisfied. Standard errors ",
+	"will not be calculated."
+)
+
 # getGramInv
 #' @title Compute Inverse of Gram Matrix for Selected Features
 #' @description Calculates the inverse of the Gram matrix formed by the selected
@@ -322,8 +361,6 @@ getGramInv <- function(
 	min_gram_eigen <- min(gram_eigvals)
 	max_gram_eigen <- max(gram_eigvals)
 
-	gram_singular_msg <- "Gram matrix corresponding to selected features is not invertible. Assumptions needed for inference are not satisfied. Standard errors will not be calculated."
-
 	# Guard Gram inversion with an rcond-aware relative tolerance (#205):
 	# solve() aborts on reciprocal condition number, not absolute min
 	# eigenvalue, and the old absolute floor (1e-16) sat below
@@ -333,13 +370,13 @@ getGramInv <- function(
 	if (
 		min_gram_eigen < max(dim(gram)) * .Machine$double.eps * max_gram_eigen
 	) {
-		warning(gram_singular_msg)
+		warning(.SINGULAR_GRAM_NO_SE_MSG)
 		return(list(gram_inv = NA, calc_ses = FALSE))
 	}
 
 	gram_inv <- tryCatch(solve(gram), error = function(e) NULL)
 	if (is.null(gram_inv)) {
-		warning(gram_singular_msg)
+		warning(.SINGULAR_GRAM_NO_SE_MSG)
 		return(list(gram_inv = NA, calc_ses = FALSE))
 	}
 

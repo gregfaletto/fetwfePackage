@@ -259,15 +259,32 @@ test_that(".compute_cluster_robust_sandwich emits helpful error on rank-deficien
 	X_S_full_rank[, 4] <- X_S_full_rank[, 2]
 	residuals <- rnorm(N * T)
 
-	expect_error(
+	e <- tryCatch(
 		fetwfe:::.compute_cluster_robust_sandwich(
 			X_S = X_S_full_rank,
 			residuals = residuals,
 			N = N,
 			T = T
 		),
-		"Gram matrix corresponding to selected features is not invertible"
+		error = function(e) e
 	)
+	expect_s3_class(e, "error")
+	# #431 item 8: the message is no longer a hand-kept byte-identical copy of
+	# getGramInv()'s literal -- both read the package-level constant, so the
+	# copies cannot drift. conditionMessage() errors on a non-condition, which
+	# would abort the block before the anchor below ran; same shape and same
+	# reason as tests/testthat/test-singular-gram-call-site-policy-429.R.
+	emsg <- if (inherits(e, "condition")) conditionMessage(e) else NA_character_
+	expect_identical(emsg, fetwfe:::.SINGULAR_GRAM_NO_SE_MSG)
+	# The expect_identical() above is a tautology with respect to the message's
+	# CONTENT (both sides read the same symbol); it catches a REINTRODUCED
+	# INLINE LITERAL THAT DIFFERS, not a rewrite of the constant. This anchor is
+	# what holds the wording.
+	expect_true(grepl(
+		"Gram matrix corresponding to selected features is not invertible",
+		emsg,
+		fixed = TRUE
+	))
 })
 
 # ------------------------------------------------------------------------------

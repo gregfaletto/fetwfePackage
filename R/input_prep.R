@@ -449,7 +449,12 @@ prep_for_etwfe_core <- function(
 ) {
 	stopifnot(nrow(X_gls) == N * T)
 
-	X <- X_gls[, 1:(G + T - 1 + d * (1 + G + T - 1) + num_treats)]
+	# #431 item 3: call `.base_cols()` rather than re-deriving the pre-treatment
+	# column-count formula inline. `d * (1 + G + T - 1)` expands to
+	# `d + G*d + (T-1)*d`, so this is algebraically identical -- and the #339
+	# comment six lines below documents an off-by-one caused by precisely this
+	# kind of inline re-derivation.
+	X <- X_gls[, 1:(.base_cols(G, T, d) + num_treats)]
 
 	# Treatment columns in the (pre-collapse) GLS design. Use the validated helper
 	# getTreatInds() rather than an inline formula, so the pre-collapse treatment
