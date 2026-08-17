@@ -61,6 +61,25 @@
 
 ### Internal
 
+- The remaining six items of the test-power audit that followed the #400/#401
+  single-sourcing campaign now have coverage, closing #429. Six named mutations
+  of shipped code each used to leave the test file that claims the contract
+  entirely green, and each now reddens a named assertion in it: deleting the
+  shared C6/C8 dimension check from the `etwfe`, `betwfe` or `twfeCovs`
+  validator; three separate defects in the internal helper that computes the
+  in-sample and independent ATT pair; flipping the flag that keeps an ordinary
+  fit silent when the bridge penalty zeroes every treatment effect in the
+  high-dimensional regime; adding, removing or reordering a column of the
+  degenerate confidence-band data frame; dropping the `drop = FALSE` that keeps
+  a single-column selection matrix a matrix on the `fetwfe` branch; and
+  weakening any of the sixteen scalar argument checks that `genCoefs()` and
+  `genCoefsCore()` share. `simultaneousCIs()`'s own standard-error path also
+  gained an absolute pinned value on each of the cross-accessor guardrail's six
+  fixtures, so it no longer rests only on agreement with the other accessors ---
+  an agreement a further consolidation would hollow, exactly as the #400 fold
+  already hollowed the anchors before it. Tests only: no file under `R/` is
+  touched and no estimator behavior changes.
+
 - Eight small defects found by a late audit of the #400/#401 single-sourcing
   work are fixed together (#431). Two of them finish that campaign: the
   pre-treatment column-count formula, which an earlier off-by-one bug had
