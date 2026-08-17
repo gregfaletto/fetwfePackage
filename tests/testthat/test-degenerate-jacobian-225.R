@@ -4,16 +4,20 @@ library(fetwfe)
 # Issue #225 (remaining items, deferred from #227): two regression tests for the
 # recently-added inference surface that previously had no isolated coverage.
 #
-#   Item 1 -- the K=0 "degenerate support" branch of .simultaneous_cis_impl()
-#     (R/simultaneous_cis.R:405-432): when bridge selection zeroes EVERY treatment
-#     effect, simultaneousCIs() returns collapsed point bands at zero, with the
-#     pointwise critical value and NA adjusted p-values. No test reached it.
+#   Item 1 -- the K=0 "degenerate support" early return of
+#     .simultaneous_cis_impl(), guarded by
+#     `length(sel_treat_inds_shifted) == 0L && !highdim_fetwfe_bootstrap`: when
+#     bridge selection zeroes EVERY treatment effect, simultaneousCIs() returns
+#     collapsed point bands at zero, with the pointwise critical value and NA
+#     adjusted p-values. No test reached it.
 #
 #   Item 2 -- the K=1 second-variance ("Sigma_2") term computed two ways: the
-#     joint .assemble_joint_cov_var2() (R/variance_machinery.R:1259, used by the
-#     simultaneous-CI worker) vs the scalar getSecondVarTermOLS()
-#     (R/variance_machinery.R:251, used by eventStudy()). They are the same
+#     joint .assemble_joint_cov_var2() (used by the simultaneous-CI worker) vs
+#     the scalar getSecondVarTermOLS() (used by eventStudy()). They are the same
 #     quantity in different parameterizations; nothing cross-checked them.
+#
+# References here are by FUNCTION NAME, not by R/ line number: all three of the
+# line numbers this header used to carry had gone stale (#429).
 #
 # Both are test-only drift sentinels; the shipped behavior is correct. Each is
 # verified to FAIL on a deliberately-broken version of the guarded path.
@@ -69,10 +73,30 @@ test_that("simultaneousCIs() K=0 degenerate branch returns collapsed point bands
 	for (fam in c("event_study", "cohort", "all_post_treatment")) {
 		expect_message(
 			sci <- simultaneousCIs(.deg_fit_225, family = fam),
-			"zeroed out every treatment effect"
+			"zeroed out every treatment effect",
+			fixed = TRUE
 		)
 		expect_s3_class(sci, "simultaneous_cis")
 		expect_identical(sci$K, as.integer(expected_K[[fam]]))
+
+		# #429 item 7: absolute column-name pin on the degenerate early
+		# return's data.frame(). Adding, removing or reordering a column there
+		# was invisible. This fixture is the FIXED-p arm (it reaches the
+		# message() branch); the high-dim arm, which enters the same
+		# data.frame() through the warning() guard, is pinned in
+		# test-degenerate-band-policy-429.R.
+		expect_identical(
+			names(sci$ci),
+			c(
+				"effect",
+				"estimate",
+				"simultaneous_ci_low",
+				"simultaneous_ci_high",
+				"pointwise_ci_low",
+				"pointwise_ci_high"
+			),
+			info = fam
+		)
 
 		# Every estimate is zero (the support is empty).
 		expect_true(all(sci$ci$estimate == 0))
