@@ -11,6 +11,11 @@ library(fetwfe)
 #     cells selected, d_inv_treat_sel = full diag(num_treats).
 #   - fetwfe/betwfe: d_inv_treat_sel keeps drop = FALSE (a matrix even with a
 #     single selected treatment cell) and is NULL when nothing is selected.
+#
+# #429 item 8: the k = 1 drop = FALSE case is now covered for BOTH branches. It
+# used to be exercised for betwfe only, while this header claimed it for
+# "fetwfe/betwfe" -- so removing drop = FALSE from the fetwfe branch of
+# .resolve_selected_support() left this file green.
 # ------------------------------------------------------------------------------
 
 .resolve <- get(".resolve_selected_support", envir = asNamespace("fetwfe"))
@@ -91,6 +96,43 @@ test_that("betwfe d_inv_treat_sel stays a 1-col matrix with a single selection (
 	expect_length(r$sel_treat_inds_shifted, 1L)
 	expect_true(is.matrix(r$d_inv_treat_sel)) # drop=FALSE: NOT dropped to a vector
 	expect_identical(ncol(r$d_inv_treat_sel), 1L)
+})
+
+test_that("fetwfe d_inv_treat_sel stays a 1-col matrix with a single selection (#429 item 8)", {
+	# The fetwfe branch has to be forced DIFFERENTLY from betwfe's above: betwfe
+	# reads its selection from the `beta_hat` ARGUMENT, while fetwfe ignores
+	# beta_hat entirely and reads x$internal$theta_hat. So the mutation goes on
+	# the fit object, with the `1L +` offset the resolver's intercept-dropping
+	# slice implies. The ordinary fit selects k = 6 here (a 10x6 subset is not
+	# dropped), which is why the k >= 1 block above cannot see the mutation.
+	#
+	# This deliberately leaves `f` OFF-CONTRACT: its theta_hat no longer agrees
+	# with its beta_hat, att_selected, catt_hats or catt_df, so
+	# .validate_fetwfe() would reject it. That is safe only because
+	# .resolve_selected_support() is a pure internal reader with no precondition
+	# call. DO NOT extend this block to call any of the seven
+	# .check_for_*-guarded accessors (eventStudy, augment, tidy, glance, plot,
+	# coef, simultaneousCIs) on `f` -- each would fail on a contract unrelated
+	# to drop = FALSE.
+	f <- fits$fetwfe
+	num_treats <- length(f$treat_inds)
+	f$internal$theta_hat[1L + f$treat_inds] <- 0
+	f$internal$theta_hat[1L + f$treat_inds[1]] <- 1 # exactly one selected cell
+	r <- do.call(.resolve, .args_for(f))
+
+	expect_length(r$sel_treat_inds_shifted, 1L)
+	# The two load-bearing assertions: without drop = FALSE, d_inv_treat[, 1] is
+	# a bare length-num_treats vector, so is.matrix() is FALSE and dim() is NULL.
+	expect_true(is.matrix(r$d_inv_treat_sel))
+	expect_identical(dim(r$d_inv_treat_sel), c(as.integer(num_treats), 1L))
+
+	# Branch identity: the fetwfe branch must not be silently producing what the
+	# betwfe branch would from the same selection. Measured here, the fetwfe
+	# column is the all-ones vector (cohort 1's fused base column lifts every
+	# CATT equally), which diag(num_treats)[, 1] is not. Do NOT "strengthen"
+	# this into a pin on the column's exact contents -- that is
+	# genInvTwoWayFusionTransformMat()'s contract and is tested elsewhere.
+	expect_false(identical(r$d_inv_treat_sel[, 1], diag(num_treats)[, 1]))
 })
 
 test_that("fetwfe/betwfe d_inv_treat_sel is NULL on empty selection (#400)", {
