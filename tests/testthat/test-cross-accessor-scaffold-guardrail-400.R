@@ -105,13 +105,18 @@
 # 24 failures, 18 in Part 1 and exactly one in each of the six Part 2 blocks.
 #
 # The fourth vector's VALUE equals the cohortStudy() pin sitting a few lines
-# above it in the same block -- for fetwfe/default and fetwfe/cluster the seven
-# printed digits are character-identical. That is not a defect and not
-# avoidable by changing family (event_study reproduces eventStudy()$se,
-# all_post_treatment reproduces cohortTimeATTs()$se): the agreement IS what
-# Anchor C asserts. The point of pinning it separately is that Anchor C can no
-# longer tell the two paths apart, and one absolute value should survive on the
-# simultaneousCIs() side when it goes fully hollow.
+# above it in the same block: in ALL SIX blocks the seven printed digits are
+# character-identical, which you can confirm without running anything by
+# comparing the literal pairs in each block. (They are not bit-identical --
+# identical() is FALSE on all six, 8e-17 to 2e-16 apart -- which is why the
+# tolerance is 1e-6 and not 0. An earlier draft of this comment said only
+# fetwfe/default and fetwfe/cluster matched, implying the other four differed.)
+# That is not a defect and not avoidable by changing family (event_study
+# reproduces eventStudy()$se, all_post_treatment reproduces
+# cohortTimeATTs()$se): the agreement IS what Anchor C asserts. The point of
+# pinning it separately is that Anchor C can no longer tell the two paths
+# apart, and one absolute value should survive on the simultaneousCIs() side
+# when it goes fully hollow.
 
 .g400_expect_anchors <- function(fit, label) {
 	a <- fit$alpha

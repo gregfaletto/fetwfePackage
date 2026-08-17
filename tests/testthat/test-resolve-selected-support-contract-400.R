@@ -107,13 +107,24 @@ test_that("fetwfe d_inv_treat_sel stays a 1-col matrix with a single selection (
 	# dropped), which is why the k >= 1 block above cannot see the mutation.
 	#
 	# This deliberately leaves `f` OFF-CONTRACT: its theta_hat no longer agrees
-	# with its beta_hat, att_selected, catt_hats or catt_df, so
-	# .validate_fetwfe() would reject it. That is safe only because
-	# .resolve_selected_support() is a pure internal reader with no precondition
-	# call. DO NOT extend this block to call any of the seven
-	# .check_for_*-guarded accessors (eventStudy, augment, tidy, glance, plot,
-	# coef, simultaneousCIs) on `f` -- each would fail on a contract unrelated
-	# to drop = FALSE.
+	# with its beta_hat, att_selected, catt_hats or catt_df. That is safe here
+	# only because .resolve_selected_support() is a pure internal reader with no
+	# precondition call.
+	#
+	# DO NOT extend this block to call any of the seven .check_for_*-guarded
+	# accessors (eventStudy, augment, tidy, glance, plot, coef,
+	# simultaneousCIs) on `f`. Be precise about why, because the reassuring
+	# version of this warning is false and was shipped in an earlier draft:
+	# .validate_fetwfe() does NOT reject this object. It never reads
+	# internal$theta_hat, so it accepts the fixture silently (measured; a
+	# trimmed-beta_hat control on the same fit raises `C6 length(beta_hat) == p`,
+	# which is what proves the validator is live rather than absent). Six of the
+	# seven accessors then run clean and return DIFFERENT numbers -- eventStudy(f)$se
+	# collapses from c(0.13677, 0.20340, 0.24978, 0.26261) to a constant 0.11772.
+	# Only augment() errors, and it errors on the unmutated fit too, for an
+	# unrelated reason. So the hazard is a silently wrong answer, not a loud
+	# rejection: exactly the failure mode this package's validators exist for,
+	# in the one gap they do not cover.
 	f <- fits$fetwfe
 	num_treats <- length(f$treat_inds)
 	f$internal$theta_hat[1L + f$treat_inds] <- 0

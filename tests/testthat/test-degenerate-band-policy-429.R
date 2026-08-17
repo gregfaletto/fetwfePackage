@@ -126,6 +126,14 @@ test_that("the #304 policy keeps the fit silent while simultaneousCIs() warns (#
 		# cohort family, T - 1L is K for the event-study family. A wrong value
 		# makes the helper return NULL rather than error, which is why the
 		# non-vacuity control below matters.
+		#
+		# One standing caution for whoever reuses these calls:
+		# .fit_band_for_family() hardcodes has_valid_ses = TRUE. That is sound
+		# here only because the invariants block above pins fit$calc_ses, so
+		# these fits genuinely have valid standard errors. Pointed at a
+		# calc_ses = FALSE fit, the helper would assert an invariant the object
+		# does not satisfy, and whatever it returned would be meaningless
+		# rather than wrong-and-loud.
 		expected_rows <- c(
 			cohort = nrow(fit$catt_df),
 			event_study = fit$T - 1L

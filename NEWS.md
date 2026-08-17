@@ -62,9 +62,10 @@
 ### Internal
 
 - The remaining six items of the test-power audit that followed the #400/#401
-  single-sourcing campaign now have coverage, closing #429. Six named mutations
-  of shipped code each used to leave the test file that claims the contract
-  entirely green, and each now reddens a named assertion in it: deleting the
+  single-sourcing campaign now have coverage, closing #429. Six classes of
+  mutation to shipped code are now caught by the test file that claims the
+  contract, where before they were invisible to it --- entirely so for five of
+  the six, and for nine of the sixteen argument checks in the sixth: deleting the
   shared C6/C8 dimension check from the `etwfe`, `betwfe` or `twfeCovs`
   validator; three separate defects in the internal helper that computes the
   in-sample and independent ATT pair; flipping the flag that keeps an ordinary

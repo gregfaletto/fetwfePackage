@@ -103,6 +103,14 @@ test_that(".compute_att_pair() maps the in-sample fields correctly (#429 item 5)
 	# exactly this shape passed macOS/Windows and failed all four Linux jobs on
 	# #427's first cross-platform run. (It happens to be bit-identical on
 	# macOS/Accelerate, which is precisely the evidence that misleads.)
+	#
+	# RECORDED LIMIT: because gram_inv and psi_mat are both the identity here,
+	# this pins the SCALING of att_var_1 -- sig_eps_sq, the cohort-probability
+	# weighting, and the 1/(N*T) divisor -- and not the quadratic form itself. A
+	# mutation that transposed or mis-ordered the psi/gram product would survive
+	# this assertion. That is deliberate: this file is a unit test of
+	# .compute_att_pair()'s FIELD MAPPING, and the quadratic form belongs to
+	# .compute_att_var1(), whose own coverage is elsewhere.
 	expect_equal(out$in_sample_att_var_1, 1 / 300)
 
 	# With no independent count data, all four independent fields are NA.
