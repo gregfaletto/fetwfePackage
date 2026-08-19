@@ -19,6 +19,11 @@
 #   * "(red)" blocks fail on main and pass here -- they demonstrate the change.
 #   * "(guardrail)" blocks pass on main too -- they constrain the implementation
 #     so a too-wide predicate, a lost carve-out, or a moved number goes red.
+#     ONE MEASURED EXCEPTION: block 6b carries the guardrail label but is red on
+#     main (1 failed assertion). Its anti-vacuity half asserts that eventStudy()
+#     is LOUD on the same fit, which is exactly what main does not do. The pair
+#     is worth the exception -- without it the block would pass unchanged if the
+#     warning were deleted outright.
 #
 # EVERY text anchor in this file passes `fixed = TRUE`. Two of the natural
 # anchors here are broken as regexes, both measured: `grepl("use a fetwfe() fit",
@@ -175,6 +180,12 @@
 .HPB433_REMEDY_FETWFE <- "method = \"bootstrap\""
 .HPB433_NOTICE <- "post-selection fallback"
 .HPB433_CLASS <- "fetwfe_highdim_postselection_band"
+# The message prefix names the PUBLIC door the user called, not a hardcoded
+# `simultaneousCIs()`. On the non-fetwfe branch the remedy is "use a fetwfe()
+# fit", which names no accessor at all, so a hardcoded prefix pointed an
+# eventStudy() caller at a function they neither called nor were being sent to.
+.HPB433_PREFIX_CIS <- "simultaneousCIs(): "
+.HPB433_PREFIX_ES <- "eventStudy(): "
 
 # ------------------------------------------------------------------------------
 # The fixture invariants come FIRST, so every block below runs on an asserted
@@ -227,6 +238,8 @@ test_that("betwfe p >= NT warns on the analytic default, every family (#433)", {
 		# would be wrong advice here.
 		expect_true(grepl(.HPB433_REMEDY_OTHER, ws, fixed = TRUE), info = fam)
 		expect_false(grepl(.HPB433_REMEDY_FETWFE, ws, fixed = TRUE), info = fam)
+		# The accessor door names itself.
+		expect_true(grepl(.HPB433_PREFIX_CIS, ws, fixed = TRUE), info = fam)
 	}
 
 	# The predicate is family-agnostic, so the fourth (user-supplied) family is
@@ -322,10 +335,12 @@ test_that("betwfe p >= NT under method = 'bootstrap' still warns (#308 fold-in)"
 #    trivially warning-free. So assert positively that the band WAS built and
 #    applied. Note what is deliberately NOT asserted: that the applied bounds
 #    differ from the pointwise ones. Measured on this fixture, they are equal to
-#    the last digit -- one cohort survives the bridge, so K = 1 and the worker
-#    takes the bypass where the simultaneous critical value IS the pointwise
-#    one. A width comparison here would be a guardrail that is blind by
-#    construction.
+#    the last digit. The mechanism is the `sum(nondeg) <= 1` bypass in
+#    `.simultaneous_cis_impl()`'s step 10, NOT `K = 1`: here K is 3, and only
+#    one of the three cohorts has positive variance (half-widths 0.270423, 0,
+#    0), so the worker takes the branch where the simultaneous critical value IS
+#    the pointwise one -- bit-identical to `qnorm(0.975)`, measured. A width
+#    comparison here would be a guardrail that is blind by construction.
 # ------------------------------------------------------------------------------
 test_that("a fit-time simultaneous band on a p >= NT fit is silent (#433)", {
 	skip_on_cran()
@@ -371,6 +386,11 @@ test_that("eventStudy() on a p >= NT fit warns, as a classed condition (#433)", 
 		ws <- testthat::capture_warnings(eventStudy(fit))
 		expect_length(ws, 1L)
 		expect_true(grepl(.HPB433_ANCHOR, ws, fixed = TRUE), info = nm)
+		# The message names THIS door, not the accessor. Hardcoding
+		# `simultaneousCIs()` here pointed a betwfe user -- whose remedy is
+		# "use a fetwfe() fit" -- at a function offering them nothing.
+		expect_true(grepl(.HPB433_PREFIX_ES, ws, fixed = TRUE), info = nm)
+		expect_false(grepl(.HPB433_PREFIX_CIS, ws, fixed = TRUE), info = nm)
 
 		cond <- tryCatch(eventStudy(fit), warning = function(w) w)
 		expect_s3_class(cond, .HPB433_CLASS)
@@ -481,20 +501,32 @@ test_that("a degenerate p >= NT fit keeps only its #304 warning (#433)", {
 #    failure -- assertions that passed on Accelerate and Windows and failed all
 #    four Linux jobs at 1-4 ULPs.
 #
-#    WHAT 1e-8 ACTUALLY ACCEPTS HERE, measured rather than reasoned about (the
-#    edition-2 comparison switches between relative and absolute with the
-#    magnitude of the expected value, so "1e-8" names no unit on its own):
-#    perturbing ONE element passes at 5e-9 and fails at 1e-8, i.e. an effective
-#    absolute band of ~1e-8 on values of order 1-5. `all.equal.numeric` defaults
-#    to `countEQ = FALSE`, so the mean is taken over only the differing entries
-#    and a single bad element is not diluted by the other three. That is ~7
-#    orders of magnitude above the 1-4 ULP cross-BLAS noise section 12.8
+#    WHAT 1e-8 ACTUALLY ACCEPTS HERE, measured per element rather than reasoned
+#    about (the edition-2 comparison switches between relative and absolute with
+#    the magnitude of the expected value, so "1e-8" names no unit on its own).
+#    `all.equal.numeric` defaults to `countEQ = FALSE`, so the mean is taken over
+#    only the DIFFERING entries and a single bad element is not diluted by the
+#    other three. Perturbing exactly one element therefore fails at
+#    `1e-8 * |that element|`, bisected:
+#
+#        ci_low[2]      (0.83581)  -> 8.36e-9
+#        estimate[2]    (1.74819)  -> 1.75e-8
+#        critical_value (2.34857)  -> 2.35e-8
+#        ci_low[4]      (4.33045)  -> 4.33e-8
+#        estimate[1]    (exactly 0) -> absolute 1e-8 (the relative branch is
+#                                     skipped when the target mean is 0)
+#
+#    So the effective band runs ~8e-9 to ~4e-8 across the pinned rows. That is
+#    ~7 orders of magnitude above the 1-4 ULP cross-BLAS noise section 12.8
 #    records, and far below anything a real change produces: a 0.1% shift in one
 #    bound fails, and the exact-zero row moving to 1e-6 fails.
 #
 #    The event_study family, not cohort: on this fixture the cohort band is
-#    (3.31769, 0, 0) with critical_value = qnorm(0.975) via the K = 1 bypass, so
-#    a cohort pin is very nearly vacuous. Here K = 4 with three live intervals
+#    (3.31769, 0, 0) with critical_value bit-identical to qnorm(0.975), because
+#    only one of its three cohorts has positive variance and step 10 takes the
+#    `sum(nondeg) <= 1` bypass (K is 3 there, not 1 -- the bypass counts
+#    non-degenerate effects, not effects). So a cohort pin is very nearly
+#    vacuous. Here K = 4 with three live intervals
 #    and a genuinely simultaneous critical value (2.3486 against a pointwise
 #    1.9600), so the pin covers the critical-value machinery too.
 # ------------------------------------------------------------------------------
@@ -528,7 +560,7 @@ test_that("the p >= NT band's numbers are unchanged by #433", {
 })
 
 # ------------------------------------------------------------------------------
-# 11. (red) print() and summary() render the caveat EXACTLY ONCE on a p >= NT
+# 10. (red) print() and summary() render the caveat EXACTLY ONCE on a p >= NT
 #     fit -- the interactive user's channel, who never sees the warning.
 #
 #     Counted, not matched: `expect_match()` on captured output passes on two
@@ -557,7 +589,7 @@ test_that("print/summary render the #433 caveat exactly once (betwfe)", {
 })
 
 # ------------------------------------------------------------------------------
-# 12. (red) The same for a fetwfe fit, with the other remedy.
+# 11. (red) The same for a fetwfe fit, with the other remedy.
 # ------------------------------------------------------------------------------
 test_that("print/summary render the #433 caveat exactly once (fetwfe)", {
 	skip_on_cran()
@@ -575,7 +607,7 @@ test_that("print/summary render the #433 caveat exactly once (fetwfe)", {
 })
 
 # ------------------------------------------------------------------------------
-# 13. (guardrail) The notice does not over-fire: a low-dimensional fit and a
+# 12. (guardrail) The notice does not over-fire: a low-dimensional fit and a
 #     `ci_type = "pointwise"` high-dimensional fit render nothing. The second
 #     one is the interesting half -- it is `p >= N*T` and differs from the
 #     firing case only in `ci_type`, so it pins that conjunct on its own.
@@ -616,7 +648,7 @@ test_that("the #433 caveat does not render on p < NT or on ci_type = 'pointwise'
 })
 
 # ------------------------------------------------------------------------------
-# 14. (guardrail) `isTRUE(calc_ses)` is in the gate, and this is what pins it.
+# 13. (guardrail) `isTRUE(calc_ses)` is in the gate, and this is what pins it.
 #     A plain `fetwfe(gls = FALSE)` fit can be p >= N*T with
 #     ci_type = "simultaneous" and `catt_df` bounds all NA -- the fit-time band
 #     came back NULL and `.finalize_ci_type()` left `ci_type` alone. Without the
@@ -690,7 +722,7 @@ test_that("the #433 caveat renders on a degenerate p >= NT fit (plan deviation)"
 })
 
 # ------------------------------------------------------------------------------
-# 15. (red) `options(warn = 2)` must not silently swap the simultaneous band for
+# 14. (red) `options(warn = 2)` must not silently swap the simultaneous band for
 #     the pointwise one. Measured on the pre-fix branch: the classed warning
 #     converted to an error INSIDE `.fit_band_for_family()`'s own
 #     `tryCatch(error = function(e) NULL)`, so the band came back NULL and

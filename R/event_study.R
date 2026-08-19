@@ -83,7 +83,8 @@ utils::globalVariables(c("event_time", "estimate", "ci_low", "ci_high"))
 #'
 #' `print()`, `summary()`, and `plot()` call this function internally and muffle
 #' that condition, so they do not repeat it on every render; `print()` and
-#' `summary()` render a one-line caveat under their CATT preview instead.
+#' `summary()` render a two-line caveat under their CATT preview instead, and
+#' `plot()` renders none.
 #' @return A data frame with class `c("eventStudy", "data.frame")` and
 #'   columns:
 #'   \describe{
@@ -961,7 +962,12 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 		"event_study",
 		alpha,
 		length(estimates),
-		warn_highdim_postselection = TRUE
+		warn_highdim_postselection = TRUE,
+		# The message names the door the user actually called. The shared text
+		# defaults to `simultaneousCIs()`, which on the non-fetwfe branch --
+		# whose remedy is "use a fetwfe() fit" -- would name a function the
+		# caller neither used nor is being sent to.
+		warn_caller = "eventStudy()"
 	)
 	if (is.null(band)) {
 		return(NULL)

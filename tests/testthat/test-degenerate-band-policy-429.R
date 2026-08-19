@@ -1,26 +1,29 @@
 # Issue #429 items 6 and 7: the #304 degenerate-band silence policy, and the
 # schema of the degenerate early return, in the HIGH-DIMENSIONAL (p >= N*T) arm.
 #
-# Item 6. .fit_band_for_family() (R/simultaneous_cis.R:1173-1198) hardcodes
-# `warn_degenerate_highdim = FALSE` at :1182, which is what keeps a plain
-# fetwfe() / betwfe() call SILENT when the bridge penalty zeroes every treatment
-# effect in the high-dimensional regime, while a direct simultaneousCIs() call
-# WARNS. Nothing asserted the fit-time half, so flipping that FALSE to TRUE --
-# which would make every high-dim degenerate fit start warning -- was invisible.
+# Item 6. .fit_band_for_family() (R/simultaneous_cis.R) hardcodes
+# `warn_degenerate_highdim = FALSE` in its one call to .simultaneous_cis_impl(),
+# which is what keeps a plain fetwfe() / betwfe() call SILENT when the bridge
+# penalty zeroes every treatment effect in the high-dimensional regime, while a
+# direct simultaneousCIs() call WARNS. Nothing asserted the fit-time half, so
+# flipping that FALSE to TRUE -- which would make every high-dim degenerate fit
+# start warning -- was invisible.
 #
-# Item 7. The degenerate early return's data.frame() (R/simultaneous_cis.R:
-# 641-649) had no absolute column-name pin on this arm. Adding, removing or
-# reordering a column there was invisible to the high-dim path.
+# Item 7. The degenerate early return's data.frame() (step 7 of
+# .simultaneous_cis_impl()) had no absolute column-name pin on this arm. Adding,
+# removing or reordering a column there was invisible to the high-dim path.
 # (test-degenerate-jacobian-225.R now carries the same pin on the fixed-p arm.)
 #
 # THE TWO PINS ARE REDUNDANT TODAY, and the honest reason to keep both is the
 # same one test-c6-toplevel-routing-429.R:20-23 gives for its nine redundant
-# cells. R/simultaneous_cis.R:623 is a SINGLE outer guard; the inner if/else
-# below it chooses only between warning() and message(), and both branches fall
-# through to one `ses <- rep(0, K)` and one data.frame() at :641-649. So either
-# pin alone catches an add, a remove or a reorder -- measured, 4 failures from
-# one and 3 from the other. They stop being redundant the moment that branch is
-# split per regime, which is exactly the shape #429 exists because of. (An
+# cells. The step-7 early return's
+# `if (length(sel_treat_inds_shifted) == 0L && !highdim_fetwfe_bootstrap)` is a
+# SINGLE outer guard; the inner if/else below it chooses only between warning()
+# and message(), and both branches fall through to one `ses <- rep(0, K)` and
+# one data.frame(). So either pin alone catches an add, a remove or a reorder --
+# measured, 4 failures from one and 3 from the other. They stop being redundant
+# the moment that branch is split per regime, which is exactly the shape #429
+# exists because of. (An
 # earlier draft of this comment claimed the two arms "enter the same
 # data.frame() through different guards, so both are needed" -- there is one
 # guard, and that reasoning was backwards.)
@@ -129,9 +132,11 @@ test_that("the #304 policy keeps the fit silent while simultaneousCIs() warns (#
 		# expect_no_warning(eventStudy(fit)) here: measured, eventStudy() calls
 		# .fit_band_for_family() ZERO times on this fixture and can never reach
 		# the degenerate arm. An all-zeroed bridge makes .event_study_fetwfe()
-		# force its local calc_ses <- FALSE (R/event_study.R:550), which closes
-		# the :820 gate -- and that is the SAME condition as the degenerate
-		# branch at R/simultaneous_cis.R:623. A fixture that reaches one cannot
+		# force its local calc_ses <- FALSE (.event_study_fetwfe(),
+		# R/event_study.R), which closes .finish_event_study()'s
+		# `identical(ci_type, "simultaneous") && calc_ses` gate -- and that is
+		# the SAME condition as the step-7 degenerate branch in
+		# .simultaneous_cis_impl(). A fixture that reaches one cannot
 		# reach the other. The fit itself calls the helper exactly once, for the
 		# COHORT family only, so a direct call is the only coverage the
 		# event-study family can have at all.
@@ -184,8 +189,9 @@ test_that("the #304 policy keeps the fit silent while simultaneousCIs() warns (#
 #
 # THIS BLOCK IS NOT SELF-PROTECTING, and the dependency is declared rather than
 # assumed: a NON-degenerate fit returns these same six column names from the
-# ordinary path at R/simultaneous_cis.R:1014-1022, so nothing asserted below
-# would notice if the fixture stopped being degenerate. What rules that out is
+# ordinary path too (the step-12 `ci <- data.frame(...)` in
+# .simultaneous_cis_impl()), so nothing asserted below would notice if the
+# fixture stopped being degenerate. What rules that out is
 # the invariants block at the top of this file (`all(catt_hats == 0)` plus
 # `p >= N*T`), which fails loudly on the same run. Do not move these assertions
 # into a file that lacks those invariants.

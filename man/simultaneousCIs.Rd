@@ -242,7 +242,7 @@ withCallingHandlers(
 \code{\link[=eventStudy]{eventStudy()}} signals the same condition, for the same reason. It does
 \strong{not} fire at fit time (a \code{ci_type = "simultaneous"} fit is silent), nor
 inside \code{print()}, \code{summary()}, or \code{plot()}, all three of which muffle it; of
-those, \code{print()} and \code{summary()} render a one-line caveat under their CATT
+those, \code{print()} and \code{summary()} render a two-line caveat under their CATT
 preview instead, and \code{plot()} renders none. It also does not fire on the
 \code{p >= NT} all-zero-support path, which returns a degenerate band and carries
 its own (#304) condition already.

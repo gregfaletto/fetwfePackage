@@ -240,7 +240,7 @@ utils::globalVariables(c(
 #' [eventStudy()] signals the same condition, for the same reason. It does
 #' **not** fire at fit time (a `ci_type = "simultaneous"` fit is silent), nor
 #' inside `print()`, `summary()`, or `plot()`, all three of which muffle it; of
-#' those, `print()` and `summary()` render a one-line caveat under their CATT
+#' those, `print()` and `summary()` render a two-line caveat under their CATT
 #' preview instead, and `plot()` renders none. It also does not fire on the
 #' `p >= NT` all-zero-support path, which returns a degenerate band and carries
 #' its own (#304) condition already.
@@ -435,27 +435,37 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 #'   issue #458's to repair, not this text's). And `method = "bootstrap"` is the
 #'   `fetwfe` remedy the tests read.
 #'
-#'   The `simultaneousCIs():` prefix names one caller, which is correct only
-#'   while every non-accessor caller opts out: `.simultaneous_cis_impl()` has
-#'   exactly two live call sites in `R/`, and the internal one
-#'   (`.fit_band_for_family()`) forwards a flag its fit-time caller sets
-#'   `FALSE`. Its `eventStudy()` caller sets `TRUE` on purpose, and
-#'   `eventStudy()` reports the condition under this same prefix -- the text
-#'   describes the band, not the door, and `simultaneousCIs()` is the accessor
-#'   the remedy points at.
+#'   **The `<caller>():` prefix is a parameter, not a literal.** Every message
+#'   in this file carries the name of the door whose contract it is about, and
+#'   this is the first one reachable through *two* public doors: the
+#'   `simultaneousCIs()` accessor and `eventStudy()` (via
+#'   `.fit_band_for_family()`, whose fit-time caller opts out and whose
+#'   event-study caller opts in). Hardcoding `simultaneousCIs()` was wrong on
+#'   the `eventStudy()` route -- worst on the non-`fetwfe` branch, where the
+#'   remedy is `use a fetwfe() fit` and so names no accessor at all, leaving the
+#'   prefix pointing at a function the user neither called nor is being sent to.
+#'   A new caller must pass its own name.
 #' @param is_fetwfe Logical scalar; `inherits(x, "fetwfe")`.
+#' @param caller Character scalar; the public function the user called, written
+#'   as it would be typed (`"simultaneousCIs()"`, `"eventStudy()"`). Used only
+#'   as the message prefix.
 #' @return A length-1 character; the full warning message.
 #' @keywords internal
 #' @noRd
-.highdim_postselection_band_message <- function(is_fetwfe) {
+.highdim_postselection_band_message <- function(
+	is_fetwfe,
+	caller = "simultaneousCIs()"
+) {
 	lead <- if (isTRUE(is_fetwfe)) {
 		paste0(
-			"simultaneousCIs(): the analytic route builds no desparsified band ",
+			caller,
+			": the analytic route builds no desparsified band ",
 			"for a high-dimensional (p >= NT) fit, "
 		)
 	} else {
 		paste0(
-			"simultaneousCIs(): a non-fetwfe high-dimensional (p >= NT) fit ",
+			caller,
+			": a non-fetwfe high-dimensional (p >= NT) fit ",
 			"(e.g. betwfe()) has no desparsified band, "
 		)
 	}
@@ -513,7 +523,13 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 	# default is TRUE while `.fit_band_for_family()`'s is FALSE: the loud
 	# default belongs on the worker so a future caller inherits the warning
 	# rather than inheriting silence.
-	warn_highdim_postselection = TRUE
+	warn_highdim_postselection = TRUE,
+	# Name of the PUBLIC door the user called, used only as the #433 message
+	# prefix (every message in this file names its own door). The default is
+	# right for the accessor at :349; the eventStudy() route overrides it
+	# through `.fit_band_for_family()`. See
+	# `.highdim_postselection_band_message()`'s @details.
+	warn_caller = "simultaneousCIs()"
 ) {
 	# --- 1. Argument validation (mvtnorm guard deferred to step 11). ---
 	# `alpha = NULL` (the accessor default) inherits the level the fit's catt_df /
@@ -771,8 +787,19 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 	#         degenerate early return above, so an all-zero-support fit keeps
 	#         only its own #304 condition (warning twice about one band is
 	#         noise, and the #304 text already says "treat this as unreliable");
-	#         and BEFORE anything that can `stop()` below, so a call that warns
-	#         is a call that returns a band.
+	#         and BEFORE the analytic Sigma assembly, so the user learns the
+	#         band is post-selection even on the calls that go on to fail at
+	#         the singular-Gram `stop()` in step 9 (`on_singular = "stop"` with
+	#         `.SINGULAR_GRAM_ANALYTIC_STOP_MSG`, whose own text is written for
+	#         this same `p >= NT` set).
+	#
+	#         It is NOT a promise that a call which warns is a call that
+	#         returns a band. A warn-then-stop is reachable and measured:
+	#         force a singular selected-support Gram on a `p >= NT` fit and
+	#         this site warns, then step 9 stops. Three further `stop()`s
+	#         follow (the cov2cor failure, the invalid-correlation guard, and
+	#         the mvtnorm guard). A singular Gram in this regime is the
+	#         package's signature failure mode, not an exotic case.
 	#
 	#         Signalled as a CLASSED condition, not a plain string: the three
 	#         internal `eventStudy()` callers (print / summary / plot) muffle it
@@ -785,7 +812,7 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 			isTRUE(warn_highdim_postselection)
 	) {
 		warning(warningCondition(
-			.highdim_postselection_band_message(is_fetwfe),
+			.highdim_postselection_band_message(is_fetwfe, warn_caller),
 			class = "fetwfe_highdim_postselection_band",
 			call = NULL
 		))
@@ -1308,6 +1335,12 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 #'   the default silently changes what that test asserts. Do not "tidy" it to
 #'   match the worker's `TRUE`; the worker is loud by default on purpose, and
 #'   this helper is the door every internal route comes through.
+#' @param warn_caller Character; the public function name the #433 message is
+#'   prefixed with, forwarded to the worker. Declared AFTER
+#'   `warn_highdim_postselection` on purpose: `test-degenerate-band-policy-429.R`
+#'   calls this helper with four positional arguments, so only appending is
+#'   safe. The `"simultaneousCIs()"` default is inert while
+#'   `warn_highdim_postselection` is `FALSE`.
 #' @return A list `list(ci_low, ci_high, adjusted_p_values)`, or `NULL` to fall
 #'   back to pointwise.
 #' @keywords internal
@@ -1317,7 +1350,8 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 	family,
 	alpha,
 	expected_rows,
-	warn_highdim_postselection = FALSE
+	warn_highdim_postselection = FALSE,
+	warn_caller = "simultaneousCIs()"
 ) {
 	# The #433 condition is CAPTURED here and re-raised below, OUTSIDE the
 	# `tryCatch(error = )`. Signalling it inside is a wrong-answer bug under
@@ -1347,7 +1381,8 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 					contrasts = NULL,
 					has_valid_ses = TRUE,
 					warn_degenerate_highdim = FALSE,
-					warn_highdim_postselection = warn_highdim_postselection
+					warn_highdim_postselection = warn_highdim_postselection,
+					warn_caller = warn_caller
 				)
 			),
 			fetwfe_highdim_postselection_band = function(w) {
@@ -1383,9 +1418,10 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 #'   family and returns the simultaneous lower/upper bounds aligned to the
 #'   fit's `catt_df` cohort row order. Degrades gracefully: when standard
 #'   errors are unavailable (`calc_ses = FALSE`), the family is degenerate, or
-#'   `K = 1`, the worker returns bounds equal to the existing pointwise bounds
-#'   (no widening) and any error short-circuits to `NULL` (leave `catt_df`
-#'   unchanged).
+#'   fewer than two effects have positive variance (`sum(nondeg) <= 1`, which
+#'   includes but is not limited to `K = 1`), the worker returns bounds equal to
+#'   the existing pointwise bounds (no widening) and any error short-circuits to
+#'   `NULL` (leave `catt_df` unchanged).
 #' @param x A fully-classed `fetwfe`/`etwfe`/`betwfe`/`twfeCovs` object.
 #' @param alpha Numeric; the alpha the fit's `catt_df` was built at (`x$alpha`
 #'   for all four classes; twfeCovs gained an `alpha` slot in #204). Passed
@@ -1416,6 +1452,12 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 	# per-caller choice rather than a property of the helper -- the event-study
 	# call site (`R/event_study.R`) passes TRUE for the third one -- so a fourth
 	# mechanism added later belongs here, not there.
+	#
+	# The helper's class-keyed `withCallingHandlers()` is NOT a fourth
+	# mechanism: it captures the #433 condition only to re-raise it outside the
+	# `tryCatch(error = )` (see that helper's @details), and with
+	# `warn_highdim_postselection = FALSE` the worker never signals it at all,
+	# so nothing is captured and nothing is re-raised on this route.
 	.fit_band_for_family(
 		x,
 		"cohort",

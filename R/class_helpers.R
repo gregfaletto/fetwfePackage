@@ -814,7 +814,9 @@
 #' `summary.fetwfe`-family list, which carries no top-level `p` / `N` / `T` and
 #' is not `inherits(., "fetwfe")`. An object parameter here aborts every
 #' `print(summary(fit))` of every class at every dimension -- `x$p >= x$N * x$T`
-#' is `logical(0)` on a summary and `&&` raises on it. So the summary side
+#' is `logical(0)` on a summary, `TRUE && logical(0)` returns `NA`, and it is the
+#' enclosing `if (NA)` that raises "missing value where TRUE/FALSE needed" (the
+#' `&&` itself does not raise). So the summary side
 #' resolves these values while it still holds the fit
 #' (`.summary_estimator_output()`) and stores the finished string; its print
 #' method renders whatever is stored and gates on nothing.
@@ -835,8 +837,10 @@
 #' It is necessary but **not** sufficient -- a singular selected-support Gram
 #' can leave a `calc_ses = TRUE` object with no applied band, and the object
 #' carries no positive signal that the band was applied (a width comparison does
-#' not work: under the `K = 1` bypass the applied band's width equals the
-#' pointwise width). That residual is the pre-existing
+#' not work: under the `sum(nondeg) <= 1` bypass in `.simultaneous_cis_impl()`'s
+#' step 10 -- fewer than two effects with positive variance, which is NOT the
+#' same condition as `K = 1` and fires at any `K` -- the applied band's width
+#' equals the pointwise width). That residual is the pre-existing
 #' `ci_type`-over-`NA`-bounds mislabelling, filed separately.
 #'
 #' **Degenerate fits DO render the notice, unlike the warning.** The `warning()`

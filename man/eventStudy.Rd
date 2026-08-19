@@ -106,7 +106,8 @@ withCallingHandlers(
 
 \code{print()}, \code{summary()}, and \code{plot()} call this function internally and muffle
 that condition, so they do not repeat it on every render; \code{print()} and
-\code{summary()} render a one-line caveat under their CATT preview instead.
+\code{summary()} render a two-line caveat under their CATT preview instead, and
+\code{plot()} renders none.
 }
 \examples{
 \dontrun{
