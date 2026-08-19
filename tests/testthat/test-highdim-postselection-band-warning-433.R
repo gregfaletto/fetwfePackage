@@ -363,8 +363,18 @@ test_that("a fit-time simultaneous band on a p >= NT fit is silent (#433)", {
 		alpha = fit$alpha,
 		has_valid_ses = TRUE
 	)
+	# THE LOAD-BEARING HALF is this pair: it establishes that the worker was
+	# reached and returned a row-count-correct band, which is what makes the
+	# silence above silence from the flag rather than from an early exit.
 	expect_false(is.null(band))
 	expect_length(band$ci_low, nrow(fit$catt_df))
+	# The two below are a CONSISTENCY CHECK, deliberately weak on this fixture:
+	# `band` is a fresh run of the same deterministic code on the same fit, and
+	# the bypass noted above makes the applied bounds coincide with the
+	# pointwise ones -- so this pair would also pass on an object where no band
+	# was ever applied. Kept because it is free and would catch a misalignment
+	# between the helper's row order and `catt_df`'s; not relied on for the
+	# block's claim.
 	expect_equal(fit$catt_df$ci_low, band$ci_low)
 	expect_equal(fit$catt_df$ci_high, band$ci_high)
 })
@@ -769,4 +779,68 @@ test_that("options(warn = 2) does not silently downgrade the band (#433)", {
 	# ... so the three renderers stay usable under warnings-as-errors.
 	expect_no_error(capture.output(print(fit)))
 	expect_no_error(capture.output(print(summary(fit))))
+})
+
+# ------------------------------------------------------------------------------
+# 15. (guardrail, unit) The notice helper validates TYPE as well as shape. This
+#     family runs no precondition (#447), so the helper's own guards are the only
+#     thing between a malformed object and a rendered caveat -- and shape alone
+#     is not enough: `"356" >= 60 * 5` is a LEXICOGRAPHIC comparison and returns
+#     TRUE, so a character `p` used to render a confident sentence about a band
+#     whose dimensionality was never established. Measured before the fix.
+#
+#     Scalars, not a fit: this is the one helper in the #433 set whose contract
+#     is "takes six scalars and validates them itself", so it is the one place a
+#     unit test is the right instrument.
+# ------------------------------------------------------------------------------
+test_that("the #433 notice helper rejects non-numeric dimensions", {
+	nt <- fetwfe:::.highdim_postselection_band_notice
+
+	# The positive control. Without it, every expect_null() below would pass on
+	# a helper that had simply stopped rendering anything.
+	expect_type(
+		nt(
+			ci_type = "simultaneous",
+			p = 356,
+			N = 60,
+			T_ = 5,
+			calc_ses = TRUE,
+			is_fetwfe = TRUE
+		),
+		"character"
+	)
+
+	for (bad in list("356", list(356), TRUE)) {
+		expect_null(nt(
+			ci_type = "simultaneous",
+			p = bad,
+			N = 60,
+			T_ = 5,
+			calc_ses = TRUE,
+			is_fetwfe = TRUE
+		))
+	}
+	expect_null(nt(
+		ci_type = "simultaneous",
+		p = 356,
+		N = "60",
+		T_ = 5,
+		calc_ses = TRUE,
+		is_fetwfe = TRUE
+	))
+	expect_null(nt(
+		ci_type = "simultaneous",
+		p = 356,
+		N = 60,
+		T_ = "5",
+		calc_ses = TRUE,
+		is_fetwfe = TRUE
+	))
+
+	# The pre-existing shape guards still hold.
+	expect_null(nt(NULL, 356, 60, 5, TRUE, TRUE))
+	expect_null(nt("simultaneous", NULL, 60, 5, TRUE, TRUE))
+	expect_null(nt("simultaneous", NA_real_, 60, 5, TRUE, TRUE))
+	expect_null(nt(c("simultaneous", "pointwise"), 356, 60, 5, TRUE, TRUE))
+	expect_null(nt("simultaneous", 356, 60, 5, FALSE, TRUE))
 })

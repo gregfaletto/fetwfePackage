@@ -859,10 +859,16 @@
 #'
 #' **No precondition runs before these reads.** The print / summary /
 #' print.summary family calls none (#447; `.workflow/PROFILE.md` section 9), so
-#' the three guards below are the only thing between a malformed object and a
+#' the guards below are the only thing between a malformed object and a
 #' rendered result. Each is written as its own `if`, wrapping the numeric
 #' comparison in `isTRUE()`, so that no conjunct ordering is load-bearing and a
 #' `NULL` or zero-length slot returns `NULL` rather than raising.
+#'
+#' **The dimensions are type-checked as well as shape-checked**, which shape
+#' alone does not give you: `"356" >= 60 * 5` is a *lexicographic* comparison
+#' and returns `TRUE`, so without `is.numeric()` a character `p` renders a
+#' confident caveat about a band whose dimensionality was never established.
+#' Nothing upstream rules that out, because this family runs no validator.
 #'
 #' @param ci_type Character scalar or `NULL`; the object's `ci_type` slot.
 #' @param p,N,T_ Numeric scalars; the design's column count, unit count, and
@@ -890,6 +896,9 @@
 	if (!isTRUE(calc_ses)) {
 		return(NULL)
 	}
+	if (!(is.numeric(p) && is.numeric(N) && is.numeric(T_))) {
+		return(NULL)
+	}
 	if (!isTRUE(p >= N * T_)) {
 		return(NULL)
 	}
@@ -899,6 +908,42 @@
 		"  ",
 		.highdim_band_remedy(is_fetwfe),
 		"\n\n"
+	)
+}
+
+#' @title The high-dimensional post-selection caveat, resolved from a fit
+#' @description Extracts the six scalars
+#'   `.highdim_postselection_band_notice()` needs from a fitted estimator object
+#'   and returns its result. The two renderers -- `.print_estimator_output()`
+#'   and `.summary_estimator_output()` -- both hold a fit at the point they need
+#'   the notice, and both used to spell the same six-line argument block out by
+#'   hand, differing only in whether the object was called `x` or `object`.
+#' @details **`calc_ses` is derived, not read off the top level.** Where
+#'   `calc_ses` lives is class-dependent -- nested under `$internal` for
+#'   `fetwfe`, top-level for `etwfe` / `betwfe` / `twfeCovs` -- and getting that
+#'   wrong is issue #73, the canonical cross-method contradiction this file's
+#'   preconditions exist for. `.check_for_event_study()` and
+#'   `.check_for_simultaneous_cis()` both implement the same one-line
+#'   derivation; this helper is the third site and uses it rather than the
+#'   top-level slot. Reading `x$calc_ses` directly happens to agree today only
+#'   because `R/fetwfe.R` duplicates the value at top level for parity (#180,
+#'   pinned by `tests/testthat/test-internal-slot-parity.R`) -- an incidental
+#'   duplication, not the derivation the package treats as canonical.
+#' @param x A fitted `fetwfe` / `etwfe` / `betwfe` / `twfeCovs` object (never a
+#'   `summary.*` list, which carries no top-level `p` / `N` / `T`).
+#' @return A length-1 character ready to `cat()`, or `NULL` when no notice
+#'   applies.
+#' @keywords internal
+#' @noRd
+.highdim_notice_from_fit <- function(x) {
+	is_fetwfe <- inherits(x, "fetwfe")
+	.highdim_postselection_band_notice(
+		ci_type = x$ci_type,
+		p = x$p,
+		N = x$N,
+		T_ = x$T,
+		calc_ses = if (is_fetwfe) x$internal$calc_ses else x$calc_ses,
+		is_fetwfe = is_fetwfe
 	)
 }
 
@@ -1213,18 +1258,12 @@
 	)
 
 	## High-dimensional post-selection fallback caveat (#433). `x` is the fit,
-	## so every ingredient is read straight off it. Rendered here, under the
-	## CATT preview, rather than once per preview: the two previews display the
-	## same band under the same `[<label> NN% CI]` header, and one caveat per
-	## object is the point.
-	highdim_notice <- .highdim_postselection_band_notice(
-		ci_type = x$ci_type,
-		p = x$p,
-		N = x$N,
-		T_ = x$T,
-		calc_ses = x$calc_ses,
-		is_fetwfe = inherits(x, "fetwfe")
-	)
+	## so `.highdim_notice_from_fit()` can read every ingredient off it (and
+	## derives `calc_ses` per class rather than reading the top-level slot; see
+	## its @details). Rendered here, under the CATT preview, rather than once
+	## per preview: the two previews display the same band under the same
+	## `[<label> NN% CI]` header, and one caveat per object is the point.
+	highdim_notice <- .highdim_notice_from_fit(x)
 	if (!is.null(highdim_notice)) {
 		cat(highdim_notice)
 	}
@@ -1399,14 +1438,7 @@
 		# fit. `print.summary.<class>` receives a `summary.<class>` list with no
 		# top-level p / N / T and no `calc_ses` at all, so it could neither gate
 		# nor build this. A length-1 character, or NULL when no notice applies.
-		highdim_band_notice = .highdim_postselection_band_notice(
-			ci_type = object$ci_type,
-			p = object$p,
-			N = object$N,
-			T_ = object$T,
-			calc_ses = object$calc_ses,
-			is_fetwfe = inherits(object, "fetwfe")
-		)
+		highdim_band_notice = .highdim_notice_from_fit(object)
 	)
 
 	keep <- c(
