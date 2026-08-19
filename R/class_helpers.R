@@ -839,12 +839,19 @@
 #' pointwise width). That residual is the pre-existing
 #' `ci_type`-over-`NA`-bounds mislabelling, filed separately.
 #'
-#' **Degenerate fits render nothing, deliberately.** A `p >= NT` fit whose
-#' bridge zeroed every treatment effect carries the all-zero degenerate band,
-#' not a post-selection fallback, and its own #304 condition already covers it
-#' -- the same carve-out the warning makes. In practice such a fit reaches this
-#' helper only if it also satisfies the gate; the omission is recorded here so
-#' it reads as a decision rather than an oversight.
+#' **Degenerate fits DO render the notice, unlike the warning.** The `warning()`
+#' carves out the `p >= NT` all-zero-support path, because that path early-
+#' returns before the warning site and carries its own #304 condition. The
+#' notice does not carve it out, and cannot: degeneracy is not visible in these
+#' six scalars, and it should not be -- at fit time #304 is a `message()` that
+#' `.fit_band_for_family()` suppresses, so a user who fits and prints a
+#' degenerate high-dimensional object sees all-zero bounds under a
+#' `[simultaneous 95% CI]` header with no caveat whatsoever if this stays quiet.
+#' The notice is accurate there (the all-zero band is a post-selection artifact
+#' and certainly does not cover) and its remedy is the right one. Measured, and
+#' pinned by
+#' `tests/testthat/test-highdim-postselection-band-warning-433.R`, so that
+#' revisiting the choice produces a deliberate red rather than silent drift.
 #'
 #' **No precondition runs before these reads.** The print / summary /
 #' print.summary family calls none (#447; `.workflow/PROFILE.md` section 9), so
