@@ -72,9 +72,9 @@
   actually take, and a `fetwfe()` fit on that default, silent. `print()` and
   `summary()` note it in their output, under the CATT preview, for the
   interactive reader who sees the band on screen rather than extracting it. The
-  warning is signalled as the catchable condition class
-  `"fetwfe_highdim_postselection_band"`, so it can be muffled precisely with
-  `withCallingHandlers()`; fitting with `ci_type = "simultaneous"` stays silent,
+  warning carries the condition class `"fetwfe_highdim_postselection_band"`, so
+  it can be caught or muffled precisely with `withCallingHandlers()` rather than
+  by matching its text; fitting with `ci_type = "simultaneous"` stays silent,
   and `print()` / `summary()` / `plot()` do not repeat it on every render. No
   estimate, band, standard error, or selected support changes; what changes is
   that a result already known to be unreliable is now announced.
