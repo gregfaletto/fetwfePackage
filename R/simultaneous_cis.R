@@ -239,8 +239,9 @@ utils::globalVariables(c(
 #'
 #' [eventStudy()] signals the same condition, for the same reason. It does
 #' **not** fire at fit time (a `ci_type = "simultaneous"` fit is silent), nor
-#' inside `print()` / `summary()` / `plot()`, which muffle it and render a
-#' one-line caveat under the CATT preview instead. It also does not fire on the
+#' inside `print()`, `summary()`, or `plot()`, all three of which muffle it; of
+#' those, `print()` and `summary()` render a one-line caveat under their CATT
+#' preview instead, and `plot()` renders none. It also does not fire on the
 #' `p >= NT` all-zero-support path, which returns a degenerate band and carries
 #' its own (#304) condition already.
 #'
@@ -817,10 +818,11 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 		# non-fetwfe `p >= NT` fit (e.g. betwfe) leaves `targets` NULL and falls
 		# through to the fixed-p selected-support construction. That case has
 		# already warned ABOVE, at the shared step-7b `p >= NT` post-selection
-		# site (#433), which since that fold-in covers this route and the analytic
-		# one alike -- a #308 coverage study shows the band under-covers in
-		# `p >= NT`, even when the selected support is low-dimensional. Fixed-p
-		# (`p < NT`) likewise leaves `targets` NULL.
+		# site (#433); the branch that used to carry the warning here was folded
+		# into that site, which now covers this route and the analytic one alike
+		# -- a #308 coverage study shows the band under-covers in `p >= NT`, even
+		# when the selected support is low-dimensional. Fixed-p (`p < NT`)
+		# likewise leaves `targets` NULL.
 		targets <- NULL
 		cell_targets <- NULL
 		a_att <- NULL
