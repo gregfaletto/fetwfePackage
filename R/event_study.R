@@ -58,6 +58,32 @@ utils::globalVariables(c("event_time", "estimate", "ci_low", "ci_high"))
 #'   valid high-dimensional event-study band call [simultaneousCIs()] with
 #'   `family = "event_study"`, `method = "bootstrap"` (Theorem
 #'   `debiased.highdim.joint.thm`, validated near-nominally in Faletto 2025).
+#'   Such a call **emits a warning**; see Details.
+#' @details
+#' **High-dimensional (`p >= NT`) bands warn.** When the returned
+#' `"simultaneous"` bounds are the `p >= NT` post-selection fallback rather than
+#' a uniformly-valid band -- which is every high-dimensional fit here, since
+#' this accessor always takes the analytic route -- the call emits a warning
+#' naming the remedy (#433). A #308 coverage study measures that band at roughly
+#' 0.09 against 0.95 nominal, even when the selected support is low-dimensional.
+#' The remedy is [simultaneousCIs()] with `family = "event_study"` and
+#' `method = "bootstrap"` on a `fetwfe()` fit; no valid high-dimensional band
+#' exists for the other estimators.
+#'
+#' The warning is the same classed condition [simultaneousCIs()] signals,
+#' `"fetwfe_highdim_postselection_band"`, so it can be caught or muffled
+#' precisely:
+#'
+#' \preformatted{
+#' withCallingHandlers(
+#'   eventStudy(fit),
+#'   fetwfe_highdim_postselection_band = function(w) invokeRestart("muffleWarning")
+#' )
+#' }
+#'
+#' `print()`, `summary()`, and `plot()` call this function internally and muffle
+#' that condition, so they do not repeat it on every render; `print()` and
+#' `summary()` render a one-line caveat under their CATT preview instead.
 #' @return A data frame with class `c("eventStudy", "data.frame")` and
 #'   columns:
 #'   \describe{
@@ -102,6 +128,56 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 		paste(class(x), collapse = ", "),
 		".",
 		call. = FALSE
+	)
+}
+
+#' Call `eventStudy()` without the high-dimensional post-selection band warning
+#'
+#' @description The three internal `eventStudy()` callers -- `print()`,
+#'   `summary()`, and `plot(type = "event_study")`, via
+#'   `.print_estimator_output()` / `.summary_estimator_output()` (`R/class_helpers.R`)
+#'   and `.plot_event_study()` (`R/plot.R`) -- must not re-emit the #433
+#'   `p >= NT` post-selection-fallback warning a direct `eventStudy()` call
+#'   signals. A condition repeated on every render is exactly the noise the
+#'   severity flag exists to prevent, and the interactive user is served instead
+#'   by the caveat `print()` / `summary()` render under the CATT preview.
+#'
+#' @details **Why a condition class rather than an argument.** The flag cannot
+#'   thread down from `eventStudy()`: it is an exported generic, and adding a
+#'   parameter for internal bookkeeping would put it in the public API, which
+#'   for a CRAN package is a one-way door. The alternative -- extracting an
+#'   `.event_study_impl()` and threading a severity argument through it -- was
+#'   built and works, and was rejected on two grounds: it defaults every
+#'   internal caller to *silence*, so a future caller inherits silence unless
+#'   someone opts in (the wrong direction for a warning whose whole point is
+#'   that it was previously missing), and it touches six functions where this
+#'   touches three call sites and one helper.
+#'
+#'   `withCallingHandlers()` rather than `tryCatch()`: the handler must muffle
+#'   the warning and let the call *continue*, returning the same data frame a
+#'   direct call returns. The handler is established outside
+#'   `.fit_band_for_family()`'s `suppressMessages()` and `tryCatch(error = )`,
+#'   and reaches the signal through both. It also wins under
+#'   `options(warn = 2)`, where the muffle beats the conversion to an error, so
+#'   `print()` on a high-dimensional fit does not become an error under
+#'   warnings-as-errors.
+#'
+#'   **It muffles that one class and nothing else.** Every other condition --
+#'   the #304 degenerate-band warning, anything a future change signals --
+#'   propagates normally.
+#'
+#' @param x A fitted object of class `"fetwfe"`, `"etwfe"`, or `"betwfe"`.
+#' @param ... Passed through to [eventStudy()] (`.plot_event_study()` passes
+#'   `alpha`).
+#' @return Whatever [eventStudy()] returns.
+#' @keywords internal
+#' @noRd
+.event_study_quiet <- function(x, ...) {
+	withCallingHandlers(
+		eventStudy(x, ...),
+		fetwfe_highdim_postselection_band = function(w) {
+			invokeRestart("muffleWarning")
+		}
 	)
 }
 
@@ -869,9 +945,22 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	# Positional alignment: `.build_psi_tes_for_family(family = "event_study")`
 	# iterates over event_times 0:(T-2), the SAME order the eventStudy() loop
 	# produces, so the worker's rows map to `estimates` by position.
-	# `.fit_band_for_family()` runs the worker silently (#304), degrades to NULL
-	# on error, and asserts the row count (`length(estimates)`) defensively.
-	band <- .fit_band_for_family(x, "event_study", alpha, length(estimates))
+	# `.fit_band_for_family()` degrades to NULL on error and asserts the row
+	# count (`length(estimates)`) defensively. It keeps the #304 degenerate
+	# notice a message() here, but this call site deliberately opts IN to the
+	# #433 post-selection-fallback warning: a direct `eventStudy()` call hands
+	# the user an under-covering `p >= NT` band programmatically, which is the
+	# reader that warning exists for. The three renderers that reach
+	# `eventStudy()` internally muffle the resulting classed condition at their
+	# own call sites (`.event_study_quiet()`, above), so the fit-time precompute
+	# and every render stay quiet while this route is loud.
+	band <- .fit_band_for_family(
+		x,
+		"event_study",
+		alpha,
+		length(estimates),
+		warn_highdim_postselection = TRUE
+	)
 	if (is.null(band)) {
 		return(NULL)
 	}

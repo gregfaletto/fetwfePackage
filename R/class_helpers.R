@@ -721,10 +721,11 @@
 # would disagree with itself about, say, whether its intervals are simultaneous
 # or pointwise. Each is now emitted from one place.
 #
-# The callers keep the event-study GATE (`print` gates on a live `eventStudy(x)`
-# call, `summary` on the cached `x$event_study`); only the rendering skeleton is
-# shared. Absorbing the gate would collapse the two independent facts that
-# test-event-study-present-in-print-summary-174.R asserts into one.
+# The callers keep the event-study GATE (`print` gates on a live
+# `.event_study_quiet(x)` call, `summary` on the cached `x$event_study`); only
+# the rendering skeleton is shared. Absorbing the gate would collapse the two
+# independent facts that test-event-study-present-in-print-summary-174.R asserts
+# into one.
 #-------------------------------------------------------------------------------
 
 #' @title Parenthetical naming the standard-error flavor
@@ -1229,7 +1230,11 @@
 	# `include_event_study = FALSE` (twfeCovs, #58) skips the event-study
 	# section: twfeCovs estimates one pooled effect per cohort, so there is no
 	# per-(cohort,time) / event-study basis and `eventStudy()` rejects it.
-	es <- if (isTRUE(include_event_study)) eventStudy(x) else NULL
+	# `.event_study_quiet()` (R/event_study.R), not `eventStudy()`: it muffles
+	# ONLY the #433 `fetwfe_highdim_postselection_band` condition, which the
+	# caveat rendered above already conveys to this (interactive) reader.
+	# Everything else, including the #304 degenerate warning, propagates.
+	es <- if (isTRUE(include_event_study)) .event_study_quiet(x) else NULL
 	if (!is.null(es) && nrow(es) > 0L) {
 		es_preview <- .truncate_event_study(es, max_event_times)
 		.cat_preview_block(
@@ -1337,7 +1342,10 @@
 	# rather than being swallowed.
 	# `include_event_study = FALSE` (twfeCovs, #58): skip the event-study
 	# preview (twfeCovs has no per-(cohort,time) basis; see .print_estimator_output).
-	es <- if (isTRUE(include_event_study)) eventStudy(object) else NULL
+	# `.event_study_quiet()`: same muffle as the print path (see
+	# `.print_estimator_output()`); the #433 caveat is carried by the
+	# `highdim_band_notice` field built below instead.
+	es <- if (isTRUE(include_event_study)) .event_study_quiet(object) else NULL
 	event_study <- if (is.null(es) || nrow(es) == 0L) {
 		NULL
 	} else {
