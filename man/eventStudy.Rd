@@ -85,9 +85,12 @@ regardless of \code{se_type} (two-sample regime, Theorem (b)).
 \details{
 \strong{High-dimensional (\code{p >= NT}) bands warn.} When the returned
 \code{"simultaneous"} bounds are the \code{p >= NT} post-selection fallback rather than
-a uniformly-valid band -- which is every high-dimensional fit here, since
-this accessor always takes the analytic route -- the call emits a warning
-naming the remedy (#433). A #308 coverage study measures that band at roughly
+a uniformly-valid band -- which is every high-dimensional fit that reaches
+the band at all, since this accessor always takes the analytic route -- the
+call emits a warning naming the remedy (#433). A high-dimensional fit under
+\code{ci_type = "pointwise"}, or one whose standard errors are unavailable, never
+builds a simultaneous band and so does not warn. A #308 coverage study
+measures the fallback band at roughly
 0.09 against 0.95 nominal, even when the selected support is low-dimensional.
 The remedy is \code{\link[=simultaneousCIs]{simultaneousCIs()}} with \code{family = "event_study"} and
 \code{method = "bootstrap"} on a \code{fetwfe()} fit; no valid high-dimensional band

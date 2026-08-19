@@ -774,7 +774,7 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 	}
 
 	# --- 7b. High-dimensional (p >= NT) post-selection fallback (#433). Every
-	#         `p >= NT` call that reaches this point returns the fixed-p
+	#         `p >= NT` call that reaches this point builds the fixed-p
 	#         post-selection band on the selected support -- a band the #308
 	#         coverage study measures at roughly 0.09 against 0.95 nominal --
 	#         EXCEPT the one route that builds the uniformly-valid desparsified

@@ -62,9 +62,12 @@ utils::globalVariables(c("event_time", "estimate", "ci_low", "ci_high"))
 #' @details
 #' **High-dimensional (`p >= NT`) bands warn.** When the returned
 #' `"simultaneous"` bounds are the `p >= NT` post-selection fallback rather than
-#' a uniformly-valid band -- which is every high-dimensional fit here, since
-#' this accessor always takes the analytic route -- the call emits a warning
-#' naming the remedy (#433). A #308 coverage study measures that band at roughly
+#' a uniformly-valid band -- which is every high-dimensional fit that reaches
+#' the band at all, since this accessor always takes the analytic route -- the
+#' call emits a warning naming the remedy (#433). A high-dimensional fit under
+#' `ci_type = "pointwise"`, or one whose standard errors are unavailable, never
+#' builds a simultaneous band and so does not warn. A #308 coverage study
+#' measures the fallback band at roughly
 #' 0.09 against 0.95 nominal, even when the selected support is low-dimensional.
 #' The remedy is [simultaneousCIs()] with `family = "event_study"` and
 #' `method = "bootstrap"` on a `fetwfe()` fit; no valid high-dimensional band
