@@ -82,20 +82,41 @@
 # kept because they still catch a divergence introduced OUTSIDE the shared
 # helper, in an accessor's own assembly of the result.
 #
-# That residual is larger than it sounds, and is the reason not to delete them:
-# they are currently the ONLY assertions in this file covering simultaneousCIs()'s
-# SE path. None of the eighteen Part 2 pins goes through simultaneousCIs() at all
-# -- they read eventStudy(), cohortStudy() and cohortTimeATTs(). Measured on the
-# #451 review: scaling Sigma one level downstream of the scaffold
-# (`Sigma <- 1.5 * (Sigma_1 + Sigma_2)` in .simultaneous_cis_impl()) fires 18
-# failures, every one of them here and none in Part 2.
+# That residual used to be the whole story, and it is why these anchors were not
+# deleted: until #429 PR B they were the ONLY assertions in this file covering
+# simultaneousCIs()'s SE path, because the original eighteen Part 2 pins read
+# eventStudy(), cohortStudy() and cohortTimeATTs() and none of them went through
+# simultaneousCIs() at all. Measured on the #451 review: scaling Sigma one level
+# downstream of the scaffold (`Sigma <- 1.5 * (Sigma_1 + Sigma_2)` in
+# .simultaneous_cis_impl()) fired 18 failures, every one of them here and none in
+# Part 2.
 #
-# Which sets up the same trap one layer up: .assemble_joint_cov_var1/2 are
-# ALREADY shared helpers, so the next consolidation routing both sides of these
-# anchors through one of them hollows this block exactly as the #400 fold
-# hollowed it against the scaffold -- and at that moment simultaneousCIs() SEs
-# have no absolute pin anywhere. Pre-empting that with a fourth pinned vector per
-# fixture (via .g400_se_of_sci()) is #429 PR B's job.
+# Which set up the same trap one layer up: .assemble_joint_cov_var1/2 are ALREADY
+# shared helpers, so the next consolidation routing both sides of these anchors
+# through one of them hollows this block exactly as the #400 fold hollowed it
+# against the scaffold.
+#
+# THAT IS NOW PRE-EMPTED (#429 PR B). Each of the six Part 2 blocks carries a
+# FOURTH pinned vector, .g400_se_of_sci(simultaneousCIs(fit, family = "cohort")),
+# so simultaneousCIs()'s SE assembly has an absolute pin on every fixture --
+# twenty-four pins in Part 2, not eighteen. An absolute pin cannot be hollowed by
+# consolidating the two things being compared, because there is only one thing.
+# Re-measured 2026-08-17 on the finished file: the same Sigma mutation now fires
+# 24 failures, 18 in Part 1 and exactly one in each of the six Part 2 blocks.
+#
+# The fourth vector's VALUE equals the cohortStudy() pin sitting a few lines
+# above it in the same block: in ALL SIX blocks the seven printed digits are
+# character-identical, which you can confirm without running anything by
+# comparing the literal pairs in each block. (They are not bit-identical --
+# identical() is FALSE on all six, 8e-17 to 2e-16 apart -- which is why the
+# tolerance is 1e-6 and not 0. An earlier draft of this comment said only
+# fetwfe/default and fetwfe/cluster matched, implying the other four differed.)
+# That is not a defect and not avoidable by changing family (event_study
+# reproduces eventStudy()$se, all_post_treatment reproduces
+# cohortTimeATTs()$se): the agreement IS what Anchor C asserts. The point of
+# pinning it separately is that Anchor C can no longer tell the two paths
+# apart, and one absolute value should survive on the simultaneousCIs() side
+# when it goes fully hollow.
 
 .g400_expect_anchors <- function(fit, label) {
 	a <- fit$alpha
@@ -179,6 +200,21 @@ test_that("scaffold SEs match pinned pre-refactor values on the fetwfe/default f
 		),
 		tolerance = 1e-6
 	)
+	# #429: the fourth pin -- simultaneousCIs()'s OWN SE assembly, recovered by
+	# .g400_se_of_sci(). Its value equals the cohortStudy() pin above (here,
+	# character-identical at seven digits); that agreement is Anchor C's
+	# invariant, and Part 1's header says why pinning it separately is the point.
+	# DO NOT "simplify" this to
+	# expect_equal(.g400_se_of_sci(...), cohortStudy(fit)$se): that converts an
+	# absolute pin back into precisely the parity assertion consolidation
+	# hollows. Verified byte-identical on origin/main as well as this branch.
+	expect_equal(
+		.g400_se_of_sci(
+			simultaneousCIs(fit, family = "cohort", alpha = fit$alpha)
+		),
+		c(0.1738941, 0.1479012, 0.1596468, 0.1438447),
+		tolerance = 1e-6
+	)
 })
 
 # The cluster fixture needs its own ABSOLUTE pins, and the reason is structural.
@@ -231,6 +267,15 @@ test_that("scaffold SEs match pinned pre-refactor values on the fetwfe/cluster f
 		),
 		tolerance = 1e-6
 	)
+	# #429: the fourth pin -- see the fetwfe/default block for the rationale and
+	# for the "do not simplify this into a cohortStudy() comparison" prohibition.
+	expect_equal(
+		.g400_se_of_sci(
+			simultaneousCIs(fit, family = "cohort", alpha = fit$alpha)
+		),
+		c(0.1853167, 0.1275883, 0.1469086, 0.1456402),
+		tolerance = 1e-6
+	)
 })
 
 # The remaining four fixtures, pinned for the same structural reason (#429).
@@ -243,7 +288,11 @@ test_that("scaffold SEs match pinned pre-refactor values on the fetwfe/cluster f
 # the three `default` ones (the `cluster` SEs never see it --
 # .compute_cluster_robust_sandwich() solves its own crossprod(X_S_centered) and
 # never touches the helper's gram_inv). The two mutations are exact
-# complements; together they reach 18 of 18 assertions.
+# complements; together they reach 18 of those 18 assertions. (That count is the
+# three eventStudy/cohortStudy/cohortTimeATTs vectors per fixture. #429 PR B
+# added a fourth, simultaneousCIs()-based vector to each block, taking Part 2 to
+# twenty-four; the two mutations above were measured against the original
+# eighteen and have not been re-measured against the fourth.)
 #
 # Two notes for the reader:
 #
@@ -294,6 +343,15 @@ test_that("scaffold SEs match pinned pre-refactor values on the etwfe/default fi
 		),
 		tolerance = 1e-6
 	)
+	# #429: the fourth pin -- see the fetwfe/default block for the rationale and
+	# for the "do not simplify this into a cohortStudy() comparison" prohibition.
+	expect_equal(
+		.g400_se_of_sci(
+			simultaneousCIs(fit, family = "cohort", alpha = fit$alpha)
+		),
+		c(0.2266507, 0.1954749, 0.1990295, 0.2088314),
+		tolerance = 1e-6
+	)
 })
 
 test_that("scaffold SEs match pinned pre-refactor values on the betwfe/default fixture (#400 guardrail, #429)", {
@@ -326,6 +384,15 @@ test_that("scaffold SEs match pinned pre-refactor values on the betwfe/default f
 			0.2484576,
 			0.2666360
 		),
+		tolerance = 1e-6
+	)
+	# #429: the fourth pin -- see the fetwfe/default block for the rationale and
+	# for the "do not simplify this into a cohortStudy() comparison" prohibition.
+	expect_equal(
+		.g400_se_of_sci(
+			simultaneousCIs(fit, family = "cohort", alpha = fit$alpha)
+		),
+		c(0.1490514, 0.1604112, 0.1738290, 0.1978270),
 		tolerance = 1e-6
 	)
 })
@@ -362,6 +429,15 @@ test_that("scaffold SEs match pinned pre-refactor values on the etwfe/cluster fi
 		),
 		tolerance = 1e-6
 	)
+	# #429: the fourth pin -- see the fetwfe/default block for the rationale and
+	# for the "do not simplify this into a cohortStudy() comparison" prohibition.
+	expect_equal(
+		.g400_se_of_sci(
+			simultaneousCIs(fit, family = "cohort", alpha = fit$alpha)
+		),
+		c(0.2396085, 0.1776220, 0.1807051, 0.1994378),
+		tolerance = 1e-6
+	)
 })
 
 test_that("scaffold SEs match pinned pre-refactor values on the betwfe/cluster fixture (#400 guardrail, #429)", {
@@ -394,6 +470,15 @@ test_that("scaffold SEs match pinned pre-refactor values on the betwfe/cluster f
 			0.2640755,
 			0.2708483
 		),
+		tolerance = 1e-6
+	)
+	# #429: the fourth pin -- see the fetwfe/default block for the rationale and
+	# for the "do not simplify this into a cohortStudy() comparison" prohibition.
+	expect_equal(
+		.g400_se_of_sci(
+			simultaneousCIs(fit, family = "cohort", alpha = fit$alpha)
+		),
+		c(0.1648825, 0.1514423, 0.1534372, 0.2044426),
 		tolerance = 1e-6
 	)
 })
