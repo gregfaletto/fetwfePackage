@@ -356,7 +356,17 @@ test_that("high-dim event_study band/adjusted-p duality holds with the debiased 
 	expect_identical(bo$regime, "high-dimensional")
 	# bridge ES estimate for the last event time is exactly 0; the debiased center
 	# is not -- the configuration that makes the t_stat source decisive.
-	an <- simultaneousCIs(fit2, family = "event_study", method = "analytic")
+	# `fit2` is high-dimensional (`regime == "high-dimensional"` above), so the
+	# ANALYTIC route on it returns the post-selection fallback band and warns
+	# (#433) -- an assertion, not a suppression: this is the fetwfe-analytic half
+	# of #433's widened scope, and it is red on main. Wrapping also keeps the
+	# suite at WARN 0. `expect_warning()` returns its expression's value, so the
+	# `an <-` assignment survives.
+	an <- expect_warning(
+		simultaneousCIs(fit2, family = "event_study", method = "analytic"),
+		"no desparsified band",
+		fixed = TRUE
+	)
 	bridge_zero <- which(abs(an$ci$estimate) < 1e-10)
 	expect_gt(length(bridge_zero), 0L)
 	expect_true(any(abs(bo$ci$estimate[bridge_zero]) > 1e-6))
