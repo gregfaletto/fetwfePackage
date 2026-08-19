@@ -688,3 +688,53 @@ test_that("the #433 caveat renders on a degenerate p >= NT fit (plan deviation)"
 		1L
 	)
 })
+
+# ------------------------------------------------------------------------------
+# 15. (red) `options(warn = 2)` must not silently swap the simultaneous band for
+#     the pointwise one. Measured on the pre-fix branch: the classed warning
+#     converted to an error INSIDE `.fit_band_for_family()`'s own
+#     `tryCatch(error = function(e) NULL)`, so the band came back NULL and
+#     `.event_study_simultaneous_bounds()` fell through to the pointwise bounds
+#     -- `ci_low` moved from (0, 0.8358, 1.4812, 4.3305) to
+#     (0, 0.9868, 1.6653, 4.4265), a NARROWER interval under a
+#     `[simultaneous 95% CI]` header, with no error, no warning and no message.
+#     A narrower band over-rejects, so this was a wrong answer, not a nuisance.
+#
+#     DO NOT WRAP THE warn = 2 CALL IN suppressWarnings(). It muffles the
+#     condition BEFORE `warn = 2` converts it, so the bug disappears and the
+#     block passes on the broken code -- measured; it cost a wrong first
+#     measurement during the review. Same reason `.event_study_quiet()` is
+#     called bare below: its own class-keyed muffle is the thing under test, and
+#     an outer `suppressWarnings()` would stand in for it if it regressed.
+# ------------------------------------------------------------------------------
+test_that("options(warn = 2) does not silently downgrade the band (#433)", {
+	skip_on_cran()
+
+	fit <- .hpb433("hd_betwfe")
+	ref <- fetwfe:::.event_study_quiet(fit)
+	pw <- eventStudy(fit, ci_type = "pointwise")
+
+	# ANTI-VACUITY. If the two bands coincided on this fixture, the equality
+	# assertion below could not tell a downgrade from a no-op.
+	expect_false(isTRUE(all.equal(ref$ci_low, pw$ci_low)))
+
+	old <- options(warn = 2)
+	on.exit(options(old), add = TRUE)
+
+	# The direct route ERRORS -- the semantics the user asked for -- rather than
+	# returning a quietly-downgraded frame.
+	err <- tryCatch(eventStudy(fit), error = function(e) e)
+	expect_s3_class(err, "error")
+	expect_true(grepl(.HPB433_ANCHOR, conditionMessage(err), fixed = TRUE))
+
+	# The muffled route still returns the SIMULTANEOUS band, not the pointwise
+	# one: the class-keyed muffle beats the warn = 2 conversion.
+	q <- fetwfe:::.event_study_quiet(fit)
+	expect_equal(q$ci_low, ref$ci_low)
+	expect_equal(q$ci_high, ref$ci_high)
+	expect_false(isTRUE(all.equal(q$ci_low, pw$ci_low)))
+
+	# ... so the three renderers stay usable under warnings-as-errors.
+	expect_no_error(capture.output(print(fit)))
+	expect_no_error(capture.output(print(summary(fit))))
+})

@@ -1282,6 +1282,18 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 #'   hardcoded `FALSE` like its #304 sibling; `print()` / `summary()` /
 #'   `plot()`, which reach `eventStudy()` internally, muffle the resulting
 #'   classed condition at their own call sites via `.event_study_quiet()`.
+#' @details **The #433 condition is deferred past the `tryCatch()`, and that is
+#'   a correctness requirement rather than tidiness.** Signalling it inside the
+#'   protected region makes `options(warn = 2)` convert it to an error that the
+#'   `error = function(e) NULL` handler swallows, so the band degrades to
+#'   `NULL` and `eventStudy()` silently returns the POINTWISE interval under a
+#'   `[simultaneous 95% CI]` header -- narrower, so it over-rejects, with no
+#'   condition of any kind raised. The body captures the condition with a
+#'   class-keyed `withCallingHandlers()` and re-raises it after the
+#'   `tryCatch()`, before either `NULL` return, which preserves the
+#'   warn-then-degrade shape and leaves `.event_study_quiet()`'s muffle
+#'   working. Pinned by
+#'   `tests/testthat/test-highdim-postselection-band-warning-433.R`.
 #' @param x A fully-classed estimator object.
 #' @param family Character; `"cohort"` or `"event_study"`.
 #' @param alpha Numeric; the significance level.
@@ -1307,20 +1319,51 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 	expected_rows,
 	warn_highdim_postselection = FALSE
 ) {
+	# The #433 condition is CAPTURED here and re-raised below, OUTSIDE the
+	# `tryCatch(error = )`. Signalling it inside is a wrong-answer bug under
+	# `options(warn = 2)`: R converts the warning to an error, that error is
+	# raised inside the protected region, `sci` comes back NULL, and
+	# `.event_study_simultaneous_bounds()` falls through to the POINTWISE
+	# bounds -- so `eventStudy()` returns a narrower interval under a
+	# `[simultaneous 95% CI]` header with no error, no warning and no message.
+	# Measured on a p = 356 / N*T = 300 betwfe fit: ci_low moved from the
+	# simultaneous (0, 0.8358, 1.4812, 4.3304) to the pointwise
+	# (0, 0.9868, 1.6653, 4.4265), i.e. a silent over-rejection.
+	#
+	# The handler is keyed on the class, so no other condition is intercepted
+	# and no error is muffled; the re-raise is a plain `warning(<condition>)`,
+	# so the class survives and `.event_study_quiet()`'s outer calling handler
+	# still muffles it -- including under `warn = 2`, where a muffle beats the
+	# conversion. Under `warn = 2` an UNmuffled call now errors, which is the
+	# semantics the user asked for.
+	pending <- NULL
 	sci <- tryCatch(
-		suppressMessages(
-			.simultaneous_cis_impl(
-				x = x,
-				family = family,
-				alpha = alpha,
-				contrasts = NULL,
-				has_valid_ses = TRUE,
-				warn_degenerate_highdim = FALSE,
-				warn_highdim_postselection = warn_highdim_postselection
-			)
+		withCallingHandlers(
+			suppressMessages(
+				.simultaneous_cis_impl(
+					x = x,
+					family = family,
+					alpha = alpha,
+					contrasts = NULL,
+					has_valid_ses = TRUE,
+					warn_degenerate_highdim = FALSE,
+					warn_highdim_postselection = warn_highdim_postselection
+				)
+			),
+			fetwfe_highdim_postselection_band = function(w) {
+				pending <<- w
+				invokeRestart("muffleWarning")
+			}
 		),
 		error = function(e) NULL
 	)
+	# Re-raised BEFORE the two NULL returns, so the warn-then-degrade shape is
+	# preserved exactly: a call that warned at step 7b and then hit the
+	# singular-Gram `stop()` at step 9 still warns AND still degrades to
+	# pointwise, as it did before this deferral.
+	if (!is.null(pending)) {
+		warning(pending)
+	}
 	if (is.null(sci)) {
 		return(NULL)
 	}

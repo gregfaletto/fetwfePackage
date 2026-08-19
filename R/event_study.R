@@ -155,10 +155,12 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #'
 #'   `withCallingHandlers()` rather than `tryCatch()`: the handler must muffle
 #'   the warning and let the call *continue*, returning the same data frame a
-#'   direct call returns. The handler is established outside
-#'   `.fit_band_for_family()`'s `suppressMessages()` and `tryCatch(error = )`,
-#'   and reaches the signal through both. It also wins under
-#'   `options(warn = 2)`, where the muffle beats the conversion to an error, so
+#'   direct call returns. It reaches the signal through
+#'   `.fit_band_for_family()`'s `suppressMessages()` (which passes warnings
+#'   through) and *past* that helper's `tryCatch(error = )`, which captures the
+#'   condition and re-raises it outside the protected region for exactly this
+#'   reason -- see that helper's `@details`. The muffle wins under
+#'   `options(warn = 2)`, where it beats the conversion to an error, so
 #'   `print()` on a high-dimensional fit does not become an error under
 #'   warnings-as-errors.
 #'
