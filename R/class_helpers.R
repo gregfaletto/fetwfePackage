@@ -778,10 +778,13 @@
 #' revisited, both must change.
 #'
 #' Not to be confused with the `identical(x$ci_type, "simultaneous")` tests in
-#' `.check_ci_band_width()` (this file), in `R/event_study.R`, and in
-#' `.finalize_ci_type()` (`R/simultaneous_cis.R`). Those are **gates**, not
-#' labels; routing a gate through this helper would make a control-flow decision
-#' depend on a display string.
+#' `.check_ci_band_width()` (this file), in `.highdim_postselection_band_notice()`
+#' (this file, just below), in `R/event_study.R`, and in `.finalize_ci_type()`
+#' (`R/simultaneous_cis.R`). Those four are **gates**, not labels; routing a gate
+#' through this helper would make a control-flow decision depend on a display
+#' string. (The fourth arrived with #433 and is the closest call of the four,
+#' since it gates a *string* the way this helper returns one -- but it decides
+#' whether a caveat is rendered at all, which is control flow.)
 #'
 #' @param ci_type Character scalar or `NULL`; the object's `ci_type` slot.
 #' @return A length-1 character, `"simultaneous"` or `"pointwise"`.
@@ -793,6 +796,98 @@
 	} else {
 		"pointwise"
 	}
+}
+
+#' @title Rendered caveat for a high-dimensional post-selection fallback band
+#'
+#' @description
+#' Returns the two-line notice `print()` and `summary()` render under the CATT
+#' preview when the fit's stored band is the `p >= NT` post-selection fallback,
+#' or `NULL` when it is not. The interactive user reads the band on screen and
+#' never sees the `warning()` [simultaneousCIs()] and [eventStudy()] emit for
+#' the same band (#433); the two reach disjoint users and neither substitutes
+#' for the other.
+#'
+#' Takes **scalars, never the object**, for the reason `.band_label()` states
+#' just above: the print path holds a `fetwfe`-family fit and the summary path a
+#' `summary.fetwfe`-family list, which carries no top-level `p` / `N` / `T` and
+#' is not `inherits(., "fetwfe")`. An object parameter here aborts every
+#' `print(summary(fit))` of every class at every dimension -- `x$p >= x$N * x$T`
+#' is `logical(0)` on a summary and `&&` raises on it. So the summary side
+#' resolves these values while it still holds the fit
+#' (`.summary_estimator_output()`) and stores the finished string; its print
+#' method renders whatever is stored and gates on nothing.
+#'
+#' @details
+#' **A fit-time band is always the analytic one.** `.fit_band_for_family()`
+#' passes no `method`, so it takes the `"analytic"` default -- which means a
+#' `p >= NT` fit carrying `ci_type = "simultaneous"` has a post-selection
+#' fallback band stored in `catt_df` whatever its class, and both `fetwfe` and
+#' non-`fetwfe` fits need the notice (with different remedies, from the shared
+#' `.highdim_band_remedy()`).
+#'
+#' **`isTRUE(calc_ses)` is load-bearing, not defensive dressing.** A plain
+#' `fetwfe(gls = FALSE)` fit can be `p >= NT` with `ci_type = "simultaneous"`
+#' and `catt_df` bounds all `NA`: the fit-time band came back `NULL` and
+#' `.finalize_ci_type()` left `ci_type` alone. Without this conjunct the notice
+#' asserts a full sentence about the properties of a band that does not exist.
+#' It is necessary but **not** sufficient -- a singular selected-support Gram
+#' can leave a `calc_ses = TRUE` object with no applied band, and the object
+#' carries no positive signal that the band was applied (a width comparison does
+#' not work: under the `K = 1` bypass the applied band's width equals the
+#' pointwise width). That residual is the pre-existing
+#' `ci_type`-over-`NA`-bounds mislabelling, filed separately.
+#'
+#' **Degenerate fits render nothing, deliberately.** A `p >= NT` fit whose
+#' bridge zeroed every treatment effect carries the all-zero degenerate band,
+#' not a post-selection fallback, and its own #304 condition already covers it
+#' -- the same carve-out the warning makes. In practice such a fit reaches this
+#' helper only if it also satisfies the gate; the omission is recorded here so
+#' it reads as a decision rather than an oversight.
+#'
+#' **No precondition runs before these reads.** The print / summary /
+#' print.summary family calls none (#447; `.workflow/PROFILE.md` section 9), so
+#' the three guards below are the only thing between a malformed object and a
+#' rendered result. Each is written as its own `if`, wrapping the numeric
+#' comparison in `isTRUE()`, so that no conjunct ordering is load-bearing and a
+#' `NULL` or zero-length slot returns `NULL` rather than raising.
+#'
+#' @param ci_type Character scalar or `NULL`; the object's `ci_type` slot.
+#' @param p,N,T_ Numeric scalars; the design's column count, unit count, and
+#'   time-period count. `T_` is spelled with the underscore because `T` is
+#'   `TRUE`'s alias.
+#' @param calc_ses Logical scalar; whether the fit computed analytic standard
+#'   errors.
+#' @param is_fetwfe Logical scalar; `inherits(x, "fetwfe")` **on the fit**, not
+#'   on a summary object (a `summary.fetwfe` does not inherit `fetwfe`).
+#' @return A length-1 character ready to `cat()` -- two lines plus a trailing
+#'   blank line -- or `NULL` when no notice applies.
+#' @keywords internal
+#' @noRd
+.highdim_postselection_band_notice <- function(
+	ci_type,
+	p,
+	N,
+	T_,
+	calc_ses,
+	is_fetwfe
+) {
+	if (!identical(ci_type, "simultaneous")) {
+		return(NULL)
+	}
+	if (!isTRUE(calc_ses)) {
+		return(NULL)
+	}
+	if (!isTRUE(p >= N * T_)) {
+		return(NULL)
+	}
+	paste0(
+		"Note: p >= N*T and this band is the post-selection fallback, which ",
+		"under-covers.\n",
+		"  ",
+		.highdim_band_remedy(is_fetwfe),
+		"\n\n"
+	)
 }
 
 #' @title Two-sided Wald interval for a scalar estimate
@@ -1105,6 +1200,23 @@
 		"  ... and %d more cohorts.\n"
 	)
 
+	## High-dimensional post-selection fallback caveat (#433). `x` is the fit,
+	## so every ingredient is read straight off it. Rendered here, under the
+	## CATT preview, rather than once per preview: the two previews display the
+	## same band under the same `[<label> NN% CI]` header, and one caveat per
+	## object is the point.
+	highdim_notice <- .highdim_postselection_band_notice(
+		ci_type = x$ci_type,
+		p = x$p,
+		N = x$N,
+		T_ = x$T,
+		calc_ses = x$calc_ses,
+		is_fetwfe = inherits(x, "fetwfe")
+	)
+	if (!is.null(highdim_notice)) {
+		cat(highdim_notice)
+	}
+
 	## Event-study effects (#174 / #138). Strict policy: `eventStudy()`'s
 	## contract is "succeeds on any fit produced by `fetwfe()` /
 	## `betwfe()` / `etwfe()`". If it fails on a valid fit, that is
@@ -1262,7 +1374,20 @@
 		# #197: carry ci_type so print.summary.<class> can label the CATT /
 		# event-study previews (simultaneous vs pointwise). Pre-1.16.0 fits
 		# have no slot -> NULL -> labeled pointwise downstream.
-		ci_type = object$ci_type
+		ci_type = object$ci_type,
+		# #433: the high-dimensional post-selection-fallback caveat, resolved
+		# HERE because this is the last point on the summary path that holds the
+		# fit. `print.summary.<class>` receives a `summary.<class>` list with no
+		# top-level p / N / T and no `calc_ses` at all, so it could neither gate
+		# nor build this. A length-1 character, or NULL when no notice applies.
+		highdim_band_notice = .highdim_postselection_band_notice(
+			ci_type = object$ci_type,
+			p = object$p,
+			N = object$N,
+			T_ = object$T,
+			calc_ses = object$calc_ses,
+			is_fetwfe = inherits(object, "fetwfe")
+		)
 	)
 
 	keep <- c(
@@ -1278,7 +1403,12 @@
 		"se_type",
 		# #197: ci_type appears last, after se_type (the band-type label
 		# source for the CATT / event-study previews).
-		"ci_type"
+		"ci_type",
+		# #433: grouped with `ci_type`, the other band-related field. This
+		# vector is a WHITELIST -- `out <- out[keep]` below silently drops any
+		# name not listed here, with no error -- so a field added to `out` and
+		# not to `keep` never reaches the summary object and never renders.
+		"highdim_band_notice"
 	)
 	out <- out[keep]
 
@@ -1371,6 +1501,18 @@
 		),
 		"  ... + %d more cohorts.\n"
 	)
+
+	## High-dimensional post-selection fallback caveat (#433). Renders the
+	## string `.summary_estimator_output()` resolved while it still held the
+	## fit; this function performs NO gating, because it does not hold the
+	## ingredients (no top-level p / N / T, no `calc_ses`) and must not pretend
+	## to. The `is.null()` guard is required, not stylistic: `cat(NULL, "\n\n")`
+	## emits two blank lines, which would appear in every `summary()` of every
+	## class at every dimension and drift both snapshot goldens. It also keeps a
+	## pre-#433 serialized summary object (no such field) rendering correctly.
+	if (!is.null(x$highdim_band_notice)) {
+		cat(x$highdim_band_notice)
+	}
 
 	## Event-study preview (#174 / #138). Reads from the cached field set
 	## by `.summary_estimator_output()`; no recompute. NULL means

@@ -71,15 +71,7 @@ Faletto (2025), the band sibling of the scalar result (~0.94); the cohort and
 all-post-treatment families are covered by the same theorem but were not
 separately simulated. As with the scalar, validity rests on the sparsity /
 restricted-eigenvalue primitives (assumed, not proved), so inspect the
-returned \code{feasibility} / \code{converged} diagnostics. A
-non-\code{fetwfe()} \code{p >= NT}
-fit (e.g. \code{betwfe()}) has no desparsified band, so it instead falls back to
-the fixed-\code{p} selected-support band and emits a \code{warning()}: a #308 coverage
-study shows that band substantially \strong{under-covers} in the \code{p >= NT} regime
--- even when the selected support is low-dimensional -- because the bridge
-shrinks the band center toward zero and the post-selection standard error
-understates variability, so the band is returned but should be treated as
-unreliable (use a \code{fetwfe()} fit for valid high-dimensional bands). The
+returned \code{feasibility} / \code{converged} diagnostics. The
 desparsified path covers all
 four families (a high-dimensional \code{family = "event_study"} fit additionally
 carries the propensity channel \code{F_pi}). In the high-dimensional regime the
@@ -92,12 +84,9 @@ whitening nor \code{sig_eps_sq} -- it also accepts a high-dimensional
 \strong{\code{gls = FALSE}} fetwfe fit (\code{calc_ses = FALSE}), the band analog of
 \code{debiasedATT()}'s Omega-free SE (#307, #313). \code{method = "analytic"} still
 requires valid analytic SEs (a \code{q < 1}, \code{gls = TRUE}, rank-satisfied fit).
-\strong{At \code{p >= NT}, \code{method = "bootstrap"} is the valid simultaneous band} ---
-the desparsified Theorem \code{debiased.highdim.joint.thm} band above. A
-\code{method = "analytic"} call there instead returns the analytic band on the
-\emph{selected support}: a post-selection band that under-covers (it is not the
-uniformly-valid desparsified band), and a \code{gls = FALSE} fit has no analytic
-SEs at all --- so pass \code{method = "bootstrap"} for high-dimensional bands.}
+\strong{Which method is valid at \code{p >= NT} is a property of the function rather
+than of this argument alone; see the "High-dimensional (\code{p >= NT}) bands"
+paragraph of Details, which also documents the warning such a call emits.}}
 
 \item{B}{Integer; number of multiplier-bootstrap replicates
 (\code{method = "bootstrap"} only). Must be a positive integer no greater than
@@ -219,6 +208,48 @@ computed over the non-degenerate sub-family). This \code{se = 0} convention is t
 simultaneous-CI analog of the \code{NA} standard error \code{eventStudy()} reports for
 the same structurally-degenerate event times; both assign the effect an
 estimate of 0.
+
+\strong{High-dimensional (\code{p >= NT}) bands.} One route out of the four is
+uniformly valid: a \code{fetwfe()} fit under
+\code{method = "bootstrap"}. That is the full-design desparsified band of
+Theorem \code{debiased.highdim.joint.thm} (Faletto 2025), whose family-wise
+coverage is validated near-nominally in simulation.
+
+Every other \code{p >= NT} combination returns the fixed-\code{p} \strong{post-selection}
+band on the selected support instead, and that band is not valid there: a
+#308 coverage study measures it at roughly 0.09 against 0.95 nominal, \strong{even
+when the selected support is low-dimensional}, because the bridge shrinks
+the band center toward zero and the post-selection standard error understates
+variability. Sparsity does not rescue it; only debiasing does. Concretely
+this covers a non-\code{fetwfe()} fit (e.g. \code{betwfe()}) on \strong{either} method --
+the desparsified construction is \code{fetwfe()}-only, so no valid
+high-dimensional band exists for those estimators -- and a \code{fetwfe()} fit on
+the \code{method = "analytic"} \strong{default}, where the remedy is simply to pass
+\code{method = "bootstrap"}.
+
+The band is still returned rather than replaced by an error, but every such
+call \strong{emits a warning} naming the applicable remedy. The warning is a
+classed condition, \code{"fetwfe_highdim_postselection_band"}, so it can be caught
+or muffled precisely:
+
+\preformatted{
+withCallingHandlers(
+  simultaneousCIs(fit),
+  fetwfe_highdim_postselection_band = function(w) invokeRestart("muffleWarning")
+)
+}
+
+\code{\link[=eventStudy]{eventStudy()}} signals the same condition, for the same reason. It does
+\strong{not} fire at fit time (a \code{ci_type = "simultaneous"} fit is silent), nor
+inside \code{print()} / \code{summary()} / \code{plot()}, which muffle it and render a
+one-line caveat under the CATT preview instead. It also does not fire on the
+\code{p >= NT} all-zero-support path, which returns a degenerate band and carries
+its own (#304) condition already.
+
+A \code{gls = FALSE} (\code{calc_ses = FALSE}) high-dimensional \code{fetwfe()} fit has no
+analytic standard errors at all, so \code{method = "analytic"} errors there rather
+than warning; \code{method = "bootstrap"} still works, because the desparsified
+band is built from the empirical per-unit influence function.
 
 \strong{Paper grounding.} Theorem (c') tight Gaussianity (Faletto 2025,
 \code{paper_arxiv.tex:1233}) guarantees the joint asymptotic normality; Assumption

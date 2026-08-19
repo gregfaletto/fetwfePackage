@@ -96,15 +96,7 @@ utils::globalVariables(c(
 #'   all-post-treatment families are covered by the same theorem but were not
 #'   separately simulated. As with the scalar, validity rests on the sparsity /
 #'   restricted-eigenvalue primitives (assumed, not proved), so inspect the
-#'   returned `feasibility` / `converged` diagnostics. A
-#'   non-`fetwfe()` `p >= NT`
-#'   fit (e.g. `betwfe()`) has no desparsified band, so it instead falls back to
-#'   the fixed-`p` selected-support band and emits a `warning()`: a #308 coverage
-#'   study shows that band substantially **under-covers** in the `p >= NT` regime
-#'   -- even when the selected support is low-dimensional -- because the bridge
-#'   shrinks the band center toward zero and the post-selection standard error
-#'   understates variability, so the band is returned but should be treated as
-#'   unreliable (use a `fetwfe()` fit for valid high-dimensional bands). The
+#'   returned `feasibility` / `converged` diagnostics. The
 #'   desparsified path covers all
 #'   four families (a high-dimensional `family = "event_study"` fit additionally
 #'   carries the propensity channel `F_pi`). In the high-dimensional regime the
@@ -117,12 +109,9 @@ utils::globalVariables(c(
 #'   **`gls = FALSE`** fetwfe fit (`calc_ses = FALSE`), the band analog of
 #'   `debiasedATT()`'s Omega-free SE (#307, #313). `method = "analytic"` still
 #'   requires valid analytic SEs (a `q < 1`, `gls = TRUE`, rank-satisfied fit).
-#'   **At `p >= NT`, `method = "bootstrap"` is the valid simultaneous band** ---
-#'   the desparsified Theorem `debiased.highdim.joint.thm` band above. A
-#'   `method = "analytic"` call there instead returns the analytic band on the
-#'   *selected support*: a post-selection band that under-covers (it is not the
-#'   uniformly-valid desparsified band), and a `gls = FALSE` fit has no analytic
-#'   SEs at all --- so pass `method = "bootstrap"` for high-dimensional bands.
+#'   **Which method is valid at `p >= NT` is a property of the function rather
+#'   than of this argument alone; see the "High-dimensional (`p >= NT`) bands"
+#'   paragraph of Details, which also documents the warning such a call emits.**
 #' @param B Integer; number of multiplier-bootstrap replicates
 #'   (`method = "bootstrap"` only). Must be a positive integer no greater than
 #'   `.Machine$integer.max`. Default `1000`.
@@ -217,6 +206,48 @@ utils::globalVariables(c(
 #' simultaneous-CI analog of the `NA` standard error `eventStudy()` reports for
 #' the same structurally-degenerate event times; both assign the effect an
 #' estimate of 0.
+#'
+#' **High-dimensional (`p >= NT`) bands.** One route out of the four is
+#' uniformly valid: a `fetwfe()` fit under
+#' `method = "bootstrap"`. That is the full-design desparsified band of
+#' Theorem `debiased.highdim.joint.thm` (Faletto 2025), whose family-wise
+#' coverage is validated near-nominally in simulation.
+#'
+#' Every other `p >= NT` combination returns the fixed-`p` **post-selection**
+#' band on the selected support instead, and that band is not valid there: a
+#' #308 coverage study measures it at roughly 0.09 against 0.95 nominal, **even
+#' when the selected support is low-dimensional**, because the bridge shrinks
+#' the band center toward zero and the post-selection standard error understates
+#' variability. Sparsity does not rescue it; only debiasing does. Concretely
+#' this covers a non-`fetwfe()` fit (e.g. `betwfe()`) on **either** method --
+#' the desparsified construction is `fetwfe()`-only, so no valid
+#' high-dimensional band exists for those estimators -- and a `fetwfe()` fit on
+#' the `method = "analytic"` **default**, where the remedy is simply to pass
+#' `method = "bootstrap"`.
+#'
+#' The band is still returned rather than replaced by an error, but every such
+#' call **emits a warning** naming the applicable remedy. The warning is a
+#' classed condition, `"fetwfe_highdim_postselection_band"`, so it can be caught
+#' or muffled precisely:
+#'
+#' \preformatted{
+#' withCallingHandlers(
+#'   simultaneousCIs(fit),
+#'   fetwfe_highdim_postselection_band = function(w) invokeRestart("muffleWarning")
+#' )
+#' }
+#'
+#' [eventStudy()] signals the same condition, for the same reason. It does
+#' **not** fire at fit time (a `ci_type = "simultaneous"` fit is silent), nor
+#' inside `print()` / `summary()` / `plot()`, which muffle it and render a
+#' one-line caveat under the CATT preview instead. It also does not fire on the
+#' `p >= NT` all-zero-support path, which returns a degenerate band and carries
+#' its own (#304) condition already.
+#'
+#' A `gls = FALSE` (`calc_ses = FALSE`) high-dimensional `fetwfe()` fit has no
+#' analytic standard errors at all, so `method = "analytic"` errors there rather
+#' than warning; `method = "bootstrap"` still works, because the desparsified
+#' band is built from the empirical per-unit influence function.
 #'
 #' **Paper grounding.** Theorem (c') tight Gaussianity (Faletto 2025,
 #' `paper_arxiv.tex:1233`) guarantees the joint asymptotic normality; Assumption
