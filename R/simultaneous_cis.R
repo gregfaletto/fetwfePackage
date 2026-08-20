@@ -526,7 +526,7 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 	warn_highdim_postselection = TRUE,
 	# Name of the PUBLIC door the user called, used only as the #433 message
 	# prefix (every message in this file names its own door). The default is
-	# right for the accessor at :349; the eventStudy() route overrides it
+	# right for the accessor's own dispatch body; the eventStudy() route overrides it
 	# through `.fit_band_for_family()`. See
 	# `.highdim_postselection_band_message()`'s @details.
 	warn_caller = "simultaneousCIs()"

@@ -336,7 +336,7 @@ test_that("betwfe p >= NT under method = 'bootstrap' still warns (#308 fold-in)"
 #    applied. Note what is deliberately NOT asserted: that the applied bounds
 #    differ from the pointwise ones. Measured on this fixture, they are equal to
 #    the last digit. The mechanism is the `sum(nondeg) <= 1` bypass in
-#    `.simultaneous_cis_impl()`'s step 10, NOT `K = 1`: here K is 3, and only
+#    `.simultaneous_cis_impl()`, NOT `K = 1`: here K is 3, and only
 #    one of the three cohorts has positive variance (half-widths 0.270423, 0,
 #    0), so the worker takes the branch where the simultaneous critical value IS
 #    the pointwise one -- bit-identical to `qnorm(0.975)`, measured. A width
@@ -533,8 +533,8 @@ test_that("a degenerate p >= NT fit keeps only its #304 warning (#433)", {
 #
 #    The event_study family, not cohort: on this fixture the cohort band is
 #    (3.31769, 0, 0) with critical_value bit-identical to qnorm(0.975), because
-#    only one of its three cohorts has positive variance and step 10 takes the
-#    `sum(nondeg) <= 1` bypass (K is 3 there, not 1 -- the bypass counts
+#    only one of its three cohorts has positive variance, so the worker takes
+#    the `sum(nondeg) <= 1` bypass (K is 3 there, not 1 -- the bypass counts
 #    non-degenerate effects, not effects). So a cohort pin is very nearly
 #    vacuous. Here K = 4 with three live intervals
 #    and a genuinely simultaneous critical value (2.3486 against a pointwise
@@ -737,7 +737,7 @@ test_that("the #433 caveat renders on a degenerate p >= NT fit (plan deviation)"
 #     converted to an error INSIDE `.fit_band_for_family()`'s own
 #     `tryCatch(error = function(e) NULL)`, so the band came back NULL and
 #     `.event_study_simultaneous_bounds()` fell through to the pointwise bounds
-#     -- `ci_low` moved from (0, 0.8358, 1.4812, 4.3305) to
+#     -- `ci_low` moved from (0, 0.8358, 1.4812, 4.3304) to
 #     (0, 0.9868, 1.6653, 4.4265), a NARROWER interval under a
 #     `[simultaneous 95% CI]` header, with no error, no warning and no message.
 #     A narrower band over-rejects, so this was a wrong answer, not a nuisance.

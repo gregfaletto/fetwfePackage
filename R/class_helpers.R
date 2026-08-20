@@ -837,8 +837,8 @@
 #' It is necessary but **not** sufficient -- a singular selected-support Gram
 #' can leave a `calc_ses = TRUE` object with no applied band, and the object
 #' carries no positive signal that the band was applied (a width comparison does
-#' not work: under the `sum(nondeg) <= 1` bypass in `.simultaneous_cis_impl()`'s
-#' step 10 -- fewer than two effects with positive variance, which is NOT the
+#' not work: under the `sum(nondeg) <= 1` bypass in `.simultaneous_cis_impl()`
+#' -- fewer than two effects with positive variance, which is NOT the
 #' same condition as `K = 1` and fires at any `K` -- the applied band's width
 #' equals the pointwise width). That residual is the pre-existing
 #' `ci_type`-over-`NA`-bounds mislabelling, filed separately.
