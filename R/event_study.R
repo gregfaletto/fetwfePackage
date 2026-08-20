@@ -159,12 +159,14 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #'
 #'   `withCallingHandlers()` rather than `tryCatch()`: the handler must muffle
 #'   the warning and let the call *continue*, returning the same data frame a
-#'   direct call returns. The condition it sees is **not** the one the worker
-#'   signalled: `.fit_band_for_family()` captures that one inside its own
-#'   `suppressMessages()` / `tryCatch(error = )` region and re-raises it after
-#'   the region ends -- see that helper's `@details` for why. So the signal
-#'   reaching this handler has passed through neither, and this handler is the
-#'   first to see it. The muffle wins under `options(warn = 2)`, where it beats
+#'   direct call returns. The condition object is **the same one** the worker
+#'   signalled -- `.fit_band_for_family()` captures it (`pending <<- w`) and
+#'   re-raises that identical object (`warning(pending)`); measured,
+#'   `identical()` on the two is `TRUE`. What differs is the signalling *event*:
+#'   the worker's signal is muffled inside that helper's `suppressMessages()` /
+#'   `tryCatch(error = )` region, and the re-raise happens after the region ends
+#'   -- see that helper's `@details` for why. So the signal this handler sees has
+#'   passed through neither construct, even though the object it carries did. The muffle wins under `options(warn = 2)`, where it beats
 #'   the conversion to an error, so `print()` on a high-dimensional fit does not
 #'   become an error under warnings-as-errors.
 #'

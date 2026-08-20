@@ -841,7 +841,9 @@
 #' -- fewer than two effects with positive variance, which is NOT the
 #' same condition as `K = 1` and fires at any `K` -- the applied band's width
 #' equals the pointwise width). That residual is the pre-existing
-#' `ci_type`-over-`NA`-bounds mislabelling, filed separately.
+#' `ci_type`-over-`NA`-bounds mislabelling. **It is not filed as an issue** as of
+#' 2026-08-20; it is carried in `.workflow/QUEUE.md`'s disposition list awaiting
+#' the maintainer's go-ahead. Do not read this as a pointer to a tracker entry.
 #'
 #' **Degenerate fits DO render the notice, unlike the warning.** The `warning()`
 #' carves out the `p >= NT` all-zero-support path, because that path early-

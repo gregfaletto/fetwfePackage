@@ -808,7 +808,7 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 	#         test while silently disarming that muffling. ---
 	if (
 		p >= N * T_ &&
-			!(is_fetwfe && identical(method, "bootstrap")) &&
+			!highdim_fetwfe_bootstrap &&
 			isTRUE(warn_highdim_postselection)
 	) {
 		warning(warningCondition(

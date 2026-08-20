@@ -42,11 +42,14 @@
 #'   sentence, so writing it twice would be a copy-paste pair kept in agreement
 #'   by nothing. Lives in `R/utility.R` because its consumers sit in two
 #'   different files (`.workflow/PROFILE.md` section 9: cross-cutting helpers).
-#' @details A third home exists and cannot call this helper: the roxygen
-#'   `@details` of [simultaneousCIs()] and [eventStudy()] states the same two
-#'   remedies in prose. Roxygen cannot evaluate R code, so those copies are
-#'   maintained by hand; they are documentation of the policy rather than the
-#'   emitted text.
+#' @details Two further homes exist and cannot call this helper: the roxygen
+#'   `@details` of [simultaneousCIs()] and [eventStudy()], and the prose in
+#'   `vignettes/simultaneous_cis_vignette.Rmd` (the `p >= NT` paragraph), all of
+#'   which state the remedies in prose. Neither roxygen nor Rmd can evaluate this
+#'   helper, so those copies are maintained by hand; they are documentation of the
+#'   policy rather than the emitted text. The vignette was omitted from this list
+#'   when the list was written and added on 2026-08-20 -- if you add a fourth,
+#'   add it here in the same edit.
 #' @param is_fetwfe Logical scalar; `inherits(x, "fetwfe")` for the fit the band
 #'   was built from. A `fetwfe` fit has a valid high-dimensional route
 #'   (`method = "bootstrap"`, the desparsified band); no other estimator does.
