@@ -159,14 +159,14 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #'
 #'   `withCallingHandlers()` rather than `tryCatch()`: the handler must muffle
 #'   the warning and let the call *continue*, returning the same data frame a
-#'   direct call returns. It reaches the signal through
-#'   `.fit_band_for_family()`'s `suppressMessages()` (which passes warnings
-#'   through) and *past* that helper's `tryCatch(error = )`, which captures the
-#'   condition and re-raises it outside the protected region for exactly this
-#'   reason -- see that helper's `@details`. The muffle wins under
-#'   `options(warn = 2)`, where it beats the conversion to an error, so
-#'   `print()` on a high-dimensional fit does not become an error under
-#'   warnings-as-errors.
+#'   direct call returns. The condition it sees is **not** the one the worker
+#'   signalled: `.fit_band_for_family()` captures that one inside its own
+#'   `suppressMessages()` / `tryCatch(error = )` region and re-raises it after
+#'   the region ends -- see that helper's `@details` for why. So the signal
+#'   reaching this handler has passed through neither, and this handler is the
+#'   first to see it. The muffle wins under `options(warn = 2)`, where it beats
+#'   the conversion to an error, so `print()` on a high-dimensional fit does not
+#'   become an error under warnings-as-errors.
 #'
 #'   **It muffles that one class and nothing else.** Every other condition --
 #'   the #304 degenerate-band warning, anything a future change signals --
