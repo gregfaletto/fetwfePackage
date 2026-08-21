@@ -175,6 +175,10 @@ test_that("a comfortable panel returns promptly in both bar modes (#436)", {
 	expect_s3_class(sim_plain, "FETWFE_simulated")
 	expect_equal(nrow(sim_plain$pdata), 200 * 31)
 
+	# Re-armed because this block makes a SECOND call that a hang-mutation
+	# could stall: a fired elapsed limit disarms itself (measured; see the
+	# header of test-gencoefs-retry-cap-436.R).
+	setTimeLimit(elapsed = 60, transient = TRUE)
 	set.seed(5)
 	sim_grc <- simulateData(
 		.gar436_coefs_grc,

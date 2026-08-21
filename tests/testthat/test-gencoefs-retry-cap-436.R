@@ -20,7 +20,11 @@
 #       back into the suite the exact pathology #436 exists to remove. 60 s is
 #       generous against a correct path measured at ~0.02 s, so runner jitter
 #       cannot false-positive it, and the on.exit() is required to stop the
-#       limit leaking into later blocks (measured).
+#       limit leaking into later blocks (measured). ONE setTimeLimit() CALL
+#       GUARDS EXACTLY ONE HANGING CALL: measured, a fired elapsed limit is
+#       disarmed, and the next long call in the same block runs unguarded to
+#       completion. Any block below with two calls that could hang therefore
+#       arms it twice.
 #
 #   (3) THE DRAW-COUNT PIN. `.apply_seed(NULL)` is a verified no-op on the RNG
 #       (it returns before touching it) and everything between it and the loop
@@ -49,7 +53,14 @@ test_that("a degenerate density errors instead of hanging (#436)", {
 })
 
 test_that("the retry-cap error is identical from both doors and sets no call (#436)", {
-	setTimeLimit(elapsed = 60, transient = TRUE)
+	# ONE setTimeLimit() GUARDS EXACTLY ONE HANGING CALL, so this block arms it
+	# twice -- once per door. Measured: inside a single top-level task (which is
+	# what a test_that() block is under devtools::test()), an elapsed limit
+	# fires at its deadline and is then DISARMED; a second long call in the same
+	# block runs unguarded to completion. Without the re-arm, a cap-removing
+	# mutation hangs this block forever on the second door, which is the exact
+	# failure mode the guard exists to prevent. The on.exit() still clears the
+	# limit at block end so it cannot leak into later blocks.
 	on.exit(setTimeLimit(), add = TRUE)
 
 	# Degrade to a readable value rather than raising, so a mutation that makes
@@ -70,10 +81,12 @@ test_that("the retry-cap error is identical from both doors and sets no call (#4
 		}
 	}
 
+	setTimeLimit(elapsed = 60, transient = TRUE)
 	e_core <- tryCatch(
 		genCoefsCore(G = 3, T = 5, d = 2, density = 1e-300, eff_size = 1),
 		error = function(e) e
 	)
+	setTimeLimit(elapsed = 60, transient = TRUE)
 	e_gc <- tryCatch(
 		genCoefs(G = 3, T = 5, d = 2, density = 1e-300, eff_size = 1),
 		error = function(e) e
