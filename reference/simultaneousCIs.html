@@ -166,15 +166,7 @@ Faletto (2025), the band sibling of the scalar result (~0.94); the cohort and
 all-post-treatment families are covered by the same theorem but were not
 separately simulated. As with the scalar, validity rests on the sparsity /
 restricted-eigenvalue primitives (assumed, not proved), so inspect the
-returned <code>feasibility</code> / <code>converged</code> diagnostics. A
-non-<code><a href="fetwfe.html">fetwfe()</a></code> <code>p &gt;= NT</code>
-fit (e.g. <code><a href="betwfe.html">betwfe()</a></code>) has no desparsified band, so it instead falls back to
-the fixed-<code>p</code> selected-support band and emits a <code><a href="https://rdrr.io/r/base/warning.html" class="external-link">warning()</a></code>: a #308 coverage
-study shows that band substantially <strong>under-covers</strong> in the <code>p &gt;= NT</code> regime
-– even when the selected support is low-dimensional – because the bridge
-shrinks the band center toward zero and the post-selection standard error
-understates variability, so the band is returned but should be treated as
-unreliable (use a <code><a href="fetwfe.html">fetwfe()</a></code> fit for valid high-dimensional bands). The
+returned <code>feasibility</code> / <code>converged</code> diagnostics. The
 desparsified path covers all
 four families (a high-dimensional <code>family = "event_study"</code> fit additionally
 carries the propensity channel <code>F_pi</code>). In the high-dimensional regime the
@@ -187,12 +179,9 @@ whitening nor <code>sig_eps_sq</code> – it also accepts a high-dimensional
 <strong><code>gls = FALSE</code></strong> fetwfe fit (<code>calc_ses = FALSE</code>), the band analog of
 <code><a href="debiasedATT.html">debiasedATT()</a></code>'s Omega-free SE (#307, #313). <code>method = "analytic"</code> still
 requires valid analytic SEs (a <code>q &lt; 1</code>, <code>gls = TRUE</code>, rank-satisfied fit).
-<strong>At <code>p &gt;= NT</code>, <code>method = "bootstrap"</code> is the valid simultaneous band</strong> —
-the desparsified Theorem <code>debiased.highdim.joint.thm</code> band above. A
-<code>method = "analytic"</code> call there instead returns the analytic band on the
-<em>selected support</em>: a post-selection band that under-covers (it is not the
-uniformly-valid desparsified band), and a <code>gls = FALSE</code> fit has no analytic
-SEs at all — so pass <code>method = "bootstrap"</code> for high-dimensional bands.</p></dd>
+<strong>Which method is valid at <code>p &gt;= NT</code> is a property of the function rather
+than of this argument alone; see the "High-dimensional (<code>p &gt;= NT</code>) bands"
+paragraph of Details, which also documents the warning such a call emits.</strong></p></dd>
 
 
 <dt id="arg-b">B<a class="anchor" aria-label="anchor" href="#arg-b"></a></dt>
@@ -320,6 +309,43 @@ computed over the non-degenerate sub-family). This <code>se = 0</code> conventio
 simultaneous-CI analog of the <code>NA</code> standard error <code><a href="eventStudy.html">eventStudy()</a></code> reports for
 the same structurally-degenerate event times; both assign the effect an
 estimate of 0.</p>
+<p><strong>High-dimensional (<code>p &gt;= NT</code>) bands.</strong> One route out of the four is
+uniformly valid: a <code><a href="fetwfe.html">fetwfe()</a></code> fit under
+<code>method = "bootstrap"</code>. That is the full-design desparsified band of
+Theorem <code>debiased.highdim.joint.thm</code> (Faletto 2025), whose family-wise
+coverage is validated near-nominally in simulation.</p>
+<p>Every other <code>p &gt;= NT</code> combination returns the fixed-<code>p</code> <strong>post-selection</strong>
+band on the selected support instead, and that band is not valid there: a
+#308 coverage study measures it at roughly 0.09 against 0.95 nominal, <strong>even
+when the selected support is low-dimensional</strong>, because the bridge shrinks
+the band center toward zero and the post-selection standard error understates
+variability. Sparsity does not rescue it; only debiasing does. Concretely
+this covers a non-<code><a href="fetwfe.html">fetwfe()</a></code> fit (e.g. <code><a href="betwfe.html">betwfe()</a></code>) on <strong>either</strong> method –
+the desparsified construction is <code><a href="fetwfe.html">fetwfe()</a></code>-only, so no valid
+high-dimensional band exists for those estimators – and a <code><a href="fetwfe.html">fetwfe()</a></code> fit on
+the <code>method = "analytic"</code> <strong>default</strong>, where the remedy is simply to pass
+<code>method = "bootstrap"</code>.</p>
+<p>The band is still returned rather than replaced by an error, but every such
+call <strong>emits a warning</strong> naming the applicable remedy. The warning is a
+classed condition, <code>"fetwfe_highdim_postselection_band"</code>, so it can be caught
+or muffled precisely:</p>
+<div class="sourceCode"><pre><code><span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">withCallingHandlers</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="../reference/simultaneousCIs.html">simultaneousCIs</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span>,</span>
+<span>  fetwfe_highdim_postselection_band <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">w</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">invokeRestart</a></span><span class="op">(</span><span class="st">"muffleWarning"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+
+<p><code><a href="eventStudy.html">eventStudy()</a></code> signals the same condition, for the same reason. It does
+<strong>not</strong> fire at fit time (a <code>ci_type = "simultaneous"</code> fit is silent), nor
+inside <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code>, <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>, or <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code>, all three of which muffle it; of
+those, <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> and <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> render a two-line caveat under their CATT
+preview instead, and <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> renders none. It also does not fire on the
+<code>p &gt;= NT</code> all-zero-support path, which returns a degenerate band and carries
+its own (#304) condition already.</p>
+<p>A <code>gls = FALSE</code> (<code>calc_ses = FALSE</code>) high-dimensional <code><a href="fetwfe.html">fetwfe()</a></code> fit has no
+analytic standard errors at all, so <code>method = "analytic"</code> errors there rather
+than warning; <code>method = "bootstrap"</code> still works, because the desparsified
+band is built from the empirical per-unit influence function.</p>
 <p><strong>Paper grounding.</strong> Theorem (c') tight Gaussianity (Faletto 2025,
 <code>paper_arxiv.tex:1233</code>) guarantees the joint asymptotic normality; Assumption
 (Psi-IF) (assumption equation <code>paper_arxiv.tex:2013</code>; in-prose discussion at

@@ -57,7 +57,7 @@
                         <h4 data-toc-skip class="author">Gregory
 Faletto</h4>
             
-            <h4 data-toc-skip class="date">2026-08-17</h4>
+            <h4 data-toc-skip class="date">2026-08-21</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/gregfaletto/fetwfePackage/blob/main/vignettes/simultaneous_cis_vignette.Rmd" class="external-link"><code>vignettes/simultaneous_cis_vignette.Rmd</code></a></small>
       <div class="d-none name"><code>simultaneous_cis_vignette.Rmd</code></div>
@@ -334,22 +334,44 @@ bootstrap). In the high-dimensional regime the band is <strong>centered
 on the debiased estimate</strong> (the high-dimensional FETWFE theory
 correction, matching <code><a href="../reference/debiasedATT.html">debiasedATT()</a></code>) rather than the
 post-selection bridge estimate, which would otherwise carry the
-selection bias. The desparsified path is <code><a href="../reference/fetwfe.html">fetwfe()</a></code>-only; a
-non-<code><a href="../reference/fetwfe.html">fetwfe()</a></code>
+selection bias. The desparsified path is <code><a href="../reference/fetwfe.html">fetwfe()</a></code>-only
+<em>and</em> <code>method = "bootstrap"</code>-only, so it is one route
+out of four — and every other
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>≥</mo><mi>N</mi><mi>T</mi></mrow><annotation encoding="application/x-tex">p \geq NT</annotation></semantics></math>
-fit (e.g. <code><a href="../reference/betwfe.html">betwfe()</a></code>) has no debiased band, so it falls back
-to the
+combination falls back to the
 fixed-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>
-selected-support band (rather than erroring) but emits a
-<code><a href="https://rdrr.io/r/base/warning.html" class="external-link">warning()</a></code>. A coverage study (issue #308) shows that
-fallback band substantially <strong>under-covers</strong> in the
+selected-support band and emits a <code><a href="https://rdrr.io/r/base/warning.html" class="external-link">warning()</a></code>. That covers a
+non-<code><a href="../reference/fetwfe.html">fetwfe()</a></code> fit (e.g. <code><a href="../reference/betwfe.html">betwfe()</a></code>) on
+<strong>either</strong> method, where no valid high-dimensional band
+exists at all, and a <code><a href="../reference/fetwfe.html">fetwfe()</a></code> fit on the
+<code>method = "analytic"</code> <strong>default</strong>, where the
+remedy is simply to pass <code>method = "bootstrap"</code>. A coverage
+study (issue #308) shows that fallback band substantially
+<strong>under-covers</strong> in the
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>≥</mo><mi>N</mi><mi>T</mi></mrow><annotation encoding="application/x-tex">p \geq NT</annotation></semantics></math>
 regime — even when the selected support is low-dimensional — because the
 bridge shrinks the band center toward zero (so it is biased away from
 the truth) and the post-selection standard error understates the
-sampling variability; treat such a band as unreliable and use a
-<code><a href="../reference/fetwfe.html">fetwfe()</a></code> fit for valid high-dimensional simultaneous bands.
-See <code><a href="../articles/high_dimensional_vignette.html">vignette("high_dimensional_vignette")</a></code> for
+sampling variability; treat such a band as unreliable.
+<code><a href="../reference/eventStudy.html">eventStudy()</a></code> emits the same warning, for the same reason.
+It is a classed condition,
+<code>"fetwfe_highdim_postselection_band"</code>, so you can catch or
+muffle exactly it with <code><a href="https://rdrr.io/r/base/conditions.html" class="external-link">withCallingHandlers()</a></code>; a fit made
+with <code>ci_type = "simultaneous"</code> is silent, and
+<code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> / <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> render a two-line caveat
+under their CATT preview instead, while <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> renders
+none. Two
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>≥</mo><mi>N</mi><mi>T</mi></mrow><annotation encoding="application/x-tex">p \geq NT</annotation></semantics></math>
+cases fall outside this warning. A fit whose bridge penalty zeroed out
+<em>every</em> treatment effect does not reach the fallback band at all:
+it returns the degenerate all-zero band and carries its own, different
+condition (the “bridge selection is NOT consistent” warning of issue
+#304). And a <code>gls = FALSE</code> (<code>calc_ses = FALSE</code>)
+fit has no analytic standard errors, so <code>method = "analytic"</code>
+<strong>errors</strong> there rather than warning —
+<code>method = "bootstrap"</code> still works, because the desparsified
+band is built from the empirical per-unit influence function. See
+<code><a href="../articles/high_dimensional_vignette.html">vignette("high_dimensional_vignette")</a></code> for
 <code><a href="../reference/debiasedATT.html">debiasedATT()</a></code> and the accompanying high-dimensional
 diagnostics.</p>
 </div>

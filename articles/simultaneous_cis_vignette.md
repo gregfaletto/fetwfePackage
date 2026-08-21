@@ -255,22 +255,43 @@ estimate** (the high-dimensional FETWFE theory correction, matching
 [`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md))
 rather than the post-selection bridge estimate, which would otherwise
 carry the selection bias. The desparsified path is
-[`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)-only;
-a
+[`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)-only
+*and* `method = "bootstrap"`-only, so it is one route out of four — and
+every other $`p \geq NT`$ combination falls back to the fixed-$`p`$
+selected-support band and emits a
+[`warning()`](https://rdrr.io/r/base/warning.html). That covers a
 non-[`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)
-$`p \geq NT`$ fit
+fit
 (e.g. [`betwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/betwfe.md))
-has no debiased band, so it falls back to the fixed-$`p`$
-selected-support band (rather than erroring) but emits a
-[`warning()`](https://rdrr.io/r/base/warning.html). A coverage study
-(issue \#308) shows that fallback band substantially **under-covers** in
-the $`p \geq NT`$ regime — even when the selected support is
-low-dimensional — because the bridge shrinks the band center toward zero
-(so it is biased away from the truth) and the post-selection standard
-error understates the sampling variability; treat such a band as
-unreliable and use a
+on **either** method, where no valid high-dimensional band exists at
+all, and a
 [`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)
-fit for valid high-dimensional simultaneous bands. See
+fit on the `method = "analytic"` **default**, where the remedy is simply
+to pass `method = "bootstrap"`. A coverage study (issue \#308) shows
+that fallback band substantially **under-covers** in the $`p \geq NT`$
+regime — even when the selected support is low-dimensional — because the
+bridge shrinks the band center toward zero (so it is biased away from
+the truth) and the post-selection standard error understates the
+sampling variability; treat such a band as unreliable.
+[`eventStudy()`](https://gregfaletto.github.io/fetwfePackage/reference/eventStudy.md)
+emits the same warning, for the same reason. It is a classed condition,
+`"fetwfe_highdim_postselection_band"`, so you can catch or muffle
+exactly it with
+[`withCallingHandlers()`](https://rdrr.io/r/base/conditions.html); a fit
+made with `ci_type = "simultaneous"` is silent, and
+[`print()`](https://rdrr.io/r/base/print.html) /
+[`summary()`](https://rdrr.io/r/base/summary.html) render a two-line
+caveat under their CATT preview instead, while
+[`plot()`](https://rdrr.io/r/graphics/plot.default.html) renders none.
+Two $`p \geq NT`$ cases fall outside this warning. A fit whose bridge
+penalty zeroed out *every* treatment effect does not reach the fallback
+band at all: it returns the degenerate all-zero band and carries its
+own, different condition (the “bridge selection is NOT consistent”
+warning of issue \#304). And a `gls = FALSE` (`calc_ses = FALSE`) fit
+has no analytic standard errors, so `method = "analytic"` **errors**
+there rather than warning — `method = "bootstrap"` still works, because
+the desparsified band is built from the empirical per-unit influence
+function. See
 [`vignette("high_dimensional_vignette")`](https://gregfaletto.github.io/fetwfePackage/articles/high_dimensional_vignette.md)
 for
 [`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)

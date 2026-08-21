@@ -138,7 +138,8 @@ analytic post-selection band on the selected support (or <code>NA</code> bounds 
 <code>gls = FALSE</code> fit), <em>not</em> the uniformly-valid desparsified band. For the
 valid high-dimensional event-study band call <code><a href="simultaneousCIs.html">simultaneousCIs()</a></code> with
 <code>family = "event_study"</code>, <code>method = "bootstrap"</code> (Theorem
-<code>debiased.highdim.joint.thm</code>, validated near-nominally in Faletto 2025).</p></dd>
+<code>debiased.highdim.joint.thm</code>, validated near-nominally in Faletto 2025).
+Such a call <strong>emits a warning</strong>; see Details.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -176,6 +177,34 @@ or <code>NA</code>.</p></dd>
 </dl><p>Only post-treatment event times (<code>e &gt;= 0</code>) are included; pre-treatment
 placebo periods would require an extended regression specification and
 are out of scope for this initial release.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p><strong>High-dimensional (<code>p &gt;= NT</code>) bands warn.</strong> When the returned
+<code>"simultaneous"</code> bounds are the <code>p &gt;= NT</code> post-selection fallback rather than
+a uniformly-valid band – which is every high-dimensional fit that reaches
+the band at all, since this accessor always takes the analytic route – the
+call emits a warning naming the remedy (#433). A high-dimensional fit under
+<code>ci_type = "pointwise"</code>, or one whose standard errors are unavailable, never
+builds a simultaneous band and so does not warn. A #308 coverage study
+measures the fallback band at roughly
+0.09 against 0.95 nominal, even when the selected support is low-dimensional.
+The remedy is <code><a href="simultaneousCIs.html">simultaneousCIs()</a></code> with <code>family = "event_study"</code> and
+<code>method = "bootstrap"</code> on a <code><a href="fetwfe.html">fetwfe()</a></code> fit; no valid high-dimensional band
+exists for the other estimators.</p>
+<p>The warning is the same classed condition <code><a href="simultaneousCIs.html">simultaneousCIs()</a></code> signals,
+<code>"fetwfe_highdim_postselection_band"</code>, so it can be caught or muffled
+precisely:</p>
+<div class="sourceCode"><pre><code><span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">withCallingHandlers</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="../reference/eventStudy.html">eventStudy</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span>,</span>
+<span>  fetwfe_highdim_postselection_band <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">w</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">invokeRestart</a></span><span class="op">(</span><span class="st">"muffleWarning"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+
+<p><code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code>, <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>, and <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> call this function internally and muffle
+that condition, so they do not repeat it on every render; <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> and
+<code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> render a two-line caveat under their CATT preview instead, and
+<code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> renders none.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

@@ -71,7 +71,7 @@ eventStudy(x, alpha = NULL, ci_type = NULL)
   [`simultaneousCIs()`](https://gregfaletto.github.io/fetwfePackage/reference/simultaneousCIs.md)
   with `family = "event_study"`, `method = "bootstrap"` (Theorem
   `debiased.highdim.joint.thm`, validated near-nominally in Faletto
-  2025).
+  2025). Such a call **emits a warning**; see Details.
 
 ## Value
 
@@ -113,6 +113,43 @@ A data frame with class `c("eventStudy", "data.frame")` and columns:
 Only post-treatment event times (`e >= 0`) are included; pre-treatment
 placebo periods would require an extended regression specification and
 are out of scope for this initial release.
+
+## Details
+
+**High-dimensional (`p >= NT`) bands warn.** When the returned
+`"simultaneous"` bounds are the `p >= NT` post-selection fallback rather
+than a uniformly-valid band – which is every high-dimensional fit that
+reaches the band at all, since this accessor always takes the analytic
+route – the call emits a warning naming the remedy (#433). A
+high-dimensional fit under `ci_type = "pointwise"`, or one whose
+standard errors are unavailable, never builds a simultaneous band and so
+does not warn. A \#308 coverage study measures the fallback band at
+roughly 0.09 against 0.95 nominal, even when the selected support is
+low-dimensional. The remedy is
+[`simultaneousCIs()`](https://gregfaletto.github.io/fetwfePackage/reference/simultaneousCIs.md)
+with `family = "event_study"` and `method = "bootstrap"` on a
+[`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)
+fit; no valid high-dimensional band exists for the other estimators.
+
+The warning is the same classed condition
+[`simultaneousCIs()`](https://gregfaletto.github.io/fetwfePackage/reference/simultaneousCIs.md)
+signals, `"fetwfe_highdim_postselection_band"`, so it can be caught or
+muffled precisely:
+
+
+    withCallingHandlers(
+      eventStudy(fit),
+      fetwfe_highdim_postselection_band = function(w) invokeRestart("muffleWarning")
+    )
+
+[`print()`](https://rdrr.io/r/base/print.html),
+[`summary()`](https://rdrr.io/r/base/summary.html), and
+[`plot()`](https://rdrr.io/r/graphics/plot.default.html) call this
+function internally and muffle that condition, so they do not repeat it
+on every render; [`print()`](https://rdrr.io/r/base/print.html) and
+[`summary()`](https://rdrr.io/r/base/summary.html) render a two-line
+caveat under their CATT preview instead, and
+[`plot()`](https://rdrr.io/r/graphics/plot.default.html) renders none.
 
 ## See also
 
