@@ -1226,8 +1226,19 @@ getActualCohortTes <- function(G, first_inds, treat_inds, coefs, num_treats) {
 #' @keywords internal
 #' @noRd
 .validate_gen_coefs_scalars <- function(T, G, d, density, eff_size) {
+	# The `is.na()` clause in each block below closes #436's second hole:
+	# NA_real_, NA_integer_ and NaN pass `is.numeric()`, so the comparison that
+	# follows evaluated to NA and `if (NA)` raised R's own
+	# `missing value where TRUE/FALSE needed` instead of the block's message.
+	# (Bare `NA` is logical, so `is.numeric()` already caught it.) EACH CLAUSE
+	# MUST SIT AFTER ITS `length(x) != 1` CLAUSE: `||` errors on a length-2
+	# operand under this package's R (>= 4.4.0) floor, so `is.na()` first turns
+	# a length-2 fixture into `'length = 2' in coercion to 'logical(1)'` --
+	# a different, worse error (measured). Placing it before the comparisons is
+	# for readability only; `NA || TRUE` is TRUE, so it would also work last.
+
 	# Check that T is a numeric scalar and at least 2.
-	if (!is.numeric(T) || length(T) != 1 || T < 2) {
+	if (!is.numeric(T) || length(T) != 1 || is.na(T) || T < 2) {
 		stop(
 			"T must be a numeric value greater than or equal to 2",
 			call. = FALSE
@@ -1235,7 +1246,7 @@ getActualCohortTes <- function(G, first_inds, treat_inds, coefs, num_treats) {
 	}
 
 	# Check that G is a numeric scalar and at least 1.
-	if (!is.numeric(G) || length(G) != 1 || G < 1) {
+	if (!is.numeric(G) || length(G) != 1 || is.na(G) || G < 1) {
 		stop(
 			"G must be a numeric value greater than or equal to 1 (at least one treated cohort)",
 			call. = FALSE
@@ -1248,7 +1259,7 @@ getActualCohortTes <- function(G, first_inds, treat_inds, coefs, num_treats) {
 	}
 
 	# Check that d is a numeric scalar and is non-negative.
-	if (!is.numeric(d) || length(d) != 1 || d < 0) {
+	if (!is.numeric(d) || length(d) != 1 || is.na(d) || d < 0) {
 		stop("d must be a non-negative numeric value", call. = FALSE)
 	}
 
@@ -1256,6 +1267,7 @@ getActualCohortTes <- function(G, first_inds, treat_inds, coefs, num_treats) {
 	if (
 		!is.numeric(density) ||
 			length(density) != 1 ||
+			is.na(density) ||
 			density <= 0 ||
 			density > 1
 	) {
@@ -1266,7 +1278,7 @@ getActualCohortTes <- function(G, first_inds, treat_inds, coefs, num_treats) {
 	}
 
 	# Check that eff_size is numeric.
-	if (!is.numeric(eff_size) || length(eff_size) != 1) {
+	if (!is.numeric(eff_size) || length(eff_size) != 1 || is.na(eff_size)) {
 		stop("eff_size must be a numeric value", call. = FALSE)
 	}
 
