@@ -936,9 +936,37 @@ genCoefsCore <- function(
 		#      line, re-drawn on an all-zero result, then the rfunc sign draw whose
 		#      length depends on it) and hence `theta`/`beta` are byte-identical to
 		#      pre-#332 behavior. ----
-		# Make sure at least one feature is selected
+		# Make sure at least one feature is selected. The retry is rejection
+		# sampling and terminates with probability 1, but the expected number of
+		# attempts is 1 / (1 - (1 - density)^p), which grows without bound as
+		# `density` approaches 0 -- so a legal-but-degenerate `density` (e.g.
+		# 1e-300, which passes .validate_gen_coefs_scalars()) would otherwise
+		# spin forever with no diagnostic (#436). Cap the attempts and fail with
+		# an actionable message instead. The cap bounds how many times the draw
+		# below is repeated; it does not change the draw, so the RNG stream --
+		# and hence `theta`/`beta` -- stays byte-identical for every input that
+		# terminates today.
+		max_tries <- 10000L
+		tries <- 0L
 		pass_condition <- FALSE
 		while (!pass_condition) {
+			tries <- tries + 1L
+			if (tries > max_tries) {
+				stop(
+					sprintf(
+						paste0(
+							"Could not draw a coefficient vector with at least ",
+							"one nonzero entry in %d attempts: no draw of %d ",
+							"Bernoulli(density) coefficients contained a nonzero ",
+							"entry at density = %g. Try a larger `density`."
+						),
+						max_tries,
+						p,
+						density
+					),
+					call. = FALSE
+				)
+			}
 			theta_inds <- which(as.logical(rbinom(
 				n = p,
 				size = 1,
