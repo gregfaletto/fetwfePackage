@@ -79,6 +79,31 @@
   estimate, band, standard error, or selected support changes; what changes is
   that a result already known to be unreliable is now announced.
 
+- `genCoefs()` and `genCoefsCore()` no longer spin forever on a legal but
+  degenerate `density` (#436): selecting the nonzero coefficients is rejection
+  sampling whose expected number of attempts grows without bound as `density`
+  approaches 0, so a value such as `1e-300` --- which the argument checks accept
+  --- previously never returned, with no message and no error, and the retry is
+  now capped at 10,000 attempts and fails with a message naming the attempt
+  count, the coefficient-vector length and the `density` supplied.
+
+- `simulateData()` and `simulateDataCore()` no longer spin forever at the
+  smallest `N` their argument checks admit (#436): allocating `N` units among
+  `G + 1` groups is also rejection sampling, and at `N = G + 1` every group must
+  receive exactly one unit, which happens with probability 4.8e-13 at `G = 30`,
+  so the draw is now capped at 1,000,000 attempts and fails with a message
+  naming `N`, `G`, the per-group bar it could not clear, the attempt count and
+  the way out --- increasing `N` by about 25% takes the expected number of draws
+  from millions to under 200 in every configuration measured.
+
+- A missing value passed to `genCoefs()` or `genCoefsCore()` now produces the
+  package's own message rather than R's `missing value where TRUE/FALSE needed`
+  (#436): a typed `NA` such as `NA_real_` or `NA_integer_`, and `NaN`, satisfy
+  `is.numeric()` and so reached a comparison that evaluated to `NA`, and all
+  five of `T`, `G`, `d`, `density` and `eff_size` were affected. What these
+  functions accept is unchanged --- every such input already failed, just
+  without saying which argument was at fault.
+
 ### Internal
 
 - The remaining six items of the test-power audit that followed the #400/#401
