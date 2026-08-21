@@ -17,9 +17,11 @@
 # coverage ~0.09 would need >= ~20/33 covered reps to breach it, probability
 # ~1e-17). The data, bridge fit, and bootstrap are all seeded, so coverage is
 # deterministic across runs (not flaky). Mutation-checkable: removing the
-# warning() in the non-fetwfe high-dim bootstrap branch of .simultaneous_cis_impl()
-# fails the expect_warning in part (a); the coverage assertion in part (b) is
-# independent of the warning.
+# warning() at the shared step-7b `p >= NT` post-selection site in
+# .simultaneous_cis_impl() -- or narrowing its predicate back to the
+# bootstrap-only non-fetwfe branch that used to carry it, before #433 folded
+# that branch into the shared site -- fails the expect_warning in part (a); the
+# coverage assertion in part (b) is independent of the warning.
 # ------------------------------------------------------------------------------
 
 test_that("non-fetwfe (betwfe) high-dim bootstrap band under-covers + warns (#308)", {

@@ -59,6 +59,26 @@
   (`2147483647.9`, say), which previously truncated to `2147483647L` and drew
   from a different seed than the one supplied.
 
+- A high-dimensional simultaneous band that is really the post-selection
+  fallback now says so (#433). When the full design is high-dimensional
+  (`p >= NT`), only one route returns a uniformly valid band: a `fetwfe()` fit
+  under `method = "bootstrap"`, the desparsified construction. Every other
+  combination falls back to the fixed-`p` selected-support band, which a
+  coverage study (#308) measures at roughly 0.09 against 0.95 nominal even when
+  the selected support is low-dimensional. `simultaneousCIs()` and
+  `eventStudy()` now emit a warning naming the applicable remedy on every such
+  call --- previously only `simultaneousCIs(method = "bootstrap")` on a
+  non-`fetwfe()` fit did, leaving the analytic default, which is the route users
+  actually take, and a `fetwfe()` fit on that default, silent. `print()` and
+  `summary()` note it in their output, under the CATT preview, for the
+  interactive reader who sees the band on screen rather than extracting it. The
+  warning carries the condition class `"fetwfe_highdim_postselection_band"`, so
+  it can be caught or muffled precisely with `withCallingHandlers()` rather than
+  by matching its text; fitting with `ci_type = "simultaneous"` stays silent,
+  and `print()` / `summary()` / `plot()` do not repeat it on every render. No
+  estimate, band, standard error, or selected support changes; what changes is
+  that a result already known to be unreliable is now announced.
+
 ### Internal
 
 - The remaining six items of the test-power audit that followed the #400/#401

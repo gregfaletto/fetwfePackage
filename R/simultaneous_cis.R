@@ -96,15 +96,7 @@ utils::globalVariables(c(
 #'   all-post-treatment families are covered by the same theorem but were not
 #'   separately simulated. As with the scalar, validity rests on the sparsity /
 #'   restricted-eigenvalue primitives (assumed, not proved), so inspect the
-#'   returned `feasibility` / `converged` diagnostics. A
-#'   non-`fetwfe()` `p >= NT`
-#'   fit (e.g. `betwfe()`) has no desparsified band, so it instead falls back to
-#'   the fixed-`p` selected-support band and emits a `warning()`: a #308 coverage
-#'   study shows that band substantially **under-covers** in the `p >= NT` regime
-#'   -- even when the selected support is low-dimensional -- because the bridge
-#'   shrinks the band center toward zero and the post-selection standard error
-#'   understates variability, so the band is returned but should be treated as
-#'   unreliable (use a `fetwfe()` fit for valid high-dimensional bands). The
+#'   returned `feasibility` / `converged` diagnostics. The
 #'   desparsified path covers all
 #'   four families (a high-dimensional `family = "event_study"` fit additionally
 #'   carries the propensity channel `F_pi`). In the high-dimensional regime the
@@ -117,12 +109,9 @@ utils::globalVariables(c(
 #'   **`gls = FALSE`** fetwfe fit (`calc_ses = FALSE`), the band analog of
 #'   `debiasedATT()`'s Omega-free SE (#307, #313). `method = "analytic"` still
 #'   requires valid analytic SEs (a `q < 1`, `gls = TRUE`, rank-satisfied fit).
-#'   **At `p >= NT`, `method = "bootstrap"` is the valid simultaneous band** ---
-#'   the desparsified Theorem `debiased.highdim.joint.thm` band above. A
-#'   `method = "analytic"` call there instead returns the analytic band on the
-#'   *selected support*: a post-selection band that under-covers (it is not the
-#'   uniformly-valid desparsified band), and a `gls = FALSE` fit has no analytic
-#'   SEs at all --- so pass `method = "bootstrap"` for high-dimensional bands.
+#'   **Which method is valid at `p >= NT` is a property of the function rather
+#'   than of this argument alone; see the "High-dimensional (`p >= NT`) bands"
+#'   paragraph of Details, which also documents the warning such a call emits.**
 #' @param B Integer; number of multiplier-bootstrap replicates
 #'   (`method = "bootstrap"` only). Must be a positive integer no greater than
 #'   `.Machine$integer.max`. Default `1000`.
@@ -217,6 +206,49 @@ utils::globalVariables(c(
 #' simultaneous-CI analog of the `NA` standard error `eventStudy()` reports for
 #' the same structurally-degenerate event times; both assign the effect an
 #' estimate of 0.
+#'
+#' **High-dimensional (`p >= NT`) bands.** One route out of the four is
+#' uniformly valid: a `fetwfe()` fit under
+#' `method = "bootstrap"`. That is the full-design desparsified band of
+#' Theorem `debiased.highdim.joint.thm` (Faletto 2025), whose family-wise
+#' coverage is validated near-nominally in simulation.
+#'
+#' Every other `p >= NT` combination returns the fixed-`p` **post-selection**
+#' band on the selected support instead, and that band is not valid there: a
+#' #308 coverage study measures it at roughly 0.09 against 0.95 nominal, **even
+#' when the selected support is low-dimensional**, because the bridge shrinks
+#' the band center toward zero and the post-selection standard error understates
+#' variability. Sparsity does not rescue it; only debiasing does. Concretely
+#' this covers a non-`fetwfe()` fit (e.g. `betwfe()`) on **either** method --
+#' the desparsified construction is `fetwfe()`-only, so no valid
+#' high-dimensional band exists for those estimators -- and a `fetwfe()` fit on
+#' the `method = "analytic"` **default**, where the remedy is simply to pass
+#' `method = "bootstrap"`.
+#'
+#' The band is still returned rather than replaced by an error, but every such
+#' call **emits a warning** naming the applicable remedy. The warning is a
+#' classed condition, `"fetwfe_highdim_postselection_band"`, so it can be caught
+#' or muffled precisely:
+#'
+#' \preformatted{
+#' withCallingHandlers(
+#'   simultaneousCIs(fit),
+#'   fetwfe_highdim_postselection_band = function(w) invokeRestart("muffleWarning")
+#' )
+#' }
+#'
+#' [eventStudy()] signals the same condition, for the same reason. It does
+#' **not** fire at fit time (a `ci_type = "simultaneous"` fit is silent), nor
+#' inside `print()`, `summary()`, or `plot()`, all three of which muffle it; of
+#' those, `print()` and `summary()` render a two-line caveat under their CATT
+#' preview instead, and `plot()` renders none. It also does not fire on the
+#' `p >= NT` all-zero-support path, which returns a degenerate band and carries
+#' its own (#304) condition already.
+#'
+#' A `gls = FALSE` (`calc_ses = FALSE`) high-dimensional `fetwfe()` fit has no
+#' analytic standard errors at all, so `method = "analytic"` errors there rather
+#' than warning; `method = "bootstrap"` still works, because the desparsified
+#' band is built from the empirical per-unit influence function.
 #'
 #' **Paper grounding.** Theorem (c') tight Gaussianity (Faletto 2025,
 #' `paper_arxiv.tex:1233`) guarantees the joint asymptotic normality; Assumption
@@ -381,6 +413,74 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 	"For a high-dimensional (p >= NT) design, use method = 'bootstrap'."
 )
 
+#' @title Text of the high-dimensional post-selection-fallback warning
+#' @description Builds the message signalled (as the classed condition
+#'   `"fetwfe_highdim_postselection_band"`) whenever a `p >= NT` call returns
+#'   the fixed-`p` post-selection band rather than a uniformly-valid one (#433).
+#'   One text, two leads: on a non-`fetwfe` fit the estimator itself has no
+#'   desparsified band on either route; on a `fetwfe` fit the *analytic route*
+#'   builds none, even though `method = "bootstrap"` would. The remedy sentence
+#'   comes from `.highdim_band_remedy()` (`R/utility.R`), shared with the
+#'   rendered `print()` / `summary()` notice.
+#' @details Three substrings are load-bearing and must survive any rewording.
+#'   `no desparsified band` is the discriminating anchor the #433 tests match on
+#'   (`fixed = TRUE`) and it must appear on **both** branches -- including the
+#'   `fetwfe` one, where it describes the analytic route rather than the
+#'   estimator, because `tests/testthat/test-simultaneous-bootstrap-highdim-142.R`
+#'   asserts it on an analytic call against a `fetwfe` fit. `unreliable` is what
+#'   `tests/testthat/test-betwfe-highdim-band-coverage-308.R` and
+#'   `test-simultaneous-bootstrap-highdim-142.R` currently match the #308
+#'   warning through (their `under-?cover` alternative never matches, because
+#'   the text writes `UNDER-COVERS` and `grepl()` is case-sensitive; that is
+#'   issue #458's to repair, not this text's). And `method = "bootstrap"` is the
+#'   `fetwfe` remedy the tests read.
+#'
+#'   **The `<caller>():` prefix is a parameter, not a literal.** Every message
+#'   in this file carries the name of the door whose contract it is about, and
+#'   this is the first one reachable through *two* public doors: the
+#'   `simultaneousCIs()` accessor and `eventStudy()` (via
+#'   `.fit_band_for_family()`, whose fit-time caller opts out and whose
+#'   event-study caller opts in). Hardcoding `simultaneousCIs()` was wrong on
+#'   the `eventStudy()` route -- worst on the non-`fetwfe` branch, where the
+#'   remedy is `use a fetwfe() fit` and so names no accessor at all, leaving the
+#'   prefix pointing at a function the user neither called nor is being sent to.
+#'   A new caller must pass its own name.
+#' @param is_fetwfe Logical scalar; `inherits(x, "fetwfe")`.
+#' @param caller Character scalar; the public function the user called, written
+#'   as it would be typed (`"simultaneousCIs()"`, `"eventStudy()"`). Used only
+#'   as the message prefix.
+#' @return A length-1 character; the full warning message.
+#' @keywords internal
+#' @noRd
+.highdim_postselection_band_message <- function(
+	is_fetwfe,
+	caller = "simultaneousCIs()"
+) {
+	lead <- if (isTRUE(is_fetwfe)) {
+		paste0(
+			caller,
+			": the analytic route builds no desparsified band ",
+			"for a high-dimensional (p >= NT) fit, "
+		)
+	} else {
+		paste0(
+			caller,
+			": a non-fetwfe high-dimensional (p >= NT) fit ",
+			"(e.g. betwfe()) has no desparsified band, "
+		)
+	}
+	paste0(
+		lead,
+		"so the returned band is the post-selection fixed-p selected-support ",
+		"band, centered on the bridge-shrunk estimate. Simulation (#308) shows ",
+		"it substantially UNDER-COVERS in the p >= NT regime, even when the ",
+		"selected support is low-dimensional (the bridge shrinkage biases the ",
+		"band center toward zero and the post-selection standard error ",
+		"understates variability); treat this result as unreliable. ",
+		.highdim_band_remedy(is_fetwfe)
+	)
+}
+
 #' @title Shared worker for simultaneousCIs()
 #' @description Reconstructs the K x K joint covariance from the fit's stored
 #'   slots, computes the simultaneous critical value via `mvtnorm::qmvnorm()`,
@@ -415,7 +515,21 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 	# user accessor call warns (default); the silent fit-time band precompute
 	# (`.apply_simultaneous_catt_band()`, wrapped in suppressMessages()) passes
 	# FALSE so it stays a message() and fitting does not chatter. See #304.
-	warn_degenerate_highdim = TRUE
+	warn_degenerate_highdim = TRUE,
+	# Severity of the high-dim (p >= NT) post-selection-fallback warning (#433),
+	# the same convention one line up. A direct accessor call warns (default);
+	# `.fit_band_for_family()` forwards its own parameter, which the fit-time
+	# precompute leaves FALSE and the eventStudy() path sets TRUE. Note this
+	# default is TRUE while `.fit_band_for_family()`'s is FALSE: the loud
+	# default belongs on the worker so a future caller inherits the warning
+	# rather than inheriting silence.
+	warn_highdim_postselection = TRUE,
+	# Name of the PUBLIC door the user called, used only as the #433 message
+	# prefix (every message in this file names its own door). The default is
+	# right for the accessor's own dispatch body; the eventStudy() route overrides it
+	# through `.fit_band_for_family()`. See
+	# `.highdim_postselection_band_message()`'s @details.
+	warn_caller = "simultaneousCIs()"
 ) {
 	# --- 1. Argument validation (mvtnorm guard deferred to step 11). ---
 	# `alpha = NULL` (the accessor default) inherits the level the fit's catt_df /
@@ -659,6 +773,51 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 		))
 	}
 
+	# --- 7b. High-dimensional (p >= NT) post-selection fallback (#433). Every
+	#         `p >= NT` call that reaches this point builds the fixed-p
+	#         post-selection band on the selected support -- a band the #308
+	#         coverage study measures at roughly 0.09 against 0.95 nominal --
+	#         EXCEPT the one route that builds the uniformly-valid desparsified
+	#         band: a fetwfe fit under `method = "bootstrap"`. So warn on the
+	#         complement of that route. This covers a non-fetwfe fit on EITHER
+	#         method (the fold-in of the old bootstrap-only #308 warning) and a
+	#         fetwfe fit on the analytic default.
+	#
+	#         Placement is load-bearing in both directions. It sits AFTER the
+	#         degenerate early return above, so an all-zero-support fit keeps
+	#         only its own #304 condition (warning twice about one band is
+	#         noise, and the #304 text already says "treat this as unreliable");
+	#         and BEFORE the analytic Sigma assembly, so the user learns the
+	#         band is post-selection even on the calls that go on to fail at
+	#         the singular-Gram `stop()` in step 9 (`on_singular = "stop"` with
+	#         `.SINGULAR_GRAM_ANALYTIC_STOP_MSG`, whose own text is written for
+	#         this same `p >= NT` set).
+	#
+	#         It is NOT a promise that a call which warns is a call that
+	#         returns a band. A warn-then-stop is reachable and measured:
+	#         force a singular selected-support Gram on a `p >= NT` fit and
+	#         this site warns, then step 9 stops. Three further `stop()`s
+	#         follow (the cov2cor failure, the invalid-correlation guard, and
+	#         the mvtnorm guard). A singular Gram in this regime is the
+	#         package's signature failure mode, not an exotic case.
+	#
+	#         Signalled as a CLASSED condition, not a plain string: the three
+	#         internal `eventStudy()` callers (print / summary / plot) muffle it
+	#         by class via `.event_study_quiet()`, and users can catch it the
+	#         same way. A bare `warning(msg)` here would pass every text-matching
+	#         test while silently disarming that muffling. ---
+	if (
+		p >= N * T_ &&
+			!highdim_fetwfe_bootstrap &&
+			isTRUE(warn_highdim_postselection)
+	) {
+		warning(warningCondition(
+			.highdim_postselection_band_message(is_fetwfe, warn_caller),
+			class = "fetwfe_highdim_postselection_band",
+			call = NULL
+		))
+	}
+
 	# --- 8. Shape Psi (p_sel x K): map each effect's per-cell contrast into the
 	#        selected support (theta-space for FETWFE, beta-space for OLS family).
 	#        Used by both the analytic Sigma assembly and the bootstrap IF. The
@@ -684,10 +843,13 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 		# input to the full-design desparsified construction. The desparsified path
 		# is FETWFE-only (the only estimator with a regularized `p >= NT` fit); a
 		# non-fetwfe `p >= NT` fit (e.g. betwfe) leaves `targets` NULL and falls
-		# through to the fixed-p selected-support construction (and warns below: a
-		# #308 coverage study shows that band under-covers in `p >= NT`, even when
-		# the selected support is low-dimensional). Fixed-p (`p < NT`) likewise
-		# leaves `targets` NULL.
+		# through to the fixed-p selected-support construction. That case has
+		# already warned ABOVE, at the shared step-7b `p >= NT` post-selection
+		# site (#433); the branch that used to carry the warning here was folded
+		# into that site, which now covers this route and the analytic one alike
+		# -- a #308 coverage study shows the band under-covers in `p >= NT`, even
+		# when the selected support is low-dimensional. Fixed-p (`p < NT`)
+		# likewise leaves `targets` NULL.
 		targets <- NULL
 		cell_targets <- NULL
 		a_att <- NULL
@@ -729,29 +891,6 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 				cohort_probs = x$cohort_probs
 			)
 			a_att <- as.numeric(crossprod(A, a_beta_att))
-		} else if (p >= N * T_) {
-			# Non-fetwfe high-dimensional (`p >= NT`) bootstrap (e.g. betwfe): the
-			# desparsified uniformly-valid path is fetwfe-only, so this falls through
-			# to the post-selection fixed-p selected-support band. A #308 coverage
-			# study shows that band substantially UNDER-COVERS in the `p >= NT` regime
-			# -- even when the selected support is low-dimensional -- because the
-			# bridge shrinks the band center toward zero (bias/SE ~ -10) and the
-			# post-selection SE understates sampling variability. The band is still
-			# returned (not an error, preserving #305), but is unreliable. (The
-			# all-zero-support sub-case already returned with the #304 warning above,
-			# so this fires only on the non-empty-support path.)
-			warning(
-				"simultaneousCIs(): a non-fetwfe high-dimensional (p >= NT) fit ",
-				"(e.g. betwfe()) has no desparsified band, so the returned band is ",
-				"the post-selection fixed-p selected-support band, centered on the ",
-				"bridge-shrunk estimate. Simulation (#308) shows it substantially ",
-				"UNDER-COVERS in the p >= NT regime, even when the selected support ",
-				"is low-dimensional (the bridge shrinkage biases the band center ",
-				"toward zero and the post-selection standard error understates ",
-				"variability); treat this result as unreliable. For valid ",
-				"high-dimensional simultaneous bands, use a fetwfe() fit.",
-				call. = FALSE
-			)
 		}
 		# event_study carries the non-zero cohort-probability (propensity)
 		# variance channel Sigma_2: build the SAME per-effect Jacobian list the
@@ -1148,7 +1287,7 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 	out
 }
 
-#' @title Fit a simultaneous band for one CI family (silent, fault-tolerant)
+#' @title Fit a simultaneous band for one CI family (quiet-by-default, fault-tolerant)
 #' @description Single-sources the band-attach skeleton shared by the two
 #'   fit-time band helpers: `.apply_simultaneous_catt_band()` (cohort family,
 #'   this file) and `.event_study_simultaneous_bounds()` (`R/event_study.R`,
@@ -1160,30 +1299,106 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 #'   single-sourced here (#401 item 7). Each caller keeps its own specifics (the
 #'   cohort `has_valid_ses` guard; the event-study `NA`-masking on degenerate
 #'   rows).
+#' @details **The #304 lockstep does not extend to #433.** The two callers
+#'   choose differently on the post-selection-fallback warning: the fit-time
+#'   precompute stays silent (fitting must not chatter), while
+#'   `.event_study_simultaneous_bounds()` opts in, because a direct
+#'   `eventStudy()` call hands a user an under-covering band programmatically
+#'   and is row 4 of issue #433's own table. That is why
+#'   `warn_highdim_postselection` is a **parameter** here rather than a
+#'   hardcoded `FALSE` like its #304 sibling; `print()` / `summary()` /
+#'   `plot()`, which reach `eventStudy()` internally, muffle the resulting
+#'   classed condition at their own call sites via `.event_study_quiet()`.
+#' @details **The #433 condition is deferred past the `tryCatch()`, and that is
+#'   a correctness requirement rather than tidiness.** Signalling it inside the
+#'   protected region makes `options(warn = 2)` convert it to an error that the
+#'   `error = function(e) NULL` handler swallows, so the band degrades to
+#'   `NULL` and `eventStudy()` silently returns the POINTWISE interval under a
+#'   `[simultaneous 95% CI]` header -- narrower, so it over-rejects, with no
+#'   condition of any kind raised. The body captures the condition with a
+#'   class-keyed `withCallingHandlers()` and re-raises it after the
+#'   `tryCatch()`, before either `NULL` return, which preserves the
+#'   warn-then-degrade shape and leaves `.event_study_quiet()`'s muffle
+#'   working. Pinned by
+#'   `tests/testthat/test-highdim-postselection-band-warning-433.R`.
 #' @param x A fully-classed estimator object.
 #' @param family Character; `"cohort"` or `"event_study"`.
 #' @param alpha Numeric; the significance level.
 #' @param expected_rows Integer; the row count `sci$ci` must have to be usable
 #'   (`nrow(x$catt_df)` for cohort, `length(estimates)` for event study); a
 #'   mismatch returns `NULL`.
+#' @param warn_highdim_postselection Logical; forwarded to the worker as the
+#'   severity of the `p >= NT` post-selection-fallback warning (#433). **The
+#'   `FALSE` default is load-bearing, not a style choice**:
+#'   `tests/testthat/test-degenerate-band-policy-429.R` calls this helper
+#'   positionally with four arguments inside `expect_no_warning()`, so flipping
+#'   the default silently changes what that test asserts. Do not "tidy" it to
+#'   match the worker's `TRUE`; the worker is loud by default on purpose, and
+#'   this helper is the door every internal route comes through.
+#' @param warn_caller Character; the public function name the #433 message is
+#'   prefixed with, forwarded to the worker. Declared AFTER
+#'   `warn_highdim_postselection` on purpose: `test-degenerate-band-policy-429.R`
+#'   calls this helper with four positional arguments, so only appending is
+#'   safe. The `"simultaneousCIs()"` default is inert while
+#'   `warn_highdim_postselection` is `FALSE`.
 #' @return A list `list(ci_low, ci_high, adjusted_p_values)`, or `NULL` to fall
 #'   back to pointwise.
 #' @keywords internal
 #' @noRd
-.fit_band_for_family <- function(x, family, alpha, expected_rows) {
+.fit_band_for_family <- function(
+	x,
+	family,
+	alpha,
+	expected_rows,
+	warn_highdim_postselection = FALSE,
+	warn_caller = "simultaneousCIs()"
+) {
+	# The #433 condition is CAPTURED here and re-raised below, OUTSIDE the
+	# `tryCatch(error = )`. Signalling it inside is a wrong-answer bug under
+	# `options(warn = 2)`: R converts the warning to an error, that error is
+	# raised inside the protected region, `sci` comes back NULL, and
+	# `.event_study_simultaneous_bounds()` falls through to the POINTWISE
+	# bounds -- so `eventStudy()` returns a narrower interval under a
+	# `[simultaneous 95% CI]` header with no error, no warning and no message.
+	# Measured on a p = 356 / N*T = 300 betwfe fit: ci_low moved from the
+	# simultaneous (0, 0.8358, 1.4812, 4.3304) to the pointwise
+	# (0, 0.9868, 1.6653, 4.4265), i.e. a silent over-rejection.
+	#
+	# The handler is keyed on the class, so no other condition is intercepted
+	# and no error is muffled; the re-raise is a plain `warning(<condition>)`,
+	# so the class survives and `.event_study_quiet()`'s outer calling handler
+	# still muffles it -- including under `warn = 2`, where a muffle beats the
+	# conversion. Under `warn = 2` an UNmuffled call now errors, which is the
+	# semantics the user asked for.
+	pending <- NULL
 	sci <- tryCatch(
-		suppressMessages(
-			.simultaneous_cis_impl(
-				x = x,
-				family = family,
-				alpha = alpha,
-				contrasts = NULL,
-				has_valid_ses = TRUE,
-				warn_degenerate_highdim = FALSE
-			)
+		withCallingHandlers(
+			suppressMessages(
+				.simultaneous_cis_impl(
+					x = x,
+					family = family,
+					alpha = alpha,
+					contrasts = NULL,
+					has_valid_ses = TRUE,
+					warn_degenerate_highdim = FALSE,
+					warn_highdim_postselection = warn_highdim_postselection,
+					warn_caller = warn_caller
+				)
+			),
+			fetwfe_highdim_postselection_band = function(w) {
+				pending <<- w
+				invokeRestart("muffleWarning")
+			}
 		),
 		error = function(e) NULL
 	)
+	# Re-raised BEFORE the two NULL returns, so the warn-then-degrade shape is
+	# preserved exactly: a call that warned at step 7b and then hit the
+	# singular-Gram `stop()` at step 9 still warns AND still degrades to
+	# pointwise, as it did before this deferral.
+	if (!is.null(pending)) {
+		warning(pending)
+	}
 	if (is.null(sci)) {
 		return(NULL)
 	}
@@ -1203,9 +1418,10 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 #'   family and returns the simultaneous lower/upper bounds aligned to the
 #'   fit's `catt_df` cohort row order. Degrades gracefully: when standard
 #'   errors are unavailable (`calc_ses = FALSE`), the family is degenerate, or
-#'   `K = 1`, the worker returns bounds equal to the existing pointwise bounds
-#'   (no widening) and any error short-circuits to `NULL` (leave `catt_df`
-#'   unchanged).
+#'   fewer than two effects have positive variance (`sum(nondeg) <= 1`, which
+#'   includes but is not limited to `K = 1`), the worker returns bounds equal to
+#'   the existing pointwise bounds (no widening) and any error short-circuits to
+#'   `NULL` (leave `catt_df` unchanged).
 #' @param x A fully-classed `fetwfe`/`etwfe`/`betwfe`/`twfeCovs` object.
 #' @param alpha Numeric; the alpha the fit's `catt_df` was built at (`x$alpha`
 #'   for all four classes; twfeCovs gained an `alpha` slot in #204). Passed
@@ -1228,10 +1444,27 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 	# `getCohortATTsFinal()` builds `catt_df`, so the worker's `sci$ci` is
 	# already row-aligned to `catt_df` (the `effect` labels differ --
 	# "Cohort <offset>" vs `catt_df$cohort` = `c_names` -- so rely on position,
-	# not labels). `.fit_band_for_family()` runs the worker silently
-	# (suppressMessages + warn_degenerate_highdim = FALSE, #304), degrades to
-	# NULL on error, and asserts the row count defensively.
-	.fit_band_for_family(x, "cohort", alpha, nrow(x$catt_df))
+	# not labels). `.fit_band_for_family()` degrades to NULL on error and
+	# asserts the row count defensively; this call site runs the worker
+	# silently, by three mechanisms and no more: `suppressMessages()` and
+	# `warn_degenerate_highdim = FALSE` inside the helper (#304), plus the
+	# explicit `warn_highdim_postselection = FALSE` below (#433). Silence is a
+	# per-caller choice rather than a property of the helper -- the event-study
+	# call site (`R/event_study.R`) passes TRUE for the third one -- so a fourth
+	# mechanism added later belongs here, not there.
+	#
+	# The helper's class-keyed `withCallingHandlers()` is NOT a fourth
+	# mechanism: it captures the #433 condition only to re-raise it outside the
+	# `tryCatch(error = )` (see that helper's @details), and with
+	# `warn_highdim_postselection = FALSE` the worker never signals it at all,
+	# so nothing is captured and nothing is re-raised on this route.
+	.fit_band_for_family(
+		x,
+		"cohort",
+		alpha,
+		nrow(x$catt_df),
+		warn_highdim_postselection = FALSE
+	)
 }
 
 #' @title Apply the fit's `ci_type` to its cohort-family bounds (fit-time)

@@ -302,7 +302,15 @@ plot.twfeCovs <- function(x, ...) {
 # Forwards `alpha` to eventStudy() so the CIs reflect the requested
 # confidence level.
 .plot_event_study <- function(x, conf_int, alpha) {
-	es <- eventStudy(x, alpha = alpha)
+	# `.event_study_quiet()` (R/event_study.R) muffles ONLY the #433
+	# `p >= NT` post-selection-fallback warning. Unlike `print()` / `summary()`,
+	# this path renders no caveat of its own -- a caption on a ggplot object is
+	# its own decision about plot furniture and was scoped out of #433 -- so a
+	# high-dimensional event-study plot draws the fallback band with nothing
+	# attached. Deliberate, not an oversight. (`plot(type = "catt")` reads
+	# `x$catt_df` directly and never reaches the worker, so there was never
+	# anything to muffle there.)
+	es <- .event_study_quiet(x, alpha = alpha)
 	p <- ggplot2::ggplot(
 		es,
 		ggplot2::aes(x = event_time, y = estimate)

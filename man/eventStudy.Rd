@@ -32,7 +32,8 @@ analytic post-selection band on the selected support (or \code{NA} bounds on a
 \code{gls = FALSE} fit), \emph{not} the uniformly-valid desparsified band. For the
 valid high-dimensional event-study band call \code{\link[=simultaneousCIs]{simultaneousCIs()}} with
 \code{family = "event_study"}, \code{method = "bootstrap"} (Theorem
-\code{debiased.highdim.joint.thm}, validated near-nominally in Faletto 2025).}
+\code{debiased.highdim.joint.thm}, validated near-nominally in Faletto 2025).
+Such a call \strong{emits a warning}; see Details.}
 }
 \value{
 A data frame with class \code{c("eventStudy", "data.frame")} and
@@ -80,6 +81,36 @@ the conservative Cauchy-Schwarz bound \verb{sqrt(var_1 + var_2 + 2 sqrt(var_1 * 
 (for users with non-(\eqn{\Psi}-IF) propensity-score estimators). When
 \code{indep_counts} was supplied at fit time, the tight formula applies
 regardless of \code{se_type} (two-sample regime, Theorem (b)).
+}
+\details{
+\strong{High-dimensional (\code{p >= NT}) bands warn.} When the returned
+\code{"simultaneous"} bounds are the \code{p >= NT} post-selection fallback rather than
+a uniformly-valid band -- which is every high-dimensional fit that reaches
+the band at all, since this accessor always takes the analytic route -- the
+call emits a warning naming the remedy (#433). A high-dimensional fit under
+\code{ci_type = "pointwise"}, or one whose standard errors are unavailable, never
+builds a simultaneous band and so does not warn. A #308 coverage study
+measures the fallback band at roughly
+0.09 against 0.95 nominal, even when the selected support is low-dimensional.
+The remedy is \code{\link[=simultaneousCIs]{simultaneousCIs()}} with \code{family = "event_study"} and
+\code{method = "bootstrap"} on a \code{fetwfe()} fit; no valid high-dimensional band
+exists for the other estimators.
+
+The warning is the same classed condition \code{\link[=simultaneousCIs]{simultaneousCIs()}} signals,
+\code{"fetwfe_highdim_postselection_band"}, so it can be caught or muffled
+precisely:
+
+\preformatted{
+withCallingHandlers(
+  eventStudy(fit),
+  fetwfe_highdim_postselection_band = function(w) invokeRestart("muffleWarning")
+)
+}
+
+\code{print()}, \code{summary()}, and \code{plot()} call this function internally and muffle
+that condition, so they do not repeat it on every render; \code{print()} and
+\code{summary()} render a two-line caveat under their CATT preview instead, and
+\code{plot()} renders none.
 }
 \examples{
 \dontrun{
