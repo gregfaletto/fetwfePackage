@@ -120,38 +120,17 @@ test_that("the unmodified base arguments succeed through both doors (#429 item 9
 test_that(".validate_gen_coefs_scalars() pins all twenty-one conditions on both doors (#429 item 9)", {
 	expect_length(.gcv429_cells, 21L)
 
-	# CAPTURE, DO NOT expect_error()-AND-REUSE. A cell whose mutation makes the
-	# call SUCCEED has to fail this loop cleanly rather than abort it.
-	# expect_error() on a non-erroring call records its failure and returns the
-	# expression's VALUE, and conditionMessage() on that value raises -- which
-	# ends the whole test_that() block and silently skips every later cell.
+	# CAPTURE, DO NOT expect_error()-AND-REUSE. The loop below reads each
+	# captured condition through `msg_of()` / `call_of()`, which live in
+	# helper-condition-accessors.R and degrade to a readable value instead of
+	# raising; that file explains why. What is specific to THIS file:
 	#
-	# That is reachable, not hypothetical: with `length(eff_size) != 1` dropped,
-	# genCoefs(G = 3, T = 5, d = 2, density = 0.5, eff_size = c(1, 2)) succeeds
-	# and returns a FETWFE_coefs object (measured). It used to be harmless
-	# because that condition was the last cell in the list; #436's
+	# The hazard is reachable, not hypothetical. With `length(eff_size) != 1`
+	# dropped, genCoefs(G = 3, T = 5, d = 2, density = 0.5, eff_size = c(1, 2))
+	# succeeds and returns a FETWFE_coefs object (measured). That used to be
+	# harmless because the condition was the last cell in the list; #436's
 	# `eff_size NA` cell now sits after it, so dropping that one check WOULD
-	# hide the cell downstream of it were it not for the two accessors below.
-	# The mutation battery would still show the row as detected, because the
-	# aborted block reports a failure either way.
-	#
-	# The two accessors degrade to a readable value instead of raising, so all
-	# five assertions per cell still run and a red cell names itself.
-	msg_of <- function(x) {
-		if (inherits(x, "condition")) {
-			conditionMessage(x)
-		} else {
-			paste0("<no error; returned ", class(x)[1], ">")
-		}
-	}
-	call_of <- function(x) {
-		if (inherits(x, "condition")) {
-			conditionCall(x)
-		} else {
-			quote(NO_ERROR_RAISED)
-		}
-	}
-
+	# hide the cell downstream of it if the accessors raised.
 	for (cell in .gcv429_cells) {
 		args <- utils::modifyList(.gcv429_base, cell$over)
 

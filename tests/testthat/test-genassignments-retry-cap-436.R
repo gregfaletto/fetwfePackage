@@ -80,21 +80,6 @@ test_that("an infeasible guarantee_rank_condition panel errors instead of hangin
 	setTimeLimit(elapsed = 60, transient = TRUE)
 	on.exit(setTimeLimit(), add = TRUE)
 
-	msg_of <- function(x) {
-		if (inherits(x, "condition")) {
-			conditionMessage(x)
-		} else {
-			paste0("<no error; returned ", class(x)[1], ">")
-		}
-	}
-	call_of <- function(x) {
-		if (inherits(x, "condition")) {
-			conditionCall(x)
-		} else {
-			quote(NO_ERROR_RAISED)
-		}
-	}
-
 	# N = (G + 1) * (d + 1) = 65 is the boundary simulateDataCore()'s own
 	# stopifnot() admits, and it is a MUCH harsher regime than the bar-1 floor:
 	# P = 2.7e-6 at G = 8, d = 4. This is also the first thing in the package to

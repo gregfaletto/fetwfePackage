@@ -1231,9 +1231,15 @@ getActualCohortTes <- function(G, first_inds, treat_inds, coefs, num_treats) {
 #' @noRd
 .validate_gen_coefs_scalars <- function(T, G, d, density, eff_size) {
 	# The `is.na()` clause in each block below closes #436's second hole:
-	# NA_real_, NA_integer_ and NaN pass `is.numeric()`, so the comparison that
-	# follows evaluated to NA and `if (NA)` raised R's own
-	# `missing value where TRUE/FALSE needed` instead of the block's message.
+	# NA_real_, NA_integer_ and NaN pass `is.numeric()`. For `T`, `G`, `d` and
+	# `density` that meant the comparison which follows evaluated to NA and
+	# `if (NA)` raised R's own `missing value where TRUE/FALSE needed` instead
+	# of the block's message. `eff_size` failed DIFFERENTLY and is worth calling
+	# out, because the obvious one-sentence summary is wrong for it: its check
+	# has no comparison at all, so a missing value passed validation outright
+	# and died later in the `beta` assembly on
+	# `all(!is.na(beta[...])) is not TRUE` (measured). Either way no wrong
+	# answer was ever returned -- only a cryptic message.
 	# (Bare `NA` is logical, so `is.numeric()` already caught it.) EACH CLAUSE
 	# MUST SIT AFTER ITS `length(x) != 1` CLAUSE: `||` errors on a length-2
 	# operand under this package's R (>= 4.4.0) floor, so `is.na()` first turns

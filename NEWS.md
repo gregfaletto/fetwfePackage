@@ -94,15 +94,23 @@
   so the draw is now capped at 1,000,000 attempts and fails with a message
   naming `N`, `G`, the per-group bar it could not clear, the attempt count and
   the way out --- increasing `N` by about 25% takes the expected number of draws
-  from millions to under 200 in every configuration measured.
+  from millions to under 200 in every configuration measured. Note that no cap
+  can serve every admissible `N`, so a small number of calls that used to
+  succeed will now error instead: at the tightest `guarantee_rank_condition =
+  TRUE` size, `G = 8`, `d = 4`, `N = 45`, twelve of twelve seeds succeeded
+  before and eleven of twelve succeed now. Such a call was already a coin flip
+  between a result and a session that never returned; it is now a coin flip
+  between a result and an error that says how to fix it.
 
-- A missing value passed to `genCoefs()` or `genCoefsCore()` now produces the
-  package's own message rather than R's `missing value where TRUE/FALSE needed`
-  (#436): a typed `NA` such as `NA_real_` or `NA_integer_`, and `NaN`, satisfy
-  `is.numeric()` and so reached a comparison that evaluated to `NA`, and all
-  five of `T`, `G`, `d`, `density` and `eff_size` were affected. What these
-  functions accept is unchanged --- every such input already failed, just
-  without saying which argument was at fault.
+- A missing value passed to `genCoefs()` or `genCoefsCore()` now names the
+  argument at fault (#436). A typed `NA` such as `NA_real_` or `NA_integer_`,
+  and `NaN`, satisfy `is.numeric()`, so all five of `T`, `G`, `d`, `density`
+  and `eff_size` slipped past the argument checks; for the first four the
+  comparison that followed evaluated to `NA` and R raised
+  `missing value where TRUE/FALSE needed`, while `eff_size` --- whose check
+  makes no comparison --- passed validation outright and failed later inside
+  the coefficient assembly. What these functions accept is unchanged: every
+  such input already failed, just without saying which argument was at fault.
 
 ### Internal
 

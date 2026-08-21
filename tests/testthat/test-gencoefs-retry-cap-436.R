@@ -66,21 +66,6 @@ test_that("the retry-cap error is identical from both doors and sets no call (#4
 	# Degrade to a readable value rather than raising, so a mutation that makes
 	# the call SUCCEED fails these assertions cleanly instead of aborting the
 	# block (same reasoning as test-gen-coefs-validator-429.R).
-	msg_of <- function(x) {
-		if (inherits(x, "condition")) {
-			conditionMessage(x)
-		} else {
-			paste0("<no error; returned ", class(x)[1], ">")
-		}
-	}
-	call_of <- function(x) {
-		if (inherits(x, "condition")) {
-			conditionCall(x)
-		} else {
-			quote(NO_ERROR_RAISED)
-		}
-	}
-
 	setTimeLimit(elapsed = 60, transient = TRUE)
 	e_core <- tryCatch(
 		genCoefsCore(G = 3, T = 5, d = 2, density = 1e-300, eff_size = 1),
