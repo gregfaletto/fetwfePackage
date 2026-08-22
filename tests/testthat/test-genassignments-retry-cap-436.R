@@ -21,8 +21,9 @@
 #
 # PER DECISION LOG D8 THIS FILE CARRIES NO DRAW-COUNT PIN, unlike its
 # genCoefsCore() sibling. Replaying 1,000,000 rmultinom draws to pin the
-# boundary costs 0.85-1.32 s on every run of a 9-minute suite across six CI
-# jobs, and what it would buy is detection of a `>` vs `>=` off-by-one that
+# boundary costs a second-scale replay on every run of a 9-minute suite across
+# six CI jobs -- against 0.006 s for the genCoefsCore() pin -- and what it
+# would buy is detection of a `>` vs `>=` off-by-one that
 # moves the budget by one draw in a million and has no user-visible
 # consequence whatsoever. An ABSENT cap is caught by the timeout guard, and a
 # WRONG cap value by the exact literal `in 1000000 attempts`.
@@ -82,7 +83,9 @@ test_that("an infeasible guarantee_rank_condition panel errors instead of hangin
 
 	# N = (G + 1) * (d + 1) = 65 is the boundary simulateDataCore()'s own
 	# stopifnot() admits, and it is a MUCH harsher regime than the bar-1 floor:
-	# P = 2.7e-6 at G = 8, d = 4. This is also the first thing in the package to
+	# P = 3.0e-9 for THIS block's G = 12, d = 4, N = 65 (an earlier revision
+	# quoted 2.7e-6 here, which is G = 8, d = 4, N = 45 -- a different fixture
+	# and three orders of magnitude off). This is also the first thing in the package to
 	# exercise guarantee_rank_condition = TRUE inside genAssignments() at all.
 	set.seed(2)
 	e <- tryCatch(
@@ -113,7 +116,12 @@ test_that("an infeasible guarantee_rank_condition panel errors instead of hangin
 	#     a future grammar fix would silently delete -- note d = 0 under
 	#     guarantee_rank_condition = TRUE renders "at least 1 units".
 	expect_true(grepl("at least 5 units", msg_of(e), fixed = TRUE))
-	expect_true(grepl("about 25% is", msg_of(e), fixed = TRUE))
+	expect_true(grepl("25% more is usually enough", msg_of(e), fixed = TRUE))
+
+	# Pin that N and G render in the right ORDER. Nothing else in either cap
+	# file observes these two values, so transposing the sprintf() arguments
+	# was a mutation the whole suite missed.
+	expect_true(grepl("at N = 65 and G = 12", msg_of(e), fixed = TRUE))
 
 	# The `call. = FALSE` contract from #431 item 1.
 	expect_null(call_of(e))

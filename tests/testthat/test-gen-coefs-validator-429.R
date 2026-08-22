@@ -8,9 +8,10 @@
 # genCoefs() and genCoefsCore(). At the time, ten of the sixteen atomic
 # conditions it then had carried no message-anchored test, and the whole `G`
 # message literal was unpinned, so weakening most of them was invisible to the
-# two files that claim to cover this surface. #436 later added a fifth
-# condition to each of the five blocks (`is.na()`), taking the count to
-# twenty-one.
+# two files that claim to cover this surface. #436 later added one condition
+# (`is.na()`) to each of the five blocks, taking the count to twenty-one. It
+# is not the fifth condition in each: it lands fourth in `T`, `G` and `d`,
+# fifth in `density`, and third in `eff_size`.
 #
 # Each cell asserts three things, and all three are needed:
 #   (1) the error message contains the condition's own literal, `fixed = TRUE`;
@@ -20,8 +21,8 @@
 #
 # WHY THE MESSAGE LITERAL IS WHAT CARRIES THE POWER, not expect_error() alone.
 # Both doors carry THREE consecutive redundant backstops --
-# `stopifnot(G >= 1); stopifnot(T >= 2); stopifnot(G <= T - 1)` at
-# R/gen_coefs.R:474-476 and :918-920 -- so three of the twenty-one cells
+# `stopifnot(G >= 1); stopifnot(T >= 2); stopifnot(G <= T - 1)`, in both
+# genCoefs() and genCoefsCore() -- so three of the twenty-one cells
 # (G < 1, T < 2, G > T - 1) error SOMEWHERE regardless of what the validator
 # does. A bare expect_error() on those would be satisfied by the backstop and
 # the mutant would walk.

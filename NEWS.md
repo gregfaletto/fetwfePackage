@@ -93,14 +93,21 @@
   receive exactly one unit, which happens with probability 4.8e-13 at `G = 30`,
   so the draw is now capped at 1,000,000 attempts and fails with a message
   naming `N`, `G`, the per-group bar it could not clear, the attempt count and
-  the way out --- increasing `N` by about 25% takes the expected number of draws
-  from millions to under 200 in every configuration measured. Note that no cap
-  can serve every admissible `N`, so a small number of calls that used to
-  succeed will now error instead: at the tightest `guarantee_rank_condition =
-  TRUE` size, `G = 8`, `d = 4`, `N = 45`, twelve of twelve seeds succeeded
-  before and eleven of twelve succeed now. Such a call was already a coin flip
-  between a result and a session that never returned; it is now a coin flip
-  between a result and an error that says how to fix it.
+  the way out --- at small `G`, increasing `N` by about 25% takes the expected
+  number of draws from hundreds of thousands or millions to under 200, though
+  the headroom needed grows with `G`.
+
+- **Some `simulateData()` calls that used to succeed now error instead** (#436).
+  No cap can serve every admissible `N`, and the retry cost near the smallest
+  admissible sizes is a smooth distribution rather than a clean split between
+  workable and hopeless --- so bounding it necessarily cuts off the slowest
+  successes along with the calls that never finish. Measured over ten seeds at
+  `G = 14`, `T = 15`, `d = 1`, `N = 15` --- the default mode, no
+  `guarantee_rank_condition` --- ten of ten succeeded before, in a median of
+  0.96 seconds, and eight of ten succeed now. The same happens at the
+  `guarantee_rank_condition = TRUE` sizes. If a `simulateData()` call near
+  `N = G + 1` or `N = (G + 1)(d + 1)` starts failing, raise `N`: this is the
+  cost of never hanging, and the error names the way out.
 
 - A missing value passed to `genCoefs()` or `genCoefsCore()` now names the
   argument at fault (#436). A typed `NA` such as `NA_real_` or `NA_integer_`,

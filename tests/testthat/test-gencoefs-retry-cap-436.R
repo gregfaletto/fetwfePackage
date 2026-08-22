@@ -124,6 +124,14 @@ test_that("a workable density still returns with the cap in place (#436)", {
 	# not" control and NOTHING more -- it proves nothing about an off-by-one at
 	# the boundary, which is what the draw-count pin above is for. Seeded so it
 	# is reproducible.
+	#
+	# Guarded like every other block in this file even though no CAP mutation
+	# can hang it: a mutation to the DRAW rather than the cap (`prob = density`
+	# -> `prob = 0`) would spin here, and the file's whole purpose is keeping
+	# hang-mutants out of the suite. Two lines, zero cost on the green side.
+	setTimeLimit(elapsed = 60, transient = TRUE)
+	on.exit(setTimeLimit(), add = TRUE)
+
 	res <- genCoefsCore(
 		G = 3,
 		T = 5,

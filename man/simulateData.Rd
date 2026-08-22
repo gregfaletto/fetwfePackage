@@ -18,7 +18,12 @@ simulateData(
 \item{coefs_obj}{An object of class \code{"FETWFE_coefs"} containing the coefficient vector
 and simulation parameters.}
 
-\item{N}{Integer. Number of units in the panel.}
+\item{N}{Integer. Number of units in the panel. Units are allocated among
+the \code{G + 1} groups by a retry that is bounded at 1,000,000 attempts; an
+\code{N} at or very near the smallest admissible size (\code{G + 1}, or
+\code{(G + 1) * (d + 1)} when \code{guarantee_rank_condition = TRUE}) can exhaust
+that budget and error rather than returning. Raising \code{N} is the fix, and
+the error says so.}
 
 \item{sig_eps_sq}{Numeric. Variance of the idiosyncratic (observation-level) noise.}
 

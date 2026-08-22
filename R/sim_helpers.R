@@ -367,10 +367,21 @@ genAssignments <- function(N, G, guarantee_rank_condition = FALSE, d = NA) {
 				# substituted into `%s` below, not part of a format string, and
 				# sprintf() does not re-scan substituted arguments -- so a `%%`
 				# here would reach the user literally as `25%%`. Every other
-				# `%%` in R/ sits in a format string, where doubling is correct.
+				# `%%` in R/ is either inside a format string (where doubling
+				# is correct) or the modulo operator (R/debiased_att.R:479,
+				# where it is neither); this one is the only argument-position
+				# case.
+				#
+				# The headroom figure is deliberately hedged. A 25% larger N
+				# empties the retry budget at G <= 10 (measured: E[draws] falls
+				# from 1e5-1e7 to under 200), but NOT at larger G -- at
+				# G = 25, d = 1 a 25% bump still needs ~6e5 to 2.4e6 draws, so
+				# two of three seeds land back on the cap. Do not restore a
+				# flat "25% is enough": it is false exactly where the cap
+				# actually fires.
 				suggestion <- paste0(
-					"Try a larger N -- increasing N by about 25% is ",
-					"typically enough -- or set ",
+					"Try a larger N -- 25% more is usually enough at small G, ",
+					"and the headroom needed grows with G -- or set ",
 					"guarantee_rank_condition = FALSE."
 				)
 			} else {
@@ -385,9 +396,11 @@ genAssignments <- function(N, G, guarantee_rank_condition = FALSE, d = NA) {
 					# otherwise exhaust the cap and then die on `invalid format
 					# '%d'`, replacing a hang with a different cryptic error.
 					# `%d` is right for max_tries alone, which is an integer
-					# literal we control; keep its `L` suffix, since
-					# sprintf("%s", 1000000) renders `1e+06` and would take the
-					# `in 1000000 attempts` literal down with it.
+					# literal we control. Keep its `L` suffix -- `%d` does not
+					# need it today (sprintf("%d", 1000000) on a double is
+					# "1000000"), but sprintf("%s", 1000000) renders `1e+06`,
+					# so a later switch of this one field to `%s` would take
+					# the `in 1000000 attempts` literal down with it.
 					paste0(
 						"Could not draw cohort assignments giving every one ",
 						"of the %s groups %s in %d attempts, at ",
