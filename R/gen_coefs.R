@@ -109,7 +109,9 @@
 #'   corresponding to covariate main effects and interactions are included in \code{beta}.
 #' @param density Numeric in (0,1]. The probability that any given entry in the initial
 #'   coefficient vector \code{theta} is nonzero. \code{density = 1} gives a fully dense
-#'   (non-sparse) coefficient vector.
+#'   (non-sparse) coefficient vector. A \code{density} so small that an all-zero draw is
+#'   near-certain is rejected rather than retried forever: the coefficient draw is retried
+#'   at most 10,000 times and then errors.
 #' @param eff_size Numeric. The magnitude used to scale nonzero entries in \code{theta}. Each
 #'   nonzero entry is set to \code{eff_size} or \code{-eff_size} (with a 60 percent chance for a
 #'   positive value).
@@ -794,7 +796,9 @@ getTes <- function(coefs_obj, distribution = "gaussian") {
 #' corresponding to covariate main effects and interactions are included in \code{beta}.
 #' @param density Numeric in (0,1]. The probability that any given entry in the initial
 #' coefficient vector \code{theta} is nonzero. \code{density = 1} gives a fully dense
-#' (non-sparse) coefficient vector.
+#' (non-sparse) coefficient vector. A \code{density} so small that an all-zero draw is
+#' near-certain is rejected rather than retried forever: the coefficient draw is retried
+#' at most 10,000 times and then errors.
 #' @param eff_size Numeric. The magnitude used to scale nonzero entries in \code{theta}. Each
 #' nonzero entry is set to \code{eff_size} or \code{-eff_size} (with a 60 percent chance for a
 #' positive value).
@@ -936,9 +940,37 @@ genCoefsCore <- function(
 		#      line, re-drawn on an all-zero result, then the rfunc sign draw whose
 		#      length depends on it) and hence `theta`/`beta` are byte-identical to
 		#      pre-#332 behavior. ----
-		# Make sure at least one feature is selected
+		# Make sure at least one feature is selected. The retry is rejection
+		# sampling and terminates with probability 1, but the expected number of
+		# attempts is 1 / (1 - (1 - density)^p), which grows without bound as
+		# `density` approaches 0 -- so a legal-but-degenerate `density` (e.g.
+		# 1e-300, which passes .validate_gen_coefs_scalars()) would otherwise
+		# spin forever with no diagnostic (#436). Cap the attempts and fail with
+		# an actionable message instead. The cap bounds how many times the draw
+		# below is repeated; it does not change the draw, so the RNG stream --
+		# and hence `theta`/`beta` -- stays byte-identical for every input that
+		# terminates today.
+		max_tries <- 10000L
+		tries <- 0L
 		pass_condition <- FALSE
 		while (!pass_condition) {
+			tries <- tries + 1L
+			if (tries > max_tries) {
+				stop(
+					sprintf(
+						paste0(
+							"Could not draw a coefficient vector with at least ",
+							"one nonzero entry in %d attempts: no draw of %d ",
+							"Bernoulli(density) coefficients contained a nonzero ",
+							"entry at density = %g. Try a larger `density`."
+						),
+						max_tries,
+						p,
+						density
+					),
+					call. = FALSE
+				)
+			}
 			theta_inds <- which(as.logical(rbinom(
 				n = p,
 				size = 1,
@@ -1198,8 +1230,25 @@ getActualCohortTes <- function(G, first_inds, treat_inds, coefs, num_treats) {
 #' @keywords internal
 #' @noRd
 .validate_gen_coefs_scalars <- function(T, G, d, density, eff_size) {
+	# The `is.na()` clause in each block below closes #436's second hole:
+	# NA_real_, NA_integer_ and NaN pass `is.numeric()`. For `T`, `G`, `d` and
+	# `density` that meant the comparison which follows evaluated to NA and
+	# `if (NA)` raised R's own `missing value where TRUE/FALSE needed` instead
+	# of the block's message. `eff_size` failed DIFFERENTLY and is worth calling
+	# out, because the obvious one-sentence summary is wrong for it: its check
+	# has no comparison at all, so a missing value passed validation outright
+	# and died later in the `beta` assembly on
+	# `all(!is.na(beta[...])) is not TRUE` (measured). Either way no wrong
+	# answer was ever returned -- only a cryptic message.
+	# (Bare `NA` is logical, so `is.numeric()` already caught it.) EACH CLAUSE
+	# MUST SIT AFTER ITS `length(x) != 1` CLAUSE: `||` errors on a length-2
+	# operand under this package's R (>= 4.4.0) floor, so `is.na()` first turns
+	# a length-2 fixture into `'length = 2' in coercion to 'logical(1)'` --
+	# a different, worse error (measured). Placing it before the comparisons is
+	# for readability only; `NA || TRUE` is TRUE, so it would also work last.
+
 	# Check that T is a numeric scalar and at least 2.
-	if (!is.numeric(T) || length(T) != 1 || T < 2) {
+	if (!is.numeric(T) || length(T) != 1 || is.na(T) || T < 2) {
 		stop(
 			"T must be a numeric value greater than or equal to 2",
 			call. = FALSE
@@ -1207,7 +1256,7 @@ getActualCohortTes <- function(G, first_inds, treat_inds, coefs, num_treats) {
 	}
 
 	# Check that G is a numeric scalar and at least 1.
-	if (!is.numeric(G) || length(G) != 1 || G < 1) {
+	if (!is.numeric(G) || length(G) != 1 || is.na(G) || G < 1) {
 		stop(
 			"G must be a numeric value greater than or equal to 1 (at least one treated cohort)",
 			call. = FALSE
@@ -1220,7 +1269,7 @@ getActualCohortTes <- function(G, first_inds, treat_inds, coefs, num_treats) {
 	}
 
 	# Check that d is a numeric scalar and is non-negative.
-	if (!is.numeric(d) || length(d) != 1 || d < 0) {
+	if (!is.numeric(d) || length(d) != 1 || is.na(d) || d < 0) {
 		stop("d must be a non-negative numeric value", call. = FALSE)
 	}
 
@@ -1228,6 +1277,7 @@ getActualCohortTes <- function(G, first_inds, treat_inds, coefs, num_treats) {
 	if (
 		!is.numeric(density) ||
 			length(density) != 1 ||
+			is.na(density) ||
 			density <= 0 ||
 			density > 1
 	) {
@@ -1238,7 +1288,7 @@ getActualCohortTes <- function(G, first_inds, treat_inds, coefs, num_treats) {
 	}
 
 	# Check that eff_size is numeric.
-	if (!is.numeric(eff_size) || length(eff_size) != 1) {
+	if (!is.numeric(eff_size) || length(eff_size) != 1 || is.na(eff_size)) {
 		stop("eff_size must be a numeric value", call. = FALSE)
 	}
 

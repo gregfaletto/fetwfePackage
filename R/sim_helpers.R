@@ -313,7 +313,10 @@ genCohortTimeFE <- function(N, T, G, d, guarantee_rank_condition = FALSE) {
 #' Generate Random Cohort Assignments
 #'
 #' Assigns N units to G+1 groups (G treated cohorts + 1 never-treated group)
-#' ensuring each group has at least one unit.
+#' ensuring each group has at least one unit. The draw is repeated until every
+#' group clears its bar; that retry is bounded at 1,000,000 attempts, after
+#' which the function errors with a message naming `N`, `G`, the bar and the
+#' attempt count rather than spinning forever (#436).
 #'
 #' @param N Integer. Total number of units to assign.
 #' @param G Integer. Number of treated cohorts.
@@ -334,8 +337,85 @@ genCohortTimeFE <- function(N, T, G, d, guarantee_rank_condition = FALSE) {
 genAssignments <- function(N, G, guarantee_rank_condition = FALSE, d = NA) {
 	# Make sure at least one observation in each cohort
 	stopifnot(N >= G + 1)
+	# The retry below is rejection sampling. The callers' assertions
+	# (`N >= G + 1`, and `N >= (G + 1) * (d + 1)` under
+	# guarantee_rank_condition) guarantee only that the bar is ACHIEVABLE, not
+	# that it is achievable in practice: at N = G + 1 every group must receive
+	# exactly one unit, so P(success) = (G+1)! / (G+1)^(G+1), which is 4.8e-13
+	# at G = 30. Both floors are reachable from a plain simulateData() call, and
+	# both used to spin forever with no diagnostic (#436). Cap the attempts and
+	# fail with a message naming N, G, the bar, and the escape -- a ~25% larger
+	# N takes E[draws] from 1e5-1e7 down to under 200 everywhere it was
+	# measured. The cap bounds how many times the draw below is repeated; it
+	# does not change the draw, so the simulation stream is unmoved for every
+	# input that terminates today.
+	max_tries <- 1000000L
+	tries <- 0L
 	pass_condition <- FALSE
 	while (!pass_condition) {
+		tries <- tries + 1L
+		if (tries > max_tries) {
+			if (guarantee_rank_condition) {
+				# Render the NUMBER, never the symbolic `d + 1`: two blocks in
+				# tests/testthat/test-simulate-data-highdim-293.R match the bare
+				# pattern "d \\+ 1" to prove the callers' up-front
+				# stopifnot(N >= (G + 1) * (d + 1)) fired, and the symbolic form
+				# would match this message too -- silently converting them from
+				# "the guard fired" into "either the guard or the cap fired".
+				bar_desc <- sprintf("at least %s units", d + 1)
+				# ONE percent sign, not two. `suggestion` is an ARGUMENT
+				# substituted into `%s` below, not part of a format string, and
+				# sprintf() does not re-scan substituted arguments -- so a `%%`
+				# here would reach the user literally as `25%%`. Every other
+				# `%%` in R/ is either inside a format string (where doubling
+				# is correct) or the modulo operator (R/debiased_att.R:479,
+				# where it is neither); this one is the only argument-position
+				# case.
+				#
+				# The headroom figure is deliberately hedged. A 25% larger N
+				# empties the retry budget at G <= 10 (measured: E[draws] falls
+				# from 1e5-1e7 to under 200), but NOT at larger G -- at
+				# G = 25, d = 1 a 25% bump still needs ~6e5 to 2.4e6 draws, so
+				# two of three seeds land back on the cap. Do not restore a
+				# flat "25% is enough": it is false exactly where the cap
+				# actually fires.
+				suggestion <- paste0(
+					"Try a larger N -- 25% more is usually enough at small G, ",
+					"and the headroom needed grows with G -- or set ",
+					"guarantee_rank_condition = FALSE."
+				)
+			} else {
+				bar_desc <- "at least one unit"
+				suggestion <- "Try a larger N."
+			}
+			stop(
+				sprintf(
+					# `%s` for N, G, G + 1 and d + 1: none of them is
+					# guaranteed integral, and sprintf("%d", 31.5) is an error
+					# -- reachable from simulateData(c1, N = 31.5), which would
+					# otherwise exhaust the cap and then die on `invalid format
+					# '%d'`, replacing a hang with a different cryptic error.
+					# `%d` is right for max_tries alone, which is an integer
+					# literal we control. Keep its `L` suffix -- `%d` does not
+					# need it today (sprintf("%d", 1000000) on a double is
+					# "1000000"), but sprintf("%s", 1000000) renders `1e+06`,
+					# so a later switch of this one field to `%s` would take
+					# the `in 1000000 attempts` literal down with it.
+					paste0(
+						"Could not draw cohort assignments giving every one ",
+						"of the %s groups %s in %d attempts, at ",
+						"N = %s and G = %s. %s"
+					),
+					G + 1,
+					bar_desc,
+					max_tries,
+					N,
+					G,
+					suggestion
+				),
+				call. = FALSE
+			)
+		}
 		assignments <- rmultinom(
 			n = 1,
 			size = N,

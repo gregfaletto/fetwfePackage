@@ -1,12 +1,17 @@
-# Issue #429 item 9: all SIXTEEN atomic conditions of
-# .validate_gen_coefs_scalars() (R/gen_coefs.R:1200-1246), through BOTH public
-# doors.
+# Issue #429 item 9: all TWENTY-ONE atomic conditions of
+# .validate_gen_coefs_scalars() -- find it by searching R/gen_coefs.R for
+# `.validate_gen_coefs_scalars <- function`; the line range this header used to
+# quote went stale the first time anything above it moved -- through BOTH
+# public doors.
 #
 # The validator is the single-sourced scalar gate that #401 folded out of
-# genCoefs() and genCoefsCore(). Ten of its sixteen atomic conditions had no
-# message-anchored test, and the whole `G` message literal was unpinned, so
-# weakening most of them was invisible to the two files that claim to cover this
-# surface.
+# genCoefs() and genCoefsCore(). At the time, ten of the sixteen atomic
+# conditions it then had carried no message-anchored test, and the whole `G`
+# message literal was unpinned, so weakening most of them was invisible to the
+# two files that claim to cover this surface. #436 later added one condition
+# (`is.na()`) to each of the five blocks, taking the count to twenty-one. It
+# is not the fifth condition in each: it lands fourth in `T`, `G` and `d`,
+# fifth in `density`, and third in `eff_size`.
 #
 # Each cell asserts three things, and all three are needed:
 #   (1) the error message contains the condition's own literal, `fixed = TRUE`;
@@ -16,11 +21,11 @@
 #
 # WHY THE MESSAGE LITERAL IS WHAT CARRIES THE POWER, not expect_error() alone.
 # Both doors carry THREE consecutive redundant backstops --
-# `stopifnot(G >= 1); stopifnot(T >= 2); stopifnot(G <= T - 1)` at
-# R/gen_coefs.R:474-476 and :918-920 -- so three of the sixteen cells (G < 1,
-# T < 2, G > T - 1) error SOMEWHERE regardless of what the validator does. A
-# bare expect_error() on those would be satisfied by the backstop and the
-# mutant would walk.
+# `stopifnot(G >= 1); stopifnot(T >= 2); stopifnot(G <= T - 1)`, in both
+# genCoefs() and genCoefsCore() -- so three of the twenty-one cells
+# (G < 1, T < 2, G > T - 1) error SOMEWHERE regardless of what the validator
+# does. A bare expect_error() on those would be satisfied by the backstop and
+# the mutant would walk.
 #
 # WHY THE FIXTURES CARRY NO OTHER ARGUMENTS. The two doors run their prologues
 # in different orders: genCoefsCore() runs .resolve_cohort_count_arg() (:898),
@@ -51,13 +56,16 @@
 .gcv429_cells <- list(
 	list(id = "T not numeric", over = list(T = "5"), lit = .gcv429_T_msg),
 	list(id = "T length != 1", over = list(T = c(5, 6)), lit = .gcv429_T_msg),
+	list(id = "T NA", over = list(T = NA_real_), lit = .gcv429_T_msg),
 	list(id = "T < 2", over = list(T = 1), lit = .gcv429_T_msg),
 	list(id = "G not numeric", over = list(G = "3"), lit = .gcv429_G_msg),
 	list(id = "G length != 1", over = list(G = c(2, 3)), lit = .gcv429_G_msg),
+	list(id = "G NA", over = list(G = NA_real_), lit = .gcv429_G_msg),
 	list(id = "G < 1", over = list(G = 0), lit = .gcv429_G_msg),
 	list(id = "G > T - 1", over = list(G = 5, T = 5), lit = .gcv429_GT_msg),
 	list(id = "d not numeric", over = list(d = "2"), lit = .gcv429_d_msg),
 	list(id = "d length != 1", over = list(d = c(1, 2)), lit = .gcv429_d_msg),
+	list(id = "d NA", over = list(d = NA_real_), lit = .gcv429_d_msg),
 	list(id = "d < 0", over = list(d = -1), lit = .gcv429_d_msg),
 	list(
 		id = "density not numeric",
@@ -67,6 +75,11 @@
 	list(
 		id = "density length != 1",
 		over = list(density = c(0.4, 0.5)),
+		lit = .gcv429_dens_msg
+	),
+	list(
+		id = "density NA",
+		over = list(density = NA_real_),
 		lit = .gcv429_dens_msg
 	),
 	list(id = "density <= 0", over = list(density = 0), lit = .gcv429_dens_msg),
@@ -84,12 +97,17 @@
 		id = "eff_size length != 1",
 		over = list(eff_size = c(1, 2)),
 		lit = .gcv429_eff_msg
+	),
+	list(
+		id = "eff_size NA",
+		over = list(eff_size = NA_real_),
+		lit = .gcv429_eff_msg
 	)
 )
 
 # ------------------------------------------------------------------------------
 # SANITY BLOCK, first in the file. Without it, a change that made EVERY input
-# fail would leave all sixteen negative cells green.
+# fail would leave all twenty-one negative cells green.
 # ------------------------------------------------------------------------------
 test_that("the unmodified base arguments succeed through both doors (#429 item 9)", {
 	gc <- do.call(genCoefs, .gcv429_base)
@@ -100,40 +118,20 @@ test_that("the unmodified base arguments succeed through both doors (#429 item 9
 	expect_identical(names(core), c("beta", "theta"))
 })
 
-test_that(".validate_gen_coefs_scalars() pins all sixteen conditions on both doors (#429 item 9)", {
-	expect_length(.gcv429_cells, 16L)
+test_that(".validate_gen_coefs_scalars() pins all twenty-one conditions on both doors (#429 item 9)", {
+	expect_length(.gcv429_cells, 21L)
 
-	# CAPTURE, DO NOT expect_error()-AND-REUSE. A cell whose mutation makes the
-	# call SUCCEED has to fail this loop cleanly rather than abort it.
-	# expect_error() on a non-erroring call records its failure and returns the
-	# expression's VALUE, and conditionMessage() on that value raises -- which
-	# ends the whole test_that() block and silently skips every later cell.
+	# CAPTURE, DO NOT expect_error()-AND-REUSE. The loop below reads each
+	# captured condition through `msg_of()` / `call_of()`, which live in
+	# helper-condition-accessors.R and degrade to a readable value instead of
+	# raising; that file explains why. What is specific to THIS file:
 	#
-	# That is reachable, not hypothetical: with `length(eff_size) != 1` dropped,
-	# genCoefs(G = 3, T = 5, d = 2, density = 0.5, eff_size = c(1, 2)) succeeds
-	# and returns a FETWFE_coefs object (measured). It is harmless today ONLY
-	# because that condition is cell 16 of 16 -- add a cell after it, or reorder
-	# the list, and dropping that one check would hide every cell downstream of
-	# it. The mutation battery would still show the row as detected, because the
-	# aborted block reports a failure either way.
-	#
-	# The two accessors degrade to a readable value instead of raising, so all
-	# five assertions per cell still run and a red cell names itself.
-	msg_of <- function(x) {
-		if (inherits(x, "condition")) {
-			conditionMessage(x)
-		} else {
-			paste0("<no error; returned ", class(x)[1], ">")
-		}
-	}
-	call_of <- function(x) {
-		if (inherits(x, "condition")) {
-			conditionCall(x)
-		} else {
-			quote(NO_ERROR_RAISED)
-		}
-	}
-
+	# The hazard is reachable, not hypothetical. With `length(eff_size) != 1`
+	# dropped, genCoefs(G = 3, T = 5, d = 2, density = 0.5, eff_size = c(1, 2))
+	# succeeds and returns a FETWFE_coefs object (measured). That used to be
+	# harmless because the condition was the last cell in the list; #436's
+	# `eff_size NA` cell now sits after it, so dropping that one check WOULD
+	# hide the cell downstream of it if the accessors raised.
 	for (cell in .gcv429_cells) {
 		args <- utils::modifyList(.gcv429_base, cell$over)
 

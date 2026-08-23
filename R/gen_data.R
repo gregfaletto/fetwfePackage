@@ -18,7 +18,12 @@
 #'
 #' @param coefs_obj An object of class \code{"FETWFE_coefs"} containing the coefficient vector
 #' and simulation parameters.
-#' @param N Integer. Number of units in the panel.
+#' @param N Integer. Number of units in the panel. Units are allocated among
+#'   the `G + 1` groups by a retry that is bounded at 1,000,000 attempts; an
+#'   `N` at or very near the smallest admissible size (`G + 1`, or
+#'   `(G + 1) * (d + 1)` when `guarantee_rank_condition = TRUE`) can exhaust
+#'   that budget and error rather than returning. Raising `N` is the fix, and
+#'   the error says so.
 #' @param sig_eps_sq Numeric. Variance of the idiosyncratic (observation-level) noise.
 #' @param sig_eps_c_sq Numeric. Variance of the unit-level random effects.
 #'   Must be non-negative; `0` is allowed (yields a panel with no unit-level
@@ -258,7 +263,12 @@ simulateData <- function(
 #'
 #' See the simulation studies section of Faletto (2025) for details.
 #'
-#' @param N Integer. Number of units in the panel.
+#' @param N Integer. Number of units in the panel. Units are allocated among
+#'   the `G + 1` groups by a retry that is bounded at 1,000,000 attempts; an
+#'   `N` at or very near the smallest admissible size (`G + 1`, or
+#'   `(G + 1) * (d + 1)` when `guarantee_rank_condition = TRUE`) can exhaust
+#'   that budget and error rather than returning. Raising `N` is the fix, and
+#'   the error says so.
 #' @param T Integer. Number of time periods.
 #' @param G Integer. Number of treated cohorts (with treatment starting in periods 2 to T).
 #' @param d Integer. Number of time-invariant covariates.
