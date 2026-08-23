@@ -49,7 +49,9 @@ genCoefsCore(
 
   Numeric in (0,1\]. The probability that any given entry in the initial
   coefficient vector `theta` is nonzero. `density = 1` gives a fully
-  dense (non-sparse) coefficient vector.
+  dense (non-sparse) coefficient vector. A `density` so small that an
+  all-zero draw is near-certain is rejected rather than retried forever:
+  the coefficient draw is retried at most 10,000 times and then errors.
 
 - eff_size:
 

@@ -93,7 +93,12 @@ and simulation parameters.</p></dd>
 
 
 <dt id="arg-n">N<a class="anchor" aria-label="anchor" href="#arg-n"></a></dt>
-<dd><p>Integer. Number of units in the panel.</p></dd>
+<dd><p>Integer. Number of units in the panel. Units are allocated among
+the <code>G + 1</code> groups by a retry that is bounded at 1,000,000 attempts; an
+<code>N</code> at or very near the smallest admissible size (<code>G + 1</code>, or
+<code>(G + 1) * (d + 1)</code> when <code>guarantee_rank_condition = TRUE</code>) can exhaust
+that budget and error rather than returning. Raising <code>N</code> is the fix, and
+the error says so.</p></dd>
 
 
 <dt id="arg-sig-eps-sq">sig_eps_sq<a class="anchor" aria-label="anchor" href="#arg-sig-eps-sq"></a></dt>
