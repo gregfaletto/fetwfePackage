@@ -35,19 +35,54 @@
 	objs[vapply(objs, is.function, logical(1))]
 }
 
-# The deparsed body of every namespace function, as a named list of character
-# vectors. `control` is pinned rather than left to the default so the rendering
-# stays deterministic across R versions; `useSource` is deliberately absent, so
-# comments never appear in the output even when a `srcref` is attached (which
-# it is under `options(keep.source.pkgs = TRUE)` plus `load_all()`). A function
-# with a `NULL` body contributes `character(0)`.
-.ns_deparsed_bodies <- function(pkg = "fetwfe") {
-	lapply(.ns_functions(pkg), function(f) {
-		if (is.null(body(f))) {
-			character(0)
-		} else {
-			deparse(body(f), control = c("keepInteger", "keepNA"))
+# Every code expression belonging to a function: its body, plus each formal's
+# default expression.
+#
+# `body()` ALONE IS NOT THE FUNCTION'S CODE. A formal default is arbitrary R --
+# `f <- function(x, S, v = max(as.numeric(t(x) %*% S %*% x), 0))` computes a
+# whole quadratic form and `body(f)` cannot see a character of it. A guardrail
+# that read the file as raw text saw defaults for free; one that reads `body()`
+# does not, and that difference is a real loss of coverage rather than a
+# theoretical one -- it was measured against this package's previous
+# source-text guardrail, which caught exactly this mutation while a
+# `body()`-only walk passed it.
+#
+# A formal with no default is the empty symbol; it is tested INLINE, never
+# bound to a local, for the reason `.ns_walk_ast()` documents below.
+.ns_code_exprs <- function(f) {
+	out <- list()
+	fn_body <- body(f)
+	if (!is.null(fn_body)) {
+		out[[length(out) + 1L]] <- fn_body
+	}
+	fmls <- formals(f)
+	for (i in seq_along(fmls)) {
+		if (identical(fmls[[i]], quote(expr = ))) {
+			next
 		}
+		out[[length(out) + 1L]] <- fmls[[i]]
+	}
+	out
+}
+
+# The deparsed code of every namespace function -- body AND formal defaults,
+# per `.ns_code_exprs()` -- as a named list of character vectors. `control` is
+# pinned rather than left to the default so the rendering stays deterministic
+# across R versions; `useSource` is deliberately absent, so comments never
+# appear in the output even when a `srcref` is attached (which it is under
+# `options(keep.source.pkgs = TRUE)` plus `load_all()`). A function with no
+# body and no defaulted formal contributes `character(0)`.
+.ns_deparsed_code <- function(pkg = "fetwfe") {
+	lapply(.ns_functions(pkg), function(f) {
+		exprs <- .ns_code_exprs(f)
+		if (length(exprs) == 0L) {
+			return(character(0))
+		}
+		unlist(lapply(
+			exprs,
+			deparse,
+			control = c("keepInteger", "keepNA")
+		))
 	})
 }
 

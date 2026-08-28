@@ -50,42 +50,55 @@ library(fetwfe)
 #     built.
 #   * A1 rejects renaming `sandwich_full` inside the exempt function, and
 #     rejects an alias later reassigned before an unrelated matrix product.
-#   * A4 rejects consolidating the floor call into a wrapper helper, and
-#     rejects a legitimately added, correctly floored site.
+#   * A4 and A6 reject a new floored site, or sandwich-touching code, added as
+#     a NEW FUNCTION. Adding either INSIDE a function already in the expected
+#     sets is invisible to both -- they pin function names, not call counts --
+#     so the red-on-a-legitimate-addition property holds for new functions
+#     only, which is narrower than "any new site".
 #   * A6 rejects any consolidation refactor that moves sandwich-touching code
 #     between functions.
-# The last two are the design: under a subset rule a floor added tomorrow
-# never enters the expected set, so its removal the day after is invisible
-# forever. Exact equality forces the set to be updated at the moment of
-# addition, which is the only moment a human is looking.
+# Exact set equality rather than a subset rule is what buys the first of those:
+# under a subset rule a floor added tomorrow never enters the expected set, so
+# its removal the day after is invisible forever. Exact equality forces the set
+# to be updated at the moment a new function appears, which is a moment a human
+# is looking.
 #
 # KNOWN BLIND SPOTS. These assertions are lexical, and a lexical guardrail has
-# a boundary. Recorded here because the block this one replaced shipped a
-# coverage claim it did not have -- "the five sites", and an `any(grepl())`
-# check advertised as catching duplicate labels, which it could not -- and
-# that is the failure mode #463 is. What escapes:
+# a boundary. Recorded because the block this one replaced shipped a coverage
+# claim it did not have -- "the five sites", and an `any(grepl())` check
+# advertised as catching duplicate labels, which it could not -- and that is
+# the failure #463 is. Do not let this list say more than it can back.
 #   * A NEW unfloored form in code that never spells `sandwich_full`, when the
 #     function it is added to is ALREADY in the expected sets. The realistic
 #     spelling is a general-purpose helper whose formal is named `S` or `M`,
 #     called from a function already listed -- the #344 consolidation shape.
 #     A1 cannot see it (`S` is not an alias; the alias walk resolves
-#     symbol-to-symbol assignment within one body only) and A6's set does not
-#     move. Adding such a helper as a NEW function does fire A6.
+#     symbol-to-symbol assignment only) and A6's set does not move. Adding
+#     such a helper as a NEW function does fire A6.
 #   * An alias built by anything other than symbol-to-symbol assignment
-#     INSIDE an already-listed function: `sw <- sandwich_full[keep, keep]`,
-#     a list element, `assign()`. As a new function these fire A6; in place
-#     they do not.
+#     INSIDE an already-listed function: `sw <- sandwich_full[keep, keep]`, a
+#     list element, `assign()`. As new functions these fire A6; in place they
+#     do not.
 #   * A scalar form added inside `.assemble_joint_cov_var1()`, which inherits
-#     that function's exemption. This is the function-granular limitation
-#     noted above, stated again because it is a false NEGATIVE, not a false
-#     positive.
-#   * Anything outside a function body: a formal's default expression, and
-#     the namespace's non-function objects. Measured 2026-08-27: none of them
-#     mentions `sandwich_full`.
+#     that function's exemption -- the function-granular limitation noted
+#     above, repeated here because it is a false NEGATIVE.
+#   * A7b reaches EXACTLY ONE FRAME. `suppressWarnings()` around a call to a
+#     floor-calling function is caught; around a call two frames up -- e.g.
+#     `suppressWarnings(.call_te(...))`, which reaches `.compute_att_var1()`
+#     through a by-name dispatch -- it is not. Closing that needs a call
+#     graph, not an ancestor list.
 # Closing the first two needs dataflow across function boundaries, which is a
-# large amount of test machinery for a shape that does not occur in the tree.
-# The old guardrail was equally blind to all of them, so nothing regressed --
-# but a reader should not take this file for more than it is.
+# large amount of test machinery for shapes that do not occur in the tree.
+#
+# ON REGRESSION, PRECISELY. The block this replaces read the two files it knew
+# about as raw TEXT, so it saw formal defaults for free; a `body()`-only walk
+# does not, and that WAS a real loss until `.ns_code_exprs()` closed it by
+# scanning defaults alongside bodies. It is closed: a bare
+# `max(... sandwich_full ..., 0)` in a formal default fires A1, A3 and A6,
+# where the old block caught it once. Every other blind spot above was one the
+# old block shared. Measured, not assumed -- and stated this way because an
+# earlier draft of this file asserted "nothing regressed" while the formals
+# gap was open and listed one line above.
 # ------------------------------------------------------------------------------
 
 # --- Unit tests on the helper -------------------------------------------------
@@ -210,6 +223,18 @@ test_that(".floor_cluster_quad respects custom thresholds", {
 	"withCallingHandlers"
 )
 
+# Calls that may sit between a `.floor_cluster_quad()` call and the quadratic
+# form it floors. Anything else changes the value the floor is asked to judge.
+# `abs()` is the case that motivated this: `.floor_cluster_quad(abs(form), ...)`
+# leaves the call, the label, the arity and both inventories intact while making
+# the diagnostic unable to fire at all -- and `max(abs(q), 0)` is `abs(q)`, so a
+# genuinely negative quadratic form comes back POSITIVE rather than floored to
+# zero. That inflates a standard error instead of zeroing it, which is a wrong
+# answer rather than a missing warning, and it is the most natural way in:
+# wrapping in `abs()` is what somebody reaches for to silence a
+# negative-variance complaint.
+.clf_transparent <- c("as.numeric", "drop", "(")
+
 # Is any ancestor node a call to one of `fn`?
 .clf_any_ancestor <- function(ancestors, fn) {
 	for (a in ancestors) {
@@ -218,6 +243,43 @@ test_that(".floor_cluster_quad respects custom thresholds", {
 		}
 	}
 	FALSE
+}
+
+# Index of the INNERMOST `.floor_cluster_quad()` call among `ancestors`
+# (outermost-first), or NA if the form is not floored at all.
+.clf_floor_ancestor_index <- function(ancestors) {
+	hit <- NA_integer_
+	for (i in seq_along(ancestors)) {
+		if (.ns_is_call_to(ancestors[[i]], ".floor_cluster_quad")) {
+			hit <- i
+		}
+	}
+	hit
+}
+
+# Does the quadratic form reach its floor call UNALTERED? Two conditions, both
+# needed: every node between the floor call and the form is a transparent
+# wrapper, and the chain hangs off the floor call's FIRST argument (element 2)
+# rather than off the label or a threshold. Returns TRUE for an unfloored form
+# so that this predicate reports only the sanitizer defect -- A1 already owns
+# "not floored at all".
+.clf_reaches_floor_cleanly <- function(ancestors, node, floor_idx) {
+	if (is.na(floor_idx)) {
+		return(TRUE)
+	}
+	floor_call <- ancestors[[floor_idx]]
+	between <- if (floor_idx < length(ancestors)) {
+		ancestors[(floor_idx + 1L):length(ancestors)]
+	} else {
+		list()
+	}
+	for (a in between) {
+		if (!.ns_is_call_to(a, .clf_transparent)) {
+			return(FALSE)
+		}
+	}
+	chain_head <- if (length(between) > 0L) between[[1]] else node
+	length(floor_call) >= 2L && identical(floor_call[[2]], chain_head)
 }
 
 # The symbols inside one function body that hold the cluster-robust sandwich:
@@ -233,21 +295,23 @@ test_that(".floor_cluster_quad respects custom thresholds", {
 # deliberate -- a false positive puts a human in the loop, a false negative is
 # a silently unfloored standard error. It is not dataflow analysis and does
 # not try to be.
-.clf_alias_symbols <- function(fn_body) {
+.clf_alias_symbols <- function(code_exprs) {
 	aliases <- "sandwich_full"
 	repeat {
 		found <- aliases
-		.ns_walk_ast(fn_body, function(node, ancestors) {
-			if (
-				.ns_is_call_to(node, c("<-", "=", "<<-")) &&
-					length(node) == 3L &&
-					is.symbol(node[[2]]) &&
-					is.symbol(node[[3]]) &&
-					as.character(node[[3]]) %in% found
-			) {
-				found <<- union(found, as.character(node[[2]]))
-			}
-		})
+		for (code in code_exprs) {
+			.ns_walk_ast(code, function(node, ancestors) {
+				if (
+					.ns_is_call_to(node, c("<-", "=", "<<-")) &&
+						length(node) == 3L &&
+						is.symbol(node[[2]]) &&
+						is.symbol(node[[3]]) &&
+						as.character(node[[3]]) %in% found
+				) {
+					found <<- union(found, as.character(node[[2]]))
+				}
+			})
+		}
 		if (setequal(found, aliases)) {
 			break
 		}
@@ -270,30 +334,32 @@ test_that(".floor_cluster_quad respects custom thresholds", {
 	sites <- list()
 	floor_calls <- list()
 	for (nm in names(fns)) {
-		fn_body <- body(fns[[nm]])
-		if (is.null(fn_body)) {
+		code_exprs <- .ns_code_exprs(fns[[nm]])
+		if (length(code_exprs) == 0L) {
 			next
 		}
-		aliases <- .clf_alias_symbols(fn_body)
+		aliases <- .clf_alias_symbols(code_exprs)
 		quad_nodes <- list()
 		call_nodes <- list()
-		.ns_walk_ast(fn_body, function(node, ancestors) {
-			if (
-				.ns_is_call_to(node, .clf_quad_ops) &&
-					.ns_subtree_has_symbol(node, aliases)
-			) {
-				quad_nodes[[length(quad_nodes) + 1L]] <<- list(
-					node = node,
-					ancestors = ancestors
-				)
-			}
-			if (.ns_is_call_to(node, ".floor_cluster_quad")) {
-				call_nodes[[length(call_nodes) + 1L]] <<- list(
-					node = node,
-					ancestors = ancestors
-				)
-			}
-		})
+		for (code in code_exprs) {
+			.ns_walk_ast(code, function(node, ancestors) {
+				if (
+					.ns_is_call_to(node, .clf_quad_ops) &&
+						.ns_subtree_has_symbol(node, aliases)
+				) {
+					quad_nodes[[length(quad_nodes) + 1L]] <<- list(
+						node = node,
+						ancestors = ancestors
+					)
+				}
+				if (.ns_is_call_to(node, ".floor_cluster_quad")) {
+					call_nodes[[length(call_nodes) + 1L]] <<- list(
+						node = node,
+						ancestors = ancestors
+					)
+				}
+			})
+		}
 		for (quad in quad_nodes) {
 			n_anc <- length(quad$ancestors)
 			parent <- if (n_anc > 0L) quad$ancestors[[n_anc]] else NULL
@@ -304,11 +370,14 @@ test_that(".floor_cluster_quad respects custom thresholds", {
 			) {
 				next
 			}
+			floor_idx <- .clf_floor_ancestor_index(quad$ancestors)
 			sites[[length(sites) + 1L]] <- list(
 				fn = nm,
-				floored = .clf_any_ancestor(
+				floored = !is.na(floor_idx),
+				judged = .clf_reaches_floor_cleanly(
 					quad$ancestors,
-					".floor_cluster_quad"
+					quad$node,
+					floor_idx
 				),
 				text = paste(deparse(quad$node), collapse = " ")
 			)
@@ -328,7 +397,7 @@ test_that(".floor_cluster_quad respects custom thresholds", {
 }
 
 test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
-	bodies <- .ns_deparsed_bodies("fetwfe")
+	bodies <- .ns_deparsed_code("fetwfe")
 	fns <- .ns_functions("fetwfe")
 	scanned <- .clf_scan(fns)
 
@@ -351,6 +420,23 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 		"fn"
 	)))
 	expect_setequal(unfloored, expected_unfloored)
+
+	# --- A8: the floored form reaches its floor UNALTERED ------------------
+	# A1 asks whether a form is floored; it cannot ask whether the floor is
+	# able to judge what it was handed. `.floor_cluster_quad(abs(form), ...)`
+	# satisfies A1, A4 and every inventory while guaranteeing the diagnostic
+	# never fires -- and it returns `abs(q)`, so a negative quadratic form is
+	# inflated rather than floored. Only `as.numeric()`, `drop()` and parens
+	# may sit between the floor call and the form, and the chain must hang
+	# off the floor call's first argument.
+	# A failure here may be a KNOWN FALSE-POSITIVE CLASS -- see the header.
+	sanitized <- sort(unique(vapply(
+		Filter(function(site) !site$judged, scanned$sites),
+		`[[`,
+		character(1),
+		"fn"
+	)))
+	expect_setequal(sanitized, character(0))
 
 	# --- A2: per-site label coverage, exactly once ------------------------
 	# Anchored with the surrounding double quotes: `deparse()` renders string
@@ -514,7 +600,7 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 })
 
 test_that("no call site neuters .floor_cluster_quad's diagnostic contract", {
-	bodies <- .ns_deparsed_bodies("fetwfe")
+	bodies <- .ns_deparsed_code("fetwfe")
 	scanned <- .clf_scan(.ns_functions("fetwfe"))
 
 	# Arity. Every call passes exactly two arguments. This is the
