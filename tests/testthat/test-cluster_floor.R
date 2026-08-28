@@ -301,7 +301,7 @@ test_that(".floor_cluster_quad respects custom thresholds", {
 
 test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 	bodies <- .ns_deparsed_bodies("fetwfe")
-	scan <- .clf_scan(.ns_functions("fetwfe"))
+	scanned <- .clf_scan(.ns_functions("fetwfe"))
 
 	# --- A1: the structural universal -------------------------------------
 	# Every collected cluster-sandwich quadratic form is floored in place,
@@ -315,7 +315,7 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 		".assemble_joint_cov_var1"
 	)
 	unfloored <- sort(unique(vapply(
-		Filter(function(s) !s$floored, scan$sites),
+		Filter(function(s) !s$floored, scanned$sites),
 		`[[`,
 		character(1),
 		"fn"
@@ -403,7 +403,7 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 		"getCohortATTsFinal"
 	)
 	floor_call_fns <- sort(unique(vapply(
-		scan$floor_calls,
+		scanned$floor_calls,
 		`[[`,
 		character(1),
 		"fn"
@@ -443,7 +443,7 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 
 	# --- A7: no condition suppression around a floor call -----------------
 	suppressed_fns <- sort(unique(vapply(
-		Filter(function(fc) fc$suppressed, scan$floor_calls),
+		Filter(function(fc) fc$suppressed, scanned$floor_calls),
 		`[[`,
 		character(1),
 		"fn"
@@ -453,7 +453,7 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 
 test_that("no call site neuters .floor_cluster_quad's diagnostic contract", {
 	bodies <- .ns_deparsed_bodies("fetwfe")
-	scan <- .clf_scan(.ns_functions("fetwfe"))
+	scanned <- .clf_scan(.ns_functions("fetwfe"))
 
 	# Arity. Every call passes exactly two arguments. This is the
 	# load-bearing one: a per-call-site threshold override spelled
@@ -463,7 +463,7 @@ test_that("no call site neuters .floor_cluster_quad's diagnostic contract", {
 	# The arity rule rejects both spellings and does not depend on the
 	# parameters keeping their current names.
 	bad_arity <- vapply(
-		Filter(function(fc) fc$nargs != 2L, scan$floor_calls),
+		Filter(function(fc) fc$nargs != 2L, scanned$floor_calls),
 		function(fc) paste0(fc$fn, " (", fc$nargs, " args)"),
 		character(1)
 	)
