@@ -40,10 +40,10 @@ library(fetwfe)
 # label assertion has no power at that site, and why the floor-call inventory
 # (A4) exists.
 #
-# KNOWN FALSE-POSITIVE CLASSES. Each is correct code that these assertions
-# reject on purpose; the resolution is always the same, a human looks and
-# either restores the expected shape or updates the literal expected set with
-# a reason:
+# KNOWN FALSE-POSITIVE CLASSES. Correct code these assertions reject on
+# purpose. The resolution is always the same: a human looks, and either
+# restores the expected shape or updates the literal expected set with a
+# reason. Every entry below was measured, not reasoned about.
 #   * A1 rejects a form hoisted into its own statement and floored on the next
 #     line -- the floor must be applied lexically AT the form. Following the
 #     value into a later floor call is dataflow analysis, deliberately not
@@ -54,51 +54,56 @@ library(fetwfe)
 #     a NEW FUNCTION. Adding either INSIDE a function already in the expected
 #     sets is invisible to both -- they pin function names, not call counts --
 #     so the red-on-a-legitimate-addition property holds for new functions
-#     only, which is narrower than "any new site".
-#   * A6 rejects any consolidation refactor that moves sandwich-touching code
-#     between functions.
-# Exact set equality rather than a subset rule is what buys the first of those:
-# under a subset rule a floor added tomorrow never enters the expected set, so
-# its removal the day after is invisible forever. Exact equality forces the set
-# to be updated at the moment a new function appears, which is a moment a human
-# is looking.
+#     only.
+#   * A6 rejects a consolidation refactor only when it moves sandwich-touching
+#     code TO OR FROM a function not already in the set. A move between two
+#     already-listed functions leaves the set unchanged and stays green.
+#   * A8 rejects any wrapper between the floor call and its form that is not
+#     in `.clf_transparent`. If a legitimate one appears, extend that vector
+#     rather than deleting the assertion.
+# Exact set equality rather than a subset rule is what buys the third of
+# those: under a subset rule a floor added tomorrow never enters the expected
+# set, so its removal the day after is invisible forever. Exact equality
+# forces the set to be updated at the moment a new function appears, which is
+# a moment a human is looking.
 #
 # KNOWN BLIND SPOTS. These assertions are lexical, and a lexical guardrail has
 # a boundary. Recorded because the block this one replaced shipped a coverage
 # claim it did not have -- "the five sites", and an `any(grepl())` check
 # advertised as catching duplicate labels, which it could not -- and that is
-# the failure #463 is. Do not let this list say more than it can back.
-#   * A NEW unfloored form in code that never spells `sandwich_full`, when the
-#     function it is added to is ALREADY in the expected sets. The realistic
-#     spelling is a general-purpose helper whose formal is named `S` or `M`,
-#     called from a function already listed -- the #344 consolidation shape.
-#     A1 cannot see it (`S` is not an alias; the alias walk resolves
-#     symbol-to-symbol assignment only) and A6's set does not move. Adding
-#     such a helper as a NEW function does fire A6.
-#   * An alias built by anything other than symbol-to-symbol assignment
-#     INSIDE an already-listed function: `sw <- sandwich_full[keep, keep]`, a
-#     list element, `assign()`. As new functions these fire A6; in place they
-#     do not.
+# the failure #463 is. Every entry was measured green on a mutant tree; do not
+# add one that was not.
+#   * An ADDITIONAL unfloored form inside an already-listed function, computed
+#     by a helper whose formal is named `S` or `M` rather than
+#     `sandwich_full`. A1 cannot see the arithmetic, A6's set does not move,
+#     and the function's own correct floor call satisfies A4 and A9.
+#     REPLACING a site this way is caught -- by A4 if the floor call goes with
+#     it, by A9 if a decoy floor call stays behind -- so it is specifically
+#     the additive case that escapes.
+#   * An alias built by anything other than symbol-to-symbol assignment INSIDE
+#     an already-listed function: `sw <- sandwich_full[keep, keep]`, a list
+#     element, `assign()`. As new functions these fire A6; in place they do
+#     not.
 #   * A scalar form added inside `.assemble_joint_cov_var1()`, which inherits
-#     that function's exemption -- the function-granular limitation noted
-#     above, repeated here because it is a false NEGATIVE.
+#     that function's exemption. The exemption is function-granular.
+#   * A8 judges the path from the floor call DOWN TO the form, not the form's
+#     operands: `t(psi) %*% abs(sandwich_full) %*% psi` is green.
 #   * A7b reaches EXACTLY ONE FRAME. `suppressWarnings()` around a call to a
 #     floor-calling function is caught; around a call two frames up -- e.g.
 #     `suppressWarnings(.call_te(...))`, which reaches `.compute_att_var1()`
-#     through a by-name dispatch -- it is not. Closing that needs a call
-#     graph, not an ancestor list.
+#     by name dispatch -- it is not. Closing that needs a call graph.
 # Closing the first two needs dataflow across function boundaries, which is a
 # large amount of test machinery for shapes that do not occur in the tree.
 #
 # ON REGRESSION, PRECISELY. The block this replaces read the two files it knew
 # about as raw TEXT, so it saw formal defaults for free; a `body()`-only walk
 # does not, and that WAS a real loss until `.ns_code_exprs()` closed it by
-# scanning defaults alongside bodies. It is closed: a bare
-# `max(... sandwich_full ..., 0)` in a formal default fires A1, A3 and A6,
-# where the old block caught it once. Every other blind spot above was one the
-# old block shared. Measured, not assumed -- and stated this way because an
-# earlier draft of this file asserted "nothing regressed" while the formals
-# gap was open and listed one line above.
+# scanning defaults alongside bodies. It is closed, and measured: a bare
+# `max(... sandwich_full ..., 0)` in a formal default fires A1 and A3, plus A6
+# when the function is not already in the sandwich set. Every other blind spot
+# above was one the old block shared. This paragraph is worded carefully
+# because an earlier draft of this file asserted "nothing regressed" while the
+# formals gap was open and documented in the same header.
 # ------------------------------------------------------------------------------
 
 # --- Unit tests on the helper -------------------------------------------------
@@ -233,7 +238,7 @@ test_that(".floor_cluster_quad respects custom thresholds", {
 # answer rather than a missing warning, and it is the most natural way in:
 # wrapping in `abs()` is what somebody reaches for to silence a
 # negative-variance complaint.
-.clf_transparent <- c("as.numeric", "drop", "(")
+.clf_transparent <- c("as.numeric", "drop", "(", "as.vector", "unname")
 
 # Is any ancestor node a call to one of `fn`?
 .clf_any_ancestor <- function(ancestors, fn) {
@@ -243,6 +248,30 @@ test_that(".floor_cluster_quad respects custom thresholds", {
 		}
 	}
 	FALSE
+}
+
+# The expression `.floor_cluster_quad()` is actually asked to floor, matched the
+# way R matches it: a named `q =` wins wherever it sits in source order,
+# otherwise the first positional argument. Reading `call[[2]]` instead would
+# reject `.floor_cluster_quad(site = "x", q = form)`, which is
+# behaviour-identical.
+.clf_floor_q_arg <- function(floor_call) {
+	args <- as.list(floor_call)[-1]
+	if (length(args) == 0L) {
+		return(NULL)
+	}
+	nms <- names(args)
+	if (is.null(nms)) {
+		nms <- rep("", length(args))
+	}
+	if ("q" %in% nms) {
+		return(args[[which(nms == "q")[1]]])
+	}
+	positional <- which(nms == "")
+	if (length(positional) == 0L) {
+		return(NULL)
+	}
+	args[[positional[1]]]
 }
 
 # Index of the INNERMOST `.floor_cluster_quad()` call among `ancestors`
@@ -279,7 +308,8 @@ test_that(".floor_cluster_quad respects custom thresholds", {
 		}
 	}
 	chain_head <- if (length(between) > 0L) between[[1]] else node
-	length(floor_call) >= 2L && identical(floor_call[[2]], chain_head)
+	q_arg <- .clf_floor_q_arg(floor_call)
+	!is.null(q_arg) && identical(q_arg, chain_head)
 }
 
 # The symbols inside one function body that hold the cluster-robust sandwich:
@@ -383,9 +413,22 @@ test_that(".floor_cluster_quad respects custom thresholds", {
 			)
 		}
 		for (cl in call_nodes) {
+			q_arg <- .clf_floor_q_arg(cl$node)
+			carries_form <- FALSE
+			if (!is.null(q_arg)) {
+				.ns_walk_ast(q_arg, function(node, ancestors) {
+					if (
+						.ns_is_call_to(node, .clf_quad_ops) &&
+							.ns_subtree_has_symbol(node, aliases)
+					) {
+						carries_form <<- TRUE
+					}
+				})
+			}
 			floor_calls[[length(floor_calls) + 1L]] <- list(
 				fn = nm,
 				nargs = length(cl$node) - 1L,
+				carries_form = carries_form,
 				suppressed = .clf_any_ancestor(
 					cl$ancestors,
 					.clf_suppressors
@@ -437,6 +480,24 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 		"fn"
 	)))
 	expect_setequal(sanitized, character(0))
+
+	# --- A9: every floor call is handed a real form (no decoys) ------------
+	# A8 asks whether a form reaches its floor unaltered. A9 asks the converse,
+	# and it is the converse that closes a COMPLETE revert: A4 and A2 are
+	# satisfied by a `.floor_cluster_quad()` call on ANY argument, a constant
+	# or an already-floored value included. So moving the arithmetic into a
+	# helper with a generic formal -- which A1 and A6 cannot see -- while
+	# leaving a decoy floor call behind keeps every other assertion green
+	# while the #139 diagnostic can never fire again. Measured: that mutation
+	# passed all eleven assertions and the whole suite before this one existed.
+	# A failure here may be a KNOWN FALSE-POSITIVE CLASS -- see the header.
+	decoys <- sort(unique(vapply(
+		Filter(function(fc) !fc$carries_form, scanned$floor_calls),
+		`[[`,
+		character(1),
+		"fn"
+	)))
+	expect_setequal(decoys, character(0))
 
 	# --- A2: per-site label coverage, exactly once ------------------------
 	# Anchored with the surrounding double quotes: `deparse()` renders string
@@ -490,11 +551,26 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 	# on a correct tree. Per-body scanning also lets the failure name the
 	# offending function.
 	bare_max_re <- "max\\(.{0,300}sandwich_full.{0,200}?,\\s*0\\)"
-	bare_max_fns <- names(bodies)[vapply(
-		bodies,
-		function(x) grepl(bare_max_re, paste(x, collapse = " "), perl = TRUE),
+	# Scanned per EXPRESSION, not per function: joining a body to its formal
+	# defaults with a space recreates, within one function, the same
+	# adjacency artifact that joining whole bodies created across functions.
+	bare_max_fns <- sort(names(fns)[vapply(
+		fns,
+		function(f) {
+			any(vapply(
+				.ns_code_exprs(f),
+				function(e) {
+					txt <- paste(
+						deparse(e, control = c("keepInteger", "keepNA")),
+						collapse = " "
+					)
+					grepl(bare_max_re, txt, perl = TRUE)
+				},
+				logical(1)
+			))
+		},
 		logical(1)
-	)]
+	)])
 	expect_setequal(bare_max_fns, character(0))
 
 	# --- A4: the floor-call inventory -------------------------------------
@@ -583,18 +659,16 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 	# that mutation leaves the suite fully green.
 	wrapped_callers <- character(0)
 	for (nm in names(fns)) {
-		fn_body <- body(fns[[nm]])
-		if (is.null(fn_body)) {
-			next
+		for (code in .ns_code_exprs(fns[[nm]])) {
+			.ns_walk_ast(code, function(node, ancestors) {
+				if (
+					.ns_is_call_to(node, .clf_suppressors) &&
+						.ns_subtree_has_symbol(node, expected_floor_call_fns)
+				) {
+					wrapped_callers <<- union(wrapped_callers, nm)
+				}
+			})
 		}
-		.ns_walk_ast(fn_body, function(node, ancestors) {
-			if (
-				.ns_is_call_to(node, .clf_suppressors) &&
-					.ns_subtree_has_symbol(node, expected_floor_call_fns)
-			) {
-				wrapped_callers <<- union(wrapped_callers, nm)
-			}
-		})
 	}
 	expect_setequal(sort(wrapped_callers), character(0))
 })
