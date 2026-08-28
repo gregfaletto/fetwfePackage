@@ -320,7 +320,7 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 		character(1),
 		"fn"
 	)))
-	expect_identical(unfloored, sort(expected_unfloored))
+	expect_setequal(unfloored, expected_unfloored)
 
 	# --- A2: per-site label coverage, exactly once ------------------------
 	# Anchored with the surrounding double quotes: `deparse()` renders string
@@ -352,9 +352,17 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 		},
 		integer(1)
 	)
-	expected_counts <- rep(1L, length(expected_labels))
-	names(expected_counts) <- expected_labels
-	expect_identical(label_counts, expected_counts)
+	# `sprintf()` rather than `paste0()`: `paste0("x", character(0))` recycles
+	# the zero-length argument to `""` and returns `"x"`, so an empty offender
+	# list would render as one bogus entry and fail on a clean tree.
+	# `sprintf()` returns `character(0)` for zero-length inputs.
+	off <- label_counts != 1L
+	wrong_counts <- sprintf(
+		"%s (%d occurrences)",
+		expected_labels[off],
+		label_counts[off]
+	)
+	expect_setequal(wrong_counts, character(0))
 
 	# --- A3: the negative-direction guard ---------------------------------
 	# No bare `max(... sandwich_full ..., 0)` may remain. Scanned PER BODY,
@@ -371,7 +379,7 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 		function(x) grepl(bare_max_re, paste(x, collapse = " "), perl = TRUE),
 		logical(1)
 	)]
-	expect_identical(bare_max_fns, character(0))
+	expect_setequal(bare_max_fns, character(0))
 
 	# --- A4: the floor-call inventory -------------------------------------
 	# The set of namespace functions that call `.floor_cluster_quad()`, as an
@@ -400,7 +408,7 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 		character(1),
 		"fn"
 	)))
-	expect_identical(floor_call_fns, sort(expected_floor_call_fns))
+	expect_setequal(floor_call_fns, expected_floor_call_fns)
 
 	# --- A6: the sandwich-mention inventory -------------------------------
 	# The set of namespace functions whose deparsed body mentions
@@ -431,7 +439,7 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 		function(x) any(grepl("sandwich_full", x, fixed = TRUE)),
 		logical(1)
 	)])
-	expect_identical(sandwich_fns, sort(expected_sandwich_fns))
+	expect_setequal(sandwich_fns, expected_sandwich_fns)
 
 	# --- A7: no condition suppression around a floor call -----------------
 	suppressed_fns <- sort(unique(vapply(
@@ -440,7 +448,7 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 		character(1),
 		"fn"
 	)))
-	expect_identical(suppressed_fns, character(0))
+	expect_setequal(suppressed_fns, character(0))
 })
 
 test_that("no call site neuters .floor_cluster_quad's diagnostic contract", {
@@ -459,7 +467,7 @@ test_that("no call site neuters .floor_cluster_quad's diagnostic contract", {
 		function(fc) paste0(fc$fn, " (", fc$nargs, " args)"),
 		character(1)
 	)
-	expect_identical(sort(bad_arity), character(0))
+	expect_setequal(bad_arity, character(0))
 
 	# No namespace function other than the helper itself may mention either
 	# threshold: a NAMED per-call-site override is the other spelling of the
@@ -472,7 +480,7 @@ test_that("no call site neuters .floor_cluster_quad's diagnostic contract", {
 		},
 		logical(1)
 	)])
-	expect_identical(threshold_fns, ".floor_cluster_quad")
+	expect_setequal(threshold_fns, ".floor_cluster_quad")
 
 	# The helper's formals pinned by NAME, not by value. The unit tests above
 	# already catch every way of neutering the DEFAULTS, so a value pin would
@@ -480,8 +488,8 @@ test_that("no call site neuters .floor_cluster_quad's diagnostic contract", {
 	# `diagnose = TRUE`, passed `FALSE` at one site), which leaves the
 	# defaults untouched and so keeps those unit tests green.
 	expect_identical(
-		names(formals(fetwfe:::.floor_cluster_quad)),
-		c("q", "site", "err_threshold", "warn_threshold")
+		paste(names(formals(fetwfe:::.floor_cluster_quad)), collapse = ", "),
+		"q, site, err_threshold, warn_threshold"
 	)
 })
 
