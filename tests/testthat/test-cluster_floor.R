@@ -40,70 +40,65 @@ library(fetwfe)
 # label assertion has no power at that site, and why the floor-call inventory
 # (A4) exists.
 #
-# KNOWN FALSE-POSITIVE CLASSES. Correct code these assertions reject on
-# purpose. The resolution is always the same: a human looks, and either
-# restores the expected shape or updates the literal expected set with a
-# reason. Every entry below was measured, not reasoned about.
-#   * A1 rejects a form hoisted into its own statement and floored on the next
-#     line -- the floor must be applied lexically AT the form. Following the
-#     value into a later floor call is dataflow analysis, deliberately not
-#     built.
-#   * A1 rejects renaming `sandwich_full` inside the exempt function, and
-#     rejects an alias later reassigned before an unrelated matrix product.
-#   * A4 and A6 reject a new floored site, or sandwich-touching code, added as
-#     a NEW FUNCTION. Adding either INSIDE a function already in the expected
-#     sets is invisible to both -- they pin function names, not call counts --
-#     so the red-on-a-legitimate-addition property holds for new functions
-#     only.
-#   * A6 rejects a consolidation refactor only when it moves sandwich-touching
-#     code TO OR FROM a function not already in the set. A move between two
-#     already-listed functions leaves the set unchanged and stays green.
-#   * A8 rejects any wrapper between the floor call and its form that is not
-#     in `.clf_transparent`. If a legitimate one appears, extend that vector
-#     rather than deleting the assertion.
-# Exact set equality rather than a subset rule is what buys the third of
-# those: under a subset rule a floor added tomorrow never enters the expected
-# set, so its removal the day after is invisible forever. Exact equality
-# forces the set to be updated at the moment a new function appears, which is
-# a moment a human is looking.
+# THE RULE THESE ASSERTIONS ENFORCE, stated once, positively: a cluster-sandwich
+# quadratic form and its floor are written TOGETHER -- one expression, one
+# function, the form appearing literally as the floor call's argument. Not
+# because that spelling is inherently better, but because it is the only
+# arrangement a lexical check can verify. Split them across a statement, a
+# helper, or a `...` forwarder and no static check can tell a correct
+# refactor from a silent revert: a helper that returns the form for its caller
+# to floor, and a decoy floor call in front of a helper that floors nothing,
+# are the SAME SHAPE. Measured, on this tree, in both directions.
 #
-# KNOWN BLIND SPOTS. These assertions are lexical, and a lexical guardrail has
-# a boundary. Recorded because the block this one replaced shipped a coverage
-# claim it did not have -- "the five sites", and an `any(grepl())` check
-# advertised as catching duplicate labels, which it could not -- and that is
-# the failure #463 is. Every entry was measured green on a mutant tree; do not
-# add one that was not.
+# So the code below rejects both, and the convention is the price of the
+# guarantee. If a refactor needs to break it, that is a decision for a human,
+# which is what a red test is for.
+#
+# WHAT GOES RED ON CORRECT CODE. All measured, none hypothetical:
+#   * a form hoisted into its own statement and floored on the next line;
+#   * a form computed by a callee and floored by the caller;
+#   * a floor call reached through `...` forwarding;
+#   * a new floored site, or new sandwich-touching code, added as a NEW
+#     FUNCTION -- because the expected sets are exact rather than subsets,
+#     which is what stops a floor added tomorrow being removed invisibly the
+#     day after. Added INSIDE a function already in those sets, it is
+#     invisible: they pin function names, not call counts;
+#   * a wrapper between the floor call and its form that is not in
+#     `.clf_transparent` -- extend that vector rather than deleting the
+#     assertion.
+#
+# WHAT GETS THROUGH. A lexical guardrail has a boundary, and this list is the
+# boundary. It is written out because the block this one replaced advertised
+# coverage it did not have -- "the five sites", and an `any(grepl())` check
+# sold as catching duplicate labels, which it could not -- and that is the
+# failure #463 IS. Every entry below was measured green on a mutant tree.
 #   * An ADDITIONAL unfloored form inside an already-listed function, computed
-#     by a helper whose formal is named `S` or `M` rather than
-#     `sandwich_full`. A1 cannot see the arithmetic, A6's set does not move,
-#     and the function's own correct floor call satisfies A4 and A9.
-#     REPLACING a site this way is caught -- by A4 if the floor call goes with
-#     it, by A9 if a decoy floor call stays behind -- so it is specifically
-#     the additive case that escapes.
-#   * An alias built by anything other than symbol-to-symbol assignment INSIDE
-#     an already-listed function: `sw <- sandwich_full[keep, keep]`, a list
-#     element, `assign()`. As new functions these fire A6; in place they do
-#     not.
-#   * A scalar form added inside `.assemble_joint_cov_var1()`, which inherits
-#     that function's exemption. The exemption is function-granular.
-#   * A8 judges the path from the floor call DOWN TO the form, not the form's
-#     operands: `t(psi) %*% abs(sandwich_full) %*% psi` is green.
-#   * A7b reaches EXACTLY ONE FRAME. `suppressWarnings()` around a call to a
-#     floor-calling function is caught; around a call two frames up -- e.g.
-#     `suppressWarnings(.call_te(...))`, which reaches `.compute_att_var1()`
-#     by name dispatch -- it is not. Closing that needs a call graph.
-# Closing the first two needs dataflow across function boundaries, which is a
-# large amount of test machinery for shapes that do not occur in the tree.
+#     by a helper whose formal is named `S` rather than `sandwich_full`. The
+#     function's own correct floor call satisfies everything else.
+#   * A decoy floor call handed a REAL form on a degenerate input, or one
+#     whose result is discarded. The checks inspect a floor call's argument,
+#     never its result or its runtime value.
+#   * An alias built by anything other than symbol-to-symbol assignment inside
+#     an already-listed function: a submatrix slice, a list element,
+#     `assign()`.
+#   * A scalar form inside `.assemble_joint_cov_var1()`, which inherits that
+#     function's exemption. The exemption is function-granular.
+#   * `abs()` or any sanitizer applied to an OPERAND inside the product --
+#     the path from floor to form is checked, the form's operands are not.
+#   * Condition suppression more than ONE frame above a floor call. One frame
+#     is checked; a call graph would be needed for more.
 #
-# ON REGRESSION, PRECISELY. The block this replaces read the two files it knew
-# about as raw TEXT, so it saw formal defaults for free; a `body()`-only walk
-# does not, and that WAS a real loss until `.ns_code_exprs()` closed it by
-# scanning defaults alongside bodies. It is closed, and measured: a bare
-# `max(... sandwich_full ..., 0)` in a formal default fires A1 and A3, plus A6
-# when the function is not already in the sandwich set. Every other blind spot
-# above was one the old block shared. This paragraph is worded carefully
-# because an earlier draft of this file asserted "nothing regressed" while the
-# formals gap was open and documented in the same header.
+# None of these is a regression. The block this replaces was blind to all of
+# them AND to whole files, and it ran on no automated machine. The single
+# thing it did better -- reading formal defaults, which it got for free by
+# scanning raw text -- is closed: `.ns_code_exprs()` scans defaults alongside
+# bodies, so a bare `max(... sandwich_full ..., 0)` in a default is now
+# rejected wherever the function-granular exemption above does not apply.
+#
+# Do not add a claim to either list without a mutant behind it. Three earlier
+# drafts of this header each stated a coverage claim one case too wide, and
+# each was caught only by someone running the mutation rather than reading the
+# sentence.
 # ------------------------------------------------------------------------------
 
 # --- Unit tests on the helper -------------------------------------------------
@@ -450,7 +445,7 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 	# containment: a listed site that has BECOME floored fails too, which is
 	# what stops the walk collapsing to nothing and satisfying the universal
 	# by finding no sites at all.
-	# A failure here may be a KNOWN FALSE-POSITIVE CLASS -- see the header.
+	# A failure here may be correct code -- see WHAT GOES RED in the header.
 	expected_unfloored <- c(
 		# K x K covariance block; floors its diagonal with `pmax(diag(.), 0)`
 		# because `.floor_cluster_quad()` is scalar-only. See the header.
@@ -472,7 +467,7 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 	# inflated rather than floored. Only `as.numeric()`, `drop()` and parens
 	# may sit between the floor call and the form, and the chain must hang
 	# off the floor call's first argument.
-	# A failure here may be a KNOWN FALSE-POSITIVE CLASS -- see the header.
+	# A failure here may be correct code -- see WHAT GOES RED in the header.
 	sanitized <- sort(unique(vapply(
 		Filter(function(site) !site$judged, scanned$sites),
 		`[[`,
@@ -489,8 +484,12 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 	# helper with a generic formal -- which A1 and A6 cannot see -- while
 	# leaving a decoy floor call behind keeps every other assertion green
 	# while the #139 diagnostic can never fire again. Measured: that mutation
-	# passed all eleven assertions and the whole suite before this one existed.
-	# A failure here may be a KNOWN FALSE-POSITIVE CLASS -- see the header.
+	# passed every other assertion and the whole suite before this one
+	# existed. What A9 verifies is that the floor call is handed a form at
+	# all -- not that the form is the right one, nor that the floored value is
+	# used. A decoy on a degenerate input, or one whose result is discarded,
+	# is in WHAT GETS THROUGH in the header.
+	# A failure here may be correct code -- see WHAT GOES RED in the header.
 	decoys <- sort(unique(vapply(
 		Filter(function(fc) !fc$carries_form, scanned$floor_calls),
 		`[[`,
@@ -587,7 +586,7 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 	# spelled, so it survives the aliasing and `crossprod` refactors that
 	# defeat a shape-based predicate, and it is what makes A1 non-vacuous --
 	# without it, a site that stops being DETECTED satisfies A1 by absence.
-	# A failure here may be a KNOWN FALSE-POSITIVE CLASS -- see the header.
+	# A failure here may be correct code -- see WHAT GOES RED in the header.
 	expected_floor_call_fns <- c(
 		".compute_att_var1",
 		".event_study_etwfe_betwfe",
