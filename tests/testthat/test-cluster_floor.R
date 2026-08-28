@@ -29,7 +29,7 @@ library(fetwfe)
 #   only its diagonal, with a bare `pmax(diag(.), 0)` and no #139 diagnostic.
 #   It cannot route through `.floor_cluster_quad()`, which is scalar-only by
 #   contract: any input of length other than one is passed through unchanged.
-#   Extending the diagnostic to the matrix-valued floors is tracked separately.
+#   Extending the diagnostic to the matrix-valued floors is tracked as #470.
 #   The exemption is function-granular, so a future scalar form added inside
 #   that same function would inherit it silently.
 #
@@ -58,6 +58,34 @@ library(fetwfe)
 # never enters the expected set, so its removal the day after is invisible
 # forever. Exact equality forces the set to be updated at the moment of
 # addition, which is the only moment a human is looking.
+#
+# KNOWN BLIND SPOTS. These assertions are lexical, and a lexical guardrail has
+# a boundary. Recorded here because the block this one replaced shipped a
+# coverage claim it did not have -- "the five sites", and an `any(grepl())`
+# check advertised as catching duplicate labels, which it could not -- and
+# that is the failure mode #463 is. What escapes:
+#   * A NEW unfloored form in code that never spells `sandwich_full`, when the
+#     function it is added to is ALREADY in the expected sets. The realistic
+#     spelling is a general-purpose helper whose formal is named `S` or `M`,
+#     called from a function already listed -- the #344 consolidation shape.
+#     A1 cannot see it (`S` is not an alias; the alias walk resolves
+#     symbol-to-symbol assignment within one body only) and A6's set does not
+#     move. Adding such a helper as a NEW function does fire A6.
+#   * An alias built by anything other than symbol-to-symbol assignment
+#     INSIDE an already-listed function: `sw <- sandwich_full[keep, keep]`,
+#     a list element, `assign()`. As a new function these fire A6; in place
+#     they do not.
+#   * A scalar form added inside `.assemble_joint_cov_var1()`, which inherits
+#     that function's exemption. This is the function-granular limitation
+#     noted above, stated again because it is a false NEGATIVE, not a false
+#     positive.
+#   * Anything outside a function body: a formal's default expression, and
+#     the namespace's non-function objects. Measured 2026-08-27: none of them
+#     mentions `sandwich_full`.
+# Closing the first two needs dataflow across function boundaries, which is a
+# large amount of test machinery for a shape that does not occur in the tree.
+# The old guardrail was equally blind to all of them, so nothing regressed --
+# but a reader should not take this file for more than it is.
 # ------------------------------------------------------------------------------
 
 # --- Unit tests on the helper -------------------------------------------------
@@ -266,9 +294,9 @@ test_that(".floor_cluster_quad respects custom thresholds", {
 				)
 			}
 		})
-		for (q in quad_nodes) {
-			n_anc <- length(q$ancestors)
-			parent <- if (n_anc > 0L) q$ancestors[[n_anc]] else NULL
+		for (quad in quad_nodes) {
+			n_anc <- length(quad$ancestors)
+			parent <- if (n_anc > 0L) quad$ancestors[[n_anc]] else NULL
 			if (
 				!is.null(parent) &&
 					.ns_is_call_to(parent, .clf_quad_ops) &&
@@ -279,10 +307,10 @@ test_that(".floor_cluster_quad respects custom thresholds", {
 			sites[[length(sites) + 1L]] <- list(
 				fn = nm,
 				floored = .clf_any_ancestor(
-					q$ancestors,
+					quad$ancestors,
 					".floor_cluster_quad"
 				),
-				text = paste(deparse(q$node), collapse = " ")
+				text = paste(deparse(quad$node), collapse = " ")
 			)
 		}
 		for (cl in call_nodes) {
@@ -301,7 +329,8 @@ test_that(".floor_cluster_quad respects custom thresholds", {
 
 test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 	bodies <- .ns_deparsed_bodies("fetwfe")
-	scanned <- .clf_scan(.ns_functions("fetwfe"))
+	fns <- .ns_functions("fetwfe")
+	scanned <- .clf_scan(fns)
 
 	# --- A1: the structural universal -------------------------------------
 	# Every collected cluster-sandwich quadratic form is floored in place,
@@ -309,6 +338,7 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 	# containment: a listed site that has BECOME floored fails too, which is
 	# what stops the walk collapsing to nothing and satisfying the universal
 	# by finding no sites at all.
+	# A failure here may be a KNOWN FALSE-POSITIVE CLASS -- see the header.
 	expected_unfloored <- c(
 		# K x K covariance block; floors its diagonal with `pmax(diag(.), 0)`
 		# because `.floor_cluster_quad()` is scalar-only. See the header.
@@ -395,6 +425,7 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 	# spelled, so it survives the aliasing and `crossprod` refactors that
 	# defeat a shape-based predicate, and it is what makes A1 non-vacuous --
 	# without it, a site that stops being DETECTED satisfies A1 by absence.
+	# A failure here may be a KNOWN FALSE-POSITIVE CLASS -- see the header.
 	expected_floor_call_fns <- c(
 		".compute_att_var1",
 		".event_study_etwfe_betwfe",
@@ -412,12 +443,19 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 
 	# --- A6: the sandwich-mention inventory -------------------------------
 	# The set of namespace functions whose deparsed body mentions
-	# `sandwich_full`, again an exact set against a literal vector. This is
-	# the only assertion that catches a new unfloored site whose function
-	# does not name the matrix inside a quadratic-form node: the matrix
-	# arriving as a FORMAL from a caller (the consolidation shape #344
-	# already performed on this code), a `::`-qualified operator, the matrix
-	# reached through a list element, a submatrix alias, or `assign()`.
+	# `sandwich_full`, as an exact set against a literal vector. Its
+	# predicate is exactly that -- the literal string, anywhere in the body --
+	# which is what lets it survive the aliasing and `crossprod` refactors
+	# that defeat a shape-based check: a NEW function that reaches the matrix
+	# through a list element, a submatrix slice or `assign()`, or that
+	# receives it as a formal still SPELLED `sandwich_full`, lands in this set
+	# even though A1 cannot see the arithmetic. It also closes the coupling in
+	# the SHRINK direction: an already-listed function that stops spelling the
+	# symbol drops out and fails.
+	#
+	# What it does NOT do is the grow direction inside existing code -- see
+	# KNOWN BLIND SPOTS in the file header. (A `::`-qualified operator is
+	# caught by A1, not here; see `.ns_is_call_to()`.)
 	expected_sandwich_fns <- c(
 		".assemble_cluster_robust_sandwich",
 		".assemble_joint_cov_var1",
@@ -449,6 +487,30 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 		"fn"
 	)))
 	expect_setequal(suppressed_fns, character(0))
+
+	# --- A7b: ... and none at the CALLER, one frame up --------------------
+	# A7 above scans the ancestors of the floor call within its own body, so
+	# `suppressWarnings(.compute_att_var1(...))` at the call site passes it
+	# while suppressing exactly the same diagnostic. That is the MORE likely
+	# edit of the two -- wrapping a whole internal call is easier to write
+	# than wrapping one inner expression. Measured: without this assertion
+	# that mutation leaves the suite fully green.
+	wrapped_callers <- character(0)
+	for (nm in names(fns)) {
+		fn_body <- body(fns[[nm]])
+		if (is.null(fn_body)) {
+			next
+		}
+		.ns_walk_ast(fn_body, function(node, ancestors) {
+			if (
+				.ns_is_call_to(node, .clf_suppressors) &&
+					.ns_subtree_has_symbol(node, expected_floor_call_fns)
+			) {
+				wrapped_callers <<- union(wrapped_callers, nm)
+			}
+		})
+	}
+	expect_setequal(sort(wrapped_callers), character(0))
 })
 
 test_that("no call site neuters .floor_cluster_quad's diagnostic contract", {

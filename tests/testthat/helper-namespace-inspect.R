@@ -103,15 +103,16 @@
 		return(FALSE)
 	}
 	# Element 1 of a call is its function part and is never the empty symbol,
-	# so binding it here cannot hit the missing-argument trap above.
-	head <- expr[[1]]
+	# so binding it here cannot hit the missing-argument trap above. Named
+	# `fn_head` rather than `head` so it does not shadow `utils::head()`.
+	fn_head <- expr[[1]]
 	if (
-		is.call(head) &&
-			length(head) == 3L &&
-			is.symbol(head[[1]]) &&
-			as.character(head[[1]]) %in% c("::", ":::")
+		is.call(fn_head) &&
+			length(fn_head) == 3L &&
+			is.symbol(fn_head[[1]]) &&
+			as.character(fn_head[[1]]) %in% c("::", ":::")
 	) {
-		head <- head[[3]]
+		fn_head <- fn_head[[3]]
 	}
-	is.symbol(head) && as.character(head) %in% fn
+	is.symbol(fn_head) && as.character(fn_head) %in% fn
 }
