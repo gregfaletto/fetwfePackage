@@ -49,6 +49,13 @@
 #
 # A formal with no default is the empty symbol; it is tested INLINE, never
 # bound to a local, for the reason `.ns_walk_ast()` documents below.
+#
+# One quirk, measured rather than intended: a formal whose default is the
+# literal `NULL` is DROPPED, because `out[[length(out) + 1L]] <- NULL` deletes
+# an element rather than appending one. Harmless -- a `NULL` default has no
+# subexpression any guardrail could scan -- and pinned by a test in
+# `test-namespace-inspect-463.R` so it cannot change unnoticed. Written down
+# because the line reads as an append and is not one.
 .ns_code_exprs <- function(f) {
 	out <- list()
 	fn_body <- body(f)
