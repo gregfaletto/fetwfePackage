@@ -17,16 +17,19 @@ library(fetwfe)
 #
 # So every assertion below is written in the under-report direction. Node counts
 # are pinned rather than bounded, "must find" is preferred to "must not find",
-# and each empty-symbol case asserts that the walk continued PAST the empty
-# symbol rather than merely that it did not error.
+# and each empty-symbol case THAT HAS A FOLLOWING SIBLING asserts that the walk
+# continued past the empty symbol rather than merely that it did not error. The
+# all-empty-formals case cannot: there is nothing after the empty symbols to
+# continue to, so it asserts only that the pairlist itself was visited.
 #
 # The fixtures are defined here, with known contents, rather than taken from the
 # `fetwfe` namespace, so no expectation below can drift when the package
 # changes. The two package-level primitives (`.ns_functions()` and
 # `.ns_deparsed_code()`) take a package name and cannot be pointed at a fixture;
 # they are asserted on drift-free PROPERTIES of the real namespace --
-# sortedness, function-ness, body-and-defaults coverage -- never on a list of
-# names or a count.
+# function-ness, body-and-defaults coverage, `all.names` reach -- plus two
+# individually stable name probes (`.floor_cluster_quad`, `.packageName`).
+# Never on an exact set and never on a count.
 #
 # `str2lang()` rather than `quote()` wherever the expression is a function
 # definition or contains an empty symbol: it parses with `keep.source = FALSE`,
@@ -336,6 +339,32 @@ test_that(".ns_deparsed_code does not depend on the keep.source option", {
 	options(keep.source = FALSE)
 	dropped <- .ns_deparsed_code("fetwfe")
 	expect_identical(kept, dropped)
+
+	# And pin the control vector itself. Nothing else observes it: mutating it
+	# changes the rendering of every function in the namespace while every
+	# assertion in both files stays green, because they all grep for symbol
+	# names and those survive any re-rendering. The next guardrail built on
+	# this primitive may not be symbol-name-based.
+	#
+	# Built explicitly rather than by calling `.ns_code_exprs()`, so this is a
+	# pin and not a round trip through the code under test. It pins the
+	# control vector AND the body-then-defaults concatenation order. That
+	# `.floor_cluster_quad` has exactly these two defaulted formals is itself
+	# pinned, by A5c in test-cluster_floor.R.
+	ctrl <- c("keepInteger", "keepNA")
+	fml <- formals(fetwfe:::.floor_cluster_quad)
+	expect_identical(
+		kept[[".floor_cluster_quad"]],
+		c(
+			deparse(body(fetwfe:::.floor_cluster_quad), control = ctrl),
+			deparse(fml$err_threshold, control = ctrl),
+			deparse(fml$warn_threshold, control = ctrl)
+		)
+	)
+	# And a readable discriminator for one member of that vector: `keepInteger`
+	# is what renders an integer literal as `1L`. Measured: dropping it renders
+	# the same line as `1`.
+	expect_true(any(grepl("1L", kept[[".floor_cluster_quad"]], fixed = TRUE)))
 })
 
 # --- .ns_functions ------------------------------------------------------------
@@ -344,6 +373,9 @@ test_that(".ns_functions returns only functions, name-sorted", {
 	fns <- .ns_functions()
 	expect_true(length(fns) > 0L)
 	expect_true(all(vapply(fns, is.function, logical(1))))
+	# Sortedness is a property of `ls()`, which sorts by default, so this
+	# cannot fail on any implementation that walks a namespace -- it documents
+	# the contract callers may rely on rather than guarding the `sort()` call.
 	expect_identical(names(fns), sort(names(fns)))
 	expect_identical(fns, .ns_functions("fetwfe"))
 

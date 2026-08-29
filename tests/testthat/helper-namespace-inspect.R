@@ -51,8 +51,8 @@
 # bound to a local, for the reason `.ns_walk_ast()` documents below.
 #
 # One quirk, measured rather than intended: a formal whose default is the
-# literal `NULL` is DROPPED, because `out[[length(out) + 1L]] <- NULL` deletes
-# an element rather than appending one. Harmless -- a `NULL` default has no
+# literal `NULL` is DROPPED, because `out[[length(out) + 1L]] <- NULL` at an
+# index one past the end silently does nothing rather than appending. Harmless -- a `NULL` default has no
 # subexpression any guardrail could scan -- and pinned by a test in
 # `test-namespace-inspect-463.R` so it cannot change unnoticed. Written down
 # because the line reads as an append and is not one.
@@ -75,10 +75,18 @@
 # The deparsed code of every namespace function -- body AND formal defaults,
 # per `.ns_code_exprs()` -- as a named list of character vectors. `control` is
 # pinned rather than left to the default so the rendering stays deterministic
-# across R versions; `useSource` is deliberately absent, so comments never
-# appear in the output even when a `srcref` is attached (which it is under
-# `options(keep.source.pkgs = TRUE)` plus `load_all()`). A function with no
-# body and no defaulted formal contributes `character(0)`.
+# across R versions rather than tracking whatever the default control set
+# becomes.
+#
+# Comments never appear in the output, but NOT because `useSource` is absent
+# from `control` -- an earlier draft of this comment said so, and it is wrong.
+# Measured: adding `useSource` here changes nothing, on any of this package's
+# functions. `useSource` reproduces a FUNCTION's source ref, and everything
+# deparsed below is a body or a default expression, never a function object;
+# `deparse(f, ..., "useSource")` does leak comments, `deparse(body(f), ...)`
+# does not. The guarantee comes from WHAT is deparsed, not from the control
+# set. A function with no body and no defaulted formal contributes
+# `character(0)`.
 .ns_deparsed_code <- function(pkg = "fetwfe") {
 	lapply(.ns_functions(pkg), function(f) {
 		exprs <- .ns_code_exprs(f)
