@@ -457,6 +457,8 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 		character(1),
 		"fn"
 	)))
+	# The expected set is a LITERAL on purpose. Never regenerate it from a
+	# failure's `Needs:` / `Absent:` output -- that makes it `setequal(x, x)`.
 	expect_setequal(unfloored, expected_unfloored)
 
 	# --- A8: the floored form reaches its floor UNALTERED ------------------
@@ -474,6 +476,8 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 		character(1),
 		"fn"
 	)))
+	# The expected set is a LITERAL on purpose. Never regenerate it from a
+	# failure's `Needs:` / `Absent:` output -- that makes it `setequal(x, x)`.
 	expect_setequal(sanitized, character(0))
 
 	# --- A9: every floor call is handed a real form (no decoys) ------------
@@ -496,6 +500,8 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 		character(1),
 		"fn"
 	)))
+	# The expected set is a LITERAL on purpose. Never regenerate it from a
+	# failure's `Needs:` / `Absent:` output -- that makes it `setequal(x, x)`.
 	expect_setequal(decoys, character(0))
 
 	# --- A2: per-site label coverage, exactly once ------------------------
@@ -538,6 +544,8 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 		expected_labels[off],
 		label_counts[off]
 	)
+	# The expected set is a LITERAL on purpose. Never regenerate it from a
+	# failure's `Needs:` / `Absent:` output -- that makes it `setequal(x, x)`.
 	expect_setequal(wrong_counts, character(0))
 
 	# --- A3: the negative-direction guard ---------------------------------
@@ -570,6 +578,8 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 		},
 		logical(1)
 	)])
+	# The expected set is a LITERAL on purpose. Never regenerate it from a
+	# failure's `Needs:` / `Absent:` output -- that makes it `setequal(x, x)`.
 	expect_setequal(bare_max_fns, character(0))
 
 	# --- A4: the floor-call inventory -------------------------------------
@@ -600,6 +610,8 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 		character(1),
 		"fn"
 	)))
+	# The expected set is a LITERAL on purpose. Never regenerate it from a
+	# failure's `Needs:` / `Absent:` output -- that makes it `setequal(x, x)`.
 	expect_setequal(floor_call_fns, expected_floor_call_fns)
 
 	# --- A6: the sandwich-mention inventory -------------------------------
@@ -638,6 +650,8 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 		function(x) any(grepl("sandwich_full", x, fixed = TRUE)),
 		logical(1)
 	)])
+	# The expected set is a LITERAL on purpose. Never regenerate it from a
+	# failure's `Needs:` / `Absent:` output -- that makes it `setequal(x, x)`.
 	expect_setequal(sandwich_fns, expected_sandwich_fns)
 
 	# --- A7: no condition suppression around a floor call -----------------
@@ -647,6 +661,8 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 		character(1),
 		"fn"
 	)))
+	# The expected set is a LITERAL on purpose. Never regenerate it from a
+	# failure's `Needs:` / `Absent:` output -- that makes it `setequal(x, x)`.
 	expect_setequal(suppressed_fns, character(0))
 
 	# --- A7b: ... and none at the CALLER, one frame up --------------------
@@ -669,6 +685,8 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 			})
 		}
 	}
+	# The expected set is a LITERAL on purpose. Never regenerate it from a
+	# failure's `Needs:` / `Absent:` output -- that makes it `setequal(x, x)`.
 	expect_setequal(sort(wrapped_callers), character(0))
 })
 
@@ -676,8 +694,8 @@ test_that("no call site neuters .floor_cluster_quad's diagnostic contract", {
 	bodies <- .ns_deparsed_code("fetwfe")
 	scanned <- .clf_scan(.ns_functions("fetwfe"))
 
-	# Arity. Every call passes exactly two arguments. This is the
-	# load-bearing one: a per-call-site threshold override spelled
+	# --- A5a: arity -- every floor call passes exactly two arguments ------
+	# This is the load-bearing one: a per-call-site threshold override spelled
 	# POSITIONALLY -- `.floor_cluster_quad(form, "label", -Inf, -Inf)` --
 	# mentions no parameter name, so the scan below cannot see it, and it
 	# returns the site to a silent `max(q, 0)` with the whole suite green.
@@ -688,11 +706,14 @@ test_that("no call site neuters .floor_cluster_quad's diagnostic contract", {
 		function(fc) paste0(fc$fn, " (", fc$nargs, " args)"),
 		character(1)
 	)
+	# The expected set is a LITERAL on purpose. Never regenerate it from a
+	# failure's `Needs:` / `Absent:` output -- that makes it `setequal(x, x)`.
 	expect_setequal(bad_arity, character(0))
 
+	# --- A5b: no per-call-site threshold override, spelled by NAME --------
 	# No namespace function other than the helper itself may mention either
 	# threshold: a NAMED per-call-site override is the other spelling of the
-	# same edit.
+	# same edit A5a catches positionally.
 	threshold_fns <- sort(names(bodies)[vapply(
 		bodies,
 		function(x) {
@@ -701,9 +722,12 @@ test_that("no call site neuters .floor_cluster_quad's diagnostic contract", {
 		},
 		logical(1)
 	)])
+	# The expected set is a LITERAL on purpose. Never regenerate it from a
+	# failure's `Needs:` / `Absent:` output -- that makes it `setequal(x, x)`.
 	expect_setequal(threshold_fns, ".floor_cluster_quad")
 
-	# The helper's formals pinned by NAME, not by value. The unit tests above
+	# --- A5c: the helper's own formals, pinned by name --------------------
+	# Pinned by NAME, not by value. The unit tests at the top of this file
 	# already catch every way of neutering the DEFAULTS, so a value pin would
 	# add nothing; the name pin is what catches a new opt-out formal (say
 	# `diagnose = TRUE`, passed `FALSE` at one site), which leaves the
