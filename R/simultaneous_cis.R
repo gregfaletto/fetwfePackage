@@ -1034,7 +1034,16 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 	if (is_indep || !identical(se_type, "conservative")) {
 		# Tight Gaussian (default / cluster / indep): Sigma = Sigma_1 + Sigma_2.
 		Sigma <- Sigma_1 + Sigma_2
-		ses <- sqrt(pmax(diag(Sigma), 0))
+		# Floored with the #470 diagnostic. Under `se_type = "cluster"` this
+		# floor provably cannot bind -- `.assemble_joint_cov_var1()` and
+		# `.assemble_joint_cov_var2()` have both already floored their own
+		# diagonals, so the sum is exactly non-negative -- and it is the
+		# MODEL-BASED path, where `.assemble_joint_cov_var1()` takes its
+		# `else` branch and floors nothing, that it exists for.
+		ses <- sqrt(.floor_variance_diag(
+			diag(Sigma),
+			"simultaneous_cis_impl/Sigma"
+		))
 
 		# Degenerate (zero-variance) effects: when the bridge penalty zeroes
 		# out an effect's entire contribution to the selected support its SE is
@@ -1127,7 +1136,20 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 		# Conservative same-data: the Cauchy-Schwarz upper bound does not
 		# generalize to a K x K matrix. Fall back to Bonferroni-corrected
 		# pointwise CIs on the conservative scalar SEs.
-		v1 <- pmax(diag(Sigma_1), 0)
+		# `v1` is floored with the #470 diagnostic: this branch is reached
+		# only when `.assemble_joint_cov_var1()` is on its model-based
+		# branch, which does not floor its own diagonal, so this is the only
+		# floor standing between a broken invariant and an SE of exactly 0.
+		v1 <- .floor_variance_diag(
+			diag(Sigma_1),
+			"simultaneous_cis_impl/Sigma_1"
+		)
+		# `v2` is deliberately LEFT AS WRITTEN, with no diagnostic: it is a
+		# structural no-op, because `.assemble_joint_cov_var2()` has already
+		# floored this diagonal itself, unconditionally. Kept as defence in
+		# depth should that ever stop being true. A reader who has just seen
+		# its neighbour gain a diagnostic would otherwise read its absence
+		# here as an oversight (#470).
 		v2 <- pmax(diag(Sigma_2), 0)
 		ses <- .cauchy_schwarz_se(v1, v2)
 		crit <- if (K == 1L) pointwise_crit else bonferroni_crit
@@ -1321,6 +1343,30 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 #'   warn-then-degrade shape and leaves `.event_study_quiet()`'s muffle
 #'   working. Pinned by
 #'   `tests/testthat/test-highdim-postselection-band-warning-433.R`.
+#' @details **The deferral has two tenants, not one (#470).** The
+#'   variance-floor conditions raised by `.floor_cluster_quad_diag()` /
+#'   `.floor_variance_diag()` are deferred past the `tryCatch()` for exactly
+#'   the reason the #433 one is, and by the same idiom: the
+#'   `fetwfe_negative_variance_floored` warning is captured and muffled by a
+#'   class-keyed `withCallingHandlers()`, and the
+#'   `fetwfe_negative_variance_catastrophic` error is captured by a
+#'   class-specific `tryCatch()` handler that returns `NULL`. Both are
+#'   re-raised below the `tryCatch()`. **The catastrophic tier is re-raised
+#'   with `stop()` and therefore PROPAGATES** rather than degrading to
+#'   pointwise: a fit whose PSD invariant is broken badly enough to put a
+#'   variance below `-1` fails loudly at `fetwfe()` call time instead of
+#'   returning a silently-zeroed standard error. An ordinary error still
+#'   degrades to `NULL`, which is what keeps the change narrow.
+#' @details **The re-raise ORDER is load-bearing: `stop(fatal)` comes first,
+#'   so a catastrophic #470 condition supersedes a pending #433 warning.**
+#'   Deliberate, and measured both ways. Re-raising the #433 warning first
+#'   hands the caller a *warning* and never reaches `stop(fatal)`, so a
+#'   `tryCatch(warning = )` caller loses the catastrophic condition entirely
+#'   and a `warn = 2` user gets the wrong error. The cost is that a call
+#'   which warned at step 7b and then hit a catastrophic floor loses the #433
+#'   warning; that is the right trade, and it is why the comment above the
+#'   re-raises says the warn-then-degrade shape is preserved for
+#'   warn-then-degrade specifically and not for warn-then-`stop()`.
 #' @param x A fully-classed estimator object.
 #' @param family Character; `"cohort"` or `"event_study"`.
 #' @param alpha Numeric; the significance level.
@@ -1370,7 +1416,17 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 	# still muffles it -- including under `warn = 2`, where a muffle beats the
 	# conversion. Under `warn = 2` an UNmuffled call now errors, which is the
 	# semantics the user asked for.
+	#
+	# The #470 conditions ride the same mechanism, for the same reason: the
+	# variance-floor warning would be converted by `warn = 2` and swallowed
+	# here, and the catastrophic tier would be swallowed outright, so a fit
+	# built on a broken PSD invariant would return the POINTWISE band under a
+	# simultaneous header -- the identical wrong-answer shape. A list rather
+	# than a single slot for the warnings, because nothing guarantees at most
+	# one firing per invocation and the cost of being wrong is a lost warning.
 	pending <- NULL
+	pending_floor <- list()
+	fatal <- NULL
 	sci <- tryCatch(
 		withCallingHandlers(
 			suppressMessages(
@@ -1388,16 +1444,38 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 			fetwfe_highdim_postselection_band = function(w) {
 				pending <<- w
 				invokeRestart("muffleWarning")
+			},
+			fetwfe_negative_variance_floored = function(w) {
+				pending_floor[[length(pending_floor) + 1L]] <<- w
+				invokeRestart("muffleWarning")
 			}
 		),
+		# CAPTURED here, NOT re-raised here. The capture is the mechanism.
+		# `stop(e)` from inside this handler does NOT escape this `tryCatch()`:
+		# the sibling `error = function(e) NULL` below is still established and
+		# catches it on the way out, so the band degrades to NULL exactly as it
+		# would have without the handler. Measured on both trees. Handler
+		# ORDER decides which handler runs; it has nothing to do with whether
+		# the error escapes, so do not write a comment here claiming it does.
+		fetwfe_negative_variance_catastrophic = function(e) {
+			fatal <<- e
+			NULL
+		},
 		error = function(e) NULL
 	)
 	# Re-raised BEFORE the two NULL returns, so the warn-then-degrade shape is
-	# preserved exactly: a call that warned at step 7b and then hit the
-	# singular-Gram `stop()` at step 9 still warns AND still degrades to
-	# pointwise, as it did before this deferral.
+	# preserved for the DEGRADING case: a call that warned at step 7b and then
+	# hit the singular-Gram `stop()` at step 9 still warns AND still degrades
+	# to pointwise, as it did before this deferral. It is NOT preserved for
+	# warn-then-**stop**, and that is deliberate -- see the `@details` block.
+	if (!is.null(fatal)) {
+		stop(fatal)
+	}
 	if (!is.null(pending)) {
 		warning(pending)
+	}
+	for (w in pending_floor) {
+		warning(w)
 	}
 	if (is.null(sci)) {
 		return(NULL)

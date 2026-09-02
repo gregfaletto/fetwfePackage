@@ -2,36 +2,27 @@ library(testthat)
 library(fetwfe)
 
 # ------------------------------------------------------------------------------
-# Tests for `.floor_cluster_quad()` (issue #139, version 1.11.2), and the
-# guardrail keeping every cluster-sandwich quadratic-form site routed through
-# it (issue #463).
+# Tests for the cluster-floor family -- `.floor_cluster_quad()` (issue #139,
+# version 1.11.2) and its vectorized siblings `.floor_cluster_quad_diag()` /
+# `.floor_variance_diag()` (issue #470) -- and the guardrail keeping every
+# cluster-sandwich quadratic-form site routed through one of them (issue #463).
 #
-# `.floor_cluster_quad()` layers a two-tier diagnostic on top of the
-# pre-existing `max(q, 0)` floor at each cluster-sandwich quadratic-form
-# site. The forms are PSD in exact arithmetic, so any negative value is
-# either FP-noise (silently clipped to 0) or a bug signal (warn / stop).
+# The family layers a two-tier diagnostic on top of the pre-existing
+# `max(q, 0)` / `pmax(diag(.), 0)` floor at each cluster-sandwich
+# quadratic-form site. The forms are PSD in exact arithmetic, so any negative
+# value is either FP-noise (silently clipped to 0) or a bug signal
+# (warn / stop).
 #
 # The guardrail below states a PREDICATE, not a count and not a file list --
 # both of those went stale here once already. It walks the AST of every
 # function in the package NAMESPACE and asserts that every cluster-sandwich
 # quadratic form (a `%*%` / `crossprod()` / `tcrossprod()` node whose operands
-# reach the cluster-robust sandwich) sits lexically inside a
-# `.floor_cluster_quad()` call. Reading the namespace instead of `R/*.R` as
-# text is what makes it run under `R CMD check`, where the tests execute
-# against the *installed* package and there is no `R/` directory at all -- the
-# whole block used to skip there, which is every CI job and every CRAN
-# machine (#463).
-#
-# ONE DOCUMENTED EXCEPTION, asserted rather than tolerated (it is part of an
-# exact set, so this site silently becoming floored fails too):
-#   `.assemble_joint_cov_var1()` in R/variance_machinery.R builds a K x K
-#   covariance block `t(Psi_full) %*% sandwich_full %*% Psi_full` and floors
-#   only its diagonal, with a bare `pmax(diag(.), 0)` and no #139 diagnostic.
-#   It cannot route through `.floor_cluster_quad()`, which is scalar-only by
-#   contract: any input of length other than one is passed through unchanged.
-#   Extending the diagnostic to the matrix-valued floors is tracked as #470.
-#   The exemption is function-granular, so a future scalar form added inside
-#   that same function would inherit it silently.
+# reach the cluster-robust sandwich) sits lexically inside a call to one of
+# the RECOGNIZED FLOOR FUNCTIONS, `.clf_floor_fns` below. Reading the
+# namespace instead of `R/*.R` as text is what makes it run under
+# `R CMD check`, where the tests execute against the *installed* package and
+# there is no `R/` directory at all -- the whole block used to skip there,
+# which is every CI job and every CRAN machine (#463).
 #
 # On the per-site labels asserted below: `getTeResultsOLS/att_var_1` and
 # `getTeResults2/att_var_1` are two LABELS at one SITE. #344 merged those two
@@ -81,19 +72,33 @@ library(fetwfe)
 #   * An alias built by anything other than symbol-to-symbol assignment inside
 #     an already-listed function: a submatrix slice, a list element,
 #     `assign()`.
-#   * A scalar form inside `.assemble_joint_cov_var1()`, which inherits that
-#     function's exemption. The exemption is function-granular.
+#   * Every floor site of `.floor_variance_diag()`. It is deliberately absent
+#     from `.clf_floor_fns` below, so no assertion here sees its call sites at
+#     all (A5b, a text grep over every body, is the one exception). Its
+#     arguments are MODEL-BASED covariance diagonals rather than sandwich
+#     forms, so adding it would make A9 -- "every floor call is handed a real
+#     quadratic form" -- report `.simultaneous_cis_impl` as a decoy. Measured:
+#     adding it fires A9 naming exactly that function. Refining A9 by owning
+#     function does not escape it either, since `.simultaneous_cis_impl`
+#     mentions `sandwich_full` and is in A6's inventory (#470).
 #   * `abs()` or any sanitizer applied to an OPERAND inside the product --
 #     the path from floor to form is checked, the form's operands are not.
 #   * Condition suppression more than ONE frame above a floor call. One frame
-#     is checked; a call graph would be needed for more.
+#     is checked; a call graph would be needed for more. #470 created the
+#     first LIVE instance of this blind spot: `.assemble_joint_cov_var1()`'s
+#     conditions are captured and muffled two frames up, inside
+#     `.fit_band_for_family()`, and what makes that correct rather than a
+#     silent #139 revert is the pair of re-raises below its `tryCatch()`.
+#     Delete either and the whole #470 diagnostic goes silent on every
+#     internal route while A1-A9 stay green. `test-matrix-floor-conditions-470.R`
+#     is the only thing guarding them.
 #
 # None of these is a regression. The block this replaces was blind to all of
 # them AND to whole files, and it ran on no automated machine. The single
 # thing it did better -- reading formal defaults, which it got for free by
 # scanning raw text -- is closed: `.ns_code_exprs()` scans defaults alongside
 # bodies, so a bare `max(... sandwich_full ..., 0)` in a default is now
-# rejected wherever the function-granular exemption above does not apply.
+# rejected everywhere.
 #
 # Do not add a claim to either list without a mutant behind it. Three earlier
 # drafts of this header each stated a coverage claim one case too wide, and
@@ -197,11 +202,281 @@ test_that(".floor_cluster_quad respects custom thresholds", {
 	)
 })
 
+# --- Unit tests on the vectorized family (#470) -------------------------------
+# `.floor_cluster_quad_diag()` (matrix in / matrix out) and
+# `.floor_variance_diag()` (vector in / vector out) over the shared
+# `.floor_psd_diag_core()`. They mirror the scalar block above, plus the three
+# properties the scalar helper has no analogue for: ONE aggregated condition
+# per call however many entries offend, untouched off-diagonals, and a classed
+# condition on both tiers.
+#
+# Every message assertion here is `fixed = TRUE`. The rendered messages carry
+# `(`, `)`, `.` and `-`, and a parenthesised literal used as a REGEX matches
+# text with the parentheses stripped out entirely, while an unbalanced one is a
+# hard `invalid regular expression` error. `expect_error()` / `expect_warning()`
+# pass the pattern to `grepl()` under edition 2, so both reach the assertion.
+
+# Collect every condition of one class raised by `expr`, without muffling
+# anything else, and return them. An observe-only handler on purpose: a
+# muffling one would stand in for the behavior under test.
+.clf_collect <- function(expr, class) {
+	got <- list()
+	withCallingHandlers(
+		force(expr),
+		condition = function(cnd) {
+			if (inherits(cnd, class)) {
+				got[[length(got) + 1L]] <<- cnd
+				if (inherits(cnd, "warning")) {
+					invokeRestart("muffleWarning")
+				}
+			}
+		}
+	)
+	got
+}
+
+test_that(".floor_variance_diag leaves non-negative diagonals alone", {
+	expect_silent(out <- fetwfe:::.floor_variance_diag(c(0.5, 1e-12, 100), "t"))
+	expect_equal(out, c(0.5, 1e-12, 100))
+	# Exact zero is unchanged, and so is the boundary of the FP-noise band.
+	expect_silent(out0 <- fetwfe:::.floor_variance_diag(c(0, 0, 0), "t"))
+	expect_equal(out0, c(0, 0, 0))
+})
+
+test_that(".floor_variance_diag silently floors FP-noise negatives", {
+	expect_silent(
+		out <- fetwfe:::.floor_variance_diag(c(1, -1e-15, -1e-11, -1e-10), "t")
+	)
+	# Strict `<` at the threshold, matching the scalar helper.
+	expect_equal(out, c(1, 0, 0, 0))
+})
+
+test_that(".floor_variance_diag warns once and names every offending index", {
+	ws <- .clf_collect(
+		out <- fetwfe:::.floor_variance_diag(
+			c(1, -1e-8, 2, -3e-8, 3),
+			"simultaneous_cis_impl/Sigma"
+		),
+		"fetwfe_negative_variance_floored"
+	)
+	# EXACTLY ONE condition, not one per offending entry.
+	expect_length(ws, 1L)
+	msg <- conditionMessage(ws[[1]])
+	expect_true(grepl("(indices 2, 4;", msg, fixed = TRUE))
+	expect_true(grepl("2 of 5 entries clipped to 0", msg, fixed = TRUE))
+	expect_true(grepl("most negative -3e-08", msg, fixed = TRUE))
+	expect_true(grepl("site 'simultaneous_cis_impl/Sigma'", msg, fixed = TRUE))
+	# The subject is "variance", NOT the sandwich phrase: these diagonals are
+	# model-based, so the #139 wording would be a false statement about them.
+	expect_true(grepl("Negative variance", msg, fixed = TRUE))
+	expect_false(
+		grepl("cluster-sandwich quadratic form", msg, fixed = TRUE)
+	)
+	expect_equal(out, c(1, 0, 2, 0, 3))
+})
+
+test_that(".floor_variance_diag errors on catastrophic negatives", {
+	e <- tryCatch(
+		fetwfe:::.floor_variance_diag(c(1, -2.4, -1e-8), "some_site"),
+		error = function(e) e
+	)
+	expect_s3_class(e, "fetwfe_negative_variance_catastrophic")
+	msg <- conditionMessage(e)
+	# The error tier reports the ERROR-range indices only, and its subject is
+	# sentence-cased because it opens the message.
+	expect_true(grepl("Variance on the covariance diagonal", msg, fixed = TRUE))
+	expect_true(grepl("1 of 3 entries below -1", msg, fixed = TRUE))
+	expect_true(grepl("(indices 2;", msg, fixed = TRUE))
+	expect_true(grepl("site 'some_site'", msg, fixed = TRUE))
+	expect_true(grepl("file an issue", msg, fixed = TRUE))
+})
+
+test_that(".floor_variance_diag propagates NA and passes non-numerics through", {
+	# `pmax()` propagates NA; `which(v < threshold)` drops it, so NA is
+	# neither diagnosed nor floored and needs no special case.
+	expect_silent(out <- fetwfe:::.floor_variance_diag(c(NA, -1e-15, 2), "t"))
+	expect_equal(out, c(NA, 0, 2))
+	# A warning-range negative alongside an NA still warns, and the NA does
+	# not enter the index list or the "most negative" figure.
+	ws <- .clf_collect(
+		fetwfe:::.floor_variance_diag(c(NA, -1e-8), "t"),
+		"fetwfe_negative_variance_floored"
+	)
+	expect_length(ws, 1L)
+	expect_true(
+		grepl("(indices 2;", conditionMessage(ws[[1]]), fixed = TRUE)
+	)
+	# Non-numeric passes through unchanged.
+	expect_silent(out_chr <- fetwfe:::.floor_variance_diag("nope", "t"))
+	expect_equal(out_chr, "nope")
+	expect_silent(out_e <- fetwfe:::.floor_variance_diag(numeric(0), "t"))
+	expect_equal(out_e, numeric(0))
+})
+
+test_that(".floor_cluster_quad_diag floors the diagonal and nothing else", {
+	M <- matrix(c(-1e-8, -7, 3, 2), 2, 2)
+	ws <- .clf_collect(
+		out <- fetwfe:::.floor_cluster_quad_diag(
+			M,
+			"assemble_joint_cov_var1/Sigma_1"
+		),
+		"fetwfe_negative_variance_floored"
+	)
+	expect_length(ws, 1L)
+	# OFF-DIAGONALS SURVIVE UNTOUCHED, negative ones included: they can
+	# legitimately take either sign.
+	expect_equal(out[1, 2], 3)
+	expect_equal(out[2, 1], -7)
+	expect_equal(diag(out), c(0, 2))
+	# The subject IS the scalar helper's exact phrase here, on purpose -- the
+	# integration smoke test at the bottom of this file filters on it, so its
+	# coverage widens to this site for free.
+	expect_true(grepl(
+		"Negative cluster-sandwich quadratic form",
+		conditionMessage(ws[[1]]),
+		fixed = TRUE
+	))
+	expect_true(grepl(
+		"site 'assemble_joint_cov_var1/Sigma_1'",
+		conditionMessage(ws[[1]]),
+		fixed = TRUE
+	))
+})
+
+test_that(".floor_cluster_quad_diag passes through what it should", {
+	# Positives and exact zeros are untouched, silently.
+	P <- matrix(c(1, 0.5, 0.5, 0), 2, 2)
+	expect_silent(outP <- fetwfe:::.floor_cluster_quad_diag(P, "t"))
+	expect_equal(outP, P)
+	# FP-noise negatives clip silently.
+	expect_silent(
+		outN <- fetwfe:::.floor_cluster_quad_diag(
+			matrix(c(-1e-15, 1, 1, -1e-11), 2, 2),
+			"t"
+		)
+	)
+	expect_equal(diag(outN), c(0, 0))
+	# Catastrophic entries error, classed.
+	e <- tryCatch(
+		fetwfe:::.floor_cluster_quad_diag(
+			matrix(c(-2.14, 0, 0, 1), 2, 2),
+			"assemble_joint_cov_var1/Sigma_1"
+		),
+		error = function(e) e
+	)
+	expect_s3_class(e, "fetwfe_negative_variance_catastrophic")
+	# Sentence-cased at the error tier, so a lowercase `fixed = TRUE` literal
+	# does NOT match it -- which is what keeps the smoke-test filter above
+	# matching the warning tier only.
+	expect_true(grepl(
+		"Cluster-sandwich quadratic form on the covariance diagonal",
+		conditionMessage(e),
+		fixed = TRUE
+	))
+	expect_false(grepl(
+		"Negative cluster-sandwich quadratic form",
+		conditionMessage(e),
+		fixed = TRUE
+	))
+	# A character matrix passes through byte-identically (the numeric test
+	# lives in the core, so `diag()` still reads and rewrites the same
+	# values), and a non-two-dimensional argument is returned untouched --
+	# `diag(5)` BUILDS a 5 x 5 identity rather than reading a diagonal.
+	chr <- matrix(letters[1:4], 2, 2)
+	expect_silent(out_chr <- fetwfe:::.floor_cluster_quad_diag(chr, "t"))
+	expect_identical(out_chr, chr)
+	expect_silent(out_sc <- fetwfe:::.floor_cluster_quad_diag(5, "t"))
+	expect_identical(out_sc, 5)
+})
+
+test_that("both tiers of the vectorized family carry their condition class", {
+	# The classes are the interface `.fit_band_for_family()` keys on, and the
+	# two wrappers SHARE them on purpose so one handler pair covers the family.
+	w_mat <- .clf_collect(
+		fetwfe:::.floor_cluster_quad_diag(matrix(c(-1e-8, 0, 0, 1), 2, 2), "t"),
+		"fetwfe_negative_variance_floored"
+	)[[1]]
+	w_vec <- .clf_collect(
+		fetwfe:::.floor_variance_diag(-1e-8, "t"),
+		"fetwfe_negative_variance_floored"
+	)[[1]]
+	for (w in list(w_mat, w_vec)) {
+		expect_identical(
+			class(w),
+			c("fetwfe_negative_variance_floored", "warning", "condition")
+		)
+	}
+	e_mat <- tryCatch(
+		fetwfe:::.floor_cluster_quad_diag(matrix(c(-2, 0, 0, 1), 2, 2), "t"),
+		error = function(e) e
+	)
+	e_vec <- tryCatch(
+		fetwfe:::.floor_variance_diag(-2, "t"),
+		error = function(e) e
+	)
+	for (e in list(e_mat, e_vec)) {
+		expect_identical(
+			class(e),
+			c(
+				"fetwfe_negative_variance_catastrophic",
+				"error",
+				"condition"
+			)
+		)
+	}
+})
+
+test_that(".floor_psd_diag_core caps the rendered index list", {
+	# A large `K` must not produce a multi-kilobyte condition message; #431
+	# shipped a half-megabyte one from a caller that captured the condition.
+	ws <- .clf_collect(
+		fetwfe:::.floor_psd_diag_core(rep(-1e-8, 25), "t", "variance"),
+		"fetwfe_negative_variance_floored"
+	)
+	msg <- conditionMessage(ws[[1]])
+	expect_true(grepl("25 of 25 entries", msg, fixed = TRUE))
+	expect_true(grepl(
+		"indices 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, ...",
+		msg,
+		fixed = TRUE
+	))
+	expect_false(grepl("11", msg, fixed = TRUE))
+	expect_lt(nchar(msg), 400L)
+})
+
+test_that(".floor_psd_diag_core respects custom thresholds", {
+	# The core is the only member of the family that names a threshold, and
+	# A5b below pins that. A tighter warn threshold makes a silent value warn.
+	ws <- .clf_collect(
+		fetwfe:::.floor_psd_diag_core(
+			-1e-12,
+			"t",
+			"variance",
+			warn_threshold = -1e-13
+		),
+		"fetwfe_negative_variance_floored"
+	)
+	expect_length(ws, 1L)
+	# A looser error threshold makes a warning-range value error.
+	expect_s3_class(
+		tryCatch(
+			fetwfe:::.floor_psd_diag_core(
+				-0.5,
+				"t",
+				"variance",
+				err_threshold = -0.1
+			),
+			error = function(e) e
+		),
+		"fetwfe_negative_variance_catastrophic"
+	)
+})
+
 # --- Coverage / regression test ----------------------------------------------
 # Assert every cluster-sandwich quadratic-form site in the package routes
-# through `.floor_cluster_quad`, catching a future revert to the bare
-# `max(., 0)` floor. See the file header for the predicate, the one documented
-# exception, and the known false-positive classes.
+# through one of the recognized floor functions, catching a future revert to
+# the bare `max(., 0)` / `pmax(diag(.), 0)` floor. See the file header for the
+# predicate and the known false-positive classes.
 #
 # The package-agnostic AST primitives (`.ns_*`) come from
 # helper-namespace-inspect.R, which testthat sources before this file under
@@ -210,6 +485,15 @@ test_that(".floor_cluster_quad respects custom thresholds", {
 
 # The matrix operators a quadratic form can be spelled with.
 .clf_quad_ops <- c("%*%", "crossprod", "tcrossprod")
+
+# The floor functions this guardrail RECOGNIZES: a cluster-sandwich quadratic
+# form counts as floored when it sits lexically inside a call to one of these.
+# `.floor_cluster_quad()` is the scalar helper (#139); `.floor_cluster_quad_diag()`
+# is its matrix-valued sibling, which floors a covariance diagonal (#470).
+#
+# `.floor_variance_diag()` is DELIBERATELY ABSENT -- see WHAT GETS THROUGH in
+# the header. Its arguments are model-based diagonals, not sandwich forms.
+.clf_floor_fns <- c(".floor_cluster_quad", ".floor_cluster_quad_diag")
 
 # Calls that swallow the #139 diagnostic if one wraps a floor call. Wrapping
 # the call in `suppressWarnings()` returns the site to pre-#139 behavior while
@@ -245,10 +529,52 @@ test_that(".floor_cluster_quad respects custom thresholds", {
 	FALSE
 }
 
-# The expression `.floor_cluster_quad()` is actually asked to floor, matched the
-# way R matches it: a named `q =` wins wherever it sits in source order,
-# otherwise the first positional argument. Reading `call[[2]]` instead would
-# reject `.floor_cluster_quad(site = "x", q = form)`, which is
+# The name of a called floor function's FIRST formal, resolved through the
+# package namespace, or NULL when the head cannot be resolved to a function.
+#
+# Derived rather than hardcoded because the family's members do not agree on
+# it: `.floor_cluster_quad()`'s is `q` and `.floor_cluster_quad_diag()`'s is
+# `M`. A hardcoded `"q"` made `.floor_cluster_quad_diag(M = form, site = "x")`
+# -- behaviour-identical to the positional spelling -- read as having no
+# argument at all, turning A8 red on correct code (#470).
+#
+# The `::` / `:::` unwrapping MIRRORS `.ns_is_call_to()`, which handles a
+# namespace-qualified head deliberately. Assuming a bare symbol here would
+# return NULL on `fetwfe:::.floor_cluster_quad_diag(...)` -- loud rather than
+# blinding (A8 and A9 would go red), but avoidable.
+.clf_floor_first_formal <- function(floor_call) {
+	fn_head <- floor_call[[1]]
+	if (
+		is.call(fn_head) &&
+			length(fn_head) == 3L &&
+			is.symbol(fn_head[[1]]) &&
+			as.character(fn_head[[1]]) %in% c("::", ":::")
+	) {
+		fn_head <- fn_head[[3]]
+	}
+	if (!is.symbol(fn_head)) {
+		return(NULL)
+	}
+	nm <- as.character(fn_head)
+	ns <- asNamespace("fetwfe")
+	if (!exists(nm, envir = ns, inherits = FALSE)) {
+		return(NULL)
+	}
+	f <- get(nm, envir = ns, inherits = FALSE)
+	if (!is.function(f)) {
+		return(NULL)
+	}
+	fmls <- names(formals(f))
+	if (length(fmls) == 0L) {
+		return(NULL)
+	}
+	fmls[[1]]
+}
+
+# The expression a floor call is actually asked to floor, matched the way R
+# matches it: the first formal named EXPLICITLY wins wherever it sits in source
+# order, otherwise the first positional argument. Reading `call[[2]]` instead
+# would reject `.floor_cluster_quad(site = "x", q = form)`, which is
 # behaviour-identical.
 .clf_floor_q_arg <- function(floor_call) {
 	args <- as.list(floor_call)[-1]
@@ -259,8 +585,9 @@ test_that(".floor_cluster_quad respects custom thresholds", {
 	if (is.null(nms)) {
 		nms <- rep("", length(args))
 	}
-	if ("q" %in% nms) {
-		return(args[[which(nms == "q")[1]]])
+	first_formal <- .clf_floor_first_formal(floor_call)
+	if (!is.null(first_formal) && first_formal %in% nms) {
+		return(args[[which(nms == first_formal)[1]]])
 	}
 	positional <- which(nms == "")
 	if (length(positional) == 0L) {
@@ -269,12 +596,12 @@ test_that(".floor_cluster_quad respects custom thresholds", {
 	args[[positional[1]]]
 }
 
-# Index of the INNERMOST `.floor_cluster_quad()` call among `ancestors`
+# Index of the INNERMOST recognized floor call among `ancestors`
 # (outermost-first), or NA if the form is not floored at all.
 .clf_floor_ancestor_index <- function(ancestors) {
 	hit <- NA_integer_
 	for (i in seq_along(ancestors)) {
-		if (.ns_is_call_to(ancestors[[i]], ".floor_cluster_quad")) {
+		if (.ns_is_call_to(ancestors[[i]], .clf_floor_fns)) {
 			hit <- i
 		}
 	}
@@ -347,11 +674,12 @@ test_that(".floor_cluster_quad respects custom thresholds", {
 
 # One pass over a namespace's functions, returning
 #   $sites        one entry per OUTERMOST cluster-sandwich quadratic form: the
-#                 owning function, whether a `.floor_cluster_quad()` call is
-#                 among its AST ancestors, and its deparsed text.
-#   $floor_calls  one entry per `.floor_cluster_quad()` call: the owning
-#                 function, its argument count, and whether a
-#                 condition-suppressing call is among ITS ancestors.
+#                 owning function, whether a recognized floor call
+#                 (`.clf_floor_fns`) is among its AST ancestors, and its
+#                 deparsed text.
+#   $floor_calls  one entry per recognized floor call: the owning function, its
+#                 argument count, and whether a condition-suppressing call is
+#                 among ITS ancestors.
 #
 # "Outermost" drops the inner node of a chain: `t(a) %*% B %*% a` parses as
 # `(t(a) %*% B) %*% a`, so without it one form would be reported twice.
@@ -377,7 +705,7 @@ test_that(".floor_cluster_quad respects custom thresholds", {
 						ancestors = ancestors
 					)
 				}
-				if (.ns_is_call_to(node, ".floor_cluster_quad")) {
+				if (.ns_is_call_to(node, .clf_floor_fns)) {
 					call_nodes[[length(call_nodes) + 1L]] <<- list(
 						node = node,
 						ancestors = ancestors
@@ -440,17 +768,18 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 	scanned <- .clf_scan(fns)
 
 	# --- A1: the structural universal -------------------------------------
-	# Every collected cluster-sandwich quadratic form is floored in place,
-	# except the one documented matrix-valued site. EXACT set equality, not
-	# containment: a listed site that has BECOME floored fails too, which is
-	# what stops the walk collapsing to nothing and satisfying the universal
-	# by finding no sites at all.
+	# Every collected cluster-sandwich quadratic form is floored in place.
+	# EXACT set equality against an empty vector, not containment.
+	#
+	# A1's non-vacuity rests on A4, not on this set: A4 pins the floor-call
+	# inventory as a LITERAL, so a `.clf_scan()` that silently collected
+	# nothing leaves `floor_call_fns` empty and A4 fires. (Measured: emptying
+	# the walk fires A4 alone -- A1 and A6 stay green.) A6 is an independent
+	# text inventory over the deparsed bodies and covers a DIFFERENT evasion,
+	# a renamed or aliased `sandwich_full`; it does not observe the walk at
+	# all.
 	# A failure here may be correct code -- see WHAT GOES RED in the header.
-	expected_unfloored <- c(
-		# K x K covariance block; floors its diagonal with `pmax(diag(.), 0)`
-		# because `.floor_cluster_quad()` is scalar-only. See the header.
-		".assemble_joint_cov_var1"
-	)
+	expected_unfloored <- character(0)
 	unfloored <- sort(unique(vapply(
 		Filter(function(s) !s$floored, scanned$sites),
 		`[[`,
@@ -519,7 +848,8 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 		"getCohortATTsFinal/cohort_te_se",
 		"event_study_etwfe_betwfe/var_1_e",
 		"event_study_fetwfe/var_1_e",
-		"cohort_time_atts/var_1"
+		"cohort_time_atts/var_1",
+		"assemble_joint_cov_var1/Sigma_1"
 	)
 	all_body_text <- paste(unlist(bodies), collapse = " ")
 	label_counts <- vapply(
@@ -598,6 +928,7 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 	# without it, a site that stops being DETECTED satisfies A1 by absence.
 	# A failure here may be correct code -- see WHAT GOES RED in the header.
 	expected_floor_call_fns <- c(
+		".assemble_joint_cov_var1",
 		".compute_att_var1",
 		".event_study_etwfe_betwfe",
 		".event_study_fetwfe",
@@ -711,9 +1042,20 @@ test_that("no call site neuters .floor_cluster_quad's diagnostic contract", {
 	expect_setequal(bad_arity, character(0))
 
 	# --- A5b: no per-call-site threshold override, spelled by NAME --------
-	# No namespace function other than the helper itself may mention either
-	# threshold: a NAMED per-call-site override is the other spelling of the
-	# same edit A5a catches positionally.
+	# No namespace function other than the two helpers that legitimately CARRY
+	# the thresholds may mention either: a NAMED per-call-site override is the
+	# other spelling of the same edit A5a catches positionally. Exactly those
+	# two and no wider -- `.floor_cluster_quad_diag()` and
+	# `.floor_variance_diag()` must NOT name a threshold, which is what keeps
+	# A5b's real target closed. Being an exact set, it also bounds the
+	# deliberate duplication between the scalar helper and
+	# `.floor_psd_diag_core()`: a THIRD copy of the tiering logic goes red
+	# here automatically.
+	#
+	# This is also the only assertion in the file that covers
+	# `.floor_variance_diag()`'s call sites at all -- A5a iterates the floor
+	# calls `.clf_scan()` collected via `.clf_floor_fns`, from which it is
+	# deliberately absent. See WHAT GETS THROUGH in the header.
 	threshold_fns <- sort(names(bodies)[vapply(
 		bodies,
 		function(x) {
@@ -724,17 +1066,43 @@ test_that("no call site neuters .floor_cluster_quad's diagnostic contract", {
 	)])
 	# The expected set is a LITERAL on purpose. Never regenerate it from a
 	# failure's `Needs:` / `Absent:` output -- that makes it `setequal(x, x)`.
-	expect_setequal(threshold_fns, ".floor_cluster_quad")
+	expect_setequal(
+		threshold_fns,
+		c(".floor_cluster_quad", ".floor_psd_diag_core")
+	)
 
-	# --- A5c: the helper's own formals, pinned by name --------------------
+	# --- A5c: the helpers' own formals, pinned by name --------------------
 	# Pinned by NAME, not by value. The unit tests at the top of this file
 	# already catch every way of neutering the DEFAULTS, so a value pin would
 	# add nothing; the name pin is what catches a new opt-out formal (say
 	# `diagnose = TRUE`, passed `FALSE` at one site), which leaves the
 	# defaults untouched and so keeps those unit tests green.
+	#
+	# EVERY function in the floor family is pinned, stated as that predicate
+	# rather than as a count. `.floor_psd_diag_core()` carries the thresholds,
+	# so it is the one a new opt-out formal would most usefully subvert, and
+	# it also carries two pieces of message machinery -- the index cap and the
+	# error tier's sentence-casing -- that live INLINE there on purpose. If
+	# either is ever factored into a fourth helper, that helper joins this
+	# set.
 	expect_identical(
 		paste(names(formals(fetwfe:::.floor_cluster_quad)), collapse = ", "),
 		"q, site, err_threshold, warn_threshold"
+	)
+	expect_identical(
+		paste(names(formals(fetwfe:::.floor_psd_diag_core)), collapse = ", "),
+		"v, site, subject, err_threshold, warn_threshold"
+	)
+	expect_identical(
+		paste(
+			names(formals(fetwfe:::.floor_cluster_quad_diag)),
+			collapse = ", "
+		),
+		"M, site"
+	)
+	expect_identical(
+		paste(names(formals(fetwfe:::.floor_variance_diag)), collapse = ", "),
+		"v, site"
 	)
 })
 
@@ -761,15 +1129,22 @@ test_that("cluster-SE fit on well-conditioned data does not trigger the diagnost
 		seed = 2026
 	)
 	# Run the fit; assert no warning at all surfaces with the message
-	# pattern from `.floor_cluster_quad()`. (Other unrelated warnings are
-	# not the concern of this test; we filter by substring.)
+	# pattern from the floor family. (Other unrelated warnings are not the
+	# concern of this test; we filter by substring.)
+	#
+	# The filter phrase is rendered by BOTH the scalar helper (#139) and
+	# `.floor_cluster_quad_diag()`'s warning tier (#470), so this test's
+	# coverage widened to the matrix site for free. It cannot tell the two
+	# apart, though -- which is why the failure text names the SITE from the
+	# message rather than a hardcoded helper name, and why no assertion in
+	# `test-matrix-floor-conditions-470.R` keys on this phrase alone.
 	withCallingHandlers(
 		res <- fetwfeWithSimulatedData(sim, q = 0.5, se_type = "cluster"),
 		warning = function(w) {
 			msg <- conditionMessage(w)
 			if (grepl("cluster-sandwich quadratic form", msg, fixed = TRUE)) {
 				stop(
-					"Unexpected .floor_cluster_quad warning on well-conditioned data: ",
+					"Unexpected cluster-floor warning on well-conditioned data: ",
 					msg
 				)
 			}
