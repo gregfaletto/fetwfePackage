@@ -119,6 +119,24 @@
   the coefficient assembly. What these functions accept is unchanged: every
   such input already failed, just without saying which argument was at fault.
 
+- A broken variance invariant on the simultaneous-confidence-band path now
+  announces itself instead of arriving as a standard error of exactly zero
+  (#470). The joint covariance behind `simultaneousCIs()` and `eventStudy()`
+  floored its diagonal at zero silently, so a negative variance --- impossible
+  in exact arithmetic, since the cluster-robust sandwich is a sum of outer
+  products --- produced a confidence interval collapsed to a point at the
+  estimate with no signal of any kind. Those floors now carry the same two-tier
+  diagnostic the scalar cluster-sandwich sites have carried since version
+  1.11.2: negatives at the scale of floating-point cancellation are still
+  clipped silently, a larger one warns, and one below `-1` is an error. One
+  aggregated condition per call names the offending effects and the most
+  negative value. **A fit whose variance is broken that badly now fails at
+  `fetwfe()` / `etwfe()` / `betwfe()` / `twfeCovs()` call time**, and a fit
+  where only the event-study family is affected can succeed and then fail when
+  `print()`, `summary()` or `plot()` renders its band; both used to return a
+  silently degraded interval. The estimates themselves are unchanged, and
+  nothing changes on well-conditioned data.
+
 ### Internal
 
 - The remaining six items of the test-power audit that followed the #400/#401
