@@ -285,7 +285,7 @@ test_that(".floor_variance_diag errors on catastrophic negatives", {
 	# The error tier reports the ERROR-range indices only, and its subject is
 	# sentence-cased because it opens the message.
 	expect_true(grepl("Variance on the covariance diagonal", msg, fixed = TRUE))
-	expect_true(grepl("1 of 3 entries below -1", msg, fixed = TRUE))
+	expect_true(grepl("1 of 3 entries below -1 (indices", msg, fixed = TRUE))
 	expect_true(grepl("(indices 2;", msg, fixed = TRUE))
 	expect_true(grepl("site 'some_site'", msg, fixed = TRUE))
 	expect_true(grepl("file an issue", msg, fixed = TRUE))
@@ -1047,10 +1047,15 @@ test_that("no call site neuters .floor_cluster_quad's diagnostic contract", {
 	# other spelling of the same edit A5a catches positionally. Exactly those
 	# two and no wider -- `.floor_cluster_quad_diag()` and
 	# `.floor_variance_diag()` must NOT name a threshold, which is what keeps
-	# A5b's real target closed. Being an exact set, it also bounds the
+	# A5b's real target closed. Being an exact set, it also PARTLY bounds the
 	# deliberate duplication between the scalar helper and
-	# `.floor_psd_diag_core()`: a THIRD copy of the tiering logic goes red
-	# here automatically.
+	# `.floor_psd_diag_core()`: a third copy of the tiering logic goes red here
+	# automatically IF it names either threshold. One that writes the constants
+	# inline (`if (any(v < -1))`) names neither and is invisible to the whole
+	# guardrail -- measured, all green -- since it has no call site for A1/A4/A9
+	# to collect and is not in A5c's pin set. Do not read this assertion as
+	# bounding the duplication outright; it bounds one of the two spellings,
+	# and the inline one is the likelier accident.
 	#
 	# This is also the only assertion in the file that covers
 	# `.floor_variance_diag()`'s call sites at all -- A5a iterates the floor

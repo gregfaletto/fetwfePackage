@@ -134,8 +134,10 @@
   `fetwfe()` / `etwfe()` / `betwfe()` / `twfeCovs()` call time**, and a fit
   where only the event-study family is affected can succeed and then fail when
   `print()`, `summary()` or `plot()` renders its band; both used to return a
-  silently degraded interval. The estimates themselves are unchanged, and
-  nothing changes on well-conditioned data.
+  silently degraded interval. A fit that hits the error tier can still be
+  obtained with `ci_type = "pointwise"`, which skips the simultaneous band
+  entirely. The estimates themselves are unchanged, and nothing changes on
+  well-conditioned data.
 
 ### Internal
 

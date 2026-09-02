@@ -1735,7 +1735,7 @@ getSecondVarTermDataApp <- function(
 	# `getSecondVarTermDataApp()`, the `att_var_2` floors added by #127 --
 	# carry no diagnostic either, and #139's scope was cluster-sandwich sites
 	# only, so wiring one up here would put the matrix path ahead of its own
-	# scalar siblings. Tracked as a follow-up to #470, covering the family.
+	# scalar siblings. Tracked as #474, covering the family.
 	diag(out) <- pmax(diag(out), 0)
 	out
 }

@@ -7,8 +7,11 @@
 #     classed. Every one of its call sites is provably outside
 #     `.fit_band_for_family()`'s `tryCatch(error = function(e) NULL)` -- a
 #     transitive call-graph walk from `.simultaneous_cis_impl()` intersects
-#     the floor-calling functions in the empty set -- so there is nothing for
-#     a class to key on and classing them would buy nothing (#470).
+#     the SCALAR helper's callers in the empty set -- so there is nothing
+#     for a class to key on and classing them would buy nothing (#470).
+#     (Deliberately narrower than "the floor-calling functions": the
+#     vectorized family below IS reachable from there, which is the whole
+#     reason its conditions are classed.)
 #
 #     It is also NOT re-expressed on `.floor_psd_diag_core()` below, even
 #     though the two share their tiering shape:
@@ -16,9 +19,13 @@
 #     `test-cluster_floor.R`'s scalar unit block reads it, so a re-expression
 #     would be a test change in two files for no behavioral gain. The
 #     resulting same-file duplication is bounded by a check rather than by
-#     intent: `test-cluster_floor.R`'s A5b is an EXACT set over every
-#     namespace function mentioning a threshold, so a THIRD copy goes red
-#     automatically.
+#     intent, but only partly: `test-cluster_floor.R`'s A5b is an EXACT set
+#     over every namespace function mentioning `err_threshold` /
+#     `warn_threshold`, so a third copy THAT NAMES EITHER THRESHOLD goes
+#     red automatically. A third copy with the constants written inline
+#     (`if (any(v < -1))`) names neither, has no call site for A1/A4/A9 to
+#     collect, and is not in A5c's pin set -- measured: the whole guardrail
+#     stays green. That spelling is the more likely accident, not the less.
 #
 #   * `.floor_cluster_quad_diag()` / `.floor_variance_diag()` -- the
 #     VECTORIZED family (#470), sharing `.floor_psd_diag_core()`. Their

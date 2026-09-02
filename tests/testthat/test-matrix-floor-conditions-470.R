@@ -15,21 +15,32 @@ library(fetwfe)
 # frame above a floor call as out of reach. #470 creates the first LIVE
 # instance of that documented blind spot.
 #
-# THIS FILE IS THE SOLE GUARD ON THE TWO RE-RAISES, and that is why it exists:
+# THIS FILE IS THE SOLE GUARD ON THREE THINGS, and that is why it exists:
 #
-#   * `for (w in pending_floor) warning(w)` is pinned by the `warn = 2`
-#     `eventStudy()` block below. A muffle that is never re-raised cannot
-#     error under warnings-as-errors, so deleting that loop turns that block
-#     red and nothing else.
+#   * `for (w in pending_floor) warning(w)` is pinned by EVERY `warn = 2`
+#     block here -- the direct `eventStudy()` one and both renderer ones. A
+#     muffle that is never re-raised cannot error under warnings-as-errors.
+#     (Measured at a91efb0: deleting the loop turns exactly blocks 1, 4b and
+#     4c red, 6 failures. Not one block -- do not trim 4b or 4c as redundant
+#     with 1.)
 #   * `if (!is.null(fatal)) stop(fatal)` is pinned by the fit-time `fetwfe()`
 #     block below. Delete it and the catastrophic tier degrades to a NULL
-#     band instead of propagating.
+#     band instead of propagating. (Measured: blocks 2, 4, 4c and 6 go red.)
+#   * BOTH MODEL-BASED FLOORS -- `.floor_variance_diag()` at
+#     `simultaneous_cis_impl/Sigma` and `/Sigma_1` -- are pinned by block 5
+#     and by nothing else. `.floor_variance_diag` is deliberately outside
+#     `.clf_floor_fns`, so the guardrail cannot see those sites at all.
+#     (Measured: reverting both to their pre-#470 `pmax()` form leaves
+#     `test-cluster_floor.R` at 20/20 blocks green, 101 passes, and reddens
+#     block 5 alone.) Two of the three floors this PR adds live or die there.
 #
-# Delete either line and the entire #470 diagnostic goes silent on every
-# internal route while A1-A9 in `test-cluster_floor.R` stay green,
-# `devtools::check()` stays 0/0/0, and that file still reports every assertion
-# passing. Neither block is redundant with the guardrail and neither may be
-# trimmed as such.
+# Delete either re-raise and THAT TIER of the #470 diagnostic goes silent on
+# every internal route -- the warning tier with the loop, the catastrophic
+# tier with the `stop()` -- while `test-cluster_floor.R` stays fully green
+# (measured: 20/20 blocks, 101 passes, under both mutants). Nothing but this
+# file sees it. `devtools::check()` does NOT stay clean under either mutant,
+# because this file is in the suite -- that is the point; the blindness is the
+# guardrail's, not the gate's.
 #
 # HOW EVERY MESSAGE ASSERTION HERE IS WRITTEN, without exception. Both rules
 # are measured, and both are named entries in the skill's fixture
