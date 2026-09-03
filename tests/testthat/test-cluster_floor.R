@@ -42,12 +42,14 @@ library(fetwfe)
 # THE TWO RECOGNIZED FLOOR FUNCTIONS ARE NOT INTERCHANGEABLE, which is why A10
 # pins each site to one of them by name. `.floor_cluster_quad()` takes a SCALAR
 # quadratic form; `.floor_cluster_quad_diag()` takes the K x K MATRIX and floors
-# its diagonal. Handing either the other's argument is a silent revert rather
-# than a type error, because each simply declines to act on what it does not
-# recognize -- and until #476 the matrix helper declined by returning its
-# argument untouched, so a scalar site swapped to it lost both the #139
-# diagnostic and the `max(q, 0)` floor underneath it with the suite green. The
-# helper now `stop()`s on a non-matrix, and A10 pins the pairing lexically.
+# its diagonal. Handing either the other's argument USED TO BE a silent revert
+# rather than a type error, in both directions, because each simply declined to
+# act on what it did not recognize: a scalar site swapped to the matrix helper
+# lost both the #139 diagnostic and the `max(q, 0)` floor underneath it, with
+# the suite green. That is now true in ONE direction only --
+# `.floor_cluster_quad()` still passes a matrix straight through
+# (`length(q) != 1L` -> `return(q)`), while `.floor_cluster_quad_diag()`
+# `stop()`s on a non-matrix. A10 pins the pairing lexically either way.
 # Both are deliberate, and NEITHER one-half tree is green: measured with A10
 # deleted, a matrix site swapped to the scalar floor still reddens A11 (the
 # only matrix site sits inside the protected region A11 walks), and a scalar
@@ -1273,7 +1275,10 @@ test_that("no call site neuters .floor_cluster_quad's diagnostic contract", {
 # and the same sentence, as `test-fit-time-singular-gram-degrade-400.R`.)
 #
 # The protected region is exactly the transitive closure of
-# `.simultaneous_cis_impl()`: that is the single call inside the `tryCatch()`.
+# `.simultaneous_cis_impl()`: that is the single PACKAGE call inside the
+# `tryCatch()`. The region also holds `withCallingHandlers()`,
+# `suppressMessages()` and three handler closures; none of them reaches
+# package code, which is why seeding the walk with the one call is enough.
 
 # Every namespace function `f` calls, by CALL HEAD, `::` / `:::` unwrapped.
 # Deliberately NOT "every symbol or string naming a namespace function": that
