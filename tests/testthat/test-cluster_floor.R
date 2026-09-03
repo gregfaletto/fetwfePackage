@@ -48,11 +48,12 @@ library(fetwfe)
 # argument untouched, so a scalar site swapped to it lost both the #139
 # diagnostic and the `max(q, 0)` floor underneath it with the suite green. The
 # helper now `stop()`s on a non-matrix, and A10 pins the pairing lexically.
-# Both halves are wanted, but neither is the sole guard, and the tree is not
-# green without A10 either: measured with A10 DELETED, a matrix site swapped to
-# the scalar floor still reddens A11 (the only matrix site sits inside the
-# protected region A11 walks), and a scalar site swapped to the matrix floor
-# still errors at runtime on the new `stop()`.
+# Both are deliberate, and NEITHER one-half tree is green: measured with A10
+# deleted, a matrix site swapped to the scalar floor still reddens A11 (the
+# only matrix site sits inside the protected region A11 walks), and a scalar
+# site swapped to the matrix floor still errors at runtime on the new
+# `stop()`. An earlier draft asserted the opposite -- that either half alone
+# leaves a green tree in some spelling -- with no mutant behind it.
 #
 # THE RULE THESE ASSERTIONS ENFORCE, stated once, positively: a cluster-sandwich
 # quadratic form and its floor are written TOGETHER -- one expression, one

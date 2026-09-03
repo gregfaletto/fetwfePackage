@@ -142,7 +142,8 @@
 
 # The name of the function `expr` invokes, with any `::` / `:::` qualifier
 # stripped, or `NA_character_` when there is no name to return: `expr` is not a
-# call at all, or its head is itself a call that is not a qualifier (`f()()`).
+# call at all, or -- after the qualifier is stripped -- its head is not a symbol
+# (`f()()`, or a string head).
 #
 # The unwrapping is the reason this is a primitive rather than an inline
 # `expr[[1]]`. The head of `Matrix::crossprod(...)` is itself a call --
