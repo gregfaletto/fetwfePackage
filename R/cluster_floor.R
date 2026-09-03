@@ -211,6 +211,18 @@
 				toupper(substring(subject, 1L, 1L)),
 				substring(subject, 2L)
 			)
+			# The `ci_type = "pointwise"` clause names the escape hatch the
+			# NEWS bullet advertises: this tier blocks a fit outright, and an
+			# error that blocks a fit should say how to get one. Phrased as
+			# "to obtain a fit without the simultaneous band" rather than "pass
+			# ci_type = ..." because it must be TRUE ON EVERY ROUTE, and the
+			# core serves more than the fit-time one -- on a direct
+			# `simultaneousCIs()` call `ci_type` is not that call's remedy,
+			# but it is still how the user obtains a usable fit. It is a
+			# constant here rather than a per-caller formal: `.floor_psd_diag_core()`'s
+			# formals are pinned by name in `test-cluster_floor.R`'s A5c, and a
+			# formal added only to vary this sentence would have to grow that
+			# pin for no behavioral gain.
 			stop(structure(
 				list(
 					message = paste0(
@@ -225,7 +237,9 @@
 						"; most negative ",
 						worst,
 						"). This indicates a bug or severe numerical ",
-						"breakdown. Please file an issue at ",
+						"breakdown. To obtain a fit without the simultaneous ",
+						"band, refit with ci_type = \"pointwise\". ",
+						"Please file an issue at ",
 						"https://github.com/gregfaletto/fetwfePackage/issues."
 					),
 					call = NULL

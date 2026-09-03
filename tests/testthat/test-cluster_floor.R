@@ -314,6 +314,29 @@ test_that(".floor_variance_diag errors on catastrophic negatives", {
 	expect_true(grepl("(indices 2;", msg, fixed = TRUE))
 	expect_true(grepl("site 'some_site'", msg, fixed = TRUE))
 	expect_true(grepl("file an issue", msg, fixed = TRUE))
+	# The error tier BLOCKS a fit, so it names the escape hatch its NEWS
+	# bullet advertises. Asserted on the core's shared message, because the
+	# clause has to be true on every route the core serves -- including a
+	# direct `simultaneousCIs()` call, where `ci_type` is not that call's
+	# remedy but is still how a usable fit is obtained. Hence the wording
+	# below rather than "pass ci_type = ...".
+	expect_true(grepl(
+		"To obtain a fit without the simultaneous band, refit with ",
+		msg,
+		fixed = TRUE
+	))
+	expect_true(grepl("ci_type = \"pointwise\"", msg, fixed = TRUE))
+	# The WARNING tier does not carry it: it floors and continues, so there is
+	# no fit to obtain differently.
+	ws <- .clf_collect(
+		fetwfe:::.floor_variance_diag(c(1, -1e-8), "some_site"),
+		"fetwfe_negative_variance_floored"
+	)
+	expect_false(grepl(
+		"ci_type",
+		conditionMessage(ws[[1]]),
+		fixed = TRUE
+	))
 })
 
 test_that(".floor_variance_diag propagates NA and passes non-numerics through", {
