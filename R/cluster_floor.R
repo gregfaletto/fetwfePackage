@@ -323,8 +323,8 @@
 	#
 	# It is a `stop()` rather than a pass-through because nothing legitimately
 	# hands this function a non-matrix: its only caller passes
-	# `t(Psi_full) %*% sandwich_full %*% Psi_full`. A silent pass-through is
-	# strictly worse than either alternative, and #476 measured why: a one-token
+	# `t(Psi_full) %*% sandwich_full %*% Psi_full`. A silent pass-through is the
+	# dangerous choice of the two, and #476 measured why: a one-token
 	# swap of `.floor_cluster_quad(` to `.floor_cluster_quad_diag(` at the
 	# SCALAR `.compute_att_var1()` site -- which hands its floor an
 	# `as.numeric()` of the same triple product -- reverted both the #139
