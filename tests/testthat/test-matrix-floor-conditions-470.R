@@ -30,15 +30,18 @@ library(fetwfe)
 #     `simultaneous_cis_impl/Sigma` and `/Sigma_1` -- are pinned by block 5
 #     and by nothing else. `.floor_variance_diag` is deliberately outside
 #     `.clf_floor_fns`, so the guardrail cannot see those sites at all.
-#     (Measured: reverting both to their pre-#470 `pmax()` form leaves
-#     `test-cluster_floor.R` at 20/20 blocks green, 101 passes, and reddens
-#     block 5 alone.) Two of the three floors this PR adds live or die there.
+#     (Measured: reverting both to their pre-#470 `pmax()` form leaves every
+#     assertion in `test-cluster_floor.R` green and reddens block 5 alone. A
+#     count is deliberately not written here -- that file's assertion total
+#     has already moved once under a header stating it.) Two of the three
+#     floors this PR adds live or die there.
 #
 # Delete either re-raise and THAT TIER of the #470 diagnostic goes silent on
 # every internal route -- the warning tier with the loop, the catastrophic
-# tier with the `stop()` -- while `test-cluster_floor.R` stays fully green
-# (measured: 20/20 blocks, 101 passes, under both mutants). Nothing but this
-# file sees it. `devtools::check()` does NOT stay clean under either mutant,
+# tier with the `stop()`, on disjoint sets of blocks here -- while every
+# assertion in `test-cluster_floor.R` stays green under either deletion
+# (measured, both mutants). Nothing but this file sees it.
+# `devtools::check()` does NOT stay clean under either mutant,
 # because this file is in the suite -- that is the point; the blindness is the
 # guardrail's, not the gate's.
 #

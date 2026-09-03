@@ -47,9 +47,12 @@ library(fetwfe)
 # recognize -- and until #476 the matrix helper declined by returning its
 # argument untouched, so a scalar site swapped to it lost both the #139
 # diagnostic and the `max(q, 0)` floor underneath it with the suite green. The
-# helper now `stop()`s on a non-matrix, and A10 pins the pairing lexically; the
-# defect needed both halves, since either alone still leaves a green tree in
-# some spelling.
+# helper now `stop()`s on a non-matrix, and A10 pins the pairing lexically.
+# Both halves are wanted, but neither is the sole guard, and the tree is not
+# green without A10 either: measured with A10 DELETED, a matrix site swapped to
+# the scalar floor still reddens A11 (the only matrix site sits inside the
+# protected region A11 walks), and a scalar site swapped to the matrix floor
+# still errors at runtime on the new `stop()`.
 #
 # THE RULE THESE ASSERTIONS ENFORCE, stated once, positively: a cluster-sandwich
 # quadratic form and its floor are written TOGETHER -- one expression, one
@@ -114,9 +117,12 @@ library(fetwfe)
 #     conditions are captured and muffled two frames up, inside
 #     `.fit_band_for_family()`, and what makes that correct rather than a
 #     silent #139 revert is the pair of re-raises below its `tryCatch()`.
-#     Delete either and the whole #470 diagnostic goes silent on every
-#     internal route while A1-A9 stay green. `test-matrix-floor-conditions-470.R`
-#     is the only thing guarding them.
+#     Delete one of them and exactly THAT TIER goes silent on every internal
+#     route -- `stop(fatal)` the catastrophic tier, the `pending_floor` loop
+#     the warning tier -- and the two mutants redden DISJOINT sets of blocks
+#     in `test-matrix-floor-conditions-470.R`, which is the only thing
+#     guarding either. Measured: every assertion in THIS file stays green
+#     under both deletions, so nothing here would notice.
 #
 # None of these is a regression. The block this replaces was blind to all of
 # them AND to whole files, and it ran on no automated machine. The single
@@ -615,26 +621,21 @@ test_that(".floor_psd_diag_core respects custom thresholds", {
 # The name of the function a call invokes, with any `::` / `:::` qualifier
 # stripped, or `NA_character_` when the head is not a symbol.
 #
-# The unwrapping MIRRORS `.ns_is_call_to()`, which handles a namespace-qualified
-# head deliberately. Two callers depend on it. `.clf_floor_first_formal()` below
-# would return NULL on `fetwfe:::.floor_cluster_quad_diag(...)` -- loud rather
-# than blinding (A8 and A9 would go red), but avoidable. A10 compares CALLEE
-# NAMES against a literal set, so there the qualified and bare spellings must
-# resolve to the SAME string or a correct site reads as the wrong one.
+# The unwrapping is NOT re-implemented here. It used to be -- inline in
+# `.clf_floor_first_formal()` below, and then in this function -- which made it
+# the second cross-file copy of the block inside `.ns_is_call_to()`. It now
+# lives once, in `helper-namespace-inspect.R`'s `.ns_callee_name()`, which both
+# that predicate and this wrapper call.
+#
+# What stays here is why THIS guardrail needs it, which is domain-specific and
+# so does not belong in the package-agnostic helper. Two callers depend on it.
+# `.clf_floor_first_formal()` below would return NULL on
+# `fetwfe:::.floor_cluster_quad_diag(...)` -- loud rather than blinding (A8 and
+# A9 would go red), but avoidable. A10 compares CALLEE NAMES against a literal
+# set, so there the qualified and bare spellings must resolve to the SAME
+# string or a correct site reads as the wrong one.
 .clf_callee_name <- function(cl) {
-	fn_head <- cl[[1]]
-	if (
-		is.call(fn_head) &&
-			length(fn_head) == 3L &&
-			is.symbol(fn_head[[1]]) &&
-			as.character(fn_head[[1]]) %in% c("::", ":::")
-	) {
-		fn_head <- fn_head[[3]]
-	}
-	if (!is.symbol(fn_head)) {
-		return(NA_character_)
-	}
-	as.character(fn_head)
+	.ns_callee_name(cl)
 }
 
 # The name of a called floor function's FIRST formal, resolved through the
@@ -1053,7 +1054,7 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 	# untouched, since both sites write the form literally inside the call --
 	# reverted the #139 diagnostic AND the underlying #84-item-9 `max(q, 0)`
 	# floor, returned a NEGATIVE `att_var_1` and an understated overall-ATT
-	# standard error, and left the whole 5440-assertion suite BYTE-IDENTICALLY
+	# standard error, and left the whole 5452-assertion suite BYTE-IDENTICALLY
 	# green. The dimensionless scalar hit `.floor_cluster_quad_diag()`'s old
 	# `if (length(dim(M)) != 2L) return(M)` pass-through and came straight back.
 	#
@@ -1063,8 +1064,12 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 	# `.compute_att_var1`, because that helper is deliberately outside
 	# `.clf_floor_fns`), while the DESTRUCTIVE one was accepted. A10 and
 	# `.floor_cluster_quad_diag()`'s own `stop()` are the two halves of the fix;
-	# on the destructive swap A10 now fires, and so do the fifteen-odd runtime
-	# assertions that reach a cluster-SE fit.
+	# on the destructive swap A10 now fires, and so does every runtime assertion
+	# across the cluster-SE test files that reaches a cluster-SE fit -- dozens
+	# of them, spread over more than a dozen files. The count is deliberately
+	# NOT written down: two reviewers measured this same swap on two runners
+	# and got two different totals, and this file's header states a PREDICATE,
+	# not a count, precisely because counts here have gone stale before.
 	#
 	# A failure here may be correct code -- see WHAT GOES RED in the header.
 	expected_floor_callees <- c(
@@ -1354,6 +1359,18 @@ test_that("no .floor_cluster_quad() site is reachable from the protected region"
 	# function uses one, and its use cannot name a namespace function:
 	# `.build_propensity_if()` calls `do.call(rbind, blocks)`. An EXACT literal,
 	# so a second one puts a human in the loop.
+	#
+	# `UseMethod` and `NextMethod` are the S3 dispatch verbs, and this package is
+	# S3 only -- there is no `standardGeneric` to add. Both are INERT today:
+	# measured at this tip, zero package generics are called from inside the
+	# reachable set (the one namespace function whose body calls `UseMethod` is
+	# `simultaneousCIs`, and nothing reachable calls it), so listing them moves
+	# neither `dynamic_dispatchers` nor A12's literal. They are here for the
+	# case that would otherwise be silent: a function inside the region gaining
+	# a call to a package generic puts the GENERIC into `reachable`, whose body
+	# is a bare `UseMethod` -- A11's lexical walk then stops there and never
+	# sees the method or anything below it, while A12, without these two verbs,
+	# would stay green and report no dispatch out of the graph.
 	dyn_verbs <- c(
 		"eval",
 		"evalq",
@@ -1364,7 +1381,9 @@ test_that("no .floor_cluster_quad() site is reachable from the protected region"
 		"mget",
 		"Recall",
 		"getFromNamespace",
-		"getExportedValue"
+		"getExportedValue",
+		"UseMethod",
+		"NextMethod"
 	)
 	dynamic_dispatchers <- sort(Filter(
 		function(nm) {
