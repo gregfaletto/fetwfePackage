@@ -140,20 +140,23 @@
   `simultaneousCIs()` and `eventStudy()` floored its diagonal at zero with no
   signal, so a negative variance --- impossible in exact arithmetic, since the
   cluster-robust sandwich is a sum of outer products --- returned a confidence
-  interval collapsed to a point at the estimate. Separately, on the internal
-  routes that fit a band during `fetwfe()` / `etwfe()` / `betwfe()` /
-  `twfeCovs()` and during `print()` / `summary()` / `plot()`, a failure inside
-  the band construction was swallowed and the **pointwise** interval was
-  returned under a `[simultaneous 95% CI]` header --- a narrower interval, so
-  it over-rejected. Those floors now carry the same two-tier diagnostic the
-  scalar cluster-sandwich sites have carried since version 1.11.2: negatives at
-  the scale of floating-point cancellation are still clipped silently, a larger
-  one warns, and one below `-1` is an error, with one aggregated condition per
-  call naming the offending effects and the most negative value. Both
-  conditions now survive the internal routes rather than being absorbed by
-  them. The estimates themselves are unchanged, and nothing changes on
-  well-conditioned data. See the breaking change above for what a fit that hits
-  the error tier now does.
+  interval collapsed to a point at the estimate. Left as they were, the
+  internal routes that fit a band during `fetwfe()` / `etwfe()` / `betwfe()` /
+  `twfeCovs()` and during `print()` / `summary()` / `plot()` would have
+  swallowed the new signal as well: a failure inside the band construction
+  degrades there to the **pointwise** interval under a
+  `[simultaneous 95% CI]` header --- a narrower interval, so it would have
+  over-rejected. That fallback is deliberate and is unchanged for an ordinary
+  error; what is new is that the two conditions described next are classed, so
+  those routes let exactly those two through instead of absorbing them. Those
+  floors now carry the same two-tier diagnostic the scalar cluster-sandwich
+  sites have carried since version 1.11.2: negatives at the scale of
+  floating-point cancellation are still clipped silently, a larger one warns,
+  and one below `-1` is an error, with one aggregated condition per call naming
+  the offending effects and the most negative value. The estimates themselves
+  are unchanged, and nothing changes on well-conditioned data, where no tier
+  fires at all. See the breaking change above for what a fit that hits the
+  error tier now does.
 
 ### Internal
 
