@@ -1523,19 +1523,29 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 	# already row-aligned to `catt_df` (the `effect` labels differ --
 	# "Cohort <offset>" vs `catt_df$cohort` = `c_names` -- so rely on position,
 	# not labels). `.fit_band_for_family()` degrades to NULL on error and
-	# asserts the row count defensively; this call site runs the worker
-	# silently, by three mechanisms and no more: `suppressMessages()` and
+	# asserts the row count defensively; this call site silences the worker's
+	# ADVISORY output by three mechanisms and no more: `suppressMessages()` and
 	# `warn_degenerate_highdim = FALSE` inside the helper (#304), plus the
 	# explicit `warn_highdim_postselection = FALSE` below (#433). Silence is a
 	# per-caller choice rather than a property of the helper -- the event-study
 	# call site (`R/event_study.R`) passes TRUE for the third one -- so a fourth
-	# mechanism added later belongs here, not there.
+	# advisory mechanism added later belongs here, not there.
 	#
-	# The helper's class-keyed `withCallingHandlers()` is NOT a fourth
-	# mechanism: it captures the #433 condition only to re-raise it outside the
-	# `tryCatch(error = )` (see that helper's @details), and with
-	# `warn_highdim_postselection = FALSE` the worker never signals it at all,
-	# so nothing is captured and nothing is re-raised on this route.
+	# THE ROUTE IS NOT UNCONDITIONALLY SILENT, and since #470 it is not silent
+	# even on correct-looking data. Those three mechanisms cover the two
+	# advisory notices and nothing else; a broken variance invariant is a bug
+	# signal, not an advisory, and is deliberately audible here. The helper's
+	# class-keyed `withCallingHandlers()` is therefore not a fourth silencer but
+	# the opposite: it captures `fetwfe_negative_variance_floored` only to
+	# muffle it INSIDE the protected region and re-raise it below the
+	# `tryCatch(error = )`, so the warning reaches this caller rather than being
+	# converted by `options(warn = 2)` and swallowed (see that helper's
+	# `@details`). Its sibling `fetwfe_negative_variance_catastrophic` handler
+	# re-raises with `stop()` and PROPAGATES, failing the fit outright. Both can
+	# fire on this fit-time cohort route. The #433 condition is the one thing
+	# that cannot: with `warn_highdim_postselection = FALSE` the worker never
+	# signals it, so on this route that handler captures nothing and re-raises
+	# nothing.
 	.fit_band_for_family(
 		x,
 		"cohort",
