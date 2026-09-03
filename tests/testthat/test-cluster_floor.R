@@ -31,6 +31,18 @@ library(fetwfe)
 # label assertion has no power at that site, and why the floor-call inventory
 # (A4) exists.
 #
+# THE TWO RECOGNIZED FLOOR FUNCTIONS ARE NOT INTERCHANGEABLE, which is why A10
+# pins each site to one of them by name. `.floor_cluster_quad()` takes a SCALAR
+# quadratic form; `.floor_cluster_quad_diag()` takes the K x K MATRIX and floors
+# its diagonal. Handing either the other's argument is a silent revert rather
+# than a type error, because each simply declines to act on what it does not
+# recognize -- and until #476 the matrix helper declined by returning its
+# argument untouched, so a scalar site swapped to it lost both the #139
+# diagnostic and the `max(q, 0)` floor underneath it with the suite green. The
+# helper now `stop()`s on a non-matrix, and A10 pins the pairing lexically; the
+# defect needed both halves, since either alone still leaves a green tree in
+# some spelling.
+#
 # THE RULE THESE ASSERTIONS ENFORCE, stated once, positively: a cluster-sandwich
 # quadratic form and its floor are written TOGETHER -- one expression, one
 # function, the form appearing literally as the floor call's argument. Not
@@ -54,6 +66,11 @@ library(fetwfe)
 #     which is what stops a floor added tomorrow being removed invisibly the
 #     day after. Added INSIDE a function already in those sets, it is
 #     invisible: they pin function names, not call counts;
+#   * a SECOND floor site added inside a function already in the sets, calling
+#     the OTHER member of `.clf_floor_fns` -- A4 is blind to it (function names,
+#     not call counts) but A10 pairs owner with callee, so a legitimately
+#     matrix-valued new floor inside, say, `getCohortATTsFinal()` fires A10
+#     alone. Extend A10's literal, deliberately, rather than relaxing it;
 #   * a wrapper between the floor call and its form that is not in
 #     `.clf_transparent` -- extend that vector rather than deleting the
 #     assertion.
@@ -380,13 +397,44 @@ test_that(".floor_cluster_quad_diag passes through what it should", {
 	))
 	# A character matrix passes through byte-identically (the numeric test
 	# lives in the core, so `diag()` still reads and rewrites the same
-	# values), and a non-two-dimensional argument is returned untouched --
-	# `diag(5)` BUILDS a 5 x 5 identity rather than reading a diagonal.
+	# values).
 	chr <- matrix(letters[1:4], 2, 2)
 	expect_silent(out_chr <- fetwfe:::.floor_cluster_quad_diag(chr, "t"))
 	expect_identical(out_chr, chr)
-	expect_silent(out_sc <- fetwfe:::.floor_cluster_quad_diag(5, "t"))
-	expect_identical(out_sc, 5)
+})
+
+test_that(".floor_cluster_quad_diag REJECTS a non-matrix argument", {
+	# A non-two-dimensional argument is a PROGRAMMING ERROR, not an input to
+	# tolerate: `diag(5)` BUILDS a 5 x 5 identity rather than reading a
+	# diagonal, and the only caller always hands this function a matrix. The
+	# silent pass-through this `stop()` replaced is the source half of the
+	# defect A10 below pins -- a one-token swap at the SCALAR
+	# `.compute_att_var1()` site reverted both the #139 diagnostic and the
+	# #84-item-9 `max(q, 0)` floor with the whole suite green (#476).
+	expect_error(
+		fetwfe:::.floor_cluster_quad_diag(5, "t"),
+		"requires a two-dimensional matrix",
+		fixed = TRUE
+	)
+	expect_error(
+		fetwfe:::.floor_cluster_quad_diag(-3.7, "probe_att_var1"),
+		"site 'probe_att_var1'",
+		fixed = TRUE
+	)
+	expect_error(
+		fetwfe:::.floor_cluster_quad_diag(c(1, 2, 3), "t"),
+		"numeric of length 3",
+		fixed = TRUE
+	)
+	# Deliberately UNCLASSED: this is a bug report about the caller, not a
+	# variance diagnostic, so `.fit_band_for_family()` must neither capture it
+	# nor re-raise it below its `tryCatch()` the way it does the two classed
+	# tiers -- it degrades to NULL there like any other ordinary error.
+	e <- tryCatch(
+		fetwfe:::.floor_cluster_quad_diag(5, "t"),
+		error = function(e) e
+	)
+	expect_identical(class(e), c("simpleError", "error", "condition"))
 })
 
 test_that("both tiers of the vectorized family carry their condition class", {
@@ -493,6 +541,10 @@ test_that(".floor_psd_diag_core respects custom thresholds", {
 #
 # `.floor_variance_diag()` is DELIBERATELY ABSENT -- see WHAT GETS THROUGH in
 # the header. Its arguments are model-based diagonals, not sandwich forms.
+#
+# Membership here says a call counts as a floor; it does NOT say the two are
+# substitutable at a given site. A10 pins the owner-to-callee pairing, because
+# they are not.
 .clf_floor_fns <- c(".floor_cluster_quad", ".floor_cluster_quad_diag")
 
 # Calls that swallow the #139 diagnostic if one wraps a floor call. Wrapping
@@ -529,21 +581,17 @@ test_that(".floor_psd_diag_core respects custom thresholds", {
 	FALSE
 }
 
-# The name of a called floor function's FIRST formal, resolved through the
-# package namespace, or NULL when the head cannot be resolved to a function.
+# The name of the function a call invokes, with any `::` / `:::` qualifier
+# stripped, or `NA_character_` when the head is not a symbol.
 #
-# Derived rather than hardcoded because the family's members do not agree on
-# it: `.floor_cluster_quad()`'s is `q` and `.floor_cluster_quad_diag()`'s is
-# `M`. A hardcoded `"q"` made `.floor_cluster_quad_diag(M = form, site = "x")`
-# -- behaviour-identical to the positional spelling -- read as having no
-# argument at all, turning A8 red on correct code (#470).
-#
-# The `::` / `:::` unwrapping MIRRORS `.ns_is_call_to()`, which handles a
-# namespace-qualified head deliberately. Assuming a bare symbol here would
-# return NULL on `fetwfe:::.floor_cluster_quad_diag(...)` -- loud rather than
-# blinding (A8 and A9 would go red), but avoidable.
-.clf_floor_first_formal <- function(floor_call) {
-	fn_head <- floor_call[[1]]
+# The unwrapping MIRRORS `.ns_is_call_to()`, which handles a namespace-qualified
+# head deliberately. Two callers depend on it. `.clf_floor_first_formal()` below
+# would return NULL on `fetwfe:::.floor_cluster_quad_diag(...)` -- loud rather
+# than blinding (A8 and A9 would go red), but avoidable. A10 compares CALLEE
+# NAMES against a literal set, so there the qualified and bare spellings must
+# resolve to the SAME string or a correct site reads as the wrong one.
+.clf_callee_name <- function(cl) {
+	fn_head <- cl[[1]]
 	if (
 		is.call(fn_head) &&
 			length(fn_head) == 3L &&
@@ -553,9 +601,24 @@ test_that(".floor_psd_diag_core respects custom thresholds", {
 		fn_head <- fn_head[[3]]
 	}
 	if (!is.symbol(fn_head)) {
+		return(NA_character_)
+	}
+	as.character(fn_head)
+}
+
+# The name of a called floor function's FIRST formal, resolved through the
+# package namespace, or NULL when the head cannot be resolved to a function.
+#
+# Derived rather than hardcoded because the family's members do not agree on
+# it: `.floor_cluster_quad()`'s is `q` and `.floor_cluster_quad_diag()`'s is
+# `M`. A hardcoded `"q"` made `.floor_cluster_quad_diag(M = form, site = "x")`
+# -- behaviour-identical to the positional spelling -- read as having no
+# argument at all, turning A8 red on correct code (#470).
+.clf_floor_first_formal <- function(floor_call) {
+	nm <- .clf_callee_name(floor_call)
+	if (is.na(nm)) {
 		return(NULL)
 	}
-	nm <- as.character(fn_head)
 	ns <- asNamespace("fetwfe")
 	if (!exists(nm, envir = ns, inherits = FALSE)) {
 		return(NULL)
@@ -677,9 +740,9 @@ test_that(".floor_psd_diag_core respects custom thresholds", {
 #                 owning function, whether a recognized floor call
 #                 (`.clf_floor_fns`) is among its AST ancestors, and its
 #                 deparsed text.
-#   $floor_calls  one entry per recognized floor call: the owning function, its
-#                 argument count, and whether a condition-suppressing call is
-#                 among ITS ancestors.
+#   $floor_calls  one entry per recognized floor call: the owning function, the
+#                 floor function it CALLS, its argument count, and whether a
+#                 condition-suppressing call is among ITS ancestors.
 #
 # "Outermost" drops the inner node of a chain: `t(a) %*% B %*% a` parses as
 # `(t(a) %*% B) %*% a`, so without it one form would be reported twice.
@@ -750,6 +813,7 @@ test_that(".floor_psd_diag_core respects custom thresholds", {
 			}
 			floor_calls[[length(floor_calls) + 1L]] <- list(
 				fn = nm,
+				callee = .clf_callee_name(cl$node),
 				nargs = length(cl$node) - 1L,
 				carries_form = carries_form,
 				suppressed = .clf_any_ancestor(
@@ -944,6 +1008,50 @@ test_that("every cluster-sandwich floor routes through .floor_cluster_quad", {
 	# The expected set is a LITERAL on purpose. Never regenerate it from a
 	# failure's `Needs:` / `Absent:` output -- that makes it `setequal(x, x)`.
 	expect_setequal(floor_call_fns, expected_floor_call_fns)
+
+	# --- A10: WHICH floor function each site calls ------------------------
+	# A4 pins the set of functions that contain a floor call. It does NOT pin
+	# which member of `.clf_floor_fns` each one calls, and the two are not
+	# interchangeable: `.floor_cluster_quad()` takes a SCALAR quadratic form,
+	# `.floor_cluster_quad_diag()` a MATRIX whose diagonal it floors. Handing
+	# either the other's argument is a silent revert of the floor, not a type
+	# error, so A4 and every other assertion here stay green through it.
+	#
+	# Measured (#476): swapping the one token `.floor_cluster_quad(` to
+	# `.floor_cluster_quad_diag(` at `.compute_att_var1()` -- arguments
+	# untouched, since both sites write the form literally inside the call --
+	# reverted the #139 diagnostic AND the underlying #84-item-9 `max(q, 0)`
+	# floor, returned a NEGATIVE `att_var_1` and an understated overall-ATT
+	# standard error, and left the whole 5440-assertion suite BYTE-IDENTICALLY
+	# green. The dimensionless scalar hit `.floor_cluster_quad_diag()`'s old
+	# `if (length(dim(M)) != 2L) return(M)` pass-through and came straight back.
+	#
+	# Note the direction the guardrail had it backwards. The SAFE edit --
+	# swapping to `.floor_variance_diag()`, which really does floor a scalar --
+	# was REJECTED (A1 reports the form as unfloored and A4 loses
+	# `.compute_att_var1`, because that helper is deliberately outside
+	# `.clf_floor_fns`), while the DESTRUCTIVE one was accepted. A10 and
+	# `.floor_cluster_quad_diag()`'s own `stop()` are the two halves of the fix;
+	# on the destructive swap A10 now fires, and so do the fifteen-odd runtime
+	# assertions that reach a cluster-SE fit.
+	#
+	# A failure here may be correct code -- see WHAT GOES RED in the header.
+	expected_floor_callees <- c(
+		".assemble_joint_cov_var1 -> .floor_cluster_quad_diag",
+		".compute_att_var1 -> .floor_cluster_quad",
+		".event_study_etwfe_betwfe -> .floor_cluster_quad",
+		".event_study_fetwfe -> .floor_cluster_quad",
+		"cohortTimeATTs -> .floor_cluster_quad",
+		"getCohortATTsFinal -> .floor_cluster_quad"
+	)
+	floor_callees <- sort(unique(vapply(
+		scanned$floor_calls,
+		function(fc) paste0(fc$fn, " -> ", fc$callee),
+		character(1)
+	)))
+	# The expected set is a LITERAL on purpose. Never regenerate it from a
+	# failure's `Needs:` / `Absent:` output -- that makes it `setequal(x, x)`.
+	expect_setequal(floor_callees, expected_floor_callees)
 
 	# --- A6: the sandwich-mention inventory -------------------------------
 	# The set of namespace functions whose deparsed body mentions

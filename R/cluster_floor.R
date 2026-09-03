@@ -270,22 +270,62 @@
 # Exactly two formals, and it names no threshold, so that guardrail's A5a
 # arity rule and A5b threshold rule apply to it unchanged.
 #
-# @param M numeric matrix -- the cluster-sandwich quadratic form.
+# @param M numeric matrix -- the cluster-sandwich quadratic form. A
+#   non-two-dimensional argument is a programming error and raises an ordinary
+#   `stop()`; see the guard below for why it is not a pass-through and why the
+#   condition is deliberately unclassed.
 # @param site character scalar -- short site identifier for the message.
 # @return `M` with its diagonal floored at zero.
 #
 # @keywords internal
 #' @noRd
 .floor_cluster_quad_diag <- function(M, site) {
-	# Pass-through on anything that is not two-dimensional: `diag()` of a
-	# length-one numeric BUILDS an identity matrix rather than reading a
-	# diagonal, so a scalar reaching here must not be "floored". The numeric
-	# test deliberately lives in `.floor_psd_diag_core()` and not here: a
-	# `Matrix`-classed argument is `is.numeric() == FALSE` while `diag()` on
-	# it returns an ordinary numeric vector, so a type guard here would
-	# silently stop flooring a case the bare `pmax()` floored.
+	# A guard is needed at all because `diag()` of a length-one numeric BUILDS
+	# an identity matrix rather than reading a diagonal -- `diag(5)` is 5 x 5 --
+	# so a scalar reaching here would be "floored" into something else entirely.
+	#
+	# It is a `stop()` rather than a pass-through because nothing legitimately
+	# hands this function a non-matrix: its only caller passes
+	# `t(Psi_full) %*% sandwich_full %*% Psi_full`. A silent pass-through is
+	# strictly worse than either alternative, and #476 measured why: a one-token
+	# swap of `.floor_cluster_quad(` to `.floor_cluster_quad_diag(` at the
+	# SCALAR `.compute_att_var1()` site -- which hands its floor an
+	# `as.numeric()` of the same triple product -- reverted both the #139
+	# diagnostic AND the underlying #84-item-9 `max(q, 0)` floor, returning a
+	# NEGATIVE `att_var_1` and an understated overall-ATT standard error, with
+	# the entire suite byte-identically green. `test-cluster_floor.R`'s A10 now
+	# pins which floor function each site calls; this `stop()` is the other half.
+	#
+	# PLAIN `stop()`, deliberately NOT one of the two classed conditions above:
+	# this is a bug report about the caller, not a variance diagnostic, so
+	# `.fit_band_for_family()` must neither capture it nor re-raise it below its
+	# `tryCatch()`. It degrades to `NULL` there like any other ordinary error.
+	#
+	# The numeric test lives in `.floor_psd_diag_core()` and not here so the
+	# vectorized family makes that decision in exactly one place. Here it would
+	# also be redundant: `diag()` of a non-numeric matrix comes back
+	# non-numeric, the core passes it through unchanged, and
+	# `diag(M) <- diag(M)` rewrites the same values, so a character matrix
+	# returns byte-identically either way (pinned in the unit block of
+	# `test-cluster_floor.R`). An earlier draft of this comment justified the
+	# placement by claiming `diag()` on a `Matrix`-classed argument returns an
+	# ordinary numeric vector -- measured FALSE, and deleted: only
+	# `Matrix::bdiag` is imported, so `diag` resolves to `base::diag`, which
+	# ERRORS on a `ddiMatrix` (`long vectors not supported yet`).
 	if (length(dim(M)) != 2L) {
-		return(M)
+		stop(
+			".floor_cluster_quad_diag() requires a two-dimensional matrix ",
+			"but was given a ",
+			class(M)[1],
+			" of length ",
+			length(M),
+			" at site '",
+			site,
+			"'; this is a bug in fetwfe, not a property of your data. ",
+			"Please file an issue at ",
+			"https://github.com/gregfaletto/fetwfePackage/issues.",
+			call. = FALSE
+		)
 	}
 	diag(M) <- .floor_psd_diag_core(
 		diag(M),
