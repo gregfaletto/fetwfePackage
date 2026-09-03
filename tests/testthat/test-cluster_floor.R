@@ -119,10 +119,11 @@ library(fetwfe)
 #     silent #139 revert is the pair of re-raises below its `tryCatch()`.
 #     Delete one of them and exactly THAT TIER goes silent on every internal
 #     route -- `stop(fatal)` the catastrophic tier, the `pending_floor` loop
-#     the warning tier -- and the two mutants redden DISJOINT sets of blocks
-#     in `test-matrix-floor-conditions-470.R`, which is the only thing
-#     guarding either. Measured: every assertion in THIS file stays green
-#     under both deletions, so nothing here would notice.
+#     the warning tier. Each mutant reddens its OWN tier's blocks in
+#     `test-matrix-floor-conditions-470.R`, which is the only thing guarding
+#     either; the two red sets share exactly one block, the `plot()` one,
+#     which asserts both tiers. Measured, both mutants: every assertion in
+#     THIS file stays green under either deletion, so nothing here notices.
 #
 # None of these is a regression. The block this replaces was blind to all of
 # them AND to whole files, and it ran on no automated machine. The single

@@ -38,7 +38,9 @@ library(fetwfe)
 #
 # Delete either re-raise and THAT TIER of the #470 diagnostic goes silent on
 # every internal route -- the warning tier with the loop, the catastrophic
-# tier with the `stop()`, on disjoint sets of blocks here -- while every
+# tier with the `stop()`. Each mutant reddens its own tier's blocks here, and
+# the two red sets are NOT disjoint: they share `plot() stays loud on an
+# event-study-only breakdown`, the one block that asserts both tiers. Every
 # assertion in `test-cluster_floor.R` stays green under either deletion
 # (measured, both mutants). Nothing but this file sees it.
 # `devtools::check()` does NOT stay clean under either mutant,
