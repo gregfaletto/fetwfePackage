@@ -23,11 +23,25 @@
 #     them, not to relax the assertion.
 #
 #     It is also NOT re-expressed on `.floor_psd_diag_core()` below, even
-#     though the two share their tiering shape:
-#     `tests/testthat/test-namespace-inspect-463.R` pins its body and
-#     `test-cluster_floor.R`'s scalar unit block reads it, so a re-expression
-#     would be a test change in two files for no behavioral gain. The
-#     resulting same-file duplication is bounded by a check rather than by
+#     though the two share their tiering shape. The reason is the classing
+#     asymmetry above, and it stands alone: the core raises CLASSED
+#     conditions, so delegating to it would class these two as well and hand
+#     `.fit_band_for_family()` a pair it has no site to key on. It would also
+#     restate them in the core's wording, which says "on the covariance
+#     diagonal" -- true of the vectorized family's argument, false of a
+#     scalar quadratic form.
+#
+#     A COST ARGUMENT USED TO STAND HERE TOO -- that a re-expression "would
+#     be a test change in two files for no behavioral gain" -- and it is
+#     deleted rather than reworded, because the cost measures at ZERO (#476).
+#     A re-expression changing BOTH messages and BOTH condition classes left
+#     `test-cluster_floor.R` and `test-namespace-inspect-463.R` green (177
+#     assertions before, 177 after) and the whole suite byte-identical: the
+#     `test-namespace-inspect-463.R` pin is a round trip that moves with the
+#     body, and the unit block greps substrings the new wording keeps. Do not
+#     reintroduce a cost claim about those two files without re-measuring.
+#
+#     The resulting same-file duplication is bounded by a check rather than by
 #     intent, but only partly: `test-cluster_floor.R`'s A5b is an EXACT set
 #     over every namespace function mentioning `err_threshold` /
 #     `warn_threshold`, so a third copy THAT NAMES EITHER THRESHOLD goes
