@@ -1531,19 +1531,28 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 	# call site (`R/event_study.R`) passes TRUE for the third one -- so a fourth
 	# advisory mechanism added later belongs here, not there.
 	#
-	# THE ROUTE IS NOT UNCONDITIONALLY SILENT, and since #470 it is not silent
-	# even on correct-looking data. Those three mechanisms cover the two
-	# advisory notices and nothing else; a broken variance invariant is a bug
-	# signal, not an advisory, and is deliberately audible here. The helper's
+	# THE ROUTE IS NOT UNCONDITIONALLY SILENT, and since #470 it can be audible
+	# on a fit that would previously have succeeded silently. (On
+	# well-conditioned data nothing fires at all and the route is as silent as
+	# it ever was; the change is confined to fits whose variance invariant is
+	# already broken.) Those three mechanisms cover the two advisory notices and
+	# nothing else; a broken variance invariant is a bug signal, not an
+	# advisory, and is deliberately audible here. The helper's
 	# class-keyed `withCallingHandlers()` is therefore not a fourth silencer but
 	# the opposite: it captures `fetwfe_negative_variance_floored` only to
 	# muffle it INSIDE the protected region and re-raise it below the
 	# `tryCatch(error = )`, so the warning reaches this caller rather than being
 	# converted by `options(warn = 2)` and swallowed (see that helper's
 	# `@details`). Its sibling `fetwfe_negative_variance_catastrophic` handler
-	# re-raises with `stop()` and PROPAGATES, failing the fit outright. Both can
-	# fire on this fit-time cohort route. The #433 condition is the one thing
-	# that cannot: with `warn_highdim_postselection = FALSE` the worker never
+	# works the same way and does NOT re-raise: it stores the condition in
+	# `fatal` and returns NULL, and the helper re-raises it with `stop(fatal)`
+	# BELOW the `tryCatch()` -- that is where it propagates from, failing the
+	# fit outright. (A `stop()` from inside the handler would not escape: the
+	# sibling `error = function(e) NULL` is still established and would catch
+	# it. The helper's own comment at that handler says so, and says not to
+	# write a comment claiming otherwise.) Both tiers can fire on this fit-time
+	# cohort route. The #433 condition is the one thing that cannot: with
+	# `warn_highdim_postselection = FALSE` the worker never
 	# signals it, so on this route that handler captures nothing and re-raises
 	# nothing.
 	.fit_band_for_family(

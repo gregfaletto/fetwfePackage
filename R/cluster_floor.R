@@ -35,8 +35,8 @@
 #     be a test change in two files for no behavioral gain" -- and it is
 #     deleted rather than reworded, because the cost measures at ZERO (#476).
 #     A re-expression changing BOTH messages and BOTH condition classes left
-#     `test-cluster_floor.R` and `test-namespace-inspect-463.R` green (177
-#     assertions before, 177 after) and the whole suite byte-identical: the
+#     `test-cluster_floor.R` and `test-namespace-inspect-463.R` green (189
+#     assertions before, 189 after) and the whole suite byte-identical: the
 #     `test-namespace-inspect-463.R` pin is a round trip that moves with the
 #     body, and the unit block greps substrings the new wording keeps. Do not
 #     reintroduce a cost claim about those two files without re-measuring.
@@ -233,10 +233,14 @@
 			# core serves more than the fit-time one -- on a direct
 			# `simultaneousCIs()` call `ci_type` is not that call's remedy,
 			# but it is still how the user obtains a usable fit. It is a
-			# constant here rather than a per-caller formal: `.floor_psd_diag_core()`'s
-			# formals are pinned by name in `test-cluster_floor.R`'s A5c, and a
-			# formal added only to vary this sentence would have to grow that
-			# pin for no behavioral gain.
+			# constant here rather than a per-caller formal because
+			# `.floor_psd_diag_core()`'s formals are pinned by name in
+			# `test-cluster_floor.R`'s A5c: a formal added only to vary this
+			# sentence has to grow that pin in the same commit, deliberately.
+			# That mechanism is the whole reason recorded here. Whether the
+			# per-route wording would be worth it is a trade-off, and it lives
+			# in the plan's Decision Log -- do not re-argue it here with a cost
+			# claim nobody measured, which is what stood in this spot before.
 			stop(structure(
 				list(
 					message = paste0(
