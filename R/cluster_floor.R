@@ -13,6 +13,15 @@
 #     vectorized family below IS reachable from there, which is the whole
 #     reason its conditions are classed.)
 #
+#     THAT CLAIM IS LOAD-BEARING AND IS PINNED, by A11 in
+#     `tests/testthat/test-cluster_floor.R` (#476). If it stops holding, a
+#     scalar `stop()` raised inside the protected region is swallowed by
+#     `error = function(e) NULL` and the band degrades to the POINTWISE one
+#     under a `[simultaneous 95% CI]` header -- #470's own defect, at the
+#     sites #139 was written for. A11 going red is an instruction to class
+#     these two conditions and teach `.fit_band_for_family()` to re-raise
+#     them, not to relax the assertion.
+#
 #     It is also NOT re-expressed on `.floor_psd_diag_core()` below, even
 #     though the two share their tiering shape:
 #     `tests/testthat/test-namespace-inspect-463.R` pins its body and

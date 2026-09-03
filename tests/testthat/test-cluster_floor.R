@@ -24,6 +24,14 @@ library(fetwfe)
 # there is no `R/` directory at all -- the whole block used to skip there,
 # which is every CI job and every CRAN machine (#463).
 #
+# One block here is not about the floor sites at all. A11 / A12 walk the
+# namespace CALL GRAPH rather than the AST, to pin the reachability claim
+# `R/cluster_floor.R`'s header rests on: that no `.floor_cluster_quad()` call
+# site sits inside `.fit_band_for_family()`'s protected region, which is what
+# lets the scalar helper's conditions stay unclassed. They live here because
+# that claim is the scalar floor's, and because the caller set they read is the
+# one A10 pins.
+#
 # On the per-site labels asserted below: `getTeResultsOLS/att_var_1` and
 # `getTeResults2/att_var_1` are two LABELS at one SITE. #344 merged those two
 # functions' floors into the shared `.compute_att_var1()`, and each caller
@@ -1217,6 +1225,141 @@ test_that("no call site neuters .floor_cluster_quad's diagnostic contract", {
 		paste(names(formals(fetwfe:::.floor_variance_diag)), collapse = ", "),
 		"v, site"
 	)
+})
+
+# --- A11: the reachability claim the SCALAR helper's unclassed conditions rest
+# on ---------------------------------------------------------------------------
+#
+# `R/cluster_floor.R`'s header justifies leaving `.floor_cluster_quad()`'s
+# `warning()` / `stop()` UNCLASSED on a reachability argument: every one of its
+# call sites is outside `.fit_band_for_family()`'s protected region, so there is
+# nothing for a class to key on. That claim is load-bearing. If it stops
+# holding, a scalar `stop()` raised inside the region is swallowed by
+# `error = function(e) NULL` and the band degrades to the POINTWISE one under a
+# `[simultaneous 95% CI]` header -- a narrower interval, so it over-rejects.
+# That is #470's own defect, at the sites #139 was written for.
+#
+# An untested claim about reachability rots; this one pins it. (Same reasoning,
+# and the same sentence, as `test-fit-time-singular-gram-degrade-400.R`.)
+#
+# The protected region is exactly the transitive closure of
+# `.simultaneous_cis_impl()`: that is the single call inside the `tryCatch()`.
+
+# Every namespace function `f` calls, by CALL HEAD, `::` / `:::` unwrapped.
+# Deliberately NOT "every symbol or string naming a namespace function": that
+# over-approximation is a measured false-positive generator here, because
+# `.simultaneous_cis_impl()` mentions the CLASS NAME `"fetwfe"`, which is also
+# the name of the top-level estimator, and the resulting phantom edge makes
+# nearly half the package look reachable. A12 below is what covers the opposite
+# risk -- a real edge this lexical rule cannot see.
+.clf_call_edges <- function(fns) {
+	nms <- names(fns)
+	lapply(fns, function(f) {
+		out <- character(0)
+		for (code in .ns_code_exprs(f)) {
+			.ns_walk_ast(code, function(node, ancestors) {
+				if (is.call(node)) {
+					nm <- .clf_callee_name(node)
+					if (!is.na(nm) && nm %in% nms) {
+						out <<- c(out, nm)
+					}
+				}
+			})
+		}
+		unique(out)
+	})
+}
+
+# Transitive closure of `seed` over `edges`, INCLUDING the seed itself.
+.clf_reachable_from <- function(edges, seed) {
+	seen <- seed
+	frontier <- seed
+	while (length(frontier) > 0L) {
+		nxt <- setdiff(
+			unique(unlist(edges[intersect(frontier, names(edges))])),
+			seen
+		)
+		seen <- c(seen, nxt)
+		frontier <- nxt
+	}
+	sort(seen)
+}
+
+test_that("no .floor_cluster_quad() site is reachable from the protected region", {
+	fns <- .ns_functions("fetwfe")
+	edges <- .clf_call_edges(fns)
+	reachable <- .clf_reachable_from(edges, ".simultaneous_cis_impl")
+
+	# The scalar helper's callers, derived from the same walk `.clf_scan()`
+	# uses. A10 above is what pins this set as a literal; here it is an
+	# OBSERVATION, and the claim is the intersection below.
+	scalar_callers <- sort(unique(vapply(
+		Filter(
+			function(fc) identical(fc$callee, ".floor_cluster_quad"),
+			.clf_scan(fns)$floor_calls
+		),
+		`[[`,
+		character(1),
+		"fn"
+	)))
+
+	# Non-vacuity, in both directions. Without these an empty intersection is
+	# equally consistent with a broken walk or an empty caller set.
+	expect_gt(length(scalar_callers), 0L)
+	expect_gt(length(reachable), 1L)
+	# The POSITIVE CONTROL: the walk really does reach floor-calling code from
+	# the seed. `.assemble_joint_cov_var1()` calls the MATRIX floor and IS
+	# inside the protected region -- which is exactly why the vectorized
+	# family's conditions are classed and the scalar family's are not.
+	expect_true(".assemble_joint_cov_var1" %in% reachable)
+	expect_true(".floor_cluster_quad_diag" %in% reachable)
+
+	# --- A11: the claim itself --------------------------------------------
+	# If this goes red, do NOT delete it and do NOT relax it to containment:
+	# class the scalar helper's two conditions and teach
+	# `.fit_band_for_family()` to capture and re-raise them, exactly as it does
+	# the vectorized family's, then update `R/cluster_floor.R`'s header.
+	expect_setequal(intersect(reachable, scalar_callers), character(0))
+
+	# --- A12: nothing in the region dispatches out of the lexical graph ----
+	# A11's walk follows call heads, so a call assembled at RUNTIME is invisible
+	# to it -- and this package really does dispatch that way elsewhere
+	# (`.call_te()` builds a call from a character `te_fn_name` and `eval()`s
+	# it, which is how `fetwfe_core()` reaches `getTeResults2()` and hence
+	# `.compute_att_var1()`). One such construct inside the protected region
+	# would make A11's empty intersection unsound. Exactly one reachable
+	# function uses one, and its use cannot name a namespace function:
+	# `.build_propensity_if()` calls `do.call(rbind, blocks)`. An EXACT literal,
+	# so a second one puts a human in the loop.
+	dyn_verbs <- c(
+		"eval",
+		"evalq",
+		"do.call",
+		"match.fun",
+		"get",
+		"get0",
+		"mget",
+		"Recall",
+		"getFromNamespace",
+		"getExportedValue"
+	)
+	dynamic_dispatchers <- sort(Filter(
+		function(nm) {
+			hit <- FALSE
+			for (code in .ns_code_exprs(fns[[nm]])) {
+				.ns_walk_ast(code, function(node, ancestors) {
+					if (.ns_is_call_to(node, dyn_verbs)) {
+						hit <<- TRUE
+					}
+				})
+			}
+			hit
+		},
+		reachable
+	))
+	# The expected set is a LITERAL on purpose. Never regenerate it from a
+	# failure's `Needs:` / `Absent:` output -- that makes it `setequal(x, x)`.
+	expect_setequal(dynamic_dispatchers, ".build_propensity_if")
 })
 
 # --- Integration smoke test --------------------------------------------------
