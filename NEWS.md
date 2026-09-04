@@ -12,6 +12,20 @@
   ones this change affects. Continuous integration now runs the package's
   checks on the declared minimum, so it is verified rather than asserted.
 
+- **A fit whose variance invariant is broken now errors where it used to
+  succeed** (#470). `fetwfe()`, `etwfe()`, `betwfe()` and `twfeCovs()` fail at
+  call time when a diagonal entry of the simultaneous band's joint covariance
+  falls below `-1`, and a fit where only the event-study family is affected
+  still returns but then fails when `print()`, `summary()` or `plot()` renders
+  its band. Both previously returned a silently degraded interval --- see the
+  bug fix below. Such a fit can still be obtained with `ci_type = "pointwise"`,
+  which skips the simultaneous band entirely, and the error message says so.
+  Under `options(warn = 2)` the threshold is not `-1` but `-1e-10`: the warning
+  tier fires there, and because the band helpers deliberately re-raise that
+  warning outside their own error handling, `warn = 2` converts it into an
+  error that propagates. Nothing changes on well-conditioned data, where no
+  tier fires at all.
+
 ### Defensive improvements
 
 - Several errors raised from inside the package now say something useful (#431).
@@ -118,6 +132,31 @@
   makes no comparison --- passed validation outright and failed later inside
   the coefficient assembly. What these functions accept is unchanged: every
   such input already failed, just without saying which argument was at fault.
+
+### Bug fixes
+
+- A broken variance invariant on the simultaneous-confidence-band path no
+  longer passes silently (#470). The joint covariance behind
+  `simultaneousCIs()` and `eventStudy()` floored its diagonal at zero with no
+  signal, so a negative variance --- impossible in exact arithmetic, since the
+  cluster-robust sandwich is a sum of outer products --- returned a confidence
+  interval collapsed to a point at the estimate. Left as they were, the
+  internal routes that fit a band during `fetwfe()` / `etwfe()` / `betwfe()` /
+  `twfeCovs()` and during `print()` / `summary()` / `plot()` would have
+  swallowed the new signal as well: a failure inside the band construction
+  degrades there to the **pointwise** interval under a
+  `[simultaneous 95% CI]` header --- a narrower interval, so it would have
+  over-rejected. That fallback is deliberate and is unchanged for an ordinary
+  error; what is new is that the two conditions described next are classed, so
+  those routes let exactly those two through instead of absorbing them. Those
+  floors now carry the same two-tier diagnostic the scalar cluster-sandwich
+  sites have carried since version 1.11.2: negatives at the scale of
+  floating-point cancellation are still clipped silently, a larger one warns,
+  and one below `-1` is an error, with one aggregated condition per call naming
+  the offending effects and the most negative value. The estimates themselves
+  are unchanged, and nothing changes on well-conditioned data, where no tier
+  fires at all. See the breaking change above for what a fit that hits the
+  error tier now does.
 
 ### Internal
 

@@ -1627,8 +1627,13 @@ getSecondVarTermDataApp <- function(
 #'   columns are treatment-effect features (required when
 #'   `se_type = "cluster"`), used to zero-pad `Psi` to the sandwich's full
 #'   feature space.
-#' @return A numeric K x K matrix. Diagonal entries are floored at zero in the
-#'   cluster path (issue #84 item 9 / issue #127), mirroring the scalar sites.
+#' @return A numeric K x K matrix. In the cluster path the diagonal is floored
+#'   at zero through `.floor_cluster_quad_diag()`, which carries the #139
+#'   two-tier diagnostic (silent below the FP-noise threshold, `warning()`
+#'   below `-1e-10`, `stop()` below `-1`) onto this matrix-valued site (#470);
+#'   the floor itself dates to issue #84 item 9 / issue #127 and mirrors the
+#'   scalar sites. Off-diagonals are untouched -- they can legitimately take
+#'   either sign.
 #' @keywords internal
 #' @noRd
 .assemble_joint_cov_var1 <- function(
@@ -1648,12 +1653,22 @@ getSecondVarTermDataApp <- function(
 		stopifnot(sum(treat_block_mask) == nrow(Psi))
 		Psi_full <- matrix(0, nrow = length(treat_block_mask), ncol = K)
 		Psi_full[treat_block_mask, ] <- Psi
-		out <- t(Psi_full) %*% sandwich_full %*% Psi_full
 		# Floor diagonal entries at zero against floating-point drift; the
 		# Liang-Zeger sandwich quadratic form is PSD in exact arithmetic
 		# (issue #84 item 9 / issue #127). Off-diagonals can be either sign
-		# and are left as-is.
-		diag(out) <- pmax(diag(out), 0)
+		# and are left as-is. Since #470 the floor also carries the #139
+		# two-tier diagnostic, so a broken PSD invariant announces itself
+		# instead of arriving as a standard error of exactly zero.
+		#
+		# The quadratic form is written INSIDE the floor call, not hoisted
+		# into its own statement, because that is the only arrangement
+		# `tests/testthat/test-cluster_floor.R` can verify: to a lexical
+		# check, a form computed on one line and floored on the next is the
+		# same shape as a silent revert.
+		out <- .floor_cluster_quad_diag(
+			t(Psi_full) %*% sandwich_full %*% Psi_full,
+			"assemble_joint_cov_var1/Sigma_1"
+		)
 	} else {
 		out <- sig_eps_sq * (t(Psi) %*% gram_inv %*% Psi) / (N * T)
 	}
@@ -1713,6 +1728,14 @@ getSecondVarTermDataApp <- function(
 		}
 	}
 	# Floor diagonal (parallels the issue #127 floor at the scalar sites).
+	#
+	# Deliberately left as a BARE floor when #470 gave its byte-identical
+	# sibling in `.assemble_joint_cov_var1()` the two-tier diagnostic. This
+	# block's scalar siblings -- `getSecondVarTermOLS()` /
+	# `getSecondVarTermDataApp()`, the `att_var_2` floors added by #127 --
+	# carry no diagnostic either, and #139's scope was cluster-sandwich sites
+	# only, so wiring one up here would put the matrix path ahead of its own
+	# scalar siblings. Tracked as #474, covering the family.
 	diag(out) <- pmax(diag(out), 0)
 	out
 }

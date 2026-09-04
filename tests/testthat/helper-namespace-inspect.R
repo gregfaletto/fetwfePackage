@@ -140,21 +140,30 @@
 	found
 }
 
-# Is `expr` a call to any of the function names in `fn` (a character vector)?
+# The name of the function `expr` invokes, with any `::` / `:::` qualifier
+# stripped, or `NA_character_` when there is no name to return: `expr` is not a
+# call at all, or -- after the qualifier is stripped -- its head is not a symbol
+# (`f()()`, or a string head).
 #
-# Resolves a namespace-qualified head. The head of `Matrix::crossprod(...)` is
-# itself a call -- ``::``(Matrix, crossprod) -- not a symbol, so the natural
-# `is.symbol(expr[[1]])` test silently declines to match it, and a
-# `pkg::op()` spelling escapes any guardrail built on this predicate. Measured:
-# that is exactly how a `Matrix::crossprod()` site slips past a structural
-# check while naming its operands literally.
-.ns_is_call_to <- function(expr, fn) {
+# The unwrapping is the reason this is a primitive rather than an inline
+# `expr[[1]]`. The head of `Matrix::crossprod(...)` is itself a call --
+# ``::``(Matrix, crossprod) -- not a symbol, so the natural
+# `is.symbol(expr[[1]])` test silently declines to match it, and a `pkg::op()`
+# spelling escapes any guardrail built on it. Measured: that is exactly how a
+# `Matrix::crossprod()` site slips past a structural check while naming its
+# operands literally.
+#
+# Both consumers of that unwrapping go through here -- `.ns_is_call_to()` below
+# and `test-cluster_floor.R`'s `.clf_callee_name()`. Adding a third copy is the
+# thing this exists to stop, so extend it here rather than re-deriving it.
+.ns_callee_name <- function(expr) {
 	if (!is.call(expr)) {
-		return(FALSE)
+		return(NA_character_)
 	}
 	# Element 1 of a call is its function part and is never the empty symbol,
-	# so binding it here cannot hit the missing-argument trap above. Named
-	# `fn_head` rather than `head` so it does not shadow `utils::head()`.
+	# so binding it here cannot hit the missing-argument trap `.ns_walk_ast()`
+	# documents above. Named `fn_head` rather than `head` so it does not shadow
+	# `utils::head()`.
 	fn_head <- expr[[1]]
 	if (
 		is.call(fn_head) &&
@@ -164,5 +173,18 @@
 	) {
 		fn_head <- fn_head[[3]]
 	}
-	is.symbol(fn_head) && as.character(fn_head) %in% fn
+	if (!is.symbol(fn_head)) {
+		return(NA_character_)
+	}
+	as.character(fn_head)
+}
+
+# Is `expr` a call to any of the function names in `fn` (a character vector)?
+#
+# A namespace-qualified head resolves to the FUNCTION's name, not the package's,
+# because `.ns_callee_name()` above owns the unwrapping and the reason for it.
+# A non-call, and a call whose head has no name, are both FALSE.
+.ns_is_call_to <- function(expr, fn) {
+	nm <- .ns_callee_name(expr)
+	!is.na(nm) && nm %in% fn
 }
