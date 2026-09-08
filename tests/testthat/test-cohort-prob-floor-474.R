@@ -339,6 +339,60 @@ test_that("site 3 fires both tiers at fit time on fetwfe (#474)", {
 })
 
 # ------------------------------------------------------------------------------
+# 2b. (red) SITE 3 at fit time again, this time at `se_type = "default"` with
+#     `ci_type = "pointwise"` -- the cell the `NEWS.md` breaking-change bullet
+#     singles out as the one that had NO fit-blocking variance diagnostic
+#     before this change. `.compute_att_var1()`'s #139 `stop()` tier sits
+#     inside `if (identical(se_type, "cluster"))` and #470's sits on the
+#     simultaneous band, so neither reaches here.
+#
+#     It exists because that distinction is a user-facing claim in
+#     `### Breaking changes` and every other fit-time block in this file fits
+#     at `se_type = "cluster"`, which left the claim resting on prose. An
+#     assertion is cheap; a NEWS bullet nobody can falsify is not.
+# ------------------------------------------------------------------------------
+
+test_that("site 3 fires at fit time on se_type = default, ci_type = pointwise (#474)", {
+	.cpf474_skip()
+	sim <- .cpf474("sim")
+	fit_it <- function() {
+		fetwfeWithSimulatedData(
+			sim,
+			se_type = "default",
+			ci_type = "pointwise"
+		)
+	}
+
+	# Control: this cell fits clean on unperturbed data, so the assertions
+	# below are about the injection rather than about the cell being broken.
+	expect_no_error(fit_it())
+
+	r <- .cpf474_run(
+		.cpf474_neg("getSecondVarTermDataApp", .CPF474_WARN_SCALE),
+		fit_it
+	)
+	fws <- .cpf474_floor_ws(r)
+	expect_gt(length(fws), 0L)
+	expect_s3_class(fws[[1]], "fetwfe_negative_variance_floored")
+	expect_true(grepl(
+		.CPF474_DATAAPP,
+		conditionMessage(fws[[1]]),
+		fixed = TRUE
+	))
+
+	r <- .cpf474_run(
+		.cpf474_neg("getSecondVarTermDataApp", .CPF474_ERR_SCALE),
+		fit_it
+	)
+	expect_s3_class(r$err, "fetwfe_negative_variance_catastrophic")
+	emsg <- conditionMessage(r$err)
+	expect_true(grepl(.CPF474_DATAAPP, emsg, fixed = TRUE))
+	# `ci_type = "pointwise"` is already set, so a remedy clause telling the
+	# user to set it would be the false-remedy defect this PR exists to avoid.
+	expect_false(grepl(.CPF474_REMEDY, emsg, fixed = TRUE))
+})
+
+# ------------------------------------------------------------------------------
 # 3. (red) SITE 2 via `eventStudy()` -- the OLS-family event-study route,
 #    through `.event_study_etwfe_betwfe()`. A different route to the same
 #    site, which is what the per-route half of the coverage predicate is

@@ -4,8 +4,14 @@ library(fetwfe)
 # ------------------------------------------------------------------------------
 # Tests for the cluster-floor family -- `.floor_cluster_quad()` (issue #139,
 # version 1.11.2) and its vectorized siblings `.floor_cluster_quad_diag()` /
-# `.floor_variance_diag()` (issue #470) -- and the guardrail keeping every
-# cluster-sandwich quadratic-form site routed through one of them (issue #463).
+# `.floor_variance_diag()` (issue #470) / `.floor_cohort_prob_var()`
+# (issue #474) -- and the guardrail keeping every cluster-sandwich
+# quadratic-form site routed through one of them (issue #463).
+#
+# Not every member is covered here to the same depth. The guardrail below and
+# A5's pins span the whole family; the per-tier, per-route conditions of the
+# #474 wrapper live in `test-cohort-prob-floor-474.R`, and those of the #470
+# vectorized pair in `test-matrix-floor-conditions-470.R`.
 #
 # The family layers a two-tier diagnostic on top of the pre-existing
 # `max(q, 0)` / `pmax(diag(.), 0)` floor at each cluster-sandwich
@@ -1193,9 +1199,11 @@ test_that("no call site neuters .floor_cluster_quad's diagnostic contract", {
 	# No namespace function other than the two helpers that legitimately CARRY
 	# the thresholds may mention either: a NAMED per-call-site override is the
 	# other spelling of the same edit A5a catches positionally. Exactly those
-	# two and no wider -- `.floor_cluster_quad_diag()` and
-	# `.floor_variance_diag()` must NOT name a threshold, which is what keeps
-	# A5b's real target closed. Being an exact set, it also PARTLY bounds the
+	# two and no wider -- EVERY wrapper must NOT name a threshold
+	# (`.floor_cluster_quad_diag()`, `.floor_variance_diag()` and
+	# `.floor_cohort_prob_var()` today), which is what keeps A5b's real target
+	# closed. Stated as the predicate rather than as a list, because the list
+	# grows and the rule does not. Being an exact set, it also PARTLY bounds the
 	# deliberate duplication between the scalar helper and
 	# `.floor_psd_diag_core()`: a third copy of the tiering logic goes red here
 	# automatically IF it names either threshold. One that writes the constants
@@ -1464,7 +1472,10 @@ test_that("cluster-SE fit on well-conditioned data does not trigger the diagnost
 	# `.floor_cluster_quad_diag()`'s warning tier (#470), so the coverage had
 	# widened to the matrix site for free. #474 adds a family with a different
 	# subject noun ("cohort-probability variance") whose sites this very
-	# fixture exercises -- `getSecondVarTermOLS()` runs on every `se_type` --
+	# fixture exercises -- measured on this exact fit: `getSecondVarTermDataApp()`
+	# twice and `.assemble_joint_cov_var2()` once. (An earlier draft named
+	# `getSecondVarTermOLS()` here; this fixture calls it ZERO times, because
+	# `fetwfe()` is the one estimator served by the DataApp site.) --
 	# so the phrase filter would have excluded the new family BY CONSTRUCTION
 	# on a fit that reaches it, leaving this block's stated predicate ("no
 	# condition from the floor family fires on a well-conditioned fit") true

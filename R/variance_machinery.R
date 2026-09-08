@@ -1437,13 +1437,13 @@ getSecondVarTermDataApp <- function(
 	# a near-zero value marginally negative, NaN-ing the conservative
 	# overall-ATT-SE branch `2 * sqrt(att_var_1 * att_var_2)` downstream.
 	#
-	# Issue #474 layers the two-tier diagnostic on that floor, so what it
-	# absorbs is now reported rather than silently discarded: below `-1e-10`
-	# a classed warning naming this site, below `-1` a classed error. Between
-	# `-1e-10` and `0` the behavior is exactly the `max(..., 0)` above.
-	# `remedy = NULL` because this site is NOT on the simultaneous-band path
-	# and no argument yields a fit without standard errors, so the honest text
-	# here is no remedy clause at all rather than a differently-worded one.
+	# Issue #474 layers the two-tier diagnostic on that floor. See the matching
+	# floor in `getSecondVarTermOLS()` (same file, above) for what each tier
+	# does and why this site passes `remedy = NULL`; the two are the same
+	# quantity for two estimator families, and the rationale is written once
+	# there rather than twice. (These two functions are this package's
+	# canonical copy-paste pair -- a sentence duplicated across them was wrong
+	# in two of its three copies for a whole review round.)
 	att_var_2 <- .floor_cohort_prob_var(
 		T *
 			as.numeric(

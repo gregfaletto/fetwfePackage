@@ -1,7 +1,9 @@
 # Two-tier diagnostic floors for the package's non-negative variance
 # quantities: cluster-sandwich quadratic forms (#139, #470), the model-based
 # covariance diagonals of `.simultaneous_cis_impl()` (#470), and the
-# cohort-probability variance family (#474). The title said
+# cohort-probability variances (#474). Those are QUANTITY KINDS; "family"
+# below always means one of the two HELPER families (scalar / vectorized), and
+# the two senses collided in this sentence until #474. The title said
 # "cluster-sandwich quadratic forms" alone until #474; that was already partly
 # false once `.floor_variance_diag()` landed, and a cohort-probability family
 # in the file makes it plainly wrong.
@@ -86,7 +88,14 @@
 #   * the cluster-sandwich quadratic forms (`t(psi) %*% sandwich %*% psi`,
 #     sums of outer products) are PSD by construction;
 #   * the cohort-probability forms (`theta' J' Sigma_pi_hat J theta`) are PSD
-#     because `Sigma_pi_hat` is a multinomial covariance.
+#     because `Sigma_pi_hat` is a multinomial covariance;
+#   * the model-based covariance diagonals floored by `.floor_variance_diag()`
+#     are diagonal entries of an estimated covariance matrix, PSD for that
+#     reason rather than as a sandwich form -- that wrapper's own comment
+#     records that they are NOT sandwich quantities, so the first bullet does
+#     not reach them. One bullet per quantity kind the title line names; a
+#     universal claim justified by a short list is how this paragraph went
+#     wrong once already.
 #
 # Either way a negative value in well-conditioned data is a floating-point
 # artifact at machine epsilon (~`1e-15`). Large negatives would indicate a
@@ -469,11 +478,14 @@
 # `.floor_cluster_quad_diag()` for the MODEL-BASED covariance diagonals in
 # `.simultaneous_cis_impl()`, which are not sandwich quantities -- so the
 # subject is "variance" and the #139 wording would be a false statement about
-# them. All THREE members of the vectorized family (this one,
-# `.floor_cluster_quad_diag()` and `.floor_cohort_prob_var()`) share
-# `.floor_psd_diag_core()`, and therefore both condition classes, so one
-# handler pair in `.fit_band_for_family()` covers the family. (It said "the
-# two" until #474 added the third.)
+# them. EVERY member of the vectorized family shares `.floor_psd_diag_core()`,
+# and therefore both condition classes, so one handler pair in
+# `.fit_band_for_family()` covers the family -- this one,
+# `.floor_cluster_quad_diag()` and `.floor_cohort_prob_var()` at the time of
+# writing. Stated as the predicate, without a count: this sentence said "the
+# two" until #474 made it three, and `.fit_band_for_family()`'s `@details`
+# owns the tenant count, so a second copy of it here is a second place to
+# correct.
 #
 # Deliberately absent from `test-cluster_floor.R`'s recognized floor-function
 # set: its call sites are not sandwich forms, so that guardrail's A9 ("every

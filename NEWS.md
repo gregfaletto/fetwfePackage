@@ -48,14 +48,15 @@
   and the second --- the variance inherited from estimating each treated
   cohort's share of the units --- is non-negative in exact arithmetic but can
   come out negative in floating point. Three internal sites clipped such a
-  value to zero and reported nothing: the overall-ATT variance for the
-  bridge-penalized estimators, the same quantity for the OLS-family estimators,
-  and the cohort-probability block of the simultaneous band. All three now
+  value to zero and reported nothing: the overall-ATT variance for `fetwfe()`,
+  the same quantity for `etwfe()`, `betwfe()` and `twfeCovs()`, and the
+  cohort-probability block of the simultaneous band. All three now
   carry the same two-tier diagnostic the cluster-sandwich sites have carried
   since version 1.11.2: a negative at the scale of floating-point cancellation
   is still clipped silently, a larger one warns and names the site, the value
   and the offending index, and one below `-1` is an error. The estimates
-  themselves are unchanged.
+  themselves are unchanged. See the breaking change above for what a fit that
+  hits the error tier now does.
 
 - Several errors raised from inside the package now say something useful (#431).
   A bad `T`, `G`, `d`, `density` or `eff_size` passed to `genCoefs()` or
