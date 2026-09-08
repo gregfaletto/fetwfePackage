@@ -24,9 +24,11 @@ library(fetwfe)
 #   4. `.event_study_var2_fetwfe()`  (`R/event_study.R`) -- scalar, per event
 #      time. THE ONE THAT HAD NO FLOOR: a negative reached `sqrt()` and gave
 #      `NaN`, or -- when `var_1(e)` kept the sum positive -- a silently
-#      UNDERSTATED event-study standard error. Blocks 6-8 below are that
+#      UNDERSTATED event-study standard error. Blocks 6 and 7 below are that
 #      defect's regression tests, and they pin the VALUE, not just its
-#      finiteness.
+#      finiteness. Measured on the pre-#474 tree, one fixture shows both
+#      shapes at once: `0.0501, 0.0501, NaN, 0.0804, 0.2128` where the
+#      floored answer is `0.0954, 0.0954, 0.1088, 0.1238, 0.2128`.
 #
 # THIS FILE IS THE ENTIRE DETECTOR FOR THE CHANGE. Measured in the
 # pre-implementation pass: with `.floor_cohort_prob_var()`'s body replaced by
@@ -97,8 +99,9 @@ library(fetwfe)
 #   * `se_type` across all three values, `gls`, `add_ridge` and `indep_counts`
 #     leave the reached-site set IDENTICAL, so gotcha 12.6's interaction
 #     matrix collapses to this line rather than needing a table. (`se_type`
-#     does change the arithmetic downstream of site 4, which is what block 8
-#     is about.)
+#     does change the arithmetic DOWNSTREAM of site 4 -- the conservative
+#     branch takes `2 * sqrt(var_1 * var_2)` -- which is what block 7 is
+#     about.)
 # ------------------------------------------------------------------------------
 
 # The anchored site labels, written once. Every assertion below uses these.
@@ -536,8 +539,19 @@ test_that("a negative var_2(e) does not NaN the conservative branch (#474)", {
 #    `.fit_band_for_family()`'s `tryCatch(error = function(e) NULL)` region,
 #    so an unclassed condition here is swallowed and the band degrades to the
 #    pointwise one under a `[simultaneous 95% CI]` header -- the #433/#470
-#    wrong-answer shape. Nothing but this block and block 9 guards the two
-#    re-raises in `.fit_band_for_family()` for this family.
+#    wrong-answer shape. This block, 8b and 8c are the ONLY guards on
+#    `.fit_band_for_family()`'s two re-raises for THIS family, and the two
+#    red sets are NOT the same set -- do not trim either as redundant.
+#    Measured, deleting each re-raise against this tree:
+#      * `for (w in pending_floor) warning(w)` -- blocks 8 and 8b go red;
+#        8c stays green, because it drives only the catastrophic tier.
+#      * `if (!is.null(fatal)) stop(fatal)` -- blocks 8 and 8c go red;
+#        8b stays green, because it drives only the warning tier.
+#    Block 9's direct `simultaneousCIs()` route is OUTSIDE the protected
+#    region and guards neither; it stays green under both deletions.
+#    (Until #474, `test-matrix-floor-conditions-470.R` was the SOLE guard on
+#    both re-raises. It still reddens on both mutants, and so now does this
+#    file, independently.)
 #
 #    THE GATE IS `.event_study_simultaneous_bounds`, per profile gotcha 12.8:
 #    the fit-time band and the rendered band are different families over the
@@ -735,7 +749,7 @@ test_that("the cohort family's Sigma_2 Jacobians are identically zero (#474)", {
 	# family and not of the fixture.
 	j_es <- do.call(
 		fetwfe:::.build_j_list_for_family,
-		c(list(family = "event_study"), modifyList(args, list(K = 5L)))
+		c(list(family = "event_study"), utils::modifyList(args, list(K = 5L)))
 	)
 	expect_true(any(vapply(j_es, function(m) any(m != 0), logical(1))))
 
