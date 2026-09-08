@@ -112,6 +112,12 @@ library(fetwfe)
 # The remedy clause, and the family's own subject noun.
 .CPF474_REMEDY <- "refit with ci_type = \"pointwise\""
 .CPF474_SUBJECT <- "cohort-probability variance"
+# The core sentence-cases `subject` in the CATASTROPHIC tier only (it opens
+# that message), so the two tiers render the noun differently and an assertion
+# keyed on the lowercase form silently fails at the error tier. Pinning both
+# spellings also pins that casing behavior, which lives inline in
+# `.floor_psd_diag_core()` on purpose.
+.CPF474_SUBJECT_CAP <- "Cohort-probability variance"
 
 # Measured on this fixture, not guessed. The quadratic form is exactly
 # `-scale x` its true value, and the true values run 3.7e-3 .. 4.2e-2 across
@@ -677,6 +683,18 @@ test_that("site 1 survives the renderer band route in both tiers (#474)", {
 		)
 		expect_gt(length(hit), 0L)
 		expect_s3_class(hit[[1]], "fetwfe_negative_variance_floored")
+		# SUBJECT NOUN, on this route specifically. Class, site label and
+		# remedy are all preserved by `.floor_variance_diag()`, which inherits
+		# the same remedy from the core's default -- so without this line a
+		# sibling-wrapper swap at site 1 is invisible HERE and caught only by
+		# the direct-`simultaneousCIs()` block, i.e. on the route OUTSIDE the
+		# protected region rather than the one the classing exists for. The
+		# #482 review measured that asymmetry; the noun is what discriminates.
+		expect_true(grepl(
+			.CPF474_SUBJECT,
+			conditionMessage(hit[[1]]),
+			fixed = TRUE
+		))
 
 		# --- catastrophic tier: PROPAGATES rather than degrading to a NULL
 		#     band, and carries the band remedy, which is TRUE here.
@@ -687,6 +705,7 @@ test_that("site 1 survives the renderer band route in both tiers (#474)", {
 		expect_s3_class(r$err, "fetwfe_negative_variance_catastrophic")
 		emsg <- conditionMessage(r$err)
 		expect_true(grepl(.CPF474_SIGMA2, emsg, fixed = TRUE))
+		expect_true(grepl(.CPF474_SUBJECT_CAP, emsg, fixed = TRUE))
 		# THE REMEDY IS PRESENT HERE and absent at the other three sites.
 		# This half and its three negations are the pair that keeps the
 		# false-remedy regression from returning silently.
