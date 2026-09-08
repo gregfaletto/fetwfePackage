@@ -260,7 +260,15 @@ getSecondVarTermOLS <- function(
 	# `att_var_2 >= 0` always — but floating-point cancellation can leave
 	# a near-zero value marginally negative, NaN-ing the conservative
 	# overall-ATT-SE branch `2 * sqrt(att_var_1 * att_var_2)` downstream.
-	att_var_2 <- max(
+	#
+	# Issue #474 layers the two-tier diagnostic on that floor, so what it
+	# absorbs is now reported rather than silently discarded: below `-1e-10`
+	# a classed warning naming this site, below `-1` a classed error. Between
+	# `-1e-10` and `0` the behavior is exactly the `max(..., 0)` above.
+	# `remedy = NULL` because this site is NOT on the simultaneous-band path
+	# and no argument yields a fit without standard errors, so the honest text
+	# here is no remedy clause at all rather than a differently-worded one.
+	att_var_2 <- .floor_cohort_prob_var(
 		T *
 			as.numeric(
 				t(tes) %*%
@@ -272,7 +280,8 @@ getSecondVarTermOLS <- function(
 					tes
 			) /
 			(N * T),
-		0
+		"getSecondVarTermOLS/att_var_2",
+		remedy = NULL
 	)
 
 	return(att_var_2)
@@ -1427,7 +1436,15 @@ getSecondVarTermDataApp <- function(
 	# `att_var_2 >= 0` always — but floating-point cancellation can leave
 	# a near-zero value marginally negative, NaN-ing the conservative
 	# overall-ATT-SE branch `2 * sqrt(att_var_1 * att_var_2)` downstream.
-	att_var_2 <- max(
+	#
+	# Issue #474 layers the two-tier diagnostic on that floor, so what it
+	# absorbs is now reported rather than silently discarded: below `-1e-10`
+	# a classed warning naming this site, below `-1` a classed error. Between
+	# `-1e-10` and `0` the behavior is exactly the `max(..., 0)` above.
+	# `remedy = NULL` because this site is NOT on the simultaneous-band path
+	# and no argument yields a fit without standard errors, so the honest text
+	# here is no remedy clause at all rather than a differently-worded one.
+	att_var_2 <- .floor_cohort_prob_var(
 		T *
 			as.numeric(
 				t(theta_hat_treat_sel) %*%
@@ -1437,7 +1454,8 @@ getSecondVarTermDataApp <- function(
 					theta_hat_treat_sel
 			) /
 			(N * T),
-		0
+		"getSecondVarTermDataApp/att_var_2",
+		remedy = NULL
 	)
 
 	return(att_var_2)
@@ -1702,7 +1720,11 @@ getSecondVarTermDataApp <- function(
 #'   cohort-count vector (from `.multinomial_cov(cohort_probs_overall[1:G])`).
 #' @param N,T Integers; units and time periods.
 #' @return A numeric K x K matrix. Diagonal entries are floored at zero (issue
-#'   #127), mirroring the scalar sites.
+#'   #127), mirroring the scalar sites, and diagnosed with the two-tier
+#'   cohort-probability floor (issue #474): a diagonal entry below `-1e-10`
+#'   raises a classed `fetwfe_negative_variance_floored` warning and one below
+#'   `-1` a classed `fetwfe_negative_variance_catastrophic` error, both naming
+#'   site `assemble_joint_cov_var2/Sigma_2`. Off-diagonals are untouched.
 #' @keywords internal
 #' @noRd
 .assemble_joint_cov_var2 <- function(
@@ -1727,16 +1749,22 @@ getSecondVarTermDataApp <- function(
 				(N * T)
 		}
 	}
-	# Floor diagonal (parallels the issue #127 floor at the scalar sites).
+	# Floor diagonal (parallels the issue #127 floor at the scalar sites),
+	# with #474's two-tier diagnostic on top.
 	#
-	# Deliberately left as a BARE floor when #470 gave its byte-identical
-	# sibling in `.assemble_joint_cov_var1()` the two-tier diagnostic. This
-	# block's scalar siblings -- `getSecondVarTermOLS()` /
-	# `getSecondVarTermDataApp()`, the `att_var_2` floors added by #127 --
-	# carry no diagnostic either, and #139's scope was cluster-sandwich sites
-	# only, so wiring one up here would put the matrix path ahead of its own
-	# scalar siblings. Tracked as #474, covering the family.
-	diag(out) <- pmax(diag(out), 0)
+	# THE ONE COHORT-PROBABILITY SITE INSIDE `.fit_band_for_family()`'s
+	# protected region, by a direct edge from `.simultaneous_cis_impl()`. Its
+	# conditions must therefore be CLASSED, which is what routing through
+	# `.floor_cohort_prob_var()` buys: an unclassed `stop()` here is swallowed
+	# by `error = function(e) NULL` and the band degrades to the pointwise one
+	# under a `[simultaneous 95% CI]` header. It is also the one site in the
+	# family for which the band remedy is TRUE, so it is the one that passes
+	# it; the three scalar siblings pass `remedy = NULL`.
+	diag(out) <- .floor_cohort_prob_var(
+		diag(out),
+		"assemble_joint_cov_var2/Sigma_2",
+		remedy = .SIMULTANEOUS_BAND_REMEDY_MSG
+	)
 	out
 }
 
