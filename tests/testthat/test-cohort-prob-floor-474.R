@@ -114,9 +114,14 @@ library(fetwfe)
 .CPF474_SUBJECT <- "cohort-probability variance"
 # The core sentence-cases `subject` in the CATASTROPHIC tier only (it opens
 # that message), so the two tiers render the noun differently and an assertion
-# keyed on the lowercase form silently fails at the error tier. Pinning both
-# spellings also pins that casing behavior, which lives inline in
-# `.floor_psd_diag_core()` on purpose.
+# keyed on the lowercase form silently fails at the error tier.
+#
+# The casing behavior ITSELF is already pinned, by two assertions in
+# `test-cluster_floor.R` -- removing the core's `toupper()` step reddens those
+# as well as the catastrophic-tier check here. What is new and unique to this
+# file is the catastrophic-tier SUBJECT check on the RENDERER route, which is
+# what a sibling-wrapper swap at site 1 drops. Measured both directions: the
+# lowercase and capitalized assertions each catch a mutation the other misses.
 .CPF474_SUBJECT_CAP <- "Cohort-probability variance"
 
 # Measured on this fixture, not guessed. The quadratic form is exactly

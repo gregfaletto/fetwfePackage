@@ -116,10 +116,17 @@
 #                              residual sits at machine epsilon at every
 #                              scale, and the quantity scales as response^2,
 #                              so the ABSOLUTE residual reaches order one
-#                              only around `q ~ 1e15`: roughly SEVEN TO EIGHT
-#                              decades of response above the scales seen
-#                              here, at which point `-1` would start
-#                              rejecting legitimate input. This said "two
+#                              only around `q ~ 1e15`, at which point `-1`
+#                              would start rejecting legitimate input.
+#                              `q ~ 1e15` is the invariant; any figure in
+#                              DECADES OF RESPONSE is relative to where you
+#                              start, and is quoted here against the two
+#                              anchors named just below (`att_var_1 = 2.31`,
+#                              `max diag(Sigma_1) = 8.99`), which put it at
+#                              seven to eight. Anchored elsewhere it moves --
+#                              measured, the #474 battery's own fixture gives
+#                              eight and a half. State the crossing, not the
+#                              distance, when the two can disagree. This said "two
 #                              decades" until the #482 review round; that
 #                              figure is right for the `-1e-10` WARNING
 #                              threshold, whose margin closes around
