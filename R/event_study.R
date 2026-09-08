@@ -761,6 +761,16 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #' 2592`) where the off-diagonal coefficient `J_{rs} = -pi_s / S^2` uses the
 #' column-index marginal cohort probability. (Prior to v1.8.0 the off-
 #' diagonal coefficient was indexed by the outer-loop row; see issue #46.)
+#'
+#' The returned value is floored at zero and diagnosed by
+#' `.floor_cohort_prob_var()` (#474). It carried NO floor at all until then,
+#' while its ETWFE/BETWFE sibling had one since #127 -- the asymmetry was
+#' invisible from the caller, because that sibling floors INSIDE
+#' `getSecondVarTermOLS()` rather than at the call site, so both routes looked
+#' identical from `.event_study_fetwfe()` / `.event_study_etwfe_betwfe()`. The
+#' early `return(0)` below is a STRUCTURAL zero, not a floored one, and is
+#' deliberately left outside the wrapper: routing it through would say nothing
+#' and cost a call.
 #' @keywords internal
 #' @noRd
 .event_study_var2_fetwfe <- function(
@@ -804,15 +814,27 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 		e = e
 	)
 
-	T *
-		as.numeric(
-			t(theta_hat_treat_sel) %*%
-				t(jacobian_e) %*%
-				Sigma_pi_hat %*%
-				jacobian_e %*%
-				theta_hat_treat_sel
-		) /
-		(N * T)
+	# Issue #474: floored and diagnosed. This site had NO floor at all until
+	# then -- not the floor-without-diagnostic shape its siblings carried --
+	# so a negative reached the caller's `sqrt()` and produced `NaN`, or,
+	# under `se_type = "conservative"`, `NaN` from
+	# `2 * sqrt(att_var_1 * att_var_2)` for ANY negative regardless of
+	# magnitude; and when `var_1(e)` was large enough to keep the sum
+	# positive, a silently UNDERSTATED event-study standard error with no
+	# `NaN` to notice. `remedy = NULL`: not on the simultaneous-band path.
+	.floor_cohort_prob_var(
+		T *
+			as.numeric(
+				t(theta_hat_treat_sel) %*%
+					t(jacobian_e) %*%
+					Sigma_pi_hat %*%
+					jacobian_e %*%
+					theta_hat_treat_sel
+			) /
+			(N * T),
+		"event_study_var2_fetwfe/var_2_e",
+		remedy = NULL
+	)
 }
 
 #' Assemble the event-study output data frame
