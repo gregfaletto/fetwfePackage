@@ -1254,13 +1254,20 @@ test_that("no call site neuters .floor_cluster_quad's diagnostic contract", {
 	# positional call changed meaning and every existing message stayed
 	# byte-identical (verified with `identical()`, not by eye).
 	#
-	# `.floor_cohort_prob_var()` (#474) joins the set as the family's fifth
-	# member. Its own pin is what this block's stated predicate requires; note
-	# it is NOT a detector for that wrapper's body -- measured, replacing the
-	# body with `pmax(v, 0)`, so all four of its sites silently revert to a
-	# bare floor, leaves this block and the whole suite green. Formals are
-	# what this pins. `tests/testthat/test-cohort-prob-floor-474.R` is the
-	# detector for the behavior.
+	# `.floor_cohort_prob_var()` (#474) joins the set. Its own pin is what this
+	# block's stated predicate requires; note it is NOT a detector for that
+	# wrapper's body -- measured, replacing the body with `pmax(v, 0)`, so all
+	# four of its sites silently revert to a bare floor, leaves THIS FILE
+	# byte-identically green, A5c included, because A5c pins FORMALS and a body
+	# change does not move them. It does NOT leave the suite green:
+	# `tests/testthat/test-cohort-prob-floor-474.R` reddens under it, and is the
+	# entire detector for the behavior.
+	#
+	# The clause said "and the whole suite" until the #482 review round, which
+	# is false and contradicted its own next sentence. The measurement behind it
+	# was taken in the pre-implementation pass, on a tree where that battery did
+	# not exist yet; the copy in the battery's own header re-scoped it correctly
+	# ("every OTHER test file") and this one did not.
 	expect_identical(
 		paste(names(formals(fetwfe:::.floor_cluster_quad)), collapse = ", "),
 		"q, site, err_threshold, warn_threshold"
