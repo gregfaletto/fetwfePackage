@@ -421,9 +421,24 @@ test_that("site 4 fires both tiers via eventStudy on a fetwfe fit (#474)", {
 # 5. (red) SITE 4 reached through the RENDERERS. `print()` / `summary()` /
 #    `plot()` call `eventStudy()` internally, so they reach the scalar site as
 #    well as `Sigma_2` -- which is where the new warning becomes repeated
-#    output on an ordinary `print()`. `.event_study_quiet()`'s muffle is keyed
-#    to `fetwfe_highdim_postselection_band` only, so it does not swallow
-#    these; this block is what would notice if it were ever widened.
+#    output on an ordinary `print()`.
+#
+#    BOTH TIERS, and the warning tier under `options(warn = 2)` specifically,
+#    because that is the only condition under which a muffle is visible. The
+#    renderers wrap their `eventStudy()` call in `.event_study_quiet()`, whose
+#    muffle is keyed to `fetwfe_highdim_postselection_band` ONLY. Were it ever
+#    widened to a blanket warning muffle, site 4's WARNING would be swallowed
+#    here while still arriving on the direct `eventStudy()` route of block 4 --
+#    and a catastrophic-tier-only assertion could not notice, since an `error`
+#    is not muffled by a warning muffle. The `warn = 2` half is what closes
+#    that, and it is measured: replacing `.event_study_quiet()`'s class-keyed
+#    handler with a blanket `warning = function(w) invokeRestart(...)` reddens
+#    this block, block 8 and block 8b, while block 4's DIRECT `eventStudy()`
+#    route stays green -- which is the discriminating half, since the muffle
+#    only sits on the renderer route. Without the `warn = 2` assertions this
+#    block stayed green under that mutation. Called BARE:
+#    `suppressWarnings()`, and a muffling `withCallingHandlers()`, both defeat
+#    the conversion.
 # ------------------------------------------------------------------------------
 test_that("site 4 reaches print/summary through eventStudy (#474)", {
 	.cpf474_skip()
@@ -442,6 +457,29 @@ test_that("site 4 reaches print/summary through eventStudy (#474)", {
 		expect_false(grepl(
 			.CPF474_REMEDY,
 			conditionMessage(r$err),
+			fixed = TRUE
+		))
+	}
+
+	old <- options(warn = 2)
+	on.exit(options(old), add = TRUE)
+	for (render in list(
+		function() capture.output(print(fit)),
+		function() capture.output(print(summary(fit)))
+	)) {
+		err <- testthat::with_mocked_bindings(
+			tryCatch(render(), error = function(e) e),
+			.multinomial_cov = .cpf474_neg(
+				".event_study_var2_fetwfe",
+				.CPF474_WARN_SCALE
+			),
+			.package = "fetwfe"
+		)
+		expect_s3_class(err, "error")
+		expect_true(grepl(.CPF474_ES, conditionMessage(err), fixed = TRUE))
+		expect_true(grepl(
+			"clipped to 0 (indices",
+			conditionMessage(err),
 			fixed = TRUE
 		))
 	}
