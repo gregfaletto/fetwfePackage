@@ -112,11 +112,20 @@
 #                              magnitude beyond machine epsilon times the
 #                              quantity at the response scales this package
 #                              is used at. That last clause is the condition,
-#                              not decoration -- cancellation error scales as
-#                              response^2, so a response rescaled two decades
-#                              further up would put the residual at order one
-#                              and `-1` would start rejecting legitimate
-#                              input. An earlier version of this line also
+#                              not decoration -- the RELATIVE cancellation
+#                              residual sits at machine epsilon at every
+#                              scale, and the quantity scales as response^2,
+#                              so the ABSOLUTE residual reaches order one
+#                              only around `q ~ 1e15`: roughly SEVEN TO EIGHT
+#                              decades of response above the scales seen
+#                              here, at which point `-1` would start
+#                              rejecting legitimate input. This said "two
+#                              decades" until the #482 review round; that
+#                              figure is right for the `-1e-10` WARNING
+#                              threshold, whose margin closes around
+#                              `q ~ 4e5` (about 2.5 decades), and was carried
+#                              into a sentence about the ERROR threshold.
+#                              Each tier's margin is its own measurement. An earlier version of this line also
 #                              claimed `-1` was outside "any realistic SE^2
 #                              magnitude in DiD applications"; that half is
 #                              measurably FALSE (#474 measured
