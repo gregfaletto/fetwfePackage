@@ -26,7 +26,37 @@
   error that propagates. Nothing changes on well-conditioned data, where no
   tier fires at all.
 
+- **A fit whose cohort-probability variance is catastrophically negative now
+  errors where it used to return** (#474). This is the same bound as the
+  previous item, applied to the other half of the variance: `fetwfe()`,
+  `etwfe()`, `betwfe()` and `twfeCovs()` fail at call time when the
+  cohort-probability variance --- the piece contributed by estimating, rather
+  than knowing, each treated cohort's share of the units --- falls below `-1`,
+  and `eventStudy()`, `print()`, `summary()`, `plot()` and `simultaneousCIs()`
+  fail the same way on the routes that reach it. Unlike the previous item this
+  bound also lands on `se_type = "default"` with `ci_type = "pointwise"`, the
+  one combination that had no fit-blocking variance diagnostic at all. Only the
+  simultaneous-band site's error names a way to obtain a fit anyway; at the
+  other three there is no argument that skips the calculation, so the message
+  says nothing it cannot deliver. Nothing changes on well-conditioned data,
+  where no tier fires at all.
+
 ### Defensive improvements
+
+- A negative cohort-probability variance is no longer discarded in silence
+  (#474). The variance of a treatment-effect estimate is the sum of two pieces,
+  and the second --- the variance inherited from estimating each treated
+  cohort's share of the units --- is non-negative in exact arithmetic but can
+  come out negative in floating point. Three internal sites clipped such a
+  value to zero and reported nothing: the overall-ATT variance for `fetwfe()`,
+  the same quantity for `etwfe()`, `betwfe()` and `twfeCovs()`, and the
+  cohort-probability block of the simultaneous band. All three now
+  carry the same two-tier diagnostic the cluster-sandwich sites have carried
+  since version 1.11.2: a negative at the scale of floating-point cancellation
+  is still clipped silently, a larger one warns and names the site, the value
+  and the offending index, and one below `-1` is an error. The estimates
+  themselves are unchanged. See the breaking change above for what a fit that
+  hits the error tier now does.
 
 - Several errors raised from inside the package now say something useful (#431).
   A bad `T`, `G`, `d`, `density` or `eff_size` passed to `genCoefs()` or
@@ -134,6 +164,22 @@
   such input already failed, just without saying which argument was at fault.
 
 ### Bug fixes
+
+- `eventStudy()` on a `fetwfe()` fit no longer returns `NaN` or an understated
+  standard error when the per-event-time cohort-probability variance goes
+  negative (#474). That quantity was the one place in the family with no floor
+  at all --- its ETWFE and BETWFE counterpart has floored the same quantity
+  since version 1.11.0, but does so inside a shared helper, so the two routes
+  looked identical from the caller. A negative therefore reached `sqrt()` and
+  produced `NaN`; under `se_type = "conservative"` it produced `NaN` for *any*
+  negative, however small, because that branch takes the square root of a
+  product of the two variance pieces; and when the regression piece was large
+  enough to keep the sum positive, the reported standard error was silently too
+  small, with no `NaN` to notice. The value is now floored at zero and
+  diagnosed like every other member of the family, so the affected event times
+  report the standard error implied by the regression piece alone rather than a
+  wrong number or none. Estimates are unchanged, as are standard errors on
+  well-conditioned data.
 
 - A broken variance invariant on the simultaneous-confidence-band path no
   longer passes silently (#470). The joint covariance behind

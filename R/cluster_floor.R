@@ -1,4 +1,12 @@
-# Two-tier diagnostic floor for cluster-sandwich quadratic forms.
+# Two-tier diagnostic floors for the package's non-negative variance
+# quantities: cluster-sandwich quadratic forms (#139, #470), the model-based
+# covariance diagonals of `.simultaneous_cis_impl()` (#470), and the
+# cohort-probability variances (#474). Those are QUANTITY KINDS; "family"
+# below always means one of the two HELPER families (scalar / vectorized), and
+# the two senses collided in this sentence until #474. The title said
+# "cluster-sandwich quadratic forms" alone until #474; that was already partly
+# false once `.floor_variance_diag()` landed, and a cohort-probability family
+# in the file makes it plainly wrong.
 #
 # TWO FAMILIES LIVE HERE, and the asymmetry between them is deliberate.
 #
@@ -50,9 +58,9 @@
 #     collect, and is not in A5c's pin set -- measured: the whole guardrail
 #     stays green. That spelling is the more likely accident, not the less.
 #
-#   * `.floor_cluster_quad_diag()` / `.floor_variance_diag()` -- the
-#     VECTORIZED family (#470), sharing `.floor_psd_diag_core()`. Their
-#     conditions ARE classed
+#   * `.floor_cluster_quad_diag()` / `.floor_variance_diag()` /
+#     `.floor_cohort_prob_var()` -- the VECTORIZED family (#470, extended by
+#     #474), sharing `.floor_psd_diag_core()`. Their conditions ARE classed
 #     (`fetwfe_negative_variance_floored` /
 #     `fetwfe_negative_variance_catastrophic`), because they are the only
 #     conditions in this file that cross `.fit_band_for_family()`: that
@@ -62,21 +70,80 @@
 #     `error = function(e) NULL` handler, and the band silently degrades to
 #     the POINTWISE one under a `[simultaneous 95% CI]` header -- the #433
 #     wrong-answer shape. The classes are therefore part of the interface,
-#     not an implementation detail.
+#     not an implementation detail. What the deferral machinery on the other
+#     side of that boundary now holds is stated where the mechanism lives,
+#     in `.fit_band_for_family()`'s `@details` in `R/simultaneous_cis.R` --
+#     read it there rather than from a second copy here.
 #
-# Mathematically the cluster-sandwich quadratic forms wrapped by this helper
-# (`t(psi) %*% sandwich %*% psi`, sums of outer products) are PSD by
-# construction, so any negative value in well-conditioned data is a
-# floating-point artifact at machine epsilon (~`1e-15`). Large negatives
-# would indicate a bug — a broken PSD invariant, a sign error, or a
-# numerical breakdown — and the pre-existing `max(q, 0)` floor would
-# silently absorb them, producing `SE = 0` with no signal to the user.
+#     Only ONE of `.floor_cohort_prob_var()`'s four call sites is inside that
+#     protected region (`.assemble_joint_cov_var2()`, via
+#     `.simultaneous_cis_impl()`); the other three are not, and their classing
+#     is measured INERT rather than wrong -- under `options(warn = 2)` every
+#     user-visible route reaching them errors loudly on this tree (#474).
+#
+# Mathematically every form floored here is PSD, but NOT for one reason, and
+# the difference matters because this paragraph carries the whole threshold
+# justification:
+#
+#   * the cluster-sandwich quadratic forms (`t(psi) %*% sandwich %*% psi`,
+#     sums of outer products) are PSD by construction;
+#   * the cohort-probability forms (`theta' J' Sigma_pi_hat J theta`) are PSD
+#     because `Sigma_pi_hat` is a multinomial covariance;
+#   * the model-based covariance diagonals floored by `.floor_variance_diag()`
+#     are diagonal entries of an estimated covariance matrix, PSD for that
+#     reason rather than as a sandwich form -- that wrapper's own comment
+#     records that they are NOT sandwich quantities, so the first bullet does
+#     not reach them. One bullet per quantity kind the title line names; a
+#     universal claim justified by a short list is how this paragraph went
+#     wrong once already.
+#
+# Either way a negative value in well-conditioned data is a floating-point
+# artifact at machine epsilon (~`1e-15`). Large negatives would indicate a
+# bug — a broken PSD invariant, a sign error, or a numerical breakdown — and
+# a bare `max(q, 0)` floor would silently absorb them, producing `SE = 0`
+# with no signal to the user.
 #
 # This helper layers a two-tier diagnostic on top of the floor (#139):
 #
-#   q <  -1     : stop()    -- catastrophic; outside any plausible FP-noise
-#                              range or realistic SE^2 magnitude in DiD
-#                              applications.
+#   q <  -1     : stop()    -- catastrophic. `-1` is a NOISE CEILING:
+#                              reaching it takes floating-point cancellation
+#                              of magnitude one on a quantity whose
+#                              legitimate values are non-negative, orders of
+#                              magnitude beyond machine epsilon times the
+#                              quantity at the response scales this package
+#                              is used at. That last clause is the condition,
+#                              not decoration -- the RELATIVE cancellation
+#                              residual sits at machine epsilon at every
+#                              scale, and the quantity scales as response^2,
+#                              so the ABSOLUTE residual reaches order one
+#                              only around `q ~ 1e15`, at which point `-1`
+#                              would start rejecting legitimate input.
+#                              `q ~ 1e15` is the invariant; any figure in
+#                              DECADES OF RESPONSE is relative to where you
+#                              start, and is quoted here against the two
+#                              anchors named just below (`att_var_1 = 2.31`,
+#                              `max diag(Sigma_1) = 8.99`), which put it at
+#                              seven to eight. Anchored elsewhere it moves --
+#                              measured, the #474 battery's own fixture gives
+#                              eight and a half. State the crossing, not the
+#                              distance, when the two can disagree. This said "two
+#                              decades" until the #482 review round; that
+#                              figure is right for the `-1e-10` WARNING
+#                              threshold, whose margin closes around
+#                              `q ~ 4e5` (about 2.5 decades), and was carried
+#                              into a sentence about the ERROR threshold.
+#                              Each tier's margin is its own measurement. An earlier version of this line also
+#                              claimed `-1` was outside "any realistic SE^2
+#                              magnitude in DiD applications"; that half is
+#                              measurably FALSE (#474 measured
+#                              `att_var_1 = 2.31` and
+#                              `max diag(Sigma_1) = 8.99` on a response
+#                              measured in tens) and is deleted rather than
+#                              softened. Do not replace it with "the quantity
+#                              is PSD, so `-1` cannot be a false positive":
+#                              true, but it justifies `-1e-300` and `0`
+#                              equally well and stops explaining why the
+#                              boundary sits here.
 #   q <  -1e-10 : warning() -- clearly outside FP noise; surfaces the
 #                              anomaly without breaking the fit.
 #   q in [-1e-10, 0] : floor silently to 0 (FP cancellation in well-
@@ -141,6 +208,27 @@
 }
 
 
+# The ONE home for the simultaneous-band remedy sentence carried by
+# `.floor_psd_diag_core()`'s catastrophic tier (#474). It has two readers --
+# that core's `remedy` default, and `.assemble_joint_cov_var2()`'s call site in
+# `R/variance_machinery.R`, which is the one cohort-probability site on the band
+# path and so re-states it explicitly. Written twice it would be, in this repo's
+# own words at `.highdim_band_remedy()` (`R/utility.R`), "a copy-paste pair kept
+# in agreement by nothing". Named in the `.SINGULAR_GRAM_ANALYTIC_STOP_MSG`
+# style (`R/simultaneous_cis.R`), which is this repo's existing convention for a
+# message constant with more than one reader.
+#
+# The trailing space is part of the constant: the core concatenates it between
+# two sentences.
+#
+# @keywords internal
+#' @noRd
+.SIMULTANEOUS_BAND_REMEDY_MSG <- paste0(
+	"To obtain a fit without the simultaneous band, refit with ",
+	"ci_type = \"pointwise\". "
+)
+
+
 # .floor_psd_diag_core
 #
 # The shared core of the vectorized floor family (#470). Takes the VECTOR of
@@ -173,6 +261,20 @@
 #   `< err_threshold` fires `stop()`.
 # @param warn_threshold numeric scalar (default -1e-10); any entry
 #   `< warn_threshold`, with none below `err_threshold`, fires `warning()`.
+# @param remedy character scalar or NULL (default
+#   `.SIMULTANEOUS_BAND_REMEDY_MSG`, the sentence this tier carried hardcoded
+#   before #474) -- the remedy clause the catastrophic tier emits, or `NULL`
+#   for no clause at all. Added by #474 because three of the four
+#   cohort-probability sites are not on the band path, so the default sentence
+#   is FALSE there: measured, `ci_type = "pointwise"` does not avoid them and
+#   does not even reduce their call count, so a user already on `pointwise`
+#   would be told to refit with `pointwise` and get the identical error. There
+#   is no true remedy to substitute at those sites either -- neither `fetwfe()`
+#   nor `etwfe()` carries a `calc_ses` formal, so no argument yields a fit
+#   without standard errors -- which is why `NULL` means "omit the clause"
+#   rather than "use a different one". Appended LAST so no positional call
+#   changes meaning, and defaulted so every existing message stays
+#   byte-identical.
 # @return `pmax(v, 0)` on numeric input; `v` unchanged on pass-through.
 #
 # @keywords internal
@@ -182,7 +284,8 @@
 	site,
 	subject,
 	err_threshold = -1,
-	warn_threshold = -1e-10
+	warn_threshold = -1e-10,
+	remedy = .SIMULTANEOUS_BAND_REMEDY_MSG
 ) {
 	# Pass-through if the value isn't numeric -- let downstream code handle
 	# it as it would today.
@@ -225,22 +328,30 @@
 				toupper(substring(subject, 1L, 1L)),
 				substring(subject, 2L)
 			)
-			# The `ci_type = "pointwise"` clause names the escape hatch the
-			# NEWS bullet advertises: this tier blocks a fit outright, and an
-			# error that blocks a fit should say how to get one. Phrased as
-			# "to obtain a fit without the simultaneous band" rather than "pass
-			# ci_type = ..." because it must be TRUE ON EVERY ROUTE, and the
-			# core serves more than the fit-time one -- on a direct
-			# `simultaneousCIs()` call `ci_type` is not that call's remedy,
-			# but it is still how the user obtains a usable fit. It is a
-			# constant here rather than a per-caller formal because
-			# `.floor_psd_diag_core()`'s formals are pinned by name in
-			# `test-cluster_floor.R`'s A5c: a formal added only to vary this
-			# sentence has to grow that pin in the same commit, deliberately.
-			# That mechanism is the whole reason recorded here. Whether the
-			# per-route wording would be worth it is a trade-off, and it lives
-			# in the plan's Decision Log -- do not re-argue it here with a cost
+			# The remedy clause names the escape hatch the NEWS bullet
+			# advertises: this tier blocks a fit outright, and an error that
+			# blocks a fit should say how to get one. The DEFAULT is the
+			# simultaneous-band sentence, phrased as "to obtain a fit without
+			# the simultaneous band" rather than "pass ci_type = ..." because
+			# it must be TRUE ON EVERY ROUTE the caller passing it serves --
+			# on a direct `simultaneousCIs()` call `ci_type` is not that
+			# call's remedy, but it is still how the user obtains a usable
+			# fit.
+			#
+			# It was a hardcoded constant here until #474, on the reasoning
+			# that a formal added only to vary this sentence has to grow
+			# `test-cluster_floor.R`'s A5c formals pin in the same commit,
+			# deliberately. #474 is that commit: it routes three sites that
+			# are not on the band path at all through this core, where the
+			# default sentence is false, so the formal was added and A5c's
+			# pin grew with it. That is the mechanism working as designed
+			# rather than a surprise. The trade-off itself is settled in the
+			# #474 plan's Decision Log -- do not re-argue it here with a cost
 			# claim nobody measured, which is what stood in this spot before.
+			#
+			# `remedy = NULL` omits the clause outright. See the formal's
+			# `@param` for why the non-band sites get no clause rather than a
+			# reworded one.
 			stop(structure(
 				list(
 					message = paste0(
@@ -255,8 +366,8 @@
 						"; most negative ",
 						worst,
 						"). This indicates a bug or severe numerical ",
-						"breakdown. To obtain a fit without the simultaneous ",
-						"band, refit with ci_type = \"pointwise\". ",
+						"breakdown. ",
+						if (is.null(remedy)) "" else remedy,
 						"Please file an issue at ",
 						"https://github.com/gregfaletto/fetwfePackage/issues."
 					),
@@ -383,8 +494,14 @@
 # `.floor_cluster_quad_diag()` for the MODEL-BASED covariance diagonals in
 # `.simultaneous_cis_impl()`, which are not sandwich quantities -- so the
 # subject is "variance" and the #139 wording would be a false statement about
-# them. The two share `.floor_psd_diag_core()`, and therefore both condition
-# classes, so one handler pair in `.fit_band_for_family()` covers the family.
+# them. EVERY member of the vectorized family shares `.floor_psd_diag_core()`,
+# and therefore both condition classes, so one handler pair in
+# `.fit_band_for_family()` covers the family -- this one,
+# `.floor_cluster_quad_diag()` and `.floor_cohort_prob_var()` at the time of
+# writing. Stated as the predicate, without a count: this sentence said "the
+# two" until #474 made it three, and `.fit_band_for_family()`'s `@details`
+# owns the tenant count, so a second copy of it here is a second place to
+# correct.
 #
 # Deliberately absent from `test-cluster_floor.R`'s recognized floor-function
 # set: its call sites are not sandwich forms, so that guardrail's A9 ("every
@@ -400,4 +517,93 @@
 #' @noRd
 .floor_variance_diag <- function(v, site) {
 	.floor_psd_diag_core(v, site, "variance")
+}
+
+
+# .floor_cohort_prob_var
+#
+# The COHORT-PROBABILITY family's member of the vectorized floor family (#474).
+# `att_var_2` / `Sigma_2` -- the extra variance inherited from ESTIMATING,
+# rather than knowing, what fraction of units belongs to each treated cohort.
+# Every one of its four sites computes the same shape,
+# `T * theta' J' Sigma_pi_hat J theta / (N * T)`, and they differ only in how
+# `J` and `theta` are built:
+#
+#   * `.assemble_joint_cov_var2()`   (`R/variance_machinery.R`) -- the K x K
+#     `Sigma_2` diagonal, a VECTOR, and the one site on the simultaneous-band
+#     path;
+#   * `getSecondVarTermOLS()`        (`R/variance_machinery.R`) -- scalar;
+#   * `getSecondVarTermDataApp()`    (`R/variance_machinery.R`) -- scalar;
+#   * `.event_study_var2_fetwfe()`   (`R/event_study.R`) -- scalar, per event
+#     time.
+#
+# ONE wrapper rather than a scalar/vector pair, even though the family spans
+# both: `.floor_psd_diag_core()` handles a length-one numeric with no special
+# case (`which(v < threshold)` yields `1`, `pmax(v, 0)` returns the scalar), so
+# a separate scalar helper would be a byte-identical duplicate.
+#
+# WHY THE CORE'S "on the covariance diagonal" PHRASING IS TRUE HERE, including
+# at the three scalar sites -- stated explicitly because the file header says
+# that phrase is FALSE of a scalar quadratic form, and a later reader will
+# otherwise take this for a contradiction. It is not: the header is about
+# `t(psi) %*% sandwich %*% psi`, which is not a covariance entry, whereas
+# `att_var_2` IS the one-by-one case of `diag(Sigma_2)` -- which
+# `.assemble_joint_cov_var2()`'s own roxygen already records ("The K = 1 case
+# reproduces the scalar `att_var_2`").
+#
+# `remedy` is passed through rather than fixed because ONE of the four sites is
+# on the band path and three are not, so the core's default sentence is true at
+# exactly one of them. The choice is made at the call site, where the route is
+# known. The default is `NULL` -- the majority case -- and IT MUST STAY
+# DEFAULTED. An undefaulted `remedy` is a live wrong-answer hazard rather than
+# a stricter contract: R forces the argument only inside the core's
+# `if (fatal)` branch, so an omitted one is byte-identical at the warning tier
+# and raises an UNCLASSED missing-argument error at the catastrophic one -- and
+# at the `Sigma_2` site that error lands inside `.fit_band_for_family()`'s
+# `tryCatch(error = function(e) NULL)` region, is swallowed, and the band
+# degrades to the pointwise one under a `[simultaneous 95% CI]` header. That is
+# the #433/#470 wrong-answer shape, at the one site whose conditions are
+# classed specifically to prevent it. `force(remedy)` does NOT fix it: it
+# raises the same unclassed error inside the same region.
+#
+# THE CORE'S AGGREGATION IS PER CALL, NOT PER FIT. Its header advertises "at
+# most ONE aggregated condition per call" as the thing that stops `K` warnings
+# burying the signal, and that contract holds -- but `.event_study_var2_fetwfe()`
+# is called once per event time inside `.event_study_fetwfe()`'s loop, and the
+# two scalar `att_var_2` sites fire more than once per fit, so a user can see
+# several identical conditions from one `eventStudy()` or one `print()`. That is
+# expected, not a bug. Flooring the whole per-event vector once after the loop
+# would fix the repetition and move the floor away from the form it floors,
+# which is the convention `test-cluster_floor.R`'s guardrail rests on.
+#
+# Deliberately absent from `test-cluster_floor.R`'s recognized floor-function
+# set `.clf_floor_fns`, for the same reason `.floor_variance_diag()` is: a
+# `Sigma_pi_hat` form is not a sandwich form, so that guardrail's A9 ("every
+# floor call is handed a real quadratic form") would report all four sites as
+# decoys, and A7b would additionally redden on `.fit_band_for_family()`.
+# Measured, and tracked as issue #478. Until that lands these four floors are
+# protected by their runtime tests
+# (`tests/testthat/test-cohort-prob-floor-474.R`) and not by the lexical scan.
+# It names no threshold, so A5b's exact set is unaffected; its three formals do
+# not satisfy A5a's two-argument arity rule, which is moot because A5a iterates
+# only calls to members of `.clf_floor_fns`.
+#
+# @param v numeric vector or scalar -- the cohort-probability variance to
+#   floor.
+# @param site character scalar -- short site identifier for the message.
+# @param remedy character scalar or NULL (default NULL) -- forwarded to
+#   `.floor_psd_diag_core()`; `NULL` omits the catastrophic tier's remedy
+#   clause. Pass `.SIMULTANEOUS_BAND_REMEDY_MSG` at a site on the
+#   simultaneous-band path.
+# @return `pmax(v, 0)`.
+#
+# @keywords internal
+#' @noRd
+.floor_cohort_prob_var <- function(v, site, remedy = NULL) {
+	.floor_psd_diag_core(
+		v,
+		site,
+		"cohort-probability variance",
+		remedy = remedy
+	)
 }

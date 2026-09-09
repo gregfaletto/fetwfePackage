@@ -1146,10 +1146,23 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 		)
 		# `v2` is deliberately LEFT AS WRITTEN, with no diagnostic: it is a
 		# structural no-op, because `.assemble_joint_cov_var2()` has already
-		# floored this diagonal itself, unconditionally. Kept as defence in
-		# depth should that ever stop being true. A reader who has just seen
-		# its neighbour gain a diagnostic would otherwise read its absence
-		# here as an oversight (#470).
+		# floored this diagonal itself -- whenever it is numeric, which it
+		# always is here (`out <- matrix(0, K, K)` filled with `as.numeric()`).
+		# It said "unconditionally" until #474 routed that floor through
+		# `.floor_psd_diag_core()`, whose `if (!is.numeric(v)) return(v)`
+		# pass-through makes it conditional in the letter but never at this
+		# site. Kept as defence in depth should the no-op claim ever stop being
+		# true. A reader who has just seen its neighbour gain a diagnostic
+		# would otherwise read its absence here as an oversight (#470).
+		#
+		# THE FAILURE MODE THAT CHANGED WITH #474, and the reason this line
+		# is not simply harmless: if `.assemble_joint_cov_var2()`'s floor is
+		# ever reverted, this bare `pmax()` no longer merely re-floors -- it
+		# SUPPRESSES the diagnostic #474 added, absorbing the negative that
+		# floor exists to report. That is the same silent-revert shape
+		# `.floor_cluster_quad_diag()`'s `stop()` guard was written about
+		# (`R/cluster_floor.R`). Defence in depth on the value, diagnostic
+		# suppression on the signal.
 		v2 <- pmax(diag(Sigma_2), 0)
 		ses <- .cauchy_schwarz_se(v1, v2)
 		crit <- if (K == 1L) pointwise_crit else bonferroni_crit
@@ -1343,10 +1356,12 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 #'   warn-then-degrade shape and leaves `.event_study_quiet()`'s muffle
 #'   working. Pinned by
 #'   `tests/testthat/test-highdim-postselection-band-warning-433.R`.
-#' @details **The deferral has two tenants, not one (#470).** The
-#'   variance-floor conditions raised by `.floor_cluster_quad_diag()` /
-#'   `.floor_variance_diag()` are deferred past the `tryCatch()` for exactly
-#'   the reason the #433 one is, and by the same idiom: the
+#' @details **The deferral has three tenants, not one (#470, #474).** The
+#'   variance-floor conditions raised by `.floor_cluster_quad_diag()`,
+#'   `.floor_variance_diag()` and -- since #474 -- `.floor_cohort_prob_var()`
+#'   at `.assemble_joint_cov_var2()`'s `Sigma_2` diagonal are deferred past the
+#'   `tryCatch()` for exactly the reason the #433 one is, and by the same
+#'   idiom: the
 #'   `fetwfe_negative_variance_floored` warning is captured and muffled by a
 #'   class-keyed `withCallingHandlers()`, and the
 #'   `fetwfe_negative_variance_catastrophic` error is captured by a
@@ -1356,7 +1371,13 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 #'   pointwise: a fit whose PSD invariant is broken badly enough to put a
 #'   variance below `-1` fails loudly at `fetwfe()` call time instead of
 #'   returning a silently-zeroed standard error. An ordinary error still
-#'   degrades to `NULL`, which is what keeps the change narrow.
+#'   degrades to `NULL`, which is what keeps the change narrow. The third
+#'   tenant needed no change here at all: it shares the same two condition
+#'   classes, so the existing handler pair covers it -- which is the whole
+#'   reason `R/cluster_floor.R` routes the cohort-probability family through
+#'   `.floor_psd_diag_core()` rather than giving it classes of its own. **This
+#'   block owns the tenant count**; `R/cluster_floor.R`'s header points here
+#'   rather than restating it.
 #' @details **The re-raise ORDER is load-bearing: `stop(fatal)` comes first,
 #'   so a catastrophic #470 condition supersedes a pending #433 warning.**
 #'   Deliberate, and measured both ways. Re-raising the #433 warning first

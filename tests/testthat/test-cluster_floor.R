@@ -4,8 +4,14 @@ library(fetwfe)
 # ------------------------------------------------------------------------------
 # Tests for the cluster-floor family -- `.floor_cluster_quad()` (issue #139,
 # version 1.11.2) and its vectorized siblings `.floor_cluster_quad_diag()` /
-# `.floor_variance_diag()` (issue #470) -- and the guardrail keeping every
-# cluster-sandwich quadratic-form site routed through one of them (issue #463).
+# `.floor_variance_diag()` (issue #470) / `.floor_cohort_prob_var()`
+# (issue #474) -- and the guardrail keeping every cluster-sandwich
+# quadratic-form site routed through one of them (issue #463).
+#
+# Not every member is covered here to the same depth. The guardrail below and
+# A5's pins span the whole family; the per-tier, per-route conditions of the
+# #474 wrapper live in `test-cohort-prob-floor-474.R`, and those of the #470
+# vectorized pair in `test-matrix-floor-conditions-470.R`.
 #
 # The family layers a two-tier diagnostic on top of the pre-existing
 # `max(q, 0)` / `pmax(diag(.), 0)` floor at each cluster-sandwich
@@ -1193,9 +1199,11 @@ test_that("no call site neuters .floor_cluster_quad's diagnostic contract", {
 	# No namespace function other than the two helpers that legitimately CARRY
 	# the thresholds may mention either: a NAMED per-call-site override is the
 	# other spelling of the same edit A5a catches positionally. Exactly those
-	# two and no wider -- `.floor_cluster_quad_diag()` and
-	# `.floor_variance_diag()` must NOT name a threshold, which is what keeps
-	# A5b's real target closed. Being an exact set, it also PARTLY bounds the
+	# two and no wider -- EVERY wrapper must NOT name a threshold
+	# (`.floor_cluster_quad_diag()`, `.floor_variance_diag()` and
+	# `.floor_cohort_prob_var()` today), which is what keeps A5b's real target
+	# closed. Stated as the predicate rather than as a list, because the list
+	# grows and the rule does not. Being an exact set, it also PARTLY bounds the
 	# deliberate duplication between the scalar helper and
 	# `.floor_psd_diag_core()`: a third copy of the tiering logic goes red here
 	# automatically IF it names either threshold. One that writes the constants
@@ -1238,13 +1246,35 @@ test_that("no call site neuters .floor_cluster_quad's diagnostic contract", {
 	# error tier's sentence-casing -- that live INLINE there on purpose. If
 	# either is ever factored into a fourth helper, that helper joins this
 	# set.
+	#
+	# `.floor_psd_diag_core()`'s pin GREW BY ONE in #474, and the core's own
+	# comment says so in advance: a formal added to vary the catastrophic
+	# tier's remedy sentence has to grow this pin in the same commit,
+	# deliberately. `remedy` is that formal. It is appended LAST, so no
+	# positional call changed meaning and every existing message stayed
+	# byte-identical (verified with `identical()`, not by eye).
+	#
+	# `.floor_cohort_prob_var()` (#474) joins the set. Its own pin is what this
+	# block's stated predicate requires; note it is NOT a detector for that
+	# wrapper's body -- measured, replacing the body with `pmax(v, 0)`, so all
+	# four of its sites silently revert to a bare floor, leaves THIS FILE
+	# byte-identically green, A5c included, because A5c pins FORMALS and a body
+	# change does not move them. It does NOT leave the suite green:
+	# `tests/testthat/test-cohort-prob-floor-474.R` reddens under it, and is the
+	# entire detector for the behavior.
+	#
+	# The clause said "and the whole suite" until the #482 review round, which
+	# is false and contradicted its own next sentence. The measurement behind it
+	# was taken in the pre-implementation pass, on a tree where that battery did
+	# not exist yet; the copy in the battery's own header re-scoped it correctly
+	# ("every OTHER test file") and this one did not.
 	expect_identical(
 		paste(names(formals(fetwfe:::.floor_cluster_quad)), collapse = ", "),
 		"q, site, err_threshold, warn_threshold"
 	)
 	expect_identical(
 		paste(names(formals(fetwfe:::.floor_psd_diag_core)), collapse = ", "),
-		"v, site, subject, err_threshold, warn_threshold"
+		"v, site, subject, err_threshold, warn_threshold, remedy"
 	)
 	expect_identical(
 		paste(
@@ -1256,6 +1286,13 @@ test_that("no call site neuters .floor_cluster_quad's diagnostic contract", {
 	expect_identical(
 		paste(names(formals(fetwfe:::.floor_variance_diag)), collapse = ", "),
 		"v, site"
+	)
+	expect_identical(
+		paste(
+			names(formals(fetwfe:::.floor_cohort_prob_var)),
+			collapse = ", "
+		),
+		"v, site, remedy"
 	)
 })
 
@@ -1412,8 +1449,8 @@ test_that("no .floor_cluster_quad() site is reachable from the protected region"
 })
 
 # --- Integration smoke test --------------------------------------------------
-# Fit a small cluster-SE model on well-conditioned simulated data and
-# verify no warning/error from `.floor_cluster_quad` fires.
+# Fit a small cluster-SE model on well-conditioned simulated data and verify
+# that NO condition from the floor family -- any of its members -- fires.
 
 test_that("cluster-SE fit on well-conditioned data does not trigger the diagnostic", {
 	# Small but well-conditioned: same recipe as several existing tests.
@@ -1433,23 +1470,43 @@ test_that("cluster-SE fit on well-conditioned data does not trigger the diagnost
 		sig_eps_c_sq = 0.5,
 		seed = 2026
 	)
-	# Run the fit; assert no warning at all surfaces with the message
-	# pattern from the floor family. (Other unrelated warnings are not the
-	# concern of this test; we filter by substring.)
+	# Run the fit; assert no warning at all surfaces from the floor family.
+	# (Other unrelated warnings are not the concern of this test; we filter.)
 	#
-	# The filter phrase is rendered by BOTH the scalar helper (#139) and
-	# `.floor_cluster_quad_diag()`'s warning tier (#470), so this test's
-	# coverage widened to the matrix site for free. It cannot tell the two
-	# apart, though -- which is why the failure text names the SITE from the
-	# message rather than a hardcoded helper name, and why no assertion in
-	# `test-matrix-floor-conditions-470.R` keys on this phrase alone.
+	# THE FILTER IS KEYED ON THE CONDITION CLASS, not on a subject phrase.
+	# It filtered on the literal `"cluster-sandwich quadratic form"` until
+	# #474 -- a phrase rendered by BOTH the scalar helper (#139) and
+	# `.floor_cluster_quad_diag()`'s warning tier (#470), so the coverage had
+	# widened to the matrix site for free. #474 adds a family with a different
+	# subject noun ("cohort-probability variance") whose sites this very
+	# fixture exercises -- measured on this exact fit: `getSecondVarTermDataApp()`
+	# twice and `.assemble_joint_cov_var2()` once. (An earlier draft named
+	# `getSecondVarTermOLS()` here; this fixture calls it ZERO times, because
+	# `fetwfe()` is the one estimator served by the DataApp site.) --
+	# so the phrase filter would have excluded the new family BY CONSTRUCTION
+	# on a fit that reaches it, leaving this block's stated predicate ("no
+	# condition from the floor family fires on a well-conditioned fit") true
+	# of two families out of three.
+	#
+	# The class is what the classing was introduced for, and unlike a subject
+	# phrase it cannot go stale when a fifth noun is added. The scalar #139
+	# helper's conditions are deliberately UNCLASSED (see `R/cluster_floor.R`'s
+	# header), so the phrase test is kept beside the class test rather than
+	# replaced by it -- dropping it would silently narrow this block to the
+	# vectorized family.
+	#
+	# Widening this filter is NOT the #478 guardrail extension: measured, it
+	# adds nothing to `.clf_floor_fns` and moves neither A9 nor A7b.
 	withCallingHandlers(
 		res <- fetwfeWithSimulatedData(sim, q = 0.5, se_type = "cluster"),
 		warning = function(w) {
 			msg <- conditionMessage(w)
-			if (grepl("cluster-sandwich quadratic form", msg, fixed = TRUE)) {
+			if (
+				inherits(w, "fetwfe_negative_variance_floored") ||
+					grepl("cluster-sandwich quadratic form", msg, fixed = TRUE)
+			) {
 				stop(
-					"Unexpected cluster-floor warning on well-conditioned data: ",
+					"Unexpected floor-family warning on well-conditioned data: ",
 					msg
 				)
 			}
