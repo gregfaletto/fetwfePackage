@@ -41,6 +41,22 @@
   says nothing it cannot deliver. Nothing changes on well-conditioned data,
   where no tier fires at all.
 
+- **A fit serialized by a released version is no longer readable by every
+  method, and the failure is not uniform across the four classes** (#460). The
+  new `catt_band_applied` slot is required by the class validators, exactly as
+  `ci_type` has been since 1.16.0, so an object saved by an older version is
+  missing it. Measured, per class and per method: on `fetwfe`, `etwfe` and
+  `betwfe`, `print()`, `summary()`, `eventStudy()`, `tidy()` and `plot()` all
+  raise `malformed <class> object. Missing slot(s): catt_band_applied`. On
+  `twfeCovs` only `tidy()` raises it --- `eventStudy()` and `plot()` refuse the
+  class rather than the slot, and `print()` and `summary()` **do not raise at
+  all**, because those two run no validator. An old `twfeCovs` fit whose band
+  genuinely applied therefore prints `[pointwise 95% CI]` over a real
+  simultaneous band, silently. That is the conservative direction --- the label
+  understates the coverage rather than overstating it --- but it is a silent
+  relabel and not an error. Refit rather than reload; there is no migration for
+  a serialized object.
+
 ### Defensive improvements
 
 - A negative cohort-probability variance is no longer discarded in silence
@@ -164,6 +180,31 @@
   such input already failed, just without saying which argument was at fault.
 
 ### Bug fixes
+
+- `print()` and `summary()` no longer label a confidence-interval preview
+  `simultaneous` when no simultaneous band was applied (#460). Both preview
+  headers were labelled from the fit's `ci_type` slot, which records the
+  argument the user passed and not what the band construction actually
+  produced, so a fit whose band came back `NULL` --- including one whose
+  reported bounds are all `NA` --- announced a family-wise coverage guarantee
+  that the displayed intervals do not have. Fitted objects now carry a new
+  logical slot `catt_band_applied`, recording whether the fit-time
+  cohort-family band was written into `catt_df`, and the data frame
+  `eventStudy()` returns carries the logical attribute
+  `attr(., "band_applied")` for its own family; each preview header is labelled
+  from the signal belonging to the family it describes. The two are separate
+  because the two bands are built from different contrast matrices over the
+  same covariance and fail independently. **One visible consequence beyond the
+  failure case:** on an ordinary fit whose cohort band applies while its
+  event-study band was never requested --- which happens whenever the bridge
+  selects nothing on the event-study support --- the event-study preview header
+  now reads `[pointwise 95% CI]` where it previously read
+  `[simultaneous 95% CI]`. That header was wrong before and is right now; the
+  intervals under it have not changed. `ci_type` itself is unchanged, and still
+  reports what was requested. The high-dimensional post-selection caveat
+  introduced in #433 is still rendered on a `p >= N*T` fit whose band was not
+  applied --- the pointwise intervals shown there still under-cover --- but it
+  now describes those intervals rather than a band that does not exist.
 
 - `eventStudy()` on a `fetwfe()` fit no longer returns `NaN` or an understated
   standard error when the per-event-time cohort-probability variance goes
