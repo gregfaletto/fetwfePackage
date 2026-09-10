@@ -109,9 +109,9 @@ utils::globalVariables(c("event_time", "estimate", "ci_low", "ci_high"))
 #'   The returned frame also carries the logical attribute
 #'   `attr(., "band_applied")` (#460), `TRUE` when its `ci_low` / `ci_high` ARE
 #'   the event-study-family simultaneous band and `FALSE` when they are the
-#'   pointwise Wald bounds --- because the fit asked for `ci_type =
-#'   "pointwise"`, because standard errors were unavailable on the selected
-#'   support, or because the band construction degraded. It is not the same
+#'   pointwise Wald bounds --- because the fit asked for pointwise intervals,
+#'   because standard errors were unavailable on the selected support, or
+#'   because the band construction degraded. It is not the same
 #'   question as the fit's `ci_type`, which records what was requested, nor as
 #'   the fit's `catt_band_applied` slot, which answers it for the cohort family:
 #'   the two families are built from different contrast matrices and fail
