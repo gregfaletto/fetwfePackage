@@ -803,8 +803,11 @@
 #' a gate routed through this helper would make a control-flow decision depend
 #' on a display string. The remaining `identical(ci_type, "simultaneous")` tests
 #' -- in `.highdim_postselection_band_notice()` (this file, just below), in
-#' `R/event_study.R`, and in `.finalize_ci_type()` (`R/simultaneous_cis.R`) --
-#' are gates too, and none of them belongs here either.
+#' `.finish_event_study()` (`R/event_study.R`), and in `.finalize_ci_type()`
+#' (`R/simultaneous_cis.R`) -- are gates too, and none of them belongs here
+#' either. Each is named rather than located by file: the file-level form this
+#' paragraph used to carry was read as an omission by two separate passes of
+#' this PR's own review.
 #'
 #' @param band_applied Logical scalar or `NULL`; the applied-signal of the
 #'   family whose header is being labelled.
