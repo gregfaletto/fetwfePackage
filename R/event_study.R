@@ -115,7 +115,11 @@ utils::globalVariables(c("event_time", "estimate", "ci_low", "ci_high"))
 #'   question as the fit's `ci_type`, which records what was requested, nor as
 #'   the fit's `catt_band_applied` slot, which answers it for the cohort family:
 #'   the two families are built from different contrast matrices and fail
-#'   independently, so one can be applied while the other is not.
+#'   independently, so one can be applied while the other is not. Like that
+#'   slot, it records only that the band was applied: `TRUE` does not imply the
+#'   bounds are wider than the pointwise ones, and does not imply every row is
+#'   informative --- degenerate event times are masked to `NA` while the band is
+#'   still reported as applied.
 #'   Only post-treatment event times (`e >= 0`) are included; pre-treatment
 #'   placebo periods would require an extended regression specification and
 #'   are out of scope for this initial release.

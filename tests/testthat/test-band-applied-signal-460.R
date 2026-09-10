@@ -306,9 +306,9 @@ test_that("a calc_ses fit whose cohort band failed labels only that header point
 #    (#308) -- but its noun ("this band") is wrong when there is no band.
 #
 #    `skip_on_cran()` because this block builds the `p = 356` bridge fit TWICE.
-#    The file that owns the fixture
-#    (`tests/testthat/test-highdim-postselection-band-warning-433.R`) opens all
-#    eighteen of its blocks the same way for exactly this reason. Per
+#    It follows the file that owns the fixture
+#    (`tests/testthat/test-highdim-postselection-band-warning-433.R`), whose
+#    fit-building blocks all skip for the same reason. Per
 #    `.workflow/PROFILE.md` section 3 this skips almost nowhere it will actually
 #    run: `setup-r` exports `NOT_CRAN=true`, so all six CI jobs exercise it on
 #    every PR.
@@ -453,4 +453,47 @@ test_that("the two families disagree on the standard print fixture (#460)", {
 	out_s <- .render_summary(fit)
 	.expect_header(out_s, .CATT_PREVIEW, .SIMULTANEOUS)
 	.expect_header(out_s, .ES_PREVIEW, .POINTWISE)
+})
+
+# ------------------------------------------------------------------------------
+# 10. (red under the gate's own reversion) C10 gates on the applied signal, not
+#     on `ci_type`. This is the one hunk of #460 that no other assertion
+#     observes: reverting `.check_ci_band_width()`'s gate to
+#     `identical(x$ci_type, "simultaneous")` leaves the whole suite green,
+#     measured. C10 is a wrong-number guardrail, so a gate that can un-narrow
+#     itself silently is worth one block.
+#
+#     The block discriminates in BOTH directions, which is what makes it a pin
+#     rather than a restatement: on a cell-3 object (band forced NULL, so
+#     `catt_band_applied` FALSE while `ci_type` is still "simultaneous") the new
+#     gate skips C10 and the old one would not; flipping ONLY the signal to TRUE
+#     re-arms C10 on the identical `catt_df`, so the assertion cannot be
+#     satisfied by a validator that has simply stopped checking.
+# ------------------------------------------------------------------------------
+test_that("C10 gates on the applied signal, not on ci_type (#460)", {
+	fit <- with_mocked_bindings(
+		.bas460_fp_fit(),
+		.apply_simultaneous_catt_band = function(x, alpha, has_valid_ses) NULL,
+		.package = "fetwfe"
+	)
+	expect_identical(fit$ci_type, "simultaneous")
+	expect_false(fit$catt_band_applied)
+	expect_true(all(is.finite(fit$catt_df$se) & fit$catt_df$se > 0))
+
+	# Narrow every interval to half a pointwise width -- a C10 violation by
+	# construction, on an object whose `ci_type` still reads "simultaneous".
+	z <- stats::qnorm(1 - fit$alpha / 2)
+	narrow <- fit
+	narrow$catt_df$ci_low <- narrow$catt_df$estimate -
+		0.5 * z * narrow$catt_df$se
+	narrow$catt_df$ci_high <- narrow$catt_df$estimate +
+		0.5 * z * narrow$catt_df$se
+
+	# The gate this PR installs skips C10 here, because no band was applied.
+	expect_silent(fetwfe:::.validate_fetwfe(narrow))
+
+	# ...and C10 is still armed on the identical catt_df: flip only the signal.
+	flipped <- narrow
+	flipped$catt_band_applied <- TRUE
+	expect_error(fetwfe:::.validate_fetwfe(flipped), "C10", fixed = TRUE)
 })

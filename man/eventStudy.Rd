@@ -63,7 +63,11 @@ because the band construction degraded. It is not the same
 question as the fit's \code{ci_type}, which records what was requested, nor as
 the fit's \code{catt_band_applied} slot, which answers it for the cohort family:
 the two families are built from different contrast matrices and fail
-independently, so one can be applied while the other is not.
+independently, so one can be applied while the other is not. Like that
+slot, it records only that the band was applied: \code{TRUE} does not imply the
+bounds are wider than the pointwise ones, and does not imply every row is
+informative --- degenerate event times are masked to \code{NA} while the band is
+still reported as applied.
 Only post-treatment event times (\code{e >= 0}) are included; pre-treatment
 placebo periods would require an extended regression specification and
 are out of scope for this initial release.

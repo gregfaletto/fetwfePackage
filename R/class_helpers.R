@@ -304,17 +304,24 @@
 #' **#460 narrowed this gate from `ci_type` to `catt_band_applied`** -- narrowed,
 #' not tightened. C10 asserts "simultaneous band >= pointwise band", which is
 #' only meaningful once a band was applied; and because `catt_band_applied ==
-#' TRUE` implies `ci_type == "simultaneous"` (only `.finalize_ci_type()` sets
-#' it, and it early-returns otherwise), the new gate admits a strict **subset**
-#' of the objects the old one did. C10 therefore runs *less* often than before,
-#' never more. What is given up is C10 running on a `ci_type = "simultaneous"`
-#' fit whose band came back `NULL`, where it would still have caught a pointwise
-#' construction producing bounds narrower than `2 * z * se` -- a real if small
-#' loss, and the price of the gate meaning what it says.
+#' TRUE` implies `ci_type == "simultaneous"` **on any object the package
+#' builds** (only `.finalize_ci_type()` sets it, and it early-returns
+#' otherwise), the new gate admits a strict **subset** of the objects the old
+#' one did. C10 therefore runs *less* often than before, never more. The subset
+#' claim is about live fits: nothing stops a hand-built mock from carrying
+#' `catt_band_applied = TRUE` beside `ci_type = "pointwise"`, and this validator
+#' runs on those too. What is given up is C10 running on a
+#' `ci_type = "simultaneous"` fit whose band came back `NULL`, where it would
+#' still have caught a pointwise construction producing bounds narrower than
+#' `2 * z * se` -- a real if small loss, and the price of the gate meaning what
+#' it says. That narrowing is itself pinned; see the C10 block in
+#' `tests/testthat/test-band-applied-signal-460.R`.
 #'
-#' `isTRUE()` rather than `!identical(., TRUE)`, so a missing or zero-length
-#' slot skips the contract instead of raising: this validator runs on hand-built
-#' mock fixtures as well as on live fits.
+#' `isTRUE()` rather than a bare `if (!x$catt_band_applied)`, so a missing,
+#' zero-length or `NA` slot skips the contract instead of raising ("invalid
+#' argument type" / "argument is of length zero" / "missing value where
+#' TRUE/FALSE needed"). `!identical(., TRUE)` would do equally well here and is
+#' not the foil; the bare form is.
 #' @keywords internal
 #' @noRd
 .check_ci_band_width <- function(x, cls) {
@@ -805,9 +812,8 @@
 #' -- in `.highdim_postselection_band_notice()` (this file, just below), in
 #' `.finish_event_study()` (`R/event_study.R`), and in `.finalize_ci_type()`
 #' (`R/simultaneous_cis.R`) -- are gates too, and none of them belongs here
-#' either. Each is named rather than located by file: the file-level form this
-#' paragraph used to carry was read as an omission by two separate passes of
-#' this PR's own review.
+#' either. Each is named rather than located by file, so that a reader checking
+#' the list does not have to search a file to find out which function is meant.
 #'
 #' @param band_applied Logical scalar or `NULL`; the applied-signal of the
 #'   family whose header is being labelled.
@@ -913,8 +919,10 @@
 #'   defaulted to `FALSE`**, deliberately: this helper has direct positional
 #'   six-argument test call sites this change has no reason to churn, and its
 #'   quiet direction (always render the no-band wording) is pinned at the unit
-#'   level by both of the notice-helper controls in
-#'   `tests/testthat/test-highdim-postselection-band-warning-433.R`. The
+#'   level by the FIRST of the two notice-helper controls in
+#'   `tests/testthat/test-highdim-postselection-band-warning-433.R`, the one
+#'   that omits the argument; the second passes `band_applied = TRUE`
+#'   explicitly and so pins the other branch rather than the default. The
 #'   asymmetry with `.assemble_event_study_df()`'s new *required* parameter is
 #'   deliberate too: that helper has exactly one production caller, so a
 #'   default there would be a silent hole rather than a convenience.
@@ -1507,9 +1515,12 @@
 		ci_type = object$ci_type,
 		# #460: whether the fit-time cohort-family band was actually applied.
 		# This is what labels the CATT preview header in
-		# `print.summary.<class>`. `isTRUE()` so a fit serialized before #460
-		# (no slot -> NULL) lands on FALSE rather than carrying a NULL that
-		# would drop the name from this list. The event-study half needs
+		# `print.summary.<class>`. `isTRUE()` normalises the field to a real
+		# logical, so a fit serialized before #460 (no slot -> NULL) carries
+		# FALSE rather than NULL. The NAME survives either way -- `list(x =
+		# NULL)` retains it, and so does the `out[keep]` subset below; see
+		# `.cat_model_details()` in this file, whose `length(info[[nm]]) == 1L`
+		# check is built on exactly that. The event-study half needs
 		# nothing here: `attr(., "band_applied")` rides along on the
 		# `event_study` frame above.
 		catt_band_applied = isTRUE(object$catt_band_applied),

@@ -42,8 +42,9 @@
 
 # ------------------------------------------------------------------------------
 # Fixtures. Built LAZILY and memoized, not at file scope: every block below
-# calls skip_on_cran() first, and a file-scope fixture would build four
-# high-dimensional bridge fits on CRAN before the first skip fires.
+# that builds one calls skip_on_cran() first (the pure-unit notice-helper block
+# at the end builds no fit and does not skip), and a file-scope fixture would
+# build four high-dimensional bridge fits on CRAN before the first skip fires.
 # ------------------------------------------------------------------------------
 .hpb433_cache <- new.env(parent = emptyenv())
 
