@@ -842,8 +842,8 @@
 #' fit and the summary path a `summary.fetwfe`-family list, which carries no
 #' top-level `p` / `N` / `T` and is not `inherits(., "fetwfe")`. A single object
 #' parameter would therefore carry two unrelated shapes and could validate
-#' neither. (`.band_label()` in this file takes scalars for the same reason, and
-#' says so.) An object parameter here aborts every
+#' neither. (`.band_label()` in this file also takes a scalar rather than the
+#' object.) An object parameter here aborts every
 #' `print(summary(fit))` of every class at every dimension -- `x$p >= x$N * x$T`
 #' is `logical(0)` on a summary, `TRUE && logical(0)` returns `NA`, and it is the
 #' enclosing `if (NA)` that raises "missing value where TRUE/FALSE needed" (the
