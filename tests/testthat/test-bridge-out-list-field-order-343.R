@@ -82,6 +82,7 @@ test_that("betwfe()/fetwfe() top-level and internal field order is stable (#343)
 		"treatment",
 		"covs",
 		"ci_type",
+		"catt_band_applied", # #460
 		"internal"
 	)
 	fetwfe_top <- c(
@@ -127,6 +128,7 @@ test_that("betwfe()/fetwfe() top-level and internal field order is stable (#343)
 		"treatment",
 		"covs",
 		"ci_type",
+		"catt_band_applied", # #460
 		"internal"
 	)
 

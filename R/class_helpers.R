@@ -293,17 +293,32 @@
 #' @description
 #' Encodes the core invariant of the `ci_type = "simultaneous"` default (#197):
 #' a family-wise (uniform) band is never narrower than the per-effect pointwise
-#' Wald band. Gated to run only when meaningful: `ci_type == "simultaneous"`,
-#' standard errors available, at least two cohorts (no widening when `K = 1`),
-#' and all `se` finite and strictly positive (degenerate / selected-out rows
-#' are exempt). For `ci_type == "pointwise"` the check is skipped entirely, and
-#' the gate is satisfied-by-equality on pre-overwrite pointwise bounds, so the
-#' double-validation (pre-classing pointwise + post-finalizer simultaneous)
-#' never produces a false positive.
+#' Wald band. Gated to run only when meaningful: the cohort-family band was
+#' actually applied, standard errors available, at least two cohorts (no
+#' widening when `K = 1`), and all `se` finite and strictly positive (degenerate
+#' / selected-out rows are exempt). When no band was applied the check is
+#' skipped entirely, and the gate is satisfied-by-equality on pre-overwrite
+#' pointwise bounds, so the double-validation (pre-classing pointwise +
+#' post-finalizer simultaneous) never produces a false positive.
+#'
+#' **#460 narrowed this gate from `ci_type` to `catt_band_applied`** -- narrowed,
+#' not tightened. C10 asserts "simultaneous band >= pointwise band", which is
+#' only meaningful once a band was applied; and because `catt_band_applied ==
+#' TRUE` implies `ci_type == "simultaneous"` (only `.finalize_ci_type()` sets
+#' it, and it early-returns otherwise), the new gate admits a strict **subset**
+#' of the objects the old one did. C10 therefore runs *less* often than before,
+#' never more. What is given up is C10 running on a `ci_type = "simultaneous"`
+#' fit whose band came back `NULL`, where it would still have caught a pointwise
+#' construction producing bounds narrower than `2 * z * se` -- a real if small
+#' loss, and the price of the gate meaning what it says.
+#'
+#' `isTRUE()` rather than `!identical(., TRUE)`, so a missing or zero-length
+#' slot skips the contract instead of raising: this validator runs on hand-built
+#' mock fixtures as well as on live fits.
 #' @keywords internal
 #' @noRd
 .check_ci_band_width <- function(x, cls) {
-	if (!identical(x$ci_type, "simultaneous")) {
+	if (!isTRUE(x$catt_band_applied)) {
 		return(invisible(NULL))
 	}
 	cd <- x$catt_df
@@ -760,39 +775,44 @@
 #'
 #' @description
 #' Returns `"simultaneous"` or `"pointwise"` for the `[<label> NN% CI]` suffix on
-#' the CATT and event-study preview headers (#197).
+#' the CATT and event-study preview headers (#197, #460).
 #'
-#' Takes the **scalar** `ci_type`, never the object: the print path holds a
-#' `fetwfe`-family fit and the summary path a `summary.fetwfe`-family list, so a
-#' single object parameter would carry two unrelated shapes and could validate
-#' neither.
+#' Takes the **scalar applied-signal of the family whose header is being
+#' labelled**, never the object and never `ci_type`: the CATT header is labelled
+#' from the fit's (or summary's) `catt_band_applied` slot and the event-study
+#' header from `attr(<event-study frame>, "band_applied")`. `ci_type` records
+#' what the user *asked for*; these record what was *applied*, and the two
+#' families fail independently, so a fit can carry `ci_type = "simultaneous"`
+#' with neither band applied, or with one applied and not the other (#460).
 #'
 #' @details
-#' `NULL` -- a pre-1.16.0 fit or summary carrying no `ci_type` slot -- returns
-#' `"pointwise"`. That is a **compatibility behavior, not a default**: those
-#' objects' stored bounds really are pointwise, so the label is accurate.
+#' `NULL` -- a family carrying no applied-signal at all -- returns
+#' `"pointwise"`. That is a **conservative fallback, not an accurate one**, and
+#' the distinction matters. On a pre-1.16.0 object with no `ci_type` slot it is
+#' accurate, because those bounds really are pointwise. On an object serialized
+#' between v1.16.0 and #460 whose band *did* apply -- a `twfeCovs` fit is the
+#' reachable case, since `print.twfeCovs()` / `summary.twfeCovs()` run no
+#' validator and so raise no missing-slot error -- the stored bounds are a real
+#' simultaneous band and this label **understates** them. Understating a
+#' coverage guarantee is the safe direction, which is why the behavior is kept;
+#' it is not a claim that the label is right.
 #'
-#' The same compatibility rule is encoded independently by
-#' `.resolve_event_study_ci_type()` in `R/event_study.R`, with different control
-#' flow and a divergence on invalid input (this helper falls through to
-#' `"pointwise"`; that one raises a `match.arg()` error). If the rule is ever
-#' revisited, both must change.
+#' `.check_ci_band_width()` (contract C10, this file) now reads the same
+#' `catt_band_applied` slot this helper consumes for the CATT header. One is a
+#' **gate** and the other a **label**, and they are separate readers on purpose:
+#' a gate routed through this helper would make a control-flow decision depend
+#' on a display string. The remaining `identical(ci_type, "simultaneous")` tests
+#' -- in `.highdim_postselection_band_notice()` (this file, just below), in
+#' `R/event_study.R`, and in `.finalize_ci_type()` (`R/simultaneous_cis.R`) --
+#' are gates too, and none of them belongs here either.
 #'
-#' Not to be confused with the `identical(x$ci_type, "simultaneous")` tests in
-#' `.check_ci_band_width()` (this file), in `.highdim_postselection_band_notice()`
-#' (this file, just below), in `R/event_study.R`, and in `.finalize_ci_type()`
-#' (`R/simultaneous_cis.R`). Those four are **gates**, not labels; routing a gate
-#' through this helper would make a control-flow decision depend on a display
-#' string. (The fourth arrived with #433 and is the closest call of the four,
-#' since it gates a *string* the way this helper returns one -- but it decides
-#' whether a caveat is rendered at all, which is control flow.)
-#'
-#' @param ci_type Character scalar or `NULL`; the object's `ci_type` slot.
+#' @param band_applied Logical scalar or `NULL`; the applied-signal of the
+#'   family whose header is being labelled.
 #' @return A length-1 character, `"simultaneous"` or `"pointwise"`.
 #' @keywords internal
 #' @noRd
-.band_label <- function(ci_type) {
-	if (identical(ci_type, "simultaneous")) {
+.band_label <- function(band_applied) {
+	if (isTRUE(band_applied)) {
 		"simultaneous"
 	} else {
 		"pointwise"
@@ -809,10 +829,12 @@
 #' the same band (#433); the two reach disjoint users and neither substitutes
 #' for the other.
 #'
-#' Takes **scalars, never the object**, for the reason `.band_label()` states
-#' just above: the print path holds a `fetwfe`-family fit and the summary path a
-#' `summary.fetwfe`-family list, which carries no top-level `p` / `N` / `T` and
-#' is not `inherits(., "fetwfe")`. An object parameter here aborts every
+#' Takes **scalars, never the object**: the print path holds a `fetwfe`-family
+#' fit and the summary path a `summary.fetwfe`-family list, which carries no
+#' top-level `p` / `N` / `T` and is not `inherits(., "fetwfe")`. A single object
+#' parameter would therefore carry two unrelated shapes and could validate
+#' neither. (`.band_label()` in this file takes scalars for the same reason, and
+#' says so.) An object parameter here aborts every
 #' `print(summary(fit))` of every class at every dimension -- `x$p >= x$N * x$T`
 #' is `logical(0)` on a summary, `TRUE && logical(0)` returns `NA`, and it is the
 #' enclosing `if (NA)` that raises "missing value where TRUE/FALSE needed" (the
@@ -835,13 +857,15 @@
 #' `.finalize_ci_type()` left `ci_type` alone. Without this conjunct the notice
 #' asserts a full sentence about the properties of a band that does not exist.
 #' It is necessary but **not** sufficient -- a singular selected-support Gram
-#' can leave a `calc_ses = TRUE` object with no applied band, and the object
-#' carries no positive signal that the band was applied (a width comparison does
-#' not work: under the `sum(nondeg) <= 1` bypass in `.simultaneous_cis_impl()`
-#' -- fewer than two effects with positive variance, which is NOT the
-#' same condition as `K = 1` and fires at any `K` -- the applied band's width
-#' equals the pointwise width). That residual is the pre-existing
-#' `ci_type`-over-`NA`-bounds mislabelling, filed as issue #460.
+#' can leave a `calc_ses = TRUE` object with no applied band. Since #460 the
+#' object does carry a positive signal for that case, `catt_band_applied`, and
+#' `band_applied` below is it; what still does not work is inferring it from the
+#' bounds, because under the `sum(nondeg) <= 1` bypass in
+#' `.simultaneous_cis_impl()` -- fewer than two effects with positive variance,
+#' which is NOT the same condition as `K = 1` and fires at any `K` -- the
+#' applied band's width equals the pointwise width. So `calc_ses` still gates
+#' whether a notice renders at all, and `band_applied` decides only which
+#' sentence it renders.
 #'
 #' **Degenerate fits DO render the notice, unlike the warning.** The `warning()`
 #' carves out the `p >= NT` all-zero-support path, because that path early-
@@ -878,6 +902,19 @@
 #'   errors.
 #' @param is_fetwfe Logical scalar; `inherits(x, "fetwfe")` **on the fit**, not
 #'   on a summary object (a `summary.fetwfe` does not inherit `fetwfe`).
+#' @param band_applied Logical scalar; the fit's `catt_band_applied` slot
+#'   (#460). Selects the caveat's first line -- with a band, the fallback band
+#'   itself under-covers; without one, what is displayed are the fit-time
+#'   pointwise Wald intervals on the selected support, which under-cover for a
+#'   different reason (#308) but under-cover all the same. **Appended last and
+#'   defaulted to `FALSE`**, deliberately: this helper has direct positional
+#'   six-argument test call sites this change has no reason to churn, and its
+#'   quiet direction (always render the no-band wording) is pinned at the unit
+#'   level by both of the notice-helper controls in
+#'   `tests/testthat/test-highdim-postselection-band-warning-433.R`. The
+#'   asymmetry with `.assemble_event_study_df()`'s new *required* parameter is
+#'   deliberate too: that helper has exactly one production caller, so a
+#'   default there would be a silent hole rather than a convenience.
 #' @return A length-1 character ready to `cat()` -- two lines plus a trailing
 #'   blank line -- or `NULL` when no notice applies.
 #' @keywords internal
@@ -888,7 +925,8 @@
 	N,
 	T_,
 	calc_ses,
-	is_fetwfe
+	is_fetwfe,
+	band_applied = FALSE
 ) {
 	if (!identical(ci_type, "simultaneous")) {
 		return(NULL)
@@ -902,9 +940,23 @@
 	if (!isTRUE(p >= N * T_)) {
 		return(NULL)
 	}
+	# #460: the gate above is unchanged -- both the band-applied and the
+	# no-band cell already satisfied it, and the calc_ses = FALSE cell is
+	# already suppressed. Only the noun in the first line branches. The second
+	# line (the remedy) and the trailing blank line are identical either way.
+	first_line <- if (isTRUE(band_applied)) {
+		paste0(
+			"Note: p >= N*T and this band is the post-selection fallback, ",
+			"which under-covers.\n"
+		)
+	} else {
+		paste0(
+			"Note: p >= N*T and these are post-selection intervals, which ",
+			"under-cover.\n"
+		)
+	}
 	paste0(
-		"Note: p >= N*T and this band is the post-selection fallback, which ",
-		"under-covers.\n",
+		first_line,
 		"  ",
 		.highdim_band_remedy(is_fetwfe),
 		"\n\n"
@@ -912,7 +964,7 @@
 }
 
 #' @title The high-dimensional post-selection caveat, resolved from a fit
-#' @description Extracts the six scalars
+#' @description Extracts the scalars
 #'   `.highdim_postselection_band_notice()` needs from a fitted estimator object
 #'   and returns its result. The two renderers -- `.print_estimator_output()`
 #'   and `.summary_estimator_output()` -- both hold a fit at the point they need
@@ -943,7 +995,10 @@
 		N = x$N,
 		T_ = x$T,
 		calc_ses = if (is_fetwfe) x$internal$calc_ses else x$calc_ses,
-		is_fetwfe = is_fetwfe
+		is_fetwfe = is_fetwfe,
+		# #460: read off the top level for all four classes -- unlike
+		# `calc_ses`, this slot is not class-dependent.
+		band_applied = isTRUE(x$catt_band_applied)
 	)
 }
 
@@ -1095,10 +1150,11 @@
 #' independent improvements: `[[` on a list returns `NULL` for a missing name
 #' and never errors.
 #'
-#' Note the deliberate asymmetry with `.band_label()`, two helpers above, which
-#' *tolerates* a missing `ci_type` on a pre-1.16.0 object. A missing `ci_type`
-#' has a correct fallback -- those bounds really are pointwise -- whereas a
-#' missing `N` has none: there is no value to print and no way to guess one.
+#' Note the deliberate asymmetry with `.band_label()` (this file), which
+#' *tolerates* a missing applied-signal on an object that carries none. A
+#' missing applied-signal has a usable fallback -- `"pointwise"`, which is at
+#' worst an understatement of the stored bounds' coverage -- whereas a missing
+#' `N` has none: there is no value to print and no way to guess one.
 #' Reachable in practice only from a `summary.<class>` object deserialized from
 #' a build predating the #222 `R` -> `G` rename, since `model_info` is built in
 #' exactly one place from an already-validated fit.
@@ -1241,17 +1297,19 @@
 	))
 
 	## Cohort effects
-	# Band-type label (#197): the reported CI bounds are simultaneous
-	# (family-wise) by default, or pointwise when the fit used
-	# ci_type = "pointwise". Older fits (pre-1.16.0) carry no ci_type slot
-	# and are labeled pointwise (their bounds are pointwise).
-	band_label <- .band_label(x$ci_type)
+	# Band-type label (#197, #460): each header is labelled from ITS OWN
+	# family's applied-signal, not from the shared `ci_type`. This one
+	# describes `x$catt_df`, written at fit time by `.finalize_ci_type()`, so
+	# it reads the fit's `catt_band_applied` slot. A fit carrying no such slot
+	# (pre-#460, or a pre-1.16.0 object with no `ci_type` either) falls to
+	# "pointwise" -- the conservative direction; see `.band_label()`.
+	catt_band_label <- .band_label(x$catt_band_applied)
 	catt_df <- .truncate_catt(x$catt_df, max_cohorts, order_by)
 	.cat_preview_block(
 		catt_df,
 		sprintf(
 			"Cohort Average Treatment Effects (CATT) [%s %.0f%% CI]:\n",
-			band_label,
+			catt_band_label,
 			ci_pct
 		),
 		"  ... and %d more cohorts.\n"
@@ -1261,8 +1319,12 @@
 	## so `.highdim_notice_from_fit()` can read every ingredient off it (and
 	## derives `calc_ses` per class rather than reading the top-level slot; see
 	## its @details). Rendered here, under the CATT preview, rather than once
-	## per preview: the two previews display the same band under the same
-	## `[<label> NN% CI]` header, and one caveat per object is the point.
+	## per preview. Since #460 the two previews can and routinely DO carry
+	## different `[<label> NN% CI]` headers -- they describe different families,
+	## which fail independently -- so the reason for one caveat per object is
+	## not that they display the same band. It is that the caveat's claim (what
+	## is displayed under-covers at p >= N*T) is true of both previews'
+	## contents, whichever construction each one holds.
 	highdim_notice <- .highdim_notice_from_fit(x)
 	if (!is.null(highdim_notice)) {
 		cat(highdim_notice)
@@ -1291,7 +1353,14 @@
 			es_preview,
 			sprintf(
 				"Event-Study Average Treatment Effects (per event time) [%s %.0f%% CI]:\n",
-				band_label,
+				# #460: this header describes the frame `.event_study_quiet()`
+				# just recomputed, whose band comes from the EVENT-STUDY family
+				# -- a different contrast matrix over the same sandwich, which
+				# can fail while the cohort band succeeds. So it is labelled
+				# from the frame's own attribute, never from
+				# `x$catt_band_applied`. `.truncate_event_study()` preserves
+				# the attribute (row subsetting copies the attribute list).
+				.band_label(attr(es_preview, "band_applied")),
 				ci_pct
 			),
 			"  ... and %d more event times.\n"
@@ -1429,10 +1498,18 @@
 		),
 		alpha = object$alpha,
 		se_type = object$se_type,
-		# #197: carry ci_type so print.summary.<class> can label the CATT /
-		# event-study previews (simultaneous vs pointwise). Pre-1.16.0 fits
-		# have no slot -> NULL -> labeled pointwise downstream.
+		# #197: ci_type reports what the user ASKED for, and stays on the
+		# summary object for that reason. It is no longer what labels the
+		# previews -- see the next field.
 		ci_type = object$ci_type,
+		# #460: whether the fit-time cohort-family band was actually applied.
+		# This is what labels the CATT preview header in
+		# `print.summary.<class>`. `isTRUE()` so a fit serialized before #460
+		# (no slot -> NULL) lands on FALSE rather than carrying a NULL that
+		# would drop the name from this list. The event-study half needs
+		# nothing here: `attr(., "band_applied")` rides along on the
+		# `event_study` frame above.
+		catt_band_applied = isTRUE(object$catt_band_applied),
 		# #433: the high-dimensional post-selection-fallback caveat, resolved
 		# HERE because this is the last point on the summary path that holds the
 		# fit. `print.summary.<class>` receives a `summary.<class>` list with no
@@ -1452,9 +1529,11 @@
 		"model_info",
 		"alpha",
 		"se_type",
-		# #197: ci_type appears last, after se_type (the band-type label
-		# source for the CATT / event-study previews).
+		# #197: ci_type appears after se_type; it records the user's argument.
 		"ci_type",
+		# #460: the CATT preview's band-type label source, grouped with the
+		# other band-related fields.
+		"catt_band_applied",
 		# #433: grouped with `ci_type`, the other band-related field. This
 		# vector is a WHITELIST -- `out <- out[keep]` below silently drops any
 		# name not listed here, with no error -- so a field added to `out` and
@@ -1518,9 +1597,16 @@
 	cat(header)
 
 	ci_pct <- 100 * (1 - x$alpha)
-	# Band-type label (#197): simultaneous (family-wise) by default, pointwise
-	# under ci_type = "pointwise" or for pre-1.16.0 summaries with no slot.
-	band_label <- .band_label(x$ci_type)
+	# Band-type label (#197, #460): the print-path twin of this comment lives
+	# in `.print_estimator_output()`. Each preview header is labelled from ITS
+	# OWN family's applied-signal -- the CATT header from the summary's
+	# `catt_band_applied` field, the event-study header from
+	# `attr(x$event_study, "band_applied")` -- because the two families fail
+	# independently. A summary with neither signal (serialized before #460, or
+	# pre-1.16.0 with no `ci_type` either) falls to "pointwise"; see
+	# `.band_label()` for why that is the conservative direction and not always
+	# an accurate one.
+	catt_band_label <- .band_label(x$catt_band_applied)
 	att_ci <- .att_wald_ci(x$att["estimate"], x$att["se"], x$alpha)
 	ci_low <- att_ci[1]
 	ci_high <- att_ci[2]
@@ -1547,7 +1633,7 @@
 		x$catt,
 		sprintf(
 			"CATT (preview) [%s %.0f%% CI]:\n",
-			band_label,
+			catt_band_label,
 			ci_pct
 		),
 		"  ... + %d more cohorts.\n"
@@ -1575,7 +1661,11 @@
 			x$event_study,
 			sprintf(
 				"Event Study (preview) [%s %.0f%% CI]:\n",
-				band_label,
+				# #460: labelled from the cached frame's own attribute, which
+				# `.summary_estimator_output()` carried across unaided (the
+				# attribute survives `.truncate_event_study()`), never from the
+				# summary's `catt_band_applied`.
+				.band_label(attr(x$event_study, "band_applied")),
 				ci_pct
 			),
 			"  ... + %d more event times.\n"

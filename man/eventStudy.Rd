@@ -54,6 +54,15 @@ default), the single-step max-T multiplicity-adjusted (family-wise)
 p-value matching the simultaneous band (#200). \code{NA} when \code{se} is \code{0}
 or \code{NA}.}
 }
+The returned frame also carries the logical attribute
+\code{attr(., "band_applied")} (#460), \code{TRUE} when its \code{ci_low} / \code{ci_high} ARE
+the event-study-family simultaneous band and \code{FALSE} when they are the
+pointwise Wald bounds --- because the fit asked for \code{ci_type = "pointwise"}, because standard errors were unavailable on the selected
+support, or because the band construction degraded. It is not the same
+question as the fit's \code{ci_type}, which records what was requested, nor as
+the fit's \code{catt_band_applied} slot, which answers it for the cohort family:
+the two families are built from different contrast matrices and fail
+independently, so one can be applied while the other is not.
 Only post-treatment event times (\code{e >= 0}) are included; pre-treatment
 placebo periods would require an extended regression specification and
 are out of scope for this initial release.

@@ -106,6 +106,16 @@ utils::globalVariables(c("event_time", "estimate", "ci_low", "ci_high"))
 #'       p-value matching the simultaneous band (#200). `NA` when `se` is `0`
 #'       or `NA`.}
 #'   }
+#'   The returned frame also carries the logical attribute
+#'   `attr(., "band_applied")` (#460), `TRUE` when its `ci_low` / `ci_high` ARE
+#'   the event-study-family simultaneous band and `FALSE` when they are the
+#'   pointwise Wald bounds --- because the fit asked for `ci_type =
+#'   "pointwise"`, because standard errors were unavailable on the selected
+#'   support, or because the band construction degraded. It is not the same
+#'   question as the fit's `ci_type`, which records what was requested, nor as
+#'   the fit's `catt_band_applied` slot, which answers it for the cohort family:
+#'   the two families are built from different contrast matrices and fail
+#'   independently, so one can be applied while the other is not.
 #'   Only post-treatment event times (`e >= 0`) are included; pre-treatment
 #'   placebo periods would require an extended regression specification and
 #'   are out of scope for this initial release.
@@ -858,6 +868,15 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #'   adjusted p-values to use instead of the pointwise Wald p (the
 #'   `ci_type = "simultaneous"` path). `NULL` (default) computes the pointwise
 #'   Wald p-value.
+#' @param band_applied Logical scalar recording whether the returned frame's
+#'   `ci_low` / `ci_high` ARE the event-study-family simultaneous band (#460).
+#'   Stored on the result as `attr(out, "band_applied")` and read by consumers
+#'   as `attr(es, "band_applied")`; it is what labels the event-study preview
+#'   header in `print()` / `summary()`. **Required, not defaulted**, and
+#'   appended last so the existing positional call is unaffected: this helper
+#'   has exactly one production caller and that caller knows the answer exactly,
+#'   whereas a default's quiet direction is "label every frame pointwise" --
+#'   which is the direction that would make #460 look fixed while it was not.
 #' @keywords internal
 #' @noRd
 .assemble_event_study_df <- function(
@@ -868,7 +887,8 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	z,
 	ci_low = NULL,
 	ci_high = NULL,
-	p_value = NULL
+	p_value = NULL,
+	band_applied
 ) {
 	if (is.null(ci_low)) {
 		ci_low <- estimates - z * ses
@@ -889,6 +909,7 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 		p_value = p_value
 	)
 	class(out) <- c("eventStudy", "data.frame")
+	attr(out, "band_applied") <- isTRUE(band_applied)
 	out
 }
 
@@ -909,7 +930,8 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #' @param calc_ses Logical; the LOCAL SE-availability gate.
 #' @param event_times,n_cohorts,estimates,ses,z Assembled by the worker loop and
 #'   forwarded to `.assemble_event_study_df()`.
-#' @return The event-study data frame from `.assemble_event_study_df()`.
+#' @return The event-study data frame from `.assemble_event_study_df()`,
+#'   carrying `attr(., "band_applied")` (#460).
 #' @keywords internal
 #' @noRd
 .finish_event_study <- function(
@@ -936,7 +958,14 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 		z,
 		ci_low = sb$ci_low,
 		ci_high = sb$ci_high,
-		p_value = sb$adjusted_p_values
+		p_value = sb$adjusted_p_values,
+		# #460: this is the one site that knows, and it knows exactly. `sb` is
+		# NULL both when the gate above refused to ask (`ci_type` is pointwise,
+		# or the LOCAL `calc_ses` is FALSE) and when the band helper degraded;
+		# `!is.null(sb)` is downstream of both routes. Do NOT re-derive this
+		# inside the assembler from `is.null(ci_low)` -- that is an inference
+		# where a fact is available.
+		band_applied = !is.null(sb)
 	)
 }
 

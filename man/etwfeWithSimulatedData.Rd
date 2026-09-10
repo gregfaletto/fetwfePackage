@@ -142,6 +142,7 @@ argument was provided and used for asymptotically-exact ATT inference,
 \item{se_type}{Character scalar; the \code{se_type} argument the user passed
 (\code{"default"}, \code{"conservative"}, or \code{"cluster"}).}
 \item{ci_type}{Character scalar; the \code{ci_type} argument the user passed (\code{"simultaneous"} or \code{"pointwise"}), controlling whether the reported \code{catt_df} / \code{eventStudy()} confidence-interval bounds are simultaneous (family-wise) or pointwise.}
+\item{catt_band_applied}{Logical scalar; \code{TRUE} when the fit-time cohort-family simultaneous band was computed and written into \code{catt_df}, and \code{FALSE} otherwise --- including when \code{ci_type = "pointwise"}, when standard errors were unavailable, and when the band construction degraded. It records only whether the band was applied: it does not imply the band is wider than the pointwise interval (they coincide when fewer than two effects have positive variance) and does not imply the band is informative (a degenerate fit can carry an all-zero band with \code{TRUE}).}
 \item{y_mean}{Numeric scalar; the mean of the original (pre-centering)
 response. Stored so downstream methods (\code{augment()}, \code{predict()}) can
 return fitted values on the original-response scale.}
