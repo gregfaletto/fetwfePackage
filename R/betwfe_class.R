@@ -121,6 +121,10 @@ print.summary.betwfe <- function(x, ...) {
 	"treatment",
 	"covs",
 	"ci_type",
+	# #460: whether the fit-time cohort-family simultaneous band was actually
+	# applied to `catt_df`. Mirrors its position in the out-list literal
+	# (`R/utility.R`), immediately after `ci_type`.
+	"catt_band_applied",
 	"internal"
 )
 

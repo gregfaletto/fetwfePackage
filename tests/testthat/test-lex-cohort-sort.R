@@ -121,10 +121,14 @@ test_that("tidy.<class> sorts cohorts numerically when labels include >= 10", {
 		treatment = "treatment",
 		covs = c("cov1", "cov2"),
 		# #197: ci_type slot is now required by .EXPECTED_SLOTS_FETWFE.
-		# Set to "pointwise" so C10 (simultaneous >= pointwise band width)
-		# is skipped on this hand-built catt_df, preserving this test's
-		# intent (cohort SORTING, not band type).
+		# Kept "pointwise" as the fit-request this mock stands for.
 		ci_type = "pointwise",
+		# #460: catt_band_applied is now required by .EXPECTED_SLOTS_FETWFE
+		# too, and since #460 it -- not ci_type -- is what gates C10
+		# (simultaneous >= pointwise band width). FALSE skips C10 on this
+		# hand-built catt_df, preserving this test's intent (cohort SORTING,
+		# not band type), and is the truthful value: no band was applied here.
+		catt_band_applied = FALSE,
 		# #40: fusion_structure is a required fetwfe slot.
 		fusion_structure = "cohort",
 		# #236: fusion_matrix is a required fetwfe slot (NULL when no custom

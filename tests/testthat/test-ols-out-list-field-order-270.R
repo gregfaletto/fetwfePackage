@@ -67,6 +67,7 @@ test_that("etwfe()/twfeCovs() top-level field order is preserved by the shared a
 		"treatment",
 		"covs",
 		"ci_type",
+		"catt_band_applied", # #460
 		"internal"
 	)
 	# twfeCovs differs from etwfe ONLY at positions 24-26.

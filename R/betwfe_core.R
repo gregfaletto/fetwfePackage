@@ -232,6 +232,7 @@
 #' `as.integer(N * T)` when the user did not pass a seed. `NA_integer_`
 #' when `lambda_selection = "bic"`.}
 #' \item{ci_type}{Character scalar; the `ci_type` argument the user passed (`"simultaneous"` or `"pointwise"`), controlling whether the reported `catt_df` / `eventStudy()` confidence-interval bounds are simultaneous (family-wise) or pointwise.}
+#' \item{catt_band_applied}{Logical scalar; `TRUE` when the fit-time cohort-family simultaneous band was computed and written into `catt_df`, and `FALSE` otherwise --- including when `ci_type = "pointwise"`, when standard errors were unavailable, and when the band construction degraded. It records only whether the band was applied: it does not imply the band is wider than the pointwise interval (they coincide when fewer than two effects have positive variance) and does not imply the band is informative (a degenerate fit can carry an all-zero band with `TRUE`).}
 #' \item{X_ints}{The design matrix created containing all
 #' interactions, time and cohort dummies, etc.} \item{y}{The vector of
 #' responses, containing `nrow(X_ints)` entries.} \item{X_final}{The design
@@ -673,6 +674,7 @@ betwfe <- function(
 #' `as.integer(N * T)` when the user did not pass a seed. `NA_integer_`
 #' when `lambda_selection = "bic"`.}
 #' \item{ci_type}{Character scalar; the `ci_type` argument the user passed (`"simultaneous"` or `"pointwise"`), controlling whether the reported `catt_df` / `eventStudy()` confidence-interval bounds are simultaneous (family-wise) or pointwise.}
+#' \item{catt_band_applied}{Logical scalar; `TRUE` when the fit-time cohort-family simultaneous band was computed and written into `catt_df`, and `FALSE` otherwise --- including when `ci_type = "pointwise"`, when standard errors were unavailable, and when the band construction degraded. It records only whether the band was applied: it does not imply the band is wider than the pointwise interval (they coincide when fewer than two effects have positive variance) and does not imply the band is informative (a degenerate fit can carry an all-zero band with `TRUE`).}
 #' \item{X_ints}{The design matrix created containing all
 #' interactions, time and cohort dummies, etc.} \item{y}{The vector of
 #' responses, containing `nrow(X_ints)` entries.} \item{X_final}{The design
