@@ -115,8 +115,13 @@ utils::globalVariables(c("event_time", "estimate", "ci_low", "ci_high"))
 #'   question as the fit's `ci_type`, which records what was requested, nor as
 #'   the fit's `catt_band_applied` slot, which answers it for the cohort family:
 #'   the two families are built from different contrast matrices and fail
-#'   independently, so one can be applied while the other is not. Like that
-#'   slot, it records only that the band was applied: `TRUE` does not imply the
+#'   independently, so one can be applied while the other is not. **It is an
+#'   attribute rather than a slot because no slot could hold it.** This band is
+#'   recomputed per call with that call's arguments, so one fit answers
+#'   differently for different calls: on a fit carrying
+#'   `catt_band_applied = TRUE`, `attr(eventStudy(fit), "band_applied")` is
+#'   `TRUE` while `attr(eventStudy(fit, ci_type = "pointwise"), "band_applied")`
+#'   is `FALSE`. Like the slot, it records only that the band was applied: `TRUE` does not imply the
 #'   bounds are wider than the pointwise ones, and does not imply every row is
 #'   informative --- degenerate event times are masked to `NA` while the band is
 #'   still reported as applied.

@@ -270,9 +270,9 @@ test_that("ci_type = 'pointwise' sets neither signal and labels both headers (#4
 #    `.event_study_simultaneous_bounds` instead). That is deliberate here: the
 #    event-study band is left alone precisely so the two families DISAGREE.
 #
-#    The disagreement assertion is load-bearing. Labelling the event-study header
-#    from `x$catt_band_applied` instead of the frame's own attribute renders
-#    byte-identical output on every other block in this file.
+#    The disagreement assertion is load-bearing: this block and block 9 -- the
+#    unmocked demonstration -- are the two that redden when the event-study
+#    header is labelled from `x$catt_band_applied` instead of the attribute.
 # ------------------------------------------------------------------------------
 test_that("a calc_ses fit whose cohort band failed labels only that header pointwise (#460)", {
 	fit <- with_mocked_bindings(
