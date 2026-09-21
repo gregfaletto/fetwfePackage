@@ -375,6 +375,9 @@ argument was provided and used for asymptotically-exact ATT inference,
 <dt>ci_type</dt>
 <dd><p>Character scalar; the <code>ci_type</code> argument the user passed (<code>"simultaneous"</code> or <code>"pointwise"</code>), controlling whether the reported <code>catt_df</code> confidence-interval bounds are simultaneous (family-wise) or pointwise.</p></dd>
 
+<dt>catt_band_applied</dt>
+<dd><p>Logical scalar; <code>TRUE</code> when the fit-time cohort-family simultaneous band was computed and written into <code>catt_df</code>, and <code>FALSE</code> otherwise — including when <code>ci_type = "pointwise"</code>, when standard errors were unavailable, and when the band construction degraded. It records only whether the band was applied: it does not imply the band is wider than the pointwise interval (they coincide when fewer than two effects have positive variance) and does not imply the band is informative (a degenerate fit can carry an all-zero band with <code>TRUE</code>).</p></dd>
+
 <dt>internal</dt>
 <dd><p>A list containing internal outputs that are typically
 not needed for interpretation, packaged here for parity with

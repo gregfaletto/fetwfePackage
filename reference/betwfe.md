@@ -427,6 +427,17 @@ An object of class `betwfe` containing the following elements:
   confidence-interval bounds are simultaneous (family-wise) or
   pointwise.
 
+- catt_band_applied:
+
+  Logical scalar; `TRUE` when the fit-time cohort-family simultaneous
+  band was computed and written into `catt_df`, and `FALSE` otherwise —
+  including when `ci_type = "pointwise"`, when standard errors were
+  unavailable, and when the band construction degraded. It records only
+  whether the band was applied: it does not imply the band is wider than
+  the pointwise interval (they coincide when fewer than two effects have
+  positive variance) and does not imply the band is informative (a
+  degenerate fit can carry an all-zero band with `TRUE`).
+
 - X_ints:
 
   The design matrix created containing all interactions, time and cohort
@@ -655,12 +666,12 @@ if (requireNamespace("bacondecomp", quietly = TRUE)) {
 #> No covariates provided; skipping covariate processing.
 #> Getting omega sqrt inverse estimate...
 #> Done! Time to estimate noise variances:
-#> 0.277707576751709
+#> 0.237330198287964
 #> Time to get sqrt inverse matrix:
-#> 0.000299930572509766
+#> 0.00033879280090332
 #> Estimating bridge regression with 10-fold CV...
 #> Done! Time for estimation:
-#> 0.105411529541016
+#> 0.112121343612671
 #> No treatment features selected; all treatment effects estimated to be 0.
 #>   cohort estimate se ci_low ci_high p_value selected
 #> 1   2005        0  0      0       0      NA    FALSE

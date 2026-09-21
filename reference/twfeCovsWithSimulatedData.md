@@ -261,6 +261,17 @@ An object of class `twfeCovs` containing the following elements:
   `catt_df` confidence-interval bounds are simultaneous (family-wise) or
   pointwise.
 
+- catt_band_applied:
+
+  Logical scalar; `TRUE` when the fit-time cohort-family simultaneous
+  band was computed and written into `catt_df`, and `FALSE` otherwise —
+  including when `ci_type = "pointwise"`, when standard errors were
+  unavailable, and when the band construction degraded. It records only
+  whether the band was applied: it does not imply the band is wider than
+  the pointwise interval (they coincide when fewer than two effects have
+  positive variance) and does not imply the band is informative (a
+  degenerate fit can carry an all-zero band with `TRUE`).
+
 - y_mean:
 
   Numeric scalar; mean of the original (pre-centering) response. Stored
