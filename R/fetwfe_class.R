@@ -117,6 +117,10 @@ print.summary.fetwfe <- function(x, ...) {
 	"treatment",
 	"covs",
 	"ci_type",
+	# #460: whether the fit-time cohort-family simultaneous band was actually
+	# applied to `catt_df`. Mirrors its position in the out-list literal
+	# (`R/utility.R`), immediately after `ci_type`.
+	"catt_band_applied",
 	"fusion_structure",
 	# #236: the user-supplied forward fusion matrix D_N (NULL when not
 	# supplied). Always present on freshly built fits (kept inside the

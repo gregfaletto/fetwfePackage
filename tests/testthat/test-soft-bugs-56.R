@@ -31,7 +31,11 @@ test_that(".assemble_event_study_df masks zero and negative SEs to NA p-value", 
 		n_cohorts = c(2L, 2L, 1L, 1L),
 		estimates = c(0.5, -0.3, 0.2, 0.1),
 		ses = c(0.2, 0, -0.1, 0.15),
-		z = stats::qnorm(0.975)
+		z = stats::qnorm(0.975),
+		# #460: required, no default. FALSE matches what this call already
+		# exercises -- no `ci_low` / `ci_high` supplied, so the frame's bounds
+		# are the pointwise Wald construction.
+		band_applied = FALSE
 	)
 	# ses > 0: finite p-value.
 	expect_false(is.na(out$p_value[1]))

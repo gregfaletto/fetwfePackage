@@ -268,6 +268,7 @@
 #' \item{se_type}{Character scalar; the `se_type` argument the user passed
 #' (`"default"`, `"conservative"`, or `"cluster"`).}
 #' \item{ci_type}{Character scalar; the `ci_type` argument the user passed (`"simultaneous"` or `"pointwise"`), controlling whether the reported `catt_df` / `eventStudy()` confidence-interval bounds are simultaneous (family-wise) or pointwise.}
+#' \item{catt_band_applied}{Logical scalar; `TRUE` when the fit-time cohort-family simultaneous band was computed and written into `catt_df`, and `FALSE` otherwise --- including when `ci_type = "pointwise"`, when standard errors were unavailable, and when the band construction degraded. It records only whether the band was applied: it does not imply the band is wider than the pointwise interval (they coincide when fewer than two effects have positive variance) and does not imply the band is informative (a degenerate fit can carry an all-zero band with `TRUE`).}
 #' \item{y_mean}{Numeric scalar; the mean of the original (pre-centering)
 #'   response. Stored so downstream methods (`augment()`, `predict()`)
 #'   can return fitted values on the original-response scale.}
@@ -772,6 +773,7 @@ fetwfe <- function(
 #' \item{se_type}{Character scalar; the `se_type` argument the user passed
 #' (`"default"`, `"conservative"`, or `"cluster"`).}
 #' \item{ci_type}{Character scalar; the `ci_type` argument the user passed (`"simultaneous"` or `"pointwise"`), controlling whether the reported `catt_df` / `eventStudy()` confidence-interval bounds are simultaneous (family-wise) or pointwise.}
+#' \item{catt_band_applied}{Logical scalar; `TRUE` when the fit-time cohort-family simultaneous band was computed and written into `catt_df`, and `FALSE` otherwise --- including when `ci_type = "pointwise"`, when standard errors were unavailable, and when the band construction degraded. It records only whether the band was applied: it does not imply the band is wider than the pointwise interval (they coincide when fewer than two effects have positive variance) and does not imply the band is informative (a degenerate fit can carry an all-zero band with `TRUE`).}
 #' \item{y_mean}{Numeric scalar; the mean of the original (pre-centering)
 #'   response. Stored so downstream methods (`augment()`, `predict()`)
 #'   can return fitted values on the original-response scale.}

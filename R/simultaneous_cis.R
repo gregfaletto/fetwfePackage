@@ -1593,10 +1593,20 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 #'   and returns the updated object. For `ci_type == "pointwise"` (or when the
 #'   band degrades to `NULL`) it is a no-op pass-through. Hoisted out of the
 #'   four entry-point tails to avoid a 4-site copy (WORKFLOW_LESSONS section 14).
+#'
+#'   It also **records the outcome**, not only applies it (#460): the returned
+#'   object's `catt_band_applied` slot says whether the overwrite happened.
+#'   Before #460 the only thing downstream could read was `ci_type`, which
+#'   records what the user asked for and is left untouched when the band comes
+#'   back `NULL` -- so a fit whose band degraded rendered a `simultaneous`
+#'   header over bounds that are not a simultaneous band. The reader at the
+#'   other end is `.band_label()` (`R/class_helpers.R`), which labels the CATT
+#'   preview header from this slot.
 #' @param out A fully-classed `fetwfe`/`etwfe`/`betwfe`/`twfeCovs` object.
 #' @param alpha Numeric; the alpha the fit used (read from the fit's `alpha` slot).
 #' @return `out` with `catt_df` bounds overwritten when simultaneous, else
-#'   `out` unchanged.
+#'   `out` unchanged; in both cases carrying `catt_band_applied` reflecting
+#'   whether the overwrite happened.
 #' @keywords internal
 #' @noRd
 .finalize_ci_type <- function(out, alpha) {
@@ -1620,6 +1630,11 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 		cd$ci_high <- band$ci_high
 		cd$p_value <- band$adjusted_p_values
 		out$catt_df <- cd
+		# #460: the positive signal. Nothing here sets it back to FALSE --
+		# the out-list literal in `.assemble_ols_estimator()` /
+		# `.assemble_bridge_estimator()` already did, on every path including
+		# the `ci_type != "simultaneous"` early return above.
+		out$catt_band_applied <- TRUE
 	}
 	# Re-validate the final object (defense-in-depth; the ci_type slot + the
 	# widened-band contract C9/C10 are now in place). `.assert_estimator_object()`

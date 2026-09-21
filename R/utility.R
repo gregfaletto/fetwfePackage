@@ -2734,7 +2734,15 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 		unit_var = unit_var,
 		treatment = treatment,
 		covs = covs_orig,
-		ci_type = ci_type
+		ci_type = ci_type,
+		# #460: whether the fit-time cohort-family simultaneous band was
+		# actually applied. `FALSE`, never `NA`, is the truthful initial value:
+		# `validator_fn(out)` below runs on this literal BEFORE
+		# `.finalize_ci_type()` can update it, and the slot's meaning is "the
+		# stored `catt_df` bounds ARE the simultaneous cohort band" -- which is
+		# false at this moment, and stays false forever when
+		# `ci_type = "pointwise"`.
+		catt_band_applied = FALSE
 	)
 
 	# twfeCovs historically places `alpha` AFTER se_type; reorder by name to preserve
@@ -2912,7 +2920,15 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 		unit_var = unit_var,
 		treatment = treatment,
 		covs = covs_orig,
-		ci_type = ci_type
+		ci_type = ci_type,
+		# #460: whether the fit-time cohort-family simultaneous band was
+		# actually applied. `FALSE`, never `NA`, is the truthful initial value:
+		# `.validate_fetwfe()` / `.validate_betwfe()` below run on this literal
+		# BEFORE `.finalize_ci_type()` can update it, and the slot's meaning is
+		# "the stored `catt_df` bounds ARE the simultaneous cohort band" --
+		# which is false at this moment, and stays false forever when
+		# `ci_type = "pointwise"`.
+		catt_band_applied = FALSE
 	)
 
 	out <- c(head, block_a, dims, block_b, tail)

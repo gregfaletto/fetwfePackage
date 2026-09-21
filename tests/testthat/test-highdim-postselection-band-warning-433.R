@@ -42,8 +42,9 @@
 
 # ------------------------------------------------------------------------------
 # Fixtures. Built LAZILY and memoized, not at file scope: every block below
-# calls skip_on_cran() first, and a file-scope fixture would build four
-# high-dimensional bridge fits on CRAN before the first skip fires.
+# that builds one calls skip_on_cran() first (the pure-unit notice-helper block
+# at the end builds no fit and does not skip), and a file-scope fixture would
+# build four high-dimensional bridge fits on CRAN before the first skip fires.
 # ------------------------------------------------------------------------------
 .hpb433_cache <- new.env(parent = emptyenv())
 
@@ -798,7 +799,13 @@ test_that("the #433 notice helper rejects non-numeric dimensions", {
 
 	# The positive control. Without it, every expect_null() below would pass on
 	# a helper that had simply stopped rendering anything.
-	expect_type(
+	#
+	# #460: it asserts the WORDING, not just the type. `band_applied` defaults
+	# to FALSE, so this call exercises the no-band branch -- and a type-only
+	# assertion stays green under a helper rewritten to render that branch
+	# unconditionally, which would leave the new parameter's quiet direction
+	# unpinned at the unit level (measured by the drift sentinel).
+	expect_match(
 		nt(
 			ci_type = "simultaneous",
 			p = 356,
@@ -807,7 +814,25 @@ test_that("the #433 notice helper rejects non-numeric dimensions", {
 			calc_ses = TRUE,
 			is_fetwfe = TRUE
 		),
-		"character"
+		"these are post-selection intervals",
+		fixed = TRUE
+	)
+
+	# #460: the band-applied branch. The band exists here, so the caveat's
+	# subject is the band itself. This is the control that makes the branch a
+	# branch rather than a constant.
+	expect_match(
+		nt(
+			ci_type = "simultaneous",
+			p = 356,
+			N = 60,
+			T_ = 5,
+			calc_ses = TRUE,
+			is_fetwfe = TRUE,
+			band_applied = TRUE
+		),
+		"this band is the post-selection fallback",
+		fixed = TRUE
 	)
 
 	for (bad in list("356", list(356), TRUE)) {

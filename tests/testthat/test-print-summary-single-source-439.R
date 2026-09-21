@@ -11,7 +11,8 @@ library(fetwfe)
 # is. Their value is measured instead by a mutation battery, and each group
 # below names the mutation it defends against. Before #439 the suite could not
 # distinguish a correct helper from a stubbed one: measured during plan review,
-# `.band_label <- function(ci_type) "simultaneous"`,
+# `.band_label <- function(band_applied) "simultaneous"` (spelled
+# `function(ci_type)` before #460 repurposed the parameter),
 # `.se_qualifier <- function(se_type) ""`, and swapping the G and d rows of the
 # Model Details block EACH left the entire suite green.
 #
@@ -50,6 +51,20 @@ library(fetwfe)
 
 .expect_absent <- function(blob, literal) {
 	expect_false(any(grepl(literal, blob, fixed = TRUE)))
+}
+
+# #460: since each preview header is labelled from its OWN family's
+# applied-signal, both `[simultaneous 95% CI]` and `[pointwise 95% CI]` can
+# appear in one rendered blob -- and routinely do on `.pdata_439`. A blob-level
+# presence assertion is then satisfied by a mutant that SWAPS the two headers,
+# so the header line has to be selected first and asserted on by itself.
+# `startsWith()` rather than `grep()`: it is fixed-string AND anchored at once,
+# so neither `fixed = TRUE` nor a `^` can be dropped by inattention.
+.header_line <- function(blob, prefix) {
+	lines <- strsplit(blob, "\n", fixed = TRUE)[[1]]
+	hits <- which(startsWith(lines, prefix))
+	expect_length(hits, 1L)
+	lines[hits[1]]
 }
 
 # ------------------------------------------------------------------------------
@@ -136,13 +151,18 @@ test_that(".se_qualifier() returns the parenthetical, not a finished label", {
 	)
 })
 
-test_that(".band_label() takes the scalar and treats a missing slot as pointwise", {
-	expect_identical(fetwfe:::.band_label("simultaneous"), "simultaneous")
-	expect_identical(fetwfe:::.band_label("pointwise"), "pointwise")
-	# NULL is the pre-1.16.0 no-slot case. Those objects' stored bounds really
-	# are pointwise, so this is a compatibility behavior, not a fallback
-	# default -- see the helper's roxygen and R/event_study.R's
-	# `.resolve_event_study_ci_type()`, which encodes the same rule.
+test_that(".band_label() takes the applied-signal and treats NULL as pointwise", {
+	# #460: the argument is the family's own applied-signal (a logical), not
+	# the fit's `ci_type` (a string). `ci_type` records what the user asked
+	# for; these record what was applied, and the two families fail
+	# independently.
+	expect_identical(fetwfe:::.band_label(TRUE), "simultaneous")
+	expect_identical(fetwfe:::.band_label(FALSE), "pointwise")
+	# NULL is the no-signal case: an object serialized before #460, or a
+	# pre-1.16.0 one with no `ci_type` either. `"pointwise"` is the
+	# CONSERVATIVE fallback, not an accurate one -- on an object whose band did
+	# apply it understates the stored bounds' coverage, which is the safe
+	# direction. See the helper's roxygen.
 	expect_identical(fetwfe:::.band_label(NULL), "pointwise")
 })
 
@@ -287,16 +307,37 @@ test_that("se_type = 'conservative' is rendered on both paths", {
 	out_print <- .render_print(fit)
 	expect_match(out_print, "  Std. Error (conservative): ", fixed = TRUE)
 	.expect_absent(out_print, " (cluster-robust)")
-	# The default ci_type travels with this fit, so it also pins the other
-	# branch of `.band_label()`.
-	expect_match(out_print, "[simultaneous 95% CI]", fixed = TRUE)
-	.expect_absent(out_print, "[pointwise 95% CI]")
+	# #460: this fit pins BOTH branches of `.band_label()` in one render, and
+	# they land on different headers. `.pdata_439` is degenerate -- the bridge
+	# selects nothing, so `.finish_event_study()`'s LOCAL `calc_ses` is FALSE
+	# and the event-study band is never requested -- while the cohort band
+	# applies over an all-zero `catt_df$se`. Assert per HEADER LINE, never on
+	# the blob: both literals are present either way, so a blob-level pair of
+	# presence assertions is green under a mutant that swaps the two headers.
+	expect_match(
+		.header_line(out_print, "Cohort Average Treatment Effects (CATT)"),
+		"[simultaneous 95% CI]",
+		fixed = TRUE
+	)
+	expect_match(
+		.header_line(out_print, "Event-Study Average Treatment Effects"),
+		"[pointwise 95% CI]",
+		fixed = TRUE
+	)
 
 	out_summary <- .render_summary(fit)
 	expect_match(out_summary, "(SE (conservative) = ", fixed = TRUE)
 	.expect_absent(out_summary, " (cluster-robust)")
-	expect_match(out_summary, "[simultaneous 95% CI]", fixed = TRUE)
-	.expect_absent(out_summary, "[pointwise 95% CI]")
+	expect_match(
+		.header_line(out_summary, "CATT (preview)"),
+		"[simultaneous 95% CI]",
+		fixed = TRUE
+	)
+	expect_match(
+		.header_line(out_summary, "Event Study (preview)"),
+		"[pointwise 95% CI]",
+		fixed = TRUE
+	)
 })
 
 test_that("the default se_type renders an unqualified Std. Error on both paths", {

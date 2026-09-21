@@ -18,7 +18,7 @@
             2        0  0      0       0      NA    FALSE
             3        0  0      0       0      NA    FALSE
       
-      Event-Study Average Treatment Effects (per event time) [simultaneous 95% CI]:
+      Event-Study Average Treatment Effects (per event time) [pointwise 95% CI]:
        event_time n_cohorts estimate se ci_low ci_high p_value
                 0         2        0 NA     NA      NA      NA
                 1         2        0 NA     NA      NA      NA
@@ -50,7 +50,7 @@
             2        0  0      0       0      NA    FALSE
             3        0  0      0       0      NA    FALSE
       
-      Event Study (preview) [simultaneous 95% CI]:
+      Event Study (preview) [pointwise 95% CI]:
        event_time n_cohorts estimate se ci_low ci_high p_value
                 0         2        0 NA     NA      NA      NA
                 1         2        0 NA     NA      NA      NA
@@ -148,7 +148,7 @@
             2        0  0      0       0      NA    FALSE
             3        0  0      0       0      NA    FALSE
       
-      Event-Study Average Treatment Effects (per event time) [simultaneous 95% CI]:
+      Event-Study Average Treatment Effects (per event time) [pointwise 95% CI]:
        event_time n_cohorts estimate se ci_low ci_high p_value
                 0         2        0 NA     NA      NA      NA
                 1         2        0 NA     NA      NA      NA
@@ -180,7 +180,7 @@
             2        0  0      0       0      NA    FALSE
             3        0  0      0       0      NA    FALSE
       
-      Event Study (preview) [simultaneous 95% CI]:
+      Event Study (preview) [pointwise 95% CI]:
        event_time n_cohorts estimate se ci_low ci_high p_value
                 0         2        0 NA     NA      NA      NA
                 1         2        0 NA     NA      NA      NA
