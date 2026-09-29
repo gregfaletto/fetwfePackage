@@ -333,10 +333,6 @@ getBetaCV <- function(
 		lambda_star_ind = lam_idx,
 		# Exclude the intercept (row 1) to report selected-feature count (#269).
 		lambda_star_model_size = sum(theta_hat_full[-1] != 0),
-		# Carry the cv.grpreg fit object out — fetwfe_core() / betwfe_core()
-		# need access to `fit$lambda`, `fit$beta`, and the four
-		# lambda.max/min diagnostics that .fit_bridge_with_lambda_path()
-		# would otherwise have computed.
 		fit = cv_fit$fit,
 		cv_seed = cv_seed
 	)

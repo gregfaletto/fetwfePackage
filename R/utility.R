@@ -2236,12 +2236,10 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 	)
 }
 
-#' @title 4-way grpreg::gBridge dispatch with lambda-path diagnostics
+#' @title 4-way grpreg::gBridge dispatch
 #' @description Dispatches `grpreg::gBridge()` based on which of `lambda.max`
 #'   and `lambda.min` were user-supplied (NA -> leave as default; non-NA ->
-#'   pass through). Returns the `fit` object plus the four lambda-path
-#'   diagnostic locals (`lambda.max`, `lambda.min`, `lambda.max_model_size`,
-#'   `lambda.min_model_size`) of that fit.
+#'   pass through), and returns the fit.
 #'
 #'   Extracted from a byte-identical 46-line block previously duplicated
 #'   across `R/fetwfe_core.R` and `R/betwfe_core.R`. The duplication was
@@ -2262,15 +2260,6 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #'   `gBridge()` fit.
 #' @return A list containing:
 #'   \item{fit}{The `gBridge` fit object.}
-#'   \item{lambda.max}{`max(fit$lambda)` -- the realised maximum of the
-#'     lambda grid.}
-#'   \item{lambda.min}{`min(fit$lambda)` -- the realised minimum.}
-#'   \item{lambda.max_model_size}{Number of selected features (nonzero `fit$beta`
-#'     entries excluding the intercept) at `lambda.max` (largest lambda, smallest
-#'     model).}
-#'   \item{lambda.min_model_size}{Number of selected features (nonzero `fit$beta`
-#'     entries excluding the intercept) at `lambda.min` (smallest lambda, largest
-#'     model).}
 #' @keywords internal
 #' @noRd
 .fit_bridge_with_lambda_path <- function(
@@ -2326,7 +2315,7 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 		message(Sys.time() - t0)
 	}
 
-	c(list(fit = fit), .lambda_path_diagnostics(fit))
+	list(fit = fit)
 }
 
 #' @title Compute lambda-path diagnostics from a grpreg fit
