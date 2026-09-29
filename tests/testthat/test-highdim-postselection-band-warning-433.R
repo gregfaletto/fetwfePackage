@@ -338,9 +338,9 @@ test_that("betwfe p >= NT under method = 'bootstrap' still warns (#308 fold-in)"
 #    differ from the pointwise ones. Measured on this fixture, they are equal to
 #    the last digit. The mechanism is the `sum(nondeg) <= 1` bypass in
 #    `.simultaneous_cis_impl()`, NOT `K = 1`: here K is 3, and only
-#    one of the three cohorts has positive variance (half-widths 0.270423, 0,
-#    0), so the worker takes the branch where the simultaneous critical value IS
-#    the pointwise one -- bit-identical to `qnorm(0.975)`, measured. A width
+#    one of the three cohorts has positive variance, so the worker takes the
+#    branch where the simultaneous critical value IS the pointwise one --
+#    bit-identical to `qnorm(0.975)`, measured. A width
 #    comparison here would be a guardrail that is blind by construction.
 # ------------------------------------------------------------------------------
 test_that("a fit-time simultaneous band on a p >= NT fit is silent (#433)", {
@@ -508,9 +508,8 @@ test_that("a degenerate p >= NT fit keeps only its #304 warning (#433)", {
 #
 #    NOT `identical()` and NOT `tolerance = 0`: these are qmvnorm / Gram-inverse
 #    quantities and the gate runs on six platform/BLAS combinations, four of
-#    them OpenBLAS. `.workflow/PROFILE.md` section 12.8 records the exact
-#    failure -- assertions that passed on Accelerate and Windows and failed all
-#    four Linux jobs at 1-4 ULPs.
+#    them OpenBLAS, where exact assertions have passed on Accelerate and
+#    Windows and failed all four Linux jobs at 1-4 ULPs.
 #
 #    WHAT 1e-8 ACTUALLY ACCEPTS HERE (the edition-2 comparison switches between
 #    relative and absolute with the magnitude of the expected value, so "1e-8"
@@ -532,7 +531,7 @@ test_that("a degenerate p >= NT fit keeps only its #304 warning (#433)", {
 #    event_study band's `K` and its critical value above the pointwise one are
 #    both asserted below, so the pin covers the critical-value machinery too.
 # ------------------------------------------------------------------------------
-test_that("the p >= NT band's numbers are unchanged by #433", {
+test_that("the p >= NT band's numbers are pinned", {
 	skip_on_cran()
 
 	sc <- suppressWarnings(
