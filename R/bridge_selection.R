@@ -2,17 +2,16 @@
 #
 # getBetaBIC() and getBetaCV() select the bridge-penalty lambda by BIC and by
 # cross-validation, respectively; .untransform_scaled_theta() back-transforms
-# the selected scaled coefficients to the original-data scale. All three are
-# called only from .dispatch_bridge_selection() in R/utility.R. Relocated
-# verbatim from R/fetwfe_core.R (which now holds checkFetwfeInputs() +
-# fetwfe_core()); see issue #188.
+# the selected scaled coefficients to the unscaled design. Relocated verbatim
+# from R/fetwfe_core.R (which now holds checkFetwfeInputs() + fetwfe_core());
+# see issue #188.
 
 # .untransform_scaled_theta
-#' @title Back-transform scaled bridge coefficients to original-data scale
+#' @title Back-transform scaled bridge coefficients to the unscaled design
 #' @description Shared rescaling step used by `getBetaBIC()` and `getBetaCV()`.
 #'   Given a length-`(p + 1)` coefficient vector `theta_hat_scaled` (intercept
 #'   at position 1, slopes at 2..p+1) on the my_scale()-centered/scaled
-#'   design, returns the same shape on the original-data scale.
+#'   design, returns the same shape for the unscaled design.
 #'
 #'   The back-transform: `beta_j = beta_scaled_j / scale_scale_j` for
 #'   `j = 1..p`, and `intercept = intercept_scaled - sum(scale_center *

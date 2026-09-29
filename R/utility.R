@@ -2346,11 +2346,10 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #'   single finite positive number; otherwise `stats::sd(y)` when `y` is supplied
 #'   and that is finite and positive; otherwise 1.
 #'
-#'   Here a missing `sig_eps_sq` means the variance was not estimated (as on a
-#'   `gls = FALSE` fit), so with `y = NULL` the result is 1 and the fit is not
-#'   standardized. That differs from the package's convention for user
-#'   arguments, where `NA` means "estimate it": a user's unestimated `NA` passed
-#'   here also gives 1.
+#'   Here a missing `sig_eps_sq` means the variance was not estimated, so with
+#'   `y = NULL` the result is 1. That differs from the package's convention for
+#'   user arguments, where `NA` means "estimate it": a user's unestimated `NA`
+#'   passed here also gives 1.
 #' @param sig_eps_sq Numeric; the idiosyncratic noise variance the GLS step
 #'   used, or `NA` when none was estimated.
 #' @param y Numeric vector or `NULL`; the response, read only when `sig_eps_sq`
@@ -2390,10 +2389,9 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #'   `sig_eps_sq` in the matching squared units) gives the same fit, rescaled
 #'   (#428). On a `gls = FALSE` fit `sig_eps_sq` is `NA` and `s = 1`: that fit
 #'   is not standardized, and still depends on the response's units (#490).
-#'   What this function takes and returns is in the response's original units,
-#'   apart from `fit$beta`: a supplied `lambda.max` is converted to the
-#'   standardized response's scale before the fit, and `theta_hat`, `fit$lambda`
-#'   and the lambda diagnostics are converted back after it.
+#'   A supplied `lambda.max` is converted to the standardized response's scale
+#'   before the fit, and `theta_hat`, `fit$lambda` and the lambda diagnostics
+#'   are converted back to original units after it.
 #' @param lambda_selection Either `"bic"` or `"cv"`.
 #' @param X_final_scaled,q,nlambda,verbose Bridge-fit inputs.
 #' @param y_final The GLS-transformed response (with any ridge pseudo-rows),
@@ -2418,9 +2416,9 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #'     response's original units.}
 #'   \item{lambda_star_ind}{Index of the selected lambda in `fit$lambda`.}
 #'   \item{lambda_star_model_size}{Number of selected features (nonzero coefficients, excluding the intercept).}
-#'   \item{fit}{The underlying `grpreg`/`cv.grpreg` `fit` object, with
-#'     `fit$lambda` in original units; `fit$beta` stays on the standardized
-#'     response's scale.}
+#'   \item{fit}{The underlying `grpreg`/`cv.grpreg` `fit` object. `fit` keeps
+#'     `grpreg`'s standardized scale, apart from `fit$lambda`, which is
+#'     converted.}
 #'   \item{lambda.max,lambda.min,lambda.max_model_size,lambda.min_model_size}{Lambda-path
 #'     diagnostics of that fit, `lambda.max` and `lambda.min` in original units.}
 #'   \item{cv_seed_used}{Integer seed used by the CV path; `NA_integer_` under BIC.}
