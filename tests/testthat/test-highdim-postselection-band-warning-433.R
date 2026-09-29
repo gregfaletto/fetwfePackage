@@ -503,8 +503,8 @@ test_that("a degenerate p >= NT fit keeps only its #304 warning (#433)", {
 })
 
 # ------------------------------------------------------------------------------
-# 9. (guardrail, numeric) NO NUMBER MOVES. The band is pinned from the base tree
-#    at 5a69eeb, measured to 15 significant digits and asserted to 1e-8.
+# 9. (guardrail, numeric) NO NUMBER MOVES. The band's values on this fixture,
+#    recorded to 15 significant digits and asserted to 1e-8.
 #
 #    NOT `identical()` and NOT `tolerance = 0`: these are qmvnorm / Gram-inverse
 #    quantities and the gate runs on six platform/BLAS combinations, four of
@@ -512,34 +512,25 @@ test_that("a degenerate p >= NT fit keeps only its #304 warning (#433)", {
 #    failure -- assertions that passed on Accelerate and Windows and failed all
 #    four Linux jobs at 1-4 ULPs.
 #
-#    WHAT 1e-8 ACTUALLY ACCEPTS HERE, measured per element rather than reasoned
-#    about (the edition-2 comparison switches between relative and absolute with
-#    the magnitude of the expected value, so "1e-8" names no unit on its own).
-#    `all.equal.numeric` defaults to `countEQ = FALSE`, so the mean is taken over
-#    only the DIFFERING entries and a single bad element is not diluted by the
-#    other three. Perturbing exactly one element therefore fails at
-#    `1e-8 * |that element|`, bisected:
+#    WHAT 1e-8 ACTUALLY ACCEPTS HERE (the edition-2 comparison switches between
+#    relative and absolute with the magnitude of the expected value, so "1e-8"
+#    names no unit on its own). `all.equal.numeric` defaults to
+#    `countEQ = FALSE`, so the mean is taken over only the DIFFERING entries and
+#    a single bad element is not diluted by the other three. Perturbing exactly
+#    one element therefore fails at about `1e-8 * |that element|`, except that
+#    an element whose expected value is exactly 0 is judged on the absolute
+#    branch at 1e-8 (the relative branch is skipped when the target mean is 0).
+#    That is far above cross-BLAS noise of a few ULPs, and far below anything a
+#    real change produces: a 0.1% shift in one bound fails, and an exact-zero row
+#    moving to 1e-6 fails.
 #
-#        ci_low[2]      (0.83581)  -> 8.36e-9
-#        estimate[2]    (1.74819)  -> 1.75e-8
-#        critical_value (2.34857)  -> 2.35e-8
-#        ci_low[4]      (4.33045)  -> 4.33e-8
-#        estimate[1]    (exactly 0) -> absolute 1e-8 (the relative branch is
-#                                     skipped when the target mean is 0)
-#
-#    So the effective band runs ~8e-9 to ~4e-8 across the pinned rows. That is
-#    ~7 orders of magnitude above the 1-4 ULP cross-BLAS noise section 12.8
-#    records, and far below anything a real change produces: a 0.1% shift in one
-#    bound fails, and the exact-zero row moving to 1e-6 fails.
-#
-#    The event_study family, not cohort: on this fixture the cohort band is
-#    (3.31769, 0, 0) with critical_value bit-identical to qnorm(0.975), because
-#    only one of its three cohorts has positive variance, so the worker takes
-#    the `sum(nondeg) <= 1` bypass (K is 3 there, not 1 -- the bypass counts
-#    non-degenerate effects, not effects). So a cohort pin is very nearly
-#    vacuous. Here K = 4 with three live intervals
-#    and a genuinely simultaneous critical value (2.3486 against a pointwise
-#    1.9600), so the pin covers the critical-value machinery too.
+#    The event_study family, not cohort: the bridge keeps only one of this
+#    fixture's three cohorts (the `sim` fixture above), so only one cohort has
+#    positive variance and the cohort band takes the `sum(nondeg) <= 1` bypass,
+#    whose critical value is the pointwise one (the bypass counts non-degenerate
+#    effects, not effects). So a cohort pin is very nearly vacuous. The
+#    event_study band's `K` and its critical value above the pointwise one are
+#    both asserted below, so the pin covers the critical-value machinery too.
 # ------------------------------------------------------------------------------
 test_that("the p >= NT band's numbers are unchanged by #433", {
 	skip_on_cran()
@@ -551,20 +542,20 @@ test_that("the p >= NT band's numbers are unchanged by #433", {
 	expect_identical(sc$K, 4L)
 	expect_equal(
 		sc$ci$estimate,
-		c(0, 1.74819372973807, 2.59385952395926, 4.91099470563771),
+		c(0, 1.7055054140546, 2.18153825291292, 4.74990850786551),
 		tolerance = 1e-8
 	)
 	expect_equal(
 		sc$ci$simultaneous_ci_low,
-		c(0, 0.835806940880722, 1.48120298660606, 4.33044766500044),
+		c(0, 0.813315497555795, 1.22314830572985, 4.16888354386282),
 		tolerance = 1e-8
 	)
 	expect_equal(
 		sc$ci$simultaneous_ci_high,
-		c(0, 2.66058051859542, 3.70651606131246, 5.49154174627498),
+		c(0, 2.59769533055341, 3.13992820009599, 5.33093347186819),
 		tolerance = 1e-8
 	)
-	expect_equal(sc$critical_value, 2.34857048574758, tolerance = 1e-8)
+	expect_equal(sc$critical_value, 2.35061113913367, tolerance = 1e-8)
 	# The band really is wider than pointwise here, so the pin above is on a
 	# simultaneous quantity rather than on a disguised Wald interval.
 	expect_gt(sc$critical_value, sc$pointwise_critical_value)

@@ -120,8 +120,6 @@ test_that(".append_ridge_rows is a no-op when add_ridge = FALSE (#81)", {
 		G = 1L,
 		d = 0L,
 		num_treats = 1L,
-		sig_eps_sq = 1.0,
-		sig_eps_c_sq = 0.5,
 		N = N
 	)
 

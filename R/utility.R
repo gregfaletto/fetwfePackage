@@ -2241,8 +2241,7 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #'   and `lambda.min` were user-supplied (NA -> leave as default; non-NA ->
 #'   pass through). Returns the `fit` object plus the four lambda-path
 #'   diagnostic locals (`lambda.max`, `lambda.min`, `lambda.max_model_size`,
-#'   `lambda.min_model_size`) used by `fetwfe_core()` and `betwfe_core()`
-#'   downstream.
+#'   `lambda.min_model_size`) of that fit.
 #'
 #'   Extracted from a byte-identical 46-line block previously duplicated
 #'   across `R/fetwfe_core.R` and `R/betwfe_core.R`. The duplication was
@@ -2250,7 +2249,8 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #'   path now have a single landing site.
 #' @param X_final_scaled Numeric matrix; the design matrix (typically
 #'   GLS-then-fusion transformed and scaled).
-#' @param y_final Numeric vector; the GLS-transformed response.
+#' @param y_final Numeric vector; the GLS-transformed response, in the units
+#'   `.dispatch_bridge_selection()` fits it in.
 #' @param q Numeric scalar; the bridge-penalty exponent passed as `gamma` to
 #'   `gBridge()`.
 #' @param lambda.max Numeric scalar or `NA`; if non-NA, pass through to
@@ -2350,6 +2350,43 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 	)
 }
 
+#' @title The scale a bridge fit divides its response by
+#' @description Returns the positive, finite scalar that a `grpreg` bridge fit
+#'   divides its response by, so that the fit does not depend on the response's
+#'   units (#428). Two modes, by input: `sqrt(sig_eps_sq)` when `sig_eps_sq` is a
+#'   single finite positive number; otherwise `stats::sd(y)` when `y` is supplied
+#'   and that is finite and positive; otherwise 1.
+#'
+#'   Here a missing `sig_eps_sq` means the variance was not estimated (as on a
+#'   `gls = FALSE` fit), so with `y = NULL` the result is 1 and the fit is not
+#'   standardized. That differs from the package's convention for user
+#'   arguments, where `NA` means "estimate it": a user's unestimated `NA` passed
+#'   here also gives 1.
+#' @param sig_eps_sq Numeric; the idiosyncratic noise variance the GLS step
+#'   used, or `NA` when none was estimated.
+#' @param y Numeric vector or `NULL`; the response, read only when `sig_eps_sq`
+#'   is not a single finite positive number.
+#' @return A positive, finite numeric scalar.
+#' @keywords internal
+#' @noRd
+.bridge_response_scale <- function(sig_eps_sq = NA_real_, y = NULL) {
+	if (
+		is.numeric(sig_eps_sq) &&
+			length(sig_eps_sq) == 1L &&
+			is.finite(sig_eps_sq) &&
+			sig_eps_sq > 0
+	) {
+		return(sqrt(as.numeric(sig_eps_sq)))
+	}
+	if (!is.null(y)) {
+		s <- stats::sd(as.numeric(y))
+		if (is.finite(s) && s > 0) {
+			return(s)
+		}
+	}
+	1
+}
+
 #' @title Dispatch on `lambda_selection` to fit a bridge regression
 #' @description Shared CV/BIC dispatch for `fetwfe_core()` and
 #'   `betwfe_core()`. The two cores differ only in `X_mod` (the
@@ -2358,23 +2395,45 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #'   across both. Returns a list with the bridge regression results plus
 #'   the four lambda-path diagnostic locals so the caller doesn't have
 #'   to compute them.
+#'
+#'   Both paths fit the response divided by `s = .bridge_response_scale(sig_eps_sq)`,
+#'   the noise standard deviation, so that a response in other units (with
+#'   `sig_eps_sq` in the matching squared units) gives the same fit, rescaled
+#'   (#428). On a `gls = FALSE` fit `sig_eps_sq` is `NA` and `s = 1`: that fit
+#'   is not standardized, and still depends on the response's units (#490).
+#'   What this function takes and returns is in the response's original units,
+#'   apart from `fit$beta`: a supplied `lambda.max` is converted to the
+#'   standardized response's scale before the fit, and `theta_hat`, `fit$lambda`
+#'   and the lambda diagnostics are converted back after it.
 #' @param lambda_selection Either `"bic"` or `"cv"`.
-#' @param X_final_scaled,y_final,q,nlambda,verbose Bridge-fit inputs.
-#' @param lambda.max,lambda.min User-supplied lambda-path endpoints; pass
-#'   NA to let `gBridge` pick. Ignored on the CV path.
+#' @param X_final_scaled,q,nlambda,verbose Bridge-fit inputs.
+#' @param y_final The GLS-transformed response (with any ridge pseudo-rows),
+#'   in original units; divided by `s` before the fit.
+#' @param lambda.max,lambda.min User-supplied `gBridge()` grid arguments; pass
+#'   `NA` to let `gBridge` pick. `lambda.max` is in original units;
+#'   `lambda.min` is a fraction of `lambda.max` in `grpreg`, so it needs no
+#'   conversion. Ignored on the CV path.
 #' @param cv_folds,cv_seed CV-path inputs; ignored on the BIC path.
 #' @param N,T,p Dimensions (used by both paths for assertions; BIC also
 #'   uses them for SSE).
 #' @param X_mod_bic The design matrix to pass to `getBetaBIC()` for SSE
 #'   computation (X_mod for FETWFE, X_ints for BETWFE).
-#' @param y_bic Original-response vector (BIC path's SSE input).
+#' @param y_bic The response before the GLS transform (BIC path's SSE input),
+#'   in original units; divided by `s`, so its residuals are on the scale of
+#'   the coefficients `getBetaBIC()` receives.
 #' @param scale_center,scale_scale `my_scale()` outputs.
+#' @param sig_eps_sq The idiosyncratic noise variance the core's GLS step
+#'   used, `NA` on a `gls = FALSE` fit; sets `s`.
 #' @return A list:
-#'   \item{theta_hat}{Selected coefficients on the original-data scale.}
+#'   \item{theta_hat}{Selected coefficients on the unscaled design, in the
+#'     response's original units.}
 #'   \item{lambda_star_ind}{Index of the selected lambda in `fit$lambda`.}
 #'   \item{lambda_star_model_size}{Number of selected features (nonzero coefficients, excluding the intercept).}
-#'   \item{fit}{The underlying `grpreg`/`cv.grpreg` `fit` object.}
-#'   \item{lambda.max,lambda.min,lambda.max_model_size,lambda.min_model_size}{Lambda-path diagnostics.}
+#'   \item{fit}{The underlying `grpreg`/`cv.grpreg` `fit` object, with
+#'     `fit$lambda` in original units; `fit$beta` stays on the standardized
+#'     response's scale.}
+#'   \item{lambda.max,lambda.min,lambda.max_model_size,lambda.min_model_size}{Lambda-path
+#'     diagnostics of that fit, `lambda.max` and `lambda.min` in original units.}
 #'   \item{cv_seed_used}{Integer seed used by the CV path; `NA_integer_` under BIC.}
 #' @keywords internal
 #' @noRd
@@ -2395,8 +2454,19 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 	y_bic,
 	scale_center,
 	scale_scale,
-	verbose
+	verbose,
+	sig_eps_sq
 ) {
+	# On y / resp_scale, a penalty lambda is lambda / resp_scale^(2 - q)
+	# (paper_arxiv.tex \eqref{opt.prob}; #428; #490 for gls = FALSE fits).
+	resp_scale <- .bridge_response_scale(sig_eps_sq)
+	lambda_unit <- resp_scale^(2 - q)
+	y_final <- y_final / resp_scale
+	y_bic <- y_bic / resp_scale
+	if (!is.na(lambda.max)) {
+		lambda.max <- lambda.max / lambda_unit
+	}
+
 	if (lambda_selection == "bic") {
 		bridge_fit <- .fit_bridge_with_lambda_path(
 			X_final_scaled = X_final_scaled,
@@ -2417,63 +2487,58 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 			scale_center = scale_center,
 			scale_scale = scale_scale
 		)
-		return(list(
-			theta_hat = res$theta_hat,
-			lambda_star_ind = res$lambda_star_ind,
-			lambda_star_model_size = res$lambda_star_model_size,
-			fit = bridge_fit$fit,
-			lambda.max = bridge_fit$lambda.max,
-			lambda.min = bridge_fit$lambda.min,
-			lambda.max_model_size = bridge_fit$lambda.max_model_size,
-			lambda.min_model_size = bridge_fit$lambda.min_model_size,
-			cv_seed_used = NA_integer_
-		))
+		fit <- bridge_fit$fit
+		cv_seed_used <- NA_integer_
+	} else {
+		# CV path. cv.grpreg builds its own lambda grid (we don't forward the
+		# user-facing lambda.max/lambda.min/nlambda knobs — those are BIC-path
+		# only). Warn rather than silently ignore a non-default value so the user
+		# isn't surprised that a supplied lambda grid had no effect (#185 IC1).
+		if (!is.na(lambda.max) || !is.na(lambda.min) || nlambda != 100) {
+			warning(
+				"lambda.max, lambda.min, and nlambda are ignored under ",
+				"lambda_selection = 'cv' (cross-validation builds its own lambda ",
+				"grid). Set lambda_selection = 'bic' to use a custom lambda grid, ",
+				"or omit these arguments to silence this warning.",
+				call. = FALSE
+			)
+		}
+		if (verbose) {
+			message("Estimating bridge regression with 10-fold CV...")
+			t0 <- Sys.time()
+		}
+		res <- getBetaCV(
+			X_final_scaled = X_final_scaled,
+			y_final = y_final,
+			N = N,
+			T = T,
+			p = p,
+			scale_center = scale_center,
+			scale_scale = scale_scale,
+			gamma = q,
+			cv_folds = cv_folds,
+			cv_seed = cv_seed
+		)
+		if (verbose) {
+			message("Done! Time for estimation:")
+			message(Sys.time() - t0)
+		}
+		fit <- res$fit
+		cv_seed_used <- as.integer(res$cv_seed)
 	}
 
-	# CV path. cv.grpreg builds its own lambda grid (we don't forward the
-	# user-facing lambda.max/lambda.min/nlambda knobs — those are BIC-path
-	# only). Warn rather than silently ignore a non-default value so the user
-	# isn't surprised that a supplied lambda grid had no effect (#185 IC1).
-	if (!is.na(lambda.max) || !is.na(lambda.min) || nlambda != 100) {
-		warning(
-			"lambda.max, lambda.min, and nlambda are ignored under ",
-			"lambda_selection = 'cv' (cross-validation builds its own lambda ",
-			"grid). Set lambda_selection = 'bic' to use a custom lambda grid, ",
-			"or omit these arguments to silence this warning.",
-			call. = FALSE
-		)
-	}
-	if (verbose) {
-		message("Estimating bridge regression with 10-fold CV...")
-		t0 <- Sys.time()
-	}
-	res <- getBetaCV(
-		X_final_scaled = X_final_scaled,
-		y_final = y_final,
-		N = N,
-		T = T,
-		p = p,
-		scale_center = scale_center,
-		scale_scale = scale_scale,
-		gamma = q,
-		cv_folds = cv_folds,
-		cv_seed = cv_seed
-	)
-	if (verbose) {
-		message("Done! Time for estimation:")
-		message(Sys.time() - t0)
-	}
-	diag <- .lambda_path_diagnostics(res$fit)
+	fit$lambda <- fit$lambda * lambda_unit
+	diag <- .lambda_path_diagnostics(fit)
 	list(
-		theta_hat = res$theta_hat,
+		theta_hat = res$theta_hat * resp_scale,
 		lambda_star_ind = res$lambda_star_ind,
 		lambda_star_model_size = res$lambda_star_model_size,
-		fit = res$fit,
+		fit = fit,
 		lambda.max = diag$lambda.max,
 		lambda.min = diag$lambda.min,
 		lambda.max_model_size = diag$lambda.max_model_size,
 		lambda.min_model_size = diag$lambda.min_model_size,
-		cv_seed_used = as.integer(res$cv_seed)
+		cv_seed_used = cv_seed_used
 	)
 }
 

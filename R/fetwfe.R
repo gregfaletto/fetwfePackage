@@ -68,7 +68,11 @@
 #' if you are using simulated data). If this variance is unknown, this argument
 #' can be omitted, and the variance will be estimated by
 #' REML on the linear mixed-effects model `y ~ X + (1 | unit)` via
-#' `lme4::lmer` (Bates et al. 2015; Patterson & Thompson 1971). Default is NA.
+#' `lme4::lmer` (Bates et al. 2015; Patterson & Thompson 1971). When
+#' supplied, the value also sets the scale of the bridge penalty's grid (the
+#' response is divided by its square root before the fit), so a value
+#' supplied in the wrong units moves the estimates, not only their standard
+#' errors. Default is NA.
 #' @param sig_eps_c_sq (Optional.) Numeric; the variance of the unit-level IID
 #' noise (random effects) assumed to apply to each observation. See Section 2 of
 #' Faletto (2025) for details. It is best to provide this variance if it is
@@ -406,9 +410,8 @@ fetwfe <- function(
 	if (!gls) {
 		if (isTRUE(add_ridge)) {
 			stop(
-				"fetwfe(): `add_ridge = TRUE` is not supported with `gls = FALSE` ",
-				"(the ridge penalty scales with the noise variances, which are not ",
-				"estimated when whitening is skipped). Re-fit with `add_ridge = FALSE`.",
+				"fetwfe(): `add_ridge = TRUE` is not supported with `gls = FALSE`. ",
+				"Re-fit with `add_ridge = FALSE`.",
 				call. = FALSE
 			)
 		}

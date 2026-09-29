@@ -3,7 +3,7 @@ library(fetwfe)
 
 # Tests for the BETWFE add_ridge wrong-basis fix (issue #74, v1.9.12).
 #
-# Background: before this fix, `R/betwfe_core.R:840`'s call to
+# Background: before this fix, `betwfe_core()`'s call to
 # `prep_for_etwfe_regression()` did not pass `is_fetwfe`, so it picked up
 # the default `is_fetwfe = TRUE` (in `prep_for_etwfe_regression()`, `R/input_prep.R`). With `add_ridge
 # = TRUE`, this caused BETWFE's ridge augmentation rows to be built as
@@ -12,15 +12,17 @@ library(fetwfe)
 # basis). Silent — the fit converged, but with the wrong L2 penalty
 # structure.
 #
-# This file has three contracts:
+# This file's contracts:
 #   1. `prep_for_etwfe_regression(is_fetwfe = FALSE)` augments with
 #      identity basis (the BETWFE / ETWFE / twfeCovs path).
 #   2. `prep_for_etwfe_regression(is_fetwfe = TRUE)` augments with
 #      D_inverse basis (the FETWFE path).
-#   3. `betwfe(..., add_ridge = TRUE)` integration: reconstruct the
-#      inputs `betwfe_core` would forward to the helper and assert the
-#      augmentation rows ARE identity-basis. The pre-fix buggy version of
-#      betwfe would have failed this assertion.
+#   3. The helper contract of 1, checked on a `betwfe(add_ridge = TRUE)`
+#      fit's own inputs.
+#   4. The #74 guard: a recorder around `.append_ridge_rows()` asserts that
+#      a `betwfe(add_ridge = TRUE)` fit passes it `is_fetwfe = FALSE`. So it
+#      fails if `betwfe_core()` passes `is_fetwfe = TRUE`, and errors if
+#      `betwfe_core()` omits the argument, which then has no value to record.
 
 # generate_panel_data() is defined in tests/testthat/helper-panel-fixture.R
 # (sourced by testthat before this file runs; issue #91).
@@ -149,14 +151,7 @@ test_that("prep_for_etwfe_regression(is_fetwfe = TRUE) augments with D_inverse b
 
 test_that("betwfe(add_ridge = TRUE) integration: smoke check + augmentation reconstruction", {
 	# Smoke check: betwfe with add_ridge = TRUE runs to completion
-	# and produces finite output. Note: this assertion alone is
-	# weak — the pre-fix buggy version also produced finite output.
-	# But under the defensive-cleanup (no-default) regime, a future
-	# regression that drops `is_fetwfe = FALSE` from
-	# R/betwfe_core.R's call will cause this fit to error at
-	# runtime (missing required argument when add_ridge = TRUE
-	# reaches the augmentation branch), so this smoke check catches
-	# that specific regression mode.
+	# and produces finite output.
 	fit_ridge <- betwfe(
 		pdata = pdata,
 		time_var = "time",
@@ -172,10 +167,8 @@ test_that("betwfe(add_ridge = TRUE) integration: smoke check + augmentation reco
 	expect_true(is.finite(fit_ridge$att_hat))
 	expect_true(all(is.finite(fit_ridge$beta_hat)))
 
-	# Reconstruct the inputs betwfe_core forwards. Independent
-	# helper call with is_fetwfe = FALSE; assert the augmentation
-	# rows are identity-basis. This locks the helper-contract
-	# behavior on the actual integration inputs.
+	# The helper contract on this fit's own inputs: a helper call with
+	# is_fetwfe = FALSE builds identity-basis augmentation rows.
 	res <- fetwfe:::prep_for_etwfe_regression(
 		verbose = FALSE,
 		sig_eps_sq = fit_ridge$sig_eps_sq,
@@ -208,18 +201,33 @@ test_that("betwfe(add_ridge = TRUE) integration: smoke check + augmentation reco
 	expect_equal(aug_rows, expected, tolerance = 1e-12)
 })
 
-test_that("betwfe(add_ridge = TRUE) numerical regression: att_hat matches post-fix value", {
-	# The strong integration check: with a simulated DGP that
-	# produces a non-degenerate fit, the post-fix code produces a
-	# specific att_hat value. The pre-fix bug (silently passing
-	# is_fetwfe = TRUE in betwfe_core's call) shifts att_hat by
-	# ~5e-5 on this fixture. Hard-coded tolerance 1e-5 catches the
-	# bug while allowing for cross-platform float drift.
-	#
-	# The fixture uses larger sig_eps_sq (= 16) than the panel
-	# fixture above, which scales up lambda_ridge and amplifies
-	# the bug's downstream effect on att_hat (from ~2e-6 at sig=1
-	# to ~5e-5 at sig=16).
+test_that("betwfe(add_ridge = TRUE) builds its ridge rows in the identity basis (recorder)", {
+	real <- fetwfe:::.append_ridge_rows
+	rec <- new.env(parent = emptyenv())
+	rec$is_fetwfe <- list()
+	testthat::with_mocked_bindings(
+		betwfe(
+			pdata = pdata,
+			time_var = "time",
+			unit_var = "unit",
+			treatment = "treatment",
+			response = "y",
+			covs = c("cov1", "cov2"),
+			add_ridge = TRUE,
+			verbose = FALSE
+		),
+		.append_ridge_rows = function(...) {
+			a <- list(...)
+			rec$is_fetwfe[[length(rec$is_fetwfe) + 1L]] <- a$is_fetwfe
+			real(...)
+		},
+		.package = "fetwfe"
+	)
+	expect_identical(rec$is_fetwfe, list(FALSE))
+})
+
+test_that("betwfe(add_ridge = TRUE) att_hat pin", {
+	# A plain pin of one bridge fit with the ridge applied.
 	coefs <- genCoefs(
 		G = 2,
 		T = 5,
@@ -236,26 +244,19 @@ test_that("betwfe(add_ridge = TRUE) numerical regression: att_hat matches post-f
 		seed = 42
 	)
 	# Pin to BIC because the recorded reference value below was generated
-	# under the BIC selection path (v1.12.0 and earlier). The v1.13.0+
-	# default is CV, which produces a slightly different att_hat on this
-	# fixture; that's expected, and is tested separately in
-	# test-lambda-selection-164.R.
+	# under the BIC selection path. The default is CV, which produces a
+	# slightly different att_hat on this fixture; that's expected, and is
+	# tested separately in test-lambda-selection-164.R.
 	fit <- betwfeWithSimulatedData(
 		sim,
 		add_ridge = TRUE,
 		lambda_selection = "bic"
 	)
 
-	# Sanity: the fit selected something. The pre-fix code on this
-	# fixture also produces a non-degenerate fit, so this is not a
-	# bug-catch in itself.
+	# The fit selected something, so the pin is not on a null model.
 	expect_true(any(fit$beta_hat != 0))
 
-	# Numerical regression catch. The post-fix value on this fixture
-	# is 3.4764564039 (recorded after applying the bug fix at
-	# R/betwfe_core.R:840 + the defensive cleanup in R/input_prep.R).
-	# The pre-fix buggy value is ~3.4764078169 (a 4.9e-5 shift).
-	# Tolerance 1e-5 catches the shift while comfortably exceeding
-	# expected cross-platform float drift on grpreg+BLAS.
-	expect_equal(fit$att_hat, 3.4764564039, tolerance = 1e-5)
+	# Tolerance 1e-5 comfortably exceeds cross-platform float drift on
+	# grpreg + BLAS.
+	expect_equal(fit$att_hat, 3.4803274345, tolerance = 1e-5)
 })

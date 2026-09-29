@@ -54,7 +54,7 @@
 #'   path of lambda penalties), this function selects the optimal set of
 #'   coefficients based on the Bayesian Information Criterion (BIC). It also
 #'   returns the chosen lambda index and the size of the selected model.
-#'   Coefficients are returned on their original scale.
+#'   Coefficients are returned for the unscaled design (undoing `my_scale()`).
 #' @param fit A `gBridge` fit object, typically the output from `grpreg::gBridge()`.
 #' @param N Integer; the total number of unique units.
 #' @param T Integer; the total number of time periods.
@@ -62,16 +62,16 @@
 #'   in the model matrix `X_mod`.
 #' @param X_mod Numeric matrix; the design matrix (potentially transformed for
 #'   FETWFE, and **not** yet GLStransformed or scaled/centered by `my_scale`) that was used to generate `y`.
-#'   It's used here to calculate SSE on the original scale of `y`.
-#' @param y Numeric vector; the original response variable (before GLS transform and centering)
-#'   used to fit the model. Length `N*T`.
+#'   It's used here to calculate SSE against the un-whitened `y`.
+#' @param y Numeric vector; the response before the GLS transform, in the units
+#'   `.dispatch_bridge_selection()` fits it in. Length `N*T`.
 #' @param scale_center Numeric vector; the centering values used to scale `X_mod`
 #'   before fitting `gBridge`. Length `p`.
 #' @param scale_scale Numeric vector; the scaling values used to scale `X_mod`
 #'   before fitting `gBridge`. Length `p`.
 #' @return A list containing:
 #'   \item{theta_hat}{Numeric vector of length `p+1`. The selected coefficients
-#'     (including intercept at `theta_hat[1]`) on their original data scale.}
+#'     (including intercept at `theta_hat[1]`) for the unscaled design.}
 #'   \item{lambda_star_ind}{Integer; the index of the lambda value in `fit$lambda`
 #'     that resulted in the best BIC.}
 #'   \item{lambda_star_model_size}{Integer; the number of non-zero coefficients
@@ -79,11 +79,11 @@
 #' @details For every lambda in `fit$lambda` (all evaluated together rather than
 #'   in a per-lambda loop):
 #'   1. It extracts the intercepts (`eta_s`) and slopes (`beta_s`) on the scaled data.
-#'   2. It converts these coefficients back to the original data scale using
+#'   2. It converts these coefficients back to the unscaled design using
 #'      `scale_center` and `scale_scale`.
-#'   3. It calculates the mean squared error using `sse_bridge()` with the
-#'      original-scale coefficients, original `y`, and `X_mod` -- a single BLAS-3
-#'      matrix multiply across all lambdas.
+#'   3. It calculates the mean squared error using `sse_bridge()` with those
+#'      coefficients, `y`, and `X_mod` -- a single BLAS-3 matrix multiply across
+#'      all lambdas.
 #'   4. It computes the BIC value: `N*T*log(SSE/(N*T)) + s*log(N*T)`, where `s`
 #'      is the number of non-zero coefficients (excluding the always-present
 #'      intercept; a constant offset that does not affect which lambda minimizes BIC).
@@ -93,7 +93,7 @@
 #'   The set of coefficients corresponding to the minimum BIC is chosen. If multiple
 #'   lambdas yield the same minimum BIC, the one resulting in the smallest model
 #'   size (fewest non-zero coefficients) is selected.
-#'   The final returned `theta_hat` also has its slopes and intercept adjusted back to the original scale.
+#'   The final returned `theta_hat` also has its slopes and intercept adjusted back to the unscaled design.
 #' @keywords internal
 #' @noRd
 getBetaBIC <- function(fit, N, T, p, X_mod, y, scale_center, scale_scale) {
@@ -104,7 +104,7 @@ getBetaBIC <- function(fit, N, T, p, X_mod, y, scale_center, scale_scale) {
 	eta_s <- fit$beta[1, ] # intercepts (scaled space), one per lambda
 	beta_s <- fit$beta[2:(p + 1), , drop = FALSE] # slopes (scaled), p x n_lambda
 
-	## --- convert to original scale -----------------------------------
+	## --- convert to the unscaled design --------------------------------
 	beta_hat <- beta_s / scale_scale # row i divided by scale_scale[i]
 	eta_hat <- eta_s - colSums(scale_center * beta_hat)
 
@@ -144,8 +144,8 @@ getBetaBIC <- function(fit, N, T, p, X_mod, y, scale_center, scale_scale) {
 	# interpolator -- but a near-zero MSE may still not be overcome by the size
 	# penalty, so the warning flags that the selected lambda may over-fit. (#403)
 	#
-	# The floor is RELATIVE to the response's own scale. `mse_hat` is in the raw
-	# (unstandardized) units of `y`, so a fixed absolute cut is not
+	# The floor is RELATIVE to the response's own scale. `mse_hat` is in the
+	# squared units of the `y` it is passed, so a fixed absolute cut is not
 	# scale-equivariant: rescaling `y` by c rescales every mse_hat by c^2, and an
 	# absolute .Machine$double.eps threshold would fire on a merely small-scale
 	# response (a change of units) while leaving the fit itself untouched --
@@ -214,7 +214,7 @@ getBetaBIC <- function(fit, N, T, p, X_mod, y, scale_center, scale_scale) {
 #' @description Fits the bridge-penalized regression with `grpreg::cv.grpreg`
 #'   (which performs k-fold CV over the same `grpreg`-derived lambda grid that
 #'   `getBetaBIC()` would walk) and returns the coefficients at the CV-selected
-#'   `lambda.min`, back-transformed to the original-data scale to match
+#'   `lambda.min`, back-transformed to the unscaled design to match
 #'   `getBetaBIC()`'s return contract.
 #'
 #'   The CV path is the v1.13.0 default for `fetwfe()` and `betwfe()`,
@@ -239,15 +239,16 @@ getBetaBIC <- function(fit, N, T, p, X_mod, y, scale_center, scale_scale) {
 #' @param scale_center Numeric vector of length `p`; the centering values
 #'   `my_scale()` produced.
 #' @param scale_scale Numeric vector of length `p`; the scaling values.
-#' @param y_final Numeric vector; the GLS-transformed response.
+#' @param y_final Numeric vector; the GLS-transformed response, in the units
+#'   `.dispatch_bridge_selection()` fits it in.
 #' @param gamma Numeric scalar; the bridge-penalty exponent `q`. Passed
 #'   through to `cv.grpreg(penalty = "gBridge", gamma = gamma)`.
 #' @param cv_folds Integer; number of folds for `cv.grpreg`.
 #' @param cv_seed Integer or NULL; if NULL, defaults to `as.integer(N * T)`.
 #' @return A list with the same shape as `getBetaBIC()`:
 #'   \item{theta_hat}{Numeric vector of length `p + 1` with the selected
-#'     coefficients (including intercept at position 1) on the original
-#'     data scale.}
+#'     coefficients (including intercept at position 1) for the unscaled
+#'     design.}
 #'   \item{lambda_star_ind}{Integer; the index of the selected lambda in
 #'     `cv_fit$fit$lambda`.}
 #'   \item{lambda_star_model_size}{Integer; the number of non-zero
@@ -354,7 +355,12 @@ getBetaCV <- function(
 #'   fusion-transformed design the bridge used, via `grpreg::cv.grpreg(penalty =
 #'   "gBridge", gamma = 1)` (the group-bridge penalty at `gamma = 1` over
 #'   singleton groups is the lasso), CV-selecting `lambda` --- the package's "CV
-#'   on the raw lambda" convention (cf. `getBetaCV()`).
+#'   on the raw lambda" convention (cf. `getBetaCV()`). It fits `y_final` divided
+#'   by `.bridge_response_scale(y = y_final)` (the helper's standard-deviation
+#'   mode) and multiplies the coefficients back, so `grpreg`'s absolute `delta`
+#'   cannot zero the nuisance of a small-unit response (#428); at `q = 1` the
+#'   standardized grid maps back to the unstandardized one, so wherever `delta`
+#'   does not bind this is the unstandardized fit.
 #'
 #'   **Determinism contract.** `debiasedATT()` and `.simultaneous_cis_bootstrap()`
 #'   must obtain the *identical* nuisance so the high-dim band center equals
@@ -387,10 +393,11 @@ getBetaCV <- function(
 	} else {
 		as.integer(nt_double)
 	}
+	resp_scale <- .bridge_response_scale(y = y_final)
 	cv_fit <- .with_preserved_rng(cv_seed, {
 		grpreg::cv.grpreg(
 			X = X_scaled,
-			y = y_final,
+			y = y_final / resp_scale,
 			penalty = "gBridge",
 			gamma = 1,
 			nfolds = cv_folds
@@ -400,12 +407,13 @@ getBetaCV <- function(
 	stopifnot(nrow(cv_fit$fit$beta) == p + 1L)
 	theta_scaled <- cv_fit$fit$beta[, lam_idx]
 	stopifnot(length(theta_scaled) == p + 1L, all(!is.na(theta_scaled)))
-	.untransform_scaled_theta(
+	theta <- .untransform_scaled_theta(
 		theta_hat_scaled = theta_scaled,
 		p = p,
 		scale_center = scale_center,
 		scale_scale = scale_scale
 	)
+	theta * resp_scale
 }
 
 #' @title Column index of cv.grpreg's lambda.min (exact match, guarded fallback)
