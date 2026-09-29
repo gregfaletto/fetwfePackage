@@ -66,8 +66,10 @@
   supplied), before the fit and scale the coefficients back, on both the
   cross-validation and BIC routes. Multiplying the response by any `c > 0`, and
   a supplied variance by `c^2`, now multiplies every estimate, standard error
-  and pointwise interval bound by `c`. The reported lambda values stay in the
-  response's units, and a supplied `lambda.max` gives the same fit as before.
+  and pointwise interval bound by `c`; a default (simultaneous) fit's bounds
+  and p-values on a small-unit response still move until #489 lands. The
+  reported lambda values stay in the response's units, and a supplied
+  `lambda.max` gives the same fit as before.
   Because a supplied `sig_eps_sq` now also sets where the lambda grid sits, a
   variance supplied in the wrong units moves the estimates, not only their
   standard errors. `fetwfe(gls = FALSE)` fits, which estimate no noise
@@ -77,7 +79,7 @@
   deviation, so it no longer depends on the units either. Existing estimates
   move: on the paper's empirical applications, the castle-doctrine ATT moves
   from 5.22% to 5.75%, the divorce-law ATT from -5.79% to -5.95%, and the
-  divorce-law ATT with event-study fusion from -7.30% to -7.91%.
+  divorce-law ATT with event-study fusion from -7.30% to -8.10%.
 
 - **`add_ridge = TRUE` no longer inflates the estimates of a response in large
   units** (#428). The ridge penalty was proportional to the variance
