@@ -511,6 +511,19 @@ test_that("a supplied lambda.max keeps its meaning on the BIC route: non-regress
 	expect_equal(fit$lambda.min, 0.002, tolerance = 1e-12)
 })
 
+test_that("a supplied lambda.min keeps its meaning on the BIC route: non-regression pin (#428)", {
+	fit <- .rse428_scaled_fit(
+		fetwfe,
+		1,
+		lambda_selection = "bic",
+		lambda.max = 2,
+		lambda.min = 0.01
+	)
+	# lambda.min is a fraction of lambda.max in grpreg, so it passes through
+	# unconverted.
+	expect_equal(fit$lambda.min, 0.02, tolerance = 1e-12)
+})
+
 test_that(".bridge_response_scale() returns the noise SD, else the response SD, else 1 (#428)", {
 	scale_of <- fetwfe:::.bridge_response_scale
 	y <- c(1, 3)
