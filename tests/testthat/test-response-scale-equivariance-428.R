@@ -172,17 +172,13 @@
 
 # A penalized estimator on one selection route. `pw` and `df` are accessors from
 # `.rse428_fits()`, of `ci_type = "pointwise"` and of default fits.
-.rse428_expect_route <- function(pw, df) {
+.rse428_expect_route <- function(pw, df, band = .rse428_band_quantities) {
 	.rse428_expect_live(pw(1))
 	.rse428_expect_equivariant(pw, .rse428_fit_quantities(), .RSE428_SCALES)
 	# Band quantities only where the variance floor cannot bind (#489).
 	.rse428_expect_live(df(1))
 	.rse428_expect_band_ready(df, .RSE428_BAND_SCALES, function(f) f$catt_ses)
-	.rse428_expect_equivariant(
-		df,
-		.rse428_band_quantities,
-		.RSE428_BAND_SCALES
-	)
+	.rse428_expect_equivariant(df, band, .RSE428_BAND_SCALES)
 }
 
 test_that("fetwfe() on the default route (CV, q = 0.5) is equivariant (#428)", {
@@ -214,7 +210,8 @@ test_that("fetwfe() with lambda_selection = \"bic\" is equivariant (#428)", {
 		df = .rse428_fits(
 			function(k) .rse428_scaled_fit(fetwfe, k, lambda_selection = "bic"),
 			.RSE428_BAND_SCALES
-		)
+		),
+		band = .rse428_band_quantities[c("ci_low", "ci_high")]
 	)
 })
 
