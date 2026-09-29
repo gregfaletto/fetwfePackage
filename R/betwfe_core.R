@@ -133,10 +133,8 @@
 #'   on `cv.grpreg`; the v1.13.0+ default) or `"bic"` (BIC over the
 #'   `grpreg` lambda grid; the prior default for v1.12.0 and earlier).
 #'   The default changed in v1.13.0 to address a finite-sample bias issue
-#'   documented in simulation studies (see issue #164). Pass
-#'   `lambda_selection = "bic"` to recover the prior behavior. See the
-#'   inference vignette section "Choosing the bridge penalty parameter"
-#'   for details.
+#'   documented in simulation studies (see issue #164). See the inference
+#'   vignette section "Choosing the bridge penalty parameter" for details.
 #' @param cv_folds Integer; number of folds for the CV path. Ignored when
 #'   `lambda_selection = "bic"`. Default is 10.
 #' @param cv_seed Integer or `NULL`; the seed passed to `set.seed()`
@@ -575,10 +573,8 @@ betwfe <- function(
 #'   on `cv.grpreg`; the v1.13.0+ default) or `"bic"` (BIC over the
 #'   `grpreg` lambda grid; the prior default for v1.12.0 and earlier).
 #'   The default changed in v1.13.0 to address a finite-sample bias issue
-#'   documented in simulation studies (see issue #164). Pass
-#'   `lambda_selection = "bic"` to recover the prior behavior. See the
-#'   inference vignette section "Choosing the bridge penalty parameter"
-#'   for details.
+#'   documented in simulation studies (see issue #164). See the inference
+#'   vignette section "Choosing the bridge penalty parameter" for details.
 #' @param cv_folds Integer; number of folds for the CV path. Ignored when
 #'   `lambda_selection = "bic"`. Default is 10.
 #' @param cv_seed Integer or `NULL`; the seed passed to `set.seed()`

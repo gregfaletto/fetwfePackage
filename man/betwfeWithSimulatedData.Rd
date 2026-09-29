@@ -97,10 +97,8 @@ penalty parameter \code{lambda}. Either \code{"cv"} (10-fold cross-validation
 on \code{cv.grpreg}; the v1.13.0+ default) or \code{"bic"} (BIC over the
 \code{grpreg} lambda grid; the prior default for v1.12.0 and earlier).
 The default changed in v1.13.0 to address a finite-sample bias issue
-documented in simulation studies (see issue #164). Pass
-\code{lambda_selection = "bic"} to recover the prior behavior. See the
-inference vignette section "Choosing the bridge penalty parameter"
-for details.}
+documented in simulation studies (see issue #164). See the inference
+vignette section "Choosing the bridge penalty parameter" for details.}
 
 \item{cv_folds}{Integer; number of folds for the CV path. Ignored when
 \code{lambda_selection = "bic"}. Default is 10.}

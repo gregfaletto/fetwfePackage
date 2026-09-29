@@ -154,10 +154,8 @@
 #'   moderate sample sizes, producing 95% confidence intervals whose
 #'   empirical coverage was as low as 0.00 in some regimes.
 #'   Cross-validation restores near-nominal coverage in every regime
-#'   tested. To recover the prior behavior --- for example, when
-#'   reproducing analyses run against v1.12.0 or earlier --- pass
-#'   `lambda_selection = "bic"`. See the inference vignette section
-#'   "Choosing the bridge penalty parameter" for details.
+#'   tested. See the inference vignette section "Choosing the bridge
+#'   penalty parameter" for details.
 #' @param cv_folds Integer; number of folds for the CV path. Ignored when
 #'   `lambda_selection = "bic"`. Default is 10.
 #' @param cv_seed Integer or `NULL`; the seed passed to `set.seed()`
@@ -658,10 +656,8 @@ fetwfe <- function(
 #'   moderate sample sizes, producing 95% confidence intervals whose
 #'   empirical coverage was as low as 0.00 in some regimes.
 #'   Cross-validation restores near-nominal coverage in every regime
-#'   tested. To recover the prior behavior --- for example, when
-#'   reproducing analyses run against v1.12.0 or earlier --- pass
-#'   `lambda_selection = "bic"`. See the inference vignette section
-#'   "Choosing the bridge penalty parameter" for details.
+#'   tested. See the inference vignette section "Choosing the bridge
+#'   penalty parameter" for details.
 #' @param cv_folds Integer; number of folds for the CV path. Ignored when
 #'   `lambda_selection = "bic"`. Default is 10.
 #' @param cv_seed Integer or `NULL`; the seed passed to `set.seed()`
