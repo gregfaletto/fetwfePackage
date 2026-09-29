@@ -542,16 +542,14 @@ test_that(".bridge_response_scale() returns the noise SD, else the response SD, 
 })
 
 test_that("fetwfe() rejects add_ridge = TRUE with gls = FALSE without a variance rationale (#428)", {
-	call_it <- function() {
-		.rse428_scaled_fit(fetwfe, 1, add_ridge = TRUE, gls = FALSE)
-	}
-	expect_error(
-		call_it(),
-		"is not supported with `gls = FALSE`. Re-fit with `add_ridge = FALSE`.",
-		fixed = TRUE
+	msg <- msg_of(tryCatch(
+		.rse428_scaled_fit(fetwfe, 1, add_ridge = TRUE, gls = FALSE),
+		error = identity
+	))
+	expect_identical(
+		msg,
+		"fetwfe(): `add_ridge = TRUE` is not supported with `gls = FALSE`. Re-fit with `add_ridge = FALSE`."
 	)
-	msg <- msg_of(tryCatch(call_it(), error = identity))
-	expect_false(grepl("noise variances", msg, fixed = TRUE))
 })
 
 test_that("fetwfe() and betwfe() standardize by the sig_eps_sq their GLS step used (#428)", {
