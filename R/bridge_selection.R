@@ -8,8 +8,7 @@
 
 # .untransform_scaled_theta
 #' @title Back-transform scaled bridge coefficients to the unscaled design
-#' @description Shared rescaling step used by `getBetaBIC()` and `getBetaCV()`.
-#'   Given a length-`(p + 1)` coefficient vector `theta_hat_scaled` (intercept
+#' @description Shared rescaling step. Given a length-`(p + 1)` coefficient vector `theta_hat_scaled` (intercept
 #'   at position 1, slopes at 2..p+1) on the my_scale()-centered/scaled
 #'   design, returns the same shape for the unscaled design.
 #'

@@ -2416,9 +2416,8 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #'     response's original units.}
 #'   \item{lambda_star_ind}{Index of the selected lambda in `fit$lambda`.}
 #'   \item{lambda_star_model_size}{Number of selected features (nonzero coefficients, excluding the intercept).}
-#'   \item{fit}{The underlying `grpreg`/`cv.grpreg` `fit` object. `fit` keeps
-#'     `grpreg`'s standardized scale, apart from `fit$lambda`, which is
-#'     converted.}
+#'   \item{fit}{The underlying `grpreg`/`cv.grpreg` `fit` object, on the
+#'     standardized response's scale apart from `fit$lambda`.}
 #'   \item{lambda.max,lambda.min,lambda.max_model_size,lambda.min_model_size}{Lambda-path
 #'     diagnostics of that fit, `lambda.max` and `lambda.min` in original units.}
 #'   \item{cv_seed_used}{Integer seed used by the CV path; `NA_integer_` under BIC.}

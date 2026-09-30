@@ -59,9 +59,9 @@
 #' REML on the linear mixed-effects model `y ~ X + (1 | unit)` via
 #' `lme4::lmer` (Bates et al. 2015; Patterson & Thompson 1971). When
 #' supplied, the value also sets the scale of the bridge penalty's grid (the
-#' response is divided by the square root of this value before the fit), so a
-#' value supplied in the wrong units moves the estimates, not only their
-#' standard errors. Default is NA.
+#' response is divided by `sqrt(sig_eps_sq)` before the fit), so a value
+#' supplied in the wrong units moves the estimates, not only their standard
+#' errors. Default is NA.
 #' @param sig_eps_c_sq (Optional.) Numeric; the variance of the unit-level IID
 #' noise (random effects) assumed to apply to each observation. See Section 2 of
 #' Faletto (2025) for details. It is best to provide this variance if it is
@@ -934,7 +934,7 @@ betwfeWithSimulatedData <- function(
 #'   \item{lambda.max_model_size}{Number of selected features (excluding the intercept) for `lambda.max`.}
 #'   \item{lambda.min}{The smallest lambda of the grid (units: see `.dispatch_bridge_selection()`).}
 #'   \item{lambda.min_model_size}{Number of selected features (excluding the intercept) for `lambda.min`.}
-#'   \item{lambda_star}{The lambda selected by the lambda_selection rule (units: see `.dispatch_bridge_selection()`).}
+#'   \item{lambda_star}{The selected lambda (units: see `.dispatch_bridge_selection()`).}
 #'   \item{lambda_star_model_size}{Number of selected features (excluding the intercept) for `lambda_star`.}
 #'   \item{X_ints}{The original input design matrix from `prepXints`.}
 #'   \item{y}{The original input centered response vector from `prepXints`.}

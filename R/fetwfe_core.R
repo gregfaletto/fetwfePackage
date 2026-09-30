@@ -413,7 +413,7 @@ checkFetwfeInputs <- function(
 #'   \item{lambda.max_model_size}{Number of selected features (excluding the intercept) for `lambda.max`.}
 #'   \item{lambda.min}{The smallest lambda of the grid (units: see `.dispatch_bridge_selection()`).}
 #'   \item{lambda.min_model_size}{Number of selected features (excluding the intercept) for `lambda.min`.}
-#'   \item{lambda_star}{The lambda selected by the lambda_selection rule (units: see `.dispatch_bridge_selection()`).}
+#'   \item{lambda_star}{The selected lambda (units: see `.dispatch_bridge_selection()`).}
 #'   \item{lambda_star_model_size}{Number of selected features (excluding the intercept) for `lambda_star`.}
 #'   \item{X_ints}{The original input design matrix from `prepXints`.}
 #'   \item{y}{The original input centered response vector from `prepXints`.}
