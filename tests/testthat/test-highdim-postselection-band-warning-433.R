@@ -508,8 +508,8 @@ test_that("a degenerate p >= NT fit keeps only its #304 warning (#433)", {
 #
 #    NOT `identical()` and NOT `tolerance = 0`: these are qmvnorm / Gram-inverse
 #    quantities and the gate runs on six platform/BLAS combinations, four of
-#    them OpenBLAS, where exact assertions have passed on Accelerate and
-#    Windows and failed all four Linux jobs at 1-4 ULPs.
+#    them OpenBLAS. Exact assertions have passed on Accelerate and Windows
+#    and failed all four Linux jobs at 1-4 ULPs (#427).
 #
 #    WHAT 1e-8 ACTUALLY ACCEPTS HERE (the edition-2 comparison switches between
 #    relative and absolute with the magnitude of the expected value, so "1e-8"

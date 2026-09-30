@@ -11,9 +11,8 @@
 # These two degrade to a readable value instead of raising, so every assertion
 # in a loop still runs and a red cell names itself.
 #
-# Shared by test-gen-coefs-validator-429.R, test-gencoefs-retry-cap-436.R and
-# test-genassignments-retry-cap-436.R. Extracted here (#436) once the third
-# byte-identical copy arrived; testthat sources helper-*.R before the tests.
+# Extracted here (#436) once a third byte-identical copy arrived; testthat
+# sources helper-*.R before the tests.
 
 msg_of <- function(x) {
 	if (inherits(x, "condition")) {

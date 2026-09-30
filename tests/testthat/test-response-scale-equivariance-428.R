@@ -516,8 +516,6 @@ test_that("a supplied lambda.min keeps its meaning on the BIC route: non-regress
 		lambda.max = 2,
 		lambda.min = 0.01
 	)
-	# lambda.min is a fraction of lambda.max in grpreg, so it passes through
-	# unconverted.
 	expect_equal(fit$lambda.min, 0.02, tolerance = 1e-12)
 })
 
