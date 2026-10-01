@@ -242,7 +242,7 @@
 #' \item{treat_int_inds}{The indices of `beta_hat` corresponding to the interactions between the treatment effects for each cohort at each time and the covariates.}
 #' \item{sig_eps_sq}{Either the provided `sig_eps_sq` or the estimated one, if a value wasn't provided.}
 #' \item{sig_eps_c_sq}{Either the provided `sig_eps_c_sq` or the estimated one, if a value wasn't provided.}
-#' \item{lambda.max}{Either the provided `lambda.max` or the one that was used, if a value wasn't provided. (This is returned to help with getting a reasonable range of `lambda` values for grid search.)}
+#' \item{lambda.max}{The largest `lambda` of the grid used, which is a supplied `lambda.max` only on the BIC route. (This is returned to help with getting a reasonable range of `lambda` values for grid search.)}
 #' \item{lambda.max_model_size}{The number of selected features (excluding the always-present intercept) at `lambda.max` (for `q <= 1`, this will be the smallest model size). As mentioned above, for `q <= 1` ideally this value is close to 0.}
 #' \item{lambda.min}{Either the provided `lambda.min` or the one that was used, if a value wasn't provided.}
 #' \item{lambda.min_model_size}{The number of selected features (excluding the always-present intercept) at `lambda.min` (for `q <= 1`, this will be the largest model size). As mentioned above, for `q <= 1` ideally this value is close to `p`.}
@@ -744,7 +744,7 @@ fetwfe <- function(
 #' \item{treat_int_inds}{The indices of `beta_hat` corresponding to the interactions between the treatment effects for each cohort at each time and the covariates.}
 #' \item{sig_eps_sq}{Either the provided `sig_eps_sq` or the estimated one, if a value wasn't provided.}
 #' \item{sig_eps_c_sq}{Either the provided `sig_eps_c_sq` or the estimated one, if a value wasn't provided.}
-#' \item{lambda.max}{Either the provided `lambda.max` or the one that was used, if a value wasn't provided. (This is returned to help with getting a reasonable range of `lambda` values for grid search.)}
+#' \item{lambda.max}{The largest `lambda` of the grid used, which is a supplied `lambda.max` only on the BIC route. (This is returned to help with getting a reasonable range of `lambda` values for grid search.)}
 #' \item{lambda.max_model_size}{The number of selected features (excluding the always-present intercept) at `lambda.max` (for `q <= 1`, this will be the smallest model size). As mentioned above, for `q <= 1` ideally this value is close to 0.}
 #' \item{lambda.min}{Either the provided `lambda.min` or the one that was used, if a value wasn't provided.}
 #' \item{lambda.min_model_size}{The number of selected features (excluding the always-present intercept) at `lambda.min` (for `q <= 1`, this will be the largest model size). As mentioned above, for `q <= 1` ideally this value is close to `p`.}
