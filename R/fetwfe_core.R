@@ -277,8 +277,8 @@ checkFetwfeInputs <- function(
 #' This function implements the core estimation steps of the FETWFE methodology.
 #' It takes a pre-processed design matrix and response, applies transformations
 #' for fusion penalties, handles variance components, performs bridge regression,
-#' selects the optimal penalty via BIC, and calculates treatment effects and
-#' their standard errors.
+#' selects the optimal penalty, and calculates treatment effects and their
+#' standard errors.
 #'
 #' @param X_ints The design matrix with all fixed effects, covariates, treatment
 #'   dummies, and their interactions, as produced by `prepXints`.
@@ -367,11 +367,11 @@ checkFetwfeInputs <- function(
 #'     through `.dispatch_bridge_selection()`, which states the response it fits
 #'     and the units of what it returns, on `X_final_scaled` with the specified
 #'     `q` and lambda sequence.
-#'   \item **Coefficient Selection (BIC):** Calls `getBetaBIC` to select the
-#'     optimal `lambda` using BIC and retrieve the corresponding estimated
+#'   \item **Coefficient Selection:** Selects `lambda` by cross-validation or
+#'     BIC (`lambda_selection`) and retrieves the corresponding estimated
 #'     coefficients (`theta_hat` in the transformed space).
-#'   \item **Handle Zero-Feature Case:** If BIC selects a model with zero features,
-#'     treatment effects are set to zero.
+#'   \item **Handle Zero-Feature Case:** If the selected model has zero
+#'     features, treatment effects are set to zero.
 #'   \item **Coefficient Untransformation:** Calls `untransformCoefImproved` to
 #'     transform `theta_hat` back to the original coefficient space, yielding
 #'     `beta_hat`. If `add_ridge` was true, `beta_hat` is scaled.
