@@ -150,9 +150,8 @@
 #'   `sqrt(lambda_ridge) * mat` rows to `X_scaled` and zeros to `y_gls`.
 #'   When `add_ridge = FALSE`, returns inputs unchanged with
 #'   `lambda_ridge = NA`. The long arg list reflects two semantic
-#'   groups: `(N, T, p, sig_eps_sq, sig_eps_c_sq)` feed the
-#'   `lambda_ridge` formula; `(is_fetwfe, first_inds, T, G, d,
-#'   num_treats)` feed the `D_inverse` construction.
+#'   groups: `(N, T, p)` feed the `lambda_ridge` formula; `(is_fetwfe,
+#'   first_inds, T, G, d, num_treats)` feed the `D_inverse` construction.
 #' @param X_scaled Numeric matrix; the scaled, GLS-transformed design.
 #' @param y_gls Numeric vector; the GLS-transformed response.
 #' @param p Integer; column count of `X_scaled`.
@@ -161,8 +160,7 @@
 #' @param first_inds,T,G,d,num_treats Args for
 #'   `genFullInvFusionTransformMat()` (only used when
 #'   `is_fetwfe = TRUE`).
-#' @param sig_eps_sq,sig_eps_c_sq,N Numeric / integer; inputs to the
-#'   `lambda_ridge = 1e-5 * (sig_eps_sq + sig_eps_c_sq) * sqrt(p/(N*T))`
+#' @param N Integer; the number of units, an input to the `lambda_ridge`
 #'   formula.
 #' @param fusion_structure Character; one of `"cohort"` (default) or
 #'   `"event_study"`. Forwarded to `genFullInvFusionTransformMat()`
@@ -187,8 +185,6 @@
 	G,
 	d,
 	num_treats,
-	sig_eps_sq,
-	sig_eps_c_sq,
 	N,
 	fusion_structure = "cohort",
 	d_inv_treat = NULL
@@ -220,15 +216,10 @@
 		mat_to_multiply <- D_inverse
 	}
 
-	# #185 SB5: sig_eps_sq > 0 here (validated for user-supplied input per SB2;
-	# REML-estimated otherwise) and sig_eps_c_sq >= 0, so `lambda_ridge` is
-	# strictly positive -- the former silent no-op (lambda_ridge = 0 when both
-	# variance components were 0) is unreachable. Assert it so a future change
-	# to the variance handling cannot silently reintroduce a no-op ridge under
-	# add_ridge = TRUE.
-	lambda_ridge <- 0.00001 *
-		(sig_eps_sq + sig_eps_c_sq) *
-		sqrt(p / (N * T))
+	# Unit-free (#428): `my_scale()` gives the design unit-variance columns, so the
+	# penalty lambda_ridge * ||mat_to_multiply %*% beta||^2 is in the loss's
+	# squared-response units only if lambda_ridge carries no units of its own.
+	lambda_ridge <- 1e-5 * sqrt(p / (N * T))
 	stopifnot(is.finite(lambda_ridge), lambda_ridge > 0)
 
 	X_scaled <- rbind(

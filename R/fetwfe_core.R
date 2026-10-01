@@ -277,8 +277,8 @@ checkFetwfeInputs <- function(
 #' This function implements the core estimation steps of the FETWFE methodology.
 #' It takes a pre-processed design matrix and response, applies transformations
 #' for fusion penalties, handles variance components, performs bridge regression,
-#' selects the optimal penalty via BIC, and calculates treatment effects and
-#' their standard errors.
+#' selects the optimal penalty, and calculates treatment effects and their
+#' standard errors.
 #'
 #' @param X_ints The design matrix with all fixed effects, covariates, treatment
 #'   dummies, and their interactions, as produced by `prepXints`.
@@ -363,14 +363,15 @@ checkFetwfeInputs <- function(
 #'   \item **Cohort Probabilities:** Calculates cohort membership probabilities
 #'     conditional on being treated, using `in_sample_counts` and `indep_counts`
 #'     if available.
-#'   \item **Bridge Regression:** Fits a bridge regression model using
-#'     `grpreg::gBridge` on `X_final_scaled` and `y_final` with the specified `q`
-#'     and lambda sequence.
-#'   \item **Coefficient Selection (BIC):** Calls `getBetaBIC` to select the
-#'     optimal `lambda` using BIC and retrieve the corresponding estimated
+#'   \item **Bridge Regression:** Fits a bridge regression model with `grpreg`
+#'     through `.dispatch_bridge_selection()`, which states the response it fits
+#'     and the units of what it returns, on `X_final_scaled` with the specified
+#'     `q` and lambda sequence.
+#'   \item **Coefficient Selection:** Selects `lambda` by cross-validation or
+#'     BIC (`lambda_selection`) and retrieves the corresponding estimated
 #'     coefficients (`theta_hat` in the transformed space).
-#'   \item **Handle Zero-Feature Case:** If BIC selects a model with zero features,
-#'     treatment effects are set to zero.
+#'   \item **Handle Zero-Feature Case:** If the selected model has zero
+#'     features, treatment effects are set to zero.
 #'   \item **Coefficient Untransformation:** Calls `untransformCoefImproved` to
 #'     transform `theta_hat` back to the original coefficient space, yielding
 #'     `beta_hat`. If `add_ridge` was true, `beta_hat` is scaled.
@@ -408,11 +409,11 @@ checkFetwfeInputs <- function(
 #'   \item{indep_cohort_probs}{Estimated cohort probabilities from `indep_counts` (NA if not provided).}
 #'   \item{sig_eps_sq}{The (possibly estimated) variance of observation-level noise.}
 #'   \item{sig_eps_c_sq}{The (possibly estimated) variance of unit-level random effects.}
-#'   \item{lambda.max}{The maximum lambda value used in `grpreg`.}
+#'   \item{lambda.max}{The largest lambda of the grid (units: see `.dispatch_bridge_selection()`).}
 #'   \item{lambda.max_model_size}{Number of selected features (excluding the intercept) for `lambda.max`.}
-#'   \item{lambda.min}{The minimum lambda value used in `grpreg`.}
+#'   \item{lambda.min}{The smallest lambda of the grid (units: see `.dispatch_bridge_selection()`).}
 #'   \item{lambda.min_model_size}{Number of selected features (excluding the intercept) for `lambda.min`.}
-#'   \item{lambda_star}{The lambda value selected by BIC.}
+#'   \item{lambda_star}{The selected lambda (units: see `.dispatch_bridge_selection()`).}
 #'   \item{lambda_star_model_size}{Number of selected features (excluding the intercept) for `lambda_star`.}
 #'   \item{X_ints}{The original input design matrix from `prepXints`.}
 #'   \item{y}{The original input centered response vector from `prepXints`.}
@@ -567,7 +568,8 @@ fetwfe_core <- function(
 		y_bic = y,
 		scale_center = scale_center,
 		scale_scale = scale_scale,
-		verbose = verbose
+		verbose = verbose,
+		sig_eps_sq = sig_eps_sq
 	)
 	theta_hat <- bridge_sel$theta_hat
 	lambda_star_ind <- bridge_sel$lambda_star_ind

@@ -93,7 +93,11 @@ for details. It is best to provide this variance if it is known (for example,
 if you are using simulated data). If this variance is unknown, this argument
 can be omitted, and the variance will be estimated by
 REML on the linear mixed-effects model \code{y ~ X + (1 | unit)} via
-\code{lme4::lmer} (Bates et al. 2015; Patterson & Thompson 1971). Default is NA.}
+\code{lme4::lmer} (Bates et al. 2015; Patterson & Thompson 1971). When
+supplied, the value also sets the scale of the bridge penalty's grid (the
+response is divided by \code{sqrt(sig_eps_sq)} before the fit), so at \code{q != 1} a
+value supplied in the wrong units moves the estimates, not only their
+standard errors. Default is NA.}
 
 \item{sig_eps_c_sq}{(Optional.) Numeric; the variance of the unit-level IID
 noise (random effects) assumed to apply to each observation. See Section 2 of
@@ -104,8 +108,8 @@ by REML via \code{lme4::lmer} on the
 linear mixed-effects model \code{y ~ X + (1 | unit)} (Bates et al. 2015;
 Patterson & Thompson 1971). Default is NA.}
 
-\item{lambda.max}{(Optional.) Numeric. A penalty parameter \code{lambda} will be
-selected over a grid search by BIC in order to select a single model. The
+\item{lambda.max}{(Optional.) Numeric. Used only on the BIC route
+(\code{lambda_selection = "bic"}), which selects \code{lambda} by BIC over a grid. The
 largest \code{lambda} in the grid will be \code{lambda.max}. If no \code{lambda.max} is
 provided, one will be selected automatically. When \code{q <= 1}, the model
 will be sparse, and ideally all of the following are true at once: the
@@ -121,13 +125,13 @@ indicate that the range of \code{lambda} values was too narrow or coarse. You ca
 use the function outputs \code{lambda.max_model_size}, \code{lambda.min_model_size}, and
 \code{lambda_star_model_size} to try to assess this. Default is NA.}
 
-\item{lambda.min}{(Optional.) Numeric. The smallest \code{lambda} penalty
-parameter that will be considered. See the description of \code{lambda.max} for
-details. Default is NA.}
+\item{lambda.min}{(Optional.) Numeric. Used only on the BIC route: the
+smallest \code{lambda} penalty parameter considered. See the description of
+\code{lambda.max} for details. Default is NA.}
 
-\item{nlambda}{(Optional.) Integer. The total number of \code{lambda} penalty
-parameters that will be considered. See the description of \code{lambda.max} for
-details. Default is 100.}
+\item{nlambda}{(Optional.) Integer. Used only on the BIC route: the total
+number of \code{lambda} penalty parameters considered. See the description of
+\code{lambda.max} for details. Default is 100.}
 
 \item{q}{(Optional.) Numeric; determines what \code{L_q} penalty is used for the
 fusion regularization. \code{q} = 1 is the lasso, and for 0 < \code{q} < 1, it is
@@ -186,10 +190,8 @@ BIC default, the overall-ATT estimator was biased toward zero at
 moderate sample sizes, producing 95\% confidence intervals whose
 empirical coverage was as low as 0.00 in some regimes.
 Cross-validation restores near-nominal coverage in every regime
-tested. To recover the prior behavior --- for example, when
-reproducing analyses run against v1.12.0 or earlier --- pass
-\code{lambda_selection = "bic"}. See the inference vignette section
-"Choosing the bridge penalty parameter" for details.}
+tested. See the inference vignette section "Choosing the bridge
+penalty parameter" for details.}
 
 \item{cv_folds}{Integer; number of folds for the CV path. Ignored when
 \code{lambda_selection = "bic"}. Default is 10.}
@@ -284,7 +286,7 @@ An object of class \code{fetwfe} containing the following elements:
 \item{treat_int_inds}{The indices of \code{beta_hat} corresponding to the interactions between the treatment effects for each cohort at each time and the covariates.}
 \item{sig_eps_sq}{Either the provided \code{sig_eps_sq} or the estimated one, if a value wasn't provided.}
 \item{sig_eps_c_sq}{Either the provided \code{sig_eps_c_sq} or the estimated one, if a value wasn't provided.}
-\item{lambda.max}{Either the provided \code{lambda.max} or the one that was used, if a value wasn't provided. (This is returned to help with getting a reasonable range of \code{lambda} values for grid search.)}
+\item{lambda.max}{The largest \code{lambda} of the grid used, which is a supplied \code{lambda.max} only on the BIC route. (This is returned to help with getting a reasonable range of \code{lambda} values for grid search.)}
 \item{lambda.max_model_size}{The number of selected features (excluding the always-present intercept) at \code{lambda.max} (for \code{q <= 1}, this will be the smallest model size). As mentioned above, for \code{q <= 1} ideally this value is close to 0.}
 \item{lambda.min}{Either the provided \code{lambda.min} or the one that was used, if a value wasn't provided.}
 \item{lambda.min_model_size}{The number of selected features (excluding the always-present intercept) at \code{lambda.min} (for \code{q <= 1}, this will be the largest model size). As mentioned above, for \code{q <= 1} ideally this value is close to \code{p}.}

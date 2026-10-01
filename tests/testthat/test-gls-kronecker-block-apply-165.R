@@ -53,7 +53,7 @@ test_that("block-apply identity `(I_N kron A) %*% vec(M) = vec(A %*% M)` holds (
 	# sides are different sequences of floating-point operations -- an (N*T)x(N*T)
 	# matrix-vector product versus a TxT by Tx(N or p) product -- so they agree
 	# only up to round-off, and which way the last bits fall is a property of the
-	# BLAS. `tolerance = 0` here passed on macOS/Accelerate and Windows and failed
+	# BLAS. `tolerance = 0` here passed on macOS and Windows and failed
 	# on all four Linux jobs (#427), where the observed disagreement was 1-4 ULPs:
 	# max |diff| 4.44e-16 on values of order 1, mean 1.8e-16 to 1.96e-16. The
 	# tolerance below is ~22x that maximum and two orders under the 100x cap.

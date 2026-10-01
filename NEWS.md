@@ -57,6 +57,43 @@
   relabel and not an error. Refit rather than reload; there is no migration for
   a serialized object.
 
+- **`fetwfe()` and `betwfe()` estimates no longer depend on the units of the
+  response** (#428). Both fit the bridge penalty with `grpreg`, whose lambda
+  grid and absolute threshold `delta` together made the estimate depend on the
+  response's units; either can return the null model for a response whose
+  values are very small, and at `q > 1` the grid can for very large ones. Both
+  estimators now divide the GLS-transformed response by the noise standard
+  deviation, the square root of `sig_eps_sq` (estimated or supplied), before
+  the fit and scale the coefficients back, on both the cross-validation and
+  BIC routes.
+  Multiplying the response by any `c > 0`, and a supplied variance by `c^2`,
+  now multiplies every estimate, standard error and pointwise interval bound by
+  `c`; a default (simultaneous) fit's bounds and p-values on a response with
+  small values still move until #489 lands. The reported lambda values stay in
+  the response's units, and on the BIC route a supplied `lambda.max` without
+  `add_ridge` gives the same fit as before, except where `delta` had distorted
+  the old fit.
+  Because a supplied `sig_eps_sq` now also sets where the lambda grid sits, a
+  variance supplied in the wrong units moves the estimates at `q != 1`, not
+  only their standard errors. `fetwfe(gls = FALSE)` fits, which estimate no
+  noise variance, are unchanged and still depend on the units (#490). The
+  `q = 1` nuisance behind `debiasedATT()` and the high-dimensional bootstrap
+  band of `simultaneousCIs()` is standardized too, by the response's standard
+  deviation, so it no longer depends on the units either. Existing estimates
+  move: on the paper's empirical applications at the default `cv_seed`, the
+  castle-doctrine ATT moves from 5.22% to 5.75%, the divorce-law ATT from
+  -5.79% to -5.95%, and the divorce-law ATT with event-study fusion from -7.30%
+  to -8.10%.
+
+- **`add_ridge = TRUE` no longer inflates the estimates of a response with
+  large values** (#428). The ridge penalty was proportional to the variance
+  components, so it grew with the square of the response's scale, and the
+  estimators then multiply their coefficients by one plus that penalty. For a
+  response with large values, `fetwfe()`, `betwfe()`, `etwfe()` and
+  `twfeCovs()` returned inflated estimates and distorted standard errors,
+  increasingly so as the values grew, and `fetwfe()` could fail with a `grpreg`
+  convergence error. The penalty is now unit-free.
+
 ### Defensive improvements
 
 - A negative cohort-probability variance is no longer discarded in silence

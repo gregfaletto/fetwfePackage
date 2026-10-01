@@ -9,8 +9,8 @@
 #          `/ 2` divisions and `seq()`).
 #
 # Other #185 items, covered elsewhere or not actionable:
-#   SB5 (ridge no-op) -- guarded by an invariant stopifnot in
-#       R/gls_machinery.R; exercised by the existing add_ridge tests.
+#   SB5 (ridge no-op) -- moot: `lambda_ridge` in R/gls_machinery.R does not
+#       depend on the variance components (#428), so they cannot zero it.
 #   A2  (validation-timing asymmetry) -- documentation-only.
 #   G4  (synthetic scattered-cohort fixture) -- in
 #       test-event-study-present-in-print-summary-174.R.

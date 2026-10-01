@@ -48,7 +48,7 @@
 #'   overall cohort-probability weights.
 #' @param sig_eps_sq,sig_eps_c_sq Numeric scalars; variance components.
 #' @param lambda.max,lambda.min,lambda_star Numeric scalars; bridge penalty
-#'   path endpoints and the BIC-selected lambda.
+#'   path endpoints and the selected lambda.
 #' @param lambda.max_model_size,lambda.min_model_size,lambda_star_model_size
 #'   Integer scalars; model sizes at each lambda.
 #' @param X_ints Numeric matrix; original-basis design.

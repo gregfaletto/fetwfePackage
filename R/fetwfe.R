@@ -68,7 +68,11 @@
 #' if you are using simulated data). If this variance is unknown, this argument
 #' can be omitted, and the variance will be estimated by
 #' REML on the linear mixed-effects model `y ~ X + (1 | unit)` via
-#' `lme4::lmer` (Bates et al. 2015; Patterson & Thompson 1971). Default is NA.
+#' `lme4::lmer` (Bates et al. 2015; Patterson & Thompson 1971). When
+#' supplied, the value also sets the scale of the bridge penalty's grid (the
+#' response is divided by `sqrt(sig_eps_sq)` before the fit), so at `q != 1` a
+#' value supplied in the wrong units moves the estimates, not only their
+#' standard errors. Default is NA.
 #' @param sig_eps_c_sq (Optional.) Numeric; the variance of the unit-level IID
 #' noise (random effects) assumed to apply to each observation. See Section 2 of
 #' Faletto (2025) for details. It is best to provide this variance if it is
@@ -77,8 +81,8 @@
 #' by REML via `lme4::lmer` on the
 #' linear mixed-effects model `y ~ X + (1 | unit)` (Bates et al. 2015;
 #' Patterson & Thompson 1971). Default is NA.
-#' @param lambda.max (Optional.) Numeric. A penalty parameter `lambda` will be
-#' selected over a grid search by BIC in order to select a single model. The
+#' @param lambda.max (Optional.) Numeric. Used only on the BIC route
+#' (`lambda_selection = "bic"`), which selects `lambda` by BIC over a grid. The
 #' largest `lambda` in the grid will be `lambda.max`. If no `lambda.max` is
 #' provided, one will be selected automatically. When `q <= 1`, the model
 #' will be sparse, and ideally all of the following are true at once: the
@@ -93,12 +97,12 @@
 #' indicate that the range of `lambda` values was too narrow or coarse. You can
 #' use the function outputs `lambda.max_model_size`, `lambda.min_model_size`, and
 #' `lambda_star_model_size` to try to assess this. Default is NA.
-#' @param lambda.min (Optional.) Numeric. The smallest `lambda` penalty
-#' parameter that will be considered. See the description of `lambda.max` for
-#' details. Default is NA.
-#' @param nlambda (Optional.) Integer. The total number of `lambda` penalty
-#' parameters that will be considered. See the description of `lambda.max` for
-#' details. Default is 100.
+#' @param lambda.min (Optional.) Numeric. Used only on the BIC route: the
+#' smallest `lambda` penalty parameter considered. See the description of
+#' `lambda.max` for details. Default is NA.
+#' @param nlambda (Optional.) Integer. Used only on the BIC route: the total
+#' number of `lambda` penalty parameters considered. See the description of
+#' `lambda.max` for details. Default is 100.
 #' @param q (Optional.) Numeric; determines what `L_q` penalty is used for the
 #' fusion regularization. `q` = 1 is the lasso, and for 0 < `q` < 1, it is
 #' possible to get standard errors and confidence intervals. `q` = 2 is ridge
@@ -150,10 +154,8 @@
 #'   moderate sample sizes, producing 95% confidence intervals whose
 #'   empirical coverage was as low as 0.00 in some regimes.
 #'   Cross-validation restores near-nominal coverage in every regime
-#'   tested. To recover the prior behavior --- for example, when
-#'   reproducing analyses run against v1.12.0 or earlier --- pass
-#'   `lambda_selection = "bic"`. See the inference vignette section
-#'   "Choosing the bridge penalty parameter" for details.
+#'   tested. See the inference vignette section "Choosing the bridge
+#'   penalty parameter" for details.
 #' @param cv_folds Integer; number of folds for the CV path. Ignored when
 #'   `lambda_selection = "bic"`. Default is 10.
 #' @param cv_seed Integer or `NULL`; the seed passed to `set.seed()`
@@ -240,7 +242,7 @@
 #' \item{treat_int_inds}{The indices of `beta_hat` corresponding to the interactions between the treatment effects for each cohort at each time and the covariates.}
 #' \item{sig_eps_sq}{Either the provided `sig_eps_sq` or the estimated one, if a value wasn't provided.}
 #' \item{sig_eps_c_sq}{Either the provided `sig_eps_c_sq` or the estimated one, if a value wasn't provided.}
-#' \item{lambda.max}{Either the provided `lambda.max` or the one that was used, if a value wasn't provided. (This is returned to help with getting a reasonable range of `lambda` values for grid search.)}
+#' \item{lambda.max}{The largest `lambda` of the grid used, which is a supplied `lambda.max` only on the BIC route. (This is returned to help with getting a reasonable range of `lambda` values for grid search.)}
 #' \item{lambda.max_model_size}{The number of selected features (excluding the always-present intercept) at `lambda.max` (for `q <= 1`, this will be the smallest model size). As mentioned above, for `q <= 1` ideally this value is close to 0.}
 #' \item{lambda.min}{Either the provided `lambda.min` or the one that was used, if a value wasn't provided.}
 #' \item{lambda.min_model_size}{The number of selected features (excluding the always-present intercept) at `lambda.min` (for `q <= 1`, this will be the largest model size). As mentioned above, for `q <= 1` ideally this value is close to `p`.}
@@ -406,9 +408,8 @@ fetwfe <- function(
 	if (!gls) {
 		if (isTRUE(add_ridge)) {
 			stop(
-				"fetwfe(): `add_ridge = TRUE` is not supported with `gls = FALSE` ",
-				"(the ridge penalty scales with the noise variances, which are not ",
-				"estimated when whitening is skipped). Re-fit with `add_ridge = FALSE`.",
+				"fetwfe(): `add_ridge = TRUE` is not supported with `gls = FALSE`. ",
+				"Re-fit with `add_ridge = FALSE`.",
 				call. = FALSE
 			)
 		}
@@ -582,10 +583,10 @@ fetwfe <- function(
 #'
 #' @param simulated_obj An object of class \code{"FETWFE_simulated"} containing the simulated panel
 #' data and design matrix.
-#' @param lambda.max (Optional.) Numeric. A penalty parameter `lambda` will be
-#' selected over a grid search by BIC in order to select a single model. The
+#' @param lambda.max (Optional.) Numeric. Used only on the BIC route
+#' (`lambda_selection = "bic"`), which selects `lambda` by BIC over a grid. The
 #' largest `lambda` in the grid will be `lambda.max`. If no `lambda.max` is
-#' provided, one will be selected automatically. For `lambda <= 1`, the model
+#' provided, one will be selected automatically. When `q <= 1`, the model
 #' will be sparse, and ideally all of the following are true at once: the
 #' smallest model (the one corresponding to `lambda.max`) selects close to 0
 #' features, the largest model (the one corresponding to `lambda.min`) selects
@@ -598,12 +599,12 @@ fetwfe <- function(
 #' indicate that the range of `lambda` values was too narrow. You can use the
 #' function outputs `lambda.max_model_size`, `lambda.min_model_size`, and
 #' `lambda_star_model_size` to try to assess this. Default is NA.
-#' @param lambda.min (Optional.) Numeric. The smallest `lambda` penalty
-#' parameter that will be considered. See the description of `lambda.max` for
-#' details. Default is NA.
-#' @param nlambda (Optional.) Integer. The total number of `lambda` penalty
-#' parameters that will be considered. See the description of `lambda.max` for
-#' details. Default is 100.
+#' @param lambda.min (Optional.) Numeric. Used only on the BIC route: the
+#' smallest `lambda` penalty parameter considered. See the description of
+#' `lambda.max` for details. Default is NA.
+#' @param nlambda (Optional.) Integer. Used only on the BIC route: the total
+#' number of `lambda` penalty parameters considered. See the description of
+#' `lambda.max` for details. Default is 100.
 #' @param q (Optional.) Numeric; determines what `L_q` penalty is used for the
 #' fusion regularization. `q` = 1 is the lasso, and for 0 < `q` < 1, it is
 #' possible to get standard errors and confidence intervals. `q` = 2 is ridge
@@ -655,10 +656,8 @@ fetwfe <- function(
 #'   moderate sample sizes, producing 95% confidence intervals whose
 #'   empirical coverage was as low as 0.00 in some regimes.
 #'   Cross-validation restores near-nominal coverage in every regime
-#'   tested. To recover the prior behavior --- for example, when
-#'   reproducing analyses run against v1.12.0 or earlier --- pass
-#'   `lambda_selection = "bic"`. See the inference vignette section
-#'   "Choosing the bridge penalty parameter" for details.
+#'   tested. See the inference vignette section "Choosing the bridge
+#'   penalty parameter" for details.
 #' @param cv_folds Integer; number of folds for the CV path. Ignored when
 #'   `lambda_selection = "bic"`. Default is 10.
 #' @param cv_seed Integer or `NULL`; the seed passed to `set.seed()`
@@ -745,7 +744,7 @@ fetwfe <- function(
 #' \item{treat_int_inds}{The indices of `beta_hat` corresponding to the interactions between the treatment effects for each cohort at each time and the covariates.}
 #' \item{sig_eps_sq}{Either the provided `sig_eps_sq` or the estimated one, if a value wasn't provided.}
 #' \item{sig_eps_c_sq}{Either the provided `sig_eps_c_sq` or the estimated one, if a value wasn't provided.}
-#' \item{lambda.max}{Either the provided `lambda.max` or the one that was used, if a value wasn't provided. (This is returned to help with getting a reasonable range of `lambda` values for grid search.)}
+#' \item{lambda.max}{The largest `lambda` of the grid used, which is a supplied `lambda.max` only on the BIC route. (This is returned to help with getting a reasonable range of `lambda` values for grid search.)}
 #' \item{lambda.max_model_size}{The number of selected features (excluding the always-present intercept) at `lambda.max` (for `q <= 1`, this will be the smallest model size). As mentioned above, for `q <= 1` ideally this value is close to 0.}
 #' \item{lambda.min}{Either the provided `lambda.min` or the one that was used, if a value wasn't provided.}
 #' \item{lambda.min_model_size}{The number of selected features (excluding the always-present intercept) at `lambda.min` (for `q <= 1`, this will be the largest model size). As mentioned above, for `q <= 1` ideally this value is close to `p`.}

@@ -57,7 +57,11 @@
 #' if you are using simulated data). If this variance is unknown, this argument
 #' can be omitted, and the variance will be estimated by
 #' REML on the linear mixed-effects model `y ~ X + (1 | unit)` via
-#' `lme4::lmer` (Bates et al. 2015; Patterson & Thompson 1971). Default is NA.
+#' `lme4::lmer` (Bates et al. 2015; Patterson & Thompson 1971). When
+#' supplied, the value also sets the scale of the bridge penalty's grid (the
+#' response is divided by `sqrt(sig_eps_sq)` before the fit), so at `q != 1` a
+#' value supplied in the wrong units moves the estimates, not only their
+#' standard errors. Default is NA.
 #' @param sig_eps_c_sq (Optional.) Numeric; the variance of the unit-level IID
 #' noise (random effects) assumed to apply to each observation. See Section 2 of
 #' Faletto (2025) for details. It is best to provide this variance if it is
@@ -66,8 +70,8 @@
 #' by REML via `lme4::lmer` on the
 #' linear mixed-effects model `y ~ X + (1 | unit)` (Bates et al. 2015;
 #' Patterson & Thompson 1971). Default is NA.
-#' @param lambda.max (Optional.) Numeric. A penalty parameter `lambda` will be
-#' selected over a grid search by BIC in order to select a single model. The
+#' @param lambda.max (Optional.) Numeric. Used only on the BIC route
+#' (`lambda_selection = "bic"`), which selects `lambda` by BIC over a grid. The
 #' largest `lambda` in the grid will be `lambda.max`. If no `lambda.max` is
 #' provided, one will be selected automatically. When `q <= 1`, the model
 #' will be sparse, and ideally all of the following are true at once: the
@@ -82,12 +86,12 @@
 #' indicate that the range of `lambda` values was too narrow or coarse. You can
 #' use the function outputs `lambda.max_model_size`, `lambda.min_model_size`, and
 #' `lambda_star_model_size` to try to assess this. Default is NA.
-#' @param lambda.min (Optional.) Numeric. The smallest `lambda` penalty
-#' parameter that will be considered. See the description of `lambda.max` for
-#' details. Default is NA.
-#' @param nlambda (Optional.) Integer. The total number of `lambda` penalty
-#' parameters that will be considered. See the description of `lambda.max` for
-#' details. Default is 100.
+#' @param lambda.min (Optional.) Numeric. Used only on the BIC route: the
+#' smallest `lambda` penalty parameter considered. See the description of
+#' `lambda.max` for details. Default is NA.
+#' @param nlambda (Optional.) Integer. Used only on the BIC route: the total
+#' number of `lambda` penalty parameters considered. See the description of
+#' `lambda.max` for details. Default is 100.
 #' @param q (Optional.) Numeric; determines what `L_q` penalty is used for the
 #' regularization. `q` = 1 is the lasso, and for 0 < `q` < 1, it is
 #' possible to get standard errors and confidence intervals. `q` = 2 is ridge
@@ -129,10 +133,8 @@
 #'   on `cv.grpreg`; the v1.13.0+ default) or `"bic"` (BIC over the
 #'   `grpreg` lambda grid; the prior default for v1.12.0 and earlier).
 #'   The default changed in v1.13.0 to address a finite-sample bias issue
-#'   documented in simulation studies (see issue #164). Pass
-#'   `lambda_selection = "bic"` to recover the prior behavior. See the
-#'   inference vignette section "Choosing the bridge penalty parameter"
-#'   for details.
+#'   documented in simulation studies (see issue #164). See the inference
+#'   vignette section "Choosing the bridge penalty parameter" for details.
 #' @param cv_folds Integer; number of folds for the CV path. Ignored when
 #'   `lambda_selection = "bic"`. Default is 10.
 #' @param cv_seed Integer or `NULL`; the seed passed to `set.seed()`
@@ -205,9 +207,9 @@
 #' the covariates.} \item{sig_eps_sq}{Either the provided `sig_eps_sq` or
 #' the estimated one, if a value wasn't provided.} \item{sig_eps_c_sq}{Either
 #' the provided `sig_eps_c_sq` or the estimated one, if a value wasn't
-#' provided.} \item{lambda.max}{Either the provided `lambda.max` or the one
-#' that was used, if a value wasn't provided. (This is returned to help with
-#' getting a reasonable range of `lambda` values for grid search.)}
+#' provided.} \item{lambda.max}{The largest `lambda` of the grid used, which
+#' is a supplied `lambda.max` only on the BIC route. (This is returned to help
+#' with getting a reasonable range of `lambda` values for grid search.)}
 #' \item{lambda.max_model_size}{The number of selected features (excluding the
 #' always-present intercept) at `lambda.max` (for `q <= 1`, the smallest model).
 #' As mentioned above, for `q <= 1` ideally this value is close to 0.}
@@ -508,10 +510,10 @@ betwfe <- function(
 #'
 #' @param simulated_obj An object of class \code{"FETWFE_simulated"} containing the simulated panel
 #' data and design matrix.
-#' @param lambda.max (Optional.) Numeric. A penalty parameter `lambda` will be
-#' selected over a grid search by BIC in order to select a single model. The
+#' @param lambda.max (Optional.) Numeric. Used only on the BIC route
+#' (`lambda_selection = "bic"`), which selects `lambda` by BIC over a grid. The
 #' largest `lambda` in the grid will be `lambda.max`. If no `lambda.max` is
-#' provided, one will be selected automatically. For `lambda <= 1`, the model
+#' provided, one will be selected automatically. When `q <= 1`, the model
 #' will be sparse, and ideally all of the following are true at once: the
 #' smallest model (the one corresponding to `lambda.max`) selects close to 0
 #' features, the largest model (the one corresponding to `lambda.min`) selects
@@ -524,12 +526,12 @@ betwfe <- function(
 #' indicate that the range of `lambda` values was too narrow. You can use the
 #' function outputs `lambda.max_model_size`, `lambda.min_model_size`, and
 #' `lambda_star_model_size` to try to assess this. Default is NA.
-#' @param lambda.min (Optional.) Numeric. The smallest `lambda` penalty
-#' parameter that will be considered. See the description of `lambda.max` for
-#' details. Default is NA.
-#' @param nlambda (Optional.) Integer. The total number of `lambda` penalty
-#' parameters that will be considered. See the description of `lambda.max` for
-#' details. Default is 100.
+#' @param lambda.min (Optional.) Numeric. Used only on the BIC route: the
+#' smallest `lambda` penalty parameter considered. See the description of
+#' `lambda.max` for details. Default is NA.
+#' @param nlambda (Optional.) Integer. Used only on the BIC route: the total
+#' number of `lambda` penalty parameters considered. See the description of
+#' `lambda.max` for details. Default is 100.
 #' @param q (Optional.) Numeric; determines what `L_q` penalty is used for the
 #' fusion regularization. `q` = 1 is the lasso, and for 0 < `q` < 1, it is
 #' possible to get standard errors and confidence intervals. `q` = 2 is ridge
@@ -571,10 +573,8 @@ betwfe <- function(
 #'   on `cv.grpreg`; the v1.13.0+ default) or `"bic"` (BIC over the
 #'   `grpreg` lambda grid; the prior default for v1.12.0 and earlier).
 #'   The default changed in v1.13.0 to address a finite-sample bias issue
-#'   documented in simulation studies (see issue #164). Pass
-#'   `lambda_selection = "bic"` to recover the prior behavior. See the
-#'   inference vignette section "Choosing the bridge penalty parameter"
-#'   for details.
+#'   documented in simulation studies (see issue #164). See the inference
+#'   vignette section "Choosing the bridge penalty parameter" for details.
 #' @param cv_folds Integer; number of folds for the CV path. Ignored when
 #'   `lambda_selection = "bic"`. Default is 10.
 #' @param cv_seed Integer or `NULL`; the seed passed to `set.seed()`
@@ -647,9 +647,9 @@ betwfe <- function(
 #' the covariates.} \item{sig_eps_sq}{Either the provided `sig_eps_sq` or
 #' the estimated one, if a value wasn't provided.} \item{sig_eps_c_sq}{Either
 #' the provided `sig_eps_c_sq` or the estimated one, if a value wasn't
-#' provided.} \item{lambda.max}{Either the provided `lambda.max` or the one
-#' that was used, if a value wasn't provided. (This is returned to help with
-#' getting a reasonable range of `lambda` values for grid search.)}
+#' provided.} \item{lambda.max}{The largest `lambda` of the grid used, which
+#' is a supplied `lambda.max` only on the BIC route. (This is returned to help
+#' with getting a reasonable range of `lambda` values for grid search.)}
 #' \item{lambda.max_model_size}{The number of selected features (excluding the
 #' always-present intercept) at `lambda.max` (for `q <= 1`, the smallest model).
 #' As mentioned above, for `q <= 1` ideally this value is close to 0.}
@@ -818,8 +818,8 @@ betwfeWithSimulatedData <- function(
 #' @description
 #' This function implements the core estimation steps of the BETWFE methodology.
 #' It takes a pre-processed design matrix and response, handles variance
-#' components, performs bridge regression, selects the optimal penalty via BIC,
-#' and calculates treatment effects and their standard errors.
+#' components, performs bridge regression, selects the optimal penalty, and
+#' calculates treatment effects and their standard errors.
 #'
 #' @param X_ints The design matrix with all fixed effects, covariates, treatment
 #'   dummies, and their interactions, as produced by `prepXints`.
@@ -888,14 +888,15 @@ betwfeWithSimulatedData <- function(
 #'   \item **Cohort Probabilities:** Calculates cohort membership probabilities
 #'     conditional on being treated, using `in_sample_counts` and `indep_counts`
 #'     if available.
-#'   \item **Bridge Regression:** Fits a bridge regression model using
-#'     `grpreg::gBridge` on `X_final_scaled` and `y_final` with the specified `q`
-#'     and lambda sequence.
-#'   \item **Coefficient Selection (BIC):** Calls `getBetaBIC` to select the
-#'     optimal `lambda` using BIC and retrieve the corresponding estimated
+#'   \item **Bridge Regression:** Fits a bridge regression model with `grpreg`
+#'     through `.dispatch_bridge_selection()`, which states the response it fits
+#'     and the units of what it returns, on `X_final_scaled` with the specified
+#'     `q` and lambda sequence.
+#'   \item **Coefficient Selection:** Selects `lambda` by cross-validation or
+#'     BIC (`lambda_selection`) and retrieves the corresponding estimated
 #'     coefficients.
-#'   \item **Handle Zero-Feature Case:** If BIC selects a model with zero features,
-#'     treatment effects are set to zero.
+#'   \item **Handle Zero-Feature Case:** If the selected model has zero
+#'     features, treatment effects are set to zero.
 #'   \item **Treatment Effect Calculation:**
 #'     \itemize{
 #'       \item Extracts cohort-specific average treatment effects (CATTs) from
@@ -929,11 +930,11 @@ betwfeWithSimulatedData <- function(
 #'   \item{indep_cohort_probs}{Estimated cohort probabilities from `indep_counts` (NA if not provided).}
 #'   \item{sig_eps_sq}{The (possibly estimated) variance of observation-level noise.}
 #'   \item{sig_eps_c_sq}{The (possibly estimated) variance of unit-level random effects.}
-#'   \item{lambda.max}{The maximum lambda value used in `grpreg`.}
+#'   \item{lambda.max}{The largest lambda of the grid (units: see `.dispatch_bridge_selection()`).}
 #'   \item{lambda.max_model_size}{Number of selected features (excluding the intercept) for `lambda.max`.}
-#'   \item{lambda.min}{The minimum lambda value used in `grpreg`.}
+#'   \item{lambda.min}{The smallest lambda of the grid (units: see `.dispatch_bridge_selection()`).}
 #'   \item{lambda.min_model_size}{Number of selected features (excluding the intercept) for `lambda.min`.}
-#'   \item{lambda_star}{The lambda value selected by BIC.}
+#'   \item{lambda_star}{The selected lambda (units: see `.dispatch_bridge_selection()`).}
 #'   \item{lambda_star_model_size}{Number of selected features (excluding the intercept) for `lambda_star`.}
 #'   \item{X_ints}{The original input design matrix from `prepXints`.}
 #'   \item{y}{The original input centered response vector from `prepXints`.}
@@ -1052,7 +1053,8 @@ betwfe_core <- function(
 		y_bic = y,
 		scale_center = scale_center,
 		scale_scale = scale_scale,
-		verbose = verbose
+		verbose = verbose,
+		sig_eps_sq = sig_eps_sq
 	)
 	beta_hat <- bridge_sel$theta_hat
 	lambda_star_ind <- bridge_sel$lambda_star_ind

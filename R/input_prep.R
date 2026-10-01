@@ -222,8 +222,6 @@ prep_for_etwfe_regression <- function(
 		G = G,
 		d = d,
 		num_treats = num_treats,
-		sig_eps_sq = sig_eps_sq,
-		sig_eps_c_sq = sig_eps_c_sq,
 		N = N,
 		fusion_structure = fusion_structure,
 		d_inv_treat = d_inv_treat

@@ -25,10 +25,10 @@ betwfeWithSimulatedData(
 \item{simulated_obj}{An object of class \code{"FETWFE_simulated"} containing the simulated panel
 data and design matrix.}
 
-\item{lambda.max}{(Optional.) Numeric. A penalty parameter \code{lambda} will be
-selected over a grid search by BIC in order to select a single model. The
+\item{lambda.max}{(Optional.) Numeric. Used only on the BIC route
+(\code{lambda_selection = "bic"}), which selects \code{lambda} by BIC over a grid. The
 largest \code{lambda} in the grid will be \code{lambda.max}. If no \code{lambda.max} is
-provided, one will be selected automatically. For \code{lambda <= 1}, the model
+provided, one will be selected automatically. When \code{q <= 1}, the model
 will be sparse, and ideally all of the following are true at once: the
 smallest model (the one corresponding to \code{lambda.max}) selects close to 0
 features, the largest model (the one corresponding to \code{lambda.min}) selects
@@ -42,13 +42,13 @@ indicate that the range of \code{lambda} values was too narrow. You can use the
 function outputs \code{lambda.max_model_size}, \code{lambda.min_model_size}, and
 \code{lambda_star_model_size} to try to assess this. Default is NA.}
 
-\item{lambda.min}{(Optional.) Numeric. The smallest \code{lambda} penalty
-parameter that will be considered. See the description of \code{lambda.max} for
-details. Default is NA.}
+\item{lambda.min}{(Optional.) Numeric. Used only on the BIC route: the
+smallest \code{lambda} penalty parameter considered. See the description of
+\code{lambda.max} for details. Default is NA.}
 
-\item{nlambda}{(Optional.) Integer. The total number of \code{lambda} penalty
-parameters that will be considered. See the description of \code{lambda.max} for
-details. Default is 100.}
+\item{nlambda}{(Optional.) Integer. Used only on the BIC route: the total
+number of \code{lambda} penalty parameters considered. See the description of
+\code{lambda.max} for details. Default is 100.}
 
 \item{q}{(Optional.) Numeric; determines what \code{L_q} penalty is used for the
 fusion regularization. \code{q} = 1 is the lasso, and for 0 < \code{q} < 1, it is
@@ -97,10 +97,8 @@ penalty parameter \code{lambda}. Either \code{"cv"} (10-fold cross-validation
 on \code{cv.grpreg}; the v1.13.0+ default) or \code{"bic"} (BIC over the
 \code{grpreg} lambda grid; the prior default for v1.12.0 and earlier).
 The default changed in v1.13.0 to address a finite-sample bias issue
-documented in simulation studies (see issue #164). Pass
-\code{lambda_selection = "bic"} to recover the prior behavior. See the
-inference vignette section "Choosing the bridge penalty parameter"
-for details.}
+documented in simulation studies (see issue #164). See the inference
+vignette section "Choosing the bridge penalty parameter" for details.}
 
 \item{cv_folds}{Integer; number of folds for the CV path. Ignored when
 \code{lambda_selection = "bic"}. Default is 10.}
@@ -178,9 +176,9 @@ interactions between the treatment effects for each cohort at each time and
 the covariates.} \item{sig_eps_sq}{Either the provided \code{sig_eps_sq} or
 the estimated one, if a value wasn't provided.} \item{sig_eps_c_sq}{Either
 the provided \code{sig_eps_c_sq} or the estimated one, if a value wasn't
-provided.} \item{lambda.max}{Either the provided \code{lambda.max} or the one
-that was used, if a value wasn't provided. (This is returned to help with
-getting a reasonable range of \code{lambda} values for grid search.)}
+provided.} \item{lambda.max}{The largest \code{lambda} of the grid used, which
+is a supplied \code{lambda.max} only on the BIC route. (This is returned to help
+with getting a reasonable range of \code{lambda} values for grid search.)}
 \item{lambda.max_model_size}{The number of selected features (excluding the
 always-present intercept) at \code{lambda.max} (for \code{q <= 1}, the smallest model).
 As mentioned above, for \code{q <= 1} ideally this value is close to 0.}

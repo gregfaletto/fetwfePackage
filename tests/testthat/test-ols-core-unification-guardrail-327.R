@@ -16,7 +16,9 @@
 # aggregates; the position-weighted sum (`wsum`) catches reorderings/swaps that
 # plain sum/sumsq would miss. The etwfe goldens are captured from the pre-refactor
 # code (commit f1c8cca); the twfeCovs goldens were re-captured after the #339
-# collapse off-by-one fix (see the note on the twfeCovs_* block below).
+# collapse off-by-one fix (see the note on the twfeCovs_* block below); and both
+# `c3_ridge` rows were re-captured after #428 made the ridge penalty unit-free
+# (see the note on `etwfe_c3_ridge`).
 
 .fp_327 <- function(fit) {
 	v <- c(
@@ -106,7 +108,8 @@
 	c7_indep = list(G = 3, T = 5, d = 2, indep = TRUE)
 )
 
-# Goldens: fingerprint of each (estimator, config) from the pre-#327 code.
+# Goldens: fingerprint of each (estimator, config); the header says which code
+# each was captured from.
 .GOLDEN_327 <- list(
 	etwfe_c1_base = c(
 		n = 74,
@@ -126,14 +129,16 @@
 		mx = 6.14708716389,
 		mn = -4.35012442767
 	),
+	# Re-captured after #428 made the ridge penalty unit-free, so not a
+	# pre-refactor value; likewise `twfeCovs_c3_ridge`.
 	etwfe_c3_ridge = c(
 		n = 74,
-		sum = 60.8355894105,
-		sumsq = 304.068391429,
-		sumabs = 108.226076316,
-		wsum = 2231.06287584,
-		mx = 6.14711965305,
-		mn = -4.35014739268
+		sum = 60.8354895793,
+		sumsq = 304.0673412106,
+		sumabs = 108.2258999016,
+		wsum = 2231.0590267747,
+		mx = 6.1471088233,
+		mn = -4.3501397377
 	),
 	etwfe_c4_d0 = c(
 		n = 40,
@@ -174,7 +179,8 @@
 	# twfeCovs goldens re-captured after the #339 collapse off-by-one fix (the
 	# pre-collapse treatment-column extraction now uses getTreatInds()), so these
 	# rows are post-#339 values, NOT the pre-refactor f1c8cca byte-identical
-	# values; the etwfe goldens above remain pre-refactor (etwfe never collapses).
+	# values; the etwfe goldens above other than `etwfe_c3_ridge` remain
+	# pre-refactor (etwfe never collapses).
 	twfeCovs_c1_base = c(
 		n = 36,
 		sum = 28.2113851932,
@@ -195,12 +201,12 @@
 	),
 	twfeCovs_c3_ridge = c(
 		n = 36,
-		sum = 28.2114481934,
-		sumsq = 174.5048553094,
-		sumabs = 48.4405272317,
-		wsum = 889.6722529844,
-		mx = 8.5911197332,
-		mn = -2.0282336359
+		sum = 28.2114271933,
+		sumsq = 174.5045643108,
+		sumabs = 48.4404921913,
+		wsum = 889.6715520479,
+		mx = 8.5911123145,
+		mn = -2.0282324251
 	),
 	twfeCovs_c4_d0 = c(
 		n = 34,

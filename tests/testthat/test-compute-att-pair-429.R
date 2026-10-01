@@ -76,7 +76,7 @@ test_that(".compute_att_pair() maps the in-sample fields correctly (#429 item 5)
 	# be the no-probability SE, i.e. sqrt(att_var_1). Both sides here are the
 	# same double produced by the same code path (R/variance_machinery.R
 	# computes att_te_se_no_prob <- sqrt(att_var_1) from the same local), so
-	# exactness is legitimate under .workflow/PROFILE.md section 12 gotcha 8.
+	# exactness is legitimate.
 	expect_identical(
 		out$in_sample_att_se_no_prob,
 		sqrt(out$in_sample_att_var_1)
@@ -99,10 +99,8 @@ test_that(".compute_att_pair() maps the in-sample fields correctly (#429 item 5)
 	# function's own output. expect_equal() at the default tolerance rather than
 	# expect_identical(): the two sides are NOT the same arithmetic -- one is a
 	# BLAS t(psi) %*% gram_inv %*% psi chain, the other a scalar literal
-	# division -- and .workflow/PROFILE.md section 12 gotcha 8 records that
-	# exactly this shape passed macOS/Windows and failed all four Linux jobs on
-	# #427's first cross-platform run. (It happens to be bit-identical on
-	# macOS/Accelerate, which is precisely the evidence that misleads.)
+	# division -- and exactness across BLAS implementations has failed before
+	# (#427).
 	#
 	# RECORDED LIMIT: because gram_inv and psi_mat are both the identity here,
 	# this pins the SCALING of att_var_1 -- sig_eps_sq, the cohort-probability
