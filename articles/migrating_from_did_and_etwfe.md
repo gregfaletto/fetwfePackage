@@ -73,7 +73,7 @@ res <- fetwfe(
 
 round(c(ATT = res$att_hat, SE = res$att_se), 4)
 #>     ATT      SE 
-#> -0.0387  0.0123
+#> -0.0412  0.0131
 ```
 
 ## From `etwfe`

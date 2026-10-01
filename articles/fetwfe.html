@@ -57,7 +57,7 @@
                         <h4 data-toc-skip class="author">Gregory
 Faletto</h4>
             
-            <h4 data-toc-skip class="date">2026-09-21</h4>
+            <h4 data-toc-skip class="date">2026-10-01</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/gregfaletto/fetwfePackage/blob/main/vignettes/fetwfe.Rmd" class="external-link"><code>vignettes/fetwfe.Rmd</code></a></small>
       <div class="d-none name"><code>fetwfe.Rmd</code></div>
@@ -349,31 +349,31 @@ estimator on the simulated data.</p>
 <pre><code><span><span class="co">## Summary of Fused Extended Two-Way Fixed Effects</span></span>
 <span><span class="co">## ================================================</span></span>
 <span><span class="co">## </span></span>
-<span><span class="co">## Overall ATT: 30.4626  (SE = 4.1889, p = 3.535e-13, 95% CI = [22.2525, 38.6726])</span></span>
+<span><span class="co">## Overall ATT: 30.4163  (SE = 4.1893, p = 3.857e-13, 95% CI = [22.2054, 38.6272])</span></span>
 <span><span class="co">## Selected: TRUE</span></span>
 <span><span class="co">## </span></span>
 <span><span class="co">## CATT (preview) [simultaneous 95% CI]:</span></span>
 <span><span class="co">##  cohort estimate        se   ci_low  ci_high p_value selected</span></span>
-<span><span class="co">##       7 58.84753 0.2165463 58.33381 59.36124       0     TRUE</span></span>
-<span><span class="co">##      11 14.00563 0.2344958 13.44934 14.56193       0     TRUE</span></span>
-<span><span class="co">##      12 20.01437 0.1830776 19.58006 20.44869       0     TRUE</span></span>
+<span><span class="co">##       7 58.80337 0.2165463 58.28966 59.31708       0     TRUE</span></span>
+<span><span class="co">##      11 13.95028 0.2344958 13.39398 14.50657       0     TRUE</span></span>
+<span><span class="co">##      12 19.97046 0.1830776 19.53614 20.40477       0     TRUE</span></span>
 <span><span class="co">## </span></span>
 <span><span class="co">## Event Study (preview) [simultaneous 95% CI]:</span></span>
 <span><span class="co">##  event_time n_cohorts   estimate        se      ci_low    ci_high      p_value</span></span>
-<span><span class="co">##           0         3   1.283027 0.2459480   0.6170528   1.949000 1.303408e-06</span></span>
-<span><span class="co">##           1         3   6.396242 0.5106127   5.0136135   7.778871 0.000000e+00</span></span>
-<span><span class="co">##           2         3  11.291839 0.9463132   8.7294283  13.854250 0.000000e+00</span></span>
-<span><span class="co">##           3         3  18.229410 1.4991523  14.1700307  22.288790 0.000000e+00</span></span>
-<span><span class="co">##           4         3  23.403446 2.0417170  17.8749187  28.931973 0.000000e+00</span></span>
-<span><span class="co">##           5         3  29.525165 2.7279717  22.1384088  36.911921 0.000000e+00</span></span>
-<span><span class="co">##           6         3  33.886714 2.9253379  25.9655329  41.807895 0.000000e+00</span></span>
-<span><span class="co">##           7         3  39.974990 3.6601035  30.0642229  49.885757 0.000000e+00</span></span>
-<span><span class="co">##           8         3  46.988747 4.0877163  35.9200972  58.057397 0.000000e+00</span></span>
-<span><span class="co">##           9         2  60.016166 8.2868965  37.5770456  82.455286 2.591150e-12</span></span>
-<span><span class="co">##          10         1  89.791179 0.5431113  88.3205512  91.261806 0.000000e+00</span></span>
-<span><span class="co">##          11         1  98.188340 0.5431113  96.7177126  99.658968 0.000000e+00</span></span>
-<span><span class="co">##          12         1 107.809727 0.4963810 106.4656349 109.153819 0.000000e+00</span></span>
-<span><span class="co">##          13         1 118.370341 0.4963810 117.0262492 119.714434 0.000000e+00</span></span>
+<span><span class="co">##           0         3   1.252577 0.2459480   0.5871883   1.917966 2.519027e-06</span></span>
+<span><span class="co">##           1         3   6.294528 0.5258451   4.8719036   7.717153 0.000000e+00</span></span>
+<span><span class="co">##           2         3  11.244461 0.9563090   8.6572568  13.831665 0.000000e+00</span></span>
+<span><span class="co">##           3         3  18.175751 1.5040594  14.1066592  22.244842 0.000000e+00</span></span>
+<span><span class="co">##           4         3  23.275938 2.0444430  17.7448894  28.806987 0.000000e+00</span></span>
+<span><span class="co">##           5         3  29.421751 2.7431200  22.0004971  36.843004 0.000000e+00</span></span>
+<span><span class="co">##           6         3  33.778843 2.9024351  25.9265776  41.631109 0.000000e+00</span></span>
+<span><span class="co">##           7         3  39.978885 3.6675003  30.0568075  49.900963 0.000000e+00</span></span>
+<span><span class="co">##           8         3  47.089868 4.0646171  36.0934275  58.086308 0.000000e+00</span></span>
+<span><span class="co">##           9         2  59.964748 8.2377683  37.6782391  82.251257 1.972311e-12</span></span>
+<span><span class="co">##          10         1  89.675810 0.5288006  88.2451894  91.106430 0.000000e+00</span></span>
+<span><span class="co">##          11         1  97.991425 0.4780144  96.6982016  99.284648 0.000000e+00</span></span>
+<span><span class="co">##          12         1 107.969914 0.4780144 106.6766913 109.263138 0.000000e+00</span></span>
+<span><span class="co">##          13         1 118.518816 0.4780144 117.2255926 119.812039 0.000000e+00</span></span>
 <span><span class="co">##          14         0   0.000000        NA          NA         NA           NA</span></span>
 <span><span class="co">##          15         0   0.000000        NA          NA         NA           NA</span></span>
 <span><span class="co">##          16         0   0.000000        NA          NA         NA           NA</span></span>
@@ -386,8 +386,8 @@ estimator on the simulated data.</p>
 <span><span class="co">##   Treated cohorts (G) : 3</span></span>
 <span><span class="co">##   Covariates (d)      : 3</span></span>
 <span><span class="co">##   Features (p)        : 223</span></span>
-<span><span class="co">##   Selected size       : 42</span></span>
-<span><span class="co">##   Lambda*             : 0.0309</span></span></code></pre>
+<span><span class="co">##   Selected size       : 40</span></span>
+<span><span class="co">##   Lambda*             : 0.0329</span></span></code></pre>
 <p>When you run this code, the function internally performs all the
 necessary data preparation, applies the fusion penalty via a bridge
 regression (using the <code>grpreg</code> package), and returns a list
@@ -444,67 +444,67 @@ empirical application in Section 8.2 of Faletto (2025).</p>
 <pre><code><span><span class="co">## Summary of Fused Extended Two-Way Fixed Effects</span></span>
 <span><span class="co">## ================================================</span></span>
 <span><span class="co">## </span></span>
-<span><span class="co">## Overall ATT: -0.0602  (SE = 0.0188, p = 0.001376, 95% CI = [-0.0970, -0.0233])</span></span>
+<span><span class="co">## Overall ATT: -0.0596  (SE = 0.0186, p = 0.001327, 95% CI = [-0.0960, -0.0232])</span></span>
 <span><span class="co">## Selected: TRUE</span></span>
 <span><span class="co">## </span></span>
 <span><span class="co">## CATT (preview) [simultaneous 95% CI]:</span></span>
 <span><span class="co">##  cohort    estimate          se       ci_low      ci_high      p_value selected</span></span>
 <span><span class="co">##    1969  0.00000000 0.000000000  0.000000000  0.000000000           NA    FALSE</span></span>
-<span><span class="co">##    1970 -0.44401171 0.046498180 -0.572555501 -0.315467911 0.000000e+00     TRUE</span></span>
-<span><span class="co">##    1971 -0.02633974 0.020112012 -0.081939211  0.029259735 8.474215e-01     TRUE</span></span>
-<span><span class="co">##    1972 -0.01611957 0.009359074 -0.041992646  0.009753503 5.468636e-01     TRUE</span></span>
-<span><span class="co">##    1973 -0.06452464 0.013062067 -0.100634602 -0.028414670 7.037395e-06     TRUE</span></span>
-<span><span class="co">##    1974 -0.03001991 0.012978739 -0.065899516  0.005859696 1.707508e-01     TRUE</span></span>
+<span><span class="co">##    1970 -0.44275152 0.046410168 -0.569265971 -0.316237066 0.000000e+00     TRUE</span></span>
+<span><span class="co">##    1971 -0.03269001 0.019825552 -0.086734613  0.021354583 5.628621e-01     TRUE</span></span>
+<span><span class="co">##    1972 -0.01624466 0.009356597 -0.041750806  0.009261495 4.947428e-01     TRUE</span></span>
+<span><span class="co">##    1973 -0.06295968 0.013023899 -0.098462923 -0.027456439 1.069370e-05     TRUE</span></span>
+<span><span class="co">##    1974 -0.03051791 0.012975096 -0.065888117  0.004852291 1.392168e-01     TRUE</span></span>
 <span><span class="co">##    1975  0.00000000 0.000000000  0.000000000  0.000000000           NA    FALSE</span></span>
-<span><span class="co">##    1976 -0.04379642 0.063672429 -0.219818270  0.132225427 9.976219e-01     TRUE</span></span>
-<span><span class="co">##    1977 -0.12389080 0.024178412 -0.190731799 -0.057049799 2.691903e-06     TRUE</span></span>
-<span><span class="co">##    1980 -0.04013226 0.061547270 -0.210279123  0.130014613 9.984244e-01     TRUE</span></span>
+<span><span class="co">##    1976 -0.03584431 0.063581218 -0.209167164  0.137478549 9.988446e-01     TRUE</span></span>
+<span><span class="co">##    1977 -0.12340880 0.024169900 -0.189296123 -0.057521483 2.634343e-06     TRUE</span></span>
+<span><span class="co">##    1980  0.00000000 0.000000000  0.000000000  0.000000000           NA    FALSE</span></span>
 <span><span class="co">##    1984  0.00000000 0.000000000  0.000000000  0.000000000           NA    FALSE</span></span>
-<span><span class="co">##    1985  0.14972560 0.050875421  0.009080967  0.290370243 2.880518e-02     TRUE</span></span>
+<span><span class="co">##    1985  0.14777033 0.050861041  0.009122763  0.286417890 2.890215e-02     TRUE</span></span>
 <span><span class="co">## </span></span>
 <span><span class="co">## Event Study (preview) [simultaneous 95% CI]:</span></span>
-<span><span class="co">##  event_time n_cohorts     estimate          se      ci_low      ci_high</span></span>
-<span><span class="co">##           0        12  0.000000000 0.000000000  0.00000000  0.000000000</span></span>
-<span><span class="co">##           1        12  0.007021230 0.008967259 -0.01711252  0.031154980</span></span>
-<span><span class="co">##           2        12  0.007021230 0.008967259 -0.01711252  0.031154980</span></span>
-<span><span class="co">##           3        12 -0.002432030 0.012215187 -0.03530699  0.030442926</span></span>
-<span><span class="co">##           4        12 -0.003617641 0.011148464 -0.03362171  0.026386424</span></span>
-<span><span class="co">##           5        12 -0.003617641 0.011148464 -0.03362171  0.026386424</span></span>
-<span><span class="co">##           6        12 -0.011132396 0.014720658 -0.05075037  0.028485581</span></span>
-<span><span class="co">##           7        12 -0.021202910 0.015683174 -0.06341132  0.021005503</span></span>
-<span><span class="co">##           8        12 -0.037944910 0.018119407 -0.08671000  0.010820183</span></span>
-<span><span class="co">##           9        12 -0.037944910 0.018119407 -0.08671000  0.010820183</span></span>
-<span><span class="co">##          10        12 -0.074506291 0.024798078 -0.14124581 -0.007766769</span></span>
-<span><span class="co">##          11        12 -0.074506291 0.024798078 -0.14124581 -0.007766769</span></span>
-<span><span class="co">##          12        11 -0.082814477 0.023894781 -0.14712294 -0.018506015</span></span>
-<span><span class="co">##          13        10 -0.085180605 0.024460058 -0.15101041 -0.019350801</span></span>
-<span><span class="co">##          14        10 -0.085180605 0.024460058 -0.15101041 -0.019350801</span></span>
-<span><span class="co">##          15        10 -0.088610436 0.024705385 -0.15510049 -0.022120380</span></span>
-<span><span class="co">##          16        10 -0.088610436 0.024705385 -0.15510049 -0.022120380</span></span>
-<span><span class="co">##          17         9 -0.116556469 0.025754859 -0.18587099 -0.047241944</span></span>
-<span><span class="co">##          18         9 -0.116556469 0.025754859 -0.18587099 -0.047241944</span></span>
-<span><span class="co">##          19         9 -0.126407960 0.030867474 -0.20948216 -0.043333761</span></span>
+<span><span class="co">##  event_time n_cohorts      estimate          se       ci_low      ci_high</span></span>
+<span><span class="co">##           0        12  0.0000000000 0.000000000  0.000000000  0.000000000</span></span>
+<span><span class="co">##           1        12  0.0116460157 0.012611495 -0.022434196  0.045726228</span></span>
+<span><span class="co">##           2        12  0.0038910962 0.004665326 -0.008716077  0.016498269</span></span>
+<span><span class="co">##           3        12 -0.0068098902 0.009707715 -0.033043177  0.019423396</span></span>
+<span><span class="co">##           4        12 -0.0008192013 0.011643412 -0.032283349  0.030644946</span></span>
+<span><span class="co">##           5        12 -0.0008192013 0.011643412 -0.032283349  0.030644946</span></span>
+<span><span class="co">##           6        12 -0.0008192013 0.011643412 -0.032283349  0.030644946</span></span>
+<span><span class="co">##           7        12 -0.0156592321 0.012529765 -0.049518582  0.018200118</span></span>
+<span><span class="co">##           8        12 -0.0484842687 0.022567145 -0.109467766  0.012499229</span></span>
+<span><span class="co">##           9        12 -0.0484842687 0.022567145 -0.109467766  0.012499229</span></span>
+<span><span class="co">##          10        12 -0.0727307973 0.023864941 -0.137221346 -0.008240249</span></span>
+<span><span class="co">##          11        12 -0.0727307973 0.023864941 -0.137221346 -0.008240249</span></span>
+<span><span class="co">##          12        11 -0.0809081942 0.022925852 -0.142861029 -0.018955360</span></span>
+<span><span class="co">##          13        10 -0.0832198568 0.023464043 -0.146627054 -0.019812659</span></span>
+<span><span class="co">##          14        10 -0.0832198568 0.023464043 -0.146627054 -0.019812659</span></span>
+<span><span class="co">##          15        10 -0.0861524319 0.023680429 -0.150144372 -0.022160491</span></span>
+<span><span class="co">##          16        10 -0.0861524319 0.023680429 -0.150144372 -0.022160491</span></span>
+<span><span class="co">##          17         9 -0.1160743346 0.024757999 -0.182978205 -0.049170464</span></span>
+<span><span class="co">##          18         9 -0.1160743346 0.024757999 -0.182978205 -0.049170464</span></span>
+<span><span class="co">##          19         9 -0.1273020613 0.030573267 -0.209920610 -0.044683513</span></span>
 <span><span class="co">##       p_value</span></span>
 <span><span class="co">##            NA</span></span>
-<span><span class="co">##  9.599013e-01</span></span>
-<span><span class="co">##  9.598298e-01</span></span>
-<span><span class="co">##  9.999999e-01</span></span>
-<span><span class="co">##  9.999595e-01</span></span>
-<span><span class="co">##  9.999596e-01</span></span>
-<span><span class="co">##  9.668442e-01</span></span>
-<span><span class="co">##  6.427008e-01</span></span>
-<span><span class="co">##  1.978968e-01</span></span>
-<span><span class="co">##  1.982691e-01</span></span>
-<span><span class="co">##  2.050725e-02</span></span>
-<span><span class="co">##  2.005599e-02</span></span>
-<span><span class="co">##  4.372433e-03</span></span>
-<span><span class="co">##  4.043219e-03</span></span>
-<span><span class="co">##  3.968237e-03</span></span>
-<span><span class="co">##  2.954746e-03</span></span>
-<span><span class="co">##  2.922874e-03</span></span>
-<span><span class="co">##  4.681714e-05</span></span>
-<span><span class="co">##  5.298056e-05</span></span>
-<span><span class="co">##  4.386078e-04</span></span>
+<span><span class="co">##  9.183921e-01</span></span>
+<span><span class="co">##  9.508661e-01</span></span>
+<span><span class="co">##  9.817454e-01</span></span>
+<span><span class="co">##  1.000000e+00</span></span>
+<span><span class="co">##  1.000000e+00</span></span>
+<span><span class="co">##  1.000000e+00</span></span>
+<span><span class="co">##  7.320385e-01</span></span>
+<span><span class="co">##  1.852246e-01</span></span>
+<span><span class="co">##  1.859000e-01</span></span>
+<span><span class="co">##  1.869699e-02</span></span>
+<span><span class="co">##  1.880563e-02</span></span>
+<span><span class="co">##  3.731292e-03</span></span>
+<span><span class="co">##  3.437810e-03</span></span>
+<span><span class="co">##  3.212477e-03</span></span>
+<span><span class="co">##  2.697897e-03</span></span>
+<span><span class="co">##  2.827168e-03</span></span>
+<span><span class="co">##  1.850846e-05</span></span>
+<span><span class="co">##  1.731991e-05</span></span>
+<span><span class="co">##  5.146827e-04</span></span>
 <span><span class="co">##   ... + 12 more event times.</span></span>
 <span><span class="co">## </span></span>
 <span><span class="co">## Model Details:</span></span>
@@ -513,12 +513,12 @@ empirical application in Section 8.2 of Faletto (2025).</p>
 <span><span class="co">##   Treated cohorts (G) : 12</span></span>
 <span><span class="co">##   Covariates (d)      : 2</span></span>
 <span><span class="co">##   Features (p)        : 908</span></span>
-<span><span class="co">##   Selected size       : 38</span></span>
+<span><span class="co">##   Selected size       : 34</span></span>
 <span><span class="co">##   Lambda*             : 0.0004</span></span></code></pre>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Average treatment effect on the treated units (in percentage point units)</span></span>
 <span><span class="fl">100</span> <span class="op">*</span> <span class="va">res</span><span class="op">$</span><span class="va">att_hat</span></span></code></pre></div>
-<pre><code><span><span class="co">## [1] -6.017477</span></span></code></pre>
+<pre><code><span><span class="co">## [1] -5.960751</span></span></code></pre>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># 95% confidence interval for ATT (in percentage point units)</span></span>
 <span></span>
@@ -526,7 +526,7 @@ empirical application in Section 8.2 of Faletto (2025).</p>
 <span><span class="va">high_att</span> <span class="op">&lt;-</span> <span class="fl">100</span> <span class="op">*</span> <span class="op">(</span><span class="va">res</span><span class="op">$</span><span class="va">att_hat</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">qnorm</a></span><span class="op">(</span><span class="fl">1</span> <span class="op">-</span> <span class="fl">0.05</span> <span class="op">/</span> <span class="fl">2</span><span class="op">)</span> <span class="op">*</span> <span class="va">res</span><span class="op">$</span><span class="va">att_se</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">low_att</span>, <span class="va">high_att</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## [1] -9.703624 -2.331330</span></span></code></pre>
+<pre><code><span><span class="co">## [1] -9.600257 -2.321244</span></span></code></pre>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Cohort average treatment effects and confidence intervals (in percentage</span></span>
 <span><span class="co"># point units). Several cohorts are pruned to exactly zero by the selection.</span></span>
@@ -540,17 +540,17 @@ empirical application in Section 8.2 of Faletto (2025).</p>
 <span><span class="va">catt_df_pct</span></span></code></pre></div>
 <pre><code><span><span class="co">##    cohort   estimate        se      ci_low     ci_high      p_value selected</span></span>
 <span><span class="co">## 1    1969   0.000000 0.0000000   0.0000000   0.0000000           NA    FALSE</span></span>
-<span><span class="co">## 2    1970 -44.401171 4.6498180 -57.2555501 -31.5467911 0.000000e+00     TRUE</span></span>
-<span><span class="co">## 3    1971  -2.633974 2.0112012  -8.1939211   2.9259735 8.474215e-01     TRUE</span></span>
-<span><span class="co">## 4    1972  -1.611957 0.9359074  -4.1992646   0.9753503 5.468636e-01     TRUE</span></span>
-<span><span class="co">## 5    1973  -6.452464 1.3062067 -10.0634602  -2.8414670 7.037395e-06     TRUE</span></span>
-<span><span class="co">## 6    1974  -3.001991 1.2978739  -6.5899516   0.5859696 1.707508e-01     TRUE</span></span>
+<span><span class="co">## 2    1970 -44.275152 4.6410168 -56.9265971 -31.6237066 0.000000e+00     TRUE</span></span>
+<span><span class="co">## 3    1971  -3.269001 1.9825552  -8.6734613   2.1354583 5.628621e-01     TRUE</span></span>
+<span><span class="co">## 4    1972  -1.624466 0.9356597  -4.1750806   0.9261495 4.947428e-01     TRUE</span></span>
+<span><span class="co">## 5    1973  -6.295968 1.3023899  -9.8462923  -2.7456439 1.069370e-05     TRUE</span></span>
+<span><span class="co">## 6    1974  -3.051791 1.2975096  -6.5888117   0.4852291 1.392168e-01     TRUE</span></span>
 <span><span class="co">## 7    1975   0.000000 0.0000000   0.0000000   0.0000000           NA    FALSE</span></span>
-<span><span class="co">## 8    1976  -4.379642 6.3672429 -21.9818270  13.2225427 9.976219e-01     TRUE</span></span>
-<span><span class="co">## 9    1977 -12.389080 2.4178412 -19.0731799  -5.7049799 2.691903e-06     TRUE</span></span>
-<span><span class="co">## 10   1980  -4.013226 6.1547270 -21.0279123  13.0014613 9.984244e-01     TRUE</span></span>
+<span><span class="co">## 8    1976  -3.584431 6.3581218 -20.9167164  13.7478549 9.988446e-01     TRUE</span></span>
+<span><span class="co">## 9    1977 -12.340880 2.4169900 -18.9296123  -5.7521483 2.634343e-06     TRUE</span></span>
+<span><span class="co">## 10   1980   0.000000 0.0000000   0.0000000   0.0000000           NA    FALSE</span></span>
 <span><span class="co">## 11   1984   0.000000 0.0000000   0.0000000   0.0000000           NA    FALSE</span></span>
-<span><span class="co">## 12   1985  14.972560 5.0875421   0.9080967  29.0370243 2.880518e-02     TRUE</span></span></code></pre>
+<span><span class="co">## 12   1985  14.777033 5.0861041   0.9122763  28.6417890 2.890215e-02     TRUE</span></span></code></pre>
 <p>FETWFE estimates that adopting a unilateral divorce law is associated
 with roughly a -6% change in the elasticity-scaled female suicide rate,
 with a 95% confidence interval that excludes zero. The sign and order of
@@ -746,11 +746,11 @@ null” below):</p>
 <span></span>
 <span><span class="va">tidy_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span></span>
 <span><span class="va">tidy_res</span></span></code></pre></div>
-<pre><code><span><span class="co">##        term estimate std.error  statistic      p.value conf.low conf.high</span></span>
-<span><span class="co">## 1       ATT 30.46257 4.1888700   7.272264 3.535113e-13 22.25254  38.67260</span></span>
-<span><span class="co">## 2  Cohort 7 58.84753 0.2165463 271.754951 0.000000e+00 58.33381  59.36124</span></span>
-<span><span class="co">## 3 Cohort 11 14.00563 0.2344958  59.726581 0.000000e+00 13.44934  14.56193</span></span>
-<span><span class="co">## 4 Cohort 12 20.01437 0.1830776 109.321780 0.000000e+00 19.58006  20.44869</span></span>
+<pre><code><span><span class="co">##        term estimate std.error  statistic     p.value conf.low conf.high</span></span>
+<span><span class="co">## 1       ATT 30.41630 4.1892949   7.260481 3.85717e-13 22.20543  38.62716</span></span>
+<span><span class="co">## 2  Cohort 7 58.80337 0.2165463 271.551041 0.00000e+00 58.28966  59.31708</span></span>
+<span><span class="co">## 3 Cohort 11 13.95028 0.2344958  59.490517 0.00000e+00 13.39398  14.50657</span></span>
+<span><span class="co">## 4 Cohort 12 19.97046 0.1830776 109.081923 0.00000e+00 19.53614  20.40477</span></span>
 <span><span class="co">##   selected</span></span>
 <span><span class="co">## 1     TRUE</span></span>
 <span><span class="co">## 2     TRUE</span></span>
@@ -762,9 +762,9 @@ components, and the inference settings:</p>
 <div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://generics.r-lib.org/reference/glance.html" class="external-link">glance</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">##   nobs n_units n_periods n_cohorts n_covs n_features lambda_star</span></span>
-<span><span class="co">## 1  600      30        20         3      3        223  0.03085978</span></span>
+<span><span class="co">## 1  600      30        20         3      3        223  0.03285173</span></span>
 <span><span class="co">##   lambda_star_model_size lambda_selection cv_folds cv_seed sig_eps_sq</span></span>
-<span><span class="co">## 1                     42               cv       10     600  0.9715147</span></span>
+<span><span class="co">## 1                     40               cv       10     600  0.9715147</span></span>
 <span><span class="co">##   sig_eps_c_sq alpha se_type indep_counts_used</span></span>
 <span><span class="co">## 1     90.72021  0.05 default             FALSE</span></span></code></pre>
 <p><code><a href="https://generics.r-lib.org/reference/augment.html" class="external-link">augment()</a></code> appends <code>.fitted</code> and
@@ -775,18 +775,18 @@ handed to <code><a href="../reference/fetwfe.html">fetwfe()</a></code> works):</
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://generics.r-lib.org/reference/augment.html" class="external-link">augment</a></span><span class="op">(</span><span class="va">result</span>, data <span class="op">=</span> <span class="va">pdata</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">##   time unit treated  response       cov1      cov2       cov3  .fitted</span></span>
 <span><span class="co">## 1    1    1       0 1.3403587 -0.8962503 0.1582893 -0.5019485 37.87288</span></span>
-<span><span class="co">## 2    2    1       0 0.2842639 -0.8962503 0.1582893 -0.5019485 39.05406</span></span>
-<span><span class="co">## 3    3    1       0 3.7222320 -0.8962503 0.1582893 -0.5019485 39.71505</span></span>
-<span><span class="co">## 4    4    1       0 3.6309664 -0.8962503 0.1582893 -0.5019485 40.88863</span></span>
-<span><span class="co">## 5    5    1       0 6.6701082 -0.8962503 0.1582893 -0.5019485 41.89930</span></span>
-<span><span class="co">## 6    6    1       0 6.0159986 -0.8962503 0.1582893 -0.5019485 43.22619</span></span>
+<span><span class="co">## 2    2    1       0 0.2842639 -0.8962503 0.1582893 -0.5019485 39.06716</span></span>
+<span><span class="co">## 3    3    1       0 3.7222320 -0.8962503 0.1582893 -0.5019485 39.70494</span></span>
+<span><span class="co">## 4    4    1       0 3.6309664 -0.8962503 0.1582893 -0.5019485 40.89490</span></span>
+<span><span class="co">## 5    5    1       0 6.6701082 -0.8962503 0.1582893 -0.5019485 41.88711</span></span>
+<span><span class="co">## 6    6    1       0 6.0159986 -0.8962503 0.1582893 -0.5019485 43.21781</span></span>
 <span><span class="co">##      .resid</span></span>
 <span><span class="co">## 1 -36.53252</span></span>
-<span><span class="co">## 2 -38.76980</span></span>
-<span><span class="co">## 3 -35.99282</span></span>
-<span><span class="co">## 4 -37.25766</span></span>
-<span><span class="co">## 5 -35.22919</span></span>
-<span><span class="co">## 6 -37.21019</span></span></code></pre>
+<span><span class="co">## 2 -38.78290</span></span>
+<span><span class="co">## 3 -35.98271</span></span>
+<span><span class="co">## 4 -37.26393</span></span>
+<span><span class="co">## 5 -35.21700</span></span>
+<span><span class="co">## 6 -37.20181</span></span></code></pre>
 <p>From there, the tidied output goes straight into <code>ggplot2</code>
 or <code>modelsummary</code> without needing to read the package’s class
 documentation:</p>

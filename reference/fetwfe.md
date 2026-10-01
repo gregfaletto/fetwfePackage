@@ -128,7 +128,11 @@ fetwfe(
   estimated by REML on the linear mixed-effects model
   `y ~ X + (1 | unit)` via
   [`lme4::lmer`](https://rdrr.io/pkg/lme4/man/lmer.html) (Bates et al.
-  2015; Patterson & Thompson 1971). Default is NA.
+  2015; Patterson & Thompson 1971). When supplied, the value also sets
+  the scale of the bridge penalty's grid (the response is divided by
+  `sqrt(sig_eps_sq)` before the fit), so at `q != 1` a value supplied in
+  the wrong units moves the estimates, not only their standard errors.
+  Default is NA.
 
 - sig_eps_c_sq:
 
@@ -144,35 +148,36 @@ fetwfe(
 
 - lambda.max:
 
-  (Optional.) Numeric. A penalty parameter `lambda` will be selected
-  over a grid search by BIC in order to select a single model. The
-  largest `lambda` in the grid will be `lambda.max`. If no `lambda.max`
-  is provided, one will be selected automatically. When `q <= 1`, the
-  model will be sparse, and ideally all of the following are true at
-  once: the smallest model (the one corresponding to `lambda.max`)
-  selects close to 0 features, the largest model (the one corresponding
-  to `lambda.min`) selects close to `p` features, `nlambda` is large
-  enough so that models are considered at every feasible model size, and
-  `nlambda` is small enough so that the computation doesn't become
-  infeasible. You may want to manually tweak `lambda.max`, `lambda.min`,
-  and `nlambda` to try to achieve these goals, particularly if the
-  selected model size is very close to the model corresponding to
-  `lambda.max` or `lambda.min`, which could indicate that the range of
-  `lambda` values was too narrow or coarse. You can use the function
-  outputs `lambda.max_model_size`, `lambda.min_model_size`, and
-  `lambda_star_model_size` to try to assess this. Default is NA.
+  (Optional.) Numeric. Used only on the BIC route
+  (`lambda_selection = "bic"`), which selects `lambda` by BIC over a
+  grid. The largest `lambda` in the grid will be `lambda.max`. If no
+  `lambda.max` is provided, one will be selected automatically. When
+  `q <= 1`, the model will be sparse, and ideally all of the following
+  are true at once: the smallest model (the one corresponding to
+  `lambda.max`) selects close to 0 features, the largest model (the one
+  corresponding to `lambda.min`) selects close to `p` features,
+  `nlambda` is large enough so that models are considered at every
+  feasible model size, and `nlambda` is small enough so that the
+  computation doesn't become infeasible. You may want to manually tweak
+  `lambda.max`, `lambda.min`, and `nlambda` to try to achieve these
+  goals, particularly if the selected model size is very close to the
+  model corresponding to `lambda.max` or `lambda.min`, which could
+  indicate that the range of `lambda` values was too narrow or coarse.
+  You can use the function outputs `lambda.max_model_size`,
+  `lambda.min_model_size`, and `lambda_star_model_size` to try to assess
+  this. Default is NA.
 
 - lambda.min:
 
-  (Optional.) Numeric. The smallest `lambda` penalty parameter that will
-  be considered. See the description of `lambda.max` for details.
-  Default is NA.
+  (Optional.) Numeric. Used only on the BIC route: the smallest `lambda`
+  penalty parameter considered. See the description of `lambda.max` for
+  details. Default is NA.
 
 - nlambda:
 
-  (Optional.) Integer. The total number of `lambda` penalty parameters
-  that will be considered. See the description of `lambda.max` for
-  details. Default is 100.
+  (Optional.) Integer. Used only on the BIC route: the total number of
+  `lambda` penalty parameters considered. See the description of
+  `lambda.max` for details. Default is 100.
 
 - q:
 
@@ -245,10 +250,8 @@ fetwfe(
   estimator was biased toward zero at moderate sample sizes, producing
   95% confidence intervals whose empirical coverage was as low as 0.00
   in some regimes. Cross-validation restores near-nominal coverage in
-  every regime tested. To recover the prior behavior — for example, when
-  reproducing analyses run against v1.12.0 or earlier — pass
-  `lambda_selection = "bic"`. See the inference vignette section
-  "Choosing the bridge penalty parameter" for details.
+  every regime tested. See the inference vignette section "Choosing the
+  bridge penalty parameter" for details.
 
 - cv_folds:
 
@@ -456,9 +459,9 @@ An object of class `fetwfe` containing the following elements:
 
 - lambda.max:
 
-  Either the provided `lambda.max` or the one that was used, if a value
-  wasn't provided. (This is returned to help with getting a reasonable
-  range of `lambda` values for grid search.)
+  The largest `lambda` of the grid used, which is a supplied
+  `lambda.max` only on the BIC route. (This is returned to help with
+  getting a reasonable range of `lambda` values for grid search.)
 
 - lambda.max_model_size:
 
@@ -786,39 +789,50 @@ if (requireNamespace("bacondecomp", quietly = TRUE)) {
 #> ===========================================
 #> 
 #> Overall Average Treatment Effect (ATT):
-#>   Estimate:   -0.0602
-#>   Std. Error: 0.0188
-#>   P-value:    0.001376
+#>   Estimate:   -0.0596
+#>   Std. Error: 0.0186
+#>   P-value:    0.001327
 #>   Selected:   TRUE
-#>   95% CI:    [-0.0970, -0.0233]
+#>   95% CI:    [-0.0960, -0.0232]
 #> 
 #> Cohort Average Treatment Effects (CATT) [simultaneous 95% CI]:
 #>  cohort    estimate          se       ci_low      ci_high      p_value selected
 #>    1969  0.00000000 0.000000000  0.000000000  0.000000000           NA    FALSE
-#>    1970 -0.44401171 0.046498180 -0.572555501 -0.315467911 0.000000e+00     TRUE
-#>    1971 -0.02633974 0.020112012 -0.081939211  0.029259735 8.474215e-01     TRUE
-#>    1972 -0.01611957 0.009359074 -0.041992646  0.009753503 5.468636e-01     TRUE
-#>    1973 -0.06452464 0.013062067 -0.100634602 -0.028414670 7.037395e-06     TRUE
-#>    1974 -0.03001991 0.012978739 -0.065899516  0.005859696 1.707508e-01     TRUE
+#>    1970 -0.44275152 0.046410168 -0.569265971 -0.316237066 0.000000e+00     TRUE
+#>    1971 -0.03269001 0.019825552 -0.086734613  0.021354583 5.628621e-01     TRUE
+#>    1972 -0.01624466 0.009356597 -0.041750806  0.009261495 4.947428e-01     TRUE
+#>    1973 -0.06295968 0.013023899 -0.098462923 -0.027456439 1.069370e-05     TRUE
+#>    1974 -0.03051791 0.012975096 -0.065888117  0.004852291 1.392168e-01     TRUE
 #>    1975  0.00000000 0.000000000  0.000000000  0.000000000           NA    FALSE
-#>    1976 -0.04379642 0.063672429 -0.219818270  0.132225427 9.976219e-01     TRUE
-#>    1977 -0.12389080 0.024178412 -0.190731799 -0.057049799 2.691903e-06     TRUE
-#>    1980 -0.04013226 0.061547270 -0.210279123  0.130014613 9.984244e-01     TRUE
+#>    1976 -0.03584431 0.063581218 -0.209167164  0.137478549 9.988446e-01     TRUE
+#>    1977 -0.12340880 0.024169900 -0.189296123 -0.057521483 2.634343e-06     TRUE
+#>    1980  0.00000000 0.000000000  0.000000000  0.000000000           NA    FALSE
 #>    1984  0.00000000 0.000000000  0.000000000  0.000000000           NA    FALSE
-#>    1985  0.14972560 0.050875421  0.009080967  0.290370243 2.880518e-02     TRUE
+#>    1985  0.14777033 0.050861041  0.009122763  0.286417890 2.890215e-02     TRUE
 #> 
 #> Event-Study Average Treatment Effects (per event time) [simultaneous 95% CI]:
-#>  event_time n_cohorts     estimate          se      ci_low    ci_high   p_value
-#>           0        12  0.000000000 0.000000000  0.00000000 0.00000000        NA
-#>           1        12  0.007021230 0.008967259 -0.01711252 0.03115498 0.9599013
-#>           2        12  0.007021230 0.008967259 -0.01711252 0.03115498 0.9598298
-#>           3        12 -0.002432030 0.012215187 -0.03530699 0.03044293 0.9999999
-#>           4        12 -0.003617641 0.011148464 -0.03362171 0.02638642 0.9999595
-#>           5        12 -0.003617641 0.011148464 -0.03362171 0.02638642 0.9999596
-#>           6        12 -0.011132396 0.014720658 -0.05075037 0.02848558 0.9668442
-#>           7        12 -0.021202910 0.015683174 -0.06341132 0.02100550 0.6427008
-#>           8        12 -0.037944910 0.018119407 -0.08671000 0.01082018 0.1978968
-#>           9        12 -0.037944910 0.018119407 -0.08671000 0.01082018 0.1982691
+#>  event_time n_cohorts      estimate          se       ci_low    ci_high
+#>           0        12  0.0000000000 0.000000000  0.000000000 0.00000000
+#>           1        12  0.0116460157 0.012611495 -0.022434196 0.04572623
+#>           2        12  0.0038910962 0.004665326 -0.008716077 0.01649827
+#>           3        12 -0.0068098902 0.009707715 -0.033043177 0.01942340
+#>           4        12 -0.0008192013 0.011643412 -0.032283349 0.03064495
+#>           5        12 -0.0008192013 0.011643412 -0.032283349 0.03064495
+#>           6        12 -0.0008192013 0.011643412 -0.032283349 0.03064495
+#>           7        12 -0.0156592321 0.012529765 -0.049518582 0.01820012
+#>           8        12 -0.0484842687 0.022567145 -0.109467766 0.01249923
+#>           9        12 -0.0484842687 0.022567145 -0.109467766 0.01249923
+#>    p_value
+#>         NA
+#>  0.9183921
+#>  0.9508661
+#>  0.9817454
+#>  1.0000000
+#>  1.0000000
+#>  1.0000000
+#>  0.7320385
+#>  0.1852246
+#>  0.1859000
 #>   ... and 22 more event times.
 #> 
 #> Model Details:
@@ -827,7 +841,7 @@ if (requireNamespace("bacondecomp", quietly = TRUE)) {
 #>   Treated cohorts (G) : 12
 #>   Covariates (d)      : 2
 #>   Features (p)        : 908
-#>   Selected size       : 38
+#>   Selected size       : 34
 #>   Lambda*             : 0.0004
 # }
 ```

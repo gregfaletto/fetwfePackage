@@ -57,7 +57,7 @@
                         <h4 data-toc-skip class="author">Gregory
 Faletto</h4>
             
-            <h4 data-toc-skip class="date">2026-09-21</h4>
+            <h4 data-toc-skip class="date">2026-10-01</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/gregfaletto/fetwfePackage/blob/main/vignettes/inference_vignette.Rmd" class="external-link"><code>vignettes/inference_vignette.Rmd</code></a></small>
       <div class="d-none name"><code>inference_vignette.Rmd</code></div>
@@ -558,8 +558,7 @@ provenance in three new top-level slots: <code>lambda_selection</code>,
 <code>cv_folds</code>, and <code>cv_seed</code>. The seed defaults to
 <code>as.integer(N * T)</code> so consecutive calls on the same dataset
 are reproducible without the user having to specify a seed.</p>
-<p>To recover the prior BIC behavior — for reproducing results from
-analyses run against v1.12.0 or earlier, for example — pass
+<p>To select <code>lambda</code> by BIC instead, pass
 <code>lambda_selection = "bic"</code>:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit_bic</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fetwfe.html">fetwfe</a></span><span class="op">(</span><span class="va">...</span>, lambda_selection <span class="op">=</span> <span class="st">"bic"</span><span class="op">)</span></span></code></pre></div>

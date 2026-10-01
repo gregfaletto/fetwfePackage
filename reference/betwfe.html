@@ -153,7 +153,11 @@ for details. It is best to provide this variance if it is known (for example,
 if you are using simulated data). If this variance is unknown, this argument
 can be omitted, and the variance will be estimated by
 REML on the linear mixed-effects model <code>y ~ X + (1 | unit)</code> via
-<code><a href="https://rdrr.io/pkg/lme4/man/lmer.html" class="external-link">lme4::lmer</a></code> (Bates et al. 2015; Patterson &amp; Thompson 1971). Default is NA.</p></dd>
+<code><a href="https://rdrr.io/pkg/lme4/man/lmer.html" class="external-link">lme4::lmer</a></code> (Bates et al. 2015; Patterson &amp; Thompson 1971). When
+supplied, the value also sets the scale of the bridge penalty's grid (the
+response is divided by <code>sqrt(sig_eps_sq)</code> before the fit), so at <code>q != 1</code> a
+value supplied in the wrong units moves the estimates, not only their
+standard errors. Default is NA.</p></dd>
 
 
 <dt id="arg-sig-eps-c-sq">sig_eps_c_sq<a class="anchor" aria-label="anchor" href="#arg-sig-eps-c-sq"></a></dt>
@@ -168,8 +172,8 @@ Patterson &amp; Thompson 1971). Default is NA.</p></dd>
 
 
 <dt id="arg-lambda-max">lambda.max<a class="anchor" aria-label="anchor" href="#arg-lambda-max"></a></dt>
-<dd><p>(Optional.) Numeric. A penalty parameter <code>lambda</code> will be
-selected over a grid search by BIC in order to select a single model. The
+<dd><p>(Optional.) Numeric. Used only on the BIC route
+(<code>lambda_selection = "bic"</code>), which selects <code>lambda</code> by BIC over a grid. The
 largest <code>lambda</code> in the grid will be <code>lambda.max</code>. If no <code>lambda.max</code> is
 provided, one will be selected automatically. When <code>q &lt;= 1</code>, the model
 will be sparse, and ideally all of the following are true at once: the
@@ -187,15 +191,15 @@ use the function outputs <code>lambda.max_model_size</code>, <code>lambda.min_mo
 
 
 <dt id="arg-lambda-min">lambda.min<a class="anchor" aria-label="anchor" href="#arg-lambda-min"></a></dt>
-<dd><p>(Optional.) Numeric. The smallest <code>lambda</code> penalty
-parameter that will be considered. See the description of <code>lambda.max</code> for
-details. Default is NA.</p></dd>
+<dd><p>(Optional.) Numeric. Used only on the BIC route: the
+smallest <code>lambda</code> penalty parameter considered. See the description of
+<code>lambda.max</code> for details. Default is NA.</p></dd>
 
 
 <dt id="arg-nlambda">nlambda<a class="anchor" aria-label="anchor" href="#arg-nlambda"></a></dt>
-<dd><p>(Optional.) Integer. The total number of <code>lambda</code> penalty
-parameters that will be considered. See the description of <code>lambda.max</code> for
-details. Default is 100.</p></dd>
+<dd><p>(Optional.) Integer. Used only on the BIC route: the total
+number of <code>lambda</code> penalty parameters considered. See the description of
+<code>lambda.max</code> for details. Default is 100.</p></dd>
 
 
 <dt id="arg-q">q<a class="anchor" aria-label="anchor" href="#arg-q"></a></dt>
@@ -258,10 +262,8 @@ penalty parameter <code>lambda</code>. Either <code>"cv"</code> (10-fold cross-v
 on <code>cv.grpreg</code>; the v1.13.0+ default) or <code>"bic"</code> (BIC over the
 <code>grpreg</code> lambda grid; the prior default for v1.12.0 and earlier).
 The default changed in v1.13.0 to address a finite-sample bias issue
-documented in simulation studies (see issue #164). Pass
-<code>lambda_selection = "bic"</code> to recover the prior behavior. See the
-inference vignette section "Choosing the bridge penalty parameter"
-for details.</p></dd>
+documented in simulation studies (see issue #164). See the inference
+vignette section "Choosing the bridge penalty parameter" for details.</p></dd>
 
 
 <dt id="arg-cv-folds">cv_folds<a class="anchor" aria-label="anchor" href="#arg-cv-folds"></a></dt>
@@ -374,9 +376,9 @@ the estimated one, if a value wasn't provided.</p></dd>
 the provided <code>sig_eps_c_sq</code> or the estimated one, if a value wasn't
 provided.</p></dd>
  <dt>lambda.max</dt>
-<dd><p>Either the provided <code>lambda.max</code> or the one
-that was used, if a value wasn't provided. (This is returned to help with
-getting a reasonable range of <code>lambda</code> values for grid search.)</p></dd>
+<dd><p>The largest <code>lambda</code> of the grid used, which
+is a supplied <code>lambda.max</code> only on the BIC route. (This is returned to help
+with getting a reasonable range of <code>lambda</code> values for grid search.)</p></dd>
 
 <dt>lambda.max_model_size</dt>
 <dd><p>The number of selected features (excluding the
@@ -620,12 +622,12 @@ S and S-PLUS</em>. Springer.</p>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> No covariates provided; skipping covariate processing.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Getting omega sqrt inverse estimate...</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Done! Time to estimate noise variances:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> 0.237330198287964</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 0.2406907081604</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Time to get sqrt inverse matrix:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> 0.00033879280090332</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 0.000347137451171875</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Estimating bridge regression with 10-fold CV...</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Done! Time for estimation:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> 0.112121343612671</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 0.117361783981323</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> No treatment features selected; all treatment effects estimated to be 0.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   cohort estimate se ci_low ci_high p_value selected</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1   2005        0  0      0       0      NA    FALSE</span>

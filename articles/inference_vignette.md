@@ -416,9 +416,7 @@ new top-level slots: `lambda_selection`, `cv_folds`, and `cv_seed`. The
 seed defaults to `as.integer(N * T)` so consecutive calls on the same
 dataset are reproducible without the user having to specify a seed.
 
-To recover the prior BIC behavior — for reproducing results from
-analyses run against v1.12.0 or earlier, for example — pass
-`lambda_selection = "bic"`:
+To select `lambda` by BIC instead, pass `lambda_selection = "bic"`:
 
 ``` r
 

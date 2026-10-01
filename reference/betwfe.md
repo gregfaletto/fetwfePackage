@@ -116,7 +116,11 @@ betwfe(
   estimated by REML on the linear mixed-effects model
   `y ~ X + (1 | unit)` via
   [`lme4::lmer`](https://rdrr.io/pkg/lme4/man/lmer.html) (Bates et al.
-  2015; Patterson & Thompson 1971). Default is NA.
+  2015; Patterson & Thompson 1971). When supplied, the value also sets
+  the scale of the bridge penalty's grid (the response is divided by
+  `sqrt(sig_eps_sq)` before the fit), so at `q != 1` a value supplied in
+  the wrong units moves the estimates, not only their standard errors.
+  Default is NA.
 
 - sig_eps_c_sq:
 
@@ -132,35 +136,36 @@ betwfe(
 
 - lambda.max:
 
-  (Optional.) Numeric. A penalty parameter `lambda` will be selected
-  over a grid search by BIC in order to select a single model. The
-  largest `lambda` in the grid will be `lambda.max`. If no `lambda.max`
-  is provided, one will be selected automatically. When `q <= 1`, the
-  model will be sparse, and ideally all of the following are true at
-  once: the smallest model (the one corresponding to `lambda.max`)
-  selects close to 0 features, the largest model (the one corresponding
-  to `lambda.min`) selects close to `p` features, `nlambda` is large
-  enough so that models are considered at every feasible model size, and
-  `nlambda` is small enough so that the computation doesn't become
-  infeasible. You may want to manually tweak `lambda.max`, `lambda.min`,
-  and `nlambda` to try to achieve these goals, particularly if the
-  selected model size is very close to the model corresponding to
-  `lambda.max` or `lambda.min`, which could indicate that the range of
-  `lambda` values was too narrow or coarse. You can use the function
-  outputs `lambda.max_model_size`, `lambda.min_model_size`, and
-  `lambda_star_model_size` to try to assess this. Default is NA.
+  (Optional.) Numeric. Used only on the BIC route
+  (`lambda_selection = "bic"`), which selects `lambda` by BIC over a
+  grid. The largest `lambda` in the grid will be `lambda.max`. If no
+  `lambda.max` is provided, one will be selected automatically. When
+  `q <= 1`, the model will be sparse, and ideally all of the following
+  are true at once: the smallest model (the one corresponding to
+  `lambda.max`) selects close to 0 features, the largest model (the one
+  corresponding to `lambda.min`) selects close to `p` features,
+  `nlambda` is large enough so that models are considered at every
+  feasible model size, and `nlambda` is small enough so that the
+  computation doesn't become infeasible. You may want to manually tweak
+  `lambda.max`, `lambda.min`, and `nlambda` to try to achieve these
+  goals, particularly if the selected model size is very close to the
+  model corresponding to `lambda.max` or `lambda.min`, which could
+  indicate that the range of `lambda` values was too narrow or coarse.
+  You can use the function outputs `lambda.max_model_size`,
+  `lambda.min_model_size`, and `lambda_star_model_size` to try to assess
+  this. Default is NA.
 
 - lambda.min:
 
-  (Optional.) Numeric. The smallest `lambda` penalty parameter that will
-  be considered. See the description of `lambda.max` for details.
-  Default is NA.
+  (Optional.) Numeric. Used only on the BIC route: the smallest `lambda`
+  penalty parameter considered. See the description of `lambda.max` for
+  details. Default is NA.
 
 - nlambda:
 
-  (Optional.) Integer. The total number of `lambda` penalty parameters
-  that will be considered. See the description of `lambda.max` for
-  details. Default is 100.
+  (Optional.) Integer. Used only on the BIC route: the total number of
+  `lambda` penalty parameters considered. See the description of
+  `lambda.max` for details. Default is 100.
 
 - q:
 
@@ -224,8 +229,7 @@ betwfe(
   default) or `"bic"` (BIC over the `grpreg` lambda grid; the prior
   default for v1.12.0 and earlier). The default changed in v1.13.0 to
   address a finite-sample bias issue documented in simulation studies
-  (see issue \#164). Pass `lambda_selection = "bic"` to recover the
-  prior behavior. See the inference vignette section "Choosing the
+  (see issue \#164). See the inference vignette section "Choosing the
   bridge penalty parameter" for details.
 
 - cv_folds:
@@ -364,9 +368,9 @@ An object of class `betwfe` containing the following elements:
 
 - lambda.max:
 
-  Either the provided `lambda.max` or the one that was used, if a value
-  wasn't provided. (This is returned to help with getting a reasonable
-  range of `lambda` values for grid search.)
+  The largest `lambda` of the grid used, which is a supplied
+  `lambda.max` only on the BIC route. (This is returned to help with
+  getting a reasonable range of `lambda` values for grid search.)
 
 - lambda.max_model_size:
 
@@ -666,12 +670,12 @@ if (requireNamespace("bacondecomp", quietly = TRUE)) {
 #> No covariates provided; skipping covariate processing.
 #> Getting omega sqrt inverse estimate...
 #> Done! Time to estimate noise variances:
-#> 0.237330198287964
+#> 0.2406907081604
 #> Time to get sqrt inverse matrix:
-#> 0.00033879280090332
+#> 0.000347137451171875
 #> Estimating bridge regression with 10-fold CV...
 #> Done! Time for estimation:
-#> 0.112121343612671
+#> 0.117361783981323
 #> No treatment features selected; all treatment effects estimated to be 0.
 #>   cohort estimate se ci_low ci_high p_value selected
 #> 1   2005        0  0      0       0      NA    FALSE

@@ -82,10 +82,10 @@ data and design matrix.</p></dd>
 
 
 <dt id="arg-lambda-max">lambda.max<a class="anchor" aria-label="anchor" href="#arg-lambda-max"></a></dt>
-<dd><p>(Optional.) Numeric. A penalty parameter <code>lambda</code> will be
-selected over a grid search by BIC in order to select a single model. The
+<dd><p>(Optional.) Numeric. Used only on the BIC route
+(<code>lambda_selection = "bic"</code>), which selects <code>lambda</code> by BIC over a grid. The
 largest <code>lambda</code> in the grid will be <code>lambda.max</code>. If no <code>lambda.max</code> is
-provided, one will be selected automatically. For <code>lambda &lt;= 1</code>, the model
+provided, one will be selected automatically. When <code>q &lt;= 1</code>, the model
 will be sparse, and ideally all of the following are true at once: the
 smallest model (the one corresponding to <code>lambda.max</code>) selects close to 0
 features, the largest model (the one corresponding to <code>lambda.min</code>) selects
@@ -101,15 +101,15 @@ function outputs <code>lambda.max_model_size</code>, <code>lambda.min_model_size
 
 
 <dt id="arg-lambda-min">lambda.min<a class="anchor" aria-label="anchor" href="#arg-lambda-min"></a></dt>
-<dd><p>(Optional.) Numeric. The smallest <code>lambda</code> penalty
-parameter that will be considered. See the description of <code>lambda.max</code> for
-details. Default is NA.</p></dd>
+<dd><p>(Optional.) Numeric. Used only on the BIC route: the
+smallest <code>lambda</code> penalty parameter considered. See the description of
+<code>lambda.max</code> for details. Default is NA.</p></dd>
 
 
 <dt id="arg-nlambda">nlambda<a class="anchor" aria-label="anchor" href="#arg-nlambda"></a></dt>
-<dd><p>(Optional.) Integer. The total number of <code>lambda</code> penalty
-parameters that will be considered. See the description of <code>lambda.max</code> for
-details. Default is 100.</p></dd>
+<dd><p>(Optional.) Integer. Used only on the BIC route: the total
+number of <code>lambda</code> penalty parameters considered. See the description of
+<code>lambda.max</code> for details. Default is 100.</p></dd>
 
 
 <dt id="arg-q">q<a class="anchor" aria-label="anchor" href="#arg-q"></a></dt>
@@ -172,10 +172,8 @@ penalty parameter <code>lambda</code>. Either <code>"cv"</code> (10-fold cross-v
 on <code>cv.grpreg</code>; the v1.13.0+ default) or <code>"bic"</code> (BIC over the
 <code>grpreg</code> lambda grid; the prior default for v1.12.0 and earlier).
 The default changed in v1.13.0 to address a finite-sample bias issue
-documented in simulation studies (see issue #164). Pass
-<code>lambda_selection = "bic"</code> to recover the prior behavior. See the
-inference vignette section "Choosing the bridge penalty parameter"
-for details.</p></dd>
+documented in simulation studies (see issue #164). See the inference
+vignette section "Choosing the bridge penalty parameter" for details.</p></dd>
 
 
 <dt id="arg-cv-folds">cv_folds<a class="anchor" aria-label="anchor" href="#arg-cv-folds"></a></dt>
@@ -288,9 +286,9 @@ the estimated one, if a value wasn't provided.</p></dd>
 the provided <code>sig_eps_c_sq</code> or the estimated one, if a value wasn't
 provided.</p></dd>
  <dt>lambda.max</dt>
-<dd><p>Either the provided <code>lambda.max</code> or the one
-that was used, if a value wasn't provided. (This is returned to help with
-getting a reasonable range of <code>lambda</code> values for grid search.)</p></dd>
+<dd><p>The largest <code>lambda</code> of the grid used, which
+is a supplied <code>lambda.max</code> only on the BIC route. (This is returned to help
+with getting a reasonable range of <code>lambda</code> values for grid search.)</p></dd>
 
 <dt>lambda.max_model_size</dt>
 <dd><p>The number of selected features (excluding the

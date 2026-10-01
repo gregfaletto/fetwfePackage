@@ -44,35 +44,35 @@ betwfeWithSimulatedData(
 
 - lambda.max:
 
-  (Optional.) Numeric. A penalty parameter `lambda` will be selected
-  over a grid search by BIC in order to select a single model. The
-  largest `lambda` in the grid will be `lambda.max`. If no `lambda.max`
-  is provided, one will be selected automatically. For `lambda <= 1`,
-  the model will be sparse, and ideally all of the following are true at
-  once: the smallest model (the one corresponding to `lambda.max`)
-  selects close to 0 features, the largest model (the one corresponding
-  to `lambda.min`) selects close to `p` features, `nlambda` is large
-  enough so that models are considered at every feasible model size, and
-  `nlambda` is small enough so that the computation doesn't become
-  infeasible. You may want to manually tweak `lambda.max`, `lambda.min`,
-  and `nlambda` to try to achieve these goals, particularly if the
-  selected model size is very close to the model corresponding to
-  `lambda.max` or `lambda.min`, which could indicate that the range of
-  `lambda` values was too narrow. You can use the function outputs
-  `lambda.max_model_size`, `lambda.min_model_size`, and
-  `lambda_star_model_size` to try to assess this. Default is NA.
+  (Optional.) Numeric. Used only on the BIC route
+  (`lambda_selection = "bic"`), which selects `lambda` by BIC over a
+  grid. The largest `lambda` in the grid will be `lambda.max`. If no
+  `lambda.max` is provided, one will be selected automatically. When
+  `q <= 1`, the model will be sparse, and ideally all of the following
+  are true at once: the smallest model (the one corresponding to
+  `lambda.max`) selects close to 0 features, the largest model (the one
+  corresponding to `lambda.min`) selects close to `p` features,
+  `nlambda` is large enough so that models are considered at every
+  feasible model size, and `nlambda` is small enough so that the
+  computation doesn't become infeasible. You may want to manually tweak
+  `lambda.max`, `lambda.min`, and `nlambda` to try to achieve these
+  goals, particularly if the selected model size is very close to the
+  model corresponding to `lambda.max` or `lambda.min`, which could
+  indicate that the range of `lambda` values was too narrow. You can use
+  the function outputs `lambda.max_model_size`, `lambda.min_model_size`,
+  and `lambda_star_model_size` to try to assess this. Default is NA.
 
 - lambda.min:
 
-  (Optional.) Numeric. The smallest `lambda` penalty parameter that will
-  be considered. See the description of `lambda.max` for details.
-  Default is NA.
+  (Optional.) Numeric. Used only on the BIC route: the smallest `lambda`
+  penalty parameter considered. See the description of `lambda.max` for
+  details. Default is NA.
 
 - nlambda:
 
-  (Optional.) Integer. The total number of `lambda` penalty parameters
-  that will be considered. See the description of `lambda.max` for
-  details. Default is 100.
+  (Optional.) Integer. Used only on the BIC route: the total number of
+  `lambda` penalty parameters considered. See the description of
+  `lambda.max` for details. Default is 100.
 
 - q:
 
@@ -136,8 +136,7 @@ betwfeWithSimulatedData(
   default) or `"bic"` (BIC over the `grpreg` lambda grid; the prior
   default for v1.12.0 and earlier). The default changed in v1.13.0 to
   address a finite-sample bias issue documented in simulation studies
-  (see issue \#164). Pass `lambda_selection = "bic"` to recover the
-  prior behavior. See the inference vignette section "Choosing the
+  (see issue \#164). See the inference vignette section "Choosing the
   bridge penalty parameter" for details.
 
 - cv_folds:
@@ -276,9 +275,9 @@ An object of class `betwfe` containing the following elements:
 
 - lambda.max:
 
-  Either the provided `lambda.max` or the one that was used, if a value
-  wasn't provided. (This is returned to help with getting a reasonable
-  range of `lambda` values for grid search.)
+  The largest `lambda` of the grid used, which is a supplied
+  `lambda.max` only on the BIC route. (This is returned to help with
+  getting a reasonable range of `lambda` values for grid search.)
 
 - lambda.max_model_size:
 
