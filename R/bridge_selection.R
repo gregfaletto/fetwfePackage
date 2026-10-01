@@ -352,7 +352,7 @@ getBetaCV <- function(
 #'   on the raw lambda" convention (cf. `getBetaCV()`). It fits `y_final` divided
 #'   by `.bridge_response_scale(y = y_final)` (the helper's standard-deviation
 #'   mode) and multiplies the coefficients back, so `grpreg`'s absolute `delta`
-#'   cannot zero the nuisance of a small-unit response (#428); at `q = 1` the
+#'   cannot zero the nuisance of a small-valued response (#428); at `q = 1` the
 #'   standardized grid maps back to the unstandardized one, so wherever `delta`
 #'   does not bind this is the unstandardized fit.
 #'
