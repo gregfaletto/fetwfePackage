@@ -90,9 +90,9 @@
   components, so it grew with the square of the response's scale, and the
   estimators then multiply their coefficients by one plus that penalty. For a
   response with large values, `fetwfe()`, `betwfe()`, `etwfe()` and
-  `twfeCovs()` returned inflated estimates and standard errors, increasingly so
-  as the values grew, and `fetwfe()` could fail with a `grpreg` convergence
-  error. The penalty is now unit-free.
+  `twfeCovs()` returned inflated estimates and distorted standard errors,
+  increasingly so as the values grew, and `fetwfe()` could fail with a `grpreg`
+  convergence error. The penalty is now unit-free.
 
 ### Defensive improvements
 
