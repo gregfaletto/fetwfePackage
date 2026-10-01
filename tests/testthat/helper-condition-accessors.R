@@ -11,8 +11,7 @@
 # These two degrade to a readable value instead of raising, so every assertion
 # in a loop still runs and a red cell names itself.
 #
-# Extracted here (#436) once a third byte-identical copy arrived; testthat
-# sources helper-*.R before the tests.
+# testthat sources helper-*.R before the tests (#436).
 
 msg_of <- function(x) {
 	if (inherits(x, "condition")) {
