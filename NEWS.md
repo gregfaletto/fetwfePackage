@@ -74,11 +74,11 @@
   `add_ridge` gives the same fit as before, except where `delta` had distorted
   the old fit.
   Because a supplied `sig_eps_sq` now also sets where the lambda grid sits, a
-  variance supplied in the wrong units moves the estimates, not only their
-  standard errors. `fetwfe(gls = FALSE)` fits, which estimate no noise
-  variance, are unchanged and still depend on the units (#490). The `q = 1`
-  nuisance behind `debiasedATT()` and the high-dimensional bootstrap band of
-  `simultaneousCIs()` is standardized too, by the response's standard
+  variance supplied in the wrong units moves the estimates at `q != 1`, not
+  only their standard errors. `fetwfe(gls = FALSE)` fits, which estimate no
+  noise variance, are unchanged and still depend on the units (#490). The
+  `q = 1` nuisance behind `debiasedATT()` and the high-dimensional bootstrap
+  band of `simultaneousCIs()` is standardized too, by the response's standard
   deviation, so it no longer depends on the units either. Existing estimates
   move: on the paper's empirical applications at the default `cv_seed`, the
   castle-doctrine ATT moves from 5.22% to 5.75%, the divorce-law ATT from
