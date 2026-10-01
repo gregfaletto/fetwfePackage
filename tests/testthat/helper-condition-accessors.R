@@ -11,7 +11,7 @@
 # These two degrade to a readable value instead of raising, so every assertion
 # in a loop still runs and a red cell names itself.
 #
-# testthat sources helper-*.R before the tests (#436).
+# testthat sources helper-*.R before the tests.
 
 msg_of <- function(x) {
 	if (inherits(x, "condition")) {
