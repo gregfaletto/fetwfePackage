@@ -17,8 +17,8 @@
 # THE ASSERTIONS COME IN TWO KINDS, and mixing them up is how a red-green
 # measurement gets taken over the wrong set:
 #   * "(red)" blocks fail on main and pass here -- they demonstrate the change.
-#   * "(guardrail)" blocks pass on main too -- they constrain the implementation
-#     so a too-wide predicate, a lost carve-out, or a moved number goes red.
+#   * "(guardrail)" blocks constrain the implementation, so a too-wide
+#     predicate, a lost carve-out, or a moved number goes red.
 #
 # EVERY text anchor in this file passes `fixed = TRUE`. Two of the natural
 # anchors here are broken as regexes, both measured: `grepl("use a fetwfe() fit",
