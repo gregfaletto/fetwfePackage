@@ -502,9 +502,8 @@ test_that("a degenerate p >= NT fit keeps only its #304 warning (#433)", {
 #    significant digits and asserted to 1e-8.
 #
 #    NOT `identical()` and NOT `tolerance = 0`: these are qmvnorm / Gram-inverse
-#    quantities and the gate runs on six platform/BLAS combinations, four of
-#    them OpenBLAS. Exact assertions have passed on Accelerate and Windows
-#    and failed all four Linux jobs at 1-4 ULPs (#427).
+#    quantities, and exact assertions on such quantities have failed across
+#    BLAS implementations (#427).
 #
 #    WHAT 1e-8 ACTUALLY ACCEPTS HERE (the edition-2 comparison switches between
 #    relative and absolute with the magnitude of the expected value, so "1e-8"
@@ -522,9 +521,7 @@ test_that("a degenerate p >= NT fit keeps only its #304 warning (#433)", {
 #    fixture's three cohorts (the `sim` fixture above), so only one cohort has
 #    positive variance and the cohort band takes the `sum(nondeg) <= 1` bypass,
 #    whose critical value is the pointwise one (the bypass counts non-degenerate
-#    effects, not effects). So a cohort pin is very nearly vacuous. The
-#    event_study band's `K` and its critical value above the pointwise one are
-#    both asserted below, so the pin covers the critical-value machinery too.
+#    effects, not effects). So a cohort pin is very nearly vacuous.
 # ------------------------------------------------------------------------------
 test_that("the p >= NT band's numbers are pinned", {
 	skip_on_cran()
