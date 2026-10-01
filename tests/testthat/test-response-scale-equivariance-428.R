@@ -583,6 +583,36 @@ test_that("fetwfe() and betwfe() standardize by the sig_eps_sq their GLS step us
 	}
 })
 
+test_that("the bridge fits the GLS response divided by sqrt(sig_eps_sq) (#428)", {
+	# The response's own SD is equivariant too, so only the response that
+	# reaches grpreg tells it from the noise SD.
+	real_cv <- fetwfe:::getBetaCV
+	real_bic <- fetwfe:::.fit_bridge_with_lambda_path
+	for (est in c("fetwfe", "betwfe")) {
+		for (route in c("cv", "bic")) {
+			rec <- new.env(parent = emptyenv())
+			fit <- testthat::with_mocked_bindings(
+				.rse428_scaled_fit(get(est), 1, lambda_selection = route),
+				getBetaCV = function(...) {
+					rec$y <- list(...)$y_final
+					real_cv(...)
+				},
+				.fit_bridge_with_lambda_path = function(...) {
+					rec$y <- list(...)$y_final
+					real_bic(...)
+				},
+				.package = "fetwfe"
+			)
+			expect_equal(
+				as.numeric(rec$y) * sqrt(fit$sig_eps_sq),
+				as.numeric(fit$internal$y_final),
+				tolerance = 1e-12,
+				info = paste(est, route)
+			)
+		}
+	}
+})
+
 # The p >= NT regime, where `debiasedATT()` and the bootstrap band refit the
 # q = 1 nuisance. Each block builds a high-dimensional fit per scale, so it
 # skips on CRAN, as the file that owns this fixture does.
