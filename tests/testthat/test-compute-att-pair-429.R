@@ -99,10 +99,9 @@ test_that(".compute_att_pair() maps the in-sample fields correctly (#429 item 5)
 	# function's own output. expect_equal() at the default tolerance rather than
 	# expect_identical(): the two sides are NOT the same arithmetic -- one is a
 	# BLAS t(psi) %*% gram_inv %*% psi chain, the other a scalar literal
-	# division -- and exactly this shape passed macOS/Windows and failed all
-	# four Linux jobs on #427's first cross-platform run. (It happens to be
-	# bit-identical on macOS/Accelerate, which is precisely the evidence that
-	# misleads.)
+	# division -- and exactness across BLAS implementations has failed before
+	# (#427). (It happens to be bit-identical on macOS/Accelerate, which is
+	# precisely the evidence that misleads.)
 	#
 	# RECORDED LIMIT: because gram_inv and psi_mat are both the identity here,
 	# this pins the SCALING of att_var_1 -- sig_eps_sq, the cohort-probability
