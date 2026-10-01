@@ -245,8 +245,7 @@ test_that("betwfe(add_ridge = TRUE) att_hat pin", {
 	)
 	# Pin to BIC because the recorded reference value below was generated
 	# under the BIC selection path. The default is CV, which produces a
-	# slightly different att_hat on this fixture; that's expected, and is
-	# tested separately in test-lambda-selection-164.R.
+	# slightly different att_hat on this fixture.
 	fit <- betwfeWithSimulatedData(
 		sim,
 		add_ridge = TRUE,
