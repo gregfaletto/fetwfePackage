@@ -16,7 +16,7 @@
 #
 # THE ASSERTIONS COME IN TWO KINDS, and mixing them up is how a red-green
 # measurement gets taken over the wrong set:
-#   * "(red)" blocks fail on main and pass here -- they demonstrate the change.
+#   * "(red)" blocks fail on #433's base and pass here: they show the change.
 #   * "(guardrail)" blocks constrain the implementation, so a too-wide
 #     predicate, a lost carve-out, or a moved number goes red.
 #
