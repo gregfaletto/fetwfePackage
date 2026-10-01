@@ -501,9 +501,8 @@ test_that("a degenerate p >= NT fit keeps only its #304 warning (#433)", {
 # 9. (guardrail, numeric) The band's values on this fixture, recorded to 15
 #    significant digits and asserted to 1e-8.
 #
-#    NOT `identical()` and NOT `tolerance = 0`: these are qmvnorm / Gram-inverse
-#    quantities, and exact assertions on such quantities have failed across
-#    BLAS implementations (#427).
+#    NOT `identical()` and NOT `tolerance = 0` (#427): these are qmvnorm /
+#    Gram-inverse quantities.
 #
 #    WHAT 1e-8 ACTUALLY ACCEPTS HERE (the edition-2 comparison switches between
 #    relative and absolute with the magnitude of the expected value, so "1e-8"
