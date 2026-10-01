@@ -8,8 +8,8 @@
 
 # .untransform_scaled_theta
 #' @title Back-transform scaled bridge coefficients to the unscaled design
-#' @description Shared rescaling step. Given a length-`(p + 1)` coefficient vector `theta_hat_scaled` (intercept
-#'   at position 1, slopes at 2..p+1) on the my_scale()-centered/scaled
+#' @description Given a length-`(p + 1)` coefficient vector `theta_hat_scaled`
+#'   (intercept first, then the p slopes) on the my_scale()-centered/scaled
 #'   design, returns the same shape for the unscaled design.
 #'
 #'   The back-transform: `beta_j = beta_scaled_j / scale_scale_j` for
@@ -91,7 +91,7 @@
 #'   The set of coefficients corresponding to the minimum BIC is chosen. If multiple
 #'   lambdas yield the same minimum BIC, the one resulting in the smallest model
 #'   size (fewest non-zero coefficients) is selected.
-#'   The final returned `theta_hat` also has its slopes and intercept adjusted back to the unscaled design.
+#'   The returned `theta_hat` is back-transformed to the unscaled design.
 #' @keywords internal
 #' @noRd
 getBetaBIC <- function(fit, N, T, p, X_mod, y, scale_center, scale_scale) {
