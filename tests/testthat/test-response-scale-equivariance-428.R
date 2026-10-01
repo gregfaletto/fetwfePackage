@@ -99,20 +99,24 @@
 }
 
 # The pointwise quantities of a fit. `bounds` reads `catt_df`'s interval, so it
-# belongs to `ci_type = "pointwise"` fits only.
+# belongs to `ci_type = "pointwise"` fits only. A fit returns a supplied
+# variance as given, so `variances = FALSE` is for fits that supply them.
 .rse428_fit_quantities <- function(
 	q = 0.5,
 	penalized = TRUE,
 	ses = TRUE,
-	bounds = TRUE
+	bounds = TRUE,
+	variances = TRUE
 ) {
 	out <- list(
 		att_hat = .rse428_q(1, function(f) f$att_hat),
 		beta_hat = .rse428_q(1, function(f) f$beta_hat),
-		catt_hats = .rse428_q(1, function(f) f$catt_hats),
-		sig_eps_sq = .rse428_q(2, function(f) f$sig_eps_sq),
-		sig_eps_c_sq = .rse428_q(2, function(f) f$sig_eps_c_sq)
+		catt_hats = .rse428_q(1, function(f) f$catt_hats)
 	)
+	if (variances) {
+		out$sig_eps_sq <- .rse428_q(2, function(f) f$sig_eps_sq)
+		out$sig_eps_c_sq <- .rse428_q(2, function(f) f$sig_eps_c_sq)
+	}
 	if (ses) {
 		out$att_se <- .rse428_q(1, function(f) f$att_se)
 		out$catt_ses <- .rse428_q(1, function(f) f$catt_ses)
@@ -287,7 +291,11 @@ test_that("fetwfe() with supplied variances rescaled with the response is equiva
 		.RSE428_SCALES
 	)
 	.rse428_expect_live(at(1))
-	.rse428_expect_equivariant(at, .rse428_fit_quantities(), .RSE428_SCALES)
+	.rse428_expect_equivariant(
+		at,
+		.rse428_fit_quantities(variances = FALSE),
+		.RSE428_SCALES
+	)
 })
 
 test_that("fetwfe(gls = FALSE) keeps the unstandardized grid: non-regression pin (#490)", {
@@ -621,7 +629,11 @@ test_that("high dimensions, gls = TRUE with supplied variances: the fit, debiase
 	expect_gte(ref$p, ref$N * ref$T)
 	.rse428_expect_live(ref)
 	.rse428_expect_nuisance_live(ref)
-	.rse428_expect_equivariant(at, .rse428_fit_quantities(), .RSE428_SCALES)
+	.rse428_expect_equivariant(
+		at,
+		.rse428_fit_quantities(variances = FALSE),
+		.RSE428_SCALES
+	)
 	.rse428_expect_equivariant(
 		function(k) debiasedATT(at(k)),
 		list(
