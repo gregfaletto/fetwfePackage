@@ -28,7 +28,7 @@ data and design matrix.}
 \item{lambda.max}{(Optional.) Numeric. Used only on the BIC route
 (\code{lambda_selection = "bic"}), which selects \code{lambda} by BIC over a grid. The
 largest \code{lambda} in the grid will be \code{lambda.max}. If no \code{lambda.max} is
-provided, one will be selected automatically. For \code{lambda <= 1}, the model
+provided, one will be selected automatically. When \code{q <= 1}, the model
 will be sparse, and ideally all of the following are true at once: the
 smallest model (the one corresponding to \code{lambda.max}) selects close to 0
 features, the largest model (the one corresponding to \code{lambda.min}) selects
