@@ -2,9 +2,9 @@
 # supplied variance by k^2, must multiply every estimate, standard error,
 # interval bound and coefficient by k, every lambda by k^(2 - q) and every
 # variance by k^2, and leave model sizes, critical values and p-values unchanged.
-# Each block compares the fits at k against the fit at k = 1, after dividing out
-# that power of k, and first asserts that the k = 1 reference is not degenerate:
-# a null model is equivariant trivially.
+# Each equivariance block compares the fits at k against the fit at k = 1,
+# after dividing out that power of k, and first asserts that the k = 1
+# reference is not degenerate: a null model is equivariant trivially.
 #
 # Two exceptions, each cited where it applies: simultaneous-band quantities are
 # compared only at scales where the band's absolute variance floor cannot bind
