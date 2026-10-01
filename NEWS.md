@@ -68,8 +68,9 @@
   a supplied variance by `c^2`, now multiplies every estimate, standard error
   and pointwise interval bound by `c`; a default (simultaneous) fit's bounds
   and p-values on a small-unit response still move until #489 lands. The
-  reported lambda values stay in the response's units, and a supplied
-  `lambda.max` gives the same fit as before.
+  reported lambda values stay in the response's units, and on the BIC route a
+  supplied `lambda.max` gives the same fit as before, except where `delta` had
+  distorted the old fit.
   Because a supplied `sig_eps_sq` now also sets where the lambda grid sits, a
   variance supplied in the wrong units moves the estimates, not only their
   standard errors. `fetwfe(gls = FALSE)` fits, which estimate no noise
