@@ -61,10 +61,11 @@
   response** (#428). Both fit the bridge penalty with `grpreg`, whose lambda
   grid and absolute threshold `delta` together made the estimate depend on the
   response's units; either can return the null model for a response whose
-  values are very small (or, at `q > 1`, very large). Both estimators now
-  divide the GLS-transformed response by the noise standard deviation, the
-  square root of `sig_eps_sq` (estimated or supplied), before the fit and scale
-  the coefficients back, on both the cross-validation and BIC routes.
+  values are very small, and at `q > 1` the grid can for very large ones. Both
+  estimators now divide the GLS-transformed response by the noise standard
+  deviation, the square root of `sig_eps_sq` (estimated or supplied), before
+  the fit and scale the coefficients back, on both the cross-validation and
+  BIC routes.
   Multiplying the response by any `c > 0`, and a supplied variance by `c^2`,
   now multiplies every estimate, standard error and pointwise interval bound by
   `c`; a default (simultaneous) fit's bounds and p-values on a response with
