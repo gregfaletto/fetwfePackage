@@ -584,8 +584,8 @@ test_that("fetwfe() and betwfe() standardize by the sig_eps_sq their GLS step us
 })
 
 test_that("the bridge fits the GLS response divided by sqrt(sig_eps_sq) (#428)", {
-	# The response's own SD is equivariant too, so only the response that
-	# reaches grpreg tells it from the noise SD.
+	# The response's own SD is equivariant too, so equivariance alone cannot
+	# tell it from the noise SD.
 	real_cv <- fetwfe:::getBetaCV
 	real_bic <- fetwfe:::.fit_bridge_with_lambda_path
 	for (est in c("fetwfe", "betwfe")) {
