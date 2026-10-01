@@ -122,13 +122,13 @@ indicate that the range of \code{lambda} values was too narrow or coarse. You ca
 use the function outputs \code{lambda.max_model_size}, \code{lambda.min_model_size}, and
 \code{lambda_star_model_size} to try to assess this. Default is NA.}
 
-\item{lambda.min}{(Optional.) Numeric. The smallest \code{lambda} penalty
-parameter that will be considered. See the description of \code{lambda.max} for
-details. Default is NA.}
+\item{lambda.min}{(Optional.) Numeric. Used only on the BIC route: the
+smallest \code{lambda} penalty parameter considered. See the description of
+\code{lambda.max} for details. Default is NA.}
 
-\item{nlambda}{(Optional.) Integer. The total number of \code{lambda} penalty
-parameters that will be considered. See the description of \code{lambda.max} for
-details. Default is 100.}
+\item{nlambda}{(Optional.) Integer. Used only on the BIC route: the total
+number of \code{lambda} penalty parameters considered. See the description of
+\code{lambda.max} for details. Default is 100.}
 
 \item{q}{(Optional.) Numeric; determines what \code{L_q} penalty is used for the
 regularization. \code{q} = 1 is the lasso, and for 0 < \code{q} < 1, it is

@@ -86,12 +86,12 @@
 #' indicate that the range of `lambda` values was too narrow or coarse. You can
 #' use the function outputs `lambda.max_model_size`, `lambda.min_model_size`, and
 #' `lambda_star_model_size` to try to assess this. Default is NA.
-#' @param lambda.min (Optional.) Numeric. The smallest `lambda` penalty
-#' parameter that will be considered. See the description of `lambda.max` for
-#' details. Default is NA.
-#' @param nlambda (Optional.) Integer. The total number of `lambda` penalty
-#' parameters that will be considered. See the description of `lambda.max` for
-#' details. Default is 100.
+#' @param lambda.min (Optional.) Numeric. Used only on the BIC route: the
+#' smallest `lambda` penalty parameter considered. See the description of
+#' `lambda.max` for details. Default is NA.
+#' @param nlambda (Optional.) Integer. Used only on the BIC route: the total
+#' number of `lambda` penalty parameters considered. See the description of
+#' `lambda.max` for details. Default is 100.
 #' @param q (Optional.) Numeric; determines what `L_q` penalty is used for the
 #' regularization. `q` = 1 is the lasso, and for 0 < `q` < 1, it is
 #' possible to get standard errors and confidence intervals. `q` = 2 is ridge
@@ -526,12 +526,12 @@ betwfe <- function(
 #' indicate that the range of `lambda` values was too narrow. You can use the
 #' function outputs `lambda.max_model_size`, `lambda.min_model_size`, and
 #' `lambda_star_model_size` to try to assess this. Default is NA.
-#' @param lambda.min (Optional.) Numeric. The smallest `lambda` penalty
-#' parameter that will be considered. See the description of `lambda.max` for
-#' details. Default is NA.
-#' @param nlambda (Optional.) Integer. The total number of `lambda` penalty
-#' parameters that will be considered. See the description of `lambda.max` for
-#' details. Default is 100.
+#' @param lambda.min (Optional.) Numeric. Used only on the BIC route: the
+#' smallest `lambda` penalty parameter considered. See the description of
+#' `lambda.max` for details. Default is NA.
+#' @param nlambda (Optional.) Integer. Used only on the BIC route: the total
+#' number of `lambda` penalty parameters considered. See the description of
+#' `lambda.max` for details. Default is 100.
 #' @param q (Optional.) Numeric; determines what `L_q` penalty is used for the
 #' fusion regularization. `q` = 1 is the lasso, and for 0 < `q` < 1, it is
 #' possible to get standard errors and confidence intervals. `q` = 2 is ridge
