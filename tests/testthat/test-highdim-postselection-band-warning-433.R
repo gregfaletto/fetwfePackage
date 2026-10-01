@@ -19,11 +19,6 @@
 #   * "(red)" blocks fail on main and pass here -- they demonstrate the change.
 #   * "(guardrail)" blocks pass on main too -- they constrain the implementation
 #     so a too-wide predicate, a lost carve-out, or a moved number goes red.
-#     ONE MEASURED EXCEPTION: block 6b carries the guardrail label but is red on
-#     main (1 failed assertion). Its anti-vacuity half asserts that eventStudy()
-#     is LOUD on the same fit, which is exactly what main does not do. The pair
-#     is worth the exception -- without it the block would pass unchanged if the
-#     warning were deleted outright.
 #
 # EVERY text anchor in this file passes `fixed = TRUE`. Two of the natural
 # anchors here are broken as regexes, both measured: `grepl("use a fetwfe() fit",
@@ -503,8 +498,8 @@ test_that("a degenerate p >= NT fit keeps only its #304 warning (#433)", {
 })
 
 # ------------------------------------------------------------------------------
-# 9. (guardrail, numeric) NO NUMBER MOVES. The band's values on this fixture,
-#    recorded to 15 significant digits and asserted to 1e-8.
+# 9. (guardrail, numeric) The band's values on this fixture, recorded to 15
+#    significant digits and asserted to 1e-8.
 #
 #    NOT `identical()` and NOT `tolerance = 0`: these are qmvnorm / Gram-inverse
 #    quantities and the gate runs on six platform/BLAS combinations, four of
