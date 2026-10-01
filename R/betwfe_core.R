@@ -70,8 +70,8 @@
 #' by REML via `lme4::lmer` on the
 #' linear mixed-effects model `y ~ X + (1 | unit)` (Bates et al. 2015;
 #' Patterson & Thompson 1971). Default is NA.
-#' @param lambda.max (Optional.) Numeric. A penalty parameter `lambda` will be
-#' selected over a grid search by BIC in order to select a single model. The
+#' @param lambda.max (Optional.) Numeric. Used only on the BIC route
+#' (`lambda_selection = "bic"`), which selects `lambda` by BIC over a grid. The
 #' largest `lambda` in the grid will be `lambda.max`. If no `lambda.max` is
 #' provided, one will be selected automatically. When `q <= 1`, the model
 #' will be sparse, and ideally all of the following are true at once: the
@@ -510,8 +510,8 @@ betwfe <- function(
 #'
 #' @param simulated_obj An object of class \code{"FETWFE_simulated"} containing the simulated panel
 #' data and design matrix.
-#' @param lambda.max (Optional.) Numeric. A penalty parameter `lambda` will be
-#' selected over a grid search by BIC in order to select a single model. The
+#' @param lambda.max (Optional.) Numeric. Used only on the BIC route
+#' (`lambda_selection = "bic"`), which selects `lambda` by BIC over a grid. The
 #' largest `lambda` in the grid will be `lambda.max`. If no `lambda.max` is
 #' provided, one will be selected automatically. For `lambda <= 1`, the model
 #' will be sparse, and ideally all of the following are true at once: the

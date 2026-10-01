@@ -108,8 +108,8 @@ by REML via \code{lme4::lmer} on the
 linear mixed-effects model \code{y ~ X + (1 | unit)} (Bates et al. 2015;
 Patterson & Thompson 1971). Default is NA.}
 
-\item{lambda.max}{(Optional.) Numeric. A penalty parameter \code{lambda} will be
-selected over a grid search by BIC in order to select a single model. The
+\item{lambda.max}{(Optional.) Numeric. Used only on the BIC route
+(\code{lambda_selection = "bic"}), which selects \code{lambda} by BIC over a grid. The
 largest \code{lambda} in the grid will be \code{lambda.max}. If no \code{lambda.max} is
 provided, one will be selected automatically. When \code{q <= 1}, the model
 will be sparse, and ideally all of the following are true at once: the
