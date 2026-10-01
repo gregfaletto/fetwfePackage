@@ -593,16 +593,23 @@ test_that("the bridge fits the GLS response divided by sqrt(sig_eps_sq) (#428)",
 			rec <- new.env(parent = emptyenv())
 			fit <- testthat::with_mocked_bindings(
 				.rse428_scaled_fit(get(est), 1, lambda_selection = route),
-				getBetaCV = function(...) {
-					rec$y <- list(...)$y_final
-					real_cv(...)
+				getBetaCV = function(X_final_scaled, y_final, ...) {
+					rec$y <- y_final
+					real_cv(X_final_scaled, y_final, ...)
 				},
-				.fit_bridge_with_lambda_path = function(...) {
-					rec$y <- list(...)$y_final
-					real_bic(...)
+				.fit_bridge_with_lambda_path = function(
+					X_final_scaled,
+					y_final,
+					...
+				) {
+					rec$y <- y_final
+					real_bic(X_final_scaled, y_final, ...)
 				},
 				.package = "fetwfe"
 			)
+			# The bridge saw the whole response, so the comparison below is not
+			# empty against empty.
+			expect_equal(length(rec$y), fit$N * fit$T, info = paste(est, route))
 			expect_equal(
 				as.numeric(rec$y) * sqrt(fit$sig_eps_sq),
 				as.numeric(fit$internal$y_final),
