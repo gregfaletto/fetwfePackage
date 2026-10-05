@@ -287,10 +287,10 @@
   with small values, and no longer do (#489).
 
 - Under `se_type = "conservative"`, `simultaneousCIs()` gave a finite adjusted
-  p-value to a custom contrast whose variance is only rounding error, such as
-  one whose weights cancel across cells the bridge fused to one value; it now
-  gives `NA`, as the default `se_type` and `method = "bootstrap"` already did
-  (#489).
+  p-value to a custom contrast whose variance is only rounding error, which
+  weights that cancel across cells the bridge fused to one value can leave; it
+  now gives `NA`, as the default `se_type` and `method = "bootstrap"` already
+  did (#489).
 
 ### Internal
 

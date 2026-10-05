@@ -207,11 +207,13 @@ joint correlation matrix (it adds no family-wise risk; the critical value is
 computed over the non-degenerate sub-family). This \code{se = 0} convention is the
 simultaneous-CI analog of the \code{NA} standard error \code{eventStudy()} reports for
 the same structurally-degenerate event times; both assign the effect an
-estimate of 0. A signed \code{"custom"} contrast whose weights cancel on the
-selected support is degenerate too, though its estimate and standard error
-are rounding error rather than exactly 0: its interval is a point only up to
-rounding error, so which side of zero it falls on carries no information,
-and its \code{NA} adjusted p-value is the signal.
+estimate of 0. On every band built from the selected support, which is
+every band but the desparsified one a high-dimensional \code{fetwfe()} fit gets
+under \code{method = "bootstrap"}, a signed \code{"custom"} contrast whose weights
+cancel on that support is degenerate too: its estimate and standard error
+are exactly 0 or rounding error, so which side of zero its point-sized
+interval falls on carries no information, and its \code{NA} adjusted p-value is
+the signal.
 
 \strong{High-dimensional (\code{p >= NT}) bands.} One route out of the four is
 uniformly valid: a \code{fetwfe()} fit under

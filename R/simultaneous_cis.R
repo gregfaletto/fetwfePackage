@@ -205,11 +205,13 @@ utils::globalVariables(c(
 #' computed over the non-degenerate sub-family). This `se = 0` convention is the
 #' simultaneous-CI analog of the `NA` standard error `eventStudy()` reports for
 #' the same structurally-degenerate event times; both assign the effect an
-#' estimate of 0. A signed `"custom"` contrast whose weights cancel on the
-#' selected support is degenerate too, though its estimate and standard error
-#' are rounding error rather than exactly 0: its interval is a point only up to
-#' rounding error, so which side of zero it falls on carries no information,
-#' and its `NA` adjusted p-value is the signal.
+#' estimate of 0. On every band built from the selected support, which is
+#' every band but the desparsified one a high-dimensional `fetwfe()` fit gets
+#' under `method = "bootstrap"`, a signed `"custom"` contrast whose weights
+#' cancel on that support is degenerate too: its estimate and standard error
+#' are exactly 0 or rounding error, so which side of zero its point-sized
+#' interval falls on carries no information, and its `NA` adjusted p-value is
+#' the signal.
 #'
 #' **High-dimensional (`p >= NT`) bands.** One route out of the four is
 #' uniformly valid: a `fetwfe()` fit under
