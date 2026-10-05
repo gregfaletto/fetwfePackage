@@ -22,8 +22,7 @@ test_that(".simultaneous_bootstrap_crit() floors the K>=2 sup-t crit at qnorm(1-
 	F_mat <- sapply(1:3, function(k) v + 0.01 * stats::rnorm(N))
 	# Loop bootstrap seeds: which seeds dip is BLAS/RNG-dependent, so a single
 	# pinned seed is fragile; looping guarantees the floor is exercised (>= 1
-	# dipping seed) on any platform. Every returned crit must be >= z. `var_ref`
-	# is the degeneracy reference a unit noise variance gives, 1 / n.
+	# dipping seed) on any platform. Every returned crit must be >= z.
 	crits <- vapply(
 		1:8,
 		function(s) {
