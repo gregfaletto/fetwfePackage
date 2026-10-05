@@ -147,6 +147,7 @@ test_that("eventStudy p_value is adjusted under simultaneous, Wald under pointwi
 	es_p <- eventStudy(fit, ci_type = "pointwise")
 
 	fin <- is.finite(es_s$p_value) & is.finite(es_p$p_value)
+	expect_gte(sum(fin), 2L) # fixture has >= 2 non-degenerate event times
 	# Pointwise is the Wald p-value; simultaneous is >= it.
 	expect_equal(
 		es_p$p_value[fin],
@@ -173,6 +174,7 @@ test_that("conservative se_type yields the Bonferroni-dual adjusted p-value", {
 	pw_band <- 2 * stats::pnorm(-abs(sci$ci$estimate / se_band))
 	expect_param <- pmin(1, K * pw_band)
 	fin <- is.finite(sci$adjusted_p_values)
+	expect_gte(sum(fin), 2L) # fixture has >= 2 non-degenerate cohorts
 	expect_equal(
 		sci$adjusted_p_values[fin],
 		expect_param[fin],

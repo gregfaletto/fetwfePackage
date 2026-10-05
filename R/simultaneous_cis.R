@@ -205,7 +205,11 @@ utils::globalVariables(c(
 #' computed over the non-degenerate sub-family). This `se = 0` convention is the
 #' simultaneous-CI analog of the `NA` standard error `eventStudy()` reports for
 #' the same structurally-degenerate event times; both assign the effect an
-#' estimate of 0.
+#' estimate of 0. A signed `"custom"` contrast whose weights cancel on the
+#' selected support is degenerate too, though its estimate and standard error
+#' are rounding error rather than exactly 0: its interval is a point only up to
+#' rounding error, so which side of zero it falls on carries no information,
+#' and its `NA` adjusted p-value is the signal.
 #'
 #' **High-dimensional (`p >= NT`) bands.** One route out of the four is
 #' uniformly valid: a `fetwfe()` fit under
@@ -616,6 +620,9 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 	se_type <- if (is.null(x$se_type)) "default" else x$se_type
 	is_indep <- isTRUE(x$indep_counts_used)
 	tes <- beta_hat[treat_inds]
+	# The reference variance `.band_nondegenerate()` floors its tolerance at.
+	var_ref <- .bridge_response_scale(sig_eps_sq, y_final[seq_len(N * T_)])^2 /
+		(N * T_)
 
 	# --- 3. Resolve cohort-time offsets + first_inds (same helper eventStudy
 	#        uses; preserves scattered-cohort support). ---
@@ -969,7 +976,8 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 			cohort_probs_overall = cohort_probs_overall,
 			G = G,
 			cell_targets = cell_targets,
-			j_cells = j_cells
+			j_cells = j_cells,
+			var_ref = var_ref
 		))
 	}
 
@@ -1045,16 +1053,11 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 			"simultaneous_cis_impl/Sigma"
 		))
 
-		# Degenerate (zero-variance) effects: when the bridge penalty zeroes
-		# out an effect's entire contribution to the selected support its SE is
-		# exactly 0, its CI collapses to a point at the estimate, and it
-		# contributes no family-wise risk. Such effects cannot enter the
+		# Effects `.band_nondegenerate()` classes degenerate are kept out of the
 		# correlation matrix (cov2cor() needs positive diagonal entries), so
 		# the simultaneous critical value is computed over the non-degenerate
-		# sub-family. A relative tolerance mirrors the existing rank-deficiency
-		# threshold style in the variance machinery.
-		var_tol <- .Machine$double.eps^0.5 * max(diag(Sigma), 1)
-		nondeg <- diag(Sigma) > var_tol
+		# sub-family.
+		nondeg <- .band_nondegenerate(diag(Sigma), var_ref)
 		if (sum(nondeg) <= 1L) {
 			# Zero or one non-degenerate effect: no joint correlation to
 			# integrate; the per-effect critical value is exact, and the
@@ -1167,10 +1170,11 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 		ses <- .cauchy_schwarz_se(v1, v2)
 		crit <- if (K == 1L) pointwise_crit else bonferroni_crit
 		# Bonferroni-adjusted p-values -- the dual of the Bonferroni band --
-		# computed from the same Cauchy-Schwarz ses; degenerate (se = 0)
-		# effects -> NA.
+		# computed from the same Cauchy-Schwarz ses, and NA for the effects
+		# `.band_nondegenerate()` classes degenerate on the variance bound
+		# `ses^2` (see `.cauchy_schwarz_se()`).
 		pw_cons <- ifelse(
-			ses > 0,
+			.band_nondegenerate(ses^2, var_ref),
 			2 * stats::pnorm(-abs(estimates / ses)),
 			NA_real_
 		)
@@ -1246,6 +1250,34 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 		adj[nd_idx[j]] <- min(1, max(0, 1 - as.numeric(prob)))
 	}
 	adj
+}
+
+# .band_nondegenerate
+#' @title Which effects of a band's family are non-degenerate
+#' @description An effect is non-degenerate when its variance exceeds
+#'   `sqrt(.Machine$double.eps)` times the larger of the family's largest
+#'   variance and the reference `v_ref`: a relative tolerance, floored at the
+#'   reference.
+#'
+#'   Everything the band hands this rule is in the response's squared units:
+#'   `diag(Sigma_1 + Sigma_2)` on the tight branch, the squared Cauchy-Schwarz
+#'   standard errors on the conservative branch, and the column sums of squares
+#'   in `.simultaneous_bootstrap_crit()`. The reference
+#'   `.simultaneous_cis_impl()` builds, the square of `.bridge_response_scale()`'s
+#'   scale over `N * T`, is in those units too, so the classification does not
+#'   depend on the response's units (#489).
+#'
+#'   Paper: Remark `nondegeneracy.remark` in `paper_arxiv.tex`.
+#' @param v Numeric vector; the family's effect variances, or a common positive
+#'   multiple of them.
+#' @param v_ref Numeric scalar; the reference variance, on the same scale as
+#'   `v`.
+#' @return Logical vector the length of `v`; `TRUE` for a non-degenerate
+#'   effect.
+#' @keywords internal
+#' @noRd
+.band_nondegenerate <- function(v, v_ref) {
+	v > .Machine$double.eps^0.5 * max(v, v_ref)
 }
 
 # .cauchy_schwarz_se

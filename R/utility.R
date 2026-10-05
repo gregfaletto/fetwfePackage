@@ -2350,6 +2350,9 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #'   `y = NULL` the result is 1. That differs from the package's convention for
 #'   user arguments, where `NA` means "estimate it": a user's unestimated `NA`
 #'   passed here also gives 1.
+#'
+#'   `.simultaneous_cis_impl()` also builds the simultaneous band's degeneracy
+#'   reference from this scale.
 #' @param sig_eps_sq Numeric; the idiosyncratic noise variance the GLS step
 #'   used, or `NA` when none was estimated.
 #' @param y Numeric vector or `NULL`; the response, read only when `sig_eps_sq`

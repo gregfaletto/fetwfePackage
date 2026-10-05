@@ -296,7 +296,8 @@ test_that("the bootstrap method works for the non-FETWFE estimators (etwfe, betw
 
 test_that(".simultaneous_bootstrap_crit handles degenerate / single-effect F without warnings", {
 	# All-degenerate F (zero-variance columns): no draw, no max()-over-empty
-	# warning, crit falls back to the exact pointwise quantile.
+	# warning, crit falls back to the exact pointwise quantile. `var_ref` is the
+	# degeneracy reference a unit noise variance gives, 1 / n.
 	F0 <- matrix(0, 60, 3)
 	expect_no_warning(
 		r0 <- .simultaneous_bootstrap_crit(
@@ -304,6 +305,7 @@ test_that(".simultaneous_bootstrap_crit handles degenerate / single-effect F wit
 			n = 240,
 			alpha = 0.05,
 			B = 100,
+			var_ref = 1 / 240,
 			multiplier = "rademacher",
 			seed = 1
 		)
@@ -314,7 +316,13 @@ test_that(".simultaneous_bootstrap_crit handles degenerate / single-effect F wit
 	set.seed(1)
 	F1 <- cbind(stats::rnorm(60), 0, 0)
 	expect_no_warning(
-		r1 <- .simultaneous_bootstrap_crit(F1, n = 240, alpha = 0.05, B = 100)
+		r1 <- .simultaneous_bootstrap_crit(
+			F1,
+			n = 240,
+			alpha = 0.05,
+			B = 100,
+			var_ref = 1 / 240
+		)
 	)
 	expect_equal(r1$crit, stats::qnorm(1 - 0.05 / 2))
 })
