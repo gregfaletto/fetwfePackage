@@ -6,7 +6,7 @@
 # after dividing out that power of k, and first asserts that the k = 1
 # reference is not degenerate: a null model is equivariant trivially.
 #
-# One exception, cited where it applies: `gls = FALSE` fits keep the
+# `gls = FALSE` fits are the exception, cited where it applies: they keep the
 # unstandardized lambda grid (#490).
 #
 # The fits call the estimators directly rather than the `*WithSimulatedData()`
