@@ -1225,8 +1225,8 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 #' @param estimates Numeric vector of length `K`; the family's point estimates.
 #' @param ses Numeric vector of length `K`; the per-effect standard errors
 #'   (`sqrt(diag(Sigma))`).
-#' @param nondeg Logical vector of length `K`; `TRUE` for non-degenerate
-#'   (positive-variance) effects, with `sum(nondeg) >= 2`.
+#' @param nondeg Logical vector of length `K`; `TRUE` for the effects
+#'   `.band_nondegenerate()` classes non-degenerate, with `sum(nondeg) >= 2`.
 #' @param rho The `sum(nondeg) x sum(nondeg)` correlation matrix
 #'   `cov2cor(Sigma[nondeg, nondeg])` (the band's `rho`).
 #' @return Numeric vector of length `K`: the adjusted p-value for each
