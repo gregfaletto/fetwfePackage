@@ -93,11 +93,13 @@
   convergence error. The penalty is now unit-free.
 
 - `simultaneousCIs()` now classes a `"custom"` contrast with very small weights
-  as having zero variance under every method and at any response scale, giving
-  it the pointwise band and `NA` adjusted p-values, where before the bootstrap
-  and `se_type = "conservative"` methods kept its band, as did the default
-  method on a response with large values (#489; #501 tracks making the rule
-  independent of a contrast's scale).
+  as having zero variance under every method and at any response scale (#489).
+  The default analytic method and `method = "bootstrap"` give it the pointwise
+  band and `NA` adjusted p-values, where before the bootstrap kept its band, as
+  did the analytic method on a response with large values. Under
+  `se_type = "conservative"` its Bonferroni band is unchanged, but its adjusted
+  p-values, finite before, are now `NA`. #501 tracks making the rule independent
+  of a contrast's scale.
 
 ### Defensive improvements
 
