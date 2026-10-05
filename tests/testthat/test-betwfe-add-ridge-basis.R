@@ -20,9 +20,7 @@ library(fetwfe)
 #   3. The helper contract of 1, checked on a `betwfe(add_ridge = TRUE)`
 #      fit's own inputs.
 #   4. The #74 guard: a recorder around `.append_ridge_rows()` asserts that
-#      a `betwfe(add_ridge = TRUE)` fit passes it `is_fetwfe = FALSE`. So it
-#      fails if `betwfe_core()` passes `is_fetwfe = TRUE`, and errors if
-#      `betwfe_core()` omits the argument, which then has no value to record.
+#      a `betwfe(add_ridge = TRUE)` fit passes it `is_fetwfe = FALSE`.
 
 # generate_panel_data() is defined in tests/testthat/helper-panel-fixture.R
 # (sourced by testthat before this file runs; issue #91).

@@ -565,7 +565,6 @@ test_that("fetwfe() and betwfe() standardize by the sig_eps_sq their GLS step us
 			},
 			.package = "fetwfe"
 		)
-		# The estimated variances differ, so handing over sig_eps_c_sq would show.
 		expect_false(
 			isTRUE(all.equal(fit$sig_eps_sq, fit$sig_eps_c_sq)),
 			info = est
