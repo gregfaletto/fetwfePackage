@@ -92,6 +92,13 @@
   increasingly so as the values grew, and `fetwfe()` could fail with a `grpreg`
   convergence error. The penalty is now unit-free.
 
+- `simultaneousCIs()` now classes a `"custom"` contrast with very small weights
+  as having zero variance under every method and at any response scale, giving
+  it the pointwise band and `NA` adjusted p-values, where before the bootstrap
+  and `se_type = "conservative"` methods kept its band, as did the default
+  method on a response with large values (#489; #501 tracks making the rule
+  independent of a contrast's scale).
+
 ### Defensive improvements
 
 - A negative cohort-probability variance is no longer discarded in silence
