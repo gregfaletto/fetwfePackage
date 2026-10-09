@@ -364,8 +364,11 @@ test_that("the rule receives the reference sig_eps_sq / (N * T), or var(y) / (N 
 			.band_nondegenerate = recorder,
 			.package = "fetwfe"
 		)
-		expect_length(rec$calls, 1L)
-		expect_equal(rec$calls[[1]]$w2, c(4, 1.25), info = route)
+		expect_equal(
+			lapply(rec$calls, "[[", "w2"),
+			list(c(4, 1.25)),
+			info = route
+		)
 	}
 
 	# The rest builds a `gls = FALSE` fit on #428's high-dimensional fixture, so it
