@@ -156,8 +156,7 @@ utils::globalVariables(c(
 #'       `(1 - alpha)` band iff its adjusted p-value is `< alpha`). Computed via
 #'       `mvtnorm::pmvnorm()` over the same correlation matrix the band uses
 #'       (or, under `se_type = "conservative"`, the Bonferroni adjustment
-#'       `min(1, K * pointwise_p)`). `NA` for degenerate (zero-variance)
-#'       effects. (#200)}
+#'       `min(1, K * pointwise_p)`). `NA` for degenerate effects. (#200)}
 #'     \item{critical_value}{The simultaneous critical value `c_{1 - alpha}`
 #'       (or, when the fit used `se_type = "conservative"`, the Bonferroni critical value
 #'       `qnorm(1 - alpha/(2K))` -- see Details).}
@@ -196,7 +195,7 @@ utils::globalVariables(c(
 #' for the corresponding effects. The `Sigma` blocks are not persisted on the
 #' fit; re-derivation is sub-second.
 #'
-#' **Degenerate (zero-variance) effects.** An effect whose entire contribution
+#' **Degenerate effects.** An effect whose entire contribution
 #' to the selected support is zeroed by the bridge penalty -- or, in
 #' scattered-cohort panels, an event time with an empty valid-cohort set -- has
 #' a standard error of exactly 0 by construction, so its simultaneous and
