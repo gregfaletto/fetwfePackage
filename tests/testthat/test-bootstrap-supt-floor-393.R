@@ -31,6 +31,8 @@ test_that(".simultaneous_bootstrap_crit() floors the K>=2 sup-t crit at qnorm(1-
 				n = N,
 				alpha = alpha,
 				B = 1000,
+				var_ref = 1 / N,
+				w2 = rep(1, 3),
 				multiplier = "rademacher",
 				seed = s
 			)$crit

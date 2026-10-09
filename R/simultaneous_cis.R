@@ -156,8 +156,7 @@ utils::globalVariables(c(
 #'       `(1 - alpha)` band iff its adjusted p-value is `< alpha`). Computed via
 #'       `mvtnorm::pmvnorm()` over the same correlation matrix the band uses
 #'       (or, under `se_type = "conservative"`, the Bonferroni adjustment
-#'       `min(1, K * pointwise_p)`). `NA` for degenerate (zero-variance)
-#'       effects. (#200)}
+#'       `min(1, K * pointwise_p)`). `NA` for degenerate effects. (#200)}
 #'     \item{critical_value}{The simultaneous critical value `c_{1 - alpha}`
 #'       (or, when the fit used `se_type = "conservative"`, the Bonferroni critical value
 #'       `qnorm(1 - alpha/(2K))` -- see Details).}
@@ -196,7 +195,7 @@ utils::globalVariables(c(
 #' for the corresponding effects. The `Sigma` blocks are not persisted on the
 #' fit; re-derivation is sub-second.
 #'
-#' **Degenerate (zero-variance) effects.** An effect whose entire contribution
+#' **Degenerate effects.** An effect whose entire contribution
 #' to the selected support is zeroed by the bridge penalty -- or, in
 #' scattered-cohort panels, an event time with an empty valid-cohort set -- has
 #' a standard error of exactly 0 by construction, so its simultaneous and
@@ -205,7 +204,13 @@ utils::globalVariables(c(
 #' computed over the non-degenerate sub-family). This `se = 0` convention is the
 #' simultaneous-CI analog of the `NA` standard error `eventStudy()` reports for
 #' the same structurally-degenerate event times; both assign the effect an
-#' estimate of 0.
+#' estimate of 0. On every band built from the selected support, which is
+#' every band but the desparsified one a high-dimensional `fetwfe()` fit gets
+#' under `method = "bootstrap"`, a signed `"custom"` contrast whose weights
+#' cancel on that support is degenerate too: its estimate and standard error
+#' are exactly 0 or rounding error, so which side of zero its point-sized
+#' interval falls on carries no information, and its `NA` adjusted p-value is
+#' the signal.
 #'
 #' **High-dimensional (`p >= NT`) bands.** One route out of the four is
 #' uniformly valid: a `fetwfe()` fit under
@@ -616,6 +621,9 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 	se_type <- if (is.null(x$se_type)) "default" else x$se_type
 	is_indep <- isTRUE(x$indep_counts_used)
 	tes <- beta_hat[treat_inds]
+	# `.band_nondegenerate()`'s reference variance, `v_ref`.
+	var_ref <- .bridge_response_scale(sig_eps_sq, y_final[seq_len(N * T_)])^2 /
+		(N * T_)
 
 	# --- 3. Resolve cohort-time offsets + first_inds (same helper eventStudy
 	#        uses; preserves scattered-cohort support). ---
@@ -658,6 +666,8 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 		cohort_probs_overall = cohort_probs_overall
 	)
 	K <- nrow(psi_tes_mat)
+	# `.band_nondegenerate()`'s `w2`.
+	w2 <- rowSums(psi_tes_mat^2)
 	estimates <- as.numeric(psi_tes_mat %*% tes)
 
 	pointwise_crit <- stats::qnorm(1 - alpha / 2)
@@ -969,7 +979,9 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 			cohort_probs_overall = cohort_probs_overall,
 			G = G,
 			cell_targets = cell_targets,
-			j_cells = j_cells
+			j_cells = j_cells,
+			var_ref = var_ref,
+			w2 = w2
 		))
 	}
 
@@ -1045,16 +1057,11 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 			"simultaneous_cis_impl/Sigma"
 		))
 
-		# Degenerate (zero-variance) effects: when the bridge penalty zeroes
-		# out an effect's entire contribution to the selected support its SE is
-		# exactly 0, its CI collapses to a point at the estimate, and it
-		# contributes no family-wise risk. Such effects cannot enter the
+		# Effects `.band_nondegenerate()` classes degenerate are kept out of the
 		# correlation matrix (cov2cor() needs positive diagonal entries), so
 		# the simultaneous critical value is computed over the non-degenerate
-		# sub-family. A relative tolerance mirrors the existing rank-deficiency
-		# threshold style in the variance machinery.
-		var_tol <- .Machine$double.eps^0.5 * max(diag(Sigma), 1)
-		nondeg <- diag(Sigma) > var_tol
+		# sub-family.
+		nondeg <- .band_nondegenerate(diag(Sigma), var_ref, w2)
 		if (sum(nondeg) <= 1L) {
 			# Zero or one non-degenerate effect: no joint correlation to
 			# integrate; the per-effect critical value is exact, and the
@@ -1167,10 +1174,11 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 		ses <- .cauchy_schwarz_se(v1, v2)
 		crit <- if (K == 1L) pointwise_crit else bonferroni_crit
 		# Bonferroni-adjusted p-values -- the dual of the Bonferroni band --
-		# computed from the same Cauchy-Schwarz ses; degenerate (se = 0)
-		# effects -> NA.
+		# computed from the same Cauchy-Schwarz ses, and NA for the effects
+		# `.band_nondegenerate()` classes degenerate on the variance bound
+		# `ses^2` (see `.cauchy_schwarz_se()`).
 		pw_cons <- ifelse(
-			ses > 0,
+			.band_nondegenerate(ses^2, var_ref, w2),
 			2 * stats::pnorm(-abs(estimates / ses)),
 			NA_real_
 		)
@@ -1219,8 +1227,8 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 #' @param estimates Numeric vector of length `K`; the family's point estimates.
 #' @param ses Numeric vector of length `K`; the per-effect standard errors
 #'   (`sqrt(diag(Sigma))`).
-#' @param nondeg Logical vector of length `K`; `TRUE` for non-degenerate
-#'   (positive-variance) effects, with `sum(nondeg) >= 2`.
+#' @param nondeg Logical vector of length `K`; `TRUE` for the effects
+#'   `.band_nondegenerate()` classes non-degenerate, with `sum(nondeg) >= 2`.
 #' @param rho The `sum(nondeg) x sum(nondeg)` correlation matrix
 #'   `cov2cor(Sigma[nondeg, nondeg])` (the band's `rho`).
 #' @return Numeric vector of length `K`: the adjusted p-value for each
@@ -1246,6 +1254,38 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 		adj[nd_idx[j]] <- min(1, max(0, 1 - as.numeric(prob)))
 	}
 	adj
+}
+
+# .band_nondegenerate
+#' @title Which effects of a band's family are non-degenerate
+#' @description An effect is non-degenerate when its variance per unit of
+#'   squared contrast weight, `v / w2`, exceeds `.Machine$double.eps` times the
+#'   larger of the family's largest such variance and the reference `v_ref`.
+#'
+#'   Everything the band hands this rule is in the response's squared units:
+#'   `diag(Sigma_1 + Sigma_2)` on the tight branch, the squared Cauchy-Schwarz
+#'   standard errors on the conservative branch, and the column sums of squares
+#'   in `.simultaneous_bootstrap_crit()`. The reference
+#'   `.simultaneous_cis_impl()` builds, the square of `.bridge_response_scale()`'s
+#'   scale over `N * T`, is in those units too, so the classification does not
+#'   depend on the response's units (#489). Dividing by `w2` keeps it from
+#'   depending on the scale of a contrast's weights either (#501).
+#'
+#'   Paper: Remark `nondegeneracy.remark` in `paper_arxiv.tex`.
+#' @param v Numeric vector; the family's effect variances, or a common positive
+#'   multiple of them.
+#' @param v_ref Numeric scalar; the reference variance, on the same scale as
+#'   `v`.
+#' @param w2 Numeric vector the length of `v`, or a scalar; each effect's
+#'   squared contrast-row norm. An effect whose `w2` is 0 is degenerate.
+#' @return Logical vector the length of `v`; `TRUE` for a non-degenerate
+#'   effect.
+#' @keywords internal
+#' @noRd
+.band_nondegenerate <- function(v, v_ref, w2) {
+	v_unit <- v / w2
+	v_unit[w2 == 0] <- 0
+	v_unit > .Machine$double.eps * max(v_unit, v_ref)
 }
 
 # .cauchy_schwarz_se

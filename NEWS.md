@@ -67,12 +67,10 @@
   the fit and scale the coefficients back, on both the cross-validation and
   BIC routes.
   Multiplying the response by any `c > 0`, and a supplied variance by `c^2`,
-  now multiplies every estimate, standard error and pointwise interval bound by
-  `c`; a default (simultaneous) fit's bounds and p-values on a response with
-  small values still move until #489 lands. The reported lambda values stay in
-  the response's units, and on the BIC route a supplied `lambda.max` without
-  `add_ridge` gives the same fit as before, except where `delta` had distorted
-  the old fit.
+  now multiplies every estimate, standard error and interval bound by `c`. The
+  reported lambda values stay in the response's units, and on the BIC route a
+  supplied `lambda.max` without `add_ridge` gives the same fit as before, except
+  where `delta` had distorted the old fit.
   Because a supplied `sig_eps_sq` now also sets where the lambda grid sits, a
   variance supplied in the wrong units moves the estimates at `q != 1`, not
   only their standard errors. `fetwfe(gls = FALSE)` fits, which estimate no
@@ -281,6 +279,23 @@
   are unchanged, and nothing changes on well-conditioned data, where no tier
   fires at all. See the breaking change above for what a fit that hits the
   error tier now does.
+
+- The simultaneous bands of a fit's `catt_df` (and so of `cohortStudy()`), of
+  `eventStudy()` (and so of `print()`, `summary()` and `plot()`) and of
+  `simultaneousCIs()` narrowed toward, and at small enough values fell back to,
+  the pointwise band, with `NA` adjusted p-values and no warning, for a response
+  with small values, and no longer do (#489).
+
+- Under `se_type = "conservative"`, `simultaneousCIs()` gave a finite adjusted
+  p-value to a custom contrast whose variance is only rounding error, which
+  weights that cancel across cells the bridge fused to one value can leave; it
+  now gives `NA`, as the default `se_type` and `method = "bootstrap"` already
+  did (#489).
+
+- In `simultaneousCIs()`, a `"custom"` family whose rows' weights were very
+  small, or differed in size by a large factor, lost its simultaneous band or
+  some adjusted p-values, because those rows counted as zero-variance; each row
+  is now judged relative to its own weights (#501).
 
 ### Internal
 

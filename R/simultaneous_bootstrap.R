@@ -539,14 +539,16 @@
 #' applies the finite-sample factor `cadjust = N/(N-1)` to the regression channel
 #' ONLY (the cluster sandwich bakes `cadjust` into `Sigma_1`; the multinomial
 #' `Sigma_2` carries none): `se_k = sqrt((cadjust*css_reg_k + css_pi_k) / n^2)`
-#' (`cadjust` cancels in the studentized `crit`). Degenerate (zero combined
-#' variance) effects are excluded from the max; their CIs collapse to the point
-#' estimate.
+#' (`cadjust` cancels in the studentized `crit`). Effects `.band_nondegenerate()`
+#' classes degenerate are excluded from the max.
 #'
 #' When `F_pi_mat` is `NULL` (all non-event_study families, both regimes) the
 #' `eta` stream is NOT drawn and the draw is byte-identical to the single-channel
 #' Phase-1/2 behavior.
 #'
+#' @param var_ref Numeric scalar; the degeneracy reference variance, in variance
+#'   units, which the function scales by `n^2`.
+#' @param w2 Passed to `.band_nondegenerate()`; see its `w2`.
 #' @return A list with `crit` (scalar), `ses` (length-K), `nondeg`
 #'   (logical length-K), and `boot_max` (length-B, or `NULL` in the degenerate
 #'   single-effect branch).
@@ -558,6 +560,8 @@
 	n,
 	alpha,
 	B,
+	var_ref,
+	w2,
 	multiplier = c("rademacher", "mammen", "webb"),
 	seed = NULL
 ) {
@@ -572,10 +576,10 @@
 		colSums(F_pi_mat^2)
 	}
 	col_ss <- css_reg + css_pi # combined sd_k^2 = diag(Sigma_1) + diag(Sigma_2)
-	# Degeneracy uses the COMBINED column sums (relative to max(col_ss, 1)), so a
-	# propensity-only-variance effect is not dropped.
-	var_tol <- .Machine$double.eps^0.5 * max(col_ss, 1)
-	nondeg <- col_ss > var_tol
+	# Degeneracy uses the COMBINED column sums, so a propensity-only-variance
+	# effect is not dropped. `col_ss` sits on `n^2` times the variance scale, so
+	# `.band_nondegenerate()` gets the reference on that scale too.
+	nondeg <- .band_nondegenerate(col_ss, n_obs_sq * var_ref, w2)
 	sd_k <- sqrt(col_ss)
 	# Per-effect SE. The regression channel: crossprod(F)/n^2 = cluster Sigma_1 /
 	# cadjust, so the matching SE restores the finite-sample factor
@@ -664,6 +668,8 @@
 #' high-dim regime the band center is the debiased estimate
 #' (`estimates + colSums(F_mat)/(N*T)`, the high-dimensional FETWFE theory realization matching
 #' `debiasedATT()`); fixed-p centers on the (unbiased) bridge estimate unchanged.
+#' @param var_ref Passed to `.simultaneous_bootstrap_crit()`; see its `var_ref`.
+#' @param w2 Passed to `.simultaneous_bootstrap_crit()`; see its `w2`.
 #' @keywords internal
 #' @noRd
 .simultaneous_cis_bootstrap <- function(
@@ -689,6 +695,8 @@
 	effect_labels,
 	pointwise_crit,
 	bonferroni_crit,
+	var_ref,
+	w2,
 	targets = NULL,
 	a_att = NULL,
 	J_list = NULL,
@@ -909,6 +917,8 @@
 		n = n,
 		alpha = alpha,
 		B = B,
+		var_ref = var_ref,
+		w2 = w2,
 		multiplier = multiplier,
 		seed = seed
 	)
@@ -922,12 +932,12 @@
 	# matching dual is the two-sided normal p-value 2 * pnorm(-|z|) (mirrors the
 	# analytic K = 1 path; keeps "outside band iff adjusted p < alpha" exact).
 	# Degeneracy semantics (#325): the band endpoints use `ses` directly (finite
-	# for every effect), while the adjusted p-value gates on `bc$nondeg` (the
-	# combined-column-sum test `col_ss > var_tol`). So a near-zero-variance effect
-	# classified degenerate (`nondeg = FALSE`) still gets a finite -- but near-
-	# zero-width -- band from its tiny `ses`, yet an `NA` adjusted p-value: the
-	# package's degenerate-effect convention (a collapsed band, no p-value), not an
-	# inconsistency. The two gates cannot disagree the other way: `nondeg` implies
+	# for every effect), while the adjusted p-value gates on `bc$nondeg`
+	# (`.band_nondegenerate()` on the combined column sums `col_ss`). So an
+	# effect classified degenerate (`nondeg = FALSE`) still gets a finite band
+	# from its `ses`, yet an `NA` adjusted p-value: the package's
+	# degenerate-effect convention, not an inconsistency. The two gates cannot
+	# disagree the other way: `nondeg` implies
 	# `col_ss > 0`, and `ses^2 = (cadjust*css_reg + css_pi)/n^2 >= col_ss/n^2 > 0`
 	# since `cadjust >= 1`, so `ses > 0` whenever `nondeg` -- the `& ses > 0` here is
 	# a defensive belt against floating-point only.

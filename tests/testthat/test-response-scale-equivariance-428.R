@@ -6,19 +6,16 @@
 # after dividing out that power of k, and first asserts that the k = 1
 # reference is not degenerate: a null model is equivariant trivially.
 #
-# Two exceptions, each cited where it applies: simultaneous-band quantities are
-# compared only at scales where the band's absolute variance floor cannot bind
-# (#489), and `gls = FALSE` fits keep the unstandardized lambda grid (#490).
+# `gls = FALSE` fits are the exception, cited where it applies: they keep the
+# unstandardized lambda grid (#490).
 #
 # The fits call the estimators directly rather than the `*WithSimulatedData()`
 # wrappers, which pass the simulator's true variances through and would skip
 # the variance estimation that is part of the pipeline under test.
 
 .RSE428_TOL <- 1e-6
-# Scales at which pointwise quantities are compared with k = 1.
+# Scales at which quantities are compared with k = 1.
 .RSE428_SCALES <- c(1e-9, 1e-6, 1e-3, 1e3, 1e6)
-# Scales at which simultaneous-band quantities are compared with k = 1 (#489).
-.RSE428_BAND_SCALES <- c(1e-2, 1e3, 1e6)
 
 .rse428_sim <- simulateData(
 	genCoefs(G = 3, T = 4, d = 2, density = 0.5, eff_size = 2, seed = 123),
@@ -144,6 +141,17 @@
 	p_value = .rse428_q(0, function(f) f$catt_df$p_value)
 )
 
+# The quantities of a `simultaneousCIs()` result.
+.rse428_sci_quantities <- list(
+	estimate = .rse428_q(1, function(x) x$ci$estimate),
+	pointwise_ci_low = .rse428_q(1, function(x) x$ci$pointwise_ci_low),
+	pointwise_ci_high = .rse428_q(1, function(x) x$ci$pointwise_ci_high),
+	simultaneous_ci_low = .rse428_q(1, function(x) x$ci$simultaneous_ci_low),
+	simultaneous_ci_high = .rse428_q(1, function(x) x$ci$simultaneous_ci_high),
+	critical_value = .rse428_q(0, function(x) x$critical_value),
+	adjusted_p_values = .rse428_q(0, function(x) x$adjusted_p_values)
+)
+
 # The reference is not degenerate: it selected something and has a nonzero
 # CATT. An unpenalized fit selects nothing out, so it gets the CATT check only.
 .rse428_expect_live <- function(ref, penalized = TRUE) {
@@ -153,17 +161,14 @@
 	expect_true(any(ref$catt_hats != 0))
 }
 
-# The precondition of a band comparison (#489): at every scale it uses, the
-# family's smallest variance exceeds the floor `var_tol` takes when every
-# variance is below 1, so the floor cannot class an effect degenerate.
-.rse428_expect_band_ready <- function(at, scales, ses) {
-	for (k in c(1, scales)) {
-		expect_gt(
-			min(ses(at(k))^2),
-			sqrt(.Machine$double.eps),
-			label = sprintf("smallest squared SE at k = %g", k)
-		)
-	}
+# A band's k = 1 reference is not degenerate: more than one of its effects has
+# a finite adjusted p-value `p`.
+.rse428_expect_band_live <- function(p) {
+	expect_gt(
+		sum(is.finite(p)),
+		1L,
+		label = "finite adjusted p-values at k = 1"
+	)
 }
 
 # The q = 1 nuisance that `debiasedATT()` and the bootstrap band refit when
@@ -176,13 +181,12 @@
 
 # A penalized estimator on one selection route. `pw` and `df` are accessors from
 # `.rse428_fits()`, of `ci_type = "pointwise"` and of default fits.
-.rse428_expect_route <- function(pw, df, band = .rse428_band_quantities) {
+.rse428_expect_route <- function(pw, df) {
 	.rse428_expect_live(pw(1))
 	.rse428_expect_equivariant(pw, .rse428_fit_quantities(), .RSE428_SCALES)
-	# Band quantities only where the variance floor cannot bind (#489).
 	.rse428_expect_live(df(1))
-	.rse428_expect_band_ready(df, .RSE428_BAND_SCALES, function(f) f$catt_ses)
-	.rse428_expect_equivariant(df, band, .RSE428_BAND_SCALES)
+	.rse428_expect_band_live(df(1)$catt_df$p_value)
+	.rse428_expect_equivariant(df, .rse428_band_quantities, .RSE428_SCALES)
 }
 
 test_that("fetwfe() on the default route (CV, q = 0.5) is equivariant (#428)", {
@@ -193,7 +197,7 @@ test_that("fetwfe() on the default route (CV, q = 0.5) is equivariant (#428)", {
 		),
 		df = .rse428_fits(
 			function(k) .rse428_shared("default", k),
-			.RSE428_BAND_SCALES
+			.RSE428_SCALES
 		)
 	)
 })
@@ -213,9 +217,8 @@ test_that("fetwfe() with lambda_selection = \"bic\" is equivariant (#428)", {
 		),
 		df = .rse428_fits(
 			function(k) .rse428_scaled_fit(fetwfe, k, lambda_selection = "bic"),
-			.RSE428_BAND_SCALES
-		),
-		band = .rse428_band_quantities[c("ci_low", "ci_high")]
+			.RSE428_SCALES
+		)
 	)
 })
 
@@ -237,7 +240,7 @@ test_that("betwfe() is equivariant on both selection routes (#428)", {
 				function(k) {
 					.rse428_scaled_fit(betwfe, k, lambda_selection = route)
 				},
-				.RSE428_BAND_SCALES
+				.RSE428_SCALES
 			)
 		)
 	}
@@ -377,12 +380,16 @@ test_that("eventStudy(), cohortStudy() and cohortTimeATTs() are equivariant (#42
 	pw <- function(k) .rse428_shared("pointwise", k)
 	.rse428_expect_live(df(1))
 	.rse428_expect_live(pw(1))
-	es <- function(k) eventStudy(df(k))
+	es <- .rse428_fits(function(k) eventStudy(df(k)), .RSE428_SCALES)
+	.rse428_expect_band_live(es(1)$p_value)
 	.rse428_expect_equivariant(
 		es,
 		list(
 			estimate = .rse428_q(1, function(x) x$estimate),
-			se = .rse428_q(1, function(x) x$se)
+			se = .rse428_q(1, function(x) x$se),
+			ci_low = .rse428_q(1, function(x) x$ci_low),
+			ci_high = .rse428_q(1, function(x) x$ci_high),
+			p_value = .rse428_q(0, function(x) x$p_value)
 		),
 		.RSE428_SCALES
 	)
@@ -393,16 +400,6 @@ test_that("eventStudy(), cohortStudy() and cohortTimeATTs() are equivariant (#42
 			ci_high = .rse428_q(1, function(x) x$ci_high)
 		),
 		.RSE428_SCALES
-	)
-	# The event-study band only where the variance floor cannot bind (#489).
-	.rse428_expect_band_ready(es, .RSE428_BAND_SCALES, function(x) x$se)
-	.rse428_expect_equivariant(
-		es,
-		list(
-			ci_low = .rse428_q(1, function(x) x$ci_low),
-			ci_high = .rse428_q(1, function(x) x$ci_high)
-		),
-		.RSE428_BAND_SCALES
 	)
 	.rse428_expect_equivariant(
 		function(k) cohortStudy(pw(k)),
@@ -424,52 +421,37 @@ test_that("eventStudy(), cohortStudy() and cohortTimeATTs() are equivariant (#42
 	)
 })
 
-test_that("simultaneousCIs() is equivariant under both methods (#428)", {
-	df <- function(k) .rse428_shared("default", k)
-	.rse428_expect_live(df(1))
-	# The band only where the variance floor cannot bind (#489).
-	.rse428_expect_band_ready(
-		df,
-		.RSE428_BAND_SCALES,
-		function(f) eventStudy(f)$se
-	)
-	bands <- list(
-		analytic = function(k) simultaneousCIs(df(k), method = "analytic"),
-		bootstrap = function(k) {
-			simultaneousCIs(df(k), method = "bootstrap", seed = 1)
-		}
-	)
-	for (band in bands) {
-		.rse428_expect_equivariant(
-			band,
-			list(
-				estimate = .rse428_q(1, function(x) x$ci$estimate),
-				pointwise_ci_low = .rse428_q(1, function(x) {
-					x$ci$pointwise_ci_low
-				}),
-				pointwise_ci_high = .rse428_q(1, function(x) {
-					x$ci$pointwise_ci_high
-				})
-			),
-			.RSE428_SCALES
+# `simultaneousCIs()` on the default fit at k, under each method.
+.rse428_sci_methods <- list(
+	analytic = function(k) {
+		simultaneousCIs(.rse428_shared("default", k), method = "analytic")
+	},
+	bootstrap = function(k) {
+		simultaneousCIs(
+			.rse428_shared("default", k),
+			method = "bootstrap",
+			seed = 1
 		)
+	}
+)
+
+test_that("simultaneousCIs() is equivariant under both methods (#428)", {
+	.rse428_expect_live(.rse428_shared("default", 1))
+	for (band in .rse428_sci_methods) {
+		at <- .rse428_fits(band, .RSE428_SCALES)
+		.rse428_expect_band_live(at(1)$adjusted_p_values)
+		.rse428_expect_equivariant(at, .rse428_sci_quantities, .RSE428_SCALES)
+	}
+})
+
+test_that("simultaneousCIs() gives the same critical value and adjusted p-values at k = 1e-4 as at k = 1 (#489)", {
+	for (band in .rse428_sci_methods) {
+		at <- .rse428_fits(band, 1e-4)
+		.rse428_expect_band_live(at(1)$adjusted_p_values)
 		.rse428_expect_equivariant(
-			band,
-			list(
-				simultaneous_ci_low = .rse428_q(
-					1,
-					function(x) x$ci$simultaneous_ci_low
-				),
-				simultaneous_ci_high = .rse428_q(
-					1,
-					function(x) x$ci$simultaneous_ci_high
-				),
-				critical_value = .rse428_q(0, function(x) x$critical_value),
-				adjusted_p_values = .rse428_q(0, function(x) {
-					x$adjusted_p_values
-				})
-			),
-			.RSE428_BAND_SCALES
+			at,
+			.rse428_sci_quantities[c("critical_value", "adjusted_p_values")],
+			1e-4
 		)
 	}
 })
@@ -568,12 +550,21 @@ test_that("fetwfe() and betwfe() standardize by the sig_eps_sq their GLS step us
 		fit <- testthat::with_mocked_bindings(
 			.rse428_scaled_fit(get(est), 1),
 			.bridge_response_scale = function(sig_eps_sq = NA_real_, y = NULL) {
-				rec$sig_eps_sq[[length(rec$sig_eps_sq) + 1L]] <- sig_eps_sq
+				# The band's degeneracy reference calls the same helper, so only
+				# the dispatcher's calls are recorded.
+				from_dispatch <- any(vapply(
+					sys.calls(),
+					.ns_is_call_to,
+					logical(1),
+					fn = ".dispatch_bridge_selection"
+				))
+				if (from_dispatch) {
+					rec$sig_eps_sq[[length(rec$sig_eps_sq) + 1L]] <- sig_eps_sq
+				}
 				real(sig_eps_sq, y)
 			},
 			.package = "fetwfe"
 		)
-		# The estimated variances differ, so handing over sig_eps_c_sq would show.
 		expect_false(
 			isTRUE(all.equal(fit$sig_eps_sq, fit$sig_eps_c_sq)),
 			info = est
@@ -640,12 +631,6 @@ test_that("the bridge fits the GLS response divided by sqrt(sig_eps_sq) (#428)",
 	)
 }
 
-.rse428_hd_band_quantities <- list(
-	estimate = .rse428_q(1, function(x) x$ci$estimate),
-	pointwise_ci_low = .rse428_q(1, function(x) x$ci$pointwise_ci_low),
-	pointwise_ci_high = .rse428_q(1, function(x) x$ci$pointwise_ci_high)
-)
-
 test_that("high dimensions, gls = TRUE with supplied variances: the fit, debiasedATT() and the bootstrap band are equivariant (#428)", {
 	skip_on_cran()
 	sim <- .rse428_hd_sim()
@@ -681,11 +666,12 @@ test_that("high dimensions, gls = TRUE with supplied variances: the fit, debiase
 		),
 		.RSE428_SCALES
 	)
-	.rse428_expect_equivariant(
+	band <- .rse428_fits(
 		function(k) simultaneousCIs(at(k), method = "bootstrap", seed = 1),
-		.rse428_hd_band_quantities,
 		.RSE428_SCALES
 	)
+	.rse428_expect_band_live(band(1)$adjusted_p_values)
+	.rse428_expect_equivariant(band, .rse428_sci_quantities, .RSE428_SCALES)
 })
 
 test_that("high dimensions, gls = FALSE: debiasedATT() and the bootstrap band are equivariant (#428)", {
@@ -708,11 +694,12 @@ test_that("high dimensions, gls = FALSE: debiasedATT() and the bootstrap band ar
 		),
 		.RSE428_SCALES
 	)
-	.rse428_expect_equivariant(
+	band <- .rse428_fits(
 		function(k) simultaneousCIs(at(k), method = "bootstrap", seed = 1),
-		.rse428_hd_band_quantities,
 		.RSE428_SCALES
 	)
+	.rse428_expect_band_live(band(1)$adjusted_p_values)
+	.rse428_expect_equivariant(band, .rse428_sci_quantities, .RSE428_SCALES)
 })
 
 # The other fit options, one block each.
@@ -809,5 +796,39 @@ for (.rse428_row in names(.rse428_option_rows)) {
 			.rse428_fit_quantities(),
 			.RSE428_SCALES
 		)
+	})
+}
+
+# Default (simultaneous) fits whose bands reach the degeneracy rule by other
+# routes, one block each: a cluster-robust sandwich, the conservative branch's
+# Bonferroni p-values (its bounds do not read the rule), and the beta-space
+# covariance of `etwfe()` and `twfeCovs()`.
+.rse428_band_rows <- list(
+	`fetwfe(se_type = "cluster")` = list(
+		make = function(k) .rse428_scaled_fit(fetwfe, k, se_type = "cluster"),
+		penalized = TRUE
+	),
+	`fetwfe(se_type = "conservative")` = list(
+		make = function(k) {
+			.rse428_scaled_fit(fetwfe, k, se_type = "conservative")
+		},
+		penalized = TRUE
+	),
+	`etwfe()` = list(
+		make = function(k) .rse428_scaled_fit(etwfe, k),
+		penalized = FALSE
+	),
+	`twfeCovs()` = list(
+		make = function(k) .rse428_scaled_fit(twfeCovs, k),
+		penalized = FALSE
+	)
+)
+for (.rse428_row in names(.rse428_band_rows)) {
+	test_that(sprintf("the band of %s is equivariant (#489)", .rse428_row), {
+		row <- .rse428_band_rows[[.rse428_row]]
+		at <- .rse428_fits(row$make, .RSE428_SCALES)
+		.rse428_expect_live(at(1), penalized = row$penalized)
+		.rse428_expect_band_live(at(1)$catt_df$p_value)
+		.rse428_expect_equivariant(at, .rse428_band_quantities, .RSE428_SCALES)
 	})
 }
