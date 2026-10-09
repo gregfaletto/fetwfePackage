@@ -278,7 +278,7 @@ test_that("a custom family's band does not depend on the scale of its rows' weig
 	}
 })
 
-test_that("the rule receives the reference sig_eps_sq / (N * T), and the conservative branch's squared standard errors (#501)", {
+test_that("the rule receives the reference sig_eps_sq / (N * T), or var(y) / (N * T) from a fit without sig_eps_sq, and the conservative branch's squared standard errors (#501)", {
 	fit <- .bdf489_fit(1, sim = .bdf489_sim428)
 	fit_cons <- .bdf489_fit(1, se_type = "conservative", sim = .bdf489_sim428)
 	real <- fetwfe:::.band_nondegenerate
@@ -327,4 +327,26 @@ test_that("the rule receives the reference sig_eps_sq / (N * T), and the conserv
 		((sc$ci$pointwise_ci_high - sc$ci$pointwise_ci_low) /
 			(2 * sc$pointwise_critical_value))^2
 	)
+
+	# The rest builds a `gls = FALSE` fit on #428's high-dimensional fixture, so it
+	# skips on CRAN, as that file's high-dimensional blocks do.
+	skip_on_cran()
+	sim_hd <- simulateData(
+		genCoefs(G = 3, T = 5, d = 20, density = 0.08, eff_size = 6, seed = 11),
+		N = 60,
+		sig_eps_sq = 0.5,
+		sig_eps_c_sq = 0.5,
+		seed = 1001
+	)
+	fit_hd <- .bdf489_fit(1, gls = FALSE, sim = sim_hd)
+	nt_hd <- fit_hd$N * fit_hd$T
+	y <- fit_hd$internal$y_final[seq_len(nt_hd)]
+	rec$calls <- list()
+	testthat::with_mocked_bindings(
+		simultaneousCIs(fit_hd, method = "bootstrap", seed = 1),
+		.band_nondegenerate = recorder,
+		.package = "fetwfe"
+	)
+	expect_length(rec$calls, 1L)
+	expect_equal(rec$calls[[1]]$v_ref, nt_hd^2 * stats::var(y) / nt_hd)
 })
