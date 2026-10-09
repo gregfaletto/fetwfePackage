@@ -398,7 +398,7 @@ test_that("the rule receives the reference sig_eps_sq / (N * T), or var(y) / (N 
 	C_hd[1, 1] <- 2
 	C_hd[2, 2:3] <- c(1, 0.5)
 	rec$calls <- list()
-	testthat::with_mocked_bindings(
+	sc_hd <- testthat::with_mocked_bindings(
 		simultaneousCIs(
 			fit_hd,
 			family = "custom",
@@ -409,5 +409,6 @@ test_that("the rule receives the reference sig_eps_sq / (N * T), or var(y) / (N 
 		.band_nondegenerate = recorder,
 		.package = "fetwfe"
 	)
+	expect_identical(sc_hd$regime, "high-dimensional")
 	expect_equal(lapply(rec$calls, "[[", "w2"), list(c(4, 1.25)))
 })
