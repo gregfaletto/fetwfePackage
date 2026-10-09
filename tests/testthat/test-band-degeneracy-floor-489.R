@@ -1,9 +1,9 @@
 # The simultaneous band's degeneracy rule, `.band_nondegenerate()`, and the
 # routes that apply it (#489, #501).
 
-test_that(".band_nondegenerate()'s tolerance is sqrt(eps) times the larger of the family's largest variance per unit of squared weight and the reference (#489)", {
+test_that(".band_nondegenerate()'s tolerance is eps times the larger of the family's largest variance per unit of squared weight and the reference (#489)", {
 	nondeg <- fetwfe:::.band_nondegenerate
-	tol <- sqrt(.Machine$double.eps)
+	tol <- .Machine$double.eps
 	# Exact zeros are degenerate.
 	expect_identical(nondeg(c(0, 0, 0), 1, 1), c(FALSE, FALSE, FALSE))
 	expect_identical(nondeg(c(1, 0), 1, 1), c(TRUE, FALSE))
@@ -29,7 +29,7 @@ test_that(".band_nondegenerate()'s tolerance is sqrt(eps) times the larger of th
 	# `w2` by s^2, and leaves every effect's classification unchanged.
 	v <- c(0.3, 0.2, 1e-20, 0)
 	for (j in seq_along(v)) {
-		for (s in c(1e-9, 1e6)) {
+		for (s in c(1e-9, 1e9)) {
 			w2 <- replace(rep(1, 4), j, s^2)
 			expect_identical(
 				nondeg(v * w2, 0.01, w2),
@@ -38,22 +38,22 @@ test_that(".band_nondegenerate()'s tolerance is sqrt(eps) times the larger of th
 			)
 		}
 	}
-	# Two rows whose weights differ by 1e5 are both non-degenerate.
+	# Two rows whose weights differ by 1e8 are both non-degenerate.
 	expect_identical(
-		nondeg(c(0.3, 0.2 * 1e-10), 0.01, c(1, 1e-10)),
+		nondeg(c(0.3, 0.2 * 1e-16), 0.01, c(1, 1e-16)),
 		c(TRUE, TRUE)
 	)
 	# A zero row is degenerate.
 	expect_identical(nondeg(c(0.3, 0), 0.01, c(1, 0)), c(TRUE, FALSE))
 	# A scalar `w2` applies to every effect.
-	expect_identical(nondeg(c(0.03, 5e-10), 0.01, 4), c(TRUE, FALSE))
+	expect_identical(nondeg(c(0.03, 0.035 * tol), 0.01, 4), c(TRUE, FALSE))
 })
 
 test_that(".simultaneous_bootstrap_crit() applies var_ref in variance units (#489)", {
 	N <- 60L
 	n <- N * 4L
 	var_ref <- 0.5 / n
-	tol <- sqrt(.Machine$double.eps)
+	tol <- .Machine$double.eps
 	set.seed(489)
 	u <- stats::rnorm(N)
 	u <- u / sqrt(sum(u^2))

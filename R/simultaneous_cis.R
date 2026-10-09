@@ -1259,9 +1259,8 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 # .band_nondegenerate
 #' @title Which effects of a band's family are non-degenerate
 #' @description An effect is non-degenerate when its variance per unit of
-#'   squared contrast weight, `v / w2`, exceeds `sqrt(.Machine$double.eps)`
-#'   times the larger of the family's largest such variance and the reference
-#'   `v_ref`.
+#'   squared contrast weight, `v / w2`, exceeds `.Machine$double.eps` times the
+#'   larger of the family's largest such variance and the reference `v_ref`.
 #'
 #'   Everything the band hands this rule is in the response's squared units:
 #'   `diag(Sigma_1 + Sigma_2)` on the tight branch, the squared Cauchy-Schwarz
@@ -1286,7 +1285,7 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 .band_nondegenerate <- function(v, v_ref, w2) {
 	v_unit <- v / w2
 	v_unit[w2 == 0] <- 0
-	v_unit > .Machine$double.eps^0.5 * max(v_unit, v_ref)
+	v_unit > .Machine$double.eps * max(v_unit, v_ref)
 }
 
 # .cauchy_schwarz_se
