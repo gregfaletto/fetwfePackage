@@ -92,15 +92,6 @@
   increasingly so as the values grew, and `fetwfe()` could fail with a `grpreg`
   convergence error. The penalty is now unit-free.
 
-- `simultaneousCIs()` now classes a `"custom"` contrast with very small weights
-  as having zero variance under every method and at any response scale (#489).
-  The default analytic method and `method = "bootstrap"` give it the pointwise
-  band and `NA` adjusted p-values, where before the bootstrap kept its band, as
-  did the analytic method on a response with large values. Under
-  `se_type = "conservative"` its Bonferroni band is unchanged, but its adjusted
-  p-values, finite before, are now `NA`. #501 tracks making the rule independent
-  of a contrast's scale.
-
 ### Defensive improvements
 
 - A negative cohort-probability variance is no longer discarded in silence
@@ -300,6 +291,11 @@
   weights that cancel across cells the bridge fused to one value can leave; it
   now gives `NA`, as the default `se_type` and `method = "bootstrap"` already
   did (#489).
+
+- In `simultaneousCIs()`, a `"custom"` family whose rows' weights were very
+  small, or differed in size by a large factor, lost its simultaneous band or
+  some adjusted p-values, because those rows counted as zero-variance; each row
+  is now judged relative to its own weights (#501).
 
 ### Internal
 

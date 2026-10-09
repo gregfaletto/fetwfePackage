@@ -1,31 +1,52 @@
-# The simultaneous band's degeneracy rule, `.band_nondegenerate()` (#489): the
-# rule itself, the units in which the bootstrap applies its reference, and a
-# custom contrast whose variance is rounding error.
+# The simultaneous band's degeneracy rule, `.band_nondegenerate()`, and the
+# routes that apply it (#489, #501).
 
 test_that(".band_nondegenerate() floors its relative tolerance at the reference (#489)", {
 	nondeg <- fetwfe:::.band_nondegenerate
 	tol <- sqrt(.Machine$double.eps)
 	# Exact zeros are degenerate.
-	expect_identical(nondeg(c(0, 0, 0), 1), c(FALSE, FALSE, FALSE))
-	expect_identical(nondeg(c(1, 0), 1), c(TRUE, FALSE))
+	expect_identical(nondeg(c(0, 0, 0), 1, 1), c(FALSE, FALSE, FALSE))
+	expect_identical(nondeg(c(1, 0), 1, 1), c(TRUE, FALSE))
 	# Residue-sized variances are degenerate against a real reference variance.
-	expect_identical(nondeg(c(1e-35, 2e-35), 1e-3), c(FALSE, FALSE))
+	expect_identical(nondeg(c(1e-35, 2e-35), 1e-3, 1), c(FALSE, FALSE))
 	# With the reference below the family's largest variance, the tolerance is
 	# relative to that variance.
 	big <- 1e-4
 	expect_identical(
-		nondeg(c(big, 0.5 * tol * big, 2 * tol * big), 1e-3 * big),
+		nondeg(c(big, 0.5 * tol * big, 2 * tol * big), 1e-3 * big, 1),
 		c(TRUE, FALSE, TRUE)
 	)
 	# Multiplying both arguments by k^2 leaves the classification of a real
 	# variance, a residue and a zero unchanged.
 	for (k in c(1e-9, 1e-6, 1e-3, 1, 1e3, 1e6)) {
 		expect_identical(
-			nondeg(c(0.3, 1e-20, 0) * k^2, 0.01 * k^2),
+			nondeg(c(0.3, 1e-20, 0) * k^2, 0.01 * k^2, 1),
 			c(TRUE, FALSE, FALSE),
 			info = sprintf("k = %g", k)
 		)
 	}
+	# Scaling one effect's contrast row by s multiplies its variance and its
+	# `w2` by s^2, and leaves every effect's classification unchanged.
+	v <- c(0.3, 0.2, 1e-20, 0)
+	for (j in seq_along(v)) {
+		for (s in c(1e-9, 1e6)) {
+			w2 <- replace(rep(1, 4), j, s^2)
+			expect_identical(
+				nondeg(v * w2, 0.01, w2),
+				c(TRUE, TRUE, FALSE, FALSE),
+				info = sprintf("effect %d scaled by %g", j, s)
+			)
+		}
+	}
+	# Two rows whose weights differ by 1e5 are both non-degenerate.
+	expect_identical(
+		nondeg(c(0.3, 0.2 * 1e-10), 0.01, c(1, 1e-10)),
+		c(TRUE, TRUE)
+	)
+	# A zero row is degenerate.
+	expect_identical(nondeg(c(0.3, 0), 0.01, c(1, 0)), c(TRUE, FALSE))
+	# A scalar `w2` applies to every effect.
+	expect_identical(nondeg(c(0.3, 1e-20, 0), 0.01, 4), c(TRUE, FALSE, FALSE))
 })
 
 test_that(".simultaneous_bootstrap_crit() floors degeneracy at var_ref in variance units (#489)", {
@@ -44,7 +65,8 @@ test_that(".simultaneous_bootstrap_crit() floors degeneracy at var_ref in varian
 			alpha = 0.05,
 			B = 10,
 			seed = 1,
-			var_ref = var_ref
+			var_ref = var_ref,
+			w2 = 1
 		)$nondeg
 	}
 	expect_false(nondeg_at(0.5 * tol * var_ref))
@@ -62,10 +84,9 @@ test_that(".simultaneous_bootstrap_crit() floors degeneracy at var_ref in varian
 	seed = 1003
 )
 
-# `fetwfe()` on `.bdf489_sim` with its response multiplied by `k`; `...` is
-# passed to `fetwfe()`.
-.bdf489_fit <- function(k, ...) {
-	sim <- .bdf489_sim
+# `fetwfe()` on `sim` with its response multiplied by `k`; `...` is passed to
+# `fetwfe()`.
+.bdf489_fit <- function(k, ..., sim = .bdf489_sim) {
 	pdata <- sim$pdata
 	pdata[[sim$response]] <- pdata[[sim$response]] * k
 	fetwfe(
@@ -153,4 +174,159 @@ test_that("a custom contrast whose variance is rounding error gets an NA adjuste
 			expect_true(is.na(sc$adjusted_p_values), info = info)
 		}
 	}
+})
+
+# The default fixture of `test-response-scale-equivariance-428.R`.
+.bdf489_sim428 <- simulateData(
+	genCoefs(G = 3, T = 4, d = 2, density = 0.5, eff_size = 2, seed = 123),
+	N = 120,
+	sig_eps_sq = 0.5,
+	sig_eps_c_sq = 0.5,
+	seed = 456
+)
+
+test_that("a custom family's band does not depend on the scale of its rows' weights (#501)", {
+	fits <- list(
+		default = .bdf489_fit(1, sim = .bdf489_sim428),
+		conservative = .bdf489_fit(
+			1,
+			se_type = "conservative",
+			sim = .bdf489_sim428
+		)
+	)
+	routes <- list(
+		analytic = list(fit = "default", method = "analytic"),
+		bootstrap = list(fit = "default", method = "bootstrap", seed = 1),
+		conservative = list(fit = "conservative", method = "analytic")
+	)
+	band <- function(route, contrasts) {
+		r <- routes[[route]]
+		suppressMessages(simultaneousCIs(
+			fits[[r$fit]],
+			family = "custom",
+			contrasts = contrasts,
+			method = r$method,
+			seed = r$seed
+		))
+	}
+	# `C0` with `m` rows: a 1 on cell i in row i.
+	num_treats <- length(fits$default$treat_inds)
+	c0 <- function(m) {
+		out <- matrix(0, m, num_treats)
+		out[cbind(seq_len(m), seq_len(m))] <- 1
+		out
+	}
+	ws <- list(
+		rep(1e-9, 3),
+		rep(1e-5, 3),
+		rep(1e6, 3),
+		c(1e-3, 1e-5),
+		c(1, 1e-5),
+		c(1, 1e-9),
+		c(1e-3, 1e-3, 1e-5)
+	)
+	bounds <- c(
+		"estimate",
+		"simultaneous_ci_low",
+		"simultaneous_ci_high",
+		"pointwise_ci_low",
+		"pointwise_ci_high"
+	)
+	for (route in names(routes)) {
+		refs <- list()
+		for (m in 2:3) {
+			refs[[m]] <- band(route, c0(m))
+			# `C0`'s band is live: more than one effect has an adjusted p-value.
+			expect_gt(
+				sum(is.finite(refs[[m]]$adjusted_p_values)),
+				1L,
+				label = sprintf(
+					"finite adjusted p-values of C0 (%s, %d rows)",
+					route,
+					m
+				)
+			)
+		}
+		for (w in ws) {
+			info <- sprintf(
+				"%s, w = (%s)",
+				route,
+				paste(format(w), collapse = ", ")
+			)
+			ref <- refs[[length(w)]]
+			sc <- band(route, diag(w, nrow = length(w)) %*% c0(length(w)))
+			expect_equal(
+				sc$critical_value,
+				ref$critical_value,
+				tolerance = 1e-6,
+				info = info
+			)
+			expect_equal(
+				sc$adjusted_p_values,
+				ref$adjusted_p_values,
+				tolerance = 1e-6,
+				info = info
+			)
+			# Each bound, divided by its row's weight, is `C0`'s bound.
+			for (b in bounds) {
+				expect_equal(
+					sc$ci[[b]] / w,
+					ref$ci[[b]],
+					tolerance = 1e-6,
+					info = paste(info, b)
+				)
+			}
+		}
+	}
+})
+
+test_that("the rule receives the reference sig_eps_sq / (N * T), and the conservative branch's squared standard errors (#501)", {
+	fit <- .bdf489_fit(1, sim = .bdf489_sim428)
+	fit_cons <- .bdf489_fit(1, se_type = "conservative", sim = .bdf489_sim428)
+	real <- fetwfe:::.band_nondegenerate
+	rec <- new.env(parent = emptyenv())
+	recorder <- function(v, v_ref, w2) {
+		rec$calls[[length(rec$calls) + 1L]] <- list(v = v, v_ref = v_ref)
+		real(v, v_ref, w2)
+	}
+	nt <- fit$N * fit$T
+	v_ref <- fit$sig_eps_sq / nt
+
+	rec$calls <- list()
+	testthat::with_mocked_bindings(
+		simultaneousCIs(fit),
+		.band_nondegenerate = recorder,
+		.package = "fetwfe"
+	)
+	expect_length(rec$calls, 1L)
+	expect_equal(rec$calls[[1]]$v_ref, v_ref)
+
+	# On `.simultaneous_bootstrap_crit()`'s scale; see its `var_ref`.
+	rec$calls <- list()
+	testthat::with_mocked_bindings(
+		simultaneousCIs(fit, method = "bootstrap", seed = 1),
+		.band_nondegenerate = recorder,
+		.package = "fetwfe"
+	)
+	expect_length(rec$calls, 1L)
+	expect_equal(rec$calls[[1]]$v_ref, nt^2 * v_ref)
+
+	rec$calls <- list()
+	sc <- testthat::with_mocked_bindings(
+		suppressMessages(simultaneousCIs(fit_cons)),
+		.band_nondegenerate = recorder,
+		.package = "fetwfe"
+	)
+	# The conservative branch built this band.
+	expect_equal(sc$critical_value, sc$bonferroni_critical_value)
+	expect_length(rec$calls, 1L)
+	expect_equal(
+		rec$calls[[1]]$v_ref,
+		fit_cons$sig_eps_sq / (fit_cons$N * fit_cons$T)
+	)
+	expect_equal(
+		rec$calls[[1]]$v,
+		((sc$ci$pointwise_ci_high - sc$ci$pointwise_ci_low) /
+			(2 * sc$pointwise_critical_value))^2
+	)
 })

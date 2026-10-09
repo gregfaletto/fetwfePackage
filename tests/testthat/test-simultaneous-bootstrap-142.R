@@ -305,6 +305,7 @@ test_that(".simultaneous_bootstrap_crit handles degenerate / single-effect F wit
 			alpha = 0.05,
 			B = 100,
 			var_ref = 1 / 240,
+			w2 = rep(1, 3),
 			multiplier = "rademacher",
 			seed = 1
 		)
@@ -320,7 +321,8 @@ test_that(".simultaneous_bootstrap_crit handles degenerate / single-effect F wit
 			n = 240,
 			alpha = 0.05,
 			B = 100,
-			var_ref = 1 / 240
+			var_ref = 1 / 240,
+			w2 = rep(1, 3)
 		)
 	)
 	expect_equal(r1$crit, stats::qnorm(1 - 0.05 / 2))

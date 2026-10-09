@@ -548,6 +548,7 @@
 #'
 #' @param var_ref Numeric scalar; the degeneracy reference variance, in variance
 #'   units, which the function scales by `n^2`.
+#' @param w2 Passed to `.band_nondegenerate()`; see its `w2`.
 #' @return A list with `crit` (scalar), `ses` (length-K), `nondeg`
 #'   (logical length-K), and `boot_max` (length-B, or `NULL` in the degenerate
 #'   single-effect branch).
@@ -560,6 +561,7 @@
 	alpha,
 	B,
 	var_ref,
+	w2,
 	multiplier = c("rademacher", "mammen", "webb"),
 	seed = NULL
 ) {
@@ -577,7 +579,7 @@
 	# Degeneracy uses the COMBINED column sums, so a propensity-only-variance
 	# effect is not dropped. `col_ss` sits on `n^2` times the variance scale, so
 	# `.band_nondegenerate()` gets the reference on that scale too.
-	nondeg <- .band_nondegenerate(col_ss, n_obs_sq * var_ref)
+	nondeg <- .band_nondegenerate(col_ss, n_obs_sq * var_ref, w2)
 	sd_k <- sqrt(col_ss)
 	# Per-effect SE. The regression channel: crossprod(F)/n^2 = cluster Sigma_1 /
 	# cadjust, so the matching SE restores the finite-sample factor
@@ -667,6 +669,7 @@
 #' (`estimates + colSums(F_mat)/(N*T)`, the high-dimensional FETWFE theory realization matching
 #' `debiasedATT()`); fixed-p centers on the (unbiased) bridge estimate unchanged.
 #' @param var_ref Passed to `.simultaneous_bootstrap_crit()`; see its `var_ref`.
+#' @param w2 Passed to `.simultaneous_bootstrap_crit()`; see its `w2`.
 #' @keywords internal
 #' @noRd
 .simultaneous_cis_bootstrap <- function(
@@ -693,6 +696,7 @@
 	pointwise_crit,
 	bonferroni_crit,
 	var_ref,
+	w2,
 	targets = NULL,
 	a_att = NULL,
 	J_list = NULL,
@@ -914,6 +918,7 @@
 		alpha = alpha,
 		B = B,
 		var_ref = var_ref,
+		w2 = w2,
 		multiplier = multiplier,
 		seed = seed
 	)

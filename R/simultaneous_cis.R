@@ -667,6 +667,8 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 		cohort_probs_overall = cohort_probs_overall
 	)
 	K <- nrow(psi_tes_mat)
+	# `.band_nondegenerate()`'s `w2`.
+	w2 <- rowSums(psi_tes_mat^2)
 	estimates <- as.numeric(psi_tes_mat %*% tes)
 
 	pointwise_crit <- stats::qnorm(1 - alpha / 2)
@@ -979,7 +981,8 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 			G = G,
 			cell_targets = cell_targets,
 			j_cells = j_cells,
-			var_ref = var_ref
+			var_ref = var_ref,
+			w2 = w2
 		))
 	}
 
@@ -1059,7 +1062,7 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 		# correlation matrix (cov2cor() needs positive diagonal entries), so
 		# the simultaneous critical value is computed over the non-degenerate
 		# sub-family.
-		nondeg <- .band_nondegenerate(diag(Sigma), var_ref)
+		nondeg <- .band_nondegenerate(diag(Sigma), var_ref, w2)
 		if (sum(nondeg) <= 1L) {
 			# Zero or one non-degenerate effect: no joint correlation to
 			# integrate; the per-effect critical value is exact, and the
@@ -1176,7 +1179,7 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 		# `.band_nondegenerate()` classes degenerate on the variance bound
 		# `ses^2` (see `.cauchy_schwarz_se()`).
 		pw_cons <- ifelse(
-			.band_nondegenerate(ses^2, var_ref),
+			.band_nondegenerate(ses^2, var_ref, w2),
 			2 * stats::pnorm(-abs(estimates / ses)),
 			NA_real_
 		)
@@ -1256,10 +1259,10 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 
 # .band_nondegenerate
 #' @title Which effects of a band's family are non-degenerate
-#' @description An effect is non-degenerate when its variance exceeds
-#'   `sqrt(.Machine$double.eps)` times the larger of the family's largest
-#'   variance and the reference `v_ref`: a relative tolerance, floored at the
-#'   reference.
+#' @description An effect is non-degenerate when its variance per unit of
+#'   squared contrast weight, `v / w2`, exceeds `sqrt(.Machine$double.eps)`
+#'   times the larger of the family's largest such variance and the reference
+#'   `v_ref`: a relative tolerance, floored at the reference.
 #'
 #'   Everything the band hands this rule is in the response's squared units:
 #'   `diag(Sigma_1 + Sigma_2)` on the tight branch, the squared Cauchy-Schwarz
@@ -1267,19 +1270,24 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 #'   in `.simultaneous_bootstrap_crit()`. The reference
 #'   `.simultaneous_cis_impl()` builds, the square of `.bridge_response_scale()`'s
 #'   scale over `N * T`, is in those units too, so the classification does not
-#'   depend on the response's units (#489).
+#'   depend on the response's units (#489). Dividing by `w2` keeps it from
+#'   depending on the scale of a contrast's weights either (#501).
 #'
 #'   Paper: Remark `nondegeneracy.remark` in `paper_arxiv.tex`.
 #' @param v Numeric vector; the family's effect variances, or a common positive
 #'   multiple of them.
 #' @param v_ref Numeric scalar; the reference variance, on the same scale as
 #'   `v`.
+#' @param w2 Numeric vector the length of `v`, or a scalar; each effect's
+#'   squared contrast-row norm. An effect whose `w2` is 0 is degenerate.
 #' @return Logical vector the length of `v`; `TRUE` for a non-degenerate
 #'   effect.
 #' @keywords internal
 #' @noRd
-.band_nondegenerate <- function(v, v_ref) {
-	v > .Machine$double.eps^0.5 * max(v, v_ref)
+.band_nondegenerate <- function(v, v_ref, w2) {
+	v_unit <- v / w2
+	v_unit[w2 == 0] <- 0
+	v_unit > .Machine$double.eps^0.5 * max(v_unit, v_ref)
 }
 
 # .cauchy_schwarz_se
