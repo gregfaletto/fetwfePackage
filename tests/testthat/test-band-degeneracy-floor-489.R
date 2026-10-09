@@ -73,9 +73,7 @@ test_that(".simultaneous_bootstrap_crit() floors degeneracy at var_ref in varian
 	expect_true(nondeg_at(2 * tol * var_ref))
 })
 
-# A fixture on which the bridge fuses cells to one value. A custom contrast
-# whose weights cancel across fused cells has zero variance up to rounding
-# error, and the weights (0.1, 0.2, -0.3) leave a nonzero one.
+# A fixture on which the bridge fuses cells to one value.
 .bdf489_sim <- simulateData(
 	genCoefs(G = 3, T = 5, d = 2, density = 0.15, eff_size = 2, seed = 3),
 	N = 150,
