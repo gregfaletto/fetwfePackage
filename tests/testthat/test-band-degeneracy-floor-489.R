@@ -218,9 +218,11 @@ test_that("a custom family's band does not depend on the scale of its rows' weig
 		rep(1e-9, 3),
 		rep(1e-5, 3),
 		rep(1e6, 3),
+		rep(1e9, 3),
 		c(1e-3, 1e-5),
 		c(1, 1e-5),
 		c(1, 1e-9),
+		c(1, 1e-18),
 		c(1e-3, 1e-3, 1e-5)
 	)
 	bounds <- c(
@@ -284,7 +286,11 @@ test_that("the rule receives the reference sig_eps_sq / (N * T), or var(y) / (N 
 	real <- fetwfe:::.band_nondegenerate
 	rec <- new.env(parent = emptyenv())
 	recorder <- function(v, v_ref, w2) {
-		rec$calls[[length(rec$calls) + 1L]] <- list(v = v, v_ref = v_ref)
+		rec$calls[[length(rec$calls) + 1L]] <- list(
+			v = v,
+			v_ref = v_ref,
+			w2 = w2
+		)
 		real(v, v_ref, w2)
 	}
 	nt <- fit$N * fit$T
@@ -327,6 +333,40 @@ test_that("the rule receives the reference sig_eps_sq / (N * T), or var(y) / (N 
 		((sc$ci$pointwise_ci_high - sc$ci$pointwise_ci_low) /
 			(2 * sc$pointwise_critical_value))^2
 	)
+
+	# A custom family whose rows' squared norms are 4 and 1.25, on each route.
+	C <- matrix(0, 2, length(fit$treat_inds))
+	C[1, 1] <- 2
+	C[2, 2:3] <- c(1, 0.5)
+	routes <- list(
+		analytic = function() {
+			simultaneousCIs(fit, family = "custom", contrasts = C)
+		},
+		bootstrap = function() {
+			simultaneousCIs(
+				fit,
+				family = "custom",
+				contrasts = C,
+				method = "bootstrap",
+				seed = 1
+			)
+		},
+		conservative = function() {
+			suppressMessages(
+				simultaneousCIs(fit_cons, family = "custom", contrasts = C)
+			)
+		}
+	)
+	for (route in names(routes)) {
+		rec$calls <- list()
+		testthat::with_mocked_bindings(
+			routes[[route]](),
+			.band_nondegenerate = recorder,
+			.package = "fetwfe"
+		)
+		expect_length(rec$calls, 1L)
+		expect_equal(rec$calls[[1]]$w2, c(4, 1.25), info = route)
+	}
 
 	# The rest builds a `gls = FALSE` fit on #428's high-dimensional fixture, so it
 	# skips on CRAN, as that file's high-dimensional blocks do.
