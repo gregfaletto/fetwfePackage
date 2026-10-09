@@ -280,7 +280,7 @@ test_that("a custom family's band does not depend on the scale of its rows' weig
 	}
 })
 
-test_that("the rule receives the reference sig_eps_sq / (N * T), or var(y) / (N * T) from a fit without sig_eps_sq, and the conservative branch's squared standard errors (#501)", {
+test_that("the rule receives the reference sig_eps_sq / (N * T), or var(y) / (N * T) from a fit without sig_eps_sq, the conservative branch's squared standard errors, and a custom family's squared row norms on the analytic, bootstrap, conservative and desparsified routes (#501)", {
 	fit <- .bdf489_fit(1, sim = .bdf489_sim428)
 	fit_cons <- .bdf489_fit(1, se_type = "conservative", sim = .bdf489_sim428)
 	real <- fetwfe:::.band_nondegenerate
@@ -392,4 +392,22 @@ test_that("the rule receives the reference sig_eps_sq / (N * T), or var(y) / (N 
 	)
 	expect_length(rec$calls, 1L)
 	expect_equal(rec$calls[[1]]$v_ref, nt_hd^2 * stats::var(y) / nt_hd)
+
+	# The custom family above, on the desparsified route.
+	C_hd <- matrix(0, 2, length(fit_hd$treat_inds))
+	C_hd[1, 1] <- 2
+	C_hd[2, 2:3] <- c(1, 0.5)
+	rec$calls <- list()
+	testthat::with_mocked_bindings(
+		simultaneousCIs(
+			fit_hd,
+			family = "custom",
+			contrasts = C_hd,
+			method = "bootstrap",
+			seed = 1
+		),
+		.band_nondegenerate = recorder,
+		.package = "fetwfe"
+	)
+	expect_equal(lapply(rec$calls, "[[", "w2"), list(c(4, 1.25)))
 })
