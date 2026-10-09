@@ -46,7 +46,7 @@ test_that(".band_nondegenerate()'s tolerance is sqrt(eps) times the larger of th
 	# A zero row is degenerate.
 	expect_identical(nondeg(c(0.3, 0), 0.01, c(1, 0)), c(TRUE, FALSE))
 	# A scalar `w2` applies to every effect.
-	expect_identical(nondeg(c(0.3, 1e-20, 0), 0.01, 4), c(TRUE, FALSE, FALSE))
+	expect_identical(nondeg(c(0.03, 5e-10), 0.01, 4), c(TRUE, FALSE))
 })
 
 test_that(".simultaneous_bootstrap_crit() applies var_ref in variance units (#489)", {
