@@ -205,8 +205,7 @@ An object of S3 class `"simultaneous_cis"`: a list with
   [`mvtnorm::pmvnorm()`](https://rdrr.io/pkg/mvtnorm/man/pmvnorm.html)
   over the same correlation matrix the band uses (or, under
   `se_type = "conservative"`, the Bonferroni adjustment
-  `min(1, K * pointwise_p)`). `NA` for degenerate (zero-variance)
-  effects. (#200)
+  `min(1, K * pointwise_p)`). `NA` for degenerate effects. (#200)
 
 - critical_value:
 
@@ -270,18 +269,25 @@ uses). By construction `sqrt(diag(Sigma))` equals the package's existing
 per-point standard errors for the corresponding effects. The `Sigma`
 blocks are not persisted on the fit; re-derivation is sub-second.
 
-**Degenerate (zero-variance) effects.** An effect whose entire
-contribution to the selected support is zeroed by the bridge penalty –
-or, in scattered-cohort panels, an event time with an empty valid-cohort
-set – has a standard error of exactly 0 by construction, so its
-simultaneous and pointwise CIs collapse to a point at the estimate and
-it is excluded from the joint correlation matrix (it adds no family-wise
-risk; the critical value is computed over the non-degenerate
-sub-family). This `se = 0` convention is the simultaneous-CI analog of
-the `NA` standard error
+**Degenerate effects.** An effect whose entire contribution to the
+selected support is zeroed by the bridge penalty – or, in
+scattered-cohort panels, an event time with an empty valid-cohort set –
+has a standard error of exactly 0 by construction, so its simultaneous
+and pointwise CIs collapse to a point at the estimate and it is excluded
+from the joint correlation matrix (it adds no family-wise risk; the
+critical value is computed over the non-degenerate sub-family). This
+`se = 0` convention is the simultaneous-CI analog of the `NA` standard
+error
 [`eventStudy()`](https://gregfaletto.github.io/fetwfePackage/reference/eventStudy.md)
 reports for the same structurally-degenerate event times; both assign
-the effect an estimate of 0.
+the effect an estimate of 0. On every band built from the selected
+support, which is every band but the desparsified one a high-dimensional
+[`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)
+fit gets under `method = "bootstrap"`, a signed `"custom"` contrast
+whose weights cancel on that support is degenerate too: its estimate and
+standard error are exactly 0 or rounding error, so which side of zero
+its point-sized interval falls on carries no information, and its `NA`
+adjusted p-value is the signal.
 
 **High-dimensional (`p >= NT`) bands.** One route out of the four is
 uniformly valid: a

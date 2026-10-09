@@ -246,8 +246,7 @@ exact dual of the simultaneous band (a coefficient lies outside the
 <code>(1 - alpha)</code> band iff its adjusted p-value is <code>&lt; alpha</code>). Computed via
 <code><a href="https://rdrr.io/pkg/mvtnorm/man/pmvnorm.html" class="external-link">mvtnorm::pmvnorm()</a></code> over the same correlation matrix the band uses
 (or, under <code>se_type = "conservative"</code>, the Bonferroni adjustment
-<code>min(1, K * pointwise_p)</code>). <code>NA</code> for degenerate (zero-variance)
-effects. (#200)</p></dd>
+<code>min(1, K * pointwise_p)</code>). <code>NA</code> for degenerate effects. (#200)</p></dd>
 
 <dt>critical_value</dt>
 <dd><p>The simultaneous critical value <code>c_{1 - alpha}</code>
@@ -299,7 +298,7 @@ machinery (the same machinery <code><a href="eventStudy.html">eventStudy()</a></
 <code>sqrt(diag(Sigma))</code> equals the package's existing per-point standard errors
 for the corresponding effects. The <code>Sigma</code> blocks are not persisted on the
 fit; re-derivation is sub-second.</p>
-<p><strong>Degenerate (zero-variance) effects.</strong> An effect whose entire contribution
+<p><strong>Degenerate effects.</strong> An effect whose entire contribution
 to the selected support is zeroed by the bridge penalty – or, in
 scattered-cohort panels, an event time with an empty valid-cohort set – has
 a standard error of exactly 0 by construction, so its simultaneous and
@@ -308,7 +307,13 @@ joint correlation matrix (it adds no family-wise risk; the critical value is
 computed over the non-degenerate sub-family). This <code>se = 0</code> convention is the
 simultaneous-CI analog of the <code>NA</code> standard error <code><a href="eventStudy.html">eventStudy()</a></code> reports for
 the same structurally-degenerate event times; both assign the effect an
-estimate of 0.</p>
+estimate of 0. On every band built from the selected support, which is
+every band but the desparsified one a high-dimensional <code><a href="fetwfe.html">fetwfe()</a></code> fit gets
+under <code>method = "bootstrap"</code>, a signed <code>"custom"</code> contrast whose weights
+cancel on that support is degenerate too: its estimate and standard error
+are exactly 0 or rounding error, so which side of zero its point-sized
+interval falls on carries no information, and its <code>NA</code> adjusted p-value is
+the signal.</p>
 <p><strong>High-dimensional (<code>p &gt;= NT</code>) bands.</strong> One route out of the four is
 uniformly valid: a <code><a href="fetwfe.html">fetwfe()</a></code> fit under
 <code>method = "bootstrap"</code>. That is the full-design desparsified band of
