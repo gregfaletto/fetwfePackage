@@ -1,7 +1,7 @@
 # The simultaneous band's degeneracy rule, `.band_nondegenerate()`, and the
 # routes that apply it (#489, #501).
 
-test_that(".band_nondegenerate() floors its relative tolerance at the reference (#489)", {
+test_that(".band_nondegenerate()'s tolerance is sqrt(eps) times the larger of the family's largest variance per unit of squared weight and the reference (#489)", {
 	nondeg <- fetwfe:::.band_nondegenerate
 	tol <- sqrt(.Machine$double.eps)
 	# Exact zeros are degenerate.
@@ -49,7 +49,7 @@ test_that(".band_nondegenerate() floors its relative tolerance at the reference 
 	expect_identical(nondeg(c(0.3, 1e-20, 0), 0.01, 4), c(TRUE, FALSE, FALSE))
 })
 
-test_that(".simultaneous_bootstrap_crit() floors degeneracy at var_ref in variance units (#489)", {
+test_that(".simultaneous_bootstrap_crit() applies var_ref in variance units (#489)", {
 	N <- 60L
 	n <- N * 4L
 	var_ref <- 0.5 / n

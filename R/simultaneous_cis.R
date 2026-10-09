@@ -622,7 +622,7 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 	se_type <- if (is.null(x$se_type)) "default" else x$se_type
 	is_indep <- isTRUE(x$indep_counts_used)
 	tes <- beta_hat[treat_inds]
-	# The reference variance `.band_nondegenerate()` floors its tolerance at.
+	# `.band_nondegenerate()`'s reference variance, `v_ref`.
 	var_ref <- .bridge_response_scale(sig_eps_sq, y_final[seq_len(N * T_)])^2 /
 		(N * T_)
 
@@ -1262,7 +1262,7 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 #' @description An effect is non-degenerate when its variance per unit of
 #'   squared contrast weight, `v / w2`, exceeds `sqrt(.Machine$double.eps)`
 #'   times the larger of the family's largest such variance and the reference
-#'   `v_ref`: a relative tolerance, floored at the reference.
+#'   `v_ref`.
 #'
 #'   Everything the band hands this rule is in the response's squared units:
 #'   `diag(Sigma_1 + Sigma_2)` on the tight branch, the squared Cauchy-Schwarz
