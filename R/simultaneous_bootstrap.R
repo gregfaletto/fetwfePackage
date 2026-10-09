@@ -933,11 +933,10 @@
 	# analytic K = 1 path; keeps "outside band iff adjusted p < alpha" exact).
 	# Degeneracy semantics (#325): the band endpoints use `ses` directly (finite
 	# for every effect), while the adjusted p-value gates on `bc$nondeg`
-	# (`.band_nondegenerate()` on the combined column sums `col_ss`). So a
-	# near-zero-variance effect classified degenerate (`nondeg = FALSE`) still
-	# gets a finite -- but near-zero-width -- band from its tiny `ses`, yet an
-	# `NA` adjusted p-value: the package's degenerate-effect convention (a
-	# collapsed band, no p-value), not an inconsistency. The two gates cannot
+	# (`.band_nondegenerate()` on the combined column sums `col_ss`). So an
+	# effect classified degenerate (`nondeg = FALSE`) still gets a finite band
+	# from its `ses`, yet an `NA` adjusted p-value: the package's
+	# degenerate-effect convention, not an inconsistency. The two gates cannot
 	# disagree the other way: `nondeg` implies
 	# `col_ss > 0`, and `ses^2 = (cadjust*css_reg + css_pi)/n^2 >= col_ss/n^2 > 0`
 	# since `cadjust >= 1`, so `ses > 0` whenever `nondeg` -- the `& ses > 0` here is
