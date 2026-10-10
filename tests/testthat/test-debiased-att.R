@@ -4,17 +4,13 @@
 # reconstruction of paper eqs `debiased.att.def` and `debiased.att.se` on the
 # centered design (Section `sec.meth`).
 
-# Inlined reference. It writes the residual as eq. `debiased.att.se` does on
-# centered data. It hard-codes fusion_structure = "cohort", so it is valid only
-# for cohort fits (the accessor threads fit$fusion_structure), and it takes N_T
-# from the simulated pdata.
-.ref_debiased_att <- function(fit, dat) {
+# The overall-ATT loading in theta coordinates, intercept first. It hard-codes
+# fusion_structure = "cohort", so it is valid only for cohort fits (the
+# accessor threads fit$fusion_structure).
+.ref_a_theta <- function(fit) {
 	G <- fit$G
 	Tt <- fit$T
-	d <- fit$d
 	ti <- fit$treat_inds
-	cp <- fit$cohort_probs
-	num_treats <- length(ti)
 	p <- length(fit$beta_hat)
 	fi <- getFirstInds(G = G, T = Tt)
 	sizes <- (Tt - 1):(Tt - G)
@@ -22,18 +18,27 @@
 	a_beta <- numeric(p)
 	for (g in seq_len(G)) {
 		idx <- ti[cohort_of_treat == g]
-		a_beta[idx] <- cp[g] / length(idx)
+		a_beta[idx] <- fit$cohort_probs[g] / length(idx)
 	}
 	A <- genFullInvFusionTransformMat(
 		first_inds = fi,
 		T = Tt,
 		G = G,
-		d = d,
-		num_treats = num_treats,
+		d = fit$d,
+		num_treats = length(ti),
 		fusion_structure = "cohort",
 		d_inv_treat = NULL
 	)
-	a_theta <- c(0, as.numeric(crossprod(A, a_beta)))
+	c(0, as.numeric(crossprod(A, a_beta)))
+}
+
+# Inlined reference, for cohort fits (`.ref_a_theta()`). It writes the residual
+# as eq. `debiased.att.se` does on centered data, and takes N_T from the
+# simulated pdata.
+.ref_debiased_att <- function(fit, dat) {
+	Tt <- fit$T
+	cp <- fit$cohort_probs
+	a_theta <- .ref_a_theta(fit)
 	X <- fit$internal$X_final
 	y <- fit$internal$y_final
 	th <- fit$internal$theta_hat
@@ -141,6 +146,46 @@ test_that("on a fixed-p fit debiasedATT equals the ETWFE estimate of the overall
 		expect_equal(
 			debiasedATT(fits[[nm]])$att,
 			att_etwfe,
+			tolerance = 1e-4,
+			info = nm
+		)
+	}
+})
+
+test_that("on a fixed-p fit debiasedATT's var_reg matches eq. debiased.att.se computed with an intercept column instead of centering (#507)", {
+	mf <- .make_fit("cohort")
+	dat <- mf$dat
+	fits <- list(
+		gls_true = mf$fit,
+		gls_false = fetwfe(
+			pdata = dat$pdata,
+			time_var = dat$time_var,
+			unit_var = dat$unit_var,
+			treatment = dat$treatment,
+			response = dat$response,
+			covs = dat$covs,
+			q = 0.5,
+			verbose = FALSE,
+			gls = FALSE
+		)
+	)
+	for (nm in names(fits)) {
+		f <- fits[[nm]]
+		X <- f$internal$X_final
+		y <- as.numeric(f$internal$y_final)
+		expect_lt(ncol(X), nrow(X), label = paste("p for", nm))
+		# No centering: the direction comes from the exact inverse of [1, X]'s
+		# Gram, and the residual is the nuisance's own, intercept included. The
+		# tolerance is for the accessor's fixed ridge; comparing the ratio with 1
+		# keeps it relative.
+		Z <- cbind(1, X)
+		e <- as.numeric(y - Z %*% f$internal$theta_hat)
+		w <- solve(crossprod(Z), .ref_a_theta(f))
+		unit <- rep(seq_len(nrow(X) / f$T), each = f$T)
+		ref <- sum(tapply(as.numeric(Z %*% w) * e, unit, sum)^2)
+		expect_equal(
+			debiasedATT(f)$var_reg / ref,
+			1,
 			tolerance = 1e-4,
 			info = nm
 		)
