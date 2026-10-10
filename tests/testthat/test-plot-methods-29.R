@@ -247,6 +247,18 @@ test_that("a fit saved before #505 (logical interval columns) still plots", {
 	expect_error(ggplot2::ggplot_build(p), NA)
 })
 
+test_that("the catt plot converts only logical bounds", {
+	skip_if_not_installed("ggplot2")
+	fit <- .no_se_fit_505("fetwfe_q1")
+	bad <- factor(seq_len(nrow(fit$catt_df)) / 10)
+	for (col in c("ci_low", "ci_high")) {
+		fit$catt_df[[col]] <- bad
+	}
+	p <- plot(fit, type = "catt")
+	expect_identical(p$data$ci_low, bad)
+	expect_identical(p$data$ci_high, bad)
+})
+
 test_that("on a fit with standard errors the catt plot draws the fit's own bounds", {
 	skip_if_not_installed("ggplot2")
 	sim <- .plot_setup()
