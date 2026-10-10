@@ -195,14 +195,15 @@ nuisance coefficients, but not to mean-misspecification. The regression
 channel is the unit-clustered sandwich, valid as the number of units
 \code{N -> infinity} with \strong{no} model for within-unit dependence (so a
 \code{gls = FALSE} fit, which skips GLS whitening, yields a valid cluster-robust
-SE; #307, paper Decision D1). GLS whitening (\code{gls = TRUE}) buys
-\emph{efficiency} (an asymptotically smaller \code{var_reg}), not validity.
+SE; #307, paper Decision D1).
 \item \strong{(Low-dimensional \code{p < NT} only) Asymptotically negligible ridge,}
 \code{lambda = o((NT)^(-1/2))} (the theoretical condition; the leading case is
 the exact inverse \code{lambda = 0}). The implementation does \strong{not} use a
 vanishing schedule --- it adds a fixed numerical stabilizer
-\code{1e-6 * mean(diag(Sigma))} to the Gram before solving, which is negligible
-and cancels in the OLS-identity case.
+\code{lambda = 1e-6 * mean(diag(Sigma))} to the Gram before solving. On a
+design with full column rank once centered, that stabilizer is negligible:
+it leaves the estimate within an \code{O(lambda)} term of the unrestricted
+ETWFE/OLS estimate.
 \item \strong{Growing number of clusters,} \code{N -> infinity}. The CLT is over the
 \code{N} independent units, not the \code{NT} rows. With few treated units the
 cluster approximation is poor and the interval can under-cover; a genuine
