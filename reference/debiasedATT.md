@@ -12,13 +12,14 @@ with asymptotically nominal coverage at roughly the efficiency of
 unrestricted ETWFE.
 
 The debiased point estimate **differs** from the fused `fit$att_hat`:
-when `p < NT`, by the OLS identity (paper eq. `debiased.ols.identity`)
-it equals the unrestricted ETWFE/OLS estimate in the ATT direction. You
-therefore get a dual offering — `fit$att_hat` / `fit$att_se` (fused,
-efficient, pointwise) and `debiasedATT(fit)` (debiased, ETWFE-efficient,
-uniformly valid). It is exposed as a separate accessor (rather than a
-`se_type` option) precisely because the debiased SE accompanies a
-different point estimate than the fused one.
+when `p < NT` and the centered design has full column rank, by the OLS
+identity (paper eq. `debiased.ols.identity`) it equals the unrestricted
+ETWFE/OLS estimate in the ATT direction, up to a numerical ridge (see
+Assumptions). You therefore get a dual offering — `fit$att_hat` /
+`fit$att_se` (fused, efficient, pointwise) and `debiasedATT(fit)`
+(debiased, ETWFE-efficient, uniformly valid). It is exposed as a
+separate accessor (rather than a `se_type` option) precisely because the
+debiased SE accompanies a different point estimate than the fused one.
 
 When `p >= NT` the unrestricted ETWFE is infeasible, so the OLS identity
 no longer applies; the accessor instead builds the debiasing direction
@@ -245,16 +246,16 @@ The uniformly-valid SE relies on the hypotheses of paper Theorem
   regression channel is the unit-clustered sandwich, valid as the number
   of units `N -> infinity` with **no** model for within-unit dependence
   (so a `gls = FALSE` fit, which skips GLS whitening, yields a valid
-  cluster-robust SE; \#307, paper Decision D1). GLS whitening
-  (`gls = TRUE`) buys *efficiency* (an asymptotically smaller
-  `var_reg`), not validity.
+  cluster-robust SE; \#307, paper Decision D1).
 
 - **(Low-dimensional `p < NT` only) Asymptotically negligible ridge,**
   `lambda = o((NT)^(-1/2))` (the theoretical condition; the leading case
   is the exact inverse `lambda = 0`). The implementation does **not**
   use a vanishing schedule — it adds a fixed numerical stabilizer
-  `1e-6 * mean(diag(Sigma))` to the Gram before solving, which is
-  negligible and cancels in the OLS-identity case.
+  `lambda = 1e-6 * mean(diag(Sigma))` to the Gram before solving. The
+  same `lambda` is added for every column, so a covariate in very large
+  or very small units can make it pull the estimate back toward the
+  fused one (#512).
 
 - **Growing number of clusters,** `N -> infinity`. The CLT is over the
   `N` independent units, not the `NT` rows. With few treated units the
@@ -264,9 +265,10 @@ The uniformly-valid SE relies on the hypotheses of paper Theorem
   `method = "bootstrap"` option does *not* remedy this (see its
   documentation).
 
-- **Regularity / two regimes.** When `p < NT` (Theorem
-  `debiased.att.thm`) the full design Gram is nonsingular and the
-  debiasing direction is the exact inverse; the accessor reduces to
+- **Regularity / two regimes.** When `p < NT`, Theorem
+  `debiased.att.thm` assumes the limiting full design Gram is
+  nonsingular; in a sample, the exact inverse needs the full-rank
+  condition stated in the Description, and the accessor then reduces to
   debiased ETWFE. When `p >= NT` (the high-dimensional FETWFE theory)
   the Gram is singular and the direction is the **nodewise
   (desparsified-lasso) relaxed inverse** of equation

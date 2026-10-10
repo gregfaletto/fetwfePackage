@@ -344,8 +344,7 @@ fetwfe(
   whitening and variance-component estimation entirely**, fitting on the
   un-whitened (fusion-transformed) design. This is the high-dimensional
   (`p >= NT`) path: REML cannot estimate the variance components there
-  (the `p < N(T - 1)` REML guard would otherwise stop the fit), and
-  whitening buys efficiency, not validity — the
+  (the `p < N(T - 1)` REML guard would otherwise stop the fit), and the
   [`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)
   cluster-robust sandwich standard error needs no `Omega` (paper
   Decision D1). A `gls = FALSE` fit has `calc_ses = FALSE` (no

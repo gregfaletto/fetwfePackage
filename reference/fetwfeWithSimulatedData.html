@@ -270,10 +270,10 @@ standard, efficient path. When <code>FALSE</code>, <code><a href="fetwfe.html">f
 variance-component estimation entirely</strong>, fitting on the un-whitened
 (fusion-transformed) design. This is the high-dimensional (<code>p &gt;= NT</code>) path:
 REML cannot estimate the variance components there (the <code>p &lt; N(T - 1)</code> REML
-guard would otherwise stop the fit), and whitening buys efficiency, not
-validity — the <code><a href="debiasedATT.html">debiasedATT()</a></code> cluster-robust sandwich standard error needs
-no <code>Omega</code> (paper Decision D1). A <code>gls = FALSE</code> fit has <code>calc_ses = FALSE</code>
-(no within-selection oracle standard errors) and un-whitened
+guard would otherwise stop the fit), and the <code><a href="debiasedATT.html">debiasedATT()</a></code> cluster-robust
+sandwich standard error needs no <code>Omega</code> (paper Decision D1). A
+<code>gls = FALSE</code> fit has <code>calc_ses = FALSE</code> (no within-selection oracle
+standard errors) and un-whitened
 <code>internal$X_final</code> / <code>internal$y_final</code>; pass it to <code><a href="debiasedATT.html">debiasedATT()</a></code> for a
 valid cluster-robust SE. <code>add_ridge = TRUE</code> is not supported, and supplied
 <code>sig_eps_sq</code> / <code>sig_eps_c_sq</code> are ignored, under <code>gls = FALSE</code>.</p></dd>
