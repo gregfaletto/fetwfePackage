@@ -298,10 +298,10 @@
   is now judged relative to its own weights (#501).
 
 - `debiasedATT()` now builds its fixed-p (`p < NT`) debiasing direction from
-  the centered design, as the paper specifies, so on a full-rank design its
-  estimate is the unrestricted ETWFE (OLS) estimate of the overall ATT up to its
-  numerical ridge, as documented; its standard errors and intervals change too
-  (#507).
+  the centered design, as the paper specifies, so when that centered design has
+  full rank its estimate is the unrestricted ETWFE (OLS) estimate of the overall
+  ATT up to its numerical ridge, as documented; its standard errors and
+  intervals change too (#507).
 
 ### Internal
 

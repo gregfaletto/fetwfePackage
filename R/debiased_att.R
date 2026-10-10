@@ -123,8 +123,8 @@
 #'     the exact inverse `lambda = 0`). The implementation does **not** use a
 #'     vanishing schedule --- it adds a fixed numerical stabilizer
 #'     `lambda = 1e-6 * mean(diag(Sigma))` to the Gram before solving. The same
-#'     `lambda` is added for every column, so a covariate in very large units can
-#'     make it large enough to pull the estimate back toward the fused one
+#'     `lambda` is added for every column, so a covariate in very large or very
+#'     small units can make it pull the estimate back toward the fused one
 #'     (#512).
 #'   \item **Growing number of clusters,** `N -> infinity`. The CLT is over the
 #'     `N` independent units, not the `NT` rows. With few treated units the
