@@ -200,10 +200,10 @@ SE; #307, paper Decision D1).
 \code{lambda = o((NT)^(-1/2))} (the theoretical condition; the leading case is
 the exact inverse \code{lambda = 0}). The implementation does \strong{not} use a
 vanishing schedule --- it adds a fixed numerical stabilizer
-\code{lambda = 1e-6 * mean(diag(Sigma))} to the Gram before solving. On a
-design with full column rank once centered, that stabilizer is negligible:
-it leaves the estimate within an \code{O(lambda)} term of the unrestricted
-ETWFE/OLS estimate.
+\code{lambda = 1e-6 * mean(diag(Sigma))} to the Gram before solving. The same
+\code{lambda} is added for every column, so a covariate in very large units can
+make it large enough to pull the estimate back toward the fused one
+(#512).
 \item \strong{Growing number of clusters,} \code{N -> infinity}. The CLT is over the
 \code{N} independent units, not the \code{NT} rows. With few treated units the
 cluster approximation is poor and the interval can under-cover; a genuine

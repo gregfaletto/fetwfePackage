@@ -122,10 +122,10 @@
 #'     `lambda = o((NT)^(-1/2))` (the theoretical condition; the leading case is
 #'     the exact inverse `lambda = 0`). The implementation does **not** use a
 #'     vanishing schedule --- it adds a fixed numerical stabilizer
-#'     `lambda = 1e-6 * mean(diag(Sigma))` to the Gram before solving. On a
-#'     design with full column rank once centered, that stabilizer is negligible:
-#'     it leaves the estimate within an `O(lambda)` term of the unrestricted
-#'     ETWFE/OLS estimate.
+#'     `lambda = 1e-6 * mean(diag(Sigma))` to the Gram before solving. The same
+#'     `lambda` is added for every column, so a covariate in very large units can
+#'     make it large enough to pull the estimate back toward the fused one
+#'     (#512).
 #'   \item **Growing number of clusters,** `N -> infinity`. The CLT is over the
 #'     `N` independent units, not the `NT` rows. With few treated units the
 #'     cluster approximation is poor and the interval can under-cover; a genuine
@@ -543,8 +543,8 @@ debiasedATT <- function(
 
 	# ---- debiased estimate: plug-in functional + orthogonal correction ----
 	# The design the direction and the score are built from: fixed-p centers it
-	# (Section `sec.meth`, eq. `debiased.att.def`); high-dim keeps the uncentered
-	# design pending #510.
+	# (Section `sec.meth`, eqs `debiased.att.def` / `debiased.ols.identity`);
+	# high-dim keeps the uncentered design pending #510.
 	X_dir <- if (highdim) X else scale(X, center = TRUE, scale = FALSE)
 	Sig <- crossprod(X_dir) / n
 	riesz_diag <- NULL
@@ -552,9 +552,6 @@ debiasedATT <- function(
 		# Fixed-p (p < NT): exact / tiny-ridge inverse; `lambda_c` / `riesz_*` are
 		# ignored here.
 		v <- solve(Sig + (1e-6 * mean(diag(Sig))) * diag(p), a_theta[-1])
-		# Fixed-p nuisance: the bridge theta_hat. Theorem `debiased.att.thm` needs
-		# only nuisance *consistency*, and with the exact inverse this reduces to
-		# the OLS identity (eq. `debiased.ols.identity`).
 		theta_nuis <- theta_hat
 	} else {
 		# High-dimensional (p >= NT): nodewise (desparsified-lasso) relaxed inverse.
