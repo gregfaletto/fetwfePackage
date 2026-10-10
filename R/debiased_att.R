@@ -67,10 +67,9 @@
 #' The debiased point estimate **differs** from the fused `fit$att_hat`: when
 #' `p < NT` and the centered design has full column rank, by the OLS identity
 #' (paper eq. `debiased.ols.identity`) it equals the unrestricted ETWFE/OLS
-#' estimate in the ATT direction, up to a numerical ridge (see Assumptions). On a
-#' rank-deficient fixed-p design the ridge sets the estimate instead (#511). You
-#' therefore get a dual
-#' offering --- `fit$att_hat` / `fit$att_se` (fused, efficient, pointwise) and
+#' estimate in the ATT direction, up to a numerical ridge (see Assumptions). You
+#' therefore get a dual offering --- `fit$att_hat` / `fit$att_se` (fused,
+#' efficient, pointwise) and
 #' `debiasedATT(fit)` (debiased, ETWFE-efficient, uniformly valid). It is exposed
 #' as a separate accessor (rather than a `se_type` option) precisely because the
 #' debiased SE accompanies a different point estimate than the fused one.
@@ -137,9 +136,9 @@
 #'     `method = "bootstrap"` option does *not* remedy this (see its
 #'     documentation).
 #'   \item **Regularity / two regimes.** When `p < NT`, Theorem
-#'     `debiased.att.thm` assumes the full design Gram is nonsingular, the
-#'     full-rank condition stated in the Description; the debiasing direction is
-#'     then the exact inverse and the accessor reduces to debiased ETWFE.
+#'     `debiased.att.thm` assumes the limiting full design Gram is nonsingular;
+#'     in a sample, the exact inverse needs the full-rank condition stated in the
+#'     Description, and the accessor then reduces to debiased ETWFE.
 #'     When `p >= NT` (the high-dimensional FETWFE theory) the Gram is singular and the
 #'     direction is the **nodewise (desparsified-lasso) relaxed inverse** of
 #'     equation `debiased.highdim.v` (the same estimate and SE, only `v` differs
