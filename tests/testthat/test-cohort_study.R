@@ -134,6 +134,8 @@ test_that("cohortStudy preserves content of result$catt_df", {
 test_that("cohortStudy column types are well-formed", {
 	setup <- .cs_setup()
 	res <- fetwfeWithSimulatedData(setup$sim)
+	# Precondition: this fixture carries standard errors (#505).
+	expect_true(res$calc_ses)
 	cs <- cohortStudy(res)
 	# `cohort` is a character label (stored as character throughout the
 	# package; see fetwfe()'s catt_df spec). Numeric coercion succeeds.

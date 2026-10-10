@@ -241,6 +241,12 @@ plot.twfeCovs <- function(x, ...) {
 		catt$ci_low <- catt$estimate - z * catt$se
 		catt$ci_high <- catt$estimate + z * catt$se
 	}
+	# A no-SE fit saved before #505 has logical NA bounds; plot them as double.
+	for (b in c("ci_low", "ci_high")) {
+		if (is.logical(catt[[b]])) {
+			catt[[b]] <- as.numeric(catt[[b]])
+		}
+	}
 	# Order the discrete x-axis numerically: cohorts are as.character(integer
 	# adoption time), so a bare character axis sorts "10" before "2" (#396).
 	# Reuse the numeric-first composite key from .truncate_catt().

@@ -120,12 +120,13 @@
 	ses_valid <- (q < 1) && gls
 	ret_se <- if (ses_valid) 0 else NA
 
+	# Double se / ci_low / ci_high, as in getCohortATTsFinal() (#505).
 	catt_df_to_ret <- data.frame(
 		cohort = c_names,
 		estimate = rep(0, G),
-		se = rep(ret_se, G),
-		ci_low = rep(ret_se, G),
-		ci_high = rep(ret_se, G),
+		se = rep(as.numeric(ret_se), G),
+		ci_low = rep(as.numeric(ret_se), G),
+		ci_high = rep(as.numeric(ret_se), G),
 		p_value = rep(NA_real_, G),
 		selected = rep(FALSE, G),
 		stringsAsFactors = FALSE

@@ -303,6 +303,16 @@
   ATT up to its numerical ridge, as documented; its standard errors and
   intervals change too (#507).
 
+- `plot(type = "catt")` stopped with
+  `Discrete values supplied to continuous scale` under `ggplot2` 3.5.x on a fit
+  without standard errors, such as a `fetwfe()` or `betwfe()` fit with
+  `q >= 1` or a `fetwfe(gls = FALSE)` fit, and now plots it, including such a
+  fit saved before this change; `ggplot2` 4.0.3 was not affected (#505). On
+  such fits made with this version, the `se`, `ci_low` and `ci_high` columns
+  of `catt_df` and of `cohortStudy()`, and `tidy()`'s `std.error`, are numeric
+  `NA` rather than logical `NA`; a saved fit keeps the types it was stored
+  with.
+
 ### Internal
 
 - The remaining six items of the test-power audit that followed the #400/#401
