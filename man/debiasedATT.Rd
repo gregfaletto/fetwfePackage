@@ -142,9 +142,11 @@ returns an interval with asymptotically nominal coverage at roughly the
 efficiency of unrestricted ETWFE.
 
 The debiased point estimate \strong{differs} from the fused \code{fit$att_hat}: when
-\code{p < NT}, by the OLS identity (paper eq. \code{debiased.ols.identity}) it equals the
-unrestricted ETWFE/OLS estimate in the ATT direction. You therefore get a dual
-offering --- \code{fit$att_hat} / \code{fit$att_se} (fused, efficient, pointwise) and
+\code{p < NT} and the centered design has full column rank, by the OLS identity
+(paper eq. \code{debiased.ols.identity}) it equals the unrestricted ETWFE/OLS
+estimate in the ATT direction, up to a numerical ridge (see Assumptions). You
+therefore get a dual offering --- \code{fit$att_hat} / \code{fit$att_se} (fused,
+efficient, pointwise) and
 \code{debiasedATT(fit)} (debiased, ETWFE-efficient, uniformly valid). It is exposed
 as a separate accessor (rather than a \code{se_type} option) precisely because the
 debiased SE accompanies a different point estimate than the fused one.
@@ -195,14 +197,15 @@ nuisance coefficients, but not to mean-misspecification. The regression
 channel is the unit-clustered sandwich, valid as the number of units
 \code{N -> infinity} with \strong{no} model for within-unit dependence (so a
 \code{gls = FALSE} fit, which skips GLS whitening, yields a valid cluster-robust
-SE; #307, paper Decision D1). GLS whitening (\code{gls = TRUE}) buys
-\emph{efficiency} (an asymptotically smaller \code{var_reg}), not validity.
+SE; #307, paper Decision D1).
 \item \strong{(Low-dimensional \code{p < NT} only) Asymptotically negligible ridge,}
 \code{lambda = o((NT)^(-1/2))} (the theoretical condition; the leading case is
 the exact inverse \code{lambda = 0}). The implementation does \strong{not} use a
 vanishing schedule --- it adds a fixed numerical stabilizer
-\code{1e-6 * mean(diag(Sigma))} to the Gram before solving, which is negligible
-and cancels in the OLS-identity case.
+\code{lambda = 1e-6 * mean(diag(Sigma))} to the Gram before solving. The same
+\code{lambda} is added for every column, so a covariate in very large or very
+small units can make it pull the estimate back toward the fused one
+(#512).
 \item \strong{Growing number of clusters,} \code{N -> infinity}. The CLT is over the
 \code{N} independent units, not the \code{NT} rows. With few treated units the
 cluster approximation is poor and the interval can under-cover; a genuine
@@ -210,9 +213,10 @@ few-clusters correction (a restricted wild-cluster bootstrap-t or a
 CR2-type analytic adjustment, #361) is future work. The
 \code{method = "bootstrap"} option does \emph{not} remedy this (see its
 documentation).
-\item \strong{Regularity / two regimes.} When \code{p < NT} (Theorem
-\code{debiased.att.thm}) the full design Gram is nonsingular and the debiasing
-direction is the exact inverse; the accessor reduces to debiased ETWFE.
+\item \strong{Regularity / two regimes.} When \code{p < NT}, Theorem
+\code{debiased.att.thm} assumes the limiting full design Gram is nonsingular;
+in a sample, the exact inverse needs the full-rank condition stated in the
+Description, and the accessor then reduces to debiased ETWFE.
 When \code{p >= NT} (the high-dimensional FETWFE theory) the Gram is singular and the
 direction is the \strong{nodewise (desparsified-lasso) relaxed inverse} of
 equation \code{debiased.highdim.v} (the same estimate and SE, only \code{v} differs

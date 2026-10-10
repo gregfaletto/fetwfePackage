@@ -1,23 +1,16 @@
 # Tests for debiasedATT() / debiasedATTWithSimulatedData() (#291).
 #
-# The pivotal test reproduces the validated paper-repo reference algorithm
-# `simulations/method_functions.R::debiased_fetwfe` (inlined here, since the
-# paper repo is not a package dependency) and asserts the accessor matches it to
-# < 1e-10 on a cohort fit. (Verified bite-y: perturbing the ridge constant, the
-# N_T definition, or the per-unit cluster sums in R/debiased_att.R blows this
-# comparison far past 1e-10.)
+# The pivotal test compares the accessor on a cohort fit with an independent
+# reconstruction of paper eqs `debiased.att.def` and `debiased.att.se` on the
+# centered design (Section `sec.meth`).
 
-# Inlined reference: the exact arithmetic of `debiased_fetwfe`, hard-coding
-# fusion_structure = "cohort" and taking N_T from the simulated pdata (as the
-# reference does). Valid only for cohort fits (the reference's hard-coded
-# "cohort" transform); the accessor generalizes it by threading fit$fusion_structure.
-.ref_debiased_fetwfe <- function(fit, dat) {
+# The overall-ATT loading in theta coordinates, intercept first. It hard-codes
+# fusion_structure = "cohort", so it is valid only for cohort fits (the
+# accessor threads fit$fusion_structure).
+.ref_a_theta <- function(fit) {
 	G <- fit$G
 	Tt <- fit$T
-	d <- fit$d
 	ti <- fit$treat_inds
-	cp <- fit$cohort_probs
-	num_treats <- length(ti)
 	p <- length(fit$beta_hat)
 	fi <- getFirstInds(G = G, T = Tt)
 	sizes <- (Tt - 1):(Tt - G)
@@ -25,26 +18,36 @@
 	a_beta <- numeric(p)
 	for (g in seq_len(G)) {
 		idx <- ti[cohort_of_treat == g]
-		a_beta[idx] <- cp[g] / length(idx)
+		a_beta[idx] <- fit$cohort_probs[g] / length(idx)
 	}
 	A <- genFullInvFusionTransformMat(
 		first_inds = fi,
 		T = Tt,
 		G = G,
-		d = d,
-		num_treats = num_treats,
+		d = fit$d,
+		num_treats = length(ti),
 		fusion_structure = "cohort",
 		d_inv_treat = NULL
 	)
-	a_theta <- c(0, as.numeric(crossprod(A, a_beta)))
+	c(0, as.numeric(crossprod(A, a_beta)))
+}
+
+# Inlined reference, for cohort fits (`.ref_a_theta()`). It writes the residual
+# as eq. `debiased.att.se` does on centered data, and takes N_T from the
+# simulated pdata.
+.ref_debiased_att <- function(fit, dat) {
+	Tt <- fit$T
+	cp <- fit$cohort_probs
+	a_theta <- .ref_a_theta(fit)
 	X <- fit$internal$X_final
 	y <- fit$internal$y_final
 	th <- fit$internal$theta_hat
 	n <- nrow(X)
-	Sig <- crossprod(X) / n
+	Xc <- sweep(X, 2L, colMeans(X))
+	Sig <- crossprod(Xc) / n
 	v <- solve(Sig + (1e-6 * mean(diag(Sig))) * diag(ncol(Sig)), a_theta[-1])
-	r <- as.numeric(y - th[1] - X %*% th[-1])
-	g <- as.numeric((X %*% v) * r)
+	r <- as.numeric((y - mean(y)) - Xc %*% th[-1])
+	g <- as.numeric((Xc %*% v) * r)
 	tau <- sum(a_theta * th) + mean(g)
 	unit <- rep(seq_len(n / Tt), each = Tt)
 	Gi <- tapply(g, unit, sum)
@@ -85,12 +88,93 @@
 	)
 }
 
-test_that("debiasedATT matches the validated reference algorithm to < 1e-10", {
+test_that("debiasedATT matches an independent reconstruction of eqs debiased.att.def and debiased.att.se (#507)", {
 	f <- .make_fit("cohort")
 	db <- debiasedATT(f$fit)
-	ref <- .ref_debiased_fetwfe(f$fit, f$dat)
+	ref <- .ref_debiased_att(f$fit, f$dat)
 	expect_lt(abs(db$att - ref[["att"]]), 1e-10)
 	expect_lt(abs(db$se - ref[["se"]]), 1e-10)
+})
+
+test_that("on a fixed-p fit debiasedATT equals the ETWFE estimate of the overall ATT on both gls routes (OLS identity, #507)", {
+	# The premise ?debiasedATT states for eq. `debiased.ols.identity` (#511).
+	mf <- .make_fit("cohort")
+	dat <- mf$dat
+	att_etwfe <- etwfeWithSimulatedData(dat)$att_hat
+	fits <- list(
+		cohort = mf$fit,
+		event_study = fetwfeWithSimulatedData(
+			dat,
+			q = 0.5,
+			fusion_structure = "event_study"
+		),
+		gls_false = fetwfe(
+			pdata = dat$pdata,
+			time_var = dat$time_var,
+			unit_var = dat$unit_var,
+			treatment = dat$treatment,
+			response = dat$response,
+			covs = dat$covs,
+			q = 0.5,
+			verbose = FALSE,
+			gls = FALSE
+		)
+	)
+	for (nm in names(fits)) {
+		X <- fits[[nm]]$internal$X_final
+		expect_lt(ncol(X), nrow(X), label = paste("p for", nm))
+		expect_identical(
+			qr(sweep(X, 2L, colMeans(X)))$rank,
+			ncol(X),
+			label = paste("centered rank for", nm)
+		)
+		expect_equal(
+			debiasedATT(fits[[nm]])$att,
+			att_etwfe,
+			tolerance = 1e-4,
+			info = nm
+		)
+	}
+})
+
+test_that("on a fixed-p fit debiasedATT's var_reg matches eq. debiased.att.se computed with an intercept column instead of centering (#507)", {
+	mf <- .make_fit("cohort")
+	dat <- mf$dat
+	fits <- list(
+		gls_true = mf$fit,
+		gls_false = fetwfe(
+			pdata = dat$pdata,
+			time_var = dat$time_var,
+			unit_var = dat$unit_var,
+			treatment = dat$treatment,
+			response = dat$response,
+			covs = dat$covs,
+			q = 0.5,
+			verbose = FALSE,
+			gls = FALSE
+		)
+	)
+	for (nm in names(fits)) {
+		f <- fits[[nm]]
+		X <- f$internal$X_final
+		y <- as.numeric(f$internal$y_final)
+		expect_lt(ncol(X), nrow(X), label = paste("p for", nm))
+		# No centering: the direction comes from the exact inverse of [1, X]'s
+		# Gram, and the residual is the nuisance's own, intercept included. The
+		# tolerance is for the accessor's fixed ridge; comparing the ratio with 1
+		# keeps it relative.
+		Z <- cbind(1, X)
+		e <- as.numeric(y - Z %*% f$internal$theta_hat)
+		w <- solve(crossprod(Z), .ref_a_theta(f))
+		unit <- rep(seq_len(nrow(X) / f$T), each = f$T)
+		ref <- sum(tapply(as.numeric(Z %*% w) * e, unit, sum)^2)
+		expect_equal(
+			debiasedATT(f)$var_reg / ref,
+			1,
+			tolerance = 1e-4,
+			info = nm
+		)
+	}
 })
 
 test_that("debiasedATT return shape and Wald interval", {
@@ -122,40 +206,15 @@ test_that("debiased estimate differs from the fused att_hat", {
 })
 
 test_that("debiasedATT generalizes to event-study fits (fusion_structure threaded)", {
-	# The reference hard-codes the 'cohort' transform; an event-study fit needs the
-	# fit's own fusion_structure or the ATT-direction identity fails. The accessor
-	# threads fit$fusion_structure, so its internal identity guard passes and it
-	# returns a finite, well-formed result.
+	# `.ref_a_theta()` hard-codes the cohort transform; the accessor threads the
+	# fit's own fusion_structure, so its identity guard passes on this fit.
 	f <- .make_fit("event_study")
 	expect_identical(f$fit$fusion_structure, "event_study")
 	db <- expect_no_error(debiasedATT(f$fit))
 	expect_true(is.finite(db$att) && is.finite(db$se) && db$se > 0)
 	expect_equal(db$se, sqrt(db$var_reg + db$var_weight))
-	# The reference's hard-coded 'cohort' transform would violate the identity on
-	# this fit (so the accessor's threading is load-bearing, not cosmetic).
-	G <- f$fit$G
-	Tt <- f$fit$T
-	d <- f$fit$d
-	ti <- f$fit$treat_inds
-	cp <- f$fit$cohort_probs
-	p <- length(f$fit$beta_hat)
-	fi <- getFirstInds(G = G, T = Tt)
-	cot <- rep(seq_len(G), times = (Tt - 1):(Tt - G))
-	a_beta <- numeric(p)
-	for (g in seq_len(G)) {
-		idx <- ti[cot == g]
-		a_beta[idx] <- cp[g] / length(idx)
-	}
-	A_wrong <- genFullInvFusionTransformMat(
-		first_inds = fi,
-		T = Tt,
-		G = G,
-		d = d,
-		num_treats = length(ti),
-		fusion_structure = "cohort",
-		d_inv_treat = NULL
-	)
-	a_theta_wrong <- c(0, as.numeric(crossprod(A_wrong, a_beta)))
+	# The cohort loading would violate the identity on this fit.
+	a_theta_wrong <- .ref_a_theta(f$fit)
 	expect_gt(
 		abs(sum(a_theta_wrong * f$fit$internal$theta_hat) - f$fit$att_hat),
 		1e-6

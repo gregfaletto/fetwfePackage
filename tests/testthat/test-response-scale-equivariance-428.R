@@ -79,7 +79,12 @@
 
 # Expects each quantity of `at(k)`, divided by k^power, to equal the same
 # quantity of `at(1)`, at every k in `scales`.
-.rse428_expect_equivariant <- function(at, quantities, scales) {
+.rse428_expect_equivariant <- function(
+	at,
+	quantities,
+	scales,
+	tolerance = .RSE428_TOL
+) {
 	ref <- at(1)
 	for (k in scales) {
 		obj <- at(k)
@@ -88,7 +93,7 @@
 			expect_equal(
 				spec$get(obj) / k^spec$power,
 				spec$get(ref),
-				tolerance = .RSE428_TOL,
+				tolerance = tolerance,
 				info = sprintf("%s at k = %g", nm, k)
 			)
 		}
@@ -469,8 +474,14 @@ test_that("debiasedATT() is equivariant under both methods (#428)", {
 		),
 		.RSE428_SCALES
 	)
+	# The k = 1 bootstrap critical value clears the #363 floor, so the
+	# `crit_value` row compares a bootstrap quantile rather than the floor.
+	expect_gt(
+		debiasedATT(df(1), method = "bootstrap", seed = 17)$crit_value,
+		stats::qnorm(0.975)
+	)
 	.rse428_expect_equivariant(
-		function(k) debiasedATT(df(k), method = "bootstrap", seed = 1),
+		function(k) debiasedATT(df(k), method = "bootstrap", seed = 17),
 		list(
 			att = .rse428_q(1, function(x) x$att),
 			se = .rse428_q(1, function(x) x$se),
@@ -479,6 +490,24 @@ test_that("debiasedATT() is equivariant under both methods (#428)", {
 			crit_value = .rse428_q(0, function(x) x$crit_value)
 		),
 		.RSE428_SCALES
+	)
+})
+
+test_that("debiasedATT()'s estimate on a fixed-p gls = FALSE fit is equivariant (#507)", {
+	at <- .rse428_fits(
+		function(k) .rse428_scaled_fit(fetwfe, k, gls = FALSE),
+		.RSE428_SCALES
+	)
+	.rse428_expect_live(at(1))
+	expect_lt(ncol(at(1)$internal$X_final), nrow(at(1)$internal$X_final))
+	# Only the estimate: the SE reads the fused fit's residuals and CATTs, which
+	# keep the unstandardized grid on this route (#490). The looser tolerance is
+	# for the fixed ridge's deviation from the OLS functional.
+	.rse428_expect_equivariant(
+		function(k) debiasedATT(at(k)),
+		list(att = .rse428_q(1, function(x) x$att)),
+		.RSE428_SCALES,
+		tolerance = 1e-4
 	)
 })
 

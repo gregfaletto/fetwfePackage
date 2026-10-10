@@ -3,9 +3,7 @@
 # within-selection variance and under-covers the *aggregated* overall ATT; the
 # debiased estimator restores nominal coverage at ETWFE efficiency. Hand-off from
 # the FETWFE methodology paper, Theorem `debiased.att.thm` (eqs
-# `debiased.att.def` / `debiased.ols.identity` / `debiased.att.se`). The exact
-# algorithm mirrors the validated simulation reference
-# `simulations/method_functions.R::debiased_fetwfe` in the paper repo.
+# `debiased.att.def` / `debiased.ols.identity` / `debiased.att.se`).
 
 #' Plug-in cohort-weight variance V2 (the `att_var_2` channel, without Omega)
 #'
@@ -67,9 +65,11 @@
 #' efficiency of unrestricted ETWFE.
 #'
 #' The debiased point estimate **differs** from the fused `fit$att_hat`: when
-#' `p < NT`, by the OLS identity (paper eq. `debiased.ols.identity`) it equals the
-#' unrestricted ETWFE/OLS estimate in the ATT direction. You therefore get a dual
-#' offering --- `fit$att_hat` / `fit$att_se` (fused, efficient, pointwise) and
+#' `p < NT` and the centered design has full column rank, by the OLS identity
+#' (paper eq. `debiased.ols.identity`) it equals the unrestricted ETWFE/OLS
+#' estimate in the ATT direction, up to a numerical ridge (see Assumptions). You
+#' therefore get a dual offering --- `fit$att_hat` / `fit$att_se` (fused,
+#' efficient, pointwise) and
 #' `debiasedATT(fit)` (debiased, ETWFE-efficient, uniformly valid). It is exposed
 #' as a separate accessor (rather than a `se_type` option) precisely because the
 #' debiased SE accompanies a different point estimate than the fused one.
@@ -119,14 +119,15 @@
 #'     channel is the unit-clustered sandwich, valid as the number of units
 #'     `N -> infinity` with **no** model for within-unit dependence (so a
 #'     `gls = FALSE` fit, which skips GLS whitening, yields a valid cluster-robust
-#'     SE; #307, paper Decision D1). GLS whitening (`gls = TRUE`) buys
-#'     *efficiency* (an asymptotically smaller `var_reg`), not validity.
+#'     SE; #307, paper Decision D1).
 #'   \item **(Low-dimensional `p < NT` only) Asymptotically negligible ridge,**
 #'     `lambda = o((NT)^(-1/2))` (the theoretical condition; the leading case is
 #'     the exact inverse `lambda = 0`). The implementation does **not** use a
 #'     vanishing schedule --- it adds a fixed numerical stabilizer
-#'     `1e-6 * mean(diag(Sigma))` to the Gram before solving, which is negligible
-#'     and cancels in the OLS-identity case.
+#'     `lambda = 1e-6 * mean(diag(Sigma))` to the Gram before solving. The same
+#'     `lambda` is added for every column, so a covariate in very large or very
+#'     small units can make it pull the estimate back toward the fused one
+#'     (#512).
 #'   \item **Growing number of clusters,** `N -> infinity`. The CLT is over the
 #'     `N` independent units, not the `NT` rows. With few treated units the
 #'     cluster approximation is poor and the interval can under-cover; a genuine
@@ -134,9 +135,10 @@
 #'     CR2-type analytic adjustment, #361) is future work. The
 #'     `method = "bootstrap"` option does *not* remedy this (see its
 #'     documentation).
-#'   \item **Regularity / two regimes.** When `p < NT` (Theorem
-#'     `debiased.att.thm`) the full design Gram is nonsingular and the debiasing
-#'     direction is the exact inverse; the accessor reduces to debiased ETWFE.
+#'   \item **Regularity / two regimes.** When `p < NT`, Theorem
+#'     `debiased.att.thm` assumes the limiting full design Gram is nonsingular;
+#'     in a sample, the exact inverse needs the full-rank condition stated in the
+#'     Description, and the accessor then reduces to debiased ETWFE.
 #'     When `p >= NT` (the high-dimensional FETWFE theory) the Gram is singular and the
 #'     direction is the **nodewise (desparsified-lasso) relaxed inverse** of
 #'     equation `debiased.highdim.v` (the same estimate and SE, only `v` differs
@@ -543,18 +545,16 @@ debiasedATT <- function(
 	}
 
 	# ---- debiased estimate: plug-in functional + orthogonal correction ----
-	# Two regimes, ONE estimator: only the debiasing direction `v` differs (the
-	# high-dimensional FETWFE theory, "one estimator, two regimes"); everything
-	# downstream (the correction, both SE channels) is identical.
-	Sig <- crossprod(X) / n
+	# The design the direction and the score are built from: fixed-p centers it
+	# (Section `sec.meth`, eqs `debiased.att.def` / `debiased.ols.identity`);
+	# high-dim keeps the uncentered design pending #510.
+	X_dir <- if (highdim) X else scale(X, center = TRUE, scale = FALSE)
+	Sig <- crossprod(X_dir) / n
 	riesz_diag <- NULL
 	if (!highdim) {
-		# Fixed-p (p < NT): exact / tiny-ridge inverse. Byte-identical to the
-		# validated fixed-p reference; `lambda_c` / `riesz_*` are ignored here.
+		# Fixed-p (p < NT): exact / tiny-ridge inverse; `lambda_c` / `riesz_*` are
+		# ignored here.
 		v <- solve(Sig + (1e-6 * mean(diag(Sig))) * diag(p), a_theta[-1])
-		# Fixed-p nuisance: the bridge theta_hat. Theorem `debiased.att.thm` needs
-		# only nuisance *consistency*, and with the exact inverse this reduces to
-		# the OLS identity. Byte-unchanged.
 		theta_nuis <- theta_hat
 	} else {
 		# High-dimensional (p >= NT): nodewise (desparsified-lasso) relaxed inverse.
@@ -651,8 +651,10 @@ debiasedATT <- function(
 	# Nuisance: the q=1 fused lasso in high-dim (theta_nuis set above), the bridge
 	# theta_hat in fixed-p. The plug-in functional and the residuals use it; the
 	# debiasing direction `v` and the `a_theta` identity check (above) do not.
+	# `resid` needs no centering: the nuisance's intercept is
+	# mean(y) - colMeans(X)' theta_nuis[-1], so it is the centered residual.
 	resid <- as.numeric(y - theta_nuis[1] - X %*% theta_nuis[-1])
-	score <- as.numeric((X %*% v) * resid)
+	score <- as.numeric((X_dir %*% v) * resid)
 	att_db <- sum(a_theta * theta_nuis) + mean(score)
 
 	# ---- channel 1: regression (outcome) variance, per-unit clustered ----

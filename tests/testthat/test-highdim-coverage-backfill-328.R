@@ -143,6 +143,17 @@ test_that("debiasedATT() and simultaneousCIs() run on a d=0 (no-covariate) panel
 	db <- debiasedATT(fit)
 	expect_true(is.finite(db$att) && is.finite(db$se) && db$se > 0)
 	expect_null(db$lambda_node) # fixed-p: no high-dim diagnostics
+	# Eq. `debiased.ols.identity` (#507).
+	et <- etwfe(
+		pdata = dat$pdata,
+		time_var = dat$time_var,
+		unit_var = dat$unit_var,
+		treatment = dat$treatment,
+		response = dat$response,
+		covs = dat$covs,
+		verbose = FALSE
+	)
+	expect_equal(db$att, et$att_hat, tolerance = 1e-4)
 
 	sc <- simultaneousCIs(
 		fit,
@@ -187,6 +198,17 @@ test_that("debiasedATT() and simultaneousCIs() run on a G=1 (single-cohort) pane
 	)
 	db <- debiasedATT(fit)
 	expect_true(is.finite(db$att) && is.finite(db$se) && db$se > 0)
+	# Eq. `debiased.ols.identity` (#507).
+	et <- etwfe(
+		pdata = dat$pdata,
+		time_var = dat$time_var,
+		unit_var = dat$unit_var,
+		treatment = dat$treatment,
+		response = dat$response,
+		covs = dat$covs,
+		verbose = FALSE
+	)
+	expect_equal(db$att, et$att_hat, tolerance = 1e-4)
 
 	sc <- simultaneousCIs(fit, family = "cohort")
 	expect_identical(nrow(sc$ci), 1L) # single cohort -> K = 1
