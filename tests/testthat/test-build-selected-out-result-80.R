@@ -307,7 +307,6 @@ test_that("gls gating (#304): q < 1 but gls = FALSE -> ret_se = NA, calc_ses = F
 	expect_identical(res$indep_att_se, NA)
 	expect_true(all(is.na(res$catt_ses)))
 	expect_true(all(is.na(res$catt_df$se)))
-	# Double NA, not logical (#505).
 	for (col in c("se", "ci_low", "ci_high")) {
 		expect_identical(res$catt_df[[col]], rep(NA_real_, args$G), info = col)
 	}
