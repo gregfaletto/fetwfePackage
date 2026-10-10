@@ -94,6 +94,8 @@ test_that("gls = FALSE and gls = TRUE fixed-p fits give the same point estimate 
 	# an intercept, whitening leaves that functional unchanged on the ETWFE design.
 	f0 <- .mk_fixedp_fit_312(gls = FALSE, q = 0.5)
 	f1 <- .mk_fixedp_fit_312(gls = TRUE, q = 0.5)
+	# The two fits differ, so the comparison is not vacuous.
+	expect_false(isTRUE(all.equal(f0$att_hat, f1$att_hat)))
 	d0 <- debiasedATT(f0)
 	d1 <- debiasedATT(f1)
 	expect_equal(d0$att, d1$att, tolerance = 1e-4)

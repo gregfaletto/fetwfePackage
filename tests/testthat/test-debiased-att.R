@@ -4,11 +4,10 @@
 # reconstruction of paper eqs `debiased.att.def` and `debiased.att.se` on the
 # centered design (Section `sec.meth`).
 
-# Inlined reference: eqs `debiased.att.def` / `debiased.att.se` on the centered
-# design, with the residual written as eq. `debiased.att.se` writes it on
-# centered data. It hard-codes fusion_structure = "cohort" and takes N_T from
-# the simulated pdata, so it is valid only for cohort fits; the accessor
-# generalizes it by threading fit$fusion_structure.
+# Inlined reference. It writes the residual as eq. `debiased.att.se` does on
+# centered data. It hard-codes fusion_structure = "cohort", so it is valid only
+# for cohort fits (the accessor threads fit$fusion_structure), and it takes N_T
+# from the simulated pdata.
 .ref_debiased_att <- function(fit, dat) {
 	G <- fit$G
 	Tt <- fit$T

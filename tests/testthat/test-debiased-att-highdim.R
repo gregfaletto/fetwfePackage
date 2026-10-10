@@ -1,9 +1,8 @@
 # Tests for the high-dimensional (p >= NT) regime of debiasedATT() (#31).
 #
-# The fixed-p path builds the debiasing direction by the exact/ridged inverse
-# v = (Sig + tiny*I)^{-1} a, which is invalid once p >= NT. The high-dim path
-# instead uses the nodewise (desparsified-lasso) Riesz representer
-# `riesz_lasso()` of paper Theorem `debiased.highdim.thm`.
+# The high-dim path uses the nodewise (desparsified-lasso) Riesz representer
+# `riesz_lasso()` of paper Theorem `debiased.highdim.thm` in place of the
+# fixed-p ridged inverse (see the header of R/riesz_lasso.R).
 # These tests pin (a) the nodewise solver's fidelity and KKT/boundary behavior
 # and (b) the accessor end-to-end on a genuine p >= NT fit.
 
