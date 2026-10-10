@@ -142,8 +142,11 @@ returns an interval with asymptotically nominal coverage at roughly the
 efficiency of unrestricted ETWFE.
 
 The debiased point estimate \strong{differs} from the fused \code{fit$att_hat}: when
-\code{p < NT}, by the OLS identity (paper eq. \code{debiased.ols.identity}) it equals the
-unrestricted ETWFE/OLS estimate in the ATT direction. You therefore get a dual
+\code{p < NT} and the centered design has full column rank, by the OLS identity
+(paper eq. \code{debiased.ols.identity}) it equals the unrestricted ETWFE/OLS
+estimate in the ATT direction, up to a numerical ridge (see Assumptions). On a
+rank-deficient fixed-p design the ridge sets the estimate instead (#511). You
+therefore get a dual
 offering --- \code{fit$att_hat} / \code{fit$att_se} (fused, efficient, pointwise) and
 \code{debiasedATT(fit)} (debiased, ETWFE-efficient, uniformly valid). It is exposed
 as a separate accessor (rather than a \code{se_type} option) precisely because the
@@ -211,9 +214,10 @@ few-clusters correction (a restricted wild-cluster bootstrap-t or a
 CR2-type analytic adjustment, #361) is future work. The
 \code{method = "bootstrap"} option does \emph{not} remedy this (see its
 documentation).
-\item \strong{Regularity / two regimes.} When \code{p < NT} (Theorem
-\code{debiased.att.thm}) the full design Gram is nonsingular and the debiasing
-direction is the exact inverse; the accessor reduces to debiased ETWFE.
+\item \strong{Regularity / two regimes.} When \code{p < NT}, Theorem
+\code{debiased.att.thm} assumes the full design Gram is nonsingular, the
+full-rank condition stated in the Description; the debiasing direction is
+then the exact inverse and the accessor reduces to debiased ETWFE.
 When \code{p >= NT} (the high-dimensional FETWFE theory) the Gram is singular and the
 direction is the \strong{nodewise (desparsified-lasso) relaxed inverse} of
 equation \code{debiased.highdim.v} (the same estimate and SE, only \code{v} differs
