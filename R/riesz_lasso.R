@@ -1,8 +1,7 @@
 # High-dimensional (p >= NT) debiasing direction for debiasedATT() (#31).
 #
 # The fixed-p debiased path builds the debiasing direction as the exact/ridged
-# inverse v = (Sigma_hat + tiny*I)^{-1} a, which is invalid once p >= NT
-# (Sigma_hat = X'X/n is singular and the tiny ridge yields an unstable v). In the
+# inverse v = (Sigma_hat + tiny*I)^{-1} a, which is invalid once p >= NT. In the
 # high-dimensional regime v is instead the nodewise (desparsified) Riesz
 # representer of the high-dimensional FETWFE theory, computed as the
 # l1-penalized solve below. Ported verbatim from the validated reference

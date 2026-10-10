@@ -176,11 +176,10 @@ prep_for_etwfe_regression <- function(
 	} else {
 		# gls = FALSE (#307): skip whitening AND variance-component estimation
 		# entirely. The high-dimensional (`p >= NT`) path, where REML cannot estimate
-		# Omega -- and whitening buys efficiency, not validity: the `debiasedATT()`
-		# cluster-robust sandwich SE needs no Omega (paper Decision D1 /
-		# gregfaletto/fetwfe#90). Use the un-whitened (fusion-transformed) design
-		# `X_mod`; leave the variance components NA (`calc_ses` is forced FALSE in
-		# `fetwfe_core()`).
+		# Omega -- the `debiasedATT()` cluster-robust sandwich SE needs no Omega
+		# (paper Decision D1 / gregfaletto/fetwfe#90). Use the un-whitened
+		# (fusion-transformed) design `X_mod`; leave the variance components NA
+		# (`calc_ses` is forced FALSE in `fetwfe_core()`).
 		y_final <- as.numeric(y)
 		X_final <- X_mod
 		sig_eps_sq <- NA_real_
