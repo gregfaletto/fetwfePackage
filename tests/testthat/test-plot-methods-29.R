@@ -192,8 +192,7 @@ test_that("internal helper rejects with helpful message when ggplot2 missing", {
 	)
 }
 
-test_that("a fit without standard errors stores numeric NA and its catt plot builds", {
-	skip_if_not_installed("ggplot2")
+test_that("a fit without standard errors stores numeric NA", {
 	for (nm in c("fetwfe_q1", "betwfe_q1", "fetwfe_gls_false")) {
 		fit <- .no_se_fit_505(nm)
 		na_g <- rep(NA_real_, nrow(fit$catt_df))
@@ -217,6 +216,14 @@ test_that("a fit without standard errors stores numeric NA and its catt plot bui
 			c(NA_real_, na_g),
 			info = paste(nm, "tidy std.error")
 		)
+	}
+})
+
+test_that("the catt plot of a fit without standard errors builds", {
+	skip_if_not_installed("ggplot2")
+	for (nm in c("fetwfe_q1", "betwfe_q1", "fetwfe_gls_false")) {
+		fit <- .no_se_fit_505(nm)
+		expect_false(fit$calc_ses, info = nm)
 		p <- plot(fit, type = "catt")
 		expect_error(
 			ggplot2::ggplot_build(p),
