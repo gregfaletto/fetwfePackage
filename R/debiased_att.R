@@ -3,9 +3,7 @@
 # within-selection variance and under-covers the *aggregated* overall ATT; the
 # debiased estimator restores nominal coverage at ETWFE efficiency. Hand-off from
 # the FETWFE methodology paper, Theorem `debiased.att.thm` (eqs
-# `debiased.att.def` / `debiased.ols.identity` / `debiased.att.se`). The exact
-# algorithm mirrors the validated simulation reference
-# `simulations/method_functions.R::debiased_fetwfe` in the paper repo.
+# `debiased.att.def` / `debiased.ols.identity` / `debiased.att.se`).
 
 #' Plug-in cohort-weight variance V2 (the `att_var_2` channel, without Omega)
 #'
@@ -543,18 +541,19 @@ debiasedATT <- function(
 	}
 
 	# ---- debiased estimate: plug-in functional + orthogonal correction ----
-	# Two regimes, ONE estimator: only the debiasing direction `v` differs (the
-	# high-dimensional FETWFE theory, "one estimator, two regimes"); everything
-	# downstream (the correction, both SE channels) is identical.
-	Sig <- crossprod(X) / n
+	# The design the direction and the score are built from: fixed-p centers it
+	# (Section `sec.meth`, eq. `debiased.att.def`); high-dim keeps the uncentered
+	# design pending #510.
+	X_dir <- if (highdim) X else scale(X, center = TRUE, scale = FALSE)
+	Sig <- crossprod(X_dir) / n
 	riesz_diag <- NULL
 	if (!highdim) {
-		# Fixed-p (p < NT): exact / tiny-ridge inverse. Byte-identical to the
-		# validated fixed-p reference; `lambda_c` / `riesz_*` are ignored here.
+		# Fixed-p (p < NT): exact / tiny-ridge inverse; `lambda_c` / `riesz_*` are
+		# ignored here.
 		v <- solve(Sig + (1e-6 * mean(diag(Sig))) * diag(p), a_theta[-1])
 		# Fixed-p nuisance: the bridge theta_hat. Theorem `debiased.att.thm` needs
 		# only nuisance *consistency*, and with the exact inverse this reduces to
-		# the OLS identity. Byte-unchanged.
+		# the OLS identity (eq. `debiased.ols.identity`).
 		theta_nuis <- theta_hat
 	} else {
 		# High-dimensional (p >= NT): nodewise (desparsified-lasso) relaxed inverse.
@@ -651,8 +650,10 @@ debiasedATT <- function(
 	# Nuisance: the q=1 fused lasso in high-dim (theta_nuis set above), the bridge
 	# theta_hat in fixed-p. The plug-in functional and the residuals use it; the
 	# debiasing direction `v` and the `a_theta` identity check (above) do not.
+	# `resid` needs no centering: the nuisance's intercept is
+	# mean(y) - colMeans(X)' theta_nuis[-1], so it is the centered residual.
 	resid <- as.numeric(y - theta_nuis[1] - X %*% theta_nuis[-1])
-	score <- as.numeric((X %*% v) * resid)
+	score <- as.numeric((X_dir %*% v) * resid)
 	att_db <- sum(a_theta * theta_nuis) + mean(score)
 
 	# ---- channel 1: regression (outcome) variance, per-unit clustered ----

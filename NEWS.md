@@ -297,6 +297,11 @@
   some adjusted p-values, because those rows counted as zero-variance; each row
   is now judged relative to its own weights (#501).
 
+- On a fixed-p (`p < NT`) fit whose centered design has full column rank,
+  `debiasedATT()` now returns the unrestricted ETWFE (OLS) estimate of the
+  overall ATT, as documented, because it builds the debiasing direction from
+  the centered design, as the paper specifies (#507).
+
 ### Internal
 
 - The remaining six items of the test-power audit that followed the #400/#401

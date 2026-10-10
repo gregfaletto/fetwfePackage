@@ -1,9 +1,9 @@
 # Tests for the high-dimensional (p >= NT) regime of debiasedATT() (#31).
 #
 # The fixed-p path builds the debiasing direction by the exact/ridged inverse
-# v = (Sig + tiny*I)^{-1} a, which is invalid once p >= NT (Sig = X'X/n is
-# singular). The high-dim path instead uses the nodewise (desparsified-lasso)
-# Riesz representer `riesz_lasso()` of paper Theorem `debiased.highdim.thm`.
+# v = (Sig + tiny*I)^{-1} a, which is invalid once p >= NT. The high-dim path
+# instead uses the nodewise (desparsified-lasso) Riesz representer
+# `riesz_lasso()` of paper Theorem `debiased.highdim.thm`.
 # These tests pin (a) the nodewise solver's fidelity and KKT/boundary behavior
 # and (b) the accessor end-to-end on a genuine p >= NT fit.
 
@@ -243,9 +243,9 @@ test_that("the nodewise direction meets its feasibility certificate end-to-end",
 
 test_that("the high-dim branch is load-bearing: the fixed-p inverse explodes on the singular Gram", {
 	# Reconstruct Sig and the theta-space target a exactly as the accessor does,
-	# then compare the nodewise direction against the WRONG fixed-p formula
-	# solve(Sig + tiny*I, a). On the singular high-dim Gram the latter blows up;
-	# the nodewise direction stays O(1). This is why the regime branch exists.
+	# then compare the nodewise direction against the WRONG fixed-p formula. On
+	# the singular high-dim Gram the latter blows up; the nodewise direction stays
+	# O(1). This is why the regime branch exists.
 	X <- hd_fix$internal$X_final
 	n <- nrow(X)
 	p <- ncol(X)
@@ -281,7 +281,9 @@ test_that("the high-dim branch is load-bearing: the fixed-p inverse explodes on 
 		scale = max(abs(a_th))
 	)
 	v_node <- riesz_lasso(Sig, a_th, lam_node)
-	v_fixedp <- solve(Sig + (1e-6 * mean(diag(Sig))) * diag(p), a_th)
+	Xc <- sweep(X, 2L, colMeans(X))
+	Sig_c <- crossprod(Xc) / n
+	v_fixedp <- solve(Sig_c + (1e-6 * mean(diag(Sig_c))) * diag(p), a_th)
 
 	expect_lt(max(abs(v_node)), 50) # nodewise: O(1)
 	expect_gt(max(abs(v_fixedp)), 1e4) # fixed-p inverse: blows up

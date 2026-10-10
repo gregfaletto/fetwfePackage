@@ -43,7 +43,9 @@
 
 test_that("the fixed-p var_reg equals an independent unit-clustered sandwich reconstruction (#312)", {
 	# Load-bearing correctness pin: rebuild the cluster-robust sandwich from scratch
-	# (OLS theta_hat, exact-inverse direction, OLS residuals) -- NOT via the accessor.
+	# (the fit's bridge theta_hat and its residuals, the tiny-ridge inverse
+	# direction on the centered design, eq. `debiased.att.se`) -- NOT via the
+	# accessor.
 	f <- .mk_fixedp_fit_312(gls = FALSE, q = 0.5)
 	expect_lt(ncol(f$internal$X_final), nrow(f$internal$X_final))
 	db <- debiasedATT(f)
@@ -72,11 +74,12 @@ test_that("the fixed-p var_reg equals an independent unit-clustered sandwich rec
 		a_beta[idx] <- f$cohort_probs[g] / length(idx)
 	}
 	a_theta <- c(0, as.numeric(crossprod(A, a_beta)))
-	Sig <- crossprod(X) / n
+	Xc <- sweep(X, 2L, colMeans(X))
+	Sig <- crossprod(Xc) / n
 	v <- solve(Sig + 1e-6 * mean(diag(Sig)) * diag(p), a_theta[-1])
 	th <- f$internal$theta_hat
-	resid <- as.numeric(y - th[1] - X %*% th[-1])
-	score <- as.numeric((X %*% v) * resid)
+	resid <- as.numeric((y - mean(y)) - Xc %*% th[-1])
+	score <- as.numeric((Xc %*% v) * resid)
 	unit <- rep(seq_len(N), each = Tt)
 	var_reg_ref <- sum(tapply(score, unit, sum)^2) / n^2
 	expect_equal(db$var_reg, var_reg_ref, tolerance = 1e-10)
@@ -86,18 +89,28 @@ test_that("the fixed-p var_reg equals an independent unit-clustered sandwich rec
 	expect_equal(db$se, sqrt(db$var_reg + db$var_weight))
 })
 
-test_that("gls = FALSE and gls = TRUE fixed-p agree on the point estimate but differ in SE (whitening buys efficiency)", {
-	# Structure check (NOT byte-equality): same target ATT, different var_reg
-	# (un-whitened sandwich is the less efficient, still-valid estimate).
+test_that("gls = FALSE and gls = TRUE fixed-p fits give the same point estimate (#507)", {
+	# Both routes estimate the OLS functional of eq. `debiased.ols.identity`; with
+	# an intercept, whitening leaves that functional unchanged on the ETWFE design.
 	f0 <- .mk_fixedp_fit_312(gls = FALSE, q = 0.5)
 	f1 <- .mk_fixedp_fit_312(gls = TRUE, q = 0.5)
 	d0 <- debiasedATT(f0)
 	d1 <- debiasedATT(f1)
-	expect_lt(abs(d0$att - d1$att), 0.25) # same overall-ATT target
-	expect_false(isTRUE(all.equal(d0$var_reg, d1$var_reg))) # whitening changes var_reg
+	expect_equal(d0$att, d1$att, tolerance = 1e-4)
 })
 
-test_that("a gls = FALSE fixed-p fit with q >= 1 is accepted (the SE is q-independent; #312)", {
+test_that("the fixed-p estimate does not depend on the nuisance: gls = FALSE fits at q = 0.5, 1 and 2 agree (#507)", {
+	f_05 <- .mk_fixedp_fit_312(gls = FALSE, q = 0.5)
+	f_1 <- .mk_fixedp_fit_312(gls = FALSE, q = 1)
+	f_2 <- .mk_fixedp_fit_312(gls = FALSE, q = 2)
+	# The nuisances differ, so the comparison is not vacuous.
+	expect_false(isTRUE(all.equal(f_05$att_hat, f_2$att_hat)))
+	att_05 <- debiasedATT(f_05)$att
+	expect_equal(debiasedATT(f_1)$att, att_05, tolerance = 1e-4)
+	expect_equal(debiasedATT(f_2)$att, att_05, tolerance = 1e-4)
+})
+
+test_that("a gls = FALSE fixed-p fit with q >= 1 is accepted (#312)", {
 	# The cluster-robust sandwich + exact-inverse OLS identity are valid for ANY q;
 	# is.na(sig_eps_sq) (un-whitened) is what the gate keys on, not q. Pins the
 	# "accept regardless of q" decision so it can't be silently re-narrowed.

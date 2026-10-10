@@ -289,9 +289,8 @@ test_that("the wild-bootstrap crit is floored at the Gaussian quantile (#363)", 
 		expect_gte(w$crit_value, z)
 	}
 	# The floor BITES: on a heterogeneous few-cluster fit whose pre-floor crit is
-	# ~1.44 (< z -- the anti-conservative narrowing this fix removes, #363), the
-	# returned crit equals z exactly, so the interval is the analytic Wald interval.
-	# Remove the `max(crit, z)` floor and this returns ~1.44 != z.
+	# < z (the anti-conservative narrowing this fix removes, #363), the returned
+	# crit equals z exactly, so the interval is the analytic Wald interval.
 	cf <- genCoefs(G = 3, T = 5, d = 2, density = 0.5, eff_size = 2, seed = 1)
 	sim <- simulateData(
 		cf,

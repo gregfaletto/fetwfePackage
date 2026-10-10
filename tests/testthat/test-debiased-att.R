@@ -1,17 +1,15 @@
 # Tests for debiasedATT() / debiasedATTWithSimulatedData() (#291).
 #
-# The pivotal test reproduces the validated paper-repo reference algorithm
-# `simulations/method_functions.R::debiased_fetwfe` (inlined here, since the
-# paper repo is not a package dependency) and asserts the accessor matches it to
-# < 1e-10 on a cohort fit. (Verified bite-y: perturbing the ridge constant, the
-# N_T definition, or the per-unit cluster sums in R/debiased_att.R blows this
-# comparison far past 1e-10.)
+# The pivotal test compares the accessor on a cohort fit with an independent
+# reconstruction of paper eqs `debiased.att.def` and `debiased.att.se` on the
+# centered design (Section `sec.meth`).
 
-# Inlined reference: the exact arithmetic of `debiased_fetwfe`, hard-coding
-# fusion_structure = "cohort" and taking N_T from the simulated pdata (as the
-# reference does). Valid only for cohort fits (the reference's hard-coded
-# "cohort" transform); the accessor generalizes it by threading fit$fusion_structure.
-.ref_debiased_fetwfe <- function(fit, dat) {
+# Inlined reference: eqs `debiased.att.def` / `debiased.att.se` on the centered
+# design, with the residual written as eq. `debiased.att.se` writes it on
+# centered data. It hard-codes fusion_structure = "cohort" and takes N_T from
+# the simulated pdata, so it is valid only for cohort fits; the accessor
+# generalizes it by threading fit$fusion_structure.
+.ref_debiased_att <- function(fit, dat) {
 	G <- fit$G
 	Tt <- fit$T
 	d <- fit$d
@@ -41,10 +39,11 @@
 	y <- fit$internal$y_final
 	th <- fit$internal$theta_hat
 	n <- nrow(X)
-	Sig <- crossprod(X) / n
+	Xc <- sweep(X, 2L, colMeans(X))
+	Sig <- crossprod(Xc) / n
 	v <- solve(Sig + (1e-6 * mean(diag(Sig))) * diag(ncol(Sig)), a_theta[-1])
-	r <- as.numeric(y - th[1] - X %*% th[-1])
-	g <- as.numeric((X %*% v) * r)
+	r <- as.numeric((y - mean(y)) - Xc %*% th[-1])
+	g <- as.numeric((Xc %*% v) * r)
 	tau <- sum(a_theta * th) + mean(g)
 	unit <- rep(seq_len(n / Tt), each = Tt)
 	Gi <- tapply(g, unit, sum)
@@ -85,12 +84,68 @@
 	)
 }
 
-test_that("debiasedATT matches the validated reference algorithm to < 1e-10", {
+test_that("debiasedATT matches an independent reconstruction of eqs debiased.att.def and debiased.att.se (#507)", {
 	f <- .make_fit("cohort")
 	db <- debiasedATT(f$fit)
-	ref <- .ref_debiased_fetwfe(f$fit, f$dat)
+	ref <- .ref_debiased_att(f$fit, f$dat)
 	expect_lt(abs(db$att - ref[["att"]]), 1e-10)
 	expect_lt(abs(db$se - ref[["se"]]), 1e-10)
+})
+
+test_that("on a fixed-p fit debiasedATT equals the ETWFE estimate of the overall ATT on both gls routes (OLS identity, #507)", {
+	# Eq. `debiased.ols.identity` needs a centered design of full column rank
+	# (#511 covers the rank-deficient case).
+	coefs <- genCoefs(
+		G = 3,
+		T = 5,
+		d = 2,
+		density = 0.6,
+		eff_size = 1.5,
+		seed = 7
+	)
+	dat <- simulateData(
+		coefs,
+		N = 150,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = 7
+	)
+	dat$indep_counts <- NA # single-sample (no two-sample warning)
+	att_etwfe <- etwfeWithSimulatedData(dat)$att_hat
+	fits <- list(
+		cohort = fetwfeWithSimulatedData(dat, q = 0.5),
+		event_study = fetwfeWithSimulatedData(
+			dat,
+			q = 0.5,
+			fusion_structure = "event_study"
+		),
+		gls_false = fetwfe(
+			pdata = dat$pdata,
+			time_var = dat$time_var,
+			unit_var = dat$unit_var,
+			treatment = dat$treatment,
+			response = dat$response,
+			covs = dat$covs,
+			q = 0.5,
+			verbose = FALSE,
+			gls = FALSE
+		)
+	)
+	for (nm in names(fits)) {
+		X <- fits[[nm]]$internal$X_final
+		expect_lt(ncol(X), nrow(X), label = paste("p for", nm))
+		expect_identical(
+			qr(sweep(X, 2L, colMeans(X)))$rank,
+			ncol(X),
+			label = paste("centered rank for", nm)
+		)
+		expect_equal(
+			debiasedATT(fits[[nm]])$att,
+			att_etwfe,
+			tolerance = 1e-4,
+			info = nm
+		)
+	}
 })
 
 test_that("debiasedATT return shape and Wald interval", {
