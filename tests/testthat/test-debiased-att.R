@@ -97,27 +97,12 @@ test_that("debiasedATT matches an independent reconstruction of eqs debiased.att
 })
 
 test_that("on a fixed-p fit debiasedATT equals the ETWFE estimate of the overall ATT on both gls routes (OLS identity, #507)", {
-	# Eq. `debiased.ols.identity` needs a centered design of full column rank
-	# (#511 covers the rank-deficient case).
-	coefs <- genCoefs(
-		G = 3,
-		T = 5,
-		d = 2,
-		density = 0.6,
-		eff_size = 1.5,
-		seed = 7
-	)
-	dat <- simulateData(
-		coefs,
-		N = 150,
-		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5,
-		seed = 7
-	)
-	dat$indep_counts <- NA # single-sample (no two-sample warning)
+	# The premise ?debiasedATT states for eq. `debiased.ols.identity` (#511).
+	mf <- .make_fit("cohort")
+	dat <- mf$dat
 	att_etwfe <- etwfeWithSimulatedData(dat)$att_hat
 	fits <- list(
-		cohort = fetwfeWithSimulatedData(dat, q = 0.5),
+		cohort = mf$fit,
 		event_study = fetwfeWithSimulatedData(
 			dat,
 			q = 0.5,
@@ -221,40 +206,15 @@ test_that("debiased estimate differs from the fused att_hat", {
 })
 
 test_that("debiasedATT generalizes to event-study fits (fusion_structure threaded)", {
-	# The reference hard-codes the 'cohort' transform; an event-study fit needs the
-	# fit's own fusion_structure or the ATT-direction identity fails. The accessor
-	# threads fit$fusion_structure, so its internal identity guard passes and it
-	# returns a finite, well-formed result.
+	# `.ref_a_theta()` hard-codes the cohort transform; the accessor threads the
+	# fit's own fusion_structure, so its identity guard passes on this fit.
 	f <- .make_fit("event_study")
 	expect_identical(f$fit$fusion_structure, "event_study")
 	db <- expect_no_error(debiasedATT(f$fit))
 	expect_true(is.finite(db$att) && is.finite(db$se) && db$se > 0)
 	expect_equal(db$se, sqrt(db$var_reg + db$var_weight))
-	# The reference's hard-coded 'cohort' transform would violate the identity on
-	# this fit (so the accessor's threading is load-bearing, not cosmetic).
-	G <- f$fit$G
-	Tt <- f$fit$T
-	d <- f$fit$d
-	ti <- f$fit$treat_inds
-	cp <- f$fit$cohort_probs
-	p <- length(f$fit$beta_hat)
-	fi <- getFirstInds(G = G, T = Tt)
-	cot <- rep(seq_len(G), times = (Tt - 1):(Tt - G))
-	a_beta <- numeric(p)
-	for (g in seq_len(G)) {
-		idx <- ti[cot == g]
-		a_beta[idx] <- cp[g] / length(idx)
-	}
-	A_wrong <- genFullInvFusionTransformMat(
-		first_inds = fi,
-		T = Tt,
-		G = G,
-		d = d,
-		num_treats = length(ti),
-		fusion_structure = "cohort",
-		d_inv_treat = NULL
-	)
-	a_theta_wrong <- c(0, as.numeric(crossprod(A_wrong, a_beta)))
+	# The cohort loading would violate the identity on this fit.
+	a_theta_wrong <- .ref_a_theta(f$fit)
 	expect_gt(
 		abs(sum(a_theta_wrong * f$fit$internal$theta_hat) - f$fit$att_hat),
 		1e-6
