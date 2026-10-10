@@ -474,8 +474,14 @@ test_that("debiasedATT() is equivariant under both methods (#428)", {
 		),
 		.RSE428_SCALES
 	)
+	# The k = 1 bootstrap critical value clears the #363 floor, so the
+	# `crit_value` row compares a bootstrap quantile rather than the floor.
+	expect_gt(
+		debiasedATT(df(1), method = "bootstrap", seed = 17)$crit_value,
+		stats::qnorm(0.975)
+	)
 	.rse428_expect_equivariant(
-		function(k) debiasedATT(df(k), method = "bootstrap", seed = 1),
+		function(k) debiasedATT(df(k), method = "bootstrap", seed = 17),
 		list(
 			att = .rse428_q(1, function(x) x$att),
 			se = .rse428_q(1, function(x) x$se),
@@ -493,6 +499,7 @@ test_that("debiasedATT()'s estimate on a fixed-p gls = FALSE fit is equivariant 
 		.RSE428_SCALES
 	)
 	.rse428_expect_live(at(1))
+	expect_lt(ncol(at(1)$internal$X_final), nrow(at(1)$internal$X_final))
 	# Only the estimate: the SE reads the fused fit's residuals and CATTs, which
 	# keep the unstandardized grid on this route (#490). The looser tolerance is
 	# for the fixed ridge's deviation from the OLS functional.
