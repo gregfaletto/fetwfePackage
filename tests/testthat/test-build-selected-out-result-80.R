@@ -270,6 +270,8 @@ test_that("q gating: q >= 1 -> ret_se = NA, calc_ses = FALSE; q < 1 -> ret_se = 
 	expect_identical(res_low$indep_att_se, 0)
 	expect_identical(unname(res_low$catt_ses), c(0, 0))
 	expect_identical(res_low$catt_df$se, c(0, 0))
+	expect_identical(res_low$catt_df$ci_low, c(0, 0))
+	expect_identical(res_low$catt_df$ci_high, c(0, 0))
 	expect_true(res_low$calc_ses)
 
 	args_high <- .make_helper_args()
@@ -280,6 +282,14 @@ test_that("q gating: q >= 1 -> ret_se = NA, calc_ses = FALSE; q < 1 -> ret_se = 
 	expect_identical(res_high$indep_att_se, NA)
 	expect_true(all(is.na(res_high$catt_ses)))
 	expect_true(all(is.na(res_high$catt_df$se)))
+	# Double NA, not logical (#505).
+	for (col in c("se", "ci_low", "ci_high")) {
+		expect_identical(
+			res_high$catt_df[[col]],
+			rep(NA_real_, args_high$G),
+			info = col
+		)
+	}
 	expect_false(res_high$calc_ses)
 })
 
@@ -297,6 +307,10 @@ test_that("gls gating (#304): q < 1 but gls = FALSE -> ret_se = NA, calc_ses = F
 	expect_identical(res$indep_att_se, NA)
 	expect_true(all(is.na(res$catt_ses)))
 	expect_true(all(is.na(res$catt_df$se)))
+	# Double NA, not logical (#505).
+	for (col in c("se", "ci_low", "ci_high")) {
+		expect_identical(res$catt_df[[col]], rep(NA_real_, args$G), info = col)
+	}
 	# the default (gls absent) keeps the old q < 1 -> calc_ses = TRUE behavior.
 	args_default <- .make_helper_args()
 	args_default$q <- 0.5

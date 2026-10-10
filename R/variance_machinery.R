@@ -2190,12 +2190,13 @@ getCohortATTsFinal <- function(
 		names(cohort_te_ses) <- c_names
 		names(cohort_tes) <- c_names
 	} else {
+		# NA_real_, not NA: same column types as the SE branch above (#505).
 		cohort_te_df <- data.frame(
 			c_names,
 			cohort_tes,
-			rep(NA, G),
-			rep(NA, G),
-			rep(NA, G),
+			rep(NA_real_, G),
+			rep(NA_real_, G),
+			rep(NA_real_, G),
 			rep(NA_real_, G)
 		)
 	}

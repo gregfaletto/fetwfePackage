@@ -158,3 +158,104 @@ test_that("internal helper rejects with helpful message when ggplot2 missing", {
 		"requires the .ggplot2. package"
 	)
 })
+
+# ----------------------------------------------------------------------
+# 7) Fits without standard errors (#505).
+# ----------------------------------------------------------------------
+
+# One named fit without standard errors, on #505's design. The gls = FALSE fit
+# calls fetwfe() directly, so it is not handed the simulator's variance
+# components (see fetwfe()'s gls = FALSE checks).
+.no_se_fit_505 <- function(name) {
+	cf <- genCoefs(G = 3, T = 4, d = 2, density = 0.5, eff_size = 2, seed = 123)
+	sim <- simulateData(
+		cf,
+		N = 120,
+		sig_eps_sq = 0.5,
+		sig_eps_c_sq = 0.5,
+		seed = 456
+	)
+	switch(
+		name,
+		fetwfe_q1 = fetwfeWithSimulatedData(sim, q = 1),
+		betwfe_q1 = betwfeWithSimulatedData(sim, q = 1),
+		fetwfe_gls_false = fetwfe(
+			pdata = sim$pdata,
+			time_var = sim$time_var,
+			unit_var = sim$unit_var,
+			treatment = sim$treatment,
+			response = sim$response,
+			covs = sim$covs,
+			gls = FALSE
+		),
+		stop("unknown fixture: ", name)
+	)
+}
+
+test_that("a fit without standard errors stores numeric NA and its catt plot builds", {
+	skip_if_not_installed("ggplot2")
+	for (nm in c("fetwfe_q1", "betwfe_q1", "fetwfe_gls_false")) {
+		fit <- .no_se_fit_505(nm)
+		na_g <- rep(NA_real_, nrow(fit$catt_df))
+		expect_true(inherits(fit, sub("_.*", "", nm)), info = nm)
+		expect_false(fit$calc_ses, info = nm)
+		cs <- cohortStudy(fit)
+		for (col in c("se", "ci_low", "ci_high")) {
+			expect_identical(
+				fit$catt_df[[col]],
+				na_g,
+				info = paste(nm, "catt_df", col)
+			)
+			expect_identical(
+				cs[[col]],
+				na_g,
+				info = paste(nm, "cohortStudy", col)
+			)
+		}
+		expect_identical(
+			generics::tidy(fit)$std.error,
+			c(NA_real_, na_g),
+			info = paste(nm, "tidy std.error")
+		)
+		p <- plot(fit, type = "catt")
+		expect_error(
+			ggplot2::ggplot_build(p),
+			NA,
+			info = paste(nm, "catt, default alpha")
+		)
+		p <- plot(fit, type = "catt", alpha = 0.1)
+		expect_error(
+			ggplot2::ggplot_build(p),
+			NA,
+			info = paste(nm, "catt, alpha = 0.1")
+		)
+	}
+})
+
+test_that("a fit saved before #505 (logical interval columns) still plots", {
+	skip_if_not_installed("ggplot2")
+	fit <- .no_se_fit_505("fetwfe_q1")
+	n <- nrow(fit$catt_df)
+	for (col in c("se", "ci_low", "ci_high")) {
+		fit$catt_df[[col]] <- rep(NA, n)
+		expect_true(is.logical(fit$catt_df[[col]]), info = col)
+	}
+	na_g <- rep(NA_real_, n)
+	p <- plot(fit, type = "catt")
+	expect_identical(p$data$ci_low, na_g)
+	expect_identical(p$data$ci_high, na_g)
+	expect_error(ggplot2::ggplot_build(p), NA)
+})
+
+test_that("on a fit with standard errors the catt plot draws the fit's own bounds", {
+	skip_if_not_installed("ggplot2")
+	sim <- .plot_setup()
+	fit <- fetwfeWithSimulatedData(sim)
+	expect_true(fit$calc_ses)
+	p <- plot(fit, type = "catt")
+	for (b in c("ci_low", "ci_high")) {
+		x <- fit$catt_df[[b]]
+		expect_true(is.double(x) && all(is.finite(x)), info = b)
+		expect_identical(p$data[[b]], x, info = b)
+	}
+})
