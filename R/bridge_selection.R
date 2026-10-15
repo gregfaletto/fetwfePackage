@@ -410,6 +410,58 @@ getBetaCV <- function(
 	theta * resp_scale
 }
 
+#' @title `grpreg::cv.grpreg()` with folds drawn over a label-free unit order
+#' @description The cross-validation fit shared by the two `cv.grpreg()` call
+#'   sites (`getBetaCV()` and `.fit_q1_nuisance()`). It orders the units with
+#'   `.cv_unit_order()`, whose roxygen describes the key; then, under
+#'   `.with_preserved_rng(cv_seed, ...)`, it draws row folds over that order with
+#'   `.cv_row_folds()` and passes them to `cv.grpreg(fold = )`, which then draws
+#'   no random numbers of its own. The folds stay row-level, and the seed and the
+#'   draw are the ones `cv.grpreg()` would use by itself; only the order the draw
+#'   is assigned in changes, from the sorted unit IDs to one computed from the
+#'   data, so relabeling the units leaves the folds unchanged (#524).
+#'
+#'   The seed is applied with `set.seed()` around the draw rather than through
+#'   `cv.grpreg()`'s own `seed` argument, whose semantics changed across `grpreg`
+#'   versions and which seeds only the draw that `fold =` skips.
+#'   `.with_preserved_rng()` restores the caller's `.Random.seed` afterwards, so
+#'   a default-path `fetwfe()` or `betwfe()` call leaves the user's random stream
+#'   untouched (#177).
+#'
+#'   Each caller passes its own scaled design and response. The order does not
+#'   depend on that scaling: the response keys are unchanged by a positive
+#'   factor, and each design column's order by the increasing affine map
+#'   `my_scale()` applies, up to near-ties at the rounding quantum.
+#' @param X The design: `N * T` unit-major rows, then any ridge pseudo-rows.
+#' @param y The response, one entry per row of `X`.
+#' @param N,T Integer; the number of units and of periods.
+#' @param gamma Numeric; the bridge exponent, passed to `cv.grpreg(penalty =
+#'   "gBridge", gamma = )`.
+#' @param cv_folds Integer; the number of folds.
+#' @param cv_seed Integer; the seed for the fold draw.
+#' @return The `cv.grpreg()` fit.
+#' @keywords internal
+#' @noRd
+.cv_grpreg_label_free <- function(X, y, N, T, gamma, cv_folds, cv_seed) {
+	ord <- .cv_unit_order(X, N, T, y)
+	.with_preserved_rng(cv_seed, {
+		fold <- .cv_row_folds(
+			n = length(y),
+			N = N,
+			T = T,
+			K = cv_folds,
+			ord = ord
+		)
+		grpreg::cv.grpreg(
+			X = X,
+			y = y,
+			penalty = "gBridge",
+			gamma = gamma,
+			fold = fold
+		)
+	})
+}
+
 #' @title Column index of cv.grpreg's lambda.min (exact match, guarded fallback)
 #' @description The lockstep-critical step shared by the two cross-validation
 #'   call sites (`getBetaCV()` and `.fit_q1_nuisance()`): map `cv.grpreg()`'s

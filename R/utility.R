@@ -1617,6 +1617,178 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 	force(expr)
 }
 
+# .cv_unit_order
+#' @title A label-free order of the units, for drawing cross-validation folds
+#' @description Orders the `N` units of a unit-major panel by their data, never
+#'   by their IDs, so that cross-validation folds drawn over this order
+#'   (`.cv_row_folds()`, `.cv_unit_folds()`) do not depend on how the units are
+#'   labeled, or on the locale that sorts the labels (#524). Relabeling the
+#'   units permutes the unit blocks of `X` and `y`, and the order permutes with
+#'   them.
+#'
+#'   This is the key's one description. With `y`, let `dev` be the first
+#'   `N * T` entries of `y` as a `T x N` matrix (one column per unit) minus
+#'   their mean, and `q = round(dev / max(abs(dev)), 10)`, dividing by 1 when
+#'   that maximum is not positive. The units are sorted by these keys, in
+#'   priority order:
+#'
+#'   1. `abs(q)`, period by period;
+#'   2. the unit's first design row, column by column, each column divided by
+#'      its largest absolute value over the units' first rows and rounded to
+#'      10 digits;
+#'   3. `q` times the sign of the unit's first nonzero entry of `q`, period by
+#'      period;
+#'   4. `q`, period by period.
+#'
+#'   Units tied on every key keep their input order. Without `y`, the design key
+#'   alone orders the units.
+#'
+#'   Why these keys. Every key is unchanged when the response is shifted or
+#'   multiplied by a positive constant, and every key but the last when it is
+#'   negated, so those transformations of the response leave the folds
+#'   unchanged, negation except on the exact mirror twins below. The rounding,
+#'   to 10 digits of each key's own scale, stops floating-point noise from
+#'   ordering values that are equal in exact arithmetic: the centering and the
+#'   GLS whitening upstream sum in label order, so such values can differ in
+#'   their last bits, and on a discrete outcome the labels would otherwise
+#'   decide their order. The design key separates units whose responses tie; a
+#'   unit's first design row identifies its cohort and covariates, because
+#'   `processCovs()` makes the covariates time-invariant. The sign-normalized
+#'   key separates units whose absolute deviations agree in every period while
+#'   their signs differ in some. The signed key separates exact mirror twins,
+#'   units with identical first design rows whose quantized deviations are
+#'   exact negatives. Negation swaps such a pair, so no order computed from the
+#'   data can both follow negation and ignore the labels there; this one
+#'   ignores the labels. The current callers' responses are already centered by
+#'   `processCovs()`; the centering here keeps the order unchanged by a shift
+#'   for a caller whose response is not.
+#'
+#'   The order is built from stable `order(method = "radix")` passes, last key
+#'   first, rather than `do.call(order, keys)`, because the function is
+#'   reachable from `.simultaneous_cis_impl()`, where `test-cluster_floor.R`'s
+#'   A12 assertion admits no `do.call()`. When the absolute keys leave no tie,
+#'   the later keys cannot change the order, so they are not computed.
+#' @param X The design, with at least `N * T` rows, unit-major: rows
+#'   `(i - 1) * T + 1` to `i * T` belong to unit `i`. A base or `Matrix` matrix.
+#' @param N,T Integer; the number of units and of periods.
+#' @param y `NULL`, or the response, with at least `N * T` entries; entries
+#'   past the first `N * T` (ridge pseudo-rows) are ignored.
+#' @return An integer permutation of `seq_len(N)`; its `r`-th entry is the unit
+#'   at rank `r`.
+#' @keywords internal
+#' @noRd
+.cv_unit_order <- function(X, N, T, y = NULL) {
+	N <- as.integer(N)
+	T <- as.integer(T)
+	stopifnot(
+		length(N) == 1L,
+		length(T) == 1L,
+		N >= 1L,
+		T >= 1L,
+		nrow(X) >= N * T,
+		is.null(y) || length(y) >= N * T
+	)
+	ord <- seq_len(N)
+	if (!is.null(y)) {
+		dev <- matrix(as.numeric(y)[seq_len(N * T)], nrow = T)
+		dev <- dev - mean(dev)
+		sc <- max(abs(dev))
+		if (!(sc > 0)) {
+			sc <- 1
+		}
+		q <- round(dev / sc, 10)
+		aq <- abs(q)
+		for (t in rev(seq_len(T))) {
+			ord <- ord[order(aq[t, ord], method = "radix")]
+		}
+		differs <- aq[, ord[-N], drop = FALSE] != aq[, ord[-1L], drop = FALSE]
+		if (all(colSums(differs) > 0)) {
+			return(ord)
+		}
+		# The sign of each unit's first nonzero quantized deviation (1 when
+		# every entry is zero).
+		first_sign <- rep(1, N)
+		undecided <- rep(TRUE, N)
+		for (t in seq_len(T)) {
+			s <- sign(q[t, ])
+			hit <- undecided & s != 0
+			first_sign[hit] <- s[hit]
+			undecided[hit] <- FALSE
+		}
+		sn <- q * rep(first_sign, each = T)
+		ord <- seq_len(N)
+		for (t in rev(seq_len(T))) {
+			ord <- ord[order(q[t, ord], method = "radix")]
+		}
+		for (t in rev(seq_len(T))) {
+			ord <- ord[order(sn[t, ord], method = "radix")]
+		}
+	}
+	Xf <- as.matrix(X[(seq_len(N) - 1L) * T + 1L, , drop = FALSE])
+	col_max <- apply(abs(Xf), 2L, max)
+	col_max[!(col_max > 0)] <- 1
+	Xq <- round(Xf / rep(col_max, each = N), 10)
+	for (j in rev(seq_len(ncol(Xq)))) {
+		ord <- ord[order(Xq[ord, j], method = "radix")]
+	}
+	if (!is.null(y)) {
+		for (t in rev(seq_len(T))) {
+			ord <- ord[order(aq[t, ord], method = "radix")]
+		}
+	}
+	ord
+}
+
+# .cv_row_folds
+#' @title Row fold ids for cross-validation, assigned over a unit order
+#' @description Draws the fold vector `grpreg::cv.grpreg()` draws for itself
+#'   when given no `fold`, `sample(1:n %% K)` with zeros set to `K`, and assigns
+#'   its entries to rows in the canonical sequence `ord` defines: the `T` rows of
+#'   unit `ord[1]` in time order, then those of unit `ord[2]`, and so on, then
+#'   rows `N * T + 1` to `n` (ridge pseudo-rows, when present). With
+#'   `ord = seq_len(N)` the result is the draw itself. Called inside the
+#'   caller's seeded block, and with named arguments, since `n` and `N` differ
+#'   only by case.
+#' @param n Integer; the number of rows: `N * T`, plus any ridge pseudo-rows.
+#' @param N,T Integer; the number of units and of periods. The first `N * T`
+#'   rows are unit-major.
+#' @param K Integer; the number of folds.
+#' @param ord An integer permutation of `seq_len(N)`, from `.cv_unit_order()`.
+#' @return A length-`n` vector of fold ids in `1..K`, one per row.
+#' @keywords internal
+#' @noRd
+.cv_row_folds <- function(n, N, T, K, ord) {
+	stopifnot(length(ord) == N, n >= N * T)
+	f <- sample(1:n %% K)
+	f[f == 0] <- K
+	canon <- rep((ord - 1L) * T, each = T) + rep.int(seq_len(T), N)
+	if (n > N * T) {
+		canon <- c(canon, seq.int(N * T + 1L, n))
+	}
+	fold <- f
+	fold[canon] <- f
+	fold
+}
+
+# .cv_unit_folds
+#' @title Unit fold ids for cross-validation, assigned over a unit order
+#' @description Draws `sample(rep(seq_len(K), length.out = N))` and gives its
+#'   `r`-th entry to unit `ord[r]`. With `ord = seq_len(N)` the result is the
+#'   draw itself. Called inside the caller's seeded block.
+#' @param N Integer; the number of units.
+#' @param K Integer; the number of folds.
+#' @param ord An integer permutation of `seq_len(N)`, from `.cv_unit_order()`.
+#' @return A length-`N` vector of fold ids in `1..K`, one per unit.
+#' @keywords internal
+#' @noRd
+.cv_unit_folds <- function(N, K, ord) {
+	stopifnot(length(ord) == N)
+	d <- sample(rep(seq_len(K), length.out = N))
+	fold <- d
+	fold[ord] <- d
+	fold
+}
+
 #' @title Auto-truncate a panel that has no never-treated units
 #'
 #' @description
