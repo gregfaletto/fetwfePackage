@@ -69,6 +69,31 @@ test_that(".cv_lambda_node is deterministic and preserves the ambient RNG", {
 	expect_identical(r1$cv_loss, r2$cv_loss)
 })
 
+# The unit folds are drawn over a label-free order of the units (#524), so
+# permuting the units' row blocks leaves every grid point's CV loss unchanged.
+# A fallback returns an all-NA `cv_loss`, so the fits are asserted not to fall
+# back.
+test_that(".cv_lambda_node's CV loss does not change when the units are permuted (#524)", {
+	s <- .cv295_synth()
+	r <- .cv_lambda_node(s$Sig, s$a, s$X, s$N_units, s$T)
+	expect_false(r$fallback)
+	set.seed(5246)
+	for (k in 1:6) {
+		units <- sample(s$N_units)
+		rows <- rep((units - 1L) * s$T, each = s$T) +
+			rep.int(seq_len(s$T), s$N_units)
+		X <- s$X[rows, , drop = FALSE]
+		rk <- .cv_lambda_node(crossprod(X) / nrow(X), s$a, X, s$N_units, s$T)
+		expect_false(rk$fallback, info = paste("permutation", k))
+		expect_equal(rk$cv_loss, r$cv_loss, info = paste("permutation", k))
+		expect_identical(
+			rk$lambda_c,
+			r$lambda_c,
+			info = paste("permutation", k)
+		)
+	}
+})
+
 test_that(".cv_lambda_node falls back to the theory scale when nothing is feasible", {
 	s <- .cv295_synth()
 	# A grid of vanishingly small penalties: the solver cannot reach KKT

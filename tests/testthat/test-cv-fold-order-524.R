@@ -230,3 +230,200 @@ test_that(".cv_row_folds() and .cv_unit_folds() assign the seeded draw over the 
 	expect_identical(folds, expected)
 	expect_setequal(folds, seq_len(K))
 })
+
+# ---- Fits: relabeling the units leaves the estimates unchanged ----------------
+#
+# Every fit below supplies the noise variances, or skips GLS: with the
+# variances estimated, REML's own dependence on the unit order (#535) moves the
+# estimates at its optimizer's tolerance.
+
+# The divorce application's vignette call (the female subset of
+# `bacondecomp::divorce`).
+.div524_data <- NULL
+if (requireNamespace("bacondecomp", quietly = TRUE)) {
+	.div524_data <- local({
+		data("divorce", package = "bacondecomp", envir = environment())
+		divorce[divorce$sex == 2, ]
+	})
+}
+
+# Three labelings of the same states, each a map from postal code to label:
+# the postal codes as shipped, the full state names, and labels that sort in
+# the reverse of the postal codes' order.
+.div524_ids <- function() {
+	postal <- sort(unique(.div524_data$st))
+	full <- c(datasets::state.name, "District of Columbia")
+	list(
+		postal = stats::setNames(postal, postal),
+		names = stats::setNames(
+			full[match(postal, c(datasets::state.abb, "DC"))],
+			postal
+		),
+		reversed = stats::setNames(
+			sprintf("r%02d", rev(seq_along(postal))),
+			postal
+		)
+	)
+}
+
+# The vignette call under the labeling `ids`, with the response replaced by
+# `a * y + b` and the supplied variances scaled by `a^2`. Under `gls = FALSE`
+# it supplies neither the variances nor the ridge (`fetwfe()` rejects the ridge
+# there).
+.div524_fit <- function(est, ids, gls = TRUE, a = 1, b = 0) {
+	d <- .div524_data
+	d$st <- unname(ids[d$st])
+	d$suiciderate_elast_jag <- a * d$suiciderate_elast_jag + b
+	args <- list(
+		pdata = d,
+		time_var = "year",
+		unit_var = "st",
+		treatment = "changed",
+		covs = c("murderrate", "lnpersinc", "afdcrolls"),
+		response = "suiciderate_elast_jag",
+		q = 0.5
+	)
+	if (gls) {
+		args$sig_eps_sq <- a^2 * 0.0344
+		args$sig_eps_c_sq <- a^2 * 0.1507
+		args$add_ridge <- TRUE
+	} else {
+		args$gls <- FALSE
+	}
+	# The call warns as it drops the first-period-treated states and the
+	# `murderrate` covariate.
+	suppressWarnings(do.call(est, args))
+}
+
+# The postal-code fits the relabeled and transformed fits are compared with.
+.div524_ref <- NULL
+if (!is.null(.div524_data)) {
+	.div524_ref <- list(
+		fetwfe = .div524_fit(fetwfe, .div524_ids()$postal),
+		betwfe = .div524_fit(betwfe, .div524_ids()$postal)
+	)
+}
+
+test_that("fetwfe() on divorce does not change when the states are relabeled (#524)", {
+	skip_if_not_installed("bacondecomp")
+	ids <- .div524_ids()
+	ref <- .div524_ref$fetwfe
+	for (lab in c("names", "reversed")) {
+		fit <- .div524_fit(fetwfe, ids[[lab]])
+		expect_equal(fit$att_hat, ref$att_hat, info = lab)
+		expect_equal(fit$att_se, ref$att_se, info = lab)
+		expect_equal(fit$beta_hat, ref$beta_hat, info = lab)
+	}
+})
+
+test_that("betwfe() on divorce does not change when the states are relabeled (#524)", {
+	skip_if_not_installed("bacondecomp")
+	ids <- .div524_ids()
+	ref <- .div524_ref$betwfe
+	for (lab in c("names", "reversed")) {
+		fit <- .div524_fit(betwfe, ids[[lab]])
+		expect_equal(fit$att_hat, ref$att_hat, info = lab)
+		expect_equal(fit$att_se, ref$att_se, info = lab)
+		expect_equal(fit$beta_hat, ref$beta_hat, info = lab)
+	}
+})
+
+test_that("fetwfe(gls = FALSE) on divorce does not change when the states are relabeled (#524)", {
+	skip_if_not_installed("bacondecomp")
+	ids <- .div524_ids()
+	ref <- .div524_fit(fetwfe, ids$postal, gls = FALSE)
+	# No standard errors without GLS, so only the estimates are compared.
+	expect_true(is.na(ref$att_se))
+	for (lab in c("names", "reversed")) {
+		fit <- .div524_fit(fetwfe, ids[[lab]], gls = FALSE)
+		expect_equal(fit$att_hat, ref$att_hat, info = lab)
+		expect_equal(fit$beta_hat, ref$beta_hat, info = lab)
+	}
+})
+
+test_that("fetwfe() and betwfe() on divorce follow y -> a * y + b, with the variances scaled by a^2 (#524)", {
+	skip_if_not_installed("bacondecomp")
+	# Not under gls = FALSE, which does not follow a rescaling (#490).
+	ids <- .div524_ids()
+	ests <- list(fetwfe = fetwfe, betwfe = betwfe)
+	for (est in names(ests)) {
+		for (ab in list(c(-1, 0), c(2, 5))) {
+			fit <- .div524_fit(ests[[est]], ids$postal, a = ab[1], b = ab[2])
+			expect_equal(
+				fit$att_hat / ab[1],
+				.div524_ref[[est]]$att_hat,
+				info = sprintf("%s, a = %g, b = %g", est, ab[1], ab[2])
+			)
+		}
+	}
+})
+
+# A continuous panel with no covariates, fit with its true variances supplied.
+.sim524 <- local({
+	cf <- genCoefs(G = 3, T = 8, d = 0, density = 0.5, eff_size = 2, seed = 7)
+	simulateData(cf, N = 80, sig_eps_sq = 1, sig_eps_c_sq = 1, seed = 8)
+})
+
+# `fetwfe()` on `.sim524` with the response replaced by `k * y` (`y` in the
+# panel's row order), the units relabeled through `ids`, a map from old ID to
+# new, and the variances scaled by `k^2`.
+.sim524_fit <- function(
+	y = .sim524$pdata[[.sim524$response]],
+	ids = NULL,
+	k = 1
+) {
+	pd <- .sim524$pdata
+	pd[[.sim524$response]] <- k * y
+	if (!is.null(ids)) {
+		pd[[.sim524$unit_var]] <- unname(ids[pd[[.sim524$unit_var]]])
+	}
+	fetwfe(
+		pdata = pd,
+		time_var = .sim524$time_var,
+		unit_var = .sim524$unit_var,
+		treatment = .sim524$treatment,
+		response = .sim524$response,
+		sig_eps_sq = k^2,
+		sig_eps_c_sq = k^2,
+		verbose = FALSE
+	)
+}
+
+# A random relabeling of `.sim524`'s units.
+.sim524_relabel <- function() {
+	units <- unique(.sim524$pdata[[.sim524$unit_var]])
+	stats::setNames(sprintf("id%03d", sample(length(units))), units)
+}
+
+# The same panel's response rounded to a count.
+.sim524_count <- function() {
+	pmax(round(.sim524$pdata[[.sim524$response]] + 3), 0)
+}
+
+test_that("fetwfe() on a simulated panel does not change when the units are relabeled (#524)", {
+	ref <- .sim524_fit()
+	set.seed(5247)
+	for (k in 1:3) {
+		fit <- .sim524_fit(ids = .sim524_relabel())
+		expect_equal(fit$att_hat, ref$att_hat, info = paste("relabeling", k))
+		expect_equal(fit$att_se, ref$att_se, info = paste("relabeling", k))
+		expect_equal(fit$beta_hat, ref$beta_hat, info = paste("relabeling", k))
+	}
+})
+
+test_that("fetwfe() on a count outcome does not change when the units are relabeled (#524)", {
+	y <- .sim524_count()
+	ref <- .sim524_fit(y)
+	set.seed(5248)
+	for (k in 1:6) {
+		fit <- .sim524_fit(y, ids = .sim524_relabel())
+		expect_equal(fit$att_hat, ref$att_hat, info = paste("relabeling", k))
+		expect_equal(fit$att_se, ref$att_se, info = paste("relabeling", k))
+		expect_equal(fit$beta_hat, ref$beta_hat, info = paste("relabeling", k))
+	}
+})
+
+test_that("fetwfe() on a count outcome follows a positive rescaling of the response (#524)", {
+	y <- .sim524_count()
+	expect_equal(.sim524_fit(y, k = 3)$att_hat / 3, .sim524_fit(y)$att_hat)
+})

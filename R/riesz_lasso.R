@@ -316,12 +316,15 @@ lambda_node_default <- function(p, N, const = 1.0, scale = 1.0) {
 	# --- Unit-fold CV of the Riesz loss over the feasible grid points. ---
 	# Data-derived fold seed (the only RNG draw; RNG state preserved). Unit-major
 	# balanced panel: unit i occupies rows ((i-1)*T + 1):(i*T). Two configs sharing
-	# `N*T` share this fold seed, which is harmless: the seed only fixes a partition
-	# of units into folds, so reuse just means an identical (still valid) split.
+	# `N*T` share this fold seed, which is harmless: the seed only fixes the draw
+	# of fold ids, so reuse just means the same draw (still a valid split). The
+	# draw is assigned to units in the label-free order of `.cv_unit_order()`,
+	# computed from the design alone, since the Riesz loss has no response in it.
 	cv_seed <- as.integer(min(as.numeric(N_units) * T, .Machine$integer.max))
+	ord <- .cv_unit_order(X, N_units, T)
 	fold <- .with_preserved_rng(
 		cv_seed,
-		sample(rep(seq_len(nfolds), length.out = N_units))
+		.cv_unit_folds(N_units, nfolds, ord)
 	)
 	unit_of_row <- rep(seq_len(N_units), each = T)
 	# CV of the Riesz loss over the feasible grid points, looped FOLD-OUTER / grid-inner:

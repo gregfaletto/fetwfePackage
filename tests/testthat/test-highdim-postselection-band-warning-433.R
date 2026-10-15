@@ -532,20 +532,20 @@ test_that("the p >= NT band's numbers are pinned", {
 	expect_identical(sc$K, 4L)
 	expect_equal(
 		sc$ci$estimate,
-		c(0, 1.7055054140546, 2.18153825291292, 4.74990850786551),
+		c(0, 2.00842401824574, 2.64302861345283, 5.21853226511246),
 		tolerance = 1e-8
 	)
 	expect_equal(
 		sc$ci$simultaneous_ci_low,
-		c(0, 0.813315497555795, 1.22314830572985, 4.16888354386282),
+		c(0, 0.96794979701938, 1.51023323212112, 4.63678968802729),
 		tolerance = 1e-8
 	)
 	expect_equal(
 		sc$ci$simultaneous_ci_high,
-		c(0, 2.59769533055341, 3.13992820009599, 5.33093347186819),
+		c(0, 3.04889823947211, 3.77582399478454, 5.80027484219764),
 		tolerance = 1e-8
 	)
-	expect_equal(sc$critical_value, 2.35061113913367, tolerance = 1e-8)
+	expect_equal(sc$critical_value, 2.34806542941738, tolerance = 1e-8)
 	# The band really is wider than pointwise here, so the pin above is on a
 	# simultaneous quantity rather than on a disguised Wald interval.
 	expect_gt(sc$critical_value, sc$pointwise_critical_value)

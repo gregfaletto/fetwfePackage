@@ -117,12 +117,11 @@ test_that("CV path with cv_seed = NULL defaults to as.integer(N * T)", {
 
 test_that("CV path varies for different cv_seed values", {
 	sim <- .lambda_sel_fixture()
-	# Pre-computed seeds known to produce different CV-selected lambdas
-	# on this DGP. (Some seed pairs collide because CV picks the same
-	# lambda index when fold assignment doesn't shift the optimum;
-	# 100 vs 7 is empirically different on this fixture.)
+	# Seeds chosen to produce different CV-selected lambdas on this DGP.
+	# (Some seed pairs collide because CV picks the same lambda index when
+	# fold assignment doesn't shift the optimum.)
 	res_a <- fetwfeWithSimulatedData(sim, cv_seed = 100L)
-	res_b <- fetwfeWithSimulatedData(sim, cv_seed = 7L)
+	res_b <- fetwfeWithSimulatedData(sim, cv_seed = 8L)
 	expect_false(isTRUE(all.equal(res_a$att_hat, res_b$att_hat)))
 })
 

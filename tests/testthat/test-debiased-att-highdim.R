@@ -87,9 +87,9 @@
 	)
 }
 
-.make_highdim_fit <- function() {
+.make_highdim_fit <- function(pdata = .make_highdim_panel()) {
 	fetwfe(
-		pdata = .make_highdim_panel(),
+		pdata = pdata,
 		time_var = "year",
 		unit_var = "unit",
 		treatment = "treat",
@@ -347,6 +347,33 @@ test_that("debiasedATT is deterministic in the high-dim regime", {
 	expect_identical(a$att, b$att)
 	expect_identical(a$se, b$se)
 	expect_identical(a$lambda_node, b$lambda_node)
+})
+
+# The q = 1 nuisance and the lambda_c = "cv" selector both draw cross-validation
+# folds over a label-free unit order (#524), so relabeling the units refits to
+# the same estimate, at a fixed lambda_c and at the CV-selected one.
+test_that("debiasedATT() in the high-dim regime does not change when the units are relabeled (#524)", {
+	panel <- .make_highdim_panel()
+	units <- unique(panel$unit)
+	att_fixed <- debiasedATT(hd_fix, lambda_c = 1)$att
+	att_cv <- debiasedATT(hd_fix, lambda_c = "cv")$att
+	set.seed(5245)
+	for (k in 1:6) {
+		ids <- stats::setNames(sprintf("v%02d", sample(length(units))), units)
+		relabeled <- panel
+		relabeled$unit <- unname(ids[relabeled$unit])
+		fit <- .make_highdim_fit(relabeled)
+		expect_equal(
+			debiasedATT(fit, lambda_c = 1)$att,
+			att_fixed,
+			info = paste("relabeling", k)
+		)
+		expect_equal(
+			debiasedATT(fit, lambda_c = "cv")$att,
+			att_cv,
+			info = paste("relabeling", k)
+		)
+	}
 })
 
 test_that("debiasedATT validates the high-dim solver arguments", {
