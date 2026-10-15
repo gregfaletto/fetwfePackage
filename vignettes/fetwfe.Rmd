@@ -243,7 +243,7 @@ catt_df_pct[["ci_high"]] <- 100 * catt_df_pct[["ci_high"]]
 catt_df_pct
 ```
 
-FETWFE estimates that adopting a unilateral divorce law is associated with roughly a -6% change in the elasticity-scaled female suicide rate, with a 95% confidence interval that excludes zero. The sign and order of magnitude match Stevenson and Wolfers (2006), who found that these reforms reduced female suicide. Unlike a fully fused fit, FETWFE's selection step retains *heterogeneous* cohort effects here: several adoption cohorts are pruned to exactly zero while the rest carry nonzero, varying estimates, so the rows of `res$catt_df` are no longer all identical.
+FETWFE estimates that adopting a unilateral divorce law is associated with a decline in the elasticity-scaled female suicide rate, with a 95% confidence interval that excludes zero. The sign and order of magnitude match Stevenson and Wolfers (2006), who found that these reforms reduced female suicide. Unlike a fully fused fit, FETWFE's selection step retains *heterogeneous* cohort effects here: several adoption cohorts are pruned to exactly zero while the rest carry nonzero, varying estimates, so the rows of `res$catt_df` are no longer all identical.
 
 Unlike the simulated example above, this fit includes covariates (the `covs` argument). Because FETWFE regularizes the cohort-interacted design through its bridge penalty, it accommodates covariates even on this panel's scattered, single-state adoption cohorts -- a setting in which an unregularized two-way fixed effects fit would be rank-deficient.
 

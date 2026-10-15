@@ -116,9 +116,11 @@ penalty parameter" for details.}
 \item{cv_folds}{Integer; number of folds for the CV path. Ignored when
 \code{lambda_selection = "bic"}. Default is 10.}
 
-\item{cv_seed}{Integer or \code{NULL}; the seed passed to \code{set.seed()}
-immediately before the \code{cv.grpreg()} call, controlling fold
-assignment. If supplied, must be within \verb{+/- .Machine$integer.max}.
+\item{cv_seed}{Integer or \code{NULL}; the seed passed to \code{set.seed()} to draw
+the cross-validation folds. The draw is assigned to the units in an order
+computed from their data rather than from their IDs, so relabeling the
+units does not change the folds. If supplied, must be within
+\verb{+/- .Machine$integer.max}.
 If \code{NULL} (the default), the seed defaults internally to
 \code{as.integer(N * T)} so consecutive calls on the same dataset are
 reproducible without the user having to specify a seed. The seed
@@ -214,7 +216,7 @@ An object of class \code{fetwfe} containing the following elements:
 \item{lambda_star_model_size}{The number of selected features (excluding the always-present intercept) in the chosen model. If this value is close to \code{lambda.max_model_size} or \code{lambda.min_model_size}, that could suggest that the range of \code{lambda} values should be expanded.}
 \item{lambda_selection}{Character scalar; either \code{"cv"} (10-fold cross-validation on \code{cv.grpreg}; v1.13.0+ default) or \code{"bic"} (BIC over the \code{grpreg} lambda grid; the prior default). Mirrors the \code{lambda_selection} argument the user passed.}
 \item{cv_folds}{Integer scalar; the \code{cv_folds} value used when \code{lambda_selection = "cv"}, \code{NA_integer_} when \code{lambda_selection = "bic"}.}
-\item{cv_seed}{Integer scalar; the seed actually fed to \code{set.seed()} immediately before \code{cv.grpreg()} was called. Defaults to \code{as.integer(N * T)} when the user did not pass a seed. \code{NA_integer_} when \code{lambda_selection = "bic"}.}
+\item{cv_seed}{Integer scalar; the seed actually fed to \code{set.seed()} to draw the cross-validation folds. Defaults to \code{as.integer(N * T)} when the user did not pass a seed. \code{NA_integer_} when \code{lambda_selection = "bic"}.}
 \item{fusion_structure}{Character scalar; the \code{fusion_structure} argument the user passed (\code{"cohort"} or \code{"event_study"}), recording which fusion-penalty differences matrix was used for the treatment effects.}
 \item{fusion_matrix}{The user-supplied custom forward differences matrix \code{D_N} (a \verb{num_treats x num_treats} numeric matrix), or \code{NULL} if none was supplied. When non-\code{NULL} it overrode \code{fusion_structure} for the treatment-effect block; the estimator used \code{solve(fusion_matrix)} internally. See the \code{fusion_matrix} argument.}
 \item{N}{The final number of units that were in the data set used for estimation (after any units may have been removed because they were treated in the first time period).}

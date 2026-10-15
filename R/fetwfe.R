@@ -158,9 +158,11 @@
 #'   penalty parameter" for details.
 #' @param cv_folds Integer; number of folds for the CV path. Ignored when
 #'   `lambda_selection = "bic"`. Default is 10.
-#' @param cv_seed Integer or `NULL`; the seed passed to `set.seed()`
-#'   immediately before the `cv.grpreg()` call, controlling fold
-#'   assignment. If supplied, must be within `+/- .Machine$integer.max`.
+#' @param cv_seed Integer or `NULL`; the seed passed to `set.seed()` to draw
+#'   the cross-validation folds. The draw is assigned to the units in an order
+#'   computed from their data rather than from their IDs, so relabeling the
+#'   units does not change the folds. If supplied, must be within
+#'   `+/- .Machine$integer.max`.
 #'   If `NULL` (the default), the seed defaults internally to
 #'   `as.integer(N * T)` so consecutive calls on the same dataset are
 #'   reproducible without the user having to specify a seed. The seed
@@ -250,7 +252,7 @@
 #' \item{lambda_star_model_size}{The number of selected features (excluding the always-present intercept) in the chosen model. If this value is close to `lambda.max_model_size` or `lambda.min_model_size`, that could suggest that the range of `lambda` values should be expanded.}
 #' \item{lambda_selection}{Character scalar; either `"cv"` (10-fold cross-validation on `cv.grpreg`; v1.13.0+ default) or `"bic"` (BIC over the `grpreg` lambda grid; the prior default). Mirrors the `lambda_selection` argument the user passed.}
 #' \item{cv_folds}{Integer scalar; the `cv_folds` value used when `lambda_selection = "cv"`, `NA_integer_` when `lambda_selection = "bic"`.}
-#' \item{cv_seed}{Integer scalar; the seed actually fed to `set.seed()` immediately before `cv.grpreg()` was called. Defaults to `as.integer(N * T)` when the user did not pass a seed. `NA_integer_` when `lambda_selection = "bic"`.}
+#' \item{cv_seed}{Integer scalar; the seed actually fed to `set.seed()` to draw the cross-validation folds. Defaults to `as.integer(N * T)` when the user did not pass a seed. `NA_integer_` when `lambda_selection = "bic"`.}
 #' \item{fusion_structure}{Character scalar; the `fusion_structure` argument the user passed (`"cohort"` or `"event_study"`), recording which fusion-penalty differences matrix was used for the treatment effects.}
 #' \item{fusion_matrix}{The user-supplied custom forward differences matrix `D_N` (a `num_treats x num_treats` numeric matrix), or `NULL` if none was supplied. When non-`NULL` it overrode `fusion_structure` for the treatment-effect block; the estimator used `solve(fusion_matrix)` internally. See the `fusion_matrix` argument.}
 #' \item{N}{The final number of units that were in the data set used for estimation (after any units may have been removed because they were treated in the first time period).}
@@ -355,8 +357,8 @@
 #'       add_ridge = TRUE,
 #'       q = 0.5)
 #'
-#'   # FETWFE estimates an overall ATT of roughly -6% on the elasticity-scaled
-#'   # female suicide rate, with a 95% confidence interval that excludes zero.
+#'   # FETWFE estimates a negative overall ATT on the elasticity-scaled female
+#'   # suicide rate, with a 95% confidence interval that excludes zero.
 #'   # The selection step retains heterogeneous cohort effects (several cohorts
 #'   # are pruned to exactly zero), rather than fusing to a single common effect.
 #'   print(res, max_cohorts = Inf)
@@ -660,14 +662,7 @@ fetwfe <- function(
 #'   penalty parameter" for details.
 #' @param cv_folds Integer; number of folds for the CV path. Ignored when
 #'   `lambda_selection = "bic"`. Default is 10.
-#' @param cv_seed Integer or `NULL`; the seed passed to `set.seed()`
-#'   immediately before the `cv.grpreg()` call, controlling fold
-#'   assignment. If supplied, must be within `+/- .Machine$integer.max`.
-#'   If `NULL` (the default), the seed defaults internally to
-#'   `as.integer(N * T)` so consecutive calls on the same dataset are
-#'   reproducible without the user having to specify a seed. The seed
-#'   actually used is stored on the returned object as `cv_seed`.
-#'   Ignored when `lambda_selection = "bic"`.
+#' @inheritParams fetwfe
 #' @param fusion_structure Character; one of `"cohort"` or `"event_study"`.
 #'   `"cohort"` (the default) uses the within-cohort / between-cohort two-way
 #'   fusion penalty. `"event_study"` instead fuses treatment effects at the same
@@ -752,7 +747,7 @@ fetwfe <- function(
 #' \item{lambda_star_model_size}{The number of selected features (excluding the always-present intercept) in the chosen model. If this value is close to `lambda.max_model_size` or `lambda.min_model_size`, that could suggest that the range of `lambda` values should be expanded.}
 #' \item{lambda_selection}{Character scalar; either `"cv"` (10-fold cross-validation on `cv.grpreg`; v1.13.0+ default) or `"bic"` (BIC over the `grpreg` lambda grid; the prior default). Mirrors the `lambda_selection` argument the user passed.}
 #' \item{cv_folds}{Integer scalar; the `cv_folds` value used when `lambda_selection = "cv"`, `NA_integer_` when `lambda_selection = "bic"`.}
-#' \item{cv_seed}{Integer scalar; the seed actually fed to `set.seed()` immediately before `cv.grpreg()` was called. Defaults to `as.integer(N * T)` when the user did not pass a seed. `NA_integer_` when `lambda_selection = "bic"`.}
+#' \item{cv_seed}{Integer scalar; the seed actually fed to `set.seed()` to draw the cross-validation folds. Defaults to `as.integer(N * T)` when the user did not pass a seed. `NA_integer_` when `lambda_selection = "bic"`.}
 #' \item{fusion_structure}{Character scalar; the `fusion_structure` argument the user passed (`"cohort"` or `"event_study"`), recording which fusion-penalty differences matrix was used for the treatment effects.}
 #' \item{fusion_matrix}{The user-supplied custom forward differences matrix `D_N` (a `num_treats x num_treats` numeric matrix), or `NULL` if none was supplied. When non-`NULL` it overrode `fusion_structure` for the treatment-effect block; the estimator used `solve(fusion_matrix)` internally. See the `fusion_matrix` argument.}
 #' \item{N}{The final number of units that were in the data set used for estimation (after any units may have been removed because they were treated in the first time period).}
