@@ -23,7 +23,6 @@ articles:
   - fusion_structure_vignette
   - inference_vignette
   - simultaneous_cis_vignette
-  - high_dimensional_vignette
   - simulation_vignette
   - etwfe_betwfe_vignette
 
@@ -38,9 +37,8 @@ reference:
   - betwfe
   - twfeCovs
 - title: Inference
-  desc: Confidence intervals and debiased overall-ATT inference.
+  desc: Simultaneous confidence bands over families of treatment effects.
   contents:
-  - debiasedATT
   - simultaneousCIs
 - title: Treatment-effect summaries
   desc: Extract cohort, event-study, and cohort-by-time treatment effects.
@@ -63,7 +61,6 @@ reference:
   - etwfeWithSimulatedData
   - betwfeWithSimulatedData
   - twfeCovsWithSimulatedData
-  - debiasedATTWithSimulatedData
 - title: Data conversion
   desc: Convert data frames from other DiD packages into the FETWFE format.
   contents:

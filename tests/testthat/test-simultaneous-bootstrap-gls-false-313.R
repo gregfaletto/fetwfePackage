@@ -9,7 +9,7 @@
 # un-whitened too. Previously the `has_valid_ses` gate (R/simultaneous_cis.R)
 # errored on every calc_ses = FALSE fit; now it lets the high-dim fetwfe bootstrap
 # path through while STILL erroring for method = "analytic" (needs sig_eps_sq) and
-# for fixed-p (#312) / non-fetwfe (#308).
+# for fixed-p / non-fetwfe.
 
 # ---- gls = FALSE high-dim fixture (raw panel, no supplied variances) ----------
 # N=20, T=8, d=12 => p = 376 >> NT = 160 (mirrors test-debiased-att-highdim.R).
@@ -144,9 +144,9 @@ test_that("method = 'analytic' on a gls = FALSE fit still errors cleanly (not a 
 	}
 })
 
-test_that("a fixed-p gls = FALSE fit still errors for the bootstrap band (the #312 scope boundary)", {
+test_that("a fixed-p gls = FALSE fit still errors for the bootstrap band", {
 	# Small d => p < NT (fixed-p). gls = FALSE => calc_ses = FALSE. The Omega-free
-	# band is high-dim-only here; the fixed-p cluster-robust band is #312.
+	# band is high-dim-only here.
 	coefs <- genCoefs(
 		G = 3,
 		T = 5,

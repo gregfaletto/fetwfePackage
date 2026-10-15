@@ -92,6 +92,9 @@
   increasingly so as the values grew, and `fetwfe()` could fail with a `grpreg`
   convergence error. The penalty is now unit-free.
 
+- `debiasedATT()` and `debiasedATTWithSimulatedData()` were withheld from the
+  exported API; #527 tracks their re-export.
+
 ### Defensive improvements
 
 - A negative cohort-probability variance is no longer discarded in silence

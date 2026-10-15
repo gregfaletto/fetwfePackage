@@ -21,3 +21,4 @@ following the package's \code{broom} column convention (\code{term}, \code{estim
 \code{std.error}, \code{conf.low}, \code{conf.high}) -- the same columns \code{tidy.fetwfe()} /
 \code{tidy.eventStudy()} return.
 }
+\keyword{internal}

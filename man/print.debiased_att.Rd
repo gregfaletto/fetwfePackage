@@ -21,3 +21,4 @@ surfaces the nodewise-direction diagnostics
 (\code{lambda_c} / \code{lambda_node}, KKT feasibility, convergence) the documentation
 tells users to inspect; the fixed-\code{p} print shows only the estimate block.
 }
+\keyword{internal}

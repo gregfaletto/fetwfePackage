@@ -552,3 +552,69 @@ test_that("tidy.eventStudy() schema is locked across conf.int branches (#84 item
 		)
 	}
 })
+
+# ------------------------------------------------------------------------------
+# Test 6 (#495): no exported function's help page is internal, and no help page
+# outside the internal ones names the withheld debiasedATT().
+# ------------------------------------------------------------------------------
+
+.rd_is_internal <- function(rd) {
+	any(vapply(
+		rd,
+		function(n) {
+			identical(attr(n, "Rd_tag"), "\\keyword") &&
+				identical(trimws(paste(unlist(n), collapse = "")), "internal")
+		},
+		logical(1)
+	))
+}
+
+.rd_aliases <- function(rd) {
+	al <- rd[vapply(
+		rd,
+		function(n) identical(attr(n, "Rd_tag"), "\\alias"),
+		logical(1)
+	)]
+	vapply(
+		al,
+		function(n) trimws(paste(unlist(n), collapse = "")),
+		character(1)
+	)
+}
+
+test_that("no exported help page names the withheld debiasedATT() (#495)", {
+	db <- .get_rd_db()
+	expect_true("fetwfe.Rd" %in% names(db))
+	expect_false(.rd_is_internal(db[["fetwfe.Rd"]]))
+	expect_true(.rd_is_internal(db[["debiasedATT.Rd"]]))
+
+	mentions <- names(db)[vapply(
+		db,
+		function(rd) {
+			grepl(
+				"debiasedATT",
+				paste(as.character(rd), collapse = ""),
+				fixed = TRUE
+			)
+		},
+		logical(1)
+	)]
+	expect_true("debiasedATT.Rd" %in% mentions)
+	offenders <- mentions[!vapply(db[mentions], .rd_is_internal, logical(1))]
+	expect_identical(offenders, character(0), info = toString(offenders))
+
+	expect_true("debiasedATT" %in% .rd_aliases(db[["debiasedATT.Rd"]]))
+	internal_pages <- names(db)[vapply(db, .rd_is_internal, logical(1))]
+	exported_internal <- intersect(
+		as.character(unlist(
+			lapply(db[internal_pages], .rd_aliases),
+			use.names = FALSE
+		)),
+		getNamespaceExports("fetwfe")
+	)
+	expect_identical(
+		exported_internal,
+		character(0),
+		info = toString(exported_internal)
+	)
+})
