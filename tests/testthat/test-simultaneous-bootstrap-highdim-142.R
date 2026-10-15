@@ -303,12 +303,7 @@ test_that("high-dim custom per-effect centers match an independent q=1 reconstru
 # `estimates`, or the band and its adjusted p-values disagree on a bridge-zeroed
 # effect. Fixture: seed = 2 (same G=3,T=5,d=22,N=40 high-dim DGP) with
 # cv_seed = 1, where the bridge zeroes SOME-but-not-all event-study effects
-# (bridge e3 == 0 exactly, its debiased center is non-zero). The
-# mutation-checkable signal: e3's adjusted p-value is finite and < 1 here;
-# reverting the `t_stat` to abs(estimates) would make e3's t_stat abs(0)/se = 0
-# and its adjusted p ~1. NOTE: seed = 6 instead zeroes ALL effects and trips the
-# upstream all-zero early-exit (which now warns in the high-dim regime -- see the
-# dedicated test below), so it never reaches this duality path.
+# (bridge e3 == 0 exactly, its debiased center is non-zero).
 # ------------------------------------------------------------------------------
 test_that("high-dim event_study band/adjusted-p duality holds with the debiased center (#299)", {
 	coefs <- genCoefs(
@@ -378,9 +373,8 @@ test_that("high-dim event_study band/adjusted-p duality holds with the debiased 
 	sig <- bo$adjusted_p_values < bo$alpha
 	expect_identical(excl0, sig)
 
-	# Mutation anchor: a bridge-zero effect's adjusted p-value is driven by its
-	# DEBIASED center, so it is < 1; under the bug (abs(estimates))
-	# it would be ~1 (mean(boot_max >= 0)).
+	# A bridge-zero effect's adjusted p-value is driven by its DEBIASED center,
+	# so it is < 1.
 	expect_true(all(bo$adjusted_p_values[bridge_zero] < 0.95))
 })
 

@@ -107,10 +107,7 @@
 # The fourth vector's VALUE equals the cohortStudy() pin sitting a few lines
 # above it in the same block: in ALL SIX blocks the seven printed digits are
 # character-identical, which you can confirm without running anything by
-# comparing the literal pairs in each block. (They are not bit-identical --
-# identical() is FALSE on all six -- which is why the tolerance is 1e-6 and
-# not 0. An earlier draft of this comment said only fetwfe/default and
-# fetwfe/cluster matched, implying the other four differed.)
+# comparing the literal pairs in each block.
 # That is not a defect and not avoidable by changing family (event_study
 # reproduces eventStudy()$se, all_post_treatment reproduces
 # cohortTimeATTs()$se): the agreement IS what Anchor C asserts. The point of

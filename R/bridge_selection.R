@@ -409,10 +409,9 @@ getBetaCV <- function(
 #'   `.cv_unit_order()`, whose roxygen describes the key; then, under
 #'   `.with_preserved_rng(cv_seed, ...)`, it draws row folds over that order with
 #'   `.cv_row_folds()` and passes them to `cv.grpreg(fold = )`, which then draws
-#'   no random numbers of its own. The folds stay row-level, and the seed and the
-#'   draw are the ones `cv.grpreg()` would use by itself; only the order the draw
-#'   is assigned in changes, from the sorted unit IDs to one computed from the
-#'   data, so relabeling the units leaves the folds unchanged (#524).
+#'   no random numbers of its own. `.cv_row_folds()` describes the draw and the
+#'   rows it goes to, and `.cv_unit_order()` what relabeling the units does to
+#'   the order (#524).
 #'
 #'   The seed is applied with `set.seed()` around the draw rather than through
 #'   `cv.grpreg()`'s own `seed` argument, whose semantics changed across `grpreg`

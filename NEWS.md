@@ -74,7 +74,7 @@
   Because a supplied `sig_eps_sq` now also sets where the lambda grid sits, a
   variance supplied in the wrong units moves the estimates at `q != 1`, not
   only their standard errors. `fetwfe(gls = FALSE)` fits, which estimate no
-  noise variance, are unchanged and still depend on the units (#490). The
+  noise variance, are not standardized and still depend on the units (#490). The
   `q = 1` nuisance behind `debiasedATT()` and the high-dimensional bootstrap
   band of `simultaneousCIs()` is standardized too, by the response's standard
   deviation, so it no longer depends on the units either. Existing estimates
@@ -89,12 +89,13 @@
   increasingly so as the values grew, and `fetwfe()` could fail with a `grpreg`
   convergence error. The penalty is now unit-free.
 
-- **Cross-validated `fetwfe()` and `betwfe()` estimates moved, at the default
-  `cv_seed` and at any other** (#524): their cross-validation folds, and those
-  of the high-dimensional bootstrap band of `simultaneousCIs()`, are now drawn
-  over an order of the units computed from the data rather than from their
-  sorted IDs, so the fold assignment no longer depends on how the units are
-  labeled.
+- **Cross-validated `fetwfe()` and `betwfe()` estimates can move, at the
+  default `cv_seed` and at any other** (#524): their cross-validation folds, and
+  those of the high-dimensional bootstrap band of `simultaneousCIs()`, are now
+  drawn over an order of the units computed from the data rather than from
+  their sorted IDs, so the fold assignment no longer depends on how the units
+  are labeled, except through REML's small dependence on unit order when the
+  noise variances are estimated (#535).
 
 ### Defensive improvements
 

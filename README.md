@@ -68,7 +68,8 @@ remotes::install_github("gregfaletto/fetwfePackage")
 The primary function is `fetwfe()`. Here it is applied to the `divorce`
 dataset from the `bacondecomp` package — the unilateral (“no-fault”)
 divorce / female-suicide panel of Stevenson and Wolfers (2006),
-reproducing the empirical application in Faletto (2025, Sec. 8.2):
+following the data and specification of the empirical application in
+Faletto (2025, Sec. 8.2):
 
 ``` r
 library(fetwfe)

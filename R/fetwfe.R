@@ -159,10 +159,12 @@
 #' @param cv_folds Integer; number of folds for the CV path. Ignored when
 #'   `lambda_selection = "bic"`. Default is 10.
 #' @param cv_seed Integer or `NULL`; the seed passed to `set.seed()` to draw
-#'   the cross-validation folds. The draw is assigned to the units in an order
-#'   computed from their data rather than from their IDs, so relabeling the
-#'   units does not change the folds. If supplied, must be within
-#'   `+/- .Machine$integer.max`.
+#'   the cross-validation folds. The folds are row-level: the draw is assigned
+#'   to the rows unit by unit, with the units in an order computed from their
+#'   data rather than from their IDs. So the fold assignment does not depend on
+#'   how the units are labeled, except through REML's small dependence on unit
+#'   order when the noise variances are estimated (#535). If supplied, must be
+#'   within `+/- .Machine$integer.max`.
 #'   If `NULL` (the default), the seed defaults internally to
 #'   `as.integer(N * T)` so consecutive calls on the same dataset are
 #'   reproducible without the user having to specify a seed. The seed
@@ -339,7 +341,7 @@
 #'   # the elasticity-scaled female suicide rate is the response.
 #'   divorce_f <- divorce[divorce$sex == 2, ]
 #'
-#'   # Reproduces the empirical application in Faletto (2025, Sec. 8.2). The 9
+#'   # Follows the data and specification of Faletto (2025, Sec. 8.2). The 9
 #'   # states already treated by 1964 are auto-dropped as first-period-treated,
 #'   # and `murderrate` is auto-dropped (missing in 1964 for one state); both are
 #'   # reported as (expected) warnings. The noise variances are supplied

@@ -138,9 +138,11 @@
 #' @param cv_folds Integer; number of folds for the CV path. Ignored when
 #'   `lambda_selection = "bic"`. Default is 10.
 #' @param cv_seed Integer or `NULL`; the seed passed to `set.seed()` to draw
-#'   the cross-validation folds. The draw is assigned to the units in an order
-#'   computed from their data rather than from their IDs, so relabeling the
-#'   units does not change the folds. If supplied, must be
+#'   the cross-validation folds. The folds are row-level: the draw is assigned
+#'   to the rows unit by unit, with the units in an order computed from their
+#'   data rather than from their IDs. So the fold assignment does not depend on
+#'   how the units are labeled, except through REML's small dependence on unit
+#'   order when the noise variances are estimated (#535). If supplied, must be
 #'   within `+/- .Machine$integer.max`. If `NULL` (the default),
 #'   the seed defaults internally to `as.integer(N * T)`. Ignored when
 #'   `lambda_selection = "bic"`.

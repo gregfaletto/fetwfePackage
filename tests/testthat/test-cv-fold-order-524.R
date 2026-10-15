@@ -2,9 +2,10 @@
 #
 # `.cv_unit_order()` orders the units by their data; `.cv_row_folds()` and
 # `.cv_unit_folds()` assign a seeded draw over that order. The first part tests
-# those helpers directly; the second checks that fits built on them do not
-# change when the units are relabeled. `.cv_unit_order()`'s roxygen describes
-# the key.
+# those helpers directly. The second checks that fits built on them do not
+# change when the units are relabeled, and that their estimates follow the
+# response when it is rescaled, shifted or negated. `.cv_unit_order()`'s
+# roxygen describes the key.
 
 # ---- Helpers ------------------------------------------------------------------
 
@@ -130,6 +131,20 @@ test_that(".cv_unit_order() rounds each key to 10 digits of its scale (#524)", {
 		.cv_unit_order(X, 4L, 2L, c(u1, u2, -u1, -u2)),
 		c(4L, 2L, 3L, 1L)
 	)
+
+	# The design key, above its quantum: the two units tie on the absolute key,
+	# and their first design rows differ by 2^-31, which survives the rounding,
+	# so the design key decides and unit 2 comes first (their signed keys order
+	# them the other way).
+	expect_identical(
+		.cv_unit_order(
+			matrix(c(1, 1, 1 - 2^-31, 1 - 2^-31), 4L, 1L),
+			2L,
+			2L,
+			c(-1, 1, 1, -1)
+		),
+		c(2L, 1L)
+	)
 })
 
 test_that(".cv_unit_order() breaks ties by the design, then the sign-normalized and signed deviations (#524)", {
@@ -146,6 +161,20 @@ test_that(".cv_unit_order() breaks ties by the design, then the sign-normalized 
 			c(1, -1, -1, 1)
 		),
 		c(1L, 2L)
+	)
+
+	# The design key comes before the sign-normalized one: the four units tie
+	# on the absolute key, and unit 2, whose first design row is the smallest,
+	# comes first although its sign-normalized deviation sorts after those of
+	# units 1 and 3.
+	expect_identical(
+		.cv_unit_order(
+			matrix(rep(c(2, 1, 2, 2), each = 2L), 8L, 1L),
+			4L,
+			2L,
+			c(1, -1, 1, 1, -1, 1, -1, -1)
+		),
+		c(2L, 3L, 1L, 4L)
 	)
 
 	# The sign-normalized key: units 1 and 2 tie on the absolute and design

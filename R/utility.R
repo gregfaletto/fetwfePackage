@@ -1578,8 +1578,8 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #'   stream), while saving and restoring the caller's `.Random.seed` (via
 #'   `on.exit()`) so the call never perturbs the caller's random stream. Both the
 #'   "caller had a seed at entry" and "caller had none" cases are handled.
-#'   Consolidates the idiom shared by `getBetaCV()` (#181, the CV-fold
-#'   assignment), `.simultaneous_cis_impl()` (#192 / #200, the `mvtnorm`
+#'   Consolidates the idiom shared by `.cv_grpreg_label_free()` (#181, the
+#'   CV-fold assignment), `.simultaneous_cis_impl()` (#192 / #200, the `mvtnorm`
 #'   Genz-Bretz quasi-Monte-Carlo integration), and `getTes()` (#254, the
 #'   expected-cohort-probability truth computation). (#195)
 #' @param seed A single numeric seed within `+/- .Machine$integer.max` (passed
@@ -1626,11 +1626,10 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #'   units permutes the unit blocks of `X` and `y`, and the order permutes with
 #'   them.
 #'
-#'   This is the key's one description. With `y`, let `dev` be the first
-#'   `N * T` entries of `y` as a `T x N` matrix (one column per unit) minus
-#'   their mean, and `q = round(dev / max(abs(dev)), 10)`, dividing by 1 when
-#'   that maximum is not positive. The units are sorted by these keys, in
-#'   priority order:
+#'   With `y`, let `dev` be the first `N * T` entries of `y` as a `T x N`
+#'   matrix (one column per unit) minus their mean, and
+#'   `q = round(dev / max(abs(dev)), 10)`, dividing by 1 when that maximum is
+#'   not positive. The units are sorted by these keys, in priority order:
 #'
 #'   1. `abs(q)`, period by period;
 #'   2. the unit's first design row, column by column, each column divided by
