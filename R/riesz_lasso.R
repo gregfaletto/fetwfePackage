@@ -318,8 +318,8 @@ lambda_node_default <- function(p, N, const = 1.0, scale = 1.0) {
 	# balanced panel: unit i occupies rows ((i-1)*T + 1):(i*T). Two configs sharing
 	# `N*T` share this fold seed, which is harmless: the seed only fixes the draw
 	# of fold ids, so reuse just means the same draw (still a valid split). The
-	# draw is assigned to units in the label-free order of `.cv_unit_order()`,
-	# computed from the design alone, since the Riesz loss has no response in it.
+	# draw is assigned to units in the order `.cv_unit_order()` computes from the
+	# design alone, since the Riesz loss has no response in it.
 	cv_seed <- as.integer(min(as.numeric(N_units) * T, .Machine$integer.max))
 	ord <- .cv_unit_order(X, N_units, T)
 	fold <- .with_preserved_rng(

@@ -145,6 +145,19 @@ test_that(".cv_unit_order() rounds each key to 10 digits of its scale (#524)", {
 		),
 		c(2L, 1L)
 	)
+
+	# The design key, below its quantum: the first design rows differ by 2^-50,
+	# which the rounding absorbs, so the design key ties and the signed key
+	# decides: unit 1 comes first.
+	expect_identical(
+		.cv_unit_order(
+			matrix(c(1, 1, 1 - 2^-50, 1 - 2^-50), 4L, 1L),
+			2L,
+			2L,
+			c(-1, 1, 1, -1)
+		),
+		c(1L, 2L)
+	)
 })
 
 test_that(".cv_unit_order() breaks ties by the design, then the sign-normalized and signed deviations (#524)", {
@@ -260,7 +273,7 @@ test_that(".cv_row_folds() and .cv_unit_folds() assign the seeded draw over the 
 	expect_setequal(folds, seq_len(K))
 })
 
-# ---- Fits: relabeling the units leaves the estimates unchanged ----------------
+# ---- Fits: relabeled units and transformed responses --------------------------
 #
 # Every fit below supplies the noise variances, or skips GLS: with the
 # variances estimated, REML's own dependence on the unit order (#535) moves the

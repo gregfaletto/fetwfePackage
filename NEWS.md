@@ -93,9 +93,9 @@
   default `cv_seed` and at any other** (#524): their cross-validation folds, and
   those of the high-dimensional bootstrap band of `simultaneousCIs()`, are now
   drawn over an order of the units computed from the data rather than from
-  their sorted IDs, so the fold assignment no longer depends on how the units
-  are labeled, except through REML's small dependence on unit order when the
-  noise variances are estimated (#535).
+  their sorted IDs, so relabeling the units no longer changes which penalty
+  cross-validation selects, except through REML's small dependence on unit
+  order when the noise variances are estimated (#535).
 
 ### Defensive improvements
 

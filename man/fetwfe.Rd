@@ -199,10 +199,10 @@ penalty parameter" for details.}
 \item{cv_seed}{Integer or \code{NULL}; the seed passed to \code{set.seed()} to draw
 the cross-validation folds. The folds are row-level: the draw is assigned
 to the rows unit by unit, with the units in an order computed from their
-data rather than from their IDs. So the fold assignment does not depend on
-how the units are labeled, except through REML's small dependence on unit
-order when the noise variances are estimated (#535). If supplied, must be
-within \verb{+/- .Machine$integer.max}.
+data rather than from their IDs. So relabeling the units does not change
+which \code{lambda} cross-validation selects, except through REML's small
+dependence on unit order when the noise variances are estimated (#535). If
+supplied, must be within \verb{+/- .Machine$integer.max}.
 If \code{NULL} (the default), the seed defaults internally to
 \code{as.integer(N * T)} so consecutive calls on the same dataset are
 reproducible without the user having to specify a seed. The seed
@@ -393,7 +393,6 @@ if (requireNamespace("bacondecomp", quietly = TRUE)) {
       response = "suiciderate_elast_jag",
       sig_eps_sq = 0.0344,
       sig_eps_c_sq = 0.1507,
-      add_ridge = TRUE,
       q = 0.5)
 
   # FETWFE estimates a negative overall ATT on the elasticity-scaled female

@@ -421,8 +421,8 @@ getBetaCV <- function(
 #'   untouched (#177).
 #'
 #'   Each caller passes its own scaled design and response. The order does not
-#'   depend on that scaling: the response keys are unchanged by a positive
-#'   factor, and each design column's order by the increasing affine map
+#'   depend on that scaling: `.cv_unit_order()` says why for the response keys,
+#'   and each design column's order survives the increasing affine map
 #'   `my_scale()` applies, up to near-ties at the rounding quantum.
 #' @param X The design: `N * T` unit-major rows, then any ridge pseudo-rows.
 #' @param y The response, one entry per row of `X`.

@@ -195,7 +195,7 @@ test_that("too-small lambda_c warns for high-dim event_study (experimental)", {
 #
 # The full witness set, measured by mutating the band channel's lambda_c to diverge
 # from debiasedATT()'s (6 assertions in 4 files fire):
-#   test-simultaneous-bootstrap-highdim-142.R:231, :290, :482  (here)
+#   test-simultaneous-bootstrap-highdim-142.R  (here)
 #   test-simultaneous-bootstrap-gls-false-313.R:133   -- the identical cross-check
 #                                                        on a gls = FALSE high-dim fit
 #   test-simultaneous-bootstrap-fpi-desparsify-309.R:317 -- hand-rolled SE reconstruction

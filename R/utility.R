@@ -1646,21 +1646,20 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #'   multiplied by a positive constant, and every key but the last when it is
 #'   negated, so those transformations of the response leave the folds
 #'   unchanged, negation except on the exact mirror twins below. The rounding,
-#'   to 10 digits of each key's own scale, stops floating-point noise from
-#'   ordering values that are equal in exact arithmetic: the centering and the
-#'   GLS whitening upstream sum in label order, so such values can differ in
-#'   their last bits, and on a discrete outcome the labels would otherwise
-#'   decide their order. The design key separates units whose responses tie; a
-#'   unit's first design row identifies its cohort and covariates, because
-#'   `processCovs()` makes the covariates time-invariant. The sign-normalized
-#'   key separates units whose absolute deviations agree in every period while
-#'   their signs differ in some. The signed key separates exact mirror twins,
-#'   units with identical first design rows whose quantized deviations are
-#'   exact negatives. Negation swaps such a pair, so no order computed from the
-#'   data can both follow negation and ignore the labels there; this one
-#'   ignores the labels. The current callers' responses are already centered by
-#'   `processCovs()`; the centering here keeps the order unchanged by a shift
-#'   for a caller whose response is not.
+#'   to 10 digits of each key's own scale, is for values that are equal in exact
+#'   arithmetic: the centering and the GLS whitening upstream sum in label
+#'   order, so such values can differ in their last bits, and on a discrete
+#'   outcome the labels would otherwise decide their order. The design key
+#'   separates units whose responses tie; a unit's first design row identifies
+#'   its cohort and covariates, because `processCovs()` makes the covariates
+#'   time-invariant. The sign-normalized key separates units whose absolute
+#'   deviations agree in every period while their signs differ in some. The
+#'   signed key separates exact mirror twins, units with identical first design
+#'   rows whose quantized deviations are exact negatives. Negation swaps such a
+#'   pair, so no order computed from the data can both follow negation and
+#'   ignore the labels there; this one ignores the labels. The current callers'
+#'   responses are already centered by `processCovs()`; the centering here keeps
+#'   the order unchanged by a shift for a caller whose response is not.
 #'
 #'   The order is built from stable `order(method = "radix")` passes, last key
 #'   first, rather than `do.call(order, keys)`, because the function is
