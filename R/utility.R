@@ -1618,13 +1618,12 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 }
 
 # .cv_unit_order
-#' @title A label-free order of the units, for drawing cross-validation folds
+#' @title An order of the units computed from their data, for drawing
+#'   cross-validation folds
 #' @description Orders the `N` units of a unit-major panel by their data, never
-#'   by their IDs, so that cross-validation folds drawn over this order
-#'   (`.cv_row_folds()`, `.cv_unit_folds()`) do not depend on how the units are
-#'   labeled, or on the locale that sorts the labels (#524). Relabeling the
-#'   units permutes the unit blocks of `X` and `y`, and the order permutes with
-#'   them.
+#'   by their IDs, for the folds `.cv_row_folds()` and `.cv_unit_folds()` draw
+#'   over it (#524). Relabeling the units permutes the unit blocks of `X` and
+#'   `y`, and the order permutes with them, apart from ties (below).
 #'
 #'   With `y`, let `dev` be the first `N * T` entries of `y` as a `T x N`
 #'   matrix (one column per unit) minus their mean, and

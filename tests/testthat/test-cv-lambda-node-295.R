@@ -69,7 +69,7 @@ test_that(".cv_lambda_node is deterministic and preserves the ambient RNG", {
 	expect_identical(r1$cv_loss, r2$cv_loss)
 })
 
-# The unit folds are drawn over a label-free order of the units (#524), so
+# The unit folds are drawn over an order computed from the design (#524), so
 # permuting the units' row blocks leaves every grid point's CV loss unchanged.
 # A fallback returns an all-NA `cv_loss`, so the fits are asserted not to fall
 # back.

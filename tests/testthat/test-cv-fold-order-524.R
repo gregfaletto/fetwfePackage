@@ -279,7 +279,7 @@ test_that(".cv_row_folds() and .cv_unit_folds() assign the seeded draw over the 
 # variances estimated, REML's own dependence on the unit order (#535) moves the
 # estimates at its optimizer's tolerance.
 
-# The divorce application's vignette call (the female subset of
+# The divorce call with `add_ridge = TRUE` (the female subset of
 # `bacondecomp::divorce`).
 .div524_data <- NULL
 if (requireNamespace("bacondecomp", quietly = TRUE)) {
@@ -308,7 +308,7 @@ if (requireNamespace("bacondecomp", quietly = TRUE)) {
 	)
 }
 
-# The vignette call under the labeling `ids`, with the response replaced by
+# That call under the labeling `ids`, with the response replaced by
 # `a * y + b` and the supplied variances scaled by `a^2`. Under `gls = FALSE`
 # it supplies neither the variances nor the ridge (`fetwfe()` rejects the ridge
 # there).

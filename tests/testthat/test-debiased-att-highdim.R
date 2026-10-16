@@ -350,8 +350,9 @@ test_that("debiasedATT is deterministic in the high-dim regime", {
 })
 
 # The q = 1 nuisance and the lambda_c = "cv" selector both draw cross-validation
-# folds over a label-free unit order (#524), so relabeling the units refits to
-# the same estimate, at a fixed lambda_c and at the CV-selected one.
+# folds over a unit order computed from the data (#524), so relabeling the
+# units refits to the same estimate, at a fixed lambda_c and at the CV-selected
+# one.
 test_that("debiasedATT() in the high-dim regime does not change when the units are relabeled (#524)", {
 	panel <- .make_highdim_panel()
 	units <- unique(panel$unit)
