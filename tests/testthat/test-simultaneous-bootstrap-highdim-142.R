@@ -195,7 +195,7 @@ test_that("too-small lambda_c warns for high-dim event_study (experimental)", {
 #
 # The full witness set, measured by mutating the band channel's lambda_c to diverge
 # from debiasedATT()'s (6 assertions in 4 files fire):
-#   test-simultaneous-bootstrap-highdim-142.R:231, :290, :482  (here)
+#   test-simultaneous-bootstrap-highdim-142.R  (here)
 #   test-simultaneous-bootstrap-gls-false-313.R:133   -- the identical cross-check
 #                                                        on a gls = FALSE high-dim fit
 #   test-simultaneous-bootstrap-fpi-desparsify-309.R:317 -- hand-rolled SE reconstruction
@@ -301,14 +301,9 @@ test_that("high-dim custom per-effect centers match an independent q=1 reconstru
 # Band / adjusted-p duality under debiasing (#299, plan-review item 1). The
 # adjusted-p `t_stat` MUST use the debiased center `estimates_used`, not the bridge
 # `estimates`, or the band and its adjusted p-values disagree on a bridge-zeroed
-# effect. Fixture: seed = 2 (same G=3,T=5,d=22,N=40 high-dim DGP), where the
-# bridge zeroes SOME-but-not-all event-study effects (bridge e3 == 0 exactly, its
-# debiased center is non-zero). The mutation-checkable signal: e3's adjusted
-# p-value is finite and < 1 here (debiased |center|/se ~1.5); reverting the
-# `t_stat` to abs(estimates) would make e3's t_stat abs(0)/se = 0 and its adjusted
-# p ~1. NOTE: seed = 6 instead zeroes ALL effects and trips the upstream all-zero
-# early-exit (which now warns in the high-dim regime -- see the dedicated test
-# below), so it never reaches this duality path.
+# effect. Fixture: seed = 2 (same G=3,T=5,d=22,N=40 high-dim DGP) with
+# cv_seed = 1, where the bridge zeroes SOME-but-not-all event-study effects
+# (bridge e3 == 0 exactly, its debiased center is non-zero).
 # ------------------------------------------------------------------------------
 test_that("high-dim event_study band/adjusted-p duality holds with the debiased center (#299)", {
 	coefs <- genCoefs(
@@ -337,7 +332,8 @@ test_that("high-dim event_study band/adjusted-p duality holds with the debiased 
 		q = 0.5,
 		verbose = FALSE,
 		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5
+		sig_eps_c_sq = 0.5,
+		cv_seed = 1L
 	)
 	expect_gte(ncol(fit2$internal$X_final), nrow(fit2$internal$X_final))
 	# the fixture genuinely zeroes SOME (not all) treatment cells in the bridge,
@@ -377,9 +373,8 @@ test_that("high-dim event_study band/adjusted-p duality holds with the debiased 
 	sig <- bo$adjusted_p_values < bo$alpha
 	expect_identical(excl0, sig)
 
-	# Mutation anchor: a bridge-zero effect's adjusted p-value is driven by its
-	# DEBIASED center, so it is < 1 (here ~0.28); under the bug (abs(estimates))
-	# it would be ~1 (mean(boot_max >= 0)).
+	# A bridge-zero effect's adjusted p-value is driven by its DEBIASED center,
+	# so it is < 1.
 	expect_true(all(bo$adjusted_p_values[bridge_zero] < 0.95))
 })
 

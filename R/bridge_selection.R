@@ -225,9 +225,8 @@ getBetaBIC <- function(fit, N, T, p, X_mod, y, scale_center, scale_scale) {
 #'
 #'   Seed handling: if `cv_seed` is `NULL`, it defaults internally to
 #'   `as.integer(N * T)` so consecutive calls on the same dataset are
-#'   reproducible without user intervention. The seed is set via `set.seed()`
-#'   immediately before the `cv.grpreg()` call so the fold assignment is
-#'   deterministic.
+#'   reproducible without user intervention. The seed drives the fold draw in
+#'   `.cv_grpreg_label_free()`, which describes how the folds are assigned.
 #' @param X_final_scaled Numeric matrix; the design matrix after fusion +
 #'   GLS transformations and `my_scale()` centering/scaling. Same matrix
 #'   handed to `gBridge()` in the BIC path.
@@ -285,14 +284,7 @@ getBetaCV <- function(
 			cv_seed <- as.integer(nt_double)
 		}
 	}
-	# `set.seed()` here drives the fold assignment for cv.grpreg(). We use
-	# this rather than cv.grpreg's own `seed` argument because the latter
-	# changed semantics across grpreg versions; the global RNG approach is
-	# version-stable. `.with_preserved_rng()` saves and restores the caller's
-	# .Random.seed so the call leaves the caller's RNG state untouched
-	# (issue #177 — without this, every default-path fetwfe() / betwfe()
-	# call would silently mutate the user's seed, a v1.13.0 regression
-	# vs the v1.12.x BIC default).
+	# Folds drawn over a label-free unit order; see .cv_grpreg_label_free().
 	#
 	# NOTE (#403): when add_ridge = TRUE, X_final_scaled already carries the p
 	# appended sqrt(lambda_ridge)-scale ridge pseudo-rows (response 0), so they
@@ -302,15 +294,15 @@ getBetaCV <- function(
 	# selected lambda on the augmented design) would change the selected lambda,
 	# so it is a separate behavior-changing enhancement, not a behavior-neutral
 	# hardening fix.
-	cv_fit <- .with_preserved_rng(cv_seed, {
-		grpreg::cv.grpreg(
-			X = X_final_scaled,
-			y = y_final,
-			penalty = "gBridge",
-			gamma = gamma,
-			nfolds = cv_folds
-		)
-	})
+	cv_fit <- .cv_grpreg_label_free(
+		X = X_final_scaled,
+		y = y_final,
+		N = N,
+		T = T,
+		gamma = gamma,
+		cv_folds = cv_folds,
+		cv_seed = cv_seed
+	)
 
 	lam_idx <- .cv_grpreg_at_min(cv_fit)
 	stopifnot(nrow(cv_fit$fit$beta) == p + 1L)
@@ -388,15 +380,16 @@ getBetaCV <- function(
 		as.integer(nt_double)
 	}
 	resp_scale <- .bridge_response_scale(y = y_final)
-	cv_fit <- .with_preserved_rng(cv_seed, {
-		grpreg::cv.grpreg(
-			X = X_scaled,
-			y = y_final / resp_scale,
-			penalty = "gBridge",
-			gamma = 1,
-			nfolds = cv_folds
-		)
-	})
+	# Folds drawn over a label-free unit order; see .cv_grpreg_label_free().
+	cv_fit <- .cv_grpreg_label_free(
+		X = X_scaled,
+		y = y_final / resp_scale,
+		N = N,
+		T = T,
+		gamma = 1,
+		cv_folds = cv_folds,
+		cv_seed = cv_seed
+	)
 	lam_idx <- .cv_grpreg_at_min(cv_fit)
 	stopifnot(nrow(cv_fit$fit$beta) == p + 1L)
 	theta_scaled <- cv_fit$fit$beta[, lam_idx]
@@ -408,6 +401,57 @@ getBetaCV <- function(
 		scale_scale = scale_scale
 	)
 	theta * resp_scale
+}
+
+#' @title `grpreg::cv.grpreg()` with folds drawn over a label-free unit order
+#' @description The cross-validation fit shared by the two `cv.grpreg()` call
+#'   sites (`getBetaCV()` and `.fit_q1_nuisance()`). It orders the units with
+#'   `.cv_unit_order()`, whose roxygen describes the key; then, under
+#'   `.with_preserved_rng(cv_seed, ...)`, it draws row folds over that order with
+#'   `.cv_row_folds()` and passes them to `cv.grpreg(fold = )`, which then draws
+#'   no random numbers of its own. `.cv_row_folds()` describes the draw and the
+#'   rows it goes to, and `.cv_unit_order()` what relabeling the units does to
+#'   the order (#524).
+#'
+#'   The seed is applied with `set.seed()` around the draw rather than through
+#'   `cv.grpreg()`'s own `seed` argument, whose semantics changed across `grpreg`
+#'   versions and which seeds only the draw that `fold =` skips.
+#'   `.with_preserved_rng()` restores the caller's `.Random.seed` afterwards, so
+#'   a default-path `fetwfe()` or `betwfe()` call leaves the user's random stream
+#'   untouched (#177).
+#'
+#'   Each caller passes its own scaled design and response. The order does not
+#'   depend on that scaling: `.cv_unit_order()` says why for the response keys,
+#'   and each design column's order survives the increasing affine map
+#'   `my_scale()` applies, up to near-ties at the rounding quantum.
+#' @param X The design: `N * T` unit-major rows, then any ridge pseudo-rows.
+#' @param y The response, one entry per row of `X`.
+#' @param N,T Integer; the number of units and of periods.
+#' @param gamma Numeric; the bridge exponent, passed to `cv.grpreg(penalty =
+#'   "gBridge", gamma = )`.
+#' @param cv_folds Integer; the number of folds.
+#' @param cv_seed Integer; the seed for the fold draw.
+#' @return The `cv.grpreg()` fit.
+#' @keywords internal
+#' @noRd
+.cv_grpreg_label_free <- function(X, y, N, T, gamma, cv_folds, cv_seed) {
+	ord <- .cv_unit_order(X, N, T, y)
+	.with_preserved_rng(cv_seed, {
+		fold <- .cv_row_folds(
+			n = length(y),
+			N = N,
+			T = T,
+			K = cv_folds,
+			ord = ord
+		)
+		grpreg::cv.grpreg(
+			X = X,
+			y = y,
+			penalty = "gBridge",
+			gamma = gamma,
+			fold = fold
+		)
+	})
 }
 
 #' @title Column index of cv.grpreg's lambda.min (exact match, guarded fallback)
