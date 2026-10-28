@@ -33,3 +33,4 @@
 ^pkgdown$
 ^\.github$
 ^README\.Rmd$
+^vignettes-parked$

@@ -34,14 +34,16 @@
 
 #' @title Remedy sentence for a high-dimensional post-selection fallback band
 #' @description The ONE home for the two remedy sentences attached to the
-#'   `p >= NT` post-selection fallback band (#433). Both consumers call this:
-#'   `.highdim_postselection_band_message()` (`R/simultaneous_cis.R`), which
-#'   builds the `warning()` text, and `.highdim_postselection_band_notice()`
+#'   `p >= NT` post-selection fallback band (#433). The fallback band's consumers
+#'   call this: `.highdim_postselection_band_message()` (`R/simultaneous_cis.R`),
+#'   which builds the `warning()` text, and `.highdim_postselection_band_notice()`
 #'   (`R/class_helpers.R`), which builds the line `print()` / `summary()`
-#'   render. The two frame the caveat differently but end with the *same*
+#'   render. They frame the caveat differently but end with the *same*
 #'   sentence, so writing it twice would be a copy-paste pair kept in agreement
-#'   by nothing. Lives in `R/utility.R` because its consumers sit in two
-#'   different files (`.workflow/PROFILE.md` section 9: cross-cutting helpers).
+#'   by nothing. The `calc_ses = FALSE` stop in `.simultaneous_cis_impl()` calls
+#'   it too, for a high-dimensional fit. Lives in `R/utility.R` because its
+#'   consumers sit in different files (`.workflow/PROFILE.md` section 9:
+#'   cross-cutting helpers).
 #' @details Two further homes exist and cannot call this helper: the roxygen
 #'   `@details` of [simultaneousCIs()] and [eventStudy()], and the prose in
 #'   `vignettes/simultaneous_cis_vignette.Rmd` (the `p >= NT` paragraph), all of
@@ -50,8 +52,8 @@
 #'   policy rather than the emitted text. The vignette was omitted from this list
 #'   when the list was written and added on 2026-08-20 -- if you add a fourth,
 #'   add it here in the same edit.
-#' @param is_fetwfe Logical scalar; `inherits(x, "fetwfe")` for the fit the band
-#'   was built from. A `fetwfe` fit has a valid high-dimensional route
+#' @param is_fetwfe Logical scalar; `inherits(x, "fetwfe")` for the fit the
+#'   remedy addresses. A `fetwfe` fit has a valid high-dimensional route
 #'   (`method = "bootstrap"`, the desparsified band); no other estimator does.
 #' @return A length-1 character: one sentence, no leading or trailing space.
 #' @keywords internal

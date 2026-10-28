@@ -85,11 +85,11 @@ utils::globalVariables(c(
 #'   cohorts weighted by the estimated cohort probabilities). When the (full)
 #'   design is **high-dimensional (`p >= NT`)** -- where the analytic Gram inverse
 #'   need not exist -- the bootstrap uses the full-design **desparsified**
-#'   construction of `debiasedATT()` (per-effect nodewise directions) generalized
-#'   to the family. This desparsified `p >= NT` band path (`fetwfe()` fits only)
-#'   generalizes the `debiasedATT()` construction --- whose overall-ATT coverage
-#'   is validated near-nominally in simulation (Theorem `debiased.highdim.thm`,
-#'   Faletto 2025) --- to a family of functionals. Its family-wise coverage is
+#'   construction, with per-effect nodewise directions. This desparsified
+#'   `p >= NT` band path (`fetwfe()` fits only) generalizes the paper's scalar
+#'   debiased construction --- whose overall-ATT coverage is validated
+#'   near-nominally in simulation (Theorem `debiased.highdim.thm`, Faletto 2025)
+#'   --- to a family of functionals. Its family-wise coverage is
 #'   likewise validated near-nominally (Theorem `debiased.highdim.joint.thm`):
 #'   ~0.92 over the **event-study** family (`K = 7`) at the `p >= NT` anchor of
 #'   Faletto (2025), the band sibling of the scalar result (~0.94); the cohort and
@@ -100,15 +100,15 @@ utils::globalVariables(c(
 #'   desparsified path covers all
 #'   four families (a high-dimensional `family = "event_study"` fit additionally
 #'   carries the propensity channel `F_pi`). In the high-dimensional regime the
-#'   band is centered on the **debiased** estimate (the high-dimensional FETWFE theory correction,
-#'   equal to `debiasedATT()`'s point estimate for the matching contrast), not
+#'   band is centered on the **debiased** estimate (the high-dimensional FETWFE
+#'   theory correction), not
 #'   the post-selection bridge estimate; fixed-p bands center on the (unbiased)
 #'   bridge estimate as before. Because this desparsified bootstrap band is
 #'   built from the empirical per-unit influence function -- needing neither GLS
 #'   whitening nor `sig_eps_sq` -- it also accepts a high-dimensional
-#'   **`gls = FALSE`** fetwfe fit (`calc_ses = FALSE`), the band analog of
-#'   `debiasedATT()`'s Omega-free SE (#307, #313). `method = "analytic"` still
-#'   requires valid analytic SEs (a `q < 1`, `gls = TRUE`, rank-satisfied fit).
+#'   **`gls = FALSE`** fetwfe fit (`calc_ses = FALSE`). `method = "analytic"`
+#'   still requires valid analytic SEs (a `q < 1`, `gls = TRUE`, rank-satisfied
+#'   fit).
 #'   **Which method is valid at `p >= NT` is a property of the function rather
 #'   than of this argument alone; see the "High-dimensional (`p >= NT`) bands"
 #'   paragraph of Details, which also documents the warning such a call emits.**
@@ -130,19 +130,18 @@ utils::globalVariables(c(
 #'   constant of the penalty `lambda_node = lambda_c * max(|a|) * sqrt(log p / N)`:
 #'   either a single positive number (the default `1.0` = theory scale) or the
 #'   string `"cv"`, which selects the constant **per fit** by cross-validation
-#'   (the same CV `debiasedATT()` uses, on the overall-ATT direction, so one
-#'   constant serves the point estimate and every band effect; #295). **Smaller
+#'   (on the overall-ATT direction, so one constant serves every band effect;
+#'   #295). **Smaller
 #'   fixed values can leave directions infeasible (a warning fires and those bands
 #'   are unreliable).** Ignored when `p < NT` or `method = "analytic"`. The default
 #'   stays the fixed `1.0`; the family-wise coverage validated in Faletto (2025)
-#'   used the `"cv"` selector (`lambda_c` ~ 0.54, feasibility 1.0), the same
-#'   constant that serves the scalar `debiasedATT()` and every band effect.
+#'   used the `"cv"` selector (`lambda_c` ~ 0.54, feasibility 1.0).
 #' @param cv_time_budget Numeric; a wall-clock backstop (in seconds) for the
-#'   `lambda_c = "cv"` cross-validation (the same #384 backstop `debiasedATT()`
-#'   offers). `Inf` (the default) leaves selection fully deterministic /
+#'   `lambda_c = "cv"` cross-validation. `Inf` (the default) leaves selection
+#'   fully deterministic /
 #'   reproducible; a finite value stops the CV early and falls back to the theory
 #'   scale (`lambda_c = 1.0`) with a warning, so an adversarial high-dimensional
-#'   draw cannot spin indefinitely (#384). Whether a finite budget fires depends
+#'   draw cannot spin indefinitely. Whether a finite budget fires depends
 #'   on machine speed, so the result can too. Ignored unless `lambda_c = "cv"` and
 #'   `p >= NT`.
 #' @return An object of S3 class `"simultaneous_cis"`: a list with
@@ -176,8 +175,7 @@ utils::globalVariables(c(
 #'   `lambda_c` (the leading constant used) and `lambda_c_selection` (`"fixed"`
 #'   or `"cv"`). When `lambda_c = "cv"` it also carries `lambda_cv`, the
 #'   cross-validation diagnostics (the grid, the per-grid feasibility flags and CV
-#'   losses, and whether the theory-scale fallback fired), matching
-#'   `debiasedATT()`'s `lambda_cv`.
+#'   losses, and whether the theory-scale fallback fired).
 #' @details
 #' **Family resolution and `K`.** `"event_study"` resolves to one effect per
 #' post-treatment event time `e = 0, ..., T - 2` (`K = T - 1`); `"cohort"` to
@@ -425,8 +423,8 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 #'   One text, two leads: on a non-`fetwfe` fit the estimator itself has no
 #'   desparsified band on either route; on a `fetwfe` fit the *analytic route*
 #'   builds none, even though `method = "bootstrap"` would. The remedy sentence
-#'   comes from `.highdim_band_remedy()` (`R/utility.R`), shared with the
-#'   rendered `print()` / `summary()` notice.
+#'   comes from `.highdim_band_remedy()` (`R/utility.R`); see that helper for
+#'   its callers.
 #' @details Three substrings are load-bearing and must survive any rewording.
 #'   `no desparsified band` is the discriminating anchor the #433 tests match on
 #'   (`fixed = TRUE`) and it must appear on **both** branches -- including the
@@ -681,31 +679,33 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 	)
 
 	# --- 5. Edge case 1: no valid SEs -> stop(), EXCEPT the Omega-free band. ---
-	# `calc_ses = FALSE` fits (gls = FALSE, or q >= 1) carry no analytic SEs. The one
+	# `calc_ses = FALSE` fits carry no analytic SEs. The one
 	# exception is the desparsified high-dimensional band: a `p >= NT` fetwfe fit
 	# under `method = "bootstrap"` builds a cluster-robust simultaneous band from the
 	# empirical per-unit influence function -- no GLS whitening, no `sig_eps_sq` --
 	# exactly as debiasedATT() does for the overall ATT (#307, #313). Every other
-	# calc_ses = FALSE case still errors: `method = "analytic"` needs `sig_eps_sq`
-	# (NA here, and would crash downstream in Sigma_1); fixed-p (`p < NT`) is #312's
-	# scope; a non-fetwfe `p >= NT` fit (betwfe) is #308's. `p`, `N`, `T_`,
+	# calc_ses = FALSE case still errors. `p`, `N`, `T_`,
 	# `is_fetwfe`, and the resolved `method` are all already in scope here.
 	proceed_omega_free_highdim <- !isTRUE(has_valid_ses) &&
 		is_fetwfe &&
 		identical(method, "bootstrap") &&
 		(p >= N * T_)
 	if (!isTRUE(has_valid_ses) && !proceed_omega_free_highdim) {
+		remedy <- if (p >= N * T_) {
+			.highdim_band_remedy(is_fetwfe)
+		} else {
+			paste0(
+				"For a `gls = FALSE` fit, re-fit with `gls = TRUE`. For a fetwfe or ",
+				"betwfe fit made with q >= 1, re-fit with q < 1 (a fetwfe fit also ",
+				"with `gls = TRUE`). For a fit that warned that the Gram matrix of ",
+				"its selected features is not invertible, no band exists until the ",
+				"selected design satisfies the rank condition."
+			)
+		}
 		stop(
 			"simultaneousCIs(): the fitted object was constructed with ",
-			"calc_ses = FALSE; an analytic simultaneous band is not available. For ",
-			"a `gls = FALSE` high-dimensional (`p >= NT`) fetwfe fit, use ",
-			"`method = \"bootstrap\"` for cluster-robust simultaneous bands (the ",
-			"Omega-free desparsified construction, the band analog of ",
-			"`debiasedATT()`). Otherwise re-fit with q < 1 and `gls = TRUE` (a ",
-			"satisfied rank condition gives valid analytic SEs); the fixed-p ",
-			"`gls = FALSE` simultaneous band is not yet built (the band analog of ",
-			"the point-estimate SE #312 ships). For the overall ATT specifically, ",
-			"`debiasedATT()` works in both regimes (including fixed-p `gls = FALSE`).",
+			"calc_ses = FALSE; the requested band is not available. ",
+			remedy,
 			call. = FALSE
 		)
 	}

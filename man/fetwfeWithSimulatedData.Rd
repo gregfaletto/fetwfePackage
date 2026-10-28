@@ -187,13 +187,13 @@ standard, efficient path. When \code{FALSE}, \code{fetwfe()} \strong{skips GLS w
 variance-component estimation entirely}, fitting on the un-whitened
 (fusion-transformed) design. This is the high-dimensional (\code{p >= NT}) path:
 REML cannot estimate the variance components there (the \code{p < N(T - 1)} REML
-guard would otherwise stop the fit), and the \code{\link[=debiasedATT]{debiasedATT()}} cluster-robust
-sandwich standard error needs no \code{Omega} (paper Decision D1). A
-\code{gls = FALSE} fit has \code{calc_ses = FALSE} (no within-selection oracle
-standard errors) and un-whitened
-\code{internal$X_final} / \code{internal$y_final}; pass it to \code{\link[=debiasedATT]{debiasedATT()}} for a
-valid cluster-robust SE. \code{add_ridge = TRUE} is not supported, and supplied
-\code{sig_eps_sq} / \code{sig_eps_c_sq} are ignored, under \code{gls = FALSE}.}
+guard would otherwise stop the fit). A \code{gls = FALSE} fit has
+\code{calc_ses = FALSE} (no within-selection oracle standard errors) and
+un-whitened \code{internal$X_final} / \code{internal$y_final}. It gives point
+estimates; when \code{p >= NT}, \code{\link[=simultaneousCIs]{simultaneousCIs()}} with \code{method = "bootstrap"}
+also gives it cluster-robust simultaneous confidence bands, and when
+\code{p < NT} it has no standard errors. \code{add_ridge = TRUE} is not supported, and
+supplied \code{sig_eps_sq} / \code{sig_eps_c_sq} are ignored, under \code{gls = FALSE}.}
 }
 \value{
 An object of class \code{fetwfe} containing the following elements:

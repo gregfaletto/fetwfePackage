@@ -292,7 +292,7 @@
 #'   fit$att_hat # fused (pointwise)
 #'   debiasedATT(fit) # debiased (uniformly valid)
 #' }
-#' @export
+#' @keywords internal
 debiasedATT <- function(
 	fit,
 	alpha = NULL,
@@ -870,6 +870,7 @@ debiasedATT <- function(
 #' @param x A `"debiased_att"` object from [debiasedATT()].
 #' @param ... Ignored.
 #' @return `x`, invisibly.
+#' @keywords internal
 #' @export
 print.debiased_att <- function(x, ...) {
 	highdim <- !is.null(x$lambda_node)
@@ -916,6 +917,7 @@ print.debiased_att <- function(x, ...) {
 #' @return A one-row data frame with columns `term`, `estimate`, `std.error`,
 #'   `conf.low`, `conf.high`.
 #' @importFrom generics tidy
+#' @keywords internal
 #' @export
 tidy.debiased_att <- function(x, ...) {
 	data.frame(
@@ -951,7 +953,7 @@ tidy.debiased_att <- function(x, ...) {
 #'   dat <- simulateData(coefs, N = 200, sig_eps_sq = 1, sig_eps_c_sq = 0.5, seed = 1)
 #'   debiasedATTWithSimulatedData(dat)
 #' }
-#' @export
+#' @keywords internal
 debiasedATTWithSimulatedData <- function(
 	simulated_obj,
 	q = 0.5,

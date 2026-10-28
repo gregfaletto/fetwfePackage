@@ -204,13 +204,13 @@
 #'   variance-component estimation entirely**, fitting on the un-whitened
 #'   (fusion-transformed) design. This is the high-dimensional (`p >= NT`) path:
 #'   REML cannot estimate the variance components there (the `p < N(T - 1)` REML
-#'   guard would otherwise stop the fit), and the [debiasedATT()] cluster-robust
-#'   sandwich standard error needs no `Omega` (paper Decision D1). A
-#'   `gls = FALSE` fit has `calc_ses = FALSE` (no within-selection oracle
-#'   standard errors) and un-whitened
-#'   `internal$X_final` / `internal$y_final`; pass it to [debiasedATT()] for a
-#'   valid cluster-robust SE. `add_ridge = TRUE` is not supported, and supplied
-#'   `sig_eps_sq` / `sig_eps_c_sq` are ignored, under `gls = FALSE`.
+#'   guard would otherwise stop the fit). A `gls = FALSE` fit has
+#'   `calc_ses = FALSE` (no within-selection oracle standard errors) and
+#'   un-whitened `internal$X_final` / `internal$y_final`. It gives point
+#'   estimates; when `p >= NT`, [simultaneousCIs()] with `method = "bootstrap"`
+#'   also gives it cluster-robust simultaneous confidence bands, and when
+#'   `p < NT` it has no standard errors. `add_ridge = TRUE` is not supported, and
+#'   supplied `sig_eps_sq` / `sig_eps_c_sq` are ignored, under `gls = FALSE`.
 #' @param ci_type Character; one of `"simultaneous"` (default) or
 #'   `"pointwise"`. Controls the confidence-interval bounds reported for the
 #'   cohort-specific ATTs (in `catt_df`) and the event-study effects (from
@@ -698,13 +698,13 @@ fetwfe <- function(
 #'   variance-component estimation entirely**, fitting on the un-whitened
 #'   (fusion-transformed) design. This is the high-dimensional (`p >= NT`) path:
 #'   REML cannot estimate the variance components there (the `p < N(T - 1)` REML
-#'   guard would otherwise stop the fit), and the [debiasedATT()] cluster-robust
-#'   sandwich standard error needs no `Omega` (paper Decision D1). A
-#'   `gls = FALSE` fit has `calc_ses = FALSE` (no within-selection oracle
-#'   standard errors) and un-whitened
-#'   `internal$X_final` / `internal$y_final`; pass it to [debiasedATT()] for a
-#'   valid cluster-robust SE. `add_ridge = TRUE` is not supported, and supplied
-#'   `sig_eps_sq` / `sig_eps_c_sq` are ignored, under `gls = FALSE`.
+#'   guard would otherwise stop the fit). A `gls = FALSE` fit has
+#'   `calc_ses = FALSE` (no within-selection oracle standard errors) and
+#'   un-whitened `internal$X_final` / `internal$y_final`. It gives point
+#'   estimates; when `p >= NT`, [simultaneousCIs()] with `method = "bootstrap"`
+#'   also gives it cluster-robust simultaneous confidence bands, and when
+#'   `p < NT` it has no standard errors. `add_ridge = TRUE` is not supported, and
+#'   supplied `sig_eps_sq` / `sig_eps_c_sq` are ignored, under `gls = FALSE`.
 #' @param ci_type Character; one of `"simultaneous"` (default) or
 #'   `"pointwise"`. Controls the confidence-interval bounds reported for the
 #'   cohort-specific ATTs (in `catt_df`) and the event-study effects (from

@@ -60,11 +60,11 @@ one whose \code{Sigma_2} is non-zero, because each event-time effect pools acros
 cohorts weighted by the estimated cohort probabilities). When the (full)
 design is \strong{high-dimensional (\code{p >= NT})} -- where the analytic Gram inverse
 need not exist -- the bootstrap uses the full-design \strong{desparsified}
-construction of \code{debiasedATT()} (per-effect nodewise directions) generalized
-to the family. This desparsified \code{p >= NT} band path (\code{fetwfe()} fits only)
-generalizes the \code{debiasedATT()} construction --- whose overall-ATT coverage
-is validated near-nominally in simulation (Theorem \code{debiased.highdim.thm},
-Faletto 2025) --- to a family of functionals. Its family-wise coverage is
+construction, with per-effect nodewise directions. This desparsified
+\code{p >= NT} band path (\code{fetwfe()} fits only) generalizes the paper's scalar
+debiased construction --- whose overall-ATT coverage is validated
+near-nominally in simulation (Theorem \code{debiased.highdim.thm}, Faletto 2025)
+--- to a family of functionals. Its family-wise coverage is
 likewise validated near-nominally (Theorem \code{debiased.highdim.joint.thm}):
 ~0.92 over the \strong{event-study} family (\code{K = 7}) at the \code{p >= NT} anchor of
 Faletto (2025), the band sibling of the scalar result (~0.94); the cohort and
@@ -75,15 +75,15 @@ returned \code{feasibility} / \code{converged} diagnostics. The
 desparsified path covers all
 four families (a high-dimensional \code{family = "event_study"} fit additionally
 carries the propensity channel \code{F_pi}). In the high-dimensional regime the
-band is centered on the \strong{debiased} estimate (the high-dimensional FETWFE theory correction,
-equal to \code{debiasedATT()}'s point estimate for the matching contrast), not
+band is centered on the \strong{debiased} estimate (the high-dimensional FETWFE
+theory correction), not
 the post-selection bridge estimate; fixed-p bands center on the (unbiased)
 bridge estimate as before. Because this desparsified bootstrap band is
 built from the empirical per-unit influence function -- needing neither GLS
 whitening nor \code{sig_eps_sq} -- it also accepts a high-dimensional
-\strong{\code{gls = FALSE}} fetwfe fit (\code{calc_ses = FALSE}), the band analog of
-\code{debiasedATT()}'s Omega-free SE (#307, #313). \code{method = "analytic"} still
-requires valid analytic SEs (a \code{q < 1}, \code{gls = TRUE}, rank-satisfied fit).
+\strong{\code{gls = FALSE}} fetwfe fit (\code{calc_ses = FALSE}). \code{method = "analytic"}
+still requires valid analytic SEs (a \code{q < 1}, \code{gls = TRUE}, rank-satisfied
+fit).
 \strong{Which method is valid at \code{p >= NT} is a property of the function rather
 than of this argument alone; see the "High-dimensional (\code{p >= NT}) bands"
 paragraph of Details, which also documents the warning such a call emits.}}
@@ -109,20 +109,19 @@ preferred with very few clusters). Ignored when \code{method = "analytic"}.}
 constant of the penalty \verb{lambda_node = lambda_c * max(|a|) * sqrt(log p / N)}:
 either a single positive number (the default \code{1.0} = theory scale) or the
 string \code{"cv"}, which selects the constant \strong{per fit} by cross-validation
-(the same CV \code{debiasedATT()} uses, on the overall-ATT direction, so one
-constant serves the point estimate and every band effect; #295). \strong{Smaller
+(on the overall-ATT direction, so one constant serves every band effect;
+#295). \strong{Smaller
 fixed values can leave directions infeasible (a warning fires and those bands
 are unreliable).} Ignored when \code{p < NT} or \code{method = "analytic"}. The default
 stays the fixed \code{1.0}; the family-wise coverage validated in Faletto (2025)
-used the \code{"cv"} selector (\code{lambda_c} ~ 0.54, feasibility 1.0), the same
-constant that serves the scalar \code{debiasedATT()} and every band effect.}
+used the \code{"cv"} selector (\code{lambda_c} ~ 0.54, feasibility 1.0).}
 
 \item{cv_time_budget}{Numeric; a wall-clock backstop (in seconds) for the
-\code{lambda_c = "cv"} cross-validation (the same #384 backstop \code{debiasedATT()}
-offers). \code{Inf} (the default) leaves selection fully deterministic /
+\code{lambda_c = "cv"} cross-validation. \code{Inf} (the default) leaves selection
+fully deterministic /
 reproducible; a finite value stops the CV early and falls back to the theory
 scale (\code{lambda_c = 1.0}) with a warning, so an adversarial high-dimensional
-draw cannot spin indefinitely (#384). Whether a finite budget fires depends
+draw cannot spin indefinitely. Whether a finite budget fires depends
 on machine speed, so the result can too. Ignored unless \code{lambda_c = "cv"} and
 \code{p >= NT}.}
 }
@@ -158,8 +157,7 @@ the bootstrap band may differ from the analytic homoskedastic band). A
 \code{lambda_c} (the leading constant used) and \code{lambda_c_selection} (\code{"fixed"}
 or \code{"cv"}). When \code{lambda_c = "cv"} it also carries \code{lambda_cv}, the
 cross-validation diagnostics (the grid, the per-grid feasibility flags and CV
-losses, and whether the theory-scale fallback fired), matching
-\code{debiasedATT()}'s \code{lambda_cv}.
+losses, and whether the theory-scale fallback fired).
 }
 \description{
 Computes simultaneous (family-wise) confidence intervals for a user-

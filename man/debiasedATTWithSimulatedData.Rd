@@ -37,3 +37,4 @@ and returns \code{\link[=debiasedATT]{debiasedATT()}} on the fit.
 \seealso{
 \code{\link[=debiasedATT]{debiasedATT()}}, \code{\link[=fetwfeWithSimulatedData]{fetwfeWithSimulatedData()}}.
 }
+\keyword{internal}

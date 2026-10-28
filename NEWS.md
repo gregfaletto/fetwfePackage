@@ -97,6 +97,9 @@
   cross-validation selects, except through REML's small dependence on unit
   order when the noise variances are estimated (#535).
 
+- `debiasedATT()` and `debiasedATTWithSimulatedData()` were withheld from the
+  exported API; #527 tracks their re-export.
+
 ### Defensive improvements
 
 - A negative cohort-probability variance is no longer discarded in silence

@@ -271,3 +271,4 @@ Difference-in-Differences with Staggered Adoptions.
 \code{\link[=fetwfe]{fetwfe()}} for the fused fit; \code{\link[=cohortTimeATTs]{cohortTimeATTs()}} / \code{\link[=eventStudy]{eventStudy()}} /
 \code{\link[=cohortStudy]{cohortStudy()}} for the disaggregated fused effects.
 }
+\keyword{internal}
