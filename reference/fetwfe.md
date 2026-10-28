@@ -261,13 +261,18 @@ fetwfe(
 - cv_seed:
 
   Integer or `NULL`; the seed passed to
-  [`set.seed()`](https://rdrr.io/r/base/Random.html) immediately before
-  the `cv.grpreg()` call, controlling fold assignment. If supplied, must
-  be within `+/- .Machine$integer.max`. If `NULL` (the default), the
-  seed defaults internally to `as.integer(N * T)` so consecutive calls
-  on the same dataset are reproducible without the user having to
-  specify a seed. The seed actually used is stored on the returned
-  object as `cv_seed`. Ignored when `lambda_selection = "bic"`.
+  [`set.seed()`](https://rdrr.io/r/base/Random.html) to draw the
+  cross-validation folds. The folds are row-level: the draw is assigned
+  to the rows unit by unit, with the units in an order computed from
+  their data rather than from their IDs. So relabeling the units does
+  not change which `lambda` cross-validation selects, except through
+  REML's small dependence on unit order when the noise variances are
+  estimated (#535). If supplied, must be within
+  `+/- .Machine$integer.max`. If `NULL` (the default), the seed defaults
+  internally to `as.integer(N * T)` so consecutive calls on the same
+  dataset are reproducible without the user having to specify a seed.
+  The seed actually used is stored on the returned object as `cv_seed`.
+  Ignored when `lambda_selection = "bic"`.
 
 - ci_type:
 
@@ -511,10 +516,9 @@ An object of class `fetwfe` containing the following elements:
 - cv_seed:
 
   Integer scalar; the seed actually fed to
-  [`set.seed()`](https://rdrr.io/r/base/Random.html) immediately before
-  `cv.grpreg()` was called. Defaults to `as.integer(N * T)` when the
-  user did not pass a seed. `NA_integer_` when
-  `lambda_selection = "bic"`.
+  [`set.seed()`](https://rdrr.io/r/base/Random.html) to draw the
+  cross-validation folds. Defaults to `as.integer(N * T)` when the user
+  did not pass a seed. `NA_integer_` when `lambda_selection = "bic"`.
 
 - fusion_structure:
 
@@ -758,7 +762,7 @@ if (requireNamespace("bacondecomp", quietly = TRUE)) {
   # the elasticity-scaled female suicide rate is the response.
   divorce_f <- divorce[divorce$sex == 2, ]
 
-  # Reproduces the empirical application in Faletto (2025, Sec. 8.2). The 9
+  # Follows the data and specification of Faletto (2025, Sec. 8.2). The 9
   # states already treated by 1964 are auto-dropped as first-period-treated,
   # and `murderrate` is auto-dropped (missing in 1964 for one state); both are
   # reported as (expected) warnings. The noise variances are supplied
@@ -773,11 +777,10 @@ if (requireNamespace("bacondecomp", quietly = TRUE)) {
       response = "suiciderate_elast_jag",
       sig_eps_sq = 0.0344,
       sig_eps_c_sq = 0.1507,
-      add_ridge = TRUE,
       q = 0.5)
 
-  # FETWFE estimates an overall ATT of roughly -6% on the elasticity-scaled
-  # female suicide rate, with a 95% confidence interval that excludes zero.
+  # FETWFE estimates a negative overall ATT on the elasticity-scaled female
+  # suicide rate, with a 95% confidence interval that excludes zero.
   # The selection step retains heterogeneous cohort effects (several cohorts
   # are pruned to exactly zero), rather than fusing to a single common effect.
   print(res, max_cohorts = Inf)
@@ -788,50 +791,50 @@ if (requireNamespace("bacondecomp", quietly = TRUE)) {
 #> ===========================================
 #> 
 #> Overall Average Treatment Effect (ATT):
-#>   Estimate:   -0.0596
-#>   Std. Error: 0.0186
-#>   P-value:    0.001327
+#>   Estimate:   -0.0595
+#>   Std. Error: 0.0185
+#>   P-value:    0.001328
 #>   Selected:   TRUE
-#>   95% CI:    [-0.0960, -0.0232]
+#>   95% CI:    [-0.0958, -0.0232]
 #> 
 #> Cohort Average Treatment Effects (CATT) [simultaneous 95% CI]:
 #>  cohort    estimate          se       ci_low      ci_high      p_value selected
 #>    1969  0.00000000 0.000000000  0.000000000  0.000000000           NA    FALSE
-#>    1970 -0.44275152 0.046410168 -0.569265971 -0.316237066 0.000000e+00     TRUE
-#>    1971 -0.03269001 0.019825552 -0.086734613  0.021354583 5.628621e-01     TRUE
-#>    1972 -0.01624466 0.009356597 -0.041750806  0.009261495 4.947428e-01     TRUE
-#>    1973 -0.06295968 0.013023899 -0.098462923 -0.027456439 1.069370e-05     TRUE
-#>    1974 -0.03051791 0.012975096 -0.065888117  0.004852291 1.392168e-01     TRUE
+#>    1970 -0.44162868 0.046410442 -0.568143877 -0.315113473 0.000000e+00     TRUE
+#>    1971 -0.03265198 0.019825706 -0.086696995  0.021393043 5.643822e-01     TRUE
+#>    1972 -0.01619101 0.009356613 -0.041697203  0.009315188 4.991666e-01     TRUE
+#>    1973 -0.06278454 0.013023946 -0.098287916 -0.027281172 1.144147e-05     TRUE
+#>    1974 -0.03046304 0.012975158 -0.065833419  0.004907331 1.407043e-01     TRUE
 #>    1975  0.00000000 0.000000000  0.000000000  0.000000000           NA    FALSE
-#>    1976 -0.03584431 0.063581218 -0.209167164  0.137478549 9.988446e-01     TRUE
-#>    1977 -0.12340880 0.024169900 -0.189296123 -0.057521483 2.634343e-06     TRUE
+#>    1976 -0.03583835 0.063582777 -0.209165460  0.137488764 9.988462e-01     TRUE
+#>    1977 -0.12329141 0.024169960 -0.189178893 -0.057403922 2.703040e-06     TRUE
 #>    1980  0.00000000 0.000000000  0.000000000  0.000000000           NA    FALSE
 #>    1984  0.00000000 0.000000000  0.000000000  0.000000000           NA    FALSE
-#>    1985  0.14777033 0.050861041  0.009122763  0.286417890 2.890215e-02     TRUE
+#>    1985  0.14726861 0.050861058  0.008620996  0.285916222 2.981284e-02     TRUE
 #> 
 #> Event-Study Average Treatment Effects (per event time) [simultaneous 95% CI]:
 #>  event_time n_cohorts      estimate          se       ci_low    ci_high
 #>           0        12  0.0000000000 0.000000000  0.000000000 0.00000000
-#>           1        12  0.0116460157 0.012611495 -0.022434196 0.04572623
-#>           2        12  0.0038910962 0.004665326 -0.008716077 0.01649827
-#>           3        12 -0.0068098902 0.009707715 -0.033043177 0.01942340
-#>           4        12 -0.0008192013 0.011643412 -0.032283349 0.03064495
-#>           5        12 -0.0008192013 0.011643412 -0.032283349 0.03064495
-#>           6        12 -0.0008192013 0.011643412 -0.032283349 0.03064495
-#>           7        12 -0.0156592321 0.012529765 -0.049518582 0.01820012
-#>           8        12 -0.0484842687 0.022567145 -0.109467766 0.01249923
-#>           9        12 -0.0484842687 0.022567145 -0.109467766 0.01249923
+#>           1        12  0.0112144001 0.012225052 -0.021826737 0.04425554
+#>           2        12  0.0039403837 0.004705448 -0.008777219 0.01665799
+#>           3        12 -0.0067050913 0.009699136 -0.032919336 0.01950915
+#>           4        12 -0.0007347423 0.011624330 -0.032152285 0.03068280
+#>           5        12 -0.0007347423 0.011624330 -0.032152285 0.03068280
+#>           6        12 -0.0007347423 0.011624330 -0.032152285 0.03068280
+#>           7        12 -0.0156163448 0.012497355 -0.049393448 0.01816076
+#>           8        12 -0.0484166643 0.022523351 -0.109291426 0.01245810
+#>           9        12 -0.0484166643 0.022523351 -0.109291426 0.01245810
 #>    p_value
 #>         NA
-#>  0.9183921
-#>  0.9508661
-#>  0.9817454
+#>  0.9211245
+#>  0.9499800
+#>  0.9834071
 #>  1.0000000
 #>  1.0000000
 #>  1.0000000
-#>  0.7320385
-#>  0.1852246
-#>  0.1859000
+#>  0.7325567
+#>  0.1849492
+#>  0.1856232
 #>   ... and 22 more event times.
 #> 
 #> Model Details:
@@ -840,7 +843,7 @@ if (requireNamespace("bacondecomp", quietly = TRUE)) {
 #>   Treated cohorts (G) : 12
 #>   Covariates (d)      : 2
 #>   Features (p)        : 908
-#>   Selected size       : 34
-#>   Lambda*             : 0.0004
+#>   Selected size       : 36
+#>   Lambda*             : 0.0006
 # }
 ```

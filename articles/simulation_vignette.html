@@ -57,7 +57,7 @@
                         <h4 data-toc-skip class="author">Gregory
 Faletto</h4>
             
-            <h4 data-toc-skip class="date">2026-10-10</h4>
+            <h4 data-toc-skip class="date">2026-10-28</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/gregfaletto/fetwfePackage/blob/main/vignettes/simulation_vignette.Rmd" class="external-link"><code>vignettes/simulation_vignette.Rmd</code></a></small>
       <div class="d-none name"><code>simulation_vignette.Rmd</code></div>
@@ -209,20 +209,20 @@ way that we can with the standard <code><a href="../reference/fetwfe.html">fetwf
 <span><span class="co">#&gt; Summary of Fused Extended Two-Way Fixed Effects</span></span>
 <span><span class="co">#&gt; ================================================</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Overall ATT: 0.0843  (SE = 0.1372, p = 0.5389, 95% CI = [-0.1845, 0.3531])</span></span>
+<span><span class="co">#&gt; Overall ATT: 0.0859  (SE = 0.1437, p = 0.5498, 95% CI = [-0.1957, 0.3676])</span></span>
 <span><span class="co">#&gt; Selected: TRUE</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; CATT (preview) [simultaneous 95% CI]:</span></span>
 <span><span class="co">#&gt;  cohort   estimate        se     ci_low    ci_high      p_value selected</span></span>
-<span><span class="co">#&gt;       2 -1.3369236 0.1972001 -1.7779399 -0.8959073 2.411404e-11     TRUE</span></span>
-<span><span class="co">#&gt;       3  0.9165759 0.1264333  0.6338217  1.1993300 8.366641e-13     TRUE</span></span>
+<span><span class="co">#&gt;       2 -1.4252442 0.1972001 -1.8662605 -0.9842278 9.845458e-13     TRUE</span></span>
+<span><span class="co">#&gt;       3  0.9672529 0.1264333  0.6844988  1.2500071 3.996803e-14     TRUE</span></span>
 <span><span class="co">#&gt;       4  0.0000000 0.0000000  0.0000000  0.0000000           NA    FALSE</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Event Study (preview) [simultaneous 95% CI]:</span></span>
 <span><span class="co">#&gt;  event_time n_cohorts   estimate        se     ci_low   ci_high      p_value</span></span>
 <span><span class="co">#&gt;           0         3  0.0000000 0.0000000  0.0000000  0.000000           NA</span></span>
-<span><span class="co">#&gt;           1         2  0.5095182 0.3915374 -0.3636595  1.382696 3.417505e-01</span></span>
-<span><span class="co">#&gt;           2         1 -2.0053854 0.2958002 -2.6650570 -1.345714 2.411404e-11</span></span>
+<span><span class="co">#&gt;           1         2  0.5302396 0.4095273 -0.3832871  1.443766 3.459667e-01</span></span>
+<span><span class="co">#&gt;           2         1 -2.1378663 0.2958002 -2.7977036 -1.478029 9.845458e-13</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Model Details:</span></span>
 <span><span class="co">#&gt;   Units (N)           : 60</span></span>
@@ -231,7 +231,7 @@ way that we can with the standard <code><a href="../reference/fetwfe.html">fetwf
 <span><span class="co">#&gt;   Covariates (d)      : 2</span></span>
 <span><span class="co">#&gt;   Features (p)        : 38</span></span>
 <span><span class="co">#&gt;   Selected size       : 4</span></span>
-<span><span class="co">#&gt;   Lambda*             : 0.0984</span></span></code></pre></div>
+<span><span class="co">#&gt;   Lambda*             : 0.0647</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="step-4-extract-true-treatment-effects">Step 4: Extract True Treatment Effects<a class="anchor" aria-label="anchor" href="#step-4-extract-true-treatment-effects"></a>
@@ -257,7 +257,7 @@ treatment effect, like squared error:</p>
 <code class="sourceCode R"><span><span class="va">squared_error</span> <span class="op">&lt;-</span> <span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">att_hat</span> <span class="op">-</span> <span class="va">true_tes</span><span class="op">$</span><span class="va">att_true</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Squared error of ATT estimate:"</span>, <span class="va">squared_error</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Squared error of ATT estimate: 0.03817985</span></span></code></pre></div>
+<span><span class="co">#&gt; Squared error of ATT estimate: 0.03883114</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="combining-the-workflow-in-one-pipeline">Combining the Workflow in One Pipeline<a class="anchor" aria-label="anchor" href="#combining-the-workflow-in-one-pipeline"></a>
@@ -273,7 +273,7 @@ data, and runs the estimator all in one pipeline:</p>
 <span>  <span class="fu"><a href="../reference/fetwfeWithSimulatedData.html">fetwfeWithSimulatedData</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Estimated Overall ATT from piped workflow:"</span>, <span class="va">result_piped</span><span class="op">$</span><span class="va">att_hat</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Estimated Overall ATT from piped workflow: -0.7183584</span></span>
+<span><span class="co">#&gt; Estimated Overall ATT from piped workflow: -0.7094837</span></span>
 <span></span>
 <span><span class="va">true_tes_piped</span> <span class="op">&lt;-</span> <span class="va">coefs</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/getTes.html">getTes</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
@@ -285,7 +285,7 @@ data, and runs the estimator all in one pipeline:</p>
 <span><span class="va">squared_error_piped</span> <span class="op">=</span> <span class="op">(</span><span class="va">result_piped</span><span class="op">$</span><span class="va">att_hat</span> <span class="op">-</span> <span class="va">true_tes_piped</span><span class="op">$</span><span class="va">att_true</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Squared estimation error:"</span>, <span class="va">squared_error_piped</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Squared estimation error: 0.00267203</span></span></code></pre></div>
+<span><span class="co">#&gt; Squared estimation error: 0.001833302</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
@@ -427,7 +427,7 @@ assignment:</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit_mn</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fetwfeWithSimulatedData.html">fetwfeWithSimulatedData</a></span><span class="op">(</span><span class="va">sim_mn</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Estimated overall ATT:"</span>, <span class="va">fit_mn</span><span class="op">$</span><span class="va">att_hat</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Estimated overall ATT: 0.1820036</span></span></code></pre></div>
+<span><span class="co">#&gt; Estimated overall ATT: 0.1821797</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="ordered-logit-dgp">Ordered-logit DGP<a class="anchor" aria-label="anchor" href="#ordered-logit-dgp"></a>

@@ -173,22 +173,22 @@ summary(res_betwfe)
 #> Summary of Bridge-Penalized Extended Two-Way Fixed Effects
 #> ==========================================================
 #> 
-#> Overall ATT: 3.7846  (SE = 0.1370, p = 4.325e-168, 95% CI = [3.5162, 4.0530])
+#> Overall ATT: 3.7968  (SE = 0.1375, p = 9.886e-168, 95% CI = [3.5272, 4.0664])
 #> Selected: TRUE
 #> 
 #> CATT (preview) [simultaneous 95% CI]:
 #>  cohort estimate        se   ci_low  ci_high p_value selected
-#>       2 4.478828 0.1820991 4.044556 4.913100       0     TRUE
-#>       3 3.682706 0.1844766 3.242764 4.122648       0     TRUE
-#>       4 3.071311 0.2010365 2.591877 3.550745       0     TRUE
+#>       2 4.498895 0.1823152 4.064118 4.933671       0     TRUE
+#>       3 3.692508 0.1845872 3.252314 4.132703       0     TRUE
+#>       4 3.076798 0.2014584 2.596370 3.557227       0     TRUE
 #> 
 #> Event Study (preview) [simultaneous 95% CI]:
 #>  event_time n_cohorts estimate        se   ci_low  ci_high p_value
-#>           0         3 3.261924 0.1874452 2.783997 3.739851       0
-#>           1         3 3.712544 0.1722744 3.273298 4.151791       0
-#>           2         3 3.339178 0.2297940 2.753274 3.925081       0
-#>           3         2 4.926794 0.2158458 4.376454 5.477134       0
-#>           4         1 5.763977 0.2314455 5.173862 6.354091       0
+#>           0         3 3.276101 0.1871952 2.798837 3.753366       0
+#>           1         3 3.727405 0.1723928 3.287880 4.166929       0
+#>           2         3 3.350116 0.2311112 2.760886 3.939347       0
+#>           3         2 4.940002 0.2165696 4.387846 5.492157       0
+#>           4         1 5.778623 0.2320470 5.187007 6.370239       0
 #> 
 #> Model Details:
 #>   Units (N)           : 120
@@ -196,8 +196,8 @@ summary(res_betwfe)
 #>   Treated cohorts (G) : 3
 #>   Covariates (d)      : 2
 #>   Features (p)        : 62
-#>   Selected size       : 42
-#>   Lambda*             : 0.0099
+#>   Selected size       : 44
+#>   Lambda*             : 0.0080
 ```
 
 Comparing against the truth and against
@@ -210,11 +210,11 @@ cat("True ATT:        ", true_tes$att_true, "\n")
 cat("etwfe() ATT:     ", res_etwfe$att_hat, "\n")
 #> etwfe() ATT:      3.88994
 cat("betwfe() ATT:    ", res_betwfe$att_hat, "\n")
-#> betwfe() ATT:     3.784618
+#> betwfe() ATT:     3.796829
 cat("etwfe sq. error: ", (res_etwfe$att_hat - true_tes$att_true)^2, "\n")
 #> etwfe sq. error:  0.0001479292
 cat("betwfe sq. error:", (res_betwfe$att_hat - true_tes$att_true)^2, "\n")
-#> betwfe sq. error: 0.008678791
+#> betwfe sq. error: 0.006552738
 ```
 
 The bridge penalty in
@@ -421,11 +421,11 @@ on the same simulated panel:
 
 eventStudy(res_betwfe)
 #>   event_time n_cohorts estimate        se   ci_low  ci_high p_value
-#> 1          0         3 3.261924 0.1874452 2.783997 3.739851       0
-#> 2          1         3 3.712544 0.1722744 3.273298 4.151791       0
-#> 3          2         3 3.339178 0.2297940 2.753274 3.925081       0
-#> 4          3         2 4.926794 0.2158458 4.376454 5.477134       0
-#> 5          4         1 5.763977 0.2314455 5.173862 6.354091       0
+#> 1          0         3 3.276101 0.1871952 2.798837 3.753366       0
+#> 2          1         3 3.727405 0.1723928 3.287880 4.166929       0
+#> 3          2         3 3.350116 0.2311112 2.760886 3.939347       0
+#> 4          3         2 4.940002 0.2165696 4.387846 5.492157       0
+#> 5          4         1 5.778623 0.2320470 5.187007 6.370239       0
 ```
 
 ``` r

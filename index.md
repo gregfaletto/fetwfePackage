@@ -59,8 +59,8 @@ The primary function is
 [`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md).
 Here it is applied to the `divorce` dataset from the `bacondecomp`
 package — the unilateral (“no-fault”) divorce / female-suicide panel of
-Stevenson and Wolfers (2006), reproducing the empirical application in
-Faletto (2025, Sec. 8.2):
+Stevenson and Wolfers (2006), following the data and specification of
+the empirical application in Faletto (2025, Sec. 8.2):
 
 ``` r
 
@@ -82,7 +82,6 @@ res <- fetwfe(
     response = "suiciderate_elast_jag",
     sig_eps_sq = 0.0344,
     sig_eps_c_sq = 0.1507,
-    add_ridge = TRUE,
     q = 0.5
 )
 ```
@@ -98,7 +97,7 @@ round(c(
     CI_high = res$att_hat + qnorm(0.975) * res$att_se
 ), 4)
 #>     ATT      SE  CI_low CI_high 
-#> -0.0596  0.0186 -0.0960 -0.0232
+#> -0.0595  0.0185 -0.0958 -0.0232
 ```
 
 (`summary(res)` prints the full report — overall ATT, per-cohort and
@@ -117,17 +116,17 @@ to zero:
 cohortStudy(res)
 #>    cohort    estimate          se       ci_low      ci_high      p_value selected
 #> 1    1969  0.00000000 0.000000000  0.000000000  0.000000000           NA    FALSE
-#> 2    1970 -0.44275152 0.046410168 -0.569265971 -0.316237066 0.000000e+00     TRUE
-#> 3    1971 -0.03269001 0.019825552 -0.086734613  0.021354583 5.628621e-01     TRUE
-#> 4    1972 -0.01624466 0.009356597 -0.041750806  0.009261495 4.947428e-01     TRUE
-#> 5    1973 -0.06295968 0.013023899 -0.098462923 -0.027456439 1.069370e-05     TRUE
-#> 6    1974 -0.03051791 0.012975096 -0.065888117  0.004852291 1.392168e-01     TRUE
+#> 2    1970 -0.44162868 0.046410442 -0.568143877 -0.315113473 0.000000e+00     TRUE
+#> 3    1971 -0.03265198 0.019825706 -0.086696995  0.021393043 5.643822e-01     TRUE
+#> 4    1972 -0.01619101 0.009356613 -0.041697203  0.009315188 4.991666e-01     TRUE
+#> 5    1973 -0.06278454 0.013023946 -0.098287916 -0.027281172 1.144147e-05     TRUE
+#> 6    1974 -0.03046304 0.012975158 -0.065833419  0.004907331 1.407043e-01     TRUE
 #> 7    1975  0.00000000 0.000000000  0.000000000  0.000000000           NA    FALSE
-#> 8    1976 -0.03584431 0.063581218 -0.209167164  0.137478549 9.988446e-01     TRUE
-#> 9    1977 -0.12340880 0.024169900 -0.189296123 -0.057521483 2.634343e-06     TRUE
+#> 8    1976 -0.03583835 0.063582777 -0.209165460  0.137488764 9.988462e-01     TRUE
+#> 9    1977 -0.12329141 0.024169960 -0.189178893 -0.057403922 2.703040e-06     TRUE
 #> 10   1980  0.00000000 0.000000000  0.000000000  0.000000000           NA    FALSE
 #> 11   1984  0.00000000 0.000000000  0.000000000  0.000000000           NA    FALSE
-#> 12   1985  0.14777033 0.050861041  0.009122763  0.286417890 2.890215e-02     TRUE
+#> 12   1985  0.14726861 0.050861058  0.008620996  0.285916222 2.981284e-02     TRUE
 ```
 
 **3. Plot it.** [`plot()`](https://rdrr.io/r/graphics/plot.default.html)

@@ -182,9 +182,13 @@ vignette section "Choosing the bridge penalty parameter" for details.</p></dd>
 
 
 <dt id="arg-cv-seed">cv_seed<a class="anchor" aria-label="anchor" href="#arg-cv-seed"></a></dt>
-<dd><p>Integer or <code>NULL</code>; the seed passed to <code><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed()</a></code>
-immediately before the <code>cv.grpreg()</code> call. If supplied, must be
-within <code>+/- .Machine$integer.max</code>. If <code>NULL</code> (the default),
+<dd><p>Integer or <code>NULL</code>; the seed passed to <code><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed()</a></code> to draw
+the cross-validation folds. The folds are row-level: the draw is assigned
+to the rows unit by unit, with the units in an order computed from their
+data rather than from their IDs. So relabeling the units does not change
+which <code>lambda</code> cross-validation selects, except through REML's small
+dependence on unit order when the noise variances are estimated (#535). If
+supplied, must be within <code>+/- .Machine$integer.max</code>. If <code>NULL</code> (the default),
 the seed defaults internally to <code>as.integer(N * T)</code>. Ignored when
 <code>lambda_selection = "bic"</code>.</p></dd>
 
@@ -325,7 +329,7 @@ Mirrors the <code>lambda_selection</code> argument the user passed.</p></dd>
 
 <dt>cv_seed</dt>
 <dd><p>Integer scalar; the seed actually fed to <code><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed()</a></code>
-immediately before <code>cv.grpreg()</code> was called. Defaults to
+to draw the cross-validation folds. Defaults to
 <code>as.integer(N * T)</code> when the user did not pass a seed. <code>NA_integer_</code>
 when <code>lambda_selection = "bic"</code>.</p></dd>
 

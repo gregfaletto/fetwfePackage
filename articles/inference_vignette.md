@@ -336,8 +336,8 @@ c(
   default = res_default$att_se,
   cluster = res_cluster$att_se
 )
-#>   default   cluster 
-#> 0.1050007 0.1000234
+#>    default    cluster 
+#> 0.10486600 0.09988543
 ```
 
 On this F1-conforming simulated panel the two SEs are similar by
@@ -358,25 +358,25 @@ print(res_cluster)
 #> ===========================================
 #> 
 #> Overall Average Treatment Effect (ATT):
-#>   Estimate:   -0.7798
-#>   Std. Error (cluster-robust): 0.1000
-#>   P-value:    6.38e-15
+#>   Estimate:   -0.7777
+#>   Std. Error (cluster-robust): 0.0999
+#>   P-value:    6.912e-15
 #>   Selected:   TRUE
-#>   95% CI:    [-0.9758, -0.5838]
+#>   95% CI:    [-0.9735, -0.5819]
 #> 
 #> Cohort Average Treatment Effects (CATT) [simultaneous 95% CI]:
-#>  cohort   estimate         se     ci_low    ci_high     p_value selected
-#>       2 -0.4137526 0.06057451 -0.5489811 -0.2785242 1.69269e-11     TRUE
-#>       3 -1.6817852 0.13059071 -1.9733200 -1.3902505 0.00000e+00     TRUE
-#>       4  0.0000000 0.00000000  0.0000000  0.0000000          NA    FALSE
+#>  cohort   estimate         se     ci_low    ci_high      p_value selected
+#>       2 -0.4115949 0.06057451 -0.5468233 -0.2763665 2.168443e-11     TRUE
+#>       3 -1.6779650 0.13059071 -1.9694998 -1.3864302 0.000000e+00     TRUE
+#>       4  0.0000000 0.00000000  0.0000000  0.0000000           NA    FALSE
 #> 
 #> Event-Study Average Treatment Effects (per event time) [simultaneous 95% CI]:
 #>  event_time n_cohorts   estimate        se     ci_low    ci_high      p_value
 #>           0         3  0.0000000 0.0000000  0.0000000  0.0000000           NA
-#>           1         3 -0.6359733 0.1104477 -0.8975561 -0.3743905 2.162509e-08
-#>           2         3 -0.6359733 0.1104477 -0.8975561 -0.3743905 2.529819e-08
-#>           3         2 -3.0326244 0.1919425 -3.4872181 -2.5780307 0.000000e+00
-#>           4         1  0.1684927 0.2513507 -0.4268026  0.7637881 8.581460e-01
+#>           1         3 -0.6342543 0.1102732 -0.8954173 -0.3730913 2.246783e-08
+#>           2         3 -0.6342543 0.1102732 -0.8954173 -0.3730913 2.628733e-08
+#>           3         2 -3.0242895 0.1920647 -3.4791616 -2.5694175 0.000000e+00
+#>           4         1  0.1683984 0.2513507 -0.4268825  0.7636793 8.582874e-01
 #> 
 #> Model Details:
 #>   Units (N)           : 120
@@ -385,7 +385,7 @@ print(res_cluster)
 #>   Covariates (d)      : 2
 #>   Features (p)        : 62
 #>   Selected size       : 26
-#>   Lambda*             : 0.0114
+#>   Lambda*             : 0.0122
 ```
 
 The CATT SEs and confidence intervals in `catt_df` are recomputed from

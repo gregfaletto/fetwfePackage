@@ -57,7 +57,7 @@
                         <h4 data-toc-skip class="author">Gregory
 Faletto</h4>
             
-            <h4 data-toc-skip class="date">2026-10-10</h4>
+            <h4 data-toc-skip class="date">2026-10-28</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/gregfaletto/fetwfePackage/blob/main/vignettes/simultaneous_cis_vignette.Rmd" class="external-link"><code>vignettes/simultaneous_cis_vignette.Rmd</code></a></small>
       <div class="d-none name"><code>simultaneous_cis_vignette.Rmd</code></div>
@@ -146,20 +146,20 @@ object from the setup above:</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">sci</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Parametric simultaneous (1 - alpha) confidence intervals</span></span>
 <span><span class="co">#&gt; Family: event_study, K = 5, alpha = 0.05</span></span>
-<span><span class="co">#&gt; Simultaneous critical value: 2.3693 (pointwise 1.9600, Bonferroni 2.5758)</span></span>
+<span><span class="co">#&gt; Simultaneous critical value: 2.3692 (pointwise 1.9600, Bonferroni 2.5758)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;  effect   estimate simultaneous_ci_low simultaneous_ci_high pointwise_ci_low</span></span>
 <span><span class="co">#&gt;      e0  0.0000000           0.0000000            0.0000000        0.0000000</span></span>
-<span><span class="co">#&gt;      e1 -0.6726640          -0.9531319           -0.3921962       -0.9046805</span></span>
-<span><span class="co">#&gt;      e2 -0.6726640          -0.9531319           -0.3921962       -0.9046805</span></span>
-<span><span class="co">#&gt;      e3 -3.0092312          -3.4694847           -2.5489777       -3.3899750</span></span>
-<span><span class="co">#&gt;      e4  0.1684927          -0.4085822            0.7455677       -0.3088914</span></span>
+<span><span class="co">#&gt;      e1 -0.6708459          -0.9508810           -0.3908108       -0.9025086</span></span>
+<span><span class="co">#&gt;      e2 -0.6708459          -0.9508810           -0.3908108       -0.9025086</span></span>
+<span><span class="co">#&gt;      e3 -3.0008214          -3.4613567           -2.5402861       -3.3818053</span></span>
+<span><span class="co">#&gt;      e4  0.1683984          -0.4086661            0.7454629       -0.3089857</span></span>
 <span><span class="co">#&gt;  pointwise_ci_high</span></span>
 <span><span class="co">#&gt;          0.0000000</span></span>
-<span><span class="co">#&gt;         -0.4406476</span></span>
-<span><span class="co">#&gt;         -0.4406476</span></span>
-<span><span class="co">#&gt;         -2.6284874</span></span>
-<span><span class="co">#&gt;          0.6458769</span></span></code></pre></div>
+<span><span class="co">#&gt;         -0.4391832</span></span>
+<span><span class="co">#&gt;         -0.4391832</span></span>
+<span><span class="co">#&gt;         -2.6198375</span></span>
+<span><span class="co">#&gt;          0.6457825</span></span></code></pre></div>
 <p>The function returns a <code>simultaneous_cis</code> S3 object with
 <code>$ci</code> (the interval data frame), <code>$critical_value</code>
 (the simultaneous
@@ -289,7 +289,7 @@ to Monte-Carlo error:</p>
 <span>  bootstrap  <span class="op">=</span> <span class="va">es_boot</span><span class="op">$</span><span class="va">critical_value</span>,</span>
 <span>  bonferroni <span class="op">=</span> <span class="va">es_boot</span><span class="op">$</span><span class="va">bonferroni_critical_value</span><span class="op">)</span></span>
 <span><span class="co">#&gt;  pointwise   analytic  bootstrap bonferroni </span></span>
-<span><span class="co">#&gt;   1.959964   2.369258   2.355859   2.575829</span></span></code></pre></div>
+<span><span class="co">#&gt;   1.959964   2.369215   2.355766   2.575829</span></span></code></pre></div>
 <p><strong>High-dimensional
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>≥</mo><mi>N</mi><mi>T</mi></mrow><annotation encoding="application/x-tex">p \geq NT</annotation></semantics></math>.</strong>
 When the (full) design is high-dimensional — where the analytic Gram
@@ -431,8 +431,8 @@ for simultaneous).</p>
 <span>  pointwise_width <span class="op">=</span> <span class="va">fit_pw</span><span class="op">$</span><span class="va">catt_df</span><span class="op">$</span><span class="va">ci_high</span> <span class="op">-</span> <span class="va">fit_pw</span><span class="op">$</span><span class="va">catt_df</span><span class="op">$</span><span class="va">ci_low</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt;        estimate         se simul_width pointwise_width</span></span>
-<span><span class="co">#&gt; [1,] -0.4137526 0.07754859   0.3463267       0.3039849</span></span>
-<span><span class="co">#&gt; [2,] -1.6817852 0.12781952   0.5708332       0.5010433</span></span>
+<span><span class="co">#&gt; [1,] -0.4115949 0.07754859   0.3463267       0.3039849</span></span>
+<span><span class="co">#&gt; [2,] -1.6779650 0.12781952   0.5708332       0.5010433</span></span>
 <span><span class="co">#&gt; [3,]  0.0000000 0.00000000   0.0000000       0.0000000</span></span></code></pre></div>
 <p>Because the tidiers pass the object’s bounds straight through, every
 CI surface in the package agrees under the default:

@@ -147,8 +147,13 @@ betwfeWithSimulatedData(
 - cv_seed:
 
   Integer or `NULL`; the seed passed to
-  [`set.seed()`](https://rdrr.io/r/base/Random.html) immediately before
-  the `cv.grpreg()` call. If supplied, must be within
+  [`set.seed()`](https://rdrr.io/r/base/Random.html) to draw the
+  cross-validation folds. The folds are row-level: the draw is assigned
+  to the rows unit by unit, with the units in an order computed from
+  their data rather than from their IDs. So relabeling the units does
+  not change which `lambda` cross-validation selects, except through
+  REML's small dependence on unit order when the noise variances are
+  estimated (#535). If supplied, must be within
   `+/- .Machine$integer.max`. If `NULL` (the default), the seed defaults
   internally to `as.integer(N * T)`. Ignored when
   `lambda_selection = "bic"`.
@@ -324,10 +329,9 @@ An object of class `betwfe` containing the following elements:
 - cv_seed:
 
   Integer scalar; the seed actually fed to
-  [`set.seed()`](https://rdrr.io/r/base/Random.html) immediately before
-  `cv.grpreg()` was called. Defaults to `as.integer(N * T)` when the
-  user did not pass a seed. `NA_integer_` when
-  `lambda_selection = "bic"`.
+  [`set.seed()`](https://rdrr.io/r/base/Random.html) to draw the
+  cross-validation folds. Defaults to `as.integer(N * T)` when the user
+  did not pass a seed. `NA_integer_` when `lambda_selection = "bic"`.
 
 - ci_type:
 

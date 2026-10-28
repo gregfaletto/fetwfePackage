@@ -415,19 +415,19 @@ for the per-point event-study estimates and Wald intervals that
   print(sci)
 #> Parametric simultaneous (1 - alpha) confidence intervals
 #> Family: event_study, K = 5, alpha = 0.05
-#> Simultaneous critical value: 2.4454 (pointwise 1.9600, Bonferroni 2.5758)
+#> Simultaneous critical value: 2.4451 (pointwise 1.9600, Bonferroni 2.5758)
 #> 
 #>  effect estimate simultaneous_ci_low simultaneous_ci_high pointwise_ci_low
 #>      e0 0.000000           0.0000000             0.000000         0.000000
-#>      e1 1.354096           0.9933308             1.714862         1.064944
-#>      e2 3.242404           2.8548785             3.629930         2.931804
-#>      e3 3.700280           2.9969740             4.403586         3.136583
-#>      e4 5.751528           5.3111327             6.191922         5.398553
+#>      e1 1.359442           0.9980238             1.720860         1.069735
+#>      e2 3.241190           2.8536131             3.628768         2.930514
+#>      e3 3.701220           2.9973870             4.405053         3.137038
+#>      e4 5.754599           5.3142530             6.194944         5.401624
 #>  pointwise_ci_high
 #>           0.000000
-#>           1.643248
-#>           3.553005
-#>           4.263977
-#>           6.104502
+#>           1.649149
+#>           3.551867
+#>           4.265403
+#>           6.107573
 # }
 ```

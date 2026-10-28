@@ -57,7 +57,7 @@
                         <h4 data-toc-skip class="author">Gregory
 Faletto</h4>
             
-            <h4 data-toc-skip class="date">2026-10-10</h4>
+            <h4 data-toc-skip class="date">2026-10-28</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/gregfaletto/fetwfePackage/blob/main/vignettes/etwfe_betwfe_vignette.Rmd" class="external-link"><code>vignettes/etwfe_betwfe_vignette.Rmd</code></a></small>
       <div class="d-none name"><code>etwfe_betwfe_vignette.Rmd</code></div>
@@ -200,22 +200,22 @@ trades a small amount of bias for lower variance — the same idea as
 <span><span class="co">#&gt; Summary of Bridge-Penalized Extended Two-Way Fixed Effects</span></span>
 <span><span class="co">#&gt; ==========================================================</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Overall ATT: 3.7846  (SE = 0.1370, p = 4.325e-168, 95% CI = [3.5162, 4.0530])</span></span>
+<span><span class="co">#&gt; Overall ATT: 3.7968  (SE = 0.1375, p = 9.886e-168, 95% CI = [3.5272, 4.0664])</span></span>
 <span><span class="co">#&gt; Selected: TRUE</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; CATT (preview) [simultaneous 95% CI]:</span></span>
 <span><span class="co">#&gt;  cohort estimate        se   ci_low  ci_high p_value selected</span></span>
-<span><span class="co">#&gt;       2 4.478828 0.1820991 4.044556 4.913100       0     TRUE</span></span>
-<span><span class="co">#&gt;       3 3.682706 0.1844766 3.242764 4.122648       0     TRUE</span></span>
-<span><span class="co">#&gt;       4 3.071311 0.2010365 2.591877 3.550745       0     TRUE</span></span>
+<span><span class="co">#&gt;       2 4.498895 0.1823152 4.064118 4.933671       0     TRUE</span></span>
+<span><span class="co">#&gt;       3 3.692508 0.1845872 3.252314 4.132703       0     TRUE</span></span>
+<span><span class="co">#&gt;       4 3.076798 0.2014584 2.596370 3.557227       0     TRUE</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Event Study (preview) [simultaneous 95% CI]:</span></span>
 <span><span class="co">#&gt;  event_time n_cohorts estimate        se   ci_low  ci_high p_value</span></span>
-<span><span class="co">#&gt;           0         3 3.261924 0.1874452 2.783997 3.739851       0</span></span>
-<span><span class="co">#&gt;           1         3 3.712544 0.1722744 3.273298 4.151791       0</span></span>
-<span><span class="co">#&gt;           2         3 3.339178 0.2297940 2.753274 3.925081       0</span></span>
-<span><span class="co">#&gt;           3         2 4.926794 0.2158458 4.376454 5.477134       0</span></span>
-<span><span class="co">#&gt;           4         1 5.763977 0.2314455 5.173862 6.354091       0</span></span>
+<span><span class="co">#&gt;           0         3 3.276101 0.1871952 2.798837 3.753366       0</span></span>
+<span><span class="co">#&gt;           1         3 3.727405 0.1723928 3.287880 4.166929       0</span></span>
+<span><span class="co">#&gt;           2         3 3.350116 0.2311112 2.760886 3.939347       0</span></span>
+<span><span class="co">#&gt;           3         2 4.940002 0.2165696 4.387846 5.492157       0</span></span>
+<span><span class="co">#&gt;           4         1 5.778623 0.2320470 5.187007 6.370239       0</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Model Details:</span></span>
 <span><span class="co">#&gt;   Units (N)           : 120</span></span>
@@ -223,8 +223,8 @@ trades a small amount of bias for lower variance — the same idea as
 <span><span class="co">#&gt;   Treated cohorts (G) : 3</span></span>
 <span><span class="co">#&gt;   Covariates (d)      : 2</span></span>
 <span><span class="co">#&gt;   Features (p)        : 62</span></span>
-<span><span class="co">#&gt;   Selected size       : 42</span></span>
-<span><span class="co">#&gt;   Lambda*             : 0.0099</span></span></code></pre></div>
+<span><span class="co">#&gt;   Selected size       : 44</span></span>
+<span><span class="co">#&gt;   Lambda*             : 0.0080</span></span></code></pre></div>
 <p>Comparing against the truth and against <code><a href="../reference/etwfe.html">etwfe()</a></code>:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"True ATT:        "</span>, <span class="va">true_tes</span><span class="op">$</span><span class="va">att_true</span>, <span class="st">"\n"</span><span class="op">)</span></span>
@@ -232,11 +232,11 @@ trades a small amount of bias for lower variance — the same idea as
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"etwfe() ATT:     "</span>, <span class="va">res_etwfe</span><span class="op">$</span><span class="va">att_hat</span>, <span class="st">"\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; etwfe() ATT:      3.88994</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"betwfe() ATT:    "</span>, <span class="va">res_betwfe</span><span class="op">$</span><span class="va">att_hat</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; betwfe() ATT:     3.784618</span></span>
+<span><span class="co">#&gt; betwfe() ATT:     3.796829</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"etwfe sq. error: "</span>, <span class="op">(</span><span class="va">res_etwfe</span><span class="op">$</span><span class="va">att_hat</span> <span class="op">-</span> <span class="va">true_tes</span><span class="op">$</span><span class="va">att_true</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span>, <span class="st">"\n"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; etwfe sq. error:  0.0001479292</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"betwfe sq. error:"</span>, <span class="op">(</span><span class="va">res_betwfe</span><span class="op">$</span><span class="va">att_hat</span> <span class="op">-</span> <span class="va">true_tes</span><span class="op">$</span><span class="va">att_true</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; betwfe sq. error: 0.008678791</span></span></code></pre></div>
+<span><span class="co">#&gt; betwfe sq. error: 0.006552738</span></span></code></pre></div>
 <p>The bridge penalty in <code><a href="../reference/betwfe.html">betwfe()</a></code> shrinks the estimate
 toward zero relative to <code><a href="../reference/etwfe.html">etwfe()</a></code>. On this regime, that
 produces a noticeable bias — the textbook bias-variance trade-off in
@@ -402,11 +402,11 @@ panel:</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/eventStudy.html">eventStudy</a></span><span class="op">(</span><span class="va">res_betwfe</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   event_time n_cohorts estimate        se   ci_low  ci_high p_value</span></span>
-<span><span class="co">#&gt; 1          0         3 3.261924 0.1874452 2.783997 3.739851       0</span></span>
-<span><span class="co">#&gt; 2          1         3 3.712544 0.1722744 3.273298 4.151791       0</span></span>
-<span><span class="co">#&gt; 3          2         3 3.339178 0.2297940 2.753274 3.925081       0</span></span>
-<span><span class="co">#&gt; 4          3         2 4.926794 0.2158458 4.376454 5.477134       0</span></span>
-<span><span class="co">#&gt; 5          4         1 5.763977 0.2314455 5.173862 6.354091       0</span></span></code></pre></div>
+<span><span class="co">#&gt; 1          0         3 3.276101 0.1871952 2.798837 3.753366       0</span></span>
+<span><span class="co">#&gt; 2          1         3 3.727405 0.1723928 3.287880 4.166929       0</span></span>
+<span><span class="co">#&gt; 3          2         3 3.350116 0.2311112 2.760886 3.939347       0</span></span>
+<span><span class="co">#&gt; 4          3         2 4.940002 0.2165696 4.387846 5.492157       0</span></span>
+<span><span class="co">#&gt; 5          4         1 5.778623 0.2320470 5.187007 6.370239       0</span></span></code></pre></div>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">res_betwfe</span><span class="op">)</span></span></code></pre></div>
 <p><img src="etwfe_betwfe_vignette_files/figure-html/unnamed-chunk-14-1.png" class="r-plt" alt="" width="700"></p>

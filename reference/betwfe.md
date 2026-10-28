@@ -240,8 +240,13 @@ betwfe(
 - cv_seed:
 
   Integer or `NULL`; the seed passed to
-  [`set.seed()`](https://rdrr.io/r/base/Random.html) immediately before
-  the `cv.grpreg()` call. If supplied, must be within
+  [`set.seed()`](https://rdrr.io/r/base/Random.html) to draw the
+  cross-validation folds. The folds are row-level: the draw is assigned
+  to the rows unit by unit, with the units in an order computed from
+  their data rather than from their IDs. So relabeling the units does
+  not change which `lambda` cross-validation selects, except through
+  REML's small dependence on unit order when the noise variances are
+  estimated (#535). If supplied, must be within
   `+/- .Machine$integer.max`. If `NULL` (the default), the seed defaults
   internally to `as.integer(N * T)`. Ignored when
   `lambda_selection = "bic"`.
@@ -417,10 +422,9 @@ An object of class `betwfe` containing the following elements:
 - cv_seed:
 
   Integer scalar; the seed actually fed to
-  [`set.seed()`](https://rdrr.io/r/base/Random.html) immediately before
-  `cv.grpreg()` was called. Defaults to `as.integer(N * T)` when the
-  user did not pass a seed. `NA_integer_` when
-  `lambda_selection = "bic"`.
+  [`set.seed()`](https://rdrr.io/r/base/Random.html) to draw the
+  cross-validation folds. Defaults to `as.integer(N * T)` when the user
+  did not pass a seed. `NA_integer_` when `lambda_selection = "bic"`.
 
 - ci_type:
 
@@ -670,12 +674,12 @@ if (requireNamespace("bacondecomp", quietly = TRUE)) {
 #> No covariates provided; skipping covariate processing.
 #> Getting omega sqrt inverse estimate...
 #> Done! Time to estimate noise variances:
-#> 0.185879468917847
+#> 0.238559007644653
 #> Time to get sqrt inverse matrix:
-#> 0.000240564346313477
+#> 0.000288486480712891
 #> Estimating bridge regression with 10-fold CV...
 #> Done! Time for estimation:
-#> 0.093860387802124
+#> 0.116455316543579
 #> No treatment features selected; all treatment effects estimated to be 0.
 #>   cohort estimate se ci_low ci_high p_value selected
 #> 1   2005        0  0      0       0      NA    FALSE

@@ -83,20 +83,20 @@ sci <- simultaneousCIs(res_default, family = "event_study", alpha = 0.05)
 print(sci)
 #> Parametric simultaneous (1 - alpha) confidence intervals
 #> Family: event_study, K = 5, alpha = 0.05
-#> Simultaneous critical value: 2.3693 (pointwise 1.9600, Bonferroni 2.5758)
+#> Simultaneous critical value: 2.3692 (pointwise 1.9600, Bonferroni 2.5758)
 #> 
 #>  effect   estimate simultaneous_ci_low simultaneous_ci_high pointwise_ci_low
 #>      e0  0.0000000           0.0000000            0.0000000        0.0000000
-#>      e1 -0.6726640          -0.9531319           -0.3921962       -0.9046805
-#>      e2 -0.6726640          -0.9531319           -0.3921962       -0.9046805
-#>      e3 -3.0092312          -3.4694847           -2.5489777       -3.3899750
-#>      e4  0.1684927          -0.4085822            0.7455677       -0.3088914
+#>      e1 -0.6708459          -0.9508810           -0.3908108       -0.9025086
+#>      e2 -0.6708459          -0.9508810           -0.3908108       -0.9025086
+#>      e3 -3.0008214          -3.4613567           -2.5402861       -3.3818053
+#>      e4  0.1683984          -0.4086661            0.7454629       -0.3089857
 #>  pointwise_ci_high
 #>          0.0000000
-#>         -0.4406476
-#>         -0.4406476
-#>         -2.6284874
-#>          0.6458769
+#>         -0.4391832
+#>         -0.4391832
+#>         -2.6198375
+#>          0.6457825
 ```
 
 The function returns a `simultaneous_cis` S3 object with `$ci` (the
@@ -211,7 +211,7 @@ c(pointwise  = es_boot$pointwise_critical_value,
   bootstrap  = es_boot$critical_value,
   bonferroni = es_boot$bonferroni_critical_value)
 #>  pointwise   analytic  bootstrap bonferroni 
-#>   1.959964   2.369258   2.355859   2.575829
+#>   1.959964   2.369215   2.355766   2.575829
 ```
 
 **High-dimensional $`p \geq NT`$.** When the (full) design is
@@ -358,8 +358,8 @@ cbind(
   pointwise_width = fit_pw$catt_df$ci_high - fit_pw$catt_df$ci_low
 )
 #>        estimate         se simul_width pointwise_width
-#> [1,] -0.4137526 0.07754859   0.3463267       0.3039849
-#> [2,] -1.6817852 0.12781952   0.5708332       0.5010433
+#> [1,] -0.4115949 0.07754859   0.3463267       0.3039849
+#> [2,] -1.6779650 0.12781952   0.5708332       0.5010433
 #> [3,]  0.0000000 0.00000000   0.0000000       0.0000000
 ```
 

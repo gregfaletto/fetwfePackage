@@ -151,20 +151,20 @@ summary(result)
 #> Summary of Fused Extended Two-Way Fixed Effects
 #> ================================================
 #> 
-#> Overall ATT: 0.0843  (SE = 0.1372, p = 0.5389, 95% CI = [-0.1845, 0.3531])
+#> Overall ATT: 0.0859  (SE = 0.1437, p = 0.5498, 95% CI = [-0.1957, 0.3676])
 #> Selected: TRUE
 #> 
 #> CATT (preview) [simultaneous 95% CI]:
 #>  cohort   estimate        se     ci_low    ci_high      p_value selected
-#>       2 -1.3369236 0.1972001 -1.7779399 -0.8959073 2.411404e-11     TRUE
-#>       3  0.9165759 0.1264333  0.6338217  1.1993300 8.366641e-13     TRUE
+#>       2 -1.4252442 0.1972001 -1.8662605 -0.9842278 9.845458e-13     TRUE
+#>       3  0.9672529 0.1264333  0.6844988  1.2500071 3.996803e-14     TRUE
 #>       4  0.0000000 0.0000000  0.0000000  0.0000000           NA    FALSE
 #> 
 #> Event Study (preview) [simultaneous 95% CI]:
 #>  event_time n_cohorts   estimate        se     ci_low   ci_high      p_value
 #>           0         3  0.0000000 0.0000000  0.0000000  0.000000           NA
-#>           1         2  0.5095182 0.3915374 -0.3636595  1.382696 3.417505e-01
-#>           2         1 -2.0053854 0.2958002 -2.6650570 -1.345714 2.411404e-11
+#>           1         2  0.5302396 0.4095273 -0.3832871  1.443766 3.459667e-01
+#>           2         1 -2.1378663 0.2958002 -2.7977036 -1.478029 9.845458e-13
 #> 
 #> Model Details:
 #>   Units (N)           : 60
@@ -173,7 +173,7 @@ summary(result)
 #>   Covariates (d)      : 2
 #>   Features (p)        : 38
 #>   Selected size       : 4
-#>   Lambda*             : 0.0984
+#>   Lambda*             : 0.0647
 ```
 
 ### Step 4: Extract True Treatment Effects
@@ -206,7 +206,7 @@ effect, like squared error:
 squared_error <- (result$att_hat - true_tes$att_true)^2
 
 cat("Squared error of ATT estimate:", squared_error, "\n")
-#> Squared error of ATT estimate: 0.03817985
+#> Squared error of ATT estimate: 0.03883114
 ```
 
 ### Combining the Workflow in One Pipeline
@@ -224,7 +224,7 @@ result_piped <- coefs |>
   fetwfeWithSimulatedData()
 
 cat("Estimated Overall ATT from piped workflow:", result_piped$att_hat, "\n")
-#> Estimated Overall ATT from piped workflow: -0.7183584
+#> Estimated Overall ATT from piped workflow: -0.7094837
 
 true_tes_piped <- coefs |> getTes()
 
@@ -236,7 +236,7 @@ cat("True Overall ATT:", true_tes_piped$att_true, "\n")
 squared_error_piped = (result_piped$att_hat - true_tes_piped$att_true)^2
 
 cat("Squared estimation error:", squared_error_piped, "\n")
-#> Squared estimation error: 0.00267203
+#> Squared estimation error: 0.001833302
 ```
 
 ## Covariate-dependent cohort assignment
@@ -357,7 +357,7 @@ We can fit FETWFE on this panel exactly as before:
 
 fit_mn <- fetwfeWithSimulatedData(sim_mn, verbose = FALSE)
 cat("Estimated overall ATT:", fit_mn$att_hat, "\n")
-#> Estimated overall ATT: 0.1820036
+#> Estimated overall ATT: 0.1821797
 ```
 
 ### Ordered-logit DGP
