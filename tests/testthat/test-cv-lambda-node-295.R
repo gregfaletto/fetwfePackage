@@ -69,6 +69,31 @@ test_that(".cv_lambda_node is deterministic and preserves the ambient RNG", {
 	expect_identical(r1$cv_loss, r2$cv_loss)
 })
 
+# The unit folds are drawn over an order computed from the design (#524), so
+# permuting the units' row blocks leaves every grid point's CV loss unchanged.
+# A fallback returns an all-NA `cv_loss`, so the fits are asserted not to fall
+# back.
+test_that(".cv_lambda_node's CV loss does not change when the units are permuted (#524)", {
+	s <- .cv295_synth()
+	r <- .cv_lambda_node(s$Sig, s$a, s$X, s$N_units, s$T)
+	expect_false(r$fallback)
+	set.seed(5246)
+	for (k in 1:6) {
+		units <- sample(s$N_units)
+		rows <- rep((units - 1L) * s$T, each = s$T) +
+			rep.int(seq_len(s$T), s$N_units)
+		X <- s$X[rows, , drop = FALSE]
+		rk <- .cv_lambda_node(crossprod(X) / nrow(X), s$a, X, s$N_units, s$T)
+		expect_false(rk$fallback, info = paste("permutation", k))
+		expect_equal(rk$cv_loss, r$cv_loss, info = paste("permutation", k))
+		expect_identical(
+			rk$lambda_c,
+			r$lambda_c,
+			info = paste("permutation", k)
+		)
+	}
+})
+
 test_that(".cv_lambda_node falls back to the theory scale when nothing is feasible", {
 	s <- .cv295_synth()
 	# A grid of vanishingly small penalties: the solver cannot reach KKT
@@ -323,18 +348,10 @@ test_that("lambda_c rejects anything but a positive number or 'cv'", {
 # because both anchor on the same scale -- the #295 Decision D2 claim that one
 # `lambda_c` serves the point estimate AND the band.
 #
-# The anchor is NOT unguarded today -- measured, not assumed. Mutating
-# `scale = max(abs(a))` to `1.0` inside .cv_lambda_node() fails 4 assertions in
-# this file (at :49, :137 and :138 twice) against 0 unmutated. Those catches are
-# INCIDENTAL, though: they are scale-invariant relations about the selection that
-# happen to break because rescaling `lam0` shifts which grid points clear the
-# feasibility gate. Change the grid, the fixture, or the gate budget and they
-# could stop biting without anyone noticing.
-#
-# This assertion is the direct one. It pins `lam0`'s observable consequence
-# rather than `lam0` itself, since the function does not return it: the feasible
-# set is exactly the grid points whose KKT certificate clears `mult_grid[k] *
-# lam0`, reconstructed here from `max(abs(a))` independently.
+# This assertion pins `lam0`'s observable consequence rather than `lam0`
+# itself, since the function does not return it: the feasible set is exactly the
+# grid points whose KKT certificate clears `mult_grid[k] * lam0`, reconstructed
+# here from `max(abs(a))` independently.
 test_that(".cv_lambda_node's grid anchors on scale = max(abs(a)) (#366)", {
 	s <- .cv295_synth()
 	expect_gt(abs(max(abs(s$a)) - 1), 0.5) # guard: the fixture is not the max|a| == 1 trap

@@ -137,9 +137,13 @@
 #'   vignette section "Choosing the bridge penalty parameter" for details.
 #' @param cv_folds Integer; number of folds for the CV path. Ignored when
 #'   `lambda_selection = "bic"`. Default is 10.
-#' @param cv_seed Integer or `NULL`; the seed passed to `set.seed()`
-#'   immediately before the `cv.grpreg()` call. If supplied, must be
-#'   within `+/- .Machine$integer.max`. If `NULL` (the default),
+#' @param cv_seed Integer or `NULL`; the seed passed to `set.seed()` to draw
+#'   the cross-validation folds. The folds are row-level: the draw is assigned
+#'   to the rows unit by unit, with the units in an order computed from their
+#'   data rather than from their IDs. So relabeling the units does not change
+#'   which `lambda` cross-validation selects, except through REML's small
+#'   dependence on unit order when the noise variances are estimated (#535). If
+#'   supplied, must be within `+/- .Machine$integer.max`. If `NULL` (the default),
 #'   the seed defaults internally to `as.integer(N * T)`. Ignored when
 #'   `lambda_selection = "bic"`.
 #' @param ci_type Character; one of `"simultaneous"` (default) or
@@ -230,7 +234,7 @@
 #' \item{cv_folds}{Integer scalar; the `cv_folds` value used when
 #' `lambda_selection = "cv"`, `NA_integer_` when `lambda_selection = "bic"`.}
 #' \item{cv_seed}{Integer scalar; the seed actually fed to `set.seed()`
-#' immediately before `cv.grpreg()` was called. Defaults to
+#' to draw the cross-validation folds. Defaults to
 #' `as.integer(N * T)` when the user did not pass a seed. `NA_integer_`
 #' when `lambda_selection = "bic"`.}
 #' \item{ci_type}{Character scalar; the `ci_type` argument the user passed (`"simultaneous"` or `"pointwise"`), controlling whether the reported `catt_df` / `eventStudy()` confidence-interval bounds are simultaneous (family-wise) or pointwise.}
@@ -577,11 +581,7 @@ betwfe <- function(
 #'   vignette section "Choosing the bridge penalty parameter" for details.
 #' @param cv_folds Integer; number of folds for the CV path. Ignored when
 #'   `lambda_selection = "bic"`. Default is 10.
-#' @param cv_seed Integer or `NULL`; the seed passed to `set.seed()`
-#'   immediately before the `cv.grpreg()` call. If supplied, must be
-#'   within `+/- .Machine$integer.max`. If `NULL` (the default),
-#'   the seed defaults internally to `as.integer(N * T)`. Ignored when
-#'   `lambda_selection = "bic"`.
+#' @inheritParams betwfe
 #' @param ci_type Character; one of `"simultaneous"` (default) or
 #'   `"pointwise"`. Controls the confidence-interval bounds reported for the
 #'   cohort-specific ATTs (in `catt_df`) and the event-study effects (from
@@ -670,7 +670,7 @@ betwfe <- function(
 #' \item{cv_folds}{Integer scalar; the `cv_folds` value used when
 #' `lambda_selection = "cv"`, `NA_integer_` when `lambda_selection = "bic"`.}
 #' \item{cv_seed}{Integer scalar; the seed actually fed to `set.seed()`
-#' immediately before `cv.grpreg()` was called. Defaults to
+#' to draw the cross-validation folds. Defaults to
 #' `as.integer(N * T)` when the user did not pass a seed. `NA_integer_`
 #' when `lambda_selection = "bic"`.}
 #' \item{ci_type}{Character scalar; the `ci_type` argument the user passed (`"simultaneous"` or `"pointwise"`), controlling whether the reported `catt_df` / `eventStudy()` confidence-interval bounds are simultaneous (family-wise) or pointwise.}

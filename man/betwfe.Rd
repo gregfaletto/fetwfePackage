@@ -183,9 +183,13 @@ vignette section "Choosing the bridge penalty parameter" for details.}
 \item{cv_folds}{Integer; number of folds for the CV path. Ignored when
 \code{lambda_selection = "bic"}. Default is 10.}
 
-\item{cv_seed}{Integer or \code{NULL}; the seed passed to \code{set.seed()}
-immediately before the \code{cv.grpreg()} call. If supplied, must be
-within \verb{+/- .Machine$integer.max}. If \code{NULL} (the default),
+\item{cv_seed}{Integer or \code{NULL}; the seed passed to \code{set.seed()} to draw
+the cross-validation folds. The folds are row-level: the draw is assigned
+to the rows unit by unit, with the units in an order computed from their
+data rather than from their IDs. So relabeling the units does not change
+which \code{lambda} cross-validation selects, except through REML's small
+dependence on unit order when the noise variances are estimated (#535). If
+supplied, must be within \verb{+/- .Machine$integer.max}. If \code{NULL} (the default),
 the seed defaults internally to \code{as.integer(N * T)}. Ignored when
 \code{lambda_selection = "bic"}.}
 
@@ -279,7 +283,7 @@ Mirrors the \code{lambda_selection} argument the user passed.}
 \item{cv_folds}{Integer scalar; the \code{cv_folds} value used when
 \code{lambda_selection = "cv"}, \code{NA_integer_} when \code{lambda_selection = "bic"}.}
 \item{cv_seed}{Integer scalar; the seed actually fed to \code{set.seed()}
-immediately before \code{cv.grpreg()} was called. Defaults to
+to draw the cross-validation folds. Defaults to
 \code{as.integer(N * T)} when the user did not pass a seed. \code{NA_integer_}
 when \code{lambda_selection = "bic"}.}
 \item{ci_type}{Character scalar; the \code{ci_type} argument the user passed (\code{"simultaneous"} or \code{"pointwise"}), controlling whether the reported \code{catt_df} / \code{eventStudy()} confidence-interval bounds are simultaneous (family-wise) or pointwise.}

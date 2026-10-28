@@ -196,9 +196,13 @@ penalty parameter" for details.}
 \item{cv_folds}{Integer; number of folds for the CV path. Ignored when
 \code{lambda_selection = "bic"}. Default is 10.}
 
-\item{cv_seed}{Integer or \code{NULL}; the seed passed to \code{set.seed()}
-immediately before the \code{cv.grpreg()} call, controlling fold
-assignment. If supplied, must be within \verb{+/- .Machine$integer.max}.
+\item{cv_seed}{Integer or \code{NULL}; the seed passed to \code{set.seed()} to draw
+the cross-validation folds. The folds are row-level: the draw is assigned
+to the rows unit by unit, with the units in an order computed from their
+data rather than from their IDs. So relabeling the units does not change
+which \code{lambda} cross-validation selects, except through REML's small
+dependence on unit order when the noise variances are estimated (#535). If
+supplied, must be within \verb{+/- .Machine$integer.max}.
 If \code{NULL} (the default), the seed defaults internally to
 \code{as.integer(N * T)} so consecutive calls on the same dataset are
 reproducible without the user having to specify a seed. The seed
@@ -294,7 +298,7 @@ An object of class \code{fetwfe} containing the following elements:
 \item{lambda_star_model_size}{The number of selected features (excluding the always-present intercept) in the chosen model. If this value is close to \code{lambda.max_model_size} or \code{lambda.min_model_size}, that could suggest that the range of \code{lambda} values should be expanded.}
 \item{lambda_selection}{Character scalar; either \code{"cv"} (10-fold cross-validation on \code{cv.grpreg}; v1.13.0+ default) or \code{"bic"} (BIC over the \code{grpreg} lambda grid; the prior default). Mirrors the \code{lambda_selection} argument the user passed.}
 \item{cv_folds}{Integer scalar; the \code{cv_folds} value used when \code{lambda_selection = "cv"}, \code{NA_integer_} when \code{lambda_selection = "bic"}.}
-\item{cv_seed}{Integer scalar; the seed actually fed to \code{set.seed()} immediately before \code{cv.grpreg()} was called. Defaults to \code{as.integer(N * T)} when the user did not pass a seed. \code{NA_integer_} when \code{lambda_selection = "bic"}.}
+\item{cv_seed}{Integer scalar; the seed actually fed to \code{set.seed()} to draw the cross-validation folds. Defaults to \code{as.integer(N * T)} when the user did not pass a seed. \code{NA_integer_} when \code{lambda_selection = "bic"}.}
 \item{fusion_structure}{Character scalar; the \code{fusion_structure} argument the user passed (\code{"cohort"} or \code{"event_study"}), recording which fusion-penalty differences matrix was used for the treatment effects.}
 \item{fusion_matrix}{The user-supplied custom forward differences matrix \code{D_N} (a \verb{num_treats x num_treats} numeric matrix), or \code{NULL} if none was supplied. When non-\code{NULL} it overrode \code{fusion_structure} for the treatment-effect block; the estimator used \code{solve(fusion_matrix)} internally. See the \code{fusion_matrix} argument.}
 \item{N}{The final number of units that were in the data set used for estimation (after any units may have been removed because they were treated in the first time period).}
@@ -374,7 +378,7 @@ if (requireNamespace("bacondecomp", quietly = TRUE)) {
   # the elasticity-scaled female suicide rate is the response.
   divorce_f <- divorce[divorce$sex == 2, ]
 
-  # Reproduces the empirical application in Faletto (2025, Sec. 8.2). The 9
+  # Follows the data and specification of Faletto (2025, Sec. 8.2). The 9
   # states already treated by 1964 are auto-dropped as first-period-treated,
   # and `murderrate` is auto-dropped (missing in 1964 for one state); both are
   # reported as (expected) warnings. The noise variances are supplied
@@ -389,11 +393,10 @@ if (requireNamespace("bacondecomp", quietly = TRUE)) {
       response = "suiciderate_elast_jag",
       sig_eps_sq = 0.0344,
       sig_eps_c_sq = 0.1507,
-      add_ridge = TRUE,
       q = 0.5)
 
-  # FETWFE estimates an overall ATT of roughly -6\% on the elasticity-scaled
-  # female suicide rate, with a 95\% confidence interval that excludes zero.
+  # FETWFE estimates a negative overall ATT on the elasticity-scaled female
+  # suicide rate, with a 95\% confidence interval that excludes zero.
   # The selection step retains heterogeneous cohort effects (several cohorts
   # are pruned to exactly zero), rather than fusing to a single common effect.
   print(res, max_cohorts = Inf)

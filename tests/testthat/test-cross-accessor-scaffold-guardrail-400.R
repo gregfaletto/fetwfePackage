@@ -27,7 +27,7 @@
 	simulateData(cf, N = 160, sig_eps_sq = 1, sig_eps_c_sq = 0.5, seed = 101)
 })
 
-# fetwfe (partial selection, 7/14 cells) + etwfe (no selection) + betwfe (13/14),
+# fetwfe (partial selection) + etwfe (no selection) + betwfe (13/14),
 # each at se_type default and cluster -> exercises the NA-sentinel, partial-support,
 # and cluster-sandwich branches of the scaffold. Built once at collection time.
 .g400_fits <- list(
@@ -107,10 +107,7 @@
 # The fourth vector's VALUE equals the cohortStudy() pin sitting a few lines
 # above it in the same block: in ALL SIX blocks the seven printed digits are
 # character-identical, which you can confirm without running anything by
-# comparing the literal pairs in each block. (They are not bit-identical --
-# identical() is FALSE on all six, 8e-17 to 2e-16 apart -- which is why the
-# tolerance is 1e-6 and not 0. An earlier draft of this comment said only
-# fetwfe/default and fetwfe/cluster matched, implying the other four differed.)
+# comparing the literal pairs in each block.
 # That is not a defect and not avoidable by changing family (event_study
 # reproduces eventStudy()$se, all_post_treatment reproduces
 # cohortTimeATTs()$se): the agreement IS what Anchor C asserts. The point of
@@ -172,31 +169,31 @@ test_that("scaffold SEs match pinned pre-refactor values on the fetwfe/default f
 	fit <- .g400_fits[["fetwfe/default"]]
 	expect_equal(
 		eventStudy(fit)$se,
-		c(0.1432551, 0.2040083, 0.2363452, 0.2494955, 0.2219078),
+		c(0.1443706, 0.2007806, 0.2349301, 0.2252420, 0.1723328),
 		tolerance = 1e-6
 	)
 	expect_equal(
 		cohortStudy(fit)$se,
-		c(0.1738941, 0.1479012, 0.1596468, 0.1438447),
+		c(0.1723328, 0.1421995, 0.1514819, 0.1387419),
 		tolerance = 1e-6
 	)
 	expect_equal(
 		cohortTimeATTs(fit)$se,
 		c(
-			0.1817540,
-			0.1817540,
-			0.1817540,
-			0.2219078,
-			0.2219078,
-			0.1352874,
-			0.1840652,
-			0.1840652,
-			0.2448657,
-			0.1352874,
-			0.2071185,
-			0.2071185,
-			0.1352874,
-			0.2214705
+			0.1723328,
+			0.1723328,
+			0.1723328,
+			0.1723328,
+			0.1723328,
+			0.1333324,
+			0.1800493,
+			0.1800493,
+			0.2360642,
+			0.1333324,
+			0.1968354,
+			0.1968354,
+			0.1333324,
+			0.2149183
 		),
 		tolerance = 1e-6
 	)
@@ -207,12 +204,12 @@ test_that("scaffold SEs match pinned pre-refactor values on the fetwfe/default f
 	# DO NOT "simplify" this to
 	# expect_equal(.g400_se_of_sci(...), cohortStudy(fit)$se): that converts an
 	# absolute pin back into precisely the parity assertion consolidation
-	# hollows. Verified byte-identical on origin/main as well as this branch.
+	# hollows.
 	expect_equal(
 		.g400_se_of_sci(
 			simultaneousCIs(fit, family = "cohort", alpha = fit$alpha)
 		),
-		c(0.1738941, 0.1479012, 0.1596468, 0.1438447),
+		c(0.1723328, 0.1421995, 0.1514819, 0.1387419),
 		tolerance = 1e-6
 	)
 })
@@ -233,37 +230,36 @@ test_that("scaffold SEs match pinned pre-refactor values on the fetwfe/default f
 # Part 2 above pins only fetwfe/default, leaving no absolute cluster-sandwich
 # value anywhere -- and the one other test that catches such a mutation
 # (test-getCohortATTsFinal-unification.R) covers only the OLS branch
-# (sel_feat_inds = NULL), so the BRIDGE cluster path had no check at all. Values
-# below were computed on this branch and verified byte-identical on origin/main.
+# (sel_feat_inds = NULL), so the BRIDGE cluster path had no check at all.
 test_that("scaffold SEs match pinned pre-refactor values on the fetwfe/cluster fixture (#400 guardrail)", {
 	fit <- .g400_fits[["fetwfe/cluster"]]
 	expect_equal(
 		cohortStudy(fit)$se,
-		c(0.1853167, 0.1275883, 0.1469086, 0.1456402),
+		c(0.1863449, 0.1210557, 0.1398807, 0.1407523),
 		tolerance = 1e-6
 	)
 	expect_equal(
 		eventStudy(fit)$se,
-		c(0.1466590, 0.2003153, 0.2334116, 0.2379342, 0.2090416),
+		c(0.1486892, 0.1969994, 0.2319998, 0.2231560, 0.1863449),
 		tolerance = 1e-6
 	)
 	expect_equal(
 		cohortTimeATTs(fit)$se,
 		c(
-			0.1985337,
-			0.1985337,
-			0.1985337,
-			0.2090416,
-			0.2090416,
-			0.1382049,
-			0.1764362,
-			0.1764362,
-			0.2351856,
-			0.1382049,
-			0.1930629,
-			0.1930629,
-			0.1382049,
-			0.2308755
+			0.1863449,
+			0.1863449,
+			0.1863449,
+			0.1863449,
+			0.1863449,
+			0.1381698,
+			0.1708239,
+			0.1708239,
+			0.2283287,
+			0.1381698,
+			0.1836161,
+			0.1836161,
+			0.1381698,
+			0.2232355
 		),
 		tolerance = 1e-6
 	)
@@ -273,7 +269,7 @@ test_that("scaffold SEs match pinned pre-refactor values on the fetwfe/cluster f
 		.g400_se_of_sci(
 			simultaneousCIs(fit, family = "cohort", alpha = fit$alpha)
 		),
-		c(0.1853167, 0.1275883, 0.1469086, 0.1456402),
+		c(0.1863449, 0.1210557, 0.1398807, 0.1407523),
 		tolerance = 1e-6
 	)
 })
