@@ -5,12 +5,11 @@ articles:
   etwfe_betwfe_vignette: etwfe_betwfe_vignette.html
   fetwfe: fetwfe.html
   fusion_structure_vignette: fusion_structure_vignette.html
-  high_dimensional_vignette: high_dimensional_vignette.html
   inference_vignette: inference_vignette.html
   migrating_from_did_and_etwfe: migrating_from_did_and_etwfe.html
   simulation_vignette: simulation_vignette.html
   simultaneous_cis_vignette: simultaneous_cis_vignette.html
-last_built: 2026-10-28T05:03Z
+last_built: 2026-10-28T06:32Z
 urls:
   reference: https://gregfaletto.github.io/fetwfePackage/reference
   article: https://gregfaletto.github.io/fetwfePackage/articles

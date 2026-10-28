@@ -72,10 +72,7 @@ simulateData(
   which case only `>= 1` unit per cohort is required – this permits
   small cohorts and therefore high-dimensional (`p > NT`) panels, which
   [`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)
-  fits in its regularized regime (and on which the high-dimensional
-  [`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)
-  path can be exercised, using the known data-generating coefficient
-  vector; recovering the truth requires an adequate number of units).
+  fits in its regularized regime.
 
 - seed:
 

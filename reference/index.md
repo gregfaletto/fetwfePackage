@@ -17,10 +17,8 @@ estimators for difference-in-differences with staggered adoptions.
 
 ## Inference
 
-Confidence intervals and debiased overall-ATT inference.
+Simultaneous confidence bands over families of treatment effects.
 
-- [`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)
-  : Debiased overall-ATT with a uniformly-valid standard error
 - [`simultaneousCIs()`](https://gregfaletto.github.io/fetwfePackage/reference/simultaneousCIs.md)
   : Parametric simultaneous (1 - alpha) confidence intervals over a
   family of treatment effects
@@ -63,8 +61,6 @@ Convenience drivers that fit directly on simulateData() output.
   : Run BETWFE on Simulated Data
 - [`twfeCovsWithSimulatedData()`](https://gregfaletto.github.io/fetwfePackage/reference/twfeCovsWithSimulatedData.md)
   : Run twfeCovs on Simulated Data
-- [`debiasedATTWithSimulatedData()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATTWithSimulatedData.md)
-  : Run debiasedATT() on simulated data
 
 ## Data conversion
 
@@ -110,9 +106,6 @@ the fitted objects.
   :
 
   Tidy a `cohortTimeATTs` object
-
-- [`tidy(`*`<debiased_att>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/tidy.debiased_att.md)
-  : Tidy a debiased overall-ATT estimate
 
 - [`tidy(`*`<etwfe>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/tidy.etwfe.md)
   :
@@ -187,9 +180,6 @@ the fitted objects.
 
 - [`plot(`*`<twfeCovs>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/plot.twfeCovs.md)
   : Plot is not defined for a twfeCovs fit (documented omission)
-
-- [`print(`*`<debiased_att>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/print.debiased_att.md)
-  : Print a debiased overall-ATT estimate
 
 - [`print(`*`<simultaneous_cis>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/print.simultaneous_cis.md)
   : Print a simultaneous-confidence-interval object

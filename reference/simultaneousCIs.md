@@ -94,16 +94,13 @@ simultaneousCIs(
   effect pools across cohorts weighted by the estimated cohort
   probabilities). When the (full) design is **high-dimensional
   (`p >= NT`)** – where the analytic Gram inverse need not exist – the
-  bootstrap uses the full-design **desparsified** construction of
-  [`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)
-  (per-effect nodewise directions) generalized to the family. This
-  desparsified `p >= NT` band path
+  bootstrap uses the full-design **desparsified** construction, with
+  per-effect nodewise directions. This desparsified `p >= NT` band path
   ([`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)
-  fits only) generalizes the
-  [`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)
-  construction — whose overall-ATT coverage is validated near-nominally
-  in simulation (Theorem `debiased.highdim.thm`, Faletto 2025) — to a
-  family of functionals. Its family-wise coverage is likewise validated
+  fits only) generalizes the paper's scalar debiased construction —
+  whose overall-ATT coverage is validated near-nominally in simulation
+  (Theorem `debiased.highdim.thm`, Faletto 2025) — to a family of
+  functionals. Its family-wise coverage is likewise validated
   near-nominally (Theorem `debiased.highdim.joint.thm`): ~0.92 over the
   **event-study** family (`K = 7`) at the `p >= NT` anchor of Faletto
   (2025), the band sibling of the scalar result (~0.94); the cohort and
@@ -115,21 +112,17 @@ simultaneousCIs(
   `family = "event_study"` fit additionally carries the propensity
   channel `F_pi`). In the high-dimensional regime the band is centered
   on the **debiased** estimate (the high-dimensional FETWFE theory
-  correction, equal to
-  [`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)'s
-  point estimate for the matching contrast), not the post-selection
-  bridge estimate; fixed-p bands center on the (unbiased) bridge
-  estimate as before. Because this desparsified bootstrap band is built
-  from the empirical per-unit influence function – needing neither GLS
-  whitening nor `sig_eps_sq` – it also accepts a high-dimensional
-  **`gls = FALSE`** fetwfe fit (`calc_ses = FALSE`), the band analog of
-  [`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)'s
-  Omega-free SE (#307, \#313). `method = "analytic"` still requires
-  valid analytic SEs (a `q < 1`, `gls = TRUE`, rank-satisfied fit).
-  **Which method is valid at `p >= NT` is a property of the function
-  rather than of this argument alone; see the "High-dimensional
-  (`p >= NT`) bands" paragraph of Details, which also documents the
-  warning such a call emits.**
+  correction), not the post-selection bridge estimate; fixed-p bands
+  center on the (unbiased) bridge estimate as before. Because this
+  desparsified bootstrap band is built from the empirical per-unit
+  influence function – needing neither GLS whitening nor `sig_eps_sq` –
+  it also accepts a high-dimensional **`gls = FALSE`** fetwfe fit
+  (`calc_ses = FALSE`). `method = "analytic"` still requires valid
+  analytic SEs (a `q < 1`, `gls = TRUE`, rank-satisfied fit). **Which
+  method is valid at `p >= NT` is a property of the function rather than
+  of this argument alone; see the "High-dimensional (`p >= NT`) bands"
+  paragraph of Details, which also documents the warning such a call
+  emits.**
 
 - B:
 
@@ -161,28 +154,21 @@ simultaneousCIs(
   penalty `lambda_node = lambda_c * max(|a|) * sqrt(log p / N)`: either
   a single positive number (the default `1.0` = theory scale) or the
   string `"cv"`, which selects the constant **per fit** by
-  cross-validation (the same CV
-  [`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)
-  uses, on the overall-ATT direction, so one constant serves the point
-  estimate and every band effect; \#295). **Smaller fixed values can
-  leave directions infeasible (a warning fires and those bands are
-  unreliable).** Ignored when `p < NT` or `method = "analytic"`. The
-  default stays the fixed `1.0`; the family-wise coverage validated in
-  Faletto (2025) used the `"cv"` selector (`lambda_c` ~ 0.54,
-  feasibility 1.0), the same constant that serves the scalar
-  [`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)
-  and every band effect.
+  cross-validation (on the overall-ATT direction, so one constant serves
+  every band effect; \#295). **Smaller fixed values can leave directions
+  infeasible (a warning fires and those bands are unreliable).** Ignored
+  when `p < NT` or `method = "analytic"`. The default stays the fixed
+  `1.0`; the family-wise coverage validated in Faletto (2025) used the
+  `"cv"` selector (`lambda_c` ~ 0.54, feasibility 1.0).
 
 - cv_time_budget:
 
   Numeric; a wall-clock backstop (in seconds) for the `lambda_c = "cv"`
-  cross-validation (the same \#384 backstop
-  [`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)
-  offers). `Inf` (the default) leaves selection fully deterministic /
-  reproducible; a finite value stops the CV early and falls back to the
-  theory scale (`lambda_c = 1.0`) with a warning, so an adversarial
-  high-dimensional draw cannot spin indefinitely (#384). Whether a
-  finite budget fires depends on machine speed, so the result can too.
+  cross-validation. `Inf` (the default) leaves selection fully
+  deterministic / reproducible; a finite value stops the CV early and
+  falls back to the theory scale (`lambda_c = 1.0`) with a warning, so
+  an adversarial high-dimensional draw cannot spin indefinitely. Whether
+  a finite budget fires depends on machine speed, so the result can too.
   Ignored unless `lambda_c = "cv"` and `p >= NT`.
 
 ## Value
@@ -244,9 +230,7 @@ additionally carries per-effect `feasibility`, `converged`, and
 leading constant used) and `lambda_c_selection` (`"fixed"` or `"cv"`).
 When `lambda_c = "cv"` it also carries `lambda_cv`, the cross-validation
 diagnostics (the grid, the per-grid feasibility flags and CV losses, and
-whether the theory-scale fallback fired), matching
-[`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)'s
-`lambda_cv`.
+whether the theory-scale fallback fired).
 
 ## Details
 

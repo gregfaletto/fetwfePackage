@@ -13,8 +13,6 @@ structures, inference, simulation, and the comparison estimators.
   se_type](https://gregfaletto.github.io/fetwfePackage/articles/inference_vignette.md):
 - [Simultaneous confidence bands and the zero-effect
   test](https://gregfaletto.github.io/fetwfePackage/articles/simultaneous_cis_vignette.md):
-- [High-dimensional inference: debiasedATT() when p \>=
-  NT](https://gregfaletto.github.io/fetwfePackage/articles/high_dimensional_vignette.md):
 - [Simulation Vignette for FETWFE: From Coefficients to True Treatment
   Effects](https://gregfaletto.github.io/fetwfePackage/articles/simulation_vignette.md):
 - [Comparison Estimators: ETWFE and

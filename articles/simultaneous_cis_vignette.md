@@ -21,10 +21,8 @@ truly zero.
 
 It is a companion to
 [`vignette("inference_vignette")`](https://gregfaletto.github.io/fetwfePackage/articles/inference_vignette.md)
-(how the package’s standard errors are computed) and
-[`vignette("high_dimensional_vignette")`](https://gregfaletto.github.io/fetwfePackage/articles/high_dimensional_vignette.md)
-(debiased inference when $`p \geq NT`$). We reuse that first vignette’s
-small running example:
+(how the package’s standard errors are computed). We reuse that
+vignette’s small running example:
 
 ``` r
 
@@ -217,13 +215,12 @@ c(pointwise  = es_boot$pointwise_critical_value,
 **High-dimensional $`p \geq NT`$.** When the (full) design is
 high-dimensional — where the analytic Gram inverse need not exist, so
 there is no analytic sup-t band — the bootstrap automatically switches
-to the full-design **desparsified** construction of
-[`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)
-(the high-dimensional FETWFE theory): each effect’s debiasing direction
-becomes a nodewise (`riesz_lasso`) relaxed inverse over the singular
-Gram, with the bridge residuals. This is *uniformly valid* (not
-post-selection) and is the only route to simultaneous bands in that
-regime. It is validated in simulation
+to the full-design **desparsified** construction (the high-dimensional
+FETWFE theory): each effect’s debiasing direction becomes a nodewise
+(`riesz_lasso`) relaxed inverse over the singular Gram, with the bridge
+residuals. This is *uniformly valid* (not post-selection) and is the
+only route to simultaneous bands in that regime. It is validated in
+simulation
 ([`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)
 fits only): the scalar overall-ATT coverage (Theorem
 `debiased.highdim.thm`) and the family-wise *band* coverage (Theorem
@@ -237,24 +234,20 @@ warning. `lambda_c` accepts either a fixed positive number (default the
 theory scale `1.0`) or the string `"cv"`, which selects the constant
 **per fit** by cross-validating the Riesz loss over the KKT-feasible
 region (the desparsified-lasso / auto-DML standard), falling back to
-`1.0` when no grid penalty is feasible; one constant then serves both
-the
-[`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)
-point estimate and every bootstrap band effect (issue \#295). The
-default stays the fixed `1.0`; the overall-ATT coverage validated in
-Faletto (2025) is robust across the penalty values studied (a CV
-selector below the theory scale and a fixed constant above it,
-bracketing the default `1.0`). The simulator can generate the `p > NT`
-panels this needs (see the
+`1.0` when no grid penalty is feasible; one constant then serves every
+bootstrap band effect (issue \#295). The default stays the fixed `1.0`;
+the overall-ATT coverage validated in Faletto (2025) is robust across
+the penalty values studied (a CV selector below the theory scale and a
+fixed constant above it, bracketing the default `1.0`). The simulator
+can generate the `p > NT` panels this needs (see the
 [`simulateData()`](https://gregfaletto.github.io/fetwfePackage/reference/simulateData.md)
 documentation). `family = "event_study"` uses this desparsified path too
 in the high-dimensional regime, additionally carrying the per-unit
 propensity channel (the two-channel $`\Sigma_1 + \Sigma_2`$ bootstrap).
 In the high-dimensional regime the band is **centered on the debiased
-estimate** (the high-dimensional FETWFE theory correction, matching
-[`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md))
-rather than the post-selection bridge estimate, which would otherwise
-carry the selection bias. The desparsified path is
+estimate** (the high-dimensional FETWFE theory correction) rather than
+the post-selection bridge estimate, which would otherwise carry the
+selection bias. The desparsified path is
 [`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)-only
 *and* `method = "bootstrap"`-only, so it is one route out of four — and
 every other $`p \geq NT`$ combination falls back to the fixed-$`p`$
@@ -291,11 +284,7 @@ warning of issue \#304). And a `gls = FALSE` (`calc_ses = FALSE`) fit
 has no analytic standard errors, so `method = "analytic"` **errors**
 there rather than warning — `method = "bootstrap"` still works, because
 the desparsified band is built from the empirical per-unit influence
-function. See
-[`vignette("high_dimensional_vignette")`](https://gregfaletto.github.io/fetwfePackage/articles/high_dimensional_vignette.md)
-for
-[`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)
-and the accompanying high-dimensional diagnostics.
+function.
 
 ### Simultaneous bands are the default: the `ci_type` argument
 

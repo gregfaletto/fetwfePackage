@@ -77,11 +77,8 @@ zero-effect test</strong> — the sense in which <code><a href="../reference/fet
 <code>selected</code> flag is an implicit test of whether a cohort’s
 effect is truly zero.</p>
 <p>It is a companion to <code><a href="../articles/inference_vignette.html">vignette("inference_vignette")</a></code> (how
-the package’s standard errors are computed) and
-<code><a href="../articles/high_dimensional_vignette.html">vignette("high_dimensional_vignette")</a></code> (debiased inference
-when
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>≥</mo><mi>N</mi><mi>T</mi></mrow><annotation encoding="application/x-tex">p \geq NT</annotation></semantics></math>).
-We reuse that first vignette’s small running example:</p>
+the package’s standard errors are computed). We reuse that vignette’s
+small running example:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">2026</span><span class="op">)</span></span>
 <span><span class="va">sim_coefs</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/genCoefs.html">genCoefs</a></span><span class="op">(</span>G <span class="op">=</span> <span class="fl">3</span>, T <span class="op">=</span> <span class="fl">6</span>, d <span class="op">=</span> <span class="fl">2</span>, density <span class="op">=</span> <span class="fl">0.5</span>, eff_size <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
@@ -295,16 +292,16 @@ to Monte-Carlo error:</p>
 When the (full) design is high-dimensional — where the analytic Gram
 inverse need not exist, so there is no analytic sup-t band — the
 bootstrap automatically switches to the full-design
-<strong>desparsified</strong> construction of <code><a href="../reference/debiasedATT.html">debiasedATT()</a></code>
-(the high-dimensional FETWFE theory): each effect’s debiasing direction
-becomes a nodewise (<code>riesz_lasso</code>) relaxed inverse over the
-singular Gram, with the bridge residuals. This is <em>uniformly
-valid</em> (not post-selection) and is the only route to simultaneous
-bands in that regime. It is validated in simulation
-(<code><a href="../reference/fetwfe.html">fetwfe()</a></code> fits only): the scalar overall-ATT coverage
-(Theorem <code>debiased.highdim.thm</code>) and the family-wise
-<em>band</em> coverage (Theorem <code>debiased.highdim.joint.thm</code>,
-≈0.92 over the event-study family at the
+<strong>desparsified</strong> construction (the high-dimensional FETWFE
+theory): each effect’s debiasing direction becomes a nodewise
+(<code>riesz_lasso</code>) relaxed inverse over the singular Gram, with
+the bridge residuals. This is <em>uniformly valid</em> (not
+post-selection) and is the only route to simultaneous bands in that
+regime. It is validated in simulation (<code><a href="../reference/fetwfe.html">fetwfe()</a></code> fits only):
+the scalar overall-ATT coverage (Theorem
+<code>debiased.highdim.thm</code>) and the family-wise <em>band</em>
+coverage (Theorem <code>debiased.highdim.joint.thm</code>, ≈0.92 over
+the event-study family at the
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>&gt;</mo><mi>N</mi><mi>T</mi></mrow><annotation encoding="application/x-tex">p &gt; NT</annotation></semantics></math>
 anchor of Faletto 2025) are both near-nominal, so the returned object
 carries a <code>regime</code> field and per-effect
@@ -318,8 +315,7 @@ the theory scale <code>1.0</code>) or the string <code>"cv"</code>,
 which selects the constant <strong>per fit</strong> by cross-validating
 the Riesz loss over the KKT-feasible region (the desparsified-lasso /
 auto-DML standard), falling back to <code>1.0</code> when no grid
-penalty is feasible; one constant then serves both the
-<code><a href="../reference/debiasedATT.html">debiasedATT()</a></code> point estimate and every bootstrap band
+penalty is feasible; one constant then serves every bootstrap band
 effect (issue #295). The default stays the fixed <code>1.0</code>; the
 overall-ATT coverage validated in Faletto (2025) is robust across the
 penalty values studied (a CV selector below the theory scale and a fixed
@@ -332,11 +328,11 @@ propensity channel (the two-channel
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi mathvariant="normal">Σ</mi><mn>1</mn></msub><mo>+</mo><msub><mi mathvariant="normal">Σ</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">\Sigma_1 + \Sigma_2</annotation></semantics></math>
 bootstrap). In the high-dimensional regime the band is <strong>centered
 on the debiased estimate</strong> (the high-dimensional FETWFE theory
-correction, matching <code><a href="../reference/debiasedATT.html">debiasedATT()</a></code>) rather than the
-post-selection bridge estimate, which would otherwise carry the
-selection bias. The desparsified path is <code><a href="../reference/fetwfe.html">fetwfe()</a></code>-only
-<em>and</em> <code>method = "bootstrap"</code>-only, so it is one route
-out of four — and every other
+correction) rather than the post-selection bridge estimate, which would
+otherwise carry the selection bias. The desparsified path is
+<code><a href="../reference/fetwfe.html">fetwfe()</a></code>-only <em>and</em>
+<code>method = "bootstrap"</code>-only, so it is one route out of four —
+and every other
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>≥</mo><mi>N</mi><mi>T</mi></mrow><annotation encoding="application/x-tex">p \geq NT</annotation></semantics></math>
 combination falls back to the
 fixed-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>
@@ -370,10 +366,7 @@ condition (the “bridge selection is NOT consistent” warning of issue
 fit has no analytic standard errors, so <code>method = "analytic"</code>
 <strong>errors</strong> there rather than warning —
 <code>method = "bootstrap"</code> still works, because the desparsified
-band is built from the empirical per-unit influence function. See
-<code><a href="../articles/high_dimensional_vignette.html">vignette("high_dimensional_vignette")</a></code> for
-<code><a href="../reference/debiasedATT.html">debiasedATT()</a></code> and the accompanying high-dimensional
-diagnostics.</p>
+band is built from the empirical per-unit influence function.</p>
 </div>
 <div class="section level3">
 <h3 id="simultaneous-bands-are-the-default-the-ci_type-argument">Simultaneous bands are the default: the <code>ci_type</code>

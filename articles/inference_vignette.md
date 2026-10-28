@@ -20,16 +20,12 @@ so the discussion applies to all of them; we use
 [`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)
 in the running example.
 
-Two companion vignettes cover the rest of the package’s inference
-toolkit:
+A companion vignette covers the rest of the package’s inference toolkit:
 
 - [`vignette("simultaneous_cis_vignette")`](https://gregfaletto.github.io/fetwfePackage/articles/simultaneous_cis_vignette.md)
   — family-wise **simultaneous confidence bands**
   ([`simultaneousCIs()`](https://gregfaletto.github.io/fetwfePackage/reference/simultaneousCIs.md))
   and the selection-consistency **zero-effect test**.
-- [`vignette("high_dimensional_vignette")`](https://gregfaletto.github.io/fetwfePackage/articles/high_dimensional_vignette.md)
-  — **high-dimensional** ($`p \geq NT`$) debiased inference
-  ([`debiasedATT()`](https://gregfaletto.github.io/fetwfePackage/reference/debiasedATT.md)).
 
 ## 1. The headline: tight Gaussian CIs by default under (Ψ-IF)
 
