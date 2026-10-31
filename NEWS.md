@@ -1,5 +1,13 @@
 # NEWS
 
+## Version 1.10.1 (2026-10-31)
+
+- Changed the tests that compared two separately computed results exactly to
+  compare them at the default tolerance instead. Intel MKL BLAS does not
+  guarantee bitwise-identical results across runs, and two of these
+  comparisons failed the CRAN MKL check. No change to the package's code
+  (#541).
+
 ## Version 1.10.0 (2026-05-21)
 
 - CRAN release. Version 1.10.0 is the first CRAN release since 1.5.0; it
