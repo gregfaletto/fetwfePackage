@@ -78,21 +78,27 @@ export(twfeCovs)
 export(twfeCovsWithSimulatedData)
 import(glmnet)
 importFrom(Matrix,bdiag)
-importFrom(generics,augment)
-importFrom(generics,glance)
-importFrom(generics,tidy)
-importFrom(mvtnorm,GenzBretz)
-importFrom(mvtnorm,pmvnorm)
-importFrom(mvtnorm,qmvnorm)
-importFrom(stats,coef)
-importFrom(stats,lm)
-importFrom(stats,model.matrix)
-importFrom(stats,pnorm)
-importFrom(stats,predict)
-importFrom(stats,qnorm)
-importFrom(stats,rbinom)
-importFrom(stats,rmultinom)
-importFrom(stats,rnorm)
-importFrom(stats,runif)
-importFrom(stats,sd)
-importFrom(stats,setNames)
+importFrom(generics,
+  augment,
+  glance,
+  tidy
+)
+importFrom(mvtnorm,
+  GenzBretz,
+  pmvnorm,
+  qmvnorm
+)
+importFrom(stats,
+  coef,
+  lm,
+  model.matrix,
+  pnorm,
+  predict,
+  qnorm,
+  rbinom,
+  rmultinom,
+  rnorm,
+  runif,
+  sd,
+  setNames
+)
