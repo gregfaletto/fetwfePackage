@@ -4,6 +4,7 @@
 ^\.git$
 ^\.gitignore$
 ^\.gitattributes$
+^\.github$
 ^fetwfePackage\.Rproj$
 ^LICENSE\.md$
 ^CRAN-SUBMISSION$
