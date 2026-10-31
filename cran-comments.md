@@ -1,69 +1,35 @@
 # cran-comments.md
 
 **Package:** fetwfe
-**Version:** 1.10.0
-**Date:** 2026-05-21
+**Version:** 1.10.1
+**Date:** 2026-10-31
 
-This is a feature-and-bugfix update. The previous CRAN release is 1.5.0; the
-1.5.1-1.9.33 versions listed in `NEWS.md` are unreleased development.
+This is a patch release responding to CRAN's report of 2026-10-31 that
+fetwfe 1.10.0 fails the additional MKL check. It changes the tests and the
+version bookkeeping only; there is no change to the package's code.
 
-## What's new since 1.5.0
+- Changed the tests that compared two separately computed results exactly to
+  compare them at the default tolerance instead.
 
-### New functionality
-- `eventStudy()`, with `plot()` methods for the estimator classes, for
-  pooled event-time treatment-effect estimates and plots.
-- broom `tidy()`, `glance()`, and `augment()` methods for the estimator
-  outputs (and for `eventStudy()` and `getTes()`).
-- An experimental cluster-robust standard-error option (`se_type =
-  "cluster"`) on all four estimators; default behavior is unchanged.
-- An `allow_no_never_treated` argument that auto-truncates panels with no
-  never-treated units instead of erroring.
-- Per-cohort `P_value` columns, and `selected` columns for the bridge
-  estimators, with a vignette section on interpreting them.
-- S3 classes for the `betwfe()` and `getTes()` outputs; two new vignettes.
-
-### Bug fixes affecting numerical output
-- Most significant for existing users: the internal variance-component
-  estimator was corrected. It previously collapsed the unit-level variance
-  component to nearly zero, degenerating the GLS weighting step to the
-  identity; it is now estimated by REML. Both standard errors and point
-  estimates shift after this update on panels with non-negligible
-  unit-level variance. This is a bug fix, not an API change.
-- An off-by-one error in a variance-component Jacobian was corrected,
-  shifting `fetwfe()`'s reported overall standard error.
-- Smaller correctness fixes (e.g. `betwfe()` standard errors under partial
-  selection; cohort ordering in `catt_df`; column preservation in
-  `augment()`).
-
-### Internal
-- Extensive internal hardening since 1.5.0 — object and method-entry
-  validators, a source-tree reorganization, refactors removing duplicated
-  logic, and expanded test coverage — with no user-facing behavior change.
+For both failing comparisons (`test-twfeCovs.R:1030` and `:1031` in 1.10.0),
+CRAN's MKL log reads "Objects equal but not identical". The tests run under
+testthat edition 2, where `expect_identical()` prints that message exactly
+when the comparison `expect_equal()` makes finds the two objects equal, so on
+the run CRAN observed every rewritten comparison passes. Later runs rest on a
+local margin: on R's reference BLAS, perturbing one of the two compared
+results by a relative 1e-14 fails every rewritten comparison as 1.10.0 wrote
+it and none as 1.10.1 writes it, while a relative 1e-6 perturbation still
+fails every rewritten comparison. This margin was measured locally; CRAN's MKL
+environment was not reproduced.
 
 ## Test environments
-- Local: macOS 15.5 (Apple Silicon), R 4.5.0.
-- win-builder: R-devel, via `devtools::check_win_devel()`.
-- macOS builder: R-release, via `devtools::check_mac_release()`.
+- Local: macOS 26.6.2 (Apple Silicon), R 4.5.0, R's reference BLAS.
 
 ## R CMD check results
 0 errors | 0 warnings | 0 notes.
 
-A local `R CMD check --as-cran` additionally reports the environmental NOTE
-"unable to verify current time"; this arises only because the local check
-machine cannot reach a time server, and does not occur on CRAN's build
-infrastructure.
-
 ## Reverse dependencies
 `fetwfe` has no reverse dependencies on CRAN.
-
-## Dependency changes since 1.5.0
-- `generics` added to `Imports` (used by the new broom methods).
-- `broom`, `ggplot2`, and `lme4` added to `Suggests`.
-- `expm` moved from `Imports` to `Suggests`.
-
-## Other notes
-- No compiled code; the package is pure R. No new system requirements.
-- Requires R (>= 4.1.0).
 
 –––
 Thank you for your time reviewing this submission.
