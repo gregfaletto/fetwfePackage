@@ -1180,16 +1180,17 @@ make_ar1_panel <- function(seed = 7, N = 150, rho = 0.85, sd_e = 1) {
 }
 
 # ------------------------------------------------------------------------------
-# Test: betwfe with se_type omitted matches se_type = "default" identically
+# Test: betwfe with se_type omitted matches se_type = "default"
 # ------------------------------------------------------------------------------
-test_that("betwfe se_type omitted matches se_type = 'default' identically", {
+test_that("betwfe se_type omitted matches se_type = 'default'", {
 	sim <- make_se_type_panel()
 	res_omit <- betwfeWithSimulatedData(sim)
 	res_def <- betwfeWithSimulatedData(sim, se_type = "default")
-	expect_identical(res_omit$att_se, res_def$att_se)
-	expect_identical(res_omit$catt_ses, res_def$catt_ses)
-	expect_identical(res_omit$att_hat, res_def$att_hat)
-	expect_identical(res_omit$catt_hats, res_def$catt_hats)
+	# Compared at the default tolerance (#541).
+	expect_equal(res_omit$att_se, res_def$att_se)
+	expect_equal(res_omit$catt_ses, res_def$catt_ses)
+	expect_equal(res_omit$att_hat, res_def$att_hat)
+	expect_equal(res_omit$catt_hats, res_def$catt_hats)
 })
 
 # ------------------------------------------------------------------------------

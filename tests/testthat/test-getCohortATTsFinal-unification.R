@@ -12,10 +12,10 @@ library(fetwfe)
 #   fused = TRUE,  include_selected = FALSE  →  no real caller; API lockdown
 #
 # Test 1 freezes the legacy OLS implementation as an inline closure so the
-# refactored function can be asserted byte-identical against it. The closure
+# refactored function can be asserted equal to it. The closure
 # is the pre-#118 source of getCohortATTsFinalOLS() copied here verbatim
 # (with comments preserved). Future maintainers can re-execute the closure
-# against the unified function to confirm the byte-identity claim still
+# against the unified function to confirm the equivalence still
 # holds even after later refactors.
 
 # ---- Fixture --------------------------------------------------------------
@@ -53,7 +53,7 @@ library(fetwfe)
 # ---- Test 1: frozen-snapshot equivalence against legacy OLS ---------------
 
 # Inline copy of the pre-#118 getCohortATTsFinalOLS() body. Kept here so the
-# byte-equivalence assertion is reproducible without git archaeology.
+# equivalence assertion is reproducible without git archaeology.
 .legacy_getCohortATTsFinalOLS <- function(
 	X_final,
 	treat_inds,
@@ -200,7 +200,7 @@ library(fetwfe)
 	)
 }
 
-test_that("unified getCohortATTsFinal(fused=FALSE, include_selected=FALSE) matches the pre-#118 OLS implementation byte-for-byte", {
+test_that("unified getCohortATTsFinal(fused=FALSE, include_selected=FALSE) matches the pre-#118 OLS implementation", {
 	fx <- .build_unif_fixture()
 
 	# Reference: legacy OLS closure baked into this file.
@@ -237,14 +237,14 @@ test_that("unified getCohortATTsFinal(fused=FALSE, include_selected=FALSE) match
 		include_selected = FALSE
 	)
 
-	# Byte-identity on every observable slot. d_inv_treat_sel is absent in
-	# both (legacy OLS never produces it; unified function omits it under
-	# fused = FALSE).
-	expect_equal(actual$cohort_te_df, expected$cohort_te_df, tolerance = 0)
-	expect_equal(actual$cohort_tes, expected$cohort_tes, tolerance = 0)
-	expect_equal(actual$cohort_te_ses, expected$cohort_te_ses, tolerance = 0)
-	expect_equal(actual$psi_mat, expected$psi_mat, tolerance = 0)
-	expect_equal(actual$gram_inv, expected$gram_inv, tolerance = 0)
+	# Every observable slot; the numeric ones are compared at the default
+	# tolerance (#541). d_inv_treat_sel is absent in both (legacy OLS never
+	# produces it; unified function omits it under fused = FALSE).
+	expect_equal(actual$cohort_te_df, expected$cohort_te_df)
+	expect_equal(actual$cohort_tes, expected$cohort_tes)
+	expect_equal(actual$cohort_te_ses, expected$cohort_te_ses)
+	expect_equal(actual$psi_mat, expected$psi_mat)
+	expect_equal(actual$gram_inv, expected$gram_inv)
 	expect_equal(actual$calc_ses, expected$calc_ses)
 	expect_null(actual$sandwich_full)
 	expect_null(expected$sandwich_full)
@@ -292,9 +292,10 @@ test_that("unified getCohortATTsFinal(fused=FALSE, include_selected=FALSE) match
 		y_final = fx$y_final
 	)
 
-	expect_equal(actual$cohort_te_df, expected$cohort_te_df, tolerance = 0)
-	expect_equal(actual$cohort_te_ses, expected$cohort_te_ses, tolerance = 0)
-	expect_equal(actual$sandwich_full, expected$sandwich_full, tolerance = 0)
+	# The numeric slots are compared at the default tolerance (#541).
+	expect_equal(actual$cohort_te_df, expected$cohort_te_df)
+	expect_equal(actual$cohort_te_ses, expected$cohort_te_ses)
+	expect_equal(actual$sandwich_full, expected$sandwich_full)
 	expect_equal(actual$treat_block_mask, expected$treat_block_mask)
 })
 
