@@ -19,14 +19,28 @@ the run CRAN observed every rewritten comparison passes. Later runs rest on a
 local margin: on R's reference BLAS, perturbing one of the two compared
 results by a relative 1e-14 fails every rewritten comparison as 1.10.0 wrote
 it and none as 1.10.1 writes it, while a relative 1e-6 perturbation still
-fails every rewritten comparison. This margin was measured locally; CRAN's MKL
-environment was not reproduced.
+fails every rewritten comparison. Computing one side of each comparison with
+R's own matrix products instead of the BLAS (`options(matprod = "internal")`)
+fails 16 of the 24 rewritten comparisons as 1.10.0 wrote them and none as
+1.10.1 writes them. This margin was measured locally; CRAN's MKL environment
+was not reproduced.
 
 ## Test environments
 - Local: macOS 26.6.2 (Apple Silicon), R 4.5.0, R's reference BLAS.
+- R-hub, 2026-11-01, `R CMD check --as-cran` with R-devel on each platform:
+  - `mkl`: Fedora Linux 44, R-devel r90820, serial Intel MKL 2025.3
+    (`/opt/intel/oneapi/mkl/2025.3/lib/libmkl_gf_lp64.so.2`);
+  - `linux`: Ubuntu 24.04.5 LTS, R-devel r90805;
+  - `windows`: Windows Server 2025 (build 26100), R-devel r90820 (ucrt);
+  - `macos`: macOS Sequoia 15.7.9 (x86_64), R-devel r90820.
+
+R-hub's MKL is 2025.3, not the 2026.2.0 of CRAN's check, and it did not
+reproduce the failure: 1.10.0's own sources also pass on the `mkl` platform,
+in a control run on the same image. So the R-hub runs are a smoke test on
+R-devel, not evidence about MKL.
 
 ## R CMD check results
-0 errors | 0 warnings | 0 notes.
+0 errors | 0 warnings | 0 notes, locally and on each R-hub platform.
 
 ## Reverse dependencies
 `fetwfe` has no reverse dependencies on CRAN.
