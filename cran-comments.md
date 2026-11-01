@@ -12,10 +12,11 @@ version bookkeeping only; there is no change to the package's code.
   compare them at the default tolerance instead.
 
 For both failing comparisons (`test-twfeCovs.R:1030` and `:1031` in 1.10.0),
-CRAN's MKL log reads "Objects equal but not identical". The tests run under
-testthat edition 2, where `expect_identical()` prints that message exactly
-when the comparison `expect_equal()` makes finds the two objects equal, so on
-the run CRAN observed every rewritten comparison passes. Later runs rest on a
+CRAN's MKL log reads "Objects equal but not identical". The rewritten tests run
+under testthat edition 2, where `expect_identical()` prints that message
+exactly when the comparison `expect_equal()` makes finds the two objects
+equal, so every rewritten comparison would pass on the values CRAN's run
+produced. Later runs rest on a
 local margin: on R's reference BLAS, perturbing one of the two compared
 results by a relative 1e-14 fails every rewritten comparison as 1.10.0 wrote
 it and none as 1.10.1 writes it, while a relative 1e-6 perturbation still
