@@ -28,7 +28,8 @@ was not reproduced.
 
 ## Test environments
 - Local: macOS 26.6.2 (Apple Silicon), R 4.5.0, R's reference BLAS.
-- R-hub, 2026-11-01, `R CMD check --as-cran` with R-devel on each platform:
+- R-hub, 2026-11-01, `R CMD check --as-cran --no-manual` with R-devel on each
+  platform:
   - `mkl`: Fedora Linux 44, R-devel r90820, serial Intel MKL 2025.3
     (`/opt/intel/oneapi/mkl/2025.3/lib/libmkl_gf_lp64.so.2`);
   - `linux`: Ubuntu 24.04.5 LTS, R-devel r90805;
@@ -41,7 +42,8 @@ in a control run on the same image. So the R-hub runs are a smoke test on
 R-devel, not evidence about MKL.
 
 ## R CMD check results
-0 errors | 0 warnings | 0 notes, locally and on each R-hub platform.
+0 errors | 0 warnings | 0 notes, locally with `devtools::check()` and on each
+R-hub platform. Neither builds the PDF manual or runs CRAN's incoming checks.
 
 ## Reverse dependencies
 `fetwfe` has no reverse dependencies on CRAN.
