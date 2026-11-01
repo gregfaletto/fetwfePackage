@@ -2,7 +2,7 @@
 
 **Package:** fetwfe
 **Version:** 1.10.1
-**Date:** 2026-10-31
+**Date:** 2026-11-01
 
 This is a patch release responding to CRAN's report of 2026-10-31 that
 fetwfe 1.10.0 fails the additional MKL check. It changes the tests and the
