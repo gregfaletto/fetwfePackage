@@ -240,8 +240,7 @@ test_that(".assemble_cluster_robust_sandwich: NULL default produces the same out
 # `solve(crossprod(X_S_centered))` without a tryCatch, so a future caller
 # routing a rank-deficient selected support into the cluster path would
 # get a baffling Lapack stack trace instead of the helpful message.
-# This test exercises the new tryCatch branch by constructing an X_S with
-# duplicated columns (guaranteed rank-deficient).
+# This test exercises the new tryCatch branch.
 # ------------------------------------------------------------------------------
 test_that(".compute_cluster_robust_sandwich emits helpful error on rank-deficient X_S", {
 	set.seed(20260519)
@@ -253,10 +252,7 @@ test_that(".compute_cluster_robust_sandwich emits helpful error on rank-deficien
 		nrow = N * T,
 		ncol = p_S
 	)
-	# Force rank deficiency: column 4 = column 2. crossprod() is then
-	# exactly singular and solve() would throw a Lapack error in the
-	# pre-tryCatch implementation.
-	X_S_full_rank[, 4] <- X_S_full_rank[, 2]
+	X_S_full_rank[, 4] <- 1
 	residuals <- rnorm(N * T)
 
 	e <- tryCatch(
