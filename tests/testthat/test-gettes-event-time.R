@@ -2,9 +2,7 @@
 # `.true_event_time_effects()` helper (#388). The load-bearing test binds the
 # helper to the estimator's `eventStudy()` estimand. As of #389 the two estimator
 # event-study loops (`.event_study_fetwfe()` / `.event_study_etwfe_betwfe()`) are
-# folded onto this helper (single source of truth); the byte-exact test below
-# locks that `eventStudy()`'s estimand IS the helper's output for all three
-# estimators.
+# folded onto this helper (single source of truth).
 
 # Helper: the event-time effects the estimator targets, computed from a fit's
 # estimated cells + resolved cohort structure.
@@ -168,14 +166,10 @@ test_that(".true_event_time_effects returns NA at an event time no cohort reache
 	expect_true(is.na(res[["4"]]))
 })
 
-test_that(".true_event_time_effects() single-sources eventStudy()'s estimand byte-exactly (fetwfe/etwfe/betwfe, #389)", {
+test_that(".true_event_time_effects() single-sources eventStudy()'s estimand (fetwfe/etwfe/betwfe, #389)", {
 	# After #389 both estimator loops compute their point estimates by calling
-	# `.true_event_time_effects()` (with `empty_value = 0`), using the SAME
-	# sparse-weight crossprod form, so `eventStudy(fit)$estimate` equals the
-	# helper's output BIT-FOR-BIT. Loop seeds 1-6: whether the old inline `sum`
-	# form diverged from `crossprod` is BLAS/DGP-dependent (e.g. betwfe seed 3
-	# does not diverge on some platforms), so a single pinned seed could make an
-	# estimator's assertion vacuous; looping guarantees the mutation-check bites.
+	# `.true_event_time_effects()` (with `empty_value = 0`), so
+	# `eventStudy(fit)$estimate` equals the helper's output.
 	for (seed in 1:6) {
 		coefs <- genCoefs(
 			G = 3,
@@ -211,11 +205,35 @@ test_that(".true_event_time_effects() single-sources eventStudy()'s estimand byt
 				T = fit$T,
 				empty_value = 0
 			))
-			# expect_identical (not expect_equal): byte-for-byte is the point.
 			# unname() is load-bearing -- a named vector would flip the data
-			# frame's row.names, failing df-level identical().
-			expect_identical(est_via_helper, eventStudy(fit)$estimate)
+			# frame's row.names.
+			expect_equal(est_via_helper, eventStudy(fit)$estimate)
 		}
+	}
+})
+
+test_that("eventStudy()'s estimator loops compute their estimates by calling .true_event_time_effects() (#389)", {
+	for (fn_name in c(".event_study_etwfe_betwfe", ".event_study_fetwfe")) {
+		fn <- get(fn_name, envir = asNamespace("fetwfe"))
+		assignments <- list()
+		.ns_walk_ast(body(fn), function(node, ancestors) {
+			if (
+				.ns_is_call_to(node, c("<-", "=", "<<-")) &&
+					.ns_subtree_has_symbol(node[[2]], "estimates")
+			) {
+				assignments[[length(assignments) + 1L]] <<- node
+			}
+		})
+		expect_equal(length(assignments), 1L, info = fn_name)
+		calls_helper <- FALSE
+		if (length(assignments) == 1L) {
+			.ns_walk_ast(assignments[[1]][[3]], function(node, ancestors) {
+				if (.ns_is_call_to(node, ".true_event_time_effects")) {
+					calls_helper <<- TRUE
+				}
+			})
+		}
+		expect_true(calls_helper, info = fn_name)
 	}
 })
 
