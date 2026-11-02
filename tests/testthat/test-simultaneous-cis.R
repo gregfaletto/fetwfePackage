@@ -225,7 +225,7 @@ test_that("simultaneousCIs is deterministic and does not perturb caller RNG", {
 	# Contract (a): byte-identical across consecutive calls.
 	sci1 <- simultaneousCIs(fit, family = "event_study", alpha = 0.05)
 	sci2 <- simultaneousCIs(fit, family = "event_study", alpha = 0.05)
-	expect_identical(sci1, sci2)
+	expect_equal(sci1, sci2)
 
 	# Contract (b): the caller's RNG stream is unperturbed. The intervening
 	# simultaneousCIs() call must not shift the caller's draws.

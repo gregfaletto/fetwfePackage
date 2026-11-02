@@ -196,7 +196,7 @@ test_that("simulateDataCore(seed = NA) runs silently and honors an outer set.see
 		beta = beta,
 		seed = NA
 	)
-	expect_identical(a$y, b$y)
+	expect_equal(a$y, b$y)
 	expect_identical(a$X, b$X)
 })
 

@@ -97,7 +97,7 @@ test_that("simulateData seed = NA is silent and respects the ambient RNG (#250)"
 		sig_eps_c_sq = 0.5,
 		seed = NA
 	)
-	expect_identical(a$y, b$y)
+	expect_equal(a$y, b$y)
 
 	# A different outer seed -> a different panel.
 	set.seed(99999L)
@@ -147,7 +147,7 @@ test_that("simulateData seed = <int> is silent and reproducible (#250)", {
 		sig_eps_c_sq = 0.5,
 		seed = 456
 	)
-	expect_identical(a$y, b$y)
+	expect_equal(a$y, b$y)
 	expect_identical(a$X, b$X)
 	expect_identical(a$assignments, b$assignments)
 

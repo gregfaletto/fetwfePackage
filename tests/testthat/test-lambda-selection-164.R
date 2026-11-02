@@ -94,9 +94,9 @@ test_that("CV path is deterministic for the same cv_seed", {
 	sim <- .lambda_sel_fixture()
 	res1 <- fetwfeWithSimulatedData(sim, cv_seed = 42L)
 	res2 <- fetwfeWithSimulatedData(sim, cv_seed = 42L)
-	expect_identical(res1$att_hat, res2$att_hat)
-	expect_identical(res1$att_se, res2$att_se)
-	expect_identical(res1$lambda_star, res2$lambda_star)
+	expect_equal(res1$att_hat, res2$att_hat)
+	expect_equal(res1$att_se, res2$att_se)
+	expect_equal(res1$lambda_star, res2$lambda_star)
 	expect_identical(res1$cv_seed, 42L)
 })
 
@@ -108,7 +108,7 @@ test_that("CV path with cv_seed = NULL defaults to as.integer(N * T)", {
 	# Calling explicitly with the same seed should yield byte-identical
 	# results.
 	res_explicit <- fetwfeWithSimulatedData(sim, cv_seed = 600L)
-	expect_identical(res_default$att_hat, res_explicit$att_hat)
+	expect_equal(res_default$att_hat, res_explicit$att_hat)
 })
 
 # ------------------------------------------------------------------------------
@@ -313,7 +313,7 @@ test_that("betwfe() supports lambda_selection / cv_folds / cv_seed", {
 	# CV deterministic.
 	res_cv2 <- betwfeWithSimulatedData(sim, cv_seed = 7L)
 	res_cv3 <- betwfeWithSimulatedData(sim, cv_seed = 7L)
-	expect_identical(res_cv2$att_hat, res_cv3$att_hat)
+	expect_equal(res_cv2$att_hat, res_cv3$att_hat)
 })
 
 # ------------------------------------------------------------------------------

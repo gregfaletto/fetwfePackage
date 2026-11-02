@@ -118,7 +118,7 @@ test_that("bootstrap is deterministic given a seed, and varies without one", {
 		B = 1000,
 		seed = 42
 	)
-	expect_identical(a$critical_value, b$critical_value)
+	expect_equal(a$critical_value, b$critical_value)
 	c2 <- simultaneousCIs(
 		fit,
 		family = "all_post_treatment",

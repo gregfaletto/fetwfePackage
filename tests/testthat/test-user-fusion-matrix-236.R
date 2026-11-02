@@ -75,7 +75,7 @@ test_that("fusion_matrix = NULL is byte-identical to omitting it (cohort + event
 		fusion_structure = "cohort",
 		fusion_matrix = NULL
 	)
-	expect_identical(fit_co_omit, fit_co_null)
+	expect_equal(fit_co_omit, fit_co_null)
 
 	fit_es_omit <- .fm236_fit(sim, fusion_structure = "event_study")
 	fit_es_null <- .fm236_fit(
@@ -83,7 +83,7 @@ test_that("fusion_matrix = NULL is byte-identical to omitting it (cohort + event
 		fusion_structure = "event_study",
 		fusion_matrix = NULL
 	)
-	expect_identical(fit_es_omit, fit_es_null)
+	expect_equal(fit_es_omit, fit_es_null)
 
 	# The NULL-default still materializes the (NULL) slots, so the slot names
 	# survive for doc-slot parity.

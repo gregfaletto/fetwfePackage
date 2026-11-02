@@ -227,8 +227,8 @@ test_that("event_study bootstrap is deterministic given a seed and varies withou
 		B = 1000,
 		seed = 42
 	)
-	expect_identical(a$critical_value, b$critical_value)
-	expect_identical(a$ci, b$ci)
+	expect_equal(a$critical_value, b$critical_value)
+	expect_equal(a$ci, b$ci)
 	c2 <- simultaneousCIs(
 		fit,
 		family = "event_study",

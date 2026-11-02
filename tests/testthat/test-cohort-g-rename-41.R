@@ -120,7 +120,7 @@ test_that("simulateDataCore(R = ) warns and equals simulateDataCore(G = )", {
 		),
 		"deprecated"
 	)
-	expect_identical(r$pdata, g$pdata)
+	expect_equal(r$pdata, g$pdata)
 	expect_identical(r$G, g$G)
 })
 

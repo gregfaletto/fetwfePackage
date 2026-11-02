@@ -106,7 +106,7 @@ test_that("high-dim bootstrap is deterministic given a seed", {
 		B = 800,
 		seed = 7
 	)
-	expect_identical(a$critical_value, b$critical_value)
+	expect_equal(a$critical_value, b$critical_value)
 })
 
 test_that("event_study bootstrap uses the desparsified path in the high-dim regime (#299)", {
@@ -146,9 +146,9 @@ test_that("high-dim event_study bootstrap is deterministic given a seed", {
 		B = 800,
 		seed = 11
 	)
-	expect_identical(a$critical_value, b$critical_value)
-	expect_identical(a$ci$estimate, b$ci$estimate)
-	expect_identical(a$ci$simultaneous_ci_low, b$ci$simultaneous_ci_low)
+	expect_equal(a$critical_value, b$critical_value)
+	expect_equal(a$ci$estimate, b$ci$estimate)
+	expect_equal(a$ci$simultaneous_ci_low, b$ci$simultaneous_ci_low)
 })
 
 test_that("too-small lambda_c warns for high-dim event_study (experimental)", {

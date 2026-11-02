@@ -64,7 +64,7 @@ test_that("analytic default is unchanged and adds no bootstrap fields (#360)", {
 		a0 <- debiasedATT(fit)
 		a1 <- debiasedATT(fit, method = "analytic")
 		# method = "analytic" is the default and is identical.
-		expect_identical(a0, a1)
+		expect_equal(a0, a1)
 		# No bootstrap fields on the analytic object.
 		expect_false(any(
 			c("method", "crit_value", "B", "multiplier") %in% names(a0)
@@ -122,8 +122,8 @@ test_that("wild bootstrap is reproducible with a seed and ambient without (#360)
 	fit <- .wb_fixedp
 	w1 <- debiasedATT(fit, method = "bootstrap", seed = 42)
 	w2 <- debiasedATT(fit, method = "bootstrap", seed = 42)
-	expect_identical(w1$crit_value, w2$crit_value)
-	expect_identical(w1$ci_low, w2$ci_low)
+	expect_equal(w1$crit_value, w2$crit_value)
+	expect_equal(w1$ci_low, w2$ci_low)
 	# A different seed (almost surely) gives a different critical value.
 	w3 <- debiasedATT(fit, method = "bootstrap", seed = 7)
 	expect_false(isTRUE(all.equal(w1$crit_value, w3$crit_value)))

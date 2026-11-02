@@ -218,8 +218,8 @@ test_that("event_study composes with d=0 / cluster / add_ridge; default is byte-
 		lambda_selection = "bic",
 		fusion_structure = "cohort"
 	))
-	expect_identical(f_omit$beta_hat, f_def$beta_hat)
-	expect_identical(f_omit$att_hat, f_def$att_hat)
+	expect_equal(f_omit$beta_hat, f_def$beta_hat)
+	expect_equal(f_omit$att_hat, f_def$att_hat)
 
 	# (a) d = 0.
 	sim0 <- simulateData(

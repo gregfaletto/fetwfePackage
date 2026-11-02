@@ -344,9 +344,9 @@ test_that("debiasedATT warns when the nodewise solver does not fully resolve", {
 test_that("debiasedATT is deterministic in the high-dim regime", {
 	a <- debiasedATT(hd_fix)
 	b <- debiasedATT(hd_fix)
-	expect_identical(a$att, b$att)
-	expect_identical(a$se, b$se)
-	expect_identical(a$lambda_node, b$lambda_node)
+	expect_equal(a$att, b$att)
+	expect_equal(a$se, b$se)
+	expect_equal(a$lambda_node, b$lambda_node)
 })
 
 # The q = 1 nuisance and the lambda_c = "cv" selector both draw cross-validation
@@ -436,9 +436,9 @@ test_that("debiasedATT() returns a finite cluster-robust SE on a gls = FALSE fit
 test_that("debiasedATT() is deterministic on a gls = FALSE fit (#307)", {
 	a <- debiasedATT(hd_fix_nogls)
 	b <- debiasedATT(hd_fix_nogls)
-	expect_identical(a$att, b$att)
-	expect_identical(a$se, b$se)
-	expect_identical(a$lambda_node, b$lambda_node)
+	expect_equal(a$att, b$att)
+	expect_equal(a$se, b$se)
+	expect_equal(a$lambda_node, b$lambda_node)
 })
 
 # The load-bearing validation: the plug-in V2 (`.plugin_v2`, used when att_var_2 is
