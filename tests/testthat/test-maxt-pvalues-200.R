@@ -195,7 +195,7 @@ test_that("overall-ATT p_value (K=1) stays the pointwise Wald value", {
 })
 
 # ---------------------------------------------------------------------------
-# 8. Determinism: repeated calls give byte-identical adjusted p-values.
+# 8. Determinism.
 # ---------------------------------------------------------------------------
 test_that("adjusted p-values are deterministic across calls", {
 	skip_if_not_installed("mvtnorm")

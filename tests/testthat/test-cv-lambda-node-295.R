@@ -144,10 +144,8 @@ test_that(".cv_lambda_node bails feasible points whose fold solves don't converg
 
 test_that(".cv_lambda_node selection is invariant to the fold cap on a normal fit (#384 no-op)", {
 	s <- .cv295_synth()
-	# A converged nodewise solve is identical regardless of the cap, and this fit's
-	# fold solves converge in far fewer than 100 sweeps -- so the selected lambda_c and
-	# every `cv_loss` are byte-identical across a wide range of `cv_fold_max_iter`. The
-	# guard is a no-op for normal fits; only pathological non-converging folds change.
+	# This fit's fold solves converge in far fewer than 100 sweeps. The guard is a
+	# no-op for normal fits; only pathological non-converging folds change.
 	base <- .cv_lambda_node(s$Sig, s$a, s$X, s$N_units, s$T)
 	for (cap in c(500L, 5000L, 20000L)) {
 		r <- .cv_lambda_node(
@@ -302,7 +300,7 @@ test_that("point estimate and bootstrap band share one CV constant (#295)", {
 
 test_that("the fixed lambda_c escape hatch is unchanged by the cv feature", {
 	# Selecting the (formerly only) fixed constant explicitly still reports
-	# "fixed" and reproduces the default path byte-for-byte.
+	# "fixed" and reproduces the default path.
 	d_default <- debiasedATT(hd295)
 	d_fixed1 <- debiasedATT(hd295, lambda_c = 1.0)
 	expect_identical(d_fixed1$lambda_c_selection, "fixed")

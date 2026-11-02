@@ -11,12 +11,8 @@ library(fetwfe)
 #   fused = FALSE, include_selected = TRUE   →  BETWFE
 #   fused = TRUE,  include_selected = FALSE  →  no real caller; API lockdown
 #
-# Test 1 freezes the legacy OLS implementation as an inline closure so the
-# refactored function can be asserted byte-identical against it. The closure
-# is the pre-#118 source of getCohortATTsFinalOLS() copied here verbatim
-# (with comments preserved). Future maintainers can re-execute the closure
-# against the unified function to confirm the byte-identity claim still
-# holds even after later refactors.
+# The closure is the pre-#118 source of getCohortATTsFinalOLS() copied here
+# verbatim (with comments preserved).
 
 # ---- Fixture --------------------------------------------------------------
 
@@ -53,7 +49,7 @@ library(fetwfe)
 # ---- Test 1: frozen-snapshot equivalence against legacy OLS ---------------
 
 # Inline copy of the pre-#118 getCohortATTsFinalOLS() body. Kept here so the
-# byte-equivalence assertion is reproducible without git archaeology.
+# equivalence assertion is reproducible without git archaeology.
 .legacy_getCohortATTsFinalOLS <- function(
 	X_final,
 	treat_inds,
@@ -201,7 +197,7 @@ library(fetwfe)
 	)
 }
 
-test_that("unified getCohortATTsFinal(fused=FALSE, include_selected=FALSE) matches the pre-#118 OLS implementation byte-for-byte", {
+test_that("unified getCohortATTsFinal(fused=FALSE, include_selected=FALSE) matches the pre-#118 OLS implementation", {
 	fx <- .build_unif_fixture()
 
 	# Reference: legacy OLS closure baked into this file.
@@ -238,9 +234,8 @@ test_that("unified getCohortATTsFinal(fused=FALSE, include_selected=FALSE) match
 		include_selected = FALSE
 	)
 
-	# Byte-identity on every observable slot. d_inv_treat_sel is absent in
-	# both (legacy OLS never produces it; unified function omits it under
-	# fused = FALSE).
+	# d_inv_treat_sel is absent in both (legacy OLS never produces it; unified
+	# function omits it under fused = FALSE).
 	expect_equal(actual$cohort_te_df, expected$cohort_te_df, tolerance = 1e-10)
 	expect_equal(
 		log(actual$cohort_te_df$p_value),

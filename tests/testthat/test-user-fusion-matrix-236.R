@@ -9,7 +9,7 @@ library(fetwfe)
 # the access-time accessors (eventStudy() / simultaneousCIs()) reuse it.
 #
 # Headline guarantee: feeding the event-study built-in's forward D_N as a custom
-# matrix reproduces the `fusion_structure = "event_study"` fit byte-identically.
+# matrix reproduces the `fusion_structure = "event_study"` fit.
 #
 # The fixture below is DISCRIMINATING (per the plan-review finding): its selected
 # treatment support hits treatment columns where the cohort and event-study
@@ -33,7 +33,7 @@ library(fetwfe)
 		seed = 1
 	)
 	set.seed(101)
-	# Byte-exact pin (#250): the previous simulateData() reused coefs$seed,
+	# Pin (#250): the previous simulateData() reused coefs$seed,
 	# i.e. drew with set.seed(1), so the preceding set.seed(101) never
 	# governed this panel. Pin seed = 1 to reproduce the original draw.
 	simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5, seed = 1)
@@ -60,12 +60,12 @@ library(fetwfe)
 }
 
 # ------------------------------------------------------------------------------
-# 1. NULL no-op: fusion_matrix = NULL is byte-identical to omitting it, under
-#    both fusion_structure settings. (Choke-point else branch unchanged; every
-#    threaded d_inv_treat = NULL default leaves existing calls byte-identical.)
+# 1. NULL no-op: fusion_matrix = NULL, under both fusion_structure settings.
+#    (Choke-point else branch unchanged; every threaded d_inv_treat = NULL
+#    default leaves existing calls byte-identical.)
 # ------------------------------------------------------------------------------
 
-test_that("fusion_matrix = NULL is byte-identical to omitting it (cohort + event_study)", {
+test_that("fusion_matrix = NULL matches omitting it (cohort + event_study)", {
 	skip_on_cran()
 	sim <- .fm236_sim()
 
@@ -96,12 +96,12 @@ test_that("fusion_matrix = NULL is byte-identical to omitting it (cohort + event
 # ------------------------------------------------------------------------------
 # 2. Headline cross-check: a custom D_N equal to the event-study built-in's
 #    forward matrix, supplied with fusion_structure = "cohort", reproduces the
-#    fusion_structure = "event_study" fit byte-identically -- including the
+#    fusion_structure = "event_study" fit -- including the
 #    SE/CI columns of eventStudy() / simultaneousCIs(), which exercise the
 #    accessor-time stored-slot read.
 # ------------------------------------------------------------------------------
 
-test_that("custom event-study D_N reproduces the event_study fit byte-identically", {
+test_that("custom event-study D_N reproduces the event_study fit", {
 	skip_on_cran()
 	sim <- .fm236_sim()
 
@@ -327,11 +327,10 @@ test_that("a non-default but well-conditioned fusion_matrix still fits end-to-en
 })
 
 # ------------------------------------------------------------------------------
-# 5. add_ridge EXACT reproduction. add_ridge = TRUE is the only path that builds
-#    the FULL inverse-fusion matrix (genFullInvFusionTransformMat), so this
-#    proves the custom block reaches the ridge-penalty rows: a custom
+# 5. add_ridge reproduction. add_ridge = TRUE is the only path that builds
+#    the FULL inverse-fusion matrix (genFullInvFusionTransformMat): a custom
 #    event-study D_N with add_ridge = TRUE reproduces the add_ridge = TRUE
-#    event_study fit byte-identically.
+#    event_study fit.
 # ------------------------------------------------------------------------------
 
 test_that("add_ridge = TRUE with a custom event-study D_N reproduces the add_ridge event_study fit", {

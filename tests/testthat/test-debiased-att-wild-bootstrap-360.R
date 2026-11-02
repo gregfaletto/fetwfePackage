@@ -10,8 +10,7 @@ library(fetwfe)
 # value changes, and it is FLOORED at qnorm(1 - alpha/2) (#363) so the interval is
 # never narrower than the analytic Wald interval -- this is NOT a few-clusters
 # remedy (an unrestricted no-refit score bootstrap narrows below the Gaussian
-# under heterogeneous cluster influence). Default method = "analytic" is
-# byte-identical to the previous behavior.
+# under heterogeneous cluster influence).
 # ------------------------------------------------------------------------------
 
 # Single-sample fixtures (the wild bootstrap requires single-sample fits;
@@ -63,7 +62,7 @@ test_that("analytic default is unchanged and adds no bootstrap fields (#360)", {
 	for (fit in list(.wb_fixedp, .wb_highdim)) {
 		a0 <- debiasedATT(fit)
 		a1 <- debiasedATT(fit, method = "analytic")
-		# method = "analytic" is the default and is identical.
+		# method = "analytic" is the default.
 		expect_equal(a0, a1)
 		# No bootstrap fields on the analytic object.
 		expect_false(any(

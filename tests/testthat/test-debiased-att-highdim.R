@@ -294,8 +294,7 @@ test_that("the high-dim branch is load-bearing: the fixed-p inverse explodes on 
 	# N = clusters scaling, and the score/correction formula through the accessor.
 	# The high-dim nuisance is the internal q=1 fused lasso (#303), NOT the bridge
 	# theta_hat -- reconstruct it the same way the accessor does (n / Tt units), so
-	# this stays an INDEPENDENT reconstruction (the deterministic seed gives the
-	# identical nuisance => exact match), not a tautology.
+	# this stays an INDEPENDENT reconstruction, not a tautology.
 	th_q1 <- fetwfe:::.fit_q1_nuisance(
 		X,
 		as.numeric(hd_fix$internal$y_final),
@@ -317,7 +316,7 @@ test_that("lambda_c scales the nodewise penalty and shrinks the debiasing direct
 	# At lambda_c = 2 the penalty lambda_node exceeds ||a||_inf, so v = 0 is optimal
 	# and the debiased estimate collapses to the *q = 1 plug-in* (#303) -- NOT
 	# att_hat (the bridge plug-in). A much larger lambda_c gives the same v = 0, so
-	# both collapse to the identical q = 1 plug-in; and that plug-in differs from
+	# both collapse to the q = 1 plug-in; and that plug-in differs from
 	# the bridge att_hat -- the mutation signal that the nuisance actually moved.
 	expect_equal(db2$att, debiasedATT(hd_fix, lambda_c = 100)$att)
 	expect_false(isTRUE(all.equal(db2$att, hd_fix$att_hat)))

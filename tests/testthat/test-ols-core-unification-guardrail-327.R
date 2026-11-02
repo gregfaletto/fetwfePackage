@@ -88,7 +88,7 @@
 	# Exercise the asymptotically-exact two-sample ATT path: indep_counts routes
 	# the overall ATT through the indep getTeResultsOLS() call, a branch the other
 	# six configs never reach. The refactor reorganized this branch, so pin its
-	# output to lock byte-identity there too.
+	# output.
 	if (indep) {
 		args$indep_counts <- dat$indep_counts
 	}

@@ -16,7 +16,7 @@ library(fetwfe)
 #
 # These default-path calls (the bare simulateData(coefs, ...) without an
 # explicit seed) are the ONLY live simulateData() calls in the suite permitted
-# to omit a seed; every other live call is pinned for byte-exactness. The
+# to omit a seed; every other live call is pinned. The
 # mutation check on R/gen_data.R (the default flip + the warning) is owned by
 # the parent; this file just locks the observable contract green.
 # ------------------------------------------------------------------------------
@@ -80,7 +80,7 @@ test_that("simulateData seed = NA is silent and respects the ambient RNG (#250)"
 		NA
 	)
 
-	# Same outer set.seed() -> identical panel (caller controls the RNG).
+	# Same outer set.seed() (caller controls the RNG).
 	set.seed(20250250L)
 	a <- simulateData(
 		coefs,

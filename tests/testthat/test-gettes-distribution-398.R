@@ -25,7 +25,6 @@
 )
 
 test_that("getTes() `distribution` arg contract: default back-compat, effect, marginal no-op, validation (#398)", {
-	# Default is byte-identical to the pre-#398 behavior (hardcoded gaussian).
 	expect_equal(getTes(.cf_cov), getTes(.cf_cov, "gaussian"))
 
 	# The argument has an effect under covariate-dependent assignment.

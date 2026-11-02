@@ -178,12 +178,12 @@ test_that("default ci_type is simultaneous and widens the catt_df bounds", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 2: ci_type = "pointwise" reproduces the EXACT pre-#197 bounds.
+# Test 2: ci_type = "pointwise" reproduces the pre-#197 bounds.
 # THE backward-compat guard. Because getCohortATTsFinal() / eventStudy() are
 # untouched on the pointwise path, the direct `estimate +/- z*se` formula IS
-# the pre-#197 baseline -- so (a) doubles as the byte-for-byte lock (b).
+# the pre-#197 baseline -- so (a) doubles as the lock (b).
 # ------------------------------------------------------------------------------
-test_that("ci_type = 'pointwise' reproduces the exact pre-#197 catt_df bounds", {
+test_that("ci_type = 'pointwise' reproduces the pre-#197 catt_df bounds", {
 	sim <- make_ci_panel()
 	fit <- fetwfeWithSimulatedData(sim, ci_type = "pointwise")
 	expect_identical(fit$ci_type, "pointwise")
@@ -227,10 +227,10 @@ test_that("simultaneous bands are strictly wider than pointwise (>= 2 cohorts)",
 })
 
 # ------------------------------------------------------------------------------
-# Test 4: se / p_value / selected / estimate / overall-ATT CI are identical
-# across ci_type. Bounds the blast radius to the two interval-bound columns.
+# Test 4: se / p_value / selected / estimate / overall-ATT CI. Bounds the
+# blast radius to the two interval-bound columns.
 # ------------------------------------------------------------------------------
-test_that("ci_low/ci_high/p_value follow ci_type; se/selected/ATT identical", {
+test_that("ci_low/ci_high/p_value follow ci_type; se/selected/ATT match", {
 	sim <- make_ci_panel()
 	fit_s <- fetwfeWithSimulatedData(sim)
 	fit_p <- fetwfeWithSimulatedData(sim, ci_type = "pointwise")
@@ -254,7 +254,7 @@ test_that("ci_low/ci_high/p_value follow ci_type; se/selected/ATT identical", {
 	expect_equal(fit_s$att_se, fit_p$att_se)
 	expect_equal(fit_s$att_p_value, fit_p$att_p_value)
 
-	# Event-study se identical (only bounds differ).
+	# Event-study se (only bounds differ).
 	es_s <- eventStudy(fit_s)
 	es_p <- eventStudy(fit_p)
 	expect_equal(es_s$se, es_p$se)
@@ -405,7 +405,7 @@ test_that("ci_type works across etwfe / betwfe / twfeCovs", {
 			cd_p$estimate - z * cd_p$se,
 			tolerance = 1e-12
 		)
-		# se identical across ci_type.
+		# se across ci_type.
 		expect_equal(fit_s$catt_df$se, fit_p$catt_df$se)
 		# Alignment to the worker.
 		sci <- simultaneousCIs(fit_s, family = "cohort")

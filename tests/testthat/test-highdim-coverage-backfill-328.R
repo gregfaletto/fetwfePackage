@@ -71,7 +71,7 @@ test_that("high-dim debiasedATT() accepts q in {0.5,1,2} and the point estimate 
 	}
 
 	# LOAD-BEARING: the debiased point estimate AND the regression variance channel
-	# are EXACTLY invariant to the input q (they depend only on the full design and
+	# are invariant to the input q (they depend only on the full design and
 	# the internal q=1 nuisance, not the bridge `theta_hat`). Mutating the high-dim
 	# nuisance to reuse the bridge `theta_hat` breaks this.
 	expect_equal(d1$att, d05$att, tolerance = 1e-9)
@@ -296,7 +296,6 @@ test_that("debiasedATTWithSimulatedData() returns the debiased_att schema, fixed
 		)
 	}
 
-	# fixed-p: also byte-identical to the explicit two-step pipeline.
 	coefs_lp <- genCoefs(
 		G = 3,
 		T = 5,

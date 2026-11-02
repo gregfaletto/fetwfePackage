@@ -18,7 +18,7 @@ library(fetwfe)
 #   * NULL (default): X_S = X_final; treat_block_mask via boolean fill.
 #   * vector: X_S = X_final[, sel_feat_inds]; treat_block_mask via %in%.
 #
-# These tests verify the helper's output bit-identically matches the
+# These tests verify the helper's output matches the
 # manual inline computation that the 4 call sites used to do.
 
 # Small deterministic fixture: N=6 units, T=5 periods, p=10 columns

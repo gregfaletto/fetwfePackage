@@ -52,7 +52,7 @@ test_that("genInvEventStudyFusionTransformMat exactly inverts the event-study di
 		expect_equal(dim(Dinv), c(s$num_treats, s$num_treats))
 
 		# (a) Round-trip: D^{-1} applied to the event-study differences of a
-		# random effect vector recovers that effect vector exactly.
+		# random effect vector recovers that effect vector.
 		set.seed(40)
 		beta <- rnorm(s$num_treats)
 		theta <- .es_difference(beta, s$first_inds, s$n_k, G)
@@ -197,9 +197,9 @@ test_that("event_study recovers event-time-structured truth better than default 
 # ---------------------------------------------------------------------------
 # Coverage (#40): event_study composes with the configurations the threading
 # touches (d = 0, se_type = "cluster", add_ridge = TRUE), and an in-repo
-# byte-identical guard that fusion_structure = "cohort" is the no-arg path.
+# guard that fusion_structure = "cohort" is the no-arg path.
 # ---------------------------------------------------------------------------
-test_that("event_study composes with d=0 / cluster / add_ridge; default is byte-identical (#40)", {
+test_that("event_study composes with d=0 / cluster / add_ridge; default matches (#40)", {
 	skip_on_cran()
 	sim <- simulateData(
 		genCoefs(G = 3, T = 5, d = 2, density = 0.5, eff_size = 2, seed = 11),
@@ -208,7 +208,7 @@ test_that("event_study composes with d=0 / cluster / add_ridge; default is byte-
 		sig_eps_c_sq = 0.5,
 		seed = 11
 	)
-	# Byte-identity guard: fusion_structure = "cohort" == omitting it.
+	# fusion_structure = "cohort" == omitting it.
 	f_omit <- suppressWarnings(fetwfeWithSimulatedData(
 		sim,
 		lambda_selection = "bic"

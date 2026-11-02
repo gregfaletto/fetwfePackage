@@ -4,11 +4,11 @@
 #
 # 1. The default `att_se` value uses the TIGHT Gaussian variance
 #    `sqrt(att_var_1 + att_var_2)` from paper Theorem (c').
-#    Verify: byte-equal to the direct computation from the exposed
+#    Verify: equal to the direct computation from the exposed
 #    `att_var_1` / `att_var_2` slots.
 #
 # 2. `se_type = "conservative"` recovers the OLD default (Cauchy-Schwarz
-#    upper bound). Verify: byte-equal to
+#    upper bound). Verify: equal to
 #    `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))`.
 #    Also verify the conservative SE is STRICTLY WIDER than the default
 #    (regression guard against either branch silently doing the wrong
@@ -107,8 +107,7 @@ test_that("se_type = 'conservative' recovers the Cauchy-Schwarz bound (pre-v1.12
 	expect_identical(res_def$se_type, "default")
 	expect_identical(res_cons$se_type, "conservative")
 
-	# Point estimates should be identical -- only the SE combination
-	# differs.
+	# Only the SE combination differs.
 	expect_equal(res_def$att_hat, res_cons$att_hat)
 	expect_equal(res_def$catt_hats, res_cons$catt_hats)
 
@@ -260,9 +259,7 @@ test_that("variance_components block: conservative se_type swaps the headline ti
 	# Under conservative, headline `tilde_v_N` = `tilde_v_N_C_pi_hat_cons`.
 	expect_equal(vc_cons$tilde_v_N, vc_cons$tilde_v_N_C_pi_hat_cons)
 
-	# But the underlying `att_var_1`, `att_var_2`, `V_1`, `V_2`, and the
-	# full catalogue of `tilde_v_N_*` slots are identical across the two
-	# fits -- only the combination chosen as the headline changes.
+	# Only the combination chosen as the headline changes.
 	expect_equal(vc_def$att_var_1, vc_cons$att_var_1)
 	expect_equal(vc_def$att_var_2, vc_cons$att_var_2)
 	expect_equal(vc_def$V_1, vc_cons$V_1)
@@ -307,7 +304,7 @@ test_that("variance_components block: indep_counts path uses tight formula regar
 	expect_true(res_def$indep_counts_used)
 	expect_true(res_cons$indep_counts_used)
 
-	# `att_se` is identical: the indep path uses the tight formula in
+	# `att_se`: the indep path uses the tight formula in
 	# both branches.
 	expect_equal(res_def$att_se, res_cons$att_se)
 
