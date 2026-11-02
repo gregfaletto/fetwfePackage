@@ -224,7 +224,7 @@ test_that("simultaneousCIs is deterministic and does not perturb caller RNG", {
 	sci2 <- simultaneousCIs(fit, family = "event_study", alpha = 0.05)
 	expect_equal(sci1, sci2)
 
-	# Contract (b): the caller's RNG stream is unperturbed. The intervening
+	# The caller's RNG stream is unperturbed. The intervening
 	# simultaneousCIs() call must not shift the caller's draws.
 	set.seed(42L)
 	invisible(simultaneousCIs(fit, family = "event_study"))

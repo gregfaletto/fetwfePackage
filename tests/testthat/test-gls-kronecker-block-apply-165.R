@@ -9,12 +9,7 @@
 #
 # Block 2 (load-bearing): directly call `fetwfe:::.estimate_variance_and_gls()`
 # and assert its `y_gls` / `X_gls` match an explicit-Kronecker reference
-# computed inline. A future refactor that silently breaks the production
-# reshape — e.g. uses the wrong variance component in `A`'s scale, drops the
-# `matrix(..., nrow = T)` reshape, or any other change that makes the transform
-# not equal to (I_N kron A) %*% y — fails this assertion. The pre-#178 test
-# re-derived both sides inline and so passed regardless of what the production
-# code did.
+# computed inline.
 #
 # Block 3 (sig_eps_c_sq = 0 edge case): same production-call shape as
 # Block 2, exercising the degenerate-covariance branch where the closed

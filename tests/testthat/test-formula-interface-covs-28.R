@@ -94,8 +94,8 @@ test_that("non-character, non-formula input is rejected with class info", {
 })
 
 # ----------------------------------------------------------------------
-# 5) End-to-end: formula and character forms produce fits on
-#    the same simulated panel. Each of the four estimators tested.
+# 5) End-to-end: formula and character forms. Each of the four
+#    estimators tested.
 # ----------------------------------------------------------------------
 
 # Build a small simulated panel WITH d > 0 so covs actually matters.

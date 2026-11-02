@@ -149,11 +149,7 @@ test_that(".assemble_cluster_robust_sandwich integration parity: betwfe cluster-
 	# Integration check: fit betwfe with se_type = "cluster" on a
 	# simulated panel with strong signal (so selection actually
 	# fires and the cluster-SE path is exercised). Re-call the
-	# helper on the same fitted object's inputs and assert
-	# bit-identical output. This locks the refactor at the
-	# integration boundary: if a future PR changes betwfe_core's
-	# call to the helper (e.g., swaps which arg gets passed to
-	# `sel_feat_inds`), the assertion fails.
+	# helper on the same fitted object's inputs.
 	coefs <- genCoefs(
 		G = 2,
 		T = 5,

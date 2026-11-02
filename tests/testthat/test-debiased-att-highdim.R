@@ -317,7 +317,7 @@ test_that("lambda_c scales the nodewise penalty and shrinks the debiasing direct
 	# and the debiased estimate collapses to the *q = 1 plug-in* (#303) -- NOT
 	# att_hat (the bridge plug-in). A much larger lambda_c gives the same v = 0, so
 	# both collapse to the q = 1 plug-in; and that plug-in differs from
-	# the bridge att_hat -- the mutation signal that the nuisance actually moved.
+	# the bridge att_hat.
 	expect_equal(db2$att, debiasedATT(hd_fix, lambda_c = 100)$att)
 	expect_false(isTRUE(all.equal(db2$att, hd_fix$att_hat)))
 	# At the default lambda_c = 1 the correction is active (att != the plug-in).

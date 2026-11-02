@@ -10,9 +10,7 @@
 # 2. `se_type = "conservative"` recovers the OLD default (Cauchy-Schwarz
 #    upper bound). Verify: equal to
 #    `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))`.
-#    Also verify the conservative SE is STRICTLY WIDER than the default
-#    (regression guard against either branch silently doing the wrong
-#    thing).
+#    Also verify the conservative SE is STRICTLY WIDER than the default.
 #
 # 3. The new `internal$variance_components` slot is populated correctly
 #    with the paper-notation names (`V_1`, `V_2`, `tilde_v_N`, the four

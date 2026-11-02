@@ -40,8 +40,7 @@ library(fetwfe)
 test_that("marginal DGP: matches v1.13.x at default assignment_type", {
 	# Reference values captured from the marginal-path output at branch
 	# `feat-cohort-dgp-162` against the same call on `origin/main` SHA
-	# ae515b6. Locks in the pre-1.14.0 behavior at the strictest possible
-	# assertion. Any drift in the marginal-path RNG ordering fires here.
+	# ae515b6. Locks in the pre-1.14.0 behavior.
 	coefs <- genCoefs(
 		G = 3,
 		T = 5,

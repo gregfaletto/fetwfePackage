@@ -205,8 +205,6 @@ test_that(".true_event_time_effects() single-sources eventStudy()'s estimand (fe
 				T = fit$T,
 				empty_value = 0
 			))
-			# unname() is load-bearing -- a named vector would flip the data
-			# frame's row.names.
 			expect_equal(est_via_helper, eventStudy(fit)$estimate)
 		}
 	}

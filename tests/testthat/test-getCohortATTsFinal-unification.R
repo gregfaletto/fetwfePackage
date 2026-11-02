@@ -10,9 +10,6 @@ library(fetwfe)
 #   fused = TRUE,  include_selected = TRUE   →  FETWFE
 #   fused = FALSE, include_selected = TRUE   →  BETWFE
 #   fused = TRUE,  include_selected = FALSE  →  no real caller; API lockdown
-#
-# The closure is the pre-#118 source of getCohortATTsFinalOLS() copied here
-# verbatim (with comments preserved).
 
 # ---- Fixture --------------------------------------------------------------
 
