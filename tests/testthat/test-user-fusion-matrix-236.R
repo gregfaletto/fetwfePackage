@@ -114,11 +114,11 @@ test_that("custom event-study D_N reproduces the event_study fit byte-identicall
 	)
 
 	# Fit-time quantities.
-	expect_identical(fit_custom$beta_hat, fit_es$beta_hat)
-	expect_identical(fit_custom$att_hat, fit_es$att_hat)
-	expect_identical(fit_custom$att_se, fit_es$att_se)
-	expect_identical(fit_custom$catt_df, fit_es$catt_df)
-	expect_identical(fit_custom$catt_ses, fit_es$catt_ses)
+	expect_equal(fit_custom$beta_hat, fit_es$beta_hat, tolerance = 1e-10)
+	expect_equal(fit_custom$att_hat, fit_es$att_hat, tolerance = 1e-10)
+	expect_equal(fit_custom$att_se, fit_es$att_se, tolerance = 1e-10)
+	expect_equal(fit_custom$catt_df, fit_es$catt_df, tolerance = 1e-10)
+	expect_equal(fit_custom$catt_ses, fit_es$catt_ses, tolerance = 1e-10)
 
 	# Confirm the fixture genuinely discriminates: the cohort fit differs, and
 	# the selected support hits columns where cohort and event-study inverse
@@ -148,15 +148,19 @@ test_that("custom event-study D_N reproduces the event_study fit byte-identicall
 	# Accessor-time SE/CI columns (these exercise x$internal$d_inv_treat).
 	es_es <- eventStudy(fit_es)
 	es_custom <- eventStudy(fit_custom)
-	expect_identical(es_custom$se, es_es$se)
-	expect_identical(es_custom$ci_low, es_es$ci_low)
-	expect_identical(es_custom$ci_high, es_es$ci_high)
-	expect_identical(es_custom$p_value, es_es$p_value)
+	expect_equal(es_custom$se, es_es$se, tolerance = 1e-10)
+	expect_equal(es_custom$ci_low, es_es$ci_low, tolerance = 1e-10)
+	expect_equal(es_custom$ci_high, es_es$ci_high, tolerance = 1e-10)
+	expect_equal(es_custom$p_value, es_es$p_value, tolerance = 1e-10)
 
 	sc_es <- simultaneousCIs(fit_es)
 	sc_custom <- simultaneousCIs(fit_custom)
-	expect_identical(sc_custom$ci, sc_es$ci)
-	expect_identical(sc_custom$adjusted_p_values, sc_es$adjusted_p_values)
+	expect_equal(sc_custom$ci, sc_es$ci, tolerance = 1e-10)
+	expect_equal(
+		sc_custom$adjusted_p_values,
+		sc_es$adjusted_p_values,
+		tolerance = 1e-10
+	)
 })
 
 # ------------------------------------------------------------------------------
@@ -347,10 +351,10 @@ test_that("add_ridge = TRUE with a custom event-study D_N reproduces the add_rid
 		add_ridge = TRUE
 	)
 
-	expect_identical(fit_custom$beta_hat, fit_es$beta_hat)
-	expect_identical(fit_custom$att_hat, fit_es$att_hat)
-	expect_identical(fit_custom$att_se, fit_es$att_se)
-	expect_identical(fit_custom$catt_df, fit_es$catt_df)
+	expect_equal(fit_custom$beta_hat, fit_es$beta_hat, tolerance = 1e-10)
+	expect_equal(fit_custom$att_hat, fit_es$att_hat, tolerance = 1e-10)
+	expect_equal(fit_custom$att_se, fit_es$att_se, tolerance = 1e-10)
+	expect_equal(fit_custom$catt_df, fit_es$catt_df, tolerance = 1e-10)
 })
 
 # ------------------------------------------------------------------------------

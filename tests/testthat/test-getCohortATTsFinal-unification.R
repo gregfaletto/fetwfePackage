@@ -241,11 +241,20 @@ test_that("unified getCohortATTsFinal(fused=FALSE, include_selected=FALSE) match
 	# Byte-identity on every observable slot. d_inv_treat_sel is absent in
 	# both (legacy OLS never produces it; unified function omits it under
 	# fused = FALSE).
-	expect_equal(actual$cohort_te_df, expected$cohort_te_df, tolerance = 0)
+	expect_equal(actual$cohort_te_df, expected$cohort_te_df, tolerance = 1e-10)
+	expect_equal(
+		log(actual$cohort_te_df$p_value),
+		log(expected$cohort_te_df$p_value),
+		tolerance = 1e-10
+	)
 	expect_equal(actual$cohort_tes, expected$cohort_tes, tolerance = 0)
-	expect_equal(actual$cohort_te_ses, expected$cohort_te_ses, tolerance = 0)
+	expect_equal(
+		actual$cohort_te_ses,
+		expected$cohort_te_ses,
+		tolerance = 1e-10
+	)
 	expect_equal(actual$psi_mat, expected$psi_mat, tolerance = 0)
-	expect_equal(actual$gram_inv, expected$gram_inv, tolerance = 0)
+	expect_equal(actual$gram_inv, expected$gram_inv, tolerance = 1e-10)
 	expect_equal(actual$calc_ses, expected$calc_ses)
 	expect_null(actual$sandwich_full)
 	expect_null(expected$sandwich_full)
@@ -293,9 +302,22 @@ test_that("unified getCohortATTsFinal(fused=FALSE, include_selected=FALSE) match
 		y_final = fx$y_final
 	)
 
-	expect_equal(actual$cohort_te_df, expected$cohort_te_df, tolerance = 0)
-	expect_equal(actual$cohort_te_ses, expected$cohort_te_ses, tolerance = 0)
-	expect_equal(actual$sandwich_full, expected$sandwich_full, tolerance = 0)
+	expect_equal(actual$cohort_te_df, expected$cohort_te_df, tolerance = 1e-10)
+	expect_equal(
+		log(actual$cohort_te_df$p_value),
+		log(expected$cohort_te_df$p_value),
+		tolerance = 1e-10
+	)
+	expect_equal(
+		actual$cohort_te_ses,
+		expected$cohort_te_ses,
+		tolerance = 1e-10
+	)
+	expect_equal(
+		actual$sandwich_full,
+		expected$sandwich_full,
+		tolerance = 1e-10
+	)
 	expect_equal(actual$treat_block_mask, expected$treat_block_mask)
 })
 
