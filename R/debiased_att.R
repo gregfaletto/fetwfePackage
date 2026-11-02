@@ -644,8 +644,6 @@ debiasedATT <- function(
 		# q<1 bridge theta_hat. Its l1 rate is what the high-dimensional FETWFE theory
 		# controls the orthogonalization remainder through (the q<1 bridge is
 		# super-efficient / non-uniform -- the wrong nuisance for a uniform CI).
-		# Deterministic (fixed seed) so the simultaneousCIs() high-dim band center
-		# matches debiasedATT()$att exactly.
 		theta_nuis <- .fit_q1_nuisance(X, y, N_units, T)
 	}
 	# Nuisance: the q=1 fused lasso in high-dim (theta_nuis set above), the bridge
