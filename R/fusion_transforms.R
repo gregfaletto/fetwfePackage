@@ -876,8 +876,7 @@ genInvEventStudyFusionTransformMat <- function(n_vars, first_inds, G) {
 #'   `solve(fusion_matrix)` (a `num_treats x num_treats` matrix) that the
 #'   estimator threads through the `.gen_inv_treat_block()` choke point. When
 #'   `fusion_matrix` is `NULL` (the default) it returns `NULL` unchanged, so the
-#'   built-in `fusion_structure` dispatch is used and the fit is byte-identical
-#'   to omitting the argument.
+#'   built-in `fusion_structure` dispatch is used.
 #'
 #'   Checks (in order), all referencing the cohort-major `(g, t)` row order of
 #'   `getFirstInds()` / `getTreatInds()`:

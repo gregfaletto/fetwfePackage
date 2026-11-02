@@ -511,7 +511,7 @@ fetwfe <- function(
 	# supplied, `d_inv_treat <- solve(fusion_matrix)` overrides
 	# `fusion_structure` for the treatment-effect block throughout the fit and
 	# is stored on the object for the access-time accessors (eventStudy(),
-	# simultaneousCIs()). NULL (the default) is byte-identical to omitting it.
+	# simultaneousCIs()).
 	d_inv_treat <- .validate_fusion_matrix(
 		fusion_matrix = fusion_matrix,
 		num_treats = num_treats,

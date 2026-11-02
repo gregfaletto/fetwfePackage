@@ -280,10 +280,9 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #'   event-study loops (`.event_study_fetwfe()` / `.event_study_etwfe_betwfe()`,
 #'   with `empty_value = 0`) and by [getTes()] (truth side, default
 #'   `empty_value = NA`); #389 folded the previously-triplicated aggregation
-#'   here. Feeding a fit's estimated cells reproduces `eventStudy(fit)$estimate`
-#'   bit-for-bit (the aggregation uses the same sparse-weight `crossprod` form
-#'   the loops use); feeding a DGP's true cells (`coefs$beta[treat_inds]`) gives
-#'   the true event-time effects.
+#'   here. Feeding a fit's estimated cells reproduces
+#'   `eventStudy(fit)$estimate`; feeding a DGP's true cells
+#'   (`coefs$beta[treat_inds]`) gives the true event-time effects.
 #' @param cell_effects Numeric length `num_treats`; per-`(g, t)` effects in
 #'   `treat_inds` order.
 #' @param first_inds Integer length `G`; index within `cell_effects` of each
@@ -326,12 +325,6 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 			next
 		}
 		weights_Ve <- probs_Ve / S_V
-		# Same sparse-weight `crossprod` form the estimator loops in
-		# `.event_study_fetwfe()` / `.event_study_etwfe_betwfe()` use, so those
-		# loops -- which now call this helper -- reproduce `eventStudy()`'s
-		# estimand BIT-FOR-BIT. A length-|V_e| `sum(weights * cells)` diverges
-		# from the estimator `crossprod` by up to a couple of ULP on some DGPs
-		# (#389).
 		psi <- numeric(num_treats)
 		for (j in seq_along(V_e)) {
 			psi[first_inds[V_e[j]] + e] <- weights_Ve[j]

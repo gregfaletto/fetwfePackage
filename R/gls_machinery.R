@@ -114,8 +114,7 @@
 	# to each unit's T-vector independently. The pre-fix code allocates
 	# a (N*T)x(N*T) Kronecker matrix on every call (800 MB at N=2000),
 	# then does a single dense multiply; the post-fix code allocates
-	# nothing larger than the inputs. Verified bit-exact on the test
-	# fixtures (#165). See R/utility.R::idCohorts and
+	# nothing larger than the inputs. See R/utility.R::idCohorts and
 	# R/design_matrix.R::processCovs for the row-ordering invariant.
 	stopifnot(length(y) == N * T)
 	stopifnot(nrow(X_mod) == N * T)

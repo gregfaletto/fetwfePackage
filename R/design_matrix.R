@@ -413,9 +413,7 @@ processCovs <- function(
 	# wallclock on large panels. The rewrite sorts df by (unit, time) once,
 	# isolates a single `df_first` slice for all first-period operations,
 	# and uses column-wise vectorized comparisons in place of the inner
-	# unit/time loops. Output is bit-identical to the pre-rewrite version
-	# (covered by the numerical-equivalence test in test-etwfe.R /
-	# test-fetwfe.R via fetwfeWithSimulatedData).
+	# unit/time loops. Output is bit-identical to the pre-rewrite version.
 
 	# Sort df by (unit, time) once. After this, the first-period rows for
 	# every unit live at deterministic positions (1, T+1, 2T+1, ...) under
