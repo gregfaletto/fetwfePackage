@@ -204,7 +204,7 @@ lambda_node_default <- function(p, N, const = 1.0, scale = 1.0) {
 #' **Determinism.** The only RNG draw is the unit-fold assignment, seeded from the
 #' data (`as.integer(N * T)`, the `.fit_q1_nuisance()` convention) under
 #' `.with_preserved_rng()`; `riesz_lasso()` is itself deterministic. So the CV is
-#' reproducible and identical at the `debiasedATT()` and `simultaneousCIs()` call
+#' reproducible at the `debiasedATT()` and `simultaneousCIs()` call
 #' sites (same `Sig` / `X` / `N` / `T` / direction).
 #'
 #' @param Sig_full Numeric `p x p`; the full-data Gram `crossprod(X) / n`.

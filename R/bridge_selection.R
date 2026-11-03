@@ -349,7 +349,7 @@ getBetaCV <- function(
 #'   does not bind this is the unstandardized fit.
 #'
 #'   **Determinism contract.** `debiasedATT()` and `.simultaneous_cis_bootstrap()`
-#'   must obtain the *identical* nuisance so the high-dim band center equals
+#'   must obtain the nuisance so the high-dim band center equals
 #'   `debiasedATT()$att` to machine precision. The seed is derived from the data
 #'   (`as.integer(N * T)`, `getBetaCV()`'s default), NOT the fit's `cv_seed`
 #'   (which is `NA` for BIC-selected fits); both call sites pass the same

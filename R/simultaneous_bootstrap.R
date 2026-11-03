@@ -777,7 +777,7 @@
 			Sig = Sig_hd
 		)
 		# Debias the band center (the high-dimensional FETWFE theory): the q=1 plug-in plus the per-effect
-		# desparsified correction `colSums(F_mat)/(N*T)` (exactly `debiasedATT()`'s
+		# desparsified correction `colSums(F_mat)/(N*T)` (`debiasedATT()`'s
 		# `mean(score)`, the per-effect generalization of `att_db = sum(a*theta) +
 		# mean(score)`), so `estimates_used` equals `debiasedATT()$att` for the
 		# matching overall-ATT contrast. The q=1 plug-in `crossprod(targets,
