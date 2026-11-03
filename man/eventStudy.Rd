@@ -20,7 +20,7 @@ inherits the fit's stored \code{ci_type} (so a fit made with the default
 \code{ci_type = "simultaneous"} yields simultaneous event-study bands, which
 \code{print} / \code{summary} / \code{plot} then display); for objects fitted before
 version 1.16.0 (no \code{ci_type} slot) \code{NULL} falls back to \code{"pointwise"}. The
-\code{se} column is identical under both settings; the interval bounds, their
+\code{se} column is the same under both settings; the interval bounds, their
 critical-value multiplier, and the \code{p_value} differ (under
 \code{"simultaneous"} the \code{p_value} is the single-step max-T multiplicity-
 adjusted dual of the band, under \code{"pointwise"} the per-effect Wald

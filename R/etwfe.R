@@ -116,7 +116,7 @@
 #'   bounds and the per-cohort p-values (`p_value`) follow `ci_type` (max-T
 #'   multiplicity-adjusted under `"simultaneous"`, per-cohort Wald under
 #'   `"pointwise"`; #200); the standard errors (`se`) and the overall-ATT
-#'   confidence interval (a single scalar) are identical under both settings.
+#'   confidence interval (a single scalar) are the same under both settings.
 #'   When standard errors are unavailable
 #'   (e.g., a rank-deficient design) the bounds are `NA` under both settings.
 #'   Default is `"simultaneous"`.
@@ -403,7 +403,7 @@ etwfe <- function(
 #'   bounds and the per-cohort p-values (`p_value`) follow `ci_type` (max-T
 #'   multiplicity-adjusted under `"simultaneous"`, per-cohort Wald under
 #'   `"pointwise"`; #200); the standard errors (`se`) and the overall-ATT
-#'   confidence interval (a single scalar) are identical under both settings.
+#'   confidence interval (a single scalar) are the same under both settings.
 #'   When standard errors are unavailable
 #'   (e.g., a rank-deficient design) the bounds are `NA` under both settings.
 #'   Default is `"simultaneous"`.

@@ -149,7 +149,7 @@ guarantee --- the behavior of versions <= 1.15.1). Both the interval
 bounds and the per-cohort p-values (\code{p_value}) follow \code{ci_type} (max-T
 multiplicity-adjusted under \code{"simultaneous"}, per-cohort Wald under
 \code{"pointwise"}; #200); the standard errors (\code{se}) and the overall-ATT
-confidence interval (a single scalar) are identical under both settings.
+confidence interval (a single scalar) are the same under both settings.
 When standard errors are unavailable
 (e.g., a rank-deficient design) the bounds are \code{NA} under both settings.
 Default is \code{"simultaneous"}.}

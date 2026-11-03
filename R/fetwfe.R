@@ -227,7 +227,7 @@
 #'   `"simultaneous"` the `p_value` is the single-step max-T multiplicity-
 #'   adjusted p-value matching the band, under `"pointwise"` the per-cohort
 #'   Wald p-value (#200). The standard errors (`se`) and selection flags
-#'   (`selected`) are identical under both settings, and the overall-ATT
+#'   (`selected`) are the same under both settings, and the overall-ATT
 #'   confidence interval (a single scalar) is
 #'   unaffected. When standard errors are unavailable (`q >= 1`, or a
 #'   rank-deficient design) the bounds are `NA` under both settings. Default
@@ -721,7 +721,7 @@ fetwfe <- function(
 #'   `"simultaneous"` the `p_value` is the single-step max-T multiplicity-
 #'   adjusted p-value matching the band, under `"pointwise"` the per-cohort
 #'   Wald p-value (#200). The standard errors (`se`) and selection flags
-#'   (`selected`) are identical under both settings, and the overall-ATT
+#'   (`selected`) are the same under both settings, and the overall-ATT
 #'   confidence interval (a single scalar) is
 #'   unaffected. When standard errors are unavailable (`q >= 1`, or a
 #'   rank-deficient design) the bounds are `NA` under both settings. Default

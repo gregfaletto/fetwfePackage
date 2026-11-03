@@ -62,7 +62,7 @@ effect with probability \code{1 - alpha}, no joint guarantee --- the behavior
 of versions <= 1.15.1). Both the interval bounds and the
 per-cohort p-values (\code{p_value}) follow \code{ci_type} (single-step max-T
 multiplicity-adjusted under \code{"simultaneous"}, per-cohort Wald under
-\code{"pointwise"}; #200); the standard errors (\code{se}) are identical under both
+\code{"pointwise"}; #200); the standard errors (\code{se}) are the same under both
 settings. \code{twfeCovs} estimates a single pooled effect per cohort, so only
 the cohort family is affected (it has no event-study surface). When
 standard errors are unavailable (e.g., a rank-deficient design) the bounds
