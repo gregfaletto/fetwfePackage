@@ -426,25 +426,11 @@
   macOS and Windows and failed on all four Linux jobs, by 1 to 4 units in the
   last place (max absolute difference 4.44e-16 on values of order 1). This
   corrects the claim in the 1.10.0 entry for #165 that the identity was
-  "verified bit-identical (16-digit parity)" --- it is verified equal to
-  round-off, which is the strongest claim floating-point arithmetic supports.
-  No estimator behavior changed.
+  "verified bit-identical (16-digit parity)". No estimator behavior changed.
 
-- The test suite no longer requires bit-identical results from separate
-  computations through the linear-algebra library, because libraries such as
-  Intel MKL do not guarantee bitwise-identical results from one run to the
-  next (#541). Comparisons of one computation run twice now use
-  `expect_equal()` at its default tolerance. Comparisons of two code paths
-  that agree in exact arithmetic, the explicit-Kronecker GLS assertions above
-  among them, now use `tolerance = 1e-10`, and the `getCohortATTsFinal()`
-  unification test also compares its P-values on the log scale. The #389 guard
-  that `eventStudy()`'s estimates are single-sourced is now a structural check
-  on the estimator loops' code, beside a value comparison at the default
-  tolerance. `.compute_p_values()` gains a known-answer test, and the two
-  singular-design tests are rebuilt on a constant column, so that their
-  centered Gram matrix is singular under any rounding. Comments and test names
-  that claimed exactness over a comparison that is not exact lose the claim.
-  No package code changes: under `R/`, only comments change.
+- The test suite now compares separate computations through the
+  linear-algebra library up to round-off, since libraries such as Intel MKL
+  do not repeat such results bit for bit (#541).
 
 ## Version 1.56.18
 
