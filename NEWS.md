@@ -428,9 +428,9 @@
   corrects the claim in the 1.10.0 entry for #165 that the identity was
   "verified bit-identical (16-digit parity)". No estimator behavior changed.
 
-- The test suite now compares separate computations through the
-  linear-algebra library up to round-off, since libraries such as Intel MKL
-  do not repeat such results bit for bit (#541).
+- The test suite now tolerates rounding differences between separate
+  computations through the linear-algebra library, which libraries such as
+  Intel MKL do not guarantee to reproduce bit for bit (#541).
 
 ## Version 1.56.18
 
