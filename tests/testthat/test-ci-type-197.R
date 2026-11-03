@@ -181,7 +181,7 @@ test_that("default ci_type is simultaneous and widens the catt_df bounds", {
 # Test 2: ci_type = "pointwise" reproduces the pre-#197 bounds.
 # THE backward-compat guard. Because getCohortATTsFinal() / eventStudy() are
 # untouched on the pointwise path, the direct `estimate +/- z*se` formula IS
-# the pre-#197 baseline -- so (a) doubles as the lock (b).
+# the pre-#197 baseline.
 # ------------------------------------------------------------------------------
 test_that("ci_type = 'pointwise' reproduces the pre-#197 catt_df bounds", {
 	sim <- make_ci_panel()

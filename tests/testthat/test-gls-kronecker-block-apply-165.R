@@ -7,7 +7,7 @@
 # = vec(A %*% M)` holds for a small numeric fixture. Documents the math the
 # optimisation relies on; this assertion is necessary but not sufficient.
 #
-# Block 2 (load-bearing): directly call `fetwfe:::.estimate_variance_and_gls()`
+# Block 2: directly call `fetwfe:::.estimate_variance_and_gls()`
 # and assert its `y_gls` / `X_gls` match an explicit-Kronecker reference
 # computed inline.
 #
