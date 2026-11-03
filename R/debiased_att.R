@@ -169,9 +169,7 @@
 #' *input* fit must still be `q < 1` (it supplies the cohort-weight variance
 #' channel `att_var_2`); only the high-dimensional debiasing nuisance is `q = 1`.
 #' That nuisance's cross-validation uses a fixed, data-derived seed, so it is
-#' deterministic across calls (`debiasedATT()` and the high-dimensional
-#' [simultaneousCIs()] band center agree exactly) --- but it is not tunable via
-#' the fit's `cv_seed`.
+#' deterministic across calls --- but it is not tunable via the fit's `cv_seed`.
 #'
 #' @param fit A fitted object from [fetwfe()]. In the fixed-p (`p < NT`) regime
 #'   the SE needs either bridge selection (`q < 1`, `gls = TRUE`) or an un-whitened
