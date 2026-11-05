@@ -17,6 +17,30 @@
 	)
 }
 
+# Helper: one marginal and one multinomial genCoefs DGP.
+.gettes_dgps <- function() {
+	list(
+		marginal = genCoefs(
+			G = 3,
+			T = 5,
+			d = 2,
+			density = 0.5,
+			eff_size = 2,
+			seed = 9
+		),
+		multinomial = genCoefs(
+			G = 3,
+			T = 5,
+			d = 2,
+			density = 0.5,
+			eff_size = 2,
+			assignment_type = "multinomial",
+			assignment_strength = 1.0,
+			seed = 11
+		)
+	)
+}
+
 test_that(".true_event_time_effects reproduces eventStudy()'s estimand (marginal)", {
 	coefs <- genCoefs(
 		G = 3,
@@ -68,34 +92,31 @@ test_that("getTes()'s assumed indices equal a fit's resolved indices (genCoefs)"
 })
 
 test_that("getTes()$actual_event_time_tes: shape, names, and helper consistency", {
-	coefs <- genCoefs(
-		G = 3,
-		T = 5,
-		d = 2,
-		density = 0.5,
-		eff_size = 2,
-		seed = 9
-	)
-	te <- getTes(coefs)
-	expect_length(te$actual_event_time_tes, coefs$T - 1L)
-	expect_named(te$actual_event_time_tes, as.character(0:(coefs$T - 2L)))
-	num_treats <- fetwfe:::getNumTreats(G = coefs$G, T = coefs$T)
-	treat_inds <- fetwfe:::getTreatInds(
-		G = coefs$G,
-		T = coefs$T,
-		d = coefs$d,
-		num_treats = num_treats
-	)
-	expect_equal(
-		te$actual_event_time_tes,
-		fetwfe:::.true_event_time_effects(
-			cell_effects = coefs$beta[treat_inds],
-			first_inds = fetwfe:::getFirstInds(G = coefs$G, T = coefs$T),
-			cohort_offsets_int = seq.int(2L, coefs$G + 1L),
-			cohort_probs = te$cohort_weights,
-			T = coefs$T
+	dgps <- .gettes_dgps()
+	for (dgp in names(dgps)) {
+		coefs <- dgps[[dgp]]
+		te <- getTes(coefs)
+		expect_length(te$actual_event_time_tes, coefs$T - 1L)
+		expect_named(te$actual_event_time_tes, as.character(0:(coefs$T - 2L)))
+		num_treats <- fetwfe:::getNumTreats(G = coefs$G, T = coefs$T)
+		treat_inds <- fetwfe:::getTreatInds(
+			G = coefs$G,
+			T = coefs$T,
+			d = coefs$d,
+			num_treats = num_treats
 		)
-	)
+		expect_equal(
+			te$actual_event_time_tes,
+			fetwfe:::.true_event_time_effects(
+				cell_effects = coefs$beta[treat_inds],
+				first_inds = fetwfe:::getFirstInds(G = coefs$G, T = coefs$T),
+				cohort_offsets_int = seq.int(2L, coefs$G + 1L),
+				cohort_probs = te$cohort_weights,
+				T = coefs$T
+			),
+			info = dgp
+		)
+	}
 })
 
 test_that("event-time truth matches the estimand under a multinomial DGP", {
@@ -245,21 +266,16 @@ test_that("eventStudy() takes its estimates from .true_event_time_effects() (#38
 
 test_that("getTes() takes actual_event_time_tes from .true_event_time_effects() (#389)", {
 	helper <- fetwfe:::.true_event_time_effects
-	coefs <- genCoefs(
-		G = 3,
-		T = 5,
-		d = 2,
-		density = 0.5,
-		eff_size = 2,
-		seed = 9
-	)
-	plain <- getTes(coefs)$actual_event_time_tes
-	shifted <- with_mocked_bindings(
-		getTes(coefs)$actual_event_time_tes,
-		.true_event_time_effects = function(...) helper(...) + 1000,
-		.package = "fetwfe"
-	)
-	expect_equal(shifted, plain + 1000)
+	dgps <- .gettes_dgps()
+	for (dgp in names(dgps)) {
+		plain <- getTes(dgps[[dgp]])$actual_event_time_tes
+		shifted <- with_mocked_bindings(
+			getTes(dgps[[dgp]])$actual_event_time_tes,
+			.true_event_time_effects = function(...) helper(...) + 1000,
+			.package = "fetwfe"
+		)
+		expect_equal(shifted, plain + 1000, info = dgp)
+	}
 })
 
 test_that(".true_event_time_effects() `empty_value` controls the unreached-event-time fill (#389)", {
