@@ -17,7 +17,10 @@
 test_that("expect_se_type_omitted_matches_default() fails when one slot differs under se_type = 'default' (#541)", {
 	for (s in c("att_se", "catt_ses", "att_hat", "catt_hats")) {
 		expect_error(
-			expect_se_type_omitted_matches_default(.fake_fit_541(changed = s)),
+			expect_se_type_omitted_matches_default(
+				.fake_fit_541(changed = s),
+				sim = list()
+			),
 			class = "expectation_failure",
 			info = s
 		)
@@ -27,7 +30,8 @@ test_that("expect_se_type_omitted_matches_default() fails when one slot differs 
 test_that("expect_se_type_omitted_matches_default() fails when a slot is missing from both fits (#541)", {
 	expect_error(
 		expect_se_type_omitted_matches_default(
-			.fake_fit_541(dropped = "catt_ses")
+			.fake_fit_541(dropped = "catt_ses"),
+			sim = list()
 		),
 		class = "expectation_failure"
 	)
