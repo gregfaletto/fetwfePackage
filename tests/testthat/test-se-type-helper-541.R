@@ -7,7 +7,7 @@
 			catt_hats = c(1, 3)
 		)
 		if (identical(se_type, "default") && !is.null(changed)) {
-			res[[changed]] <- res[[changed]] + 1
+			res[[changed]] <- res[[changed]] * (1 + 1e-6)
 		}
 		res[dropped] <- NULL
 		res
