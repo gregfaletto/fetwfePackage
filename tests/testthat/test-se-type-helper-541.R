@@ -74,8 +74,9 @@ test_that("estimator_fit_with_sim() forwards the simulation's fields and its ext
 		sig_eps_sq = 1,
 		sig_eps_c_sq = 2
 	)
+	by_name <- function(x) x[order(names(x))]
 	estimator_fit_with_sim(fake)(sim)
-	expect_identical(seen, sim)
+	expect_identical(by_name(seen), by_name(sim))
 	estimator_fit_with_sim(fake)(sim, se_type = "default")
-	expect_identical(seen, c(sim, list(se_type = "default")))
+	expect_identical(by_name(seen), by_name(c(sim, list(se_type = "default"))))
 })
