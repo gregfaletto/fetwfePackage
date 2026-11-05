@@ -49,6 +49,8 @@ expect_se_type_omitted_matches_default <- function(
 	fit_with_sim,
 	sim = make_se_type_panel()
 ) {
+	# Cohort probabilities from the same data, where se_type sets att_se's formula.
+	sim$indep_counts <- NA
 	res_omit <- fit_with_sim(sim)
 	res_def <- fit_with_sim(sim, se_type = "default")
 	for (s in c("att_se", "catt_ses", "att_hat", "catt_hats")) {
