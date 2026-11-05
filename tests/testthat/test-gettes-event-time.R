@@ -210,8 +210,20 @@ test_that(".true_event_time_effects() single-sources eventStudy()'s estimand (fe
 	}
 })
 
+# The estimator loops eventStudy() dispatches to, walked by the #389 blocks below.
+event_study_loops <- c(".event_study_etwfe_betwfe", ".event_study_fetwfe")
+
+test_that("the #389 blocks walk every loop eventStudy() dispatches to (#389)", {
+	dispatched <- grep(
+		"^\\.event_study_",
+		all.names(body(get("eventStudy", envir = asNamespace("fetwfe")))),
+		value = TRUE
+	)
+	expect_setequal(dispatched, event_study_loops)
+})
+
 test_that("eventStudy()'s estimator loops compute their estimates by calling .true_event_time_effects() (#389)", {
-	for (fn_name in c(".event_study_etwfe_betwfe", ".event_study_fetwfe")) {
+	for (fn_name in event_study_loops) {
 		fn <- get(fn_name, envir = asNamespace("fetwfe"))
 		assignments <- list()
 		.ns_walk_ast(body(fn), function(node, ancestors) {
@@ -236,7 +248,7 @@ test_that("eventStudy()'s estimator loops compute their estimates by calling .tr
 })
 
 test_that("eventStudy()'s loops hand .finish_event_study() the helper's `estimates` (#389)", {
-	for (fn_name in c(".event_study_etwfe_betwfe", ".event_study_fetwfe")) {
+	for (fn_name in event_study_loops) {
 		fn <- get(fn_name, envir = asNamespace("fetwfe"))
 		finish_calls <- list()
 		.ns_walk_ast(body(fn), function(node, ancestors) {
