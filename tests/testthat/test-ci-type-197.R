@@ -60,7 +60,7 @@ make_scattered_degenerate_panel <- function(n_per = 40, T = 7, seed = 909) {
 # produces F1-conforming (independent) shocks, so a clean panel's cluster band ~
 # default. To make the cluster sandwich bite (and keep >= 2 finite-SE cohorts so
 # the strict simultaneous > pointwise widening is assertable) we add a per-unit
-# AR(1) shock on top of the simulated response. Mirrors test-fetwfe.R's
+# AR(1) shock on top of the simulated response. Mirrors helper-se-type.R's
 # make_ar1_panel but at R = 4 (the file's K = 4 convention).
 make_ci_ar1_panel <- function(seed = 7, N = 150, rho = 0.85, sd_e = 1) {
 	set.seed(seed)
