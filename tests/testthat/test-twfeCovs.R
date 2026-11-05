@@ -982,6 +982,10 @@ test_that("twfeCovs se_type omitted matches se_type = 'default'", {
 	expect_se_type_omitted_matches_default(twfeCovsWithSimulatedData)
 })
 
+test_that("twfeCovs() se_type omitted matches se_type = 'default'", {
+	expect_se_type_omitted_matches_default(estimator_fit_with_sim(twfeCovs))
+})
+
 # ------------------------------------------------------------------------------
 # Test: twfeCovs with se_type = "cluster" returns finite SEs on a clean panel
 # ------------------------------------------------------------------------------

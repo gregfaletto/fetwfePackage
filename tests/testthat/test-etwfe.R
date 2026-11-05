@@ -1288,6 +1288,10 @@ test_that("etwfe se_type omitted matches se_type = 'default'", {
 	expect_se_type_omitted_matches_default(etwfeWithSimulatedData)
 })
 
+test_that("etwfe() se_type omitted matches se_type = 'default'", {
+	expect_se_type_omitted_matches_default(estimator_fit_with_sim(etwfe))
+})
+
 # ------------------------------------------------------------------------------
 # Test: etwfe with se_type = "cluster" returns finite SEs on a clean panel
 # ------------------------------------------------------------------------------

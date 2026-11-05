@@ -62,3 +62,23 @@ expect_se_type_omitted_matches_default <- function(
 	expect_equal(res_omit$att_hat, res_def$att_hat)
 	expect_equal(res_omit$catt_hats, res_def$catt_hats)
 }
+
+# A fit_with_sim for an exported estimator, so an omitted se_type reaches that
+# estimator's own default rather than a *WithSimulatedData() wrapper's.
+estimator_fit_with_sim <- function(est) {
+	force(est)
+	function(sim, ...) {
+		est(
+			pdata = sim$pdata,
+			time_var = sim$time_var,
+			unit_var = sim$unit_var,
+			treatment = sim$treatment,
+			response = sim$response,
+			covs = sim$covs,
+			indep_counts = sim$indep_counts,
+			sig_eps_sq = sim$sig_eps_sq,
+			sig_eps_c_sq = sim$sig_eps_c_sq,
+			...
+		)
+	}
+}
