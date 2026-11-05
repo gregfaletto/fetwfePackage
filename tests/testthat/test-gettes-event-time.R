@@ -100,7 +100,7 @@ test_that("getTes()$actual_event_time_tes: shape, names, and helper consistency"
 		expect_named(
 			te$actual_event_time_tes,
 			as.character(0:(coefs$T - 2L)),
-			info = dgp
+			label = paste0("te$actual_event_time_tes (", dgp, ")")
 		)
 		num_treats <- fetwfe:::getNumTreats(G = coefs$G, T = coefs$T)
 		treat_inds <- fetwfe:::getTreatInds(
