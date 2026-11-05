@@ -210,69 +210,36 @@ test_that(".true_event_time_effects() single-sources eventStudy()'s estimand (fe
 	}
 })
 
-# The functions that call .finish_event_study(), walked by the #389 blocks below.
-event_study_loops <- c(".event_study_etwfe_betwfe", ".event_study_fetwfe")
-
-test_that("the #389 blocks walk every function that calls .finish_event_study() (#389)", {
-	calls_finish <- function(fn) {
-		found <- FALSE
-		for (code in .ns_code_exprs(fn)) {
-			.ns_walk_ast(code, function(node, ancestors) {
-				if (.ns_is_call_to(node, ".finish_event_study")) {
-					found <<- TRUE
-				}
-			})
-		}
-		found
-	}
-	finishers <- names(Filter(calls_finish, .ns_functions("fetwfe")))
-	expect_setequal(finishers, event_study_loops)
-})
-
-test_that("eventStudy()'s estimator loops compute their estimates by calling .true_event_time_effects() (#389)", {
-	for (fn_name in event_study_loops) {
-		fn <- get(fn_name, envir = asNamespace("fetwfe"))
-		assignments <- list()
-		.ns_walk_ast(body(fn), function(node, ancestors) {
-			if (
-				.ns_is_call_to(node, c("<-", "=", "<<-")) &&
-					.ns_subtree_has_symbol(node[[2]], "estimates")
-			) {
-				assignments[[length(assignments) + 1L]] <<- node
-			}
-		})
-		expect_equal(length(assignments), 1L, info = fn_name)
-		calls_helper <- FALSE
-		if (length(assignments) == 1L) {
-			.ns_walk_ast(assignments[[1]][[3]], function(node, ancestors) {
-				if (.ns_is_call_to(node, ".true_event_time_effects")) {
-					calls_helper <<- TRUE
-				}
-			})
-		}
-		expect_true(calls_helper, info = fn_name)
-	}
-})
-
-test_that("eventStudy()'s loops hand .finish_event_study() the helper's `estimates` (#389)", {
-	for (fn_name in event_study_loops) {
-		fn <- get(fn_name, envir = asNamespace("fetwfe"))
-		finish_calls <- list()
-		.ns_walk_ast(body(fn), function(node, ancestors) {
-			if (.ns_is_call_to(node, ".finish_event_study")) {
-				finish_calls[[length(finish_calls) + 1L]] <<- node
-			}
-		})
-		expect_equal(length(finish_calls), 1L, info = fn_name)
-		passes_estimates <- FALSE
-		if (length(finish_calls) == 1L) {
-			mc <- match.call(
-				get(".finish_event_study", envir = asNamespace("fetwfe")),
-				finish_calls[[1]]
-			)
-			passes_estimates <- identical(mc$estimates, as.name("estimates"))
-		}
-		expect_true(passes_estimates, info = fn_name)
+test_that("eventStudy() takes its estimates from .true_event_time_effects() (#389)", {
+	helper <- fetwfe:::.true_event_time_effects
+	coefs <- genCoefs(
+		G = 3,
+		T = 5,
+		d = 2,
+		density = 0.5,
+		eff_size = 2,
+		seed = 1
+	)
+	sim <- simulateData(
+		coefs,
+		N = 400,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = 1
+	)
+	fits <- list(
+		fetwfe = fetwfeWithSimulatedData(sim),
+		etwfe = etwfeWithSimulatedData(sim),
+		betwfe = betwfeWithSimulatedData(sim)
+	)
+	for (nm in names(fits)) {
+		plain <- eventStudy(fits[[nm]])$estimate
+		shifted <- with_mocked_bindings(
+			eventStudy(fits[[nm]])$estimate,
+			.true_event_time_effects = function(...) helper(...) + 1000,
+			.package = "fetwfe"
+		)
+		expect_equal(shifted, plain + 1000, info = nm)
 	}
 })
 
