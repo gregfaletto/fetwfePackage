@@ -97,7 +97,11 @@ test_that("getTes()$actual_event_time_tes: shape, names, and helper consistency"
 		coefs <- dgps[[dgp]]
 		te <- getTes(coefs)
 		expect_length(te$actual_event_time_tes, coefs$T - 1L)
-		expect_named(te$actual_event_time_tes, as.character(0:(coefs$T - 2L)))
+		expect_named(
+			te$actual_event_time_tes,
+			as.character(0:(coefs$T - 2L)),
+			info = dgp
+		)
 		num_treats <- fetwfe:::getNumTreats(G = coefs$G, T = coefs$T)
 		treat_inds <- fetwfe:::getTreatInds(
 			G = coefs$G,
