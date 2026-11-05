@@ -117,6 +117,10 @@ test_that("getTes()$actual_event_time_tes: shape, names, and helper consistency"
 			info = dgp
 		)
 	}
+})
+
+test_that(".gettes_dgps()'s two DGPs have different cohort weights (#541)", {
+	dgps <- .gettes_dgps()
 	expect_false(isTRUE(all.equal(
 		getTes(dgps$multinomial)$cohort_weights,
 		getTes(dgps$marginal)$cohort_weights
