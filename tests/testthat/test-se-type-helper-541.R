@@ -56,3 +56,26 @@ test_that("expect_se_type_omitted_matches_default() fits with cohort probabiliti
 		class = "expectation_failure"
 	)
 })
+
+test_that("estimator_fit_with_sim() forwards the simulation's fields and its extra arguments (#541)", {
+	seen <- NULL
+	fake <- function(...) {
+		seen <<- list(...)
+		list()
+	}
+	sim <- list(
+		pdata = "P",
+		time_var = "t",
+		unit_var = "u",
+		treatment = "w",
+		response = "y",
+		covs = "c",
+		indep_counts = NA,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 2
+	)
+	estimator_fit_with_sim(fake)(sim)
+	expect_identical(seen, sim)
+	estimator_fit_with_sim(fake)(sim, se_type = "default")
+	expect_identical(seen, c(sim, list(se_type = "default")))
+})
