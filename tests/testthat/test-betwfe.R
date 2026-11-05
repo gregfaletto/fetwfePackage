@@ -1166,7 +1166,7 @@ test_that("betwfe errors cleanly when no-never-treated truncation would yield < 
 # ------------------------------------------------------------------------------
 # Test: betwfe with se_type omitted matches se_type = "default"
 # ------------------------------------------------------------------------------
-test_that("betwfe se_type omitted matches se_type = 'default'", {
+test_that("betwfeWithSimulatedData() se_type omitted matches se_type = 'default'", {
 	expect_se_type_omitted_matches_default(betwfeWithSimulatedData)
 })
 

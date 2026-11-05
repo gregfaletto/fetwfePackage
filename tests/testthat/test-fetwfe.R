@@ -1118,7 +1118,7 @@ test_that("fetwfe errors cleanly when no-never-treated truncation would yield 0 
 # ------------------------------------------------------------------------------
 # Test: fetwfe with se_type omitted matches se_type = "default"
 # ------------------------------------------------------------------------------
-test_that("fetwfe se_type omitted matches se_type = 'default'", {
+test_that("fetwfeWithSimulatedData() se_type omitted matches se_type = 'default'", {
 	expect_se_type_omitted_matches_default(fetwfeWithSimulatedData)
 })
 

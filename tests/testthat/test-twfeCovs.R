@@ -978,7 +978,7 @@ test_that("twfeCovs errors cleanly when no-never-treated truncation would yield 
 # ------------------------------------------------------------------------------
 # Test: twfeCovs with se_type omitted matches se_type = "default"
 # ------------------------------------------------------------------------------
-test_that("twfeCovs se_type omitted matches se_type = 'default'", {
+test_that("twfeCovsWithSimulatedData() se_type omitted matches se_type = 'default'", {
 	expect_se_type_omitted_matches_default(twfeCovsWithSimulatedData)
 })
 

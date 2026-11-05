@@ -1284,7 +1284,7 @@ test_that("etwfe errors cleanly when no-never-treated truncation would yield < 2
 # ------------------------------------------------------------------------------
 # Test: etwfe with se_type omitted matches se_type = "default"
 # ------------------------------------------------------------------------------
-test_that("etwfe se_type omitted matches se_type = 'default'", {
+test_that("etwfeWithSimulatedData() se_type omitted matches se_type = 'default'", {
 	expect_se_type_omitted_matches_default(etwfeWithSimulatedData)
 })
 
