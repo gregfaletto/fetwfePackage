@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# Helpers for se_type tests: small F1-conforming and AR(1)-corrupted panels.
+# Helpers for se_type tests.
 # simulateData() produces F1-conforming shocks only; for the serially-correlated
 # fixture we add an AR(1) shock per unit on top of the simulated response.
 # ------------------------------------------------------------------------------
