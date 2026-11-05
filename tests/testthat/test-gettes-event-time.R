@@ -117,6 +117,10 @@ test_that("getTes()$actual_event_time_tes: shape, names, and helper consistency"
 			info = dgp
 		)
 	}
+	expect_false(isTRUE(all.equal(
+		getTes(dgps$multinomial)$cohort_weights,
+		getTes(dgps$marginal)$cohort_weights
+	)))
 })
 
 test_that("event-time truth matches the estimand under a multinomial DGP", {
