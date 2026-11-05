@@ -128,16 +128,7 @@ test_that(".gettes_dgps()'s two DGPs have different cohort weights (#541)", {
 })
 
 test_that("event-time truth matches the estimand under a multinomial DGP", {
-	coefs <- genCoefs(
-		G = 3,
-		T = 5,
-		d = 2,
-		density = 0.5,
-		eff_size = 2,
-		assignment_type = "multinomial",
-		assignment_strength = 1.0,
-		seed = 11
-	)
+	coefs <- .gettes_dgps()$multinomial
 	sim <- simulateData(
 		coefs,
 		N = 400,
