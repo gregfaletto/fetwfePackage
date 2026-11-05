@@ -238,7 +238,7 @@ test_that(".assemble_cluster_robust_sandwich: NULL default produces the same out
 # get a baffling Lapack stack trace instead of the helpful message.
 # This test exercises the new tryCatch branch.
 # ------------------------------------------------------------------------------
-test_that(".compute_cluster_robust_sandwich emits helpful error on rank-deficient X_S", {
+test_that(".compute_cluster_robust_sandwich emits helpful error", {
 	set.seed(20260519)
 	N <- 20L
 	T <- 5L
