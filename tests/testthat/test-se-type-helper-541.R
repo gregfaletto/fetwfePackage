@@ -36,3 +36,23 @@ test_that("expect_se_type_omitted_matches_default() fails when a slot is missing
 		class = "expectation_failure"
 	)
 })
+
+test_that("expect_se_type_omitted_matches_default() fits with cohort probabilities from the same data (#541)", {
+	fake <- function(sim, se_type = "conservative") {
+		same_data <- all(is.na(sim$indep_counts))
+		conservative <- identical(se_type, "conservative")
+		list(
+			att_se = if (conservative && same_data) 0.7 else 0.5,
+			catt_ses = c(0.25, 0.75),
+			att_hat = 2,
+			catt_hats = c(1, 3)
+		)
+	}
+	expect_error(
+		expect_se_type_omitted_matches_default(
+			fake,
+			sim = list(indep_counts = c(10L, 20L))
+		),
+		class = "expectation_failure"
+	)
+})
