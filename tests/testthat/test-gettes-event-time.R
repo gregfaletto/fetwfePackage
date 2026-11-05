@@ -243,6 +243,25 @@ test_that("eventStudy() takes its estimates from .true_event_time_effects() (#38
 	}
 })
 
+test_that("getTes() takes actual_event_time_tes from .true_event_time_effects() (#389)", {
+	helper <- fetwfe:::.true_event_time_effects
+	coefs <- genCoefs(
+		G = 3,
+		T = 5,
+		d = 2,
+		density = 0.5,
+		eff_size = 2,
+		seed = 9
+	)
+	plain <- getTes(coefs)$actual_event_time_tes
+	shifted <- with_mocked_bindings(
+		getTes(coefs)$actual_event_time_tes,
+		.true_event_time_effects = function(...) helper(...) + 1000,
+		.package = "fetwfe"
+	)
+	expect_equal(shifted, plain + 1000)
+})
+
 test_that(".true_event_time_effects() `empty_value` controls the unreached-event-time fill (#389)", {
 	# Synthetic offsets 5,6 with T=6: event times 2,3,4 are reached by no cohort
 	# (V_e empty). The default fills NA (truth convention); the estimator loops
