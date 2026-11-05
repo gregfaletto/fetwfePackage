@@ -235,6 +235,28 @@ test_that("eventStudy()'s estimator loops compute their estimates by calling .tr
 	}
 })
 
+test_that("eventStudy()'s loops hand .finish_event_study() the helper's `estimates` (#389)", {
+	for (fn_name in c(".event_study_etwfe_betwfe", ".event_study_fetwfe")) {
+		fn <- get(fn_name, envir = asNamespace("fetwfe"))
+		finish_calls <- list()
+		.ns_walk_ast(body(fn), function(node, ancestors) {
+			if (.ns_is_call_to(node, ".finish_event_study")) {
+				finish_calls[[length(finish_calls) + 1L]] <<- node
+			}
+		})
+		expect_equal(length(finish_calls), 1L, info = fn_name)
+		passes_estimates <- FALSE
+		if (length(finish_calls) == 1L) {
+			mc <- match.call(
+				get(".finish_event_study", envir = asNamespace("fetwfe")),
+				finish_calls[[1]]
+			)
+			passes_estimates <- identical(mc$estimates, as.name("estimates"))
+		}
+		expect_true(passes_estimates, info = fn_name)
+	}
+})
+
 test_that(".true_event_time_effects() `empty_value` controls the unreached-event-time fill (#389)", {
 	# Synthetic offsets 5,6 with T=6: event times 2,3,4 are reached by no cohort
 	# (V_e empty). The default fills NA (truth convention); the estimator loops
