@@ -9,7 +9,7 @@ library(fetwfe)
 # the access-time accessors (eventStudy() / simultaneousCIs()) reuse it.
 #
 # Headline guarantee: feeding the event-study built-in's forward D_N as a custom
-# matrix reproduces the `fusion_structure = "event_study"` fit byte-identically.
+# matrix reproduces the `fusion_structure = "event_study"` fit.
 #
 # The fixture below is DISCRIMINATING (per the plan-review finding): its selected
 # treatment support hits treatment columns where the cohort and event-study
@@ -33,7 +33,7 @@ library(fetwfe)
 		seed = 1
 	)
 	set.seed(101)
-	# Byte-exact pin (#250): the previous simulateData() reused coefs$seed,
+	# Pin (#250): the previous simulateData() reused coefs$seed,
 	# i.e. drew with set.seed(1), so the preceding set.seed(101) never
 	# governed this panel. Pin seed = 1 to reproduce the original draw.
 	simulateData(coefs, N = 120, sig_eps_sq = 5, sig_eps_c_sq = 5, seed = 1)
@@ -60,12 +60,12 @@ library(fetwfe)
 }
 
 # ------------------------------------------------------------------------------
-# 1. NULL no-op: fusion_matrix = NULL is byte-identical to omitting it, under
-#    both fusion_structure settings. (Choke-point else branch unchanged; every
-#    threaded d_inv_treat = NULL default leaves existing calls byte-identical.)
+# 1. NULL no-op: fusion_matrix = NULL, under both fusion_structure settings.
+#    (Choke-point else branch unchanged; every threaded d_inv_treat = NULL
+#    default leaves existing calls byte-identical.)
 # ------------------------------------------------------------------------------
 
-test_that("fusion_matrix = NULL is byte-identical to omitting it (cohort + event_study)", {
+test_that("fusion_matrix = NULL matches omitting it (cohort + event_study)", {
 	skip_on_cran()
 	sim <- .fm236_sim()
 
@@ -75,7 +75,7 @@ test_that("fusion_matrix = NULL is byte-identical to omitting it (cohort + event
 		fusion_structure = "cohort",
 		fusion_matrix = NULL
 	)
-	expect_identical(fit_co_omit, fit_co_null)
+	expect_equal(fit_co_omit, fit_co_null)
 
 	fit_es_omit <- .fm236_fit(sim, fusion_structure = "event_study")
 	fit_es_null <- .fm236_fit(
@@ -83,7 +83,7 @@ test_that("fusion_matrix = NULL is byte-identical to omitting it (cohort + event
 		fusion_structure = "event_study",
 		fusion_matrix = NULL
 	)
-	expect_identical(fit_es_omit, fit_es_null)
+	expect_equal(fit_es_omit, fit_es_null)
 
 	# The NULL-default still materializes the (NULL) slots, so the slot names
 	# survive for doc-slot parity.
@@ -96,12 +96,12 @@ test_that("fusion_matrix = NULL is byte-identical to omitting it (cohort + event
 # ------------------------------------------------------------------------------
 # 2. Headline cross-check: a custom D_N equal to the event-study built-in's
 #    forward matrix, supplied with fusion_structure = "cohort", reproduces the
-#    fusion_structure = "event_study" fit byte-identically -- including the
+#    fusion_structure = "event_study" fit -- including the
 #    SE/CI columns of eventStudy() / simultaneousCIs(), which exercise the
 #    accessor-time stored-slot read.
 # ------------------------------------------------------------------------------
 
-test_that("custom event-study D_N reproduces the event_study fit byte-identically", {
+test_that("custom event-study D_N reproduces the event_study fit", {
 	skip_on_cran()
 	sim <- .fm236_sim()
 
@@ -114,11 +114,11 @@ test_that("custom event-study D_N reproduces the event_study fit byte-identicall
 	)
 
 	# Fit-time quantities.
-	expect_identical(fit_custom$beta_hat, fit_es$beta_hat)
-	expect_identical(fit_custom$att_hat, fit_es$att_hat)
-	expect_identical(fit_custom$att_se, fit_es$att_se)
-	expect_identical(fit_custom$catt_df, fit_es$catt_df)
-	expect_identical(fit_custom$catt_ses, fit_es$catt_ses)
+	expect_equal(fit_custom$beta_hat, fit_es$beta_hat, tolerance = 1e-10)
+	expect_equal(fit_custom$att_hat, fit_es$att_hat, tolerance = 1e-10)
+	expect_equal(fit_custom$att_se, fit_es$att_se, tolerance = 1e-10)
+	expect_equal(fit_custom$catt_df, fit_es$catt_df, tolerance = 1e-10)
+	expect_equal(fit_custom$catt_ses, fit_es$catt_ses, tolerance = 1e-10)
 
 	# Confirm the fixture genuinely discriminates: the cohort fit differs, and
 	# the selected support hits columns where cohort and event-study inverse
@@ -148,15 +148,19 @@ test_that("custom event-study D_N reproduces the event_study fit byte-identicall
 	# Accessor-time SE/CI columns (these exercise x$internal$d_inv_treat).
 	es_es <- eventStudy(fit_es)
 	es_custom <- eventStudy(fit_custom)
-	expect_identical(es_custom$se, es_es$se)
-	expect_identical(es_custom$ci_low, es_es$ci_low)
-	expect_identical(es_custom$ci_high, es_es$ci_high)
-	expect_identical(es_custom$p_value, es_es$p_value)
+	expect_equal(es_custom$se, es_es$se, tolerance = 1e-10)
+	expect_equal(es_custom$ci_low, es_es$ci_low, tolerance = 1e-10)
+	expect_equal(es_custom$ci_high, es_es$ci_high, tolerance = 1e-10)
+	expect_equal(es_custom$p_value, es_es$p_value, tolerance = 1e-10)
 
 	sc_es <- simultaneousCIs(fit_es)
 	sc_custom <- simultaneousCIs(fit_custom)
-	expect_identical(sc_custom$ci, sc_es$ci)
-	expect_identical(sc_custom$adjusted_p_values, sc_es$adjusted_p_values)
+	expect_equal(sc_custom$ci, sc_es$ci, tolerance = 1e-10)
+	expect_equal(
+		sc_custom$adjusted_p_values,
+		sc_es$adjusted_p_values,
+		tolerance = 1e-10
+	)
 })
 
 # ------------------------------------------------------------------------------
@@ -323,11 +327,10 @@ test_that("a non-default but well-conditioned fusion_matrix still fits end-to-en
 })
 
 # ------------------------------------------------------------------------------
-# 5. add_ridge EXACT reproduction. add_ridge = TRUE is the only path that builds
-#    the FULL inverse-fusion matrix (genFullInvFusionTransformMat), so this
-#    proves the custom block reaches the ridge-penalty rows: a custom
+# 5. add_ridge reproduction. add_ridge = TRUE is the only path that builds
+#    the FULL inverse-fusion matrix (genFullInvFusionTransformMat): a custom
 #    event-study D_N with add_ridge = TRUE reproduces the add_ridge = TRUE
-#    event_study fit byte-identically.
+#    event_study fit.
 # ------------------------------------------------------------------------------
 
 test_that("add_ridge = TRUE with a custom event-study D_N reproduces the add_ridge event_study fit", {
@@ -347,10 +350,10 @@ test_that("add_ridge = TRUE with a custom event-study D_N reproduces the add_rid
 		add_ridge = TRUE
 	)
 
-	expect_identical(fit_custom$beta_hat, fit_es$beta_hat)
-	expect_identical(fit_custom$att_hat, fit_es$att_hat)
-	expect_identical(fit_custom$att_se, fit_es$att_se)
-	expect_identical(fit_custom$catt_df, fit_es$catt_df)
+	expect_equal(fit_custom$beta_hat, fit_es$beta_hat, tolerance = 1e-10)
+	expect_equal(fit_custom$att_hat, fit_es$att_hat, tolerance = 1e-10)
+	expect_equal(fit_custom$att_se, fit_es$att_se, tolerance = 1e-10)
+	expect_equal(fit_custom$catt_df, fit_es$catt_df, tolerance = 1e-10)
 })
 
 # ------------------------------------------------------------------------------

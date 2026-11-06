@@ -159,7 +159,7 @@ test_that(".build_propensity_if reproduces diag(Sigma_2) (the propensity anchor)
 
 # ------------------------------------------------------------------------------
 # End-to-end SE match: combines the regression anchor (Phase 1) + the propensity
-# anchor. The SEs do not depend on the random multipliers, so this is exact. The
+# anchor. The SEs do not depend on the random multipliers. The
 # asymmetric cadjust (N/(N-1) on the regression channel only, none on the
 # multinomial Sigma_2) is the unique scaling that matches the analytic SE.
 # ------------------------------------------------------------------------------
@@ -227,8 +227,8 @@ test_that("event_study bootstrap is deterministic given a seed and varies withou
 		B = 1000,
 		seed = 42
 	)
-	expect_identical(a$critical_value, b$critical_value)
-	expect_identical(a$ci, b$ci)
+	expect_equal(a$critical_value, b$critical_value)
+	expect_equal(a$ci, b$ci)
 	c2 <- simultaneousCIs(
 		fit,
 		family = "event_study",

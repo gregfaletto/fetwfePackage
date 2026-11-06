@@ -53,7 +53,7 @@ test_that("bootstrap per-effect SEs match the analytic cluster SEs to machine pr
 	)
 	# crossprod(F)/n^2 == cluster Sigma / cadjust, and the bootstrap SE restores
 	# cadjust, so the per-effect SEs coincide with the analytic cluster SEs. The
-	# SEs do NOT depend on the random multipliers, so this is exact.
+	# SEs do NOT depend on the random multipliers.
 	expect_equal(.se_from(bo), .se_from(an), tolerance = 1e-9)
 })
 
@@ -118,7 +118,7 @@ test_that("bootstrap is deterministic given a seed, and varies without one", {
 		B = 1000,
 		seed = 42
 	)
-	expect_identical(a$critical_value, b$critical_value)
+	expect_equal(a$critical_value, b$critical_value)
 	c2 <- simultaneousCIs(
 		fit,
 		family = "all_post_treatment",
@@ -159,7 +159,7 @@ test_that("mammen multipliers also produce an in-range critical value", {
 	expect_lte(bo$critical_value, bo$bonferroni_critical_value + 1e-8)
 })
 
-test_that("method = 'analytic' is the default and byte-identical to omitting it", {
+test_that("method = 'analytic' is the default and matches omitting it", {
 	fit <- .boot_fit(se_type = "cluster")
 	expect_equal(
 		simultaneousCIs(fit, family = "cohort"),

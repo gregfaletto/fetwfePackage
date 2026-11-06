@@ -18,7 +18,7 @@
 #      finite) via a simulateData(G = 1) fixture; twfeCovs is biased by design
 #      (asserted finite + G == 1 only).
 #   2. The three fusion structures (cohort / event_study / custom fusion_matrix)
-#      all fit at G = 1, and cohort == event_study EXACTLY (no cross-cohort
+#      all fit at G = 1, and cohort == event_study (no cross-cohort
 #      dimension to fuse, so both reduce to within-cohort dynamic-effect fusion).
 #   3. A hand-built SCATTERED-offset (offset 3, num_treats = 4) single-cohort
 #      panel fits -- genCoefs / simulateData force offset 2, so the scattered
@@ -222,10 +222,10 @@ test_that("twfeCovs fits at G = 1 (biased by design, so finiteness only)", {
 # 2. The three fusion structures at G = 1, plus the cohort == event_study
 #    invariant. With a single cohort there is no cross-cohort dimension, so the
 #    cohort and event_study penalties reduce to the same within-cohort
-#    dynamic-effect fusion and must give byte-identical fits.
+#    dynamic-effect fusion.
 # ------------------------------------------------------------------------------
 
-test_that("cohort and event_study fusion are identical at G = 1", {
+test_that("cohort and event_study fusion match at G = 1", {
 	skip_on_cran()
 	fx <- .sc112_sim()
 	res_cohort <- .sc112_fit(fx$sim, fetwfe, fusion_structure = "cohort")

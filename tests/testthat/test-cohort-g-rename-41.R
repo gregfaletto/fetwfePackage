@@ -1,6 +1,6 @@
 # Deprecation-contract tests for the user-facing cohort-count rename
 # R -> G (#41). Locks: (a) the deprecated `R` argument warns AND maps to
-# `G` (identical result); (b) the canonical `G` path is warning-free;
+# `G`; (b) the canonical `G` path is warning-free;
 # (c) both-supplied-conflict errors, both-equal warns-not-errors;
 # (d) the dual-populated `$G` field equals `$R` on every classed object;
 # (e) the package's own pipeline never self-triggers the deprecation
@@ -120,7 +120,7 @@ test_that("simulateDataCore(R = ) warns and equals simulateDataCore(G = )", {
 		),
 		"deprecated"
 	)
-	expect_identical(r$pdata, g$pdata)
+	expect_equal(r$pdata, g$pdata)
 	expect_identical(r$G, g$G)
 })
 

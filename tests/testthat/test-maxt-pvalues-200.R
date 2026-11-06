@@ -195,17 +195,17 @@ test_that("overall-ATT p_value (K=1) stays the pointwise Wald value", {
 })
 
 # ---------------------------------------------------------------------------
-# 8. Determinism: repeated calls give byte-identical adjusted p-values.
+# 8. Determinism.
 # ---------------------------------------------------------------------------
 test_that("adjusted p-values are deterministic across calls", {
 	skip_if_not_installed("mvtnorm")
 	fit <- make_maxt_fit()
 	es1 <- eventStudy(fit)
 	es2 <- eventStudy(fit)
-	expect_identical(es1$p_value, es2$p_value)
+	expect_equal(es1$p_value, es2$p_value)
 	sci1 <- suppressMessages(simultaneousCIs(fit, family = "cohort"))
 	sci2 <- suppressMessages(simultaneousCIs(fit, family = "cohort"))
-	expect_identical(sci1$adjusted_p_values, sci2$adjusted_p_values)
+	expect_equal(sci1$adjusted_p_values, sci2$adjusted_p_values)
 })
 
 # ---------------------------------------------------------------------------

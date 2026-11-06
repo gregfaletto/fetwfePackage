@@ -87,7 +87,7 @@ test_that(".cauchy_schwarz_se is sqrt(v1)+sqrt(v2) and matches hand values (#225
 # 2. Integration: the conservative event-study band is actually WIRED to the
 #    formula on a v2 > 0 family. se_type changes only the variance combine (not
 #    selection or point estimates), so the conservative and tight bands are
-#    row-aligned over identical v1, v2: tight = sqrt(v1 + v2), conservative =
+#    row-aligned over v1, v2: tight = sqrt(v1 + v2), conservative =
 #    sqrt(v1 + v2 + 2*sqrt(v1*v2)). The conservative band must therefore be
 #    >= the tight band everywhere and STRICTLY wider for >= 1 cohort-pooling
 #    (v2 > 0) event time.

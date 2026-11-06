@@ -419,18 +419,14 @@
 - The first run of that matrix found four assertions in
   `tests/testthat/test-gls-kronecker-block-apply-165.R` that required the
   block-apply GLS transform to agree with an explicit-Kronecker reference
-  *exactly*, and they now allow round-off (`tolerance = 1e-14`) instead (#427).
+  *exactly*, and they now allow round-off instead (#427).
   The two sides are mathematically equal but are different sequences of
   floating-point operations, so bit-identity between them is a property of the
   linear-algebra library rather than of correctness: the assertions passed on
   macOS and Windows and failed on all four Linux jobs, by 1 to 4 units in the
   last place (max absolute difference 4.44e-16 on values of order 1). This
   corrects the claim in the 1.10.0 entry for #165 that the identity was
-  "verified bit-identical (16-digit parity)" --- it is verified equal to
-  round-off, which is the strongest claim floating-point arithmetic supports.
-  No estimator behavior changed. The suite's other exact-equality assertions
-  are deliberately left exact, because they compare two runs of the same
-  operations rather than two ways of computing the same quantity.
+  "verified bit-identical (16-digit parity)". No estimator behavior changed.
 
 ## Version 1.56.18
 

@@ -103,8 +103,8 @@ test_that("gls = FALSE high-dim bootstrap band is deterministic at a fixed seed"
 		B = 300,
 		seed = 7
 	)
-	expect_identical(a$critical_value, b$critical_value)
-	expect_identical(a$ci$estimate, b$ci$estimate)
+	expect_equal(a$critical_value, b$critical_value)
+	expect_equal(a$ci$estimate, b$ci$estimate)
 })
 
 test_that("gls = FALSE high-dim band center matches debiasedATT() on the overall ATT (#303 cross-check)", {

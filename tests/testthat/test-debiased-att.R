@@ -313,7 +313,7 @@ test_that("var_weight reuses the fit's att_var_2 (correct two-sample formula)", 
 		N_T
 	expect_false(isTRUE(all.equal(db_indep$var_weight, naive_vw)))
 
-	# Single-sample: att_var_2 equals that single-sample recompute exactly.
+	# Single-sample: att_var_2 equals that single-sample recompute.
 	dat$indep_counts <- NA
 	fit_single <- fetwfeWithSimulatedData(dat, q = 0.5)
 	expect_false(isTRUE(fit_single$indep_counts_used))

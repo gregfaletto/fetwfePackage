@@ -15,9 +15,8 @@
 #       -- bitten by the "legacy object" test below.
 #
 # The fixture is pure base R (no bacondecomp / dplyr) and uses
-# `indep_counts == in-sample counts`, so the cohort probabilities -- and hence
-# all POINT estimates -- are identical with and without indep_counts (only the
-# SE *formula* differs by design, so SEs are not asserted equal). Synthetic
+# `indep_counts == in-sample counts` (only the SE *formula* differs by design,
+# so SEs are not asserted equal). Synthetic
 # genCoefs fixtures do NOT expose the bug: their cohorts adopt consecutively
 # from period 2, where the earliest-timing fallback is already correct.
 
@@ -116,8 +115,8 @@ for (est in c("fetwfe", "etwfe", "betwfe")) {
 			expect_identical(as.integer(fi_ic), as.integer(fi_no))
 			expect_identical(as.integer(fi_ic), c(1L, 7L, 12L, 16L))
 
-			# (c) indep_counts == in-sample counts, so all POINT estimates are
-			# identical across paths (indep changes only the SE form, not asserted).
+			# (c) indep_counts == in-sample counts (indep changes only the SE form,
+			# not asserted).
 			expect_equal(fit_ic$att_hat, fit_no$att_hat)
 			expect_equal(
 				eventStudy(fit_ic)$estimate,

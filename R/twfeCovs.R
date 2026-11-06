@@ -111,7 +111,7 @@
 #'   of versions <= 1.15.1). Both the interval bounds and the
 #'   per-cohort p-values (`p_value`) follow `ci_type` (single-step max-T
 #'   multiplicity-adjusted under `"simultaneous"`, per-cohort Wald under
-#'   `"pointwise"`; #200); the standard errors (`se`) are identical under both
+#'   `"pointwise"`; #200); the standard errors (`se`) are the same under both
 #'   settings. `twfeCovs` estimates a single pooled effect per cohort, so only
 #'   the cohort family is affected (it has no event-study surface). When
 #'   standard errors are unavailable (e.g., a rank-deficient design) the bounds
@@ -386,7 +386,7 @@ twfeCovs <- function(
 #'   of versions <= 1.15.1). Both the interval bounds and the
 #'   per-cohort p-values (`p_value`) follow `ci_type` (single-step max-T
 #'   multiplicity-adjusted under `"simultaneous"`, per-cohort Wald under
-#'   `"pointwise"`; #200); the standard errors (`se`) are identical under both
+#'   `"pointwise"`; #200); the standard errors (`se`) are the same under both
 #'   settings. `twfeCovs` estimates a single pooled effect per cohort, so only
 #'   the cohort family is affected (it has no event-study surface). When
 #'   standard errors are unavailable (e.g., a rank-deficient design) the bounds

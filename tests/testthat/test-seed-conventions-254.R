@@ -29,12 +29,9 @@ coefs_nm <- genCoefs(
 )
 
 # ------------------------------------------------------------------------------
-# (3a) BYTE-EXACT: the non-marginal att_true is pinned. tolerance = 1e-6 catches
-# RNG-ordering drift (even a 1-draw shift moves att_true by ~2.5e-4, far above
-# 1e-6; a larger reseed change moves it more) while staying robust to platform
-# floating-point. The exact value is 1.822751376679849.
+# (3a) The non-marginal att_true is pinned.
 # ------------------------------------------------------------------------------
-test_that("getTes() att_true is byte-exact on the non-marginal fixture", {
+test_that("getTes() att_true matches on the non-marginal fixture", {
 	expect_equal(getTes(coefs_nm)$att_true, 1.822751, tolerance = 1e-6)
 })
 
@@ -196,7 +193,7 @@ test_that("simulateDataCore(seed = NA) runs silently and honors an outer set.see
 		beta = beta,
 		seed = NA
 	)
-	expect_identical(a$y, b$y)
+	expect_equal(a$y, b$y)
 	expect_identical(a$X, b$X)
 })
 

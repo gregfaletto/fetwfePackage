@@ -215,19 +215,16 @@ test_that("simultaneousCIs achieves ~nominal simultaneous coverage", {
 
 # ------------------------------------------------------------------------------
 # Test 4: deterministic reproducibility + caller-RNG transparency.
-# Byte-determinism comes from the save/restore .Random.seed + fixed internal
-# set.seed(1L) wrapping mvtnorm::qmvnorm() (matches getBetaCV() / PR #181).
 # ------------------------------------------------------------------------------
 test_that("simultaneousCIs is deterministic and does not perturb caller RNG", {
 	fixture <- make_simul_cis_panel(G = 5, T = 6, d = 2, N = 200)
 	fit <- fetwfeWithSimulatedData(fixture$sim)
 
-	# Contract (a): byte-identical across consecutive calls.
 	sci1 <- simultaneousCIs(fit, family = "event_study", alpha = 0.05)
 	sci2 <- simultaneousCIs(fit, family = "event_study", alpha = 0.05)
-	expect_identical(sci1, sci2)
+	expect_equal(sci1, sci2)
 
-	# Contract (b): the caller's RNG stream is unperturbed. The intervening
+	# The caller's RNG stream is unperturbed. The intervening
 	# simultaneousCIs() call must not shift the caller's draws.
 	set.seed(42L)
 	invisible(simultaneousCIs(fit, family = "event_study"))

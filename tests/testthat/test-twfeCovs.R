@@ -976,63 +976,14 @@ test_that("twfeCovs errors cleanly when no-never-treated truncation would yield 
 })
 
 # ------------------------------------------------------------------------------
-# Helpers for se_type tests: small F1-conforming and AR(1)-corrupted panels.
-# simulateData() produces F1-conforming shocks only; for the serially-correlated
-# fixture we add an AR(1) shock per unit on top of the simulated response.
+# Test: twfeCovs with se_type omitted matches se_type = "default"
 # ------------------------------------------------------------------------------
-make_se_type_panel <- function(seed = 2026, N = 120) {
-	set.seed(seed)
-	sim_coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
-	# coefs built without a seed: continue the ambient RNG (seed = NA, #250).
-	simulateData(
-		sim_coefs,
-		N = N,
-		sig_eps_sq = 1,
-		sig_eps_c_sq = 0.5,
-		seed = NA
-	)
-}
+test_that("twfeCovsWithSimulatedData() se_type omitted matches se_type = 'default'", {
+	expect_se_type_omitted_matches_default(twfeCovsWithSimulatedData)
+})
 
-make_ar1_panel <- function(seed = 7, N = 150, rho = 0.85, sd_e = 1) {
-	set.seed(seed)
-	sim_coefs <- genCoefs(G = 3, T = 6, d = 2, density = 0.5, eff_size = 2)
-	# coefs built without a seed: continue the ambient RNG (seed = NA, #250).
-	sim <- simulateData(
-		sim_coefs,
-		N = N,
-		sig_eps_sq = 0.5,
-		sig_eps_c_sq = 0.5,
-		seed = NA
-	)
-	pdata <- sim$pdata
-	pdata <- pdata[order(pdata$unit, pdata$time), ]
-	units <- unique(pdata$unit)
-	T_ <- length(unique(pdata$time))
-	set.seed(seed + 100)
-	for (u in units) {
-		idx <- which(pdata$unit == u)
-		ar <- numeric(T_)
-		ar[1] <- rnorm(1, sd = sd_e / sqrt(1 - rho^2))
-		for (t in 2:T_) {
-			ar[t] <- rho * ar[t - 1] + rnorm(1, sd = sd_e)
-		}
-		pdata[idx, sim$response] <- pdata[idx, sim$response] + ar
-	}
-	sim$pdata <- pdata
-	sim
-}
-
-# ------------------------------------------------------------------------------
-# Test: twfeCovs with se_type omitted matches se_type = "default" identically
-# ------------------------------------------------------------------------------
-test_that("twfeCovs se_type omitted matches se_type = 'default' identically", {
-	sim <- make_se_type_panel()
-	res_omit <- twfeCovsWithSimulatedData(sim)
-	res_def <- twfeCovsWithSimulatedData(sim, se_type = "default")
-	expect_identical(res_omit$att_se, res_def$att_se)
-	expect_identical(res_omit$catt_ses, res_def$catt_ses)
-	expect_identical(res_omit$att_hat, res_def$att_hat)
-	expect_identical(res_omit$catt_hats, res_def$catt_hats)
+test_that("twfeCovs() se_type omitted matches se_type = 'default'", {
+	expect_se_type_omitted_matches_default(estimator_fit_with_sim(twfeCovs))
 })
 
 # ------------------------------------------------------------------------------

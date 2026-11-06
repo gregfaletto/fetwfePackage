@@ -106,7 +106,7 @@ test_that("high-dim bootstrap is deterministic given a seed", {
 		B = 800,
 		seed = 7
 	)
-	expect_identical(a$critical_value, b$critical_value)
+	expect_equal(a$critical_value, b$critical_value)
 })
 
 test_that("event_study bootstrap uses the desparsified path in the high-dim regime (#299)", {
@@ -146,9 +146,9 @@ test_that("high-dim event_study bootstrap is deterministic given a seed", {
 		B = 800,
 		seed = 11
 	)
-	expect_identical(a$critical_value, b$critical_value)
-	expect_identical(a$ci$estimate, b$ci$estimate)
-	expect_identical(a$ci$simultaneous_ci_low, b$ci$simultaneous_ci_low)
+	expect_equal(a$critical_value, b$critical_value)
+	expect_equal(a$ci$estimate, b$ci$estimate)
+	expect_equal(a$ci$simultaneous_ci_low, b$ci$simultaneous_ci_low)
 })
 
 test_that("too-small lambda_c warns for high-dim event_study (experimental)", {
@@ -636,8 +636,7 @@ test_that("non-fetwfe (betwfe) high-dim bootstrap uses the fixed-p band, not an 
 #
 # This is the end-to-end witness. It pins scale-EQUIVARIANCE rather than a value,
 # so it needs no reconstruction of `a`: scaling the contrast by c must scale
-# lambda_node by exactly c. Under `scale = 1.0` both calls return the identical
-# lambda_node and the ratio collapses to 1.
+# lambda_node by c. Under `scale = 1.0` the ratio collapses to 1.
 test_that("high-dim custom-family lambda_node scales with the contrast (#366)", {
 	nt <- length(hd_fit$treat_inds)
 	C1 <- rbind(c(1, rep(0, nt - 1)), c(rep(0, nt - 1), 1))

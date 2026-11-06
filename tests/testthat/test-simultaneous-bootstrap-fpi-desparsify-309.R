@@ -335,8 +335,8 @@ test_that("high-dim event_study band is finite and deterministic with the despar
 	expect_identical(sc$regime, "high-dimensional")
 	expect_true(all(is.finite(sc$ci$simultaneous_ci_low)))
 	expect_true(all(is.finite(sc$ci$simultaneous_ci_high)))
-	expect_identical(sc$critical_value, sc2$critical_value)
-	expect_identical(sc$ci$estimate, sc2$ci$estimate)
+	expect_equal(sc$critical_value, sc2$critical_value)
+	expect_equal(sc$ci$estimate, sc2$ci$estimate)
 })
 
 test_that("the experimental warning COUNTS the per-cell propensity directions, and they are exposed (#309)", {

@@ -18,7 +18,7 @@ library(fetwfe)
 #   * NULL (default): X_S = X_final; treat_block_mask via boolean fill.
 #   * vector: X_S = X_final[, sel_feat_inds]; treat_block_mask via %in%.
 #
-# These tests verify the helper's output bit-identically matches the
+# These tests verify the helper's output matches the
 # manual inline computation that the 4 call sites used to do.
 
 # Small deterministic fixture: N=6 units, T=5 periods, p=10 columns
@@ -149,11 +149,7 @@ test_that(".assemble_cluster_robust_sandwich integration parity: betwfe cluster-
 	# Integration check: fit betwfe with se_type = "cluster" on a
 	# simulated panel with strong signal (so selection actually
 	# fires and the cluster-SE path is exercised). Re-call the
-	# helper on the same fitted object's inputs and assert
-	# bit-identical output. This locks the refactor at the
-	# integration boundary: if a future PR changes betwfe_core's
-	# call to the helper (e.g., swaps which arg gets passed to
-	# `sel_feat_inds`), the assertion fails.
+	# helper on the same fitted object's inputs.
 	coefs <- genCoefs(
 		G = 2,
 		T = 5,
@@ -240,10 +236,9 @@ test_that(".assemble_cluster_robust_sandwich: NULL default produces the same out
 # `solve(crossprod(X_S_centered))` without a tryCatch, so a future caller
 # routing a rank-deficient selected support into the cluster path would
 # get a baffling Lapack stack trace instead of the helpful message.
-# This test exercises the new tryCatch branch by constructing an X_S with
-# duplicated columns (guaranteed rank-deficient).
+# This test exercises the new tryCatch branch.
 # ------------------------------------------------------------------------------
-test_that(".compute_cluster_robust_sandwich emits helpful error on rank-deficient X_S", {
+test_that(".compute_cluster_robust_sandwich emits helpful error", {
 	set.seed(20260519)
 	N <- 20L
 	T <- 5L
@@ -253,10 +248,7 @@ test_that(".compute_cluster_robust_sandwich emits helpful error on rank-deficien
 		nrow = N * T,
 		ncol = p_S
 	)
-	# Force rank deficiency: column 4 = column 2. crossprod() is then
-	# exactly singular and solve() would throw a Lapack error in the
-	# pre-tryCatch implementation.
-	X_S_full_rank[, 4] <- X_S_full_rank[, 2]
+	X_S_full_rank[, 4] <- 1
 	residuals <- rnorm(N * T)
 
 	e <- tryCatch(

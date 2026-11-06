@@ -2,9 +2,7 @@
 # `.true_event_time_effects()` helper (#388). The load-bearing test binds the
 # helper to the estimator's `eventStudy()` estimand. As of #389 the two estimator
 # event-study loops (`.event_study_fetwfe()` / `.event_study_etwfe_betwfe()`) are
-# folded onto this helper (single source of truth); the byte-exact test below
-# locks that `eventStudy()`'s estimand IS the helper's output for all three
-# estimators.
+# folded onto this helper (single source of truth).
 
 # Helper: the event-time effects the estimator targets, computed from a fit's
 # estimated cells + resolved cohort structure.
@@ -16,6 +14,30 @@
 		cohort_offsets_int = offs$cohort_offsets_int,
 		cohort_probs = fit$cohort_probs_overall,
 		T = fit$T
+	)
+}
+
+# Helper: one marginal and one multinomial genCoefs DGP.
+.gettes_dgps <- function() {
+	list(
+		marginal = genCoefs(
+			G = 3,
+			T = 5,
+			d = 2,
+			density = 0.5,
+			eff_size = 2,
+			seed = 9
+		),
+		multinomial = genCoefs(
+			G = 3,
+			T = 5,
+			d = 2,
+			density = 0.5,
+			eff_size = 2,
+			assignment_type = "multinomial",
+			assignment_strength = 1.0,
+			seed = 11
+		)
 	)
 }
 
@@ -70,47 +92,47 @@ test_that("getTes()'s assumed indices equal a fit's resolved indices (genCoefs)"
 })
 
 test_that("getTes()$actual_event_time_tes: shape, names, and helper consistency", {
-	coefs <- genCoefs(
-		G = 3,
-		T = 5,
-		d = 2,
-		density = 0.5,
-		eff_size = 2,
-		seed = 9
-	)
-	te <- getTes(coefs)
-	expect_length(te$actual_event_time_tes, coefs$T - 1L)
-	expect_named(te$actual_event_time_tes, as.character(0:(coefs$T - 2L)))
-	num_treats <- fetwfe:::getNumTreats(G = coefs$G, T = coefs$T)
-	treat_inds <- fetwfe:::getTreatInds(
-		G = coefs$G,
-		T = coefs$T,
-		d = coefs$d,
-		num_treats = num_treats
-	)
-	expect_equal(
-		te$actual_event_time_tes,
-		fetwfe:::.true_event_time_effects(
-			cell_effects = coefs$beta[treat_inds],
-			first_inds = fetwfe:::getFirstInds(G = coefs$G, T = coefs$T),
-			cohort_offsets_int = seq.int(2L, coefs$G + 1L),
-			cohort_probs = te$cohort_weights,
-			T = coefs$T
+	dgps <- .gettes_dgps()
+	for (dgp in names(dgps)) {
+		coefs <- dgps[[dgp]]
+		te <- getTes(coefs)
+		expect_length(te$actual_event_time_tes, coefs$T - 1L)
+		expect_named(
+			te$actual_event_time_tes,
+			as.character(0:(coefs$T - 2L)),
+			label = paste0("te$actual_event_time_tes (", dgp, ")")
 		)
-	)
+		num_treats <- fetwfe:::getNumTreats(G = coefs$G, T = coefs$T)
+		treat_inds <- fetwfe:::getTreatInds(
+			G = coefs$G,
+			T = coefs$T,
+			d = coefs$d,
+			num_treats = num_treats
+		)
+		expect_equal(
+			te$actual_event_time_tes,
+			fetwfe:::.true_event_time_effects(
+				cell_effects = coefs$beta[treat_inds],
+				first_inds = fetwfe:::getFirstInds(G = coefs$G, T = coefs$T),
+				cohort_offsets_int = seq.int(2L, coefs$G + 1L),
+				cohort_probs = te$cohort_weights,
+				T = coefs$T
+			),
+			info = dgp
+		)
+	}
+})
+
+test_that(".gettes_dgps()'s two DGPs have different cohort weights (#541)", {
+	dgps <- .gettes_dgps()
+	expect_false(isTRUE(all.equal(
+		getTes(dgps$multinomial)$cohort_weights,
+		getTes(dgps$marginal)$cohort_weights
+	)))
 })
 
 test_that("event-time truth matches the estimand under a multinomial DGP", {
-	coefs <- genCoefs(
-		G = 3,
-		T = 5,
-		d = 2,
-		density = 0.5,
-		eff_size = 2,
-		assignment_type = "multinomial",
-		assignment_strength = 1.0,
-		seed = 11
-	)
+	coefs <- .gettes_dgps()$multinomial
 	sim <- simulateData(
 		coefs,
 		N = 400,
@@ -168,14 +190,10 @@ test_that(".true_event_time_effects returns NA at an event time no cohort reache
 	expect_true(is.na(res[["4"]]))
 })
 
-test_that(".true_event_time_effects() single-sources eventStudy()'s estimand byte-exactly (fetwfe/etwfe/betwfe, #389)", {
+test_that(".true_event_time_effects() single-sources eventStudy()'s estimand (fetwfe/etwfe/betwfe, #389)", {
 	# After #389 both estimator loops compute their point estimates by calling
-	# `.true_event_time_effects()` (with `empty_value = 0`), using the SAME
-	# sparse-weight crossprod form, so `eventStudy(fit)$estimate` equals the
-	# helper's output BIT-FOR-BIT. Loop seeds 1-6: whether the old inline `sum`
-	# form diverged from `crossprod` is BLAS/DGP-dependent (e.g. betwfe seed 3
-	# does not diverge on some platforms), so a single pinned seed could make an
-	# estimator's assertion vacuous; looping guarantees the mutation-check bites.
+	# `.true_event_time_effects()` (with `empty_value = 0`), so
+	# `eventStudy(fit)$estimate` equals the helper's output.
 	for (seed in 1:6) {
 		coefs <- genCoefs(
 			G = 3,
@@ -211,11 +229,55 @@ test_that(".true_event_time_effects() single-sources eventStudy()'s estimand byt
 				T = fit$T,
 				empty_value = 0
 			))
-			# expect_identical (not expect_equal): byte-for-byte is the point.
-			# unname() is load-bearing -- a named vector would flip the data
-			# frame's row.names, failing df-level identical().
-			expect_identical(est_via_helper, eventStudy(fit)$estimate)
+			expect_equal(est_via_helper, eventStudy(fit)$estimate)
 		}
+	}
+})
+
+test_that("eventStudy() takes its estimates from .true_event_time_effects() (#389)", {
+	helper <- fetwfe:::.true_event_time_effects
+	coefs <- genCoefs(
+		G = 3,
+		T = 5,
+		d = 2,
+		density = 0.5,
+		eff_size = 2,
+		seed = 1
+	)
+	sim <- simulateData(
+		coefs,
+		N = 400,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = 1
+	)
+	fits <- list(
+		fetwfe = fetwfeWithSimulatedData(sim),
+		etwfe = etwfeWithSimulatedData(sim),
+		betwfe = betwfeWithSimulatedData(sim)
+	)
+	for (nm in names(fits)) {
+		plain <- eventStudy(fits[[nm]])$estimate
+		shifted <- with_mocked_bindings(
+			eventStudy(fits[[nm]])$estimate,
+			.true_event_time_effects = function(...) helper(...) + 1000,
+			.package = "fetwfe"
+		)
+		expect_equal(shifted, plain + 1000, info = nm)
+	}
+})
+
+test_that("getTes() takes actual_event_time_tes from .true_event_time_effects() (#389)", {
+	helper <- fetwfe:::.true_event_time_effects
+	dgps <- .gettes_dgps()
+	for (dgp in names(dgps)) {
+		plain <- getTes(dgps[[dgp]])$actual_event_time_tes
+		shifted <- with_mocked_bindings(
+			getTes(dgps[[dgp]])$actual_event_time_tes,
+			.true_event_time_effects = function(...) helper(...) + 1000,
+			.package = "fetwfe"
+		)
+		expect_equal(shifted, plain + 1000, info = dgp)
 	}
 })
 

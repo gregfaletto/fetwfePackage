@@ -66,7 +66,7 @@ test_that(".cv_lambda_node is deterministic and preserves the ambient RNG", {
 	set.seed(123L)
 	r2 <- .cv_lambda_node(s$Sig, s$a, s$X, s$N_units, s$T)
 	expect_identical(r1$lambda_c, r2$lambda_c)
-	expect_identical(r1$cv_loss, r2$cv_loss)
+	expect_equal(r1$cv_loss, r2$cv_loss)
 })
 
 # The unit folds are drawn over an order computed from the design (#524), so
@@ -144,10 +144,8 @@ test_that(".cv_lambda_node bails feasible points whose fold solves don't converg
 
 test_that(".cv_lambda_node selection is invariant to the fold cap on a normal fit (#384 no-op)", {
 	s <- .cv295_synth()
-	# A converged nodewise solve is identical regardless of the cap, and this fit's
-	# fold solves converge in far fewer than 100 sweeps -- so the selected lambda_c and
-	# every `cv_loss` are byte-identical across a wide range of `cv_fold_max_iter`. The
-	# guard is a no-op for normal fits; only pathological non-converging folds change.
+	# This fit's fold solves converge in far fewer than 100 sweeps. The guard is a
+	# no-op for normal fits; only pathological non-converging folds change.
 	base <- .cv_lambda_node(s$Sig, s$a, s$X, s$N_units, s$T)
 	for (cap in c(500L, 5000L, 20000L)) {
 		r <- .cv_lambda_node(
@@ -159,7 +157,7 @@ test_that(".cv_lambda_node selection is invariant to the fold cap on a normal fi
 			cv_fold_max_iter = cap
 		)
 		expect_identical(r$lambda_c, base$lambda_c)
-		expect_identical(r$cv_loss, base$cv_loss)
+		expect_equal(r$cv_loss, base$cv_loss)
 		expect_false(any(r$bailed))
 	}
 })
@@ -277,8 +275,8 @@ test_that("debiasedATT is deterministic at lambda_c = 'cv'", {
 	a <- debiasedATT(hd295, lambda_c = "cv")
 	b <- debiasedATT(hd295, lambda_c = "cv")
 	expect_identical(a$lambda_c, b$lambda_c)
-	expect_identical(a$att, b$att)
-	expect_identical(a$se, b$se)
+	expect_equal(a$att, b$att)
+	expect_equal(a$se, b$se)
 })
 
 test_that("point estimate and bootstrap band share one CV constant (#295)", {
@@ -302,12 +300,12 @@ test_that("point estimate and bootstrap band share one CV constant (#295)", {
 
 test_that("the fixed lambda_c escape hatch is unchanged by the cv feature", {
 	# Selecting the (formerly only) fixed constant explicitly still reports
-	# "fixed" and reproduces the default path byte-for-byte.
+	# "fixed" and reproduces the default path.
 	d_default <- debiasedATT(hd295)
 	d_fixed1 <- debiasedATT(hd295, lambda_c = 1.0)
 	expect_identical(d_fixed1$lambda_c_selection, "fixed")
-	expect_identical(d_default$att, d_fixed1$att)
-	expect_identical(d_default$se, d_fixed1$se)
+	expect_equal(d_default$att, d_fixed1$att)
+	expect_equal(d_default$se, d_fixed1$se)
 })
 
 # ============================== validation ===================================

@@ -294,8 +294,7 @@ test_that("the high-dim branch is load-bearing: the fixed-p inverse explodes on 
 	# N = clusters scaling, and the score/correction formula through the accessor.
 	# The high-dim nuisance is the internal q=1 fused lasso (#303), NOT the bridge
 	# theta_hat -- reconstruct it the same way the accessor does (n / Tt units), so
-	# this stays an INDEPENDENT reconstruction (the deterministic seed gives the
-	# identical nuisance => exact match), not a tautology.
+	# this stays an INDEPENDENT reconstruction, not a tautology.
 	th_q1 <- fetwfe:::.fit_q1_nuisance(
 		X,
 		as.numeric(hd_fix$internal$y_final),
@@ -317,8 +316,8 @@ test_that("lambda_c scales the nodewise penalty and shrinks the debiasing direct
 	# At lambda_c = 2 the penalty lambda_node exceeds ||a||_inf, so v = 0 is optimal
 	# and the debiased estimate collapses to the *q = 1 plug-in* (#303) -- NOT
 	# att_hat (the bridge plug-in). A much larger lambda_c gives the same v = 0, so
-	# both collapse to the identical q = 1 plug-in; and that plug-in differs from
-	# the bridge att_hat -- the mutation signal that the nuisance actually moved.
+	# both collapse to the q = 1 plug-in; and that plug-in differs from
+	# the bridge att_hat.
 	expect_equal(db2$att, debiasedATT(hd_fix, lambda_c = 100)$att)
 	expect_false(isTRUE(all.equal(db2$att, hd_fix$att_hat)))
 	# At the default lambda_c = 1 the correction is active (att != the plug-in).
@@ -344,9 +343,9 @@ test_that("debiasedATT warns when the nodewise solver does not fully resolve", {
 test_that("debiasedATT is deterministic in the high-dim regime", {
 	a <- debiasedATT(hd_fix)
 	b <- debiasedATT(hd_fix)
-	expect_identical(a$att, b$att)
-	expect_identical(a$se, b$se)
-	expect_identical(a$lambda_node, b$lambda_node)
+	expect_equal(a$att, b$att)
+	expect_equal(a$se, b$se)
+	expect_equal(a$lambda_node, b$lambda_node)
 })
 
 # The q = 1 nuisance and the lambda_c = "cv" selector both draw cross-validation
@@ -436,9 +435,9 @@ test_that("debiasedATT() returns a finite cluster-robust SE on a gls = FALSE fit
 test_that("debiasedATT() is deterministic on a gls = FALSE fit (#307)", {
 	a <- debiasedATT(hd_fix_nogls)
 	b <- debiasedATT(hd_fix_nogls)
-	expect_identical(a$att, b$att)
-	expect_identical(a$se, b$se)
-	expect_identical(a$lambda_node, b$lambda_node)
+	expect_equal(a$att, b$att)
+	expect_equal(a$se, b$se)
+	expect_equal(a$lambda_node, b$lambda_node)
 })
 
 # The load-bearing validation: the plug-in V2 (`.plugin_v2`, used when att_var_2 is

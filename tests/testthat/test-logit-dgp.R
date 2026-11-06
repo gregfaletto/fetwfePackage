@@ -7,7 +7,7 @@ library(fetwfe)
 # (issue #191).
 #
 # Eleven tests:
-#   1. Marginal DGP byte-identity (lock-in for backward compatibility).
+#   1. Marginal DGP (lock-in for backward compatibility).
 #   2. Multinomial DGP: empirical cohort proportions match the MC expectation.
 #   3. Ordered DGP: empirical cohort proportions are approximately uniform
 #      (the root-find cutpoint scheme guarantees this at strength = 0 and
@@ -35,13 +35,12 @@ library(fetwfe)
 # ------------------------------------------------------------------------------
 
 # ------------------------------------------------------------------------------
-# Test 1: marginal DGP byte-identity
+# Test 1: marginal DGP
 # ------------------------------------------------------------------------------
-test_that("marginal DGP: byte-identical to v1.13.x at default assignment_type", {
+test_that("marginal DGP: matches v1.13.x at default assignment_type", {
 	# Reference values captured from the marginal-path output at branch
 	# `feat-cohort-dgp-162` against the same call on `origin/main` SHA
-	# ae515b6. Locks in the pre-1.14.0 behavior at the strictest possible
-	# assertion. Any drift in the marginal-path RNG ordering fires here.
+	# ae515b6. Locks in the pre-1.14.0 behavior.
 	coefs <- genCoefs(
 		G = 3,
 		T = 5,

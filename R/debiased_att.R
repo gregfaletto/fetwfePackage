@@ -13,7 +13,7 @@
 #'   the per-cohort effects `catt_g`, the within-treated weights `pi_hat_g`, the
 #'   overall ATT, and the treated-unit count `N_tau` --- NOT the noise variances
 #'   or Omega. This equals the value the oracle SE machinery stores as
-#'   `att_var_2` (verified identical, single-sample, including unequal cohorts);
+#'   `att_var_2`;
 #'   `debiasedATT()` recomputes it here when the fit carries no `att_var_2`
 #'   (a `gls = FALSE` high-dimensional fit, #307).
 #' @param fit A fitted `fetwfe` object.
@@ -169,9 +169,7 @@
 #' *input* fit must still be `q < 1` (it supplies the cohort-weight variance
 #' channel `att_var_2`); only the high-dimensional debiasing nuisance is `q = 1`.
 #' That nuisance's cross-validation uses a fixed, data-derived seed, so it is
-#' deterministic across calls (`debiasedATT()` and the high-dimensional
-#' [simultaneousCIs()] band center agree exactly) --- but it is not tunable via
-#' the fit's `cv_seed`.
+#' deterministic across calls --- but it is not tunable via the fit's `cv_seed`.
 #'
 #' @param fit A fitted object from [fetwfe()]. In the fixed-p (`p < NT`) regime
 #'   the SE needs either bridge selection (`q < 1`, `gls = TRUE`) or an un-whitened
@@ -403,9 +401,8 @@ debiasedATT <- function(
 	#    machinery nor Omega -- so a `gls = FALSE` fit (`calc_ses = FALSE`, no GLS
 	#    whitening; #307) is the EXPECTED input and is accepted here. The high-dim
 	#    branch re-fits its OWN q=1 nuisance internally (#303), so it depends on
-	#    neither the input fit's `calc_ses` NOR its `q`: ANY p >= NT fit is accepted,
-	#    and the debiased estimate is IDENTICAL across the input fit's q (verified
-	#    |diff| = 0, q = 1 vs q < 1) -- the high-dim center uses the re-fit q=1
+	#    neither the input fit's `calc_ses` NOR its `q`: ANY p >= NT fit is accepted
+	#    -- the high-dim center uses the re-fit q=1
 	#    nuisance, not the input `theta_hat` (which seeds only the `a_theta` identity
 	#    check below). A high-dim q >= 1 fit is newly accepted (vs prior versions).
 	# A WHITENED (`gls = TRUE`) fixed-p fit with q >= 1: the exact inverse gives the
@@ -452,10 +449,10 @@ debiasedATT <- function(
 	# The cohort-weight SE channel V2 = `(1/N_tau) sum_g pi_g (catt_g - att)^2` --
 	# the variance from estimating the cohort weights pi_hat_g. Prefer the fit's
 	# stored plug-in `att_var_2` when present (the same value `fit$att_se` uses,
-	# byte-identical on single-sample fits and carrying the correct two-sample
-	# formula for `indep_counts` fits; single source of truth, #291 review). It is
+	# carrying the correct two-sample formula for `indep_counts` fits; single
+	# source of truth, #291 review). It is
 	# ABSENT on a `gls = FALSE` fit (`calc_ses = FALSE`, no oracle SE machinery;
-	# #307) -- there, recompute the identical plug-in directly via `.plugin_v2()`,
+	# #307) -- there, recompute the plug-in directly via `.plugin_v2()`,
 	# which needs only `catt_g` / `att_hat` / the cohort weights, NOT Omega.
 	#
 	# CAVEAT (#303 review, second-order, deferred -> #295): V2 plugs in the BRIDGE
@@ -644,8 +641,6 @@ debiasedATT <- function(
 		# q<1 bridge theta_hat. Its l1 rate is what the high-dimensional FETWFE theory
 		# controls the orthogonalization remainder through (the q<1 bridge is
 		# super-efficient / non-uniform -- the wrong nuisance for a uniform CI).
-		# Deterministic (fixed seed) so the simultaneousCIs() high-dim band center
-		# matches debiasedATT()$att exactly.
 		theta_nuis <- .fit_q1_nuisance(X, y, N_units, T)
 	}
 	# Nuisance: the q=1 fused lasso in high-dim (theta_nuis set above), the bridge

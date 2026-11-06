@@ -94,8 +94,8 @@ test_that("non-character, non-formula input is rejected with class info", {
 })
 
 # ----------------------------------------------------------------------
-# 5) End-to-end: formula and character forms produce identical fits on
-#    the same simulated panel. Each of the four estimators tested.
+# 5) End-to-end: formula and character forms. Each of the four
+#    estimators tested.
 # ----------------------------------------------------------------------
 
 # Build a small simulated panel WITH d > 0 so covs actually matters.
@@ -115,7 +115,7 @@ test_that("non-character, non-formula input is rejected with class info", {
 	dat
 }
 
-test_that("fetwfe(): formula and character forms produce identical results", {
+test_that("fetwfe(): formula and character forms produce matching results", {
 	sim <- .covs_setup()
 	df <- sim$pdata
 	# fetwfeWithSimulatedData() goes through fetwfe() with the sim's
@@ -146,7 +146,7 @@ test_that("fetwfe(): formula and character forms produce identical results", {
 	expect_equal(res_char$catt_df$se, res_form$catt_df$se)
 })
 
-test_that("etwfe(): formula and character forms produce identical results", {
+test_that("etwfe(): formula and character forms produce matching results", {
 	sim <- .covs_setup()
 	df <- sim$pdata
 	res_char <- etwfe(
@@ -170,7 +170,7 @@ test_that("etwfe(): formula and character forms produce identical results", {
 	expect_equal(res_char$catt_df$estimate, res_form$catt_df$estimate)
 })
 
-test_that("betwfe(): formula and character forms produce identical results", {
+test_that("betwfe(): formula and character forms produce matching results", {
 	sim <- .covs_setup()
 	df <- sim$pdata
 	res_char <- betwfe(
@@ -195,7 +195,7 @@ test_that("betwfe(): formula and character forms produce identical results", {
 	expect_equal(res_char$att_se, res_form$att_se)
 })
 
-test_that("twfeCovs(): formula and character forms produce identical results", {
+test_that("twfeCovs(): formula and character forms produce matching results", {
 	sim <- .covs_setup()
 	df <- sim$pdata
 	res_char <- twfeCovs(

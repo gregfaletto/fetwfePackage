@@ -1112,10 +1112,7 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 			# correlation matrix cov2cor(V) (Hothorn, Bretz, Westfall 2008).
 			#
 			# mvtnorm::GenzBretz() (mvtnorm's default; quasi-Monte Carlo) is
-			# sub-second through K ~ 100. Byte-determinism across calls is
-			# preserved by `.with_preserved_rng()`, which save/restores the
-			# caller's .Random.seed around a fixed internal set.seed(1L) (the
-			# same helper getBetaCV() uses; #195).
+			# sub-second through K ~ 100.
 			rng_out <- .with_preserved_rng(1L, {
 				qmv <- mvtnorm::qmvnorm(
 					p = 1 - alpha,

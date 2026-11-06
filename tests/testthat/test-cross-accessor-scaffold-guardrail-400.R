@@ -1,4 +1,4 @@
-# Cross-accessor byte-identity guardrail for the shared access-time inference
+# Cross-accessor guardrail for the shared access-time inference
 # scaffold (#400, Phase 1 -- the blocking prerequisite for the refactor).
 #
 # NB the next two sentences are STALE (tracked in #430): the sequence they
@@ -14,8 +14,7 @@
 # simultaneousCIs() (R/event_study.R, R/cohort_time_atts.R, R/simultaneous_cis.R).
 # If any copy drifts, the accessors silently report INCONSISTENT SEs for the same
 # fit. This file pins the three cross-accessor SE/estimate anchors AND literal
-# pre-refactor values on a shared fit so the Phase 2 single-sourcing refactor must
-# reproduce byte-identical results. There was no unified cross-accessor fixture
+# pre-refactor values on a shared fit. There was no unified cross-accessor fixture
 # before this (only pairwise checks in test-cohort_time_atts.R / test-simultaneous-cis.R).
 #
 # simultaneousCIs() exposes no `se` column; the pointwise SE is recovered from the

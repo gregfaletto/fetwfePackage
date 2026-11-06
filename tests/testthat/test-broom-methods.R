@@ -321,7 +321,7 @@ test_that("augment aligns rows to X_ints regardless of input row order", {
 	shuf_idx <- sample(nrow(setup$sim$pdata))
 	aug_shuf <- broom::augment(res, data = setup$sim$pdata[shuf_idx, ])
 	# Match shuffled output back to original by (unit, time) and check
-	# .fitted values are identical.
+	# .fitted values.
 	key_o <- paste(aug_orig$unit, aug_orig$time, sep = "_")
 	key_s <- paste(aug_shuf$unit, aug_shuf$time, sep = "_")
 	m <- match(key_o, key_s)
@@ -481,8 +481,8 @@ test_that("augment row order is invariant after auto-trim of first-period-treate
 		broom::augment(res, data = pdata[shuf_idx, ])
 	)
 
-	# Match the shuffled output back to the original by (unit, time) and
-	# require .fitted values to be identical -- the genuine row-order lock.
+	# Match the shuffled output back to the original by (unit, time) -- the
+	# genuine row-order lock.
 	key_o <- paste(aug_orig$unit, aug_orig$time, sep = "_")
 	key_s <- paste(aug_shuf$unit, aug_shuf$time, sep = "_")
 	m <- match(key_o, key_s)

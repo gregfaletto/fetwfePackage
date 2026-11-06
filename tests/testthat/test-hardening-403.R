@@ -203,10 +203,9 @@ test_that(".build_regression_if() routes a singular centered Gram to an actionab
 	n <- N * T
 	set.seed(403)
 	z <- stats::rnorm(n)
-	X_sel <- cbind(z, z, stats::rnorm(n)) # duplicated column -> singular Sig
+	X_sel <- cbind(z, 1, stats::rnorm(n))
 	y <- stats::rnorm(n)
 	Psi_full <- matrix(stats::rnorm(3 * 2), nrow = 3, ncol = 2)
-	# Pre-fix: bare LAPACK "system is computationally singular" (does not match).
 	expect_error(
 		.build_regression_if(
 			X_sel = X_sel,

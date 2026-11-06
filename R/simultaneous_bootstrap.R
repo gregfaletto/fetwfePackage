@@ -725,8 +725,7 @@
 		# High-dim nuisance (#303): an internal q=1 fused lasso (NOT the q<1 bridge
 		# theta_hat), the SAME nuisance debiasedATT() uses -- its l1 rate is what
 		# the high-dimensional FETWFE theory controls the orthogonalization remainder
-		# through, and the fixed seed makes it byte-identical to debiasedATT()'s
-		# nuisance so the debiased center below matches debiasedATT()$att exactly.
+		# through.
 		theta_q1 <- .fit_q1_nuisance(X_final, y_final[seq_len(n)], N, T)
 		# q=1 residuals over the FULL design (debiasedATT convention).
 		resid_q1 <- as.numeric(
@@ -740,7 +739,7 @@
 		# D2: one `lambda_c` serves the point estimate AND every band effect). `a_att`
 		# is built (in `.simultaneous_cis_impl`) with the offset-resolved per-cohort
 		# block sizes, the SAME construction debiasedATT() uses, so it equals
-		# debiasedATT()'s direction exactly -- and the band center matches
+		# debiasedATT()'s direction -- and the band center matches
 		# `debiasedATT()$att` under `lambda_c = "cv"` for BOTH consecutive and
 		# scattered (non-consecutive) adoption (#318 made debiasedATT() support
 		# scattered; #323 aligned this CV direction with it). Each effect's
@@ -778,7 +777,7 @@
 			Sig = Sig_hd
 		)
 		# Debias the band center (the high-dimensional FETWFE theory): the q=1 plug-in plus the per-effect
-		# desparsified correction `colSums(F_mat)/(N*T)` (exactly `debiasedATT()`'s
+		# desparsified correction `colSums(F_mat)/(N*T)` (`debiasedATT()`'s
 		# `mean(score)`, the per-effect generalization of `att_db = sum(a*theta) +
 		# mean(score)`), so `estimates_used` equals `debiasedATT()$att` for the
 		# matching overall-ATT contrast. The q=1 plug-in `crossprod(targets,
