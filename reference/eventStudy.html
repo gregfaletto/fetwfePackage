@@ -127,7 +127,7 @@ inherits the fit's stored <code>ci_type</code> (so a fit made with the default
 <code>ci_type = "simultaneous"</code> yields simultaneous event-study bands, which
 <code>print</code> / <code>summary</code> / <code>plot</code> then display); for objects fitted before
 version 1.16.0 (no <code>ci_type</code> slot) <code>NULL</code> falls back to <code>"pointwise"</code>. The
-<code>se</code> column is identical under both settings; the interval bounds, their
+<code>se</code> column is the same under both settings; the interval bounds, their
 critical-value multiplier, and the <code>p_value</code> differ (under
 <code>"simultaneous"</code> the <code>p_value</code> is the single-step max-T multiplicity-
 adjusted dual of the band, under <code>"pointwise"</code> the per-effect Wald

@@ -56,7 +56,7 @@ eventStudy(x, alpha = NULL, ci_type = NULL)
   `ci_type = "simultaneous"` yields simultaneous event-study bands,
   which `print` / `summary` / `plot` then display); for objects fitted
   before version 1.16.0 (no `ci_type` slot) `NULL` falls back to
-  `"pointwise"`. The `se` column is identical under both settings; the
+  `"pointwise"`. The `se` column is the same under both settings; the
   interval bounds, their critical-value multiplier, and the `p_value`
   differ (under `"simultaneous"` the `p_value` is the single-step max-T
   multiplicity- adjusted dual of the band, under `"pointwise"` the

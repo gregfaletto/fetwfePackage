@@ -329,7 +329,7 @@ exactly: a coefficient lies outside its `1 - alpha` simultaneous band
 iff its adjusted `p_value` is `< alpha` (version 1.18.0, \#200). The
 standard errors (`se`), selection flags (`selected`), and the
 overall-ATT confidence interval and p-value (a single scalar, `K = 1`,
-with no family and hence no widening) are **identical** under both
+with no family and hence no widening) are **the same** under both
 settings — for the bounds the only difference is the critical-value
 multiplier (`qnorm(1 - alpha/2)` for pointwise vs the joint
 $`c_{1-\alpha}`$ for simultaneous).

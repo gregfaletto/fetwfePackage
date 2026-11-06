@@ -275,7 +275,7 @@ betwfe(
   `ci_type`: under `"simultaneous"` the `p_value` is the single-step
   max-T multiplicity- adjusted p-value matching the band, under
   `"pointwise"` the per-cohort Wald p-value (#200). The standard errors
-  (`se`) and selection flags (`selected`) are identical under both
+  (`se`) and selection flags (`selected`) are the same under both
   settings, and the overall-ATT confidence interval (a single scalar) is
   unaffected. When standard errors are unavailable (`q >= 1`, or a
   rank-deficient design) the bounds are `NA` under both settings.
@@ -674,12 +674,12 @@ if (requireNamespace("bacondecomp", quietly = TRUE)) {
 #> No covariates provided; skipping covariate processing.
 #> Getting omega sqrt inverse estimate...
 #> Done! Time to estimate noise variances:
-#> 0.211035013198853
+#> 0.240771293640137
 #> Time to get sqrt inverse matrix:
-#> 0.000216484069824219
+#> 0.000338554382324219
 #> Estimating bridge regression with 10-fold CV...
 #> Done! Time for estimation:
-#> 0.098344087600708
+#> 0.117936611175537
 #> No treatment features selected; all treatment effects estimated to be 0.
 #>   cohort estimate se ci_low ci_high p_value selected
 #> 1   2005        0  0      0       0      NA    FALSE

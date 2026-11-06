@@ -300,11 +300,8 @@ super-efficient / non-uniform — the wrong nuisance for a uniformly-valid
 CI (#303). The *input* fit must still be `q < 1` (it supplies the
 cohort-weight variance channel `att_var_2`); only the high-dimensional
 debiasing nuisance is `q = 1`. That nuisance's cross-validation uses a
-fixed, data-derived seed, so it is deterministic across calls
-(`debiasedATT()` and the high-dimensional
-[`simultaneousCIs()`](https://gregfaletto.github.io/fetwfePackage/reference/simultaneousCIs.md)
-band center agree exactly) — but it is not tunable via the fit's
-`cv_seed`.
+fixed, data-derived seed, so it is deterministic across calls — but it
+is not tunable via the fit's `cv_seed`.
 
 ## References
 
