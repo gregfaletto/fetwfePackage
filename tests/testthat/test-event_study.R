@@ -46,7 +46,6 @@ test_that("eventStudy returns expected structure", {
 			"p_value"
 		)
 	)
-	# T = 6, so max_event = 4, length = 5
 	expect_equal(nrow(es), 5L)
 	expect_equal(es$event_time, 0:4)
 	# Estimate and SE columns are numeric, finite, non-negative SE

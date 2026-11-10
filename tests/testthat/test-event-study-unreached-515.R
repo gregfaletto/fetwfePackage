@@ -146,7 +146,26 @@ for (est in c("fetwfe", "etwfe", "betwfe")) {
 		}
 	)
 
-	# Parity checks: the two surfaces agree row for row.
+	test_that(
+		paste0(
+			"plot() draws a point at each reached event time only (",
+			est,
+			")"
+		),
+		{
+			skip_if_not_installed("ggplot2")
+			p <- plot(.esu515_fit(est))
+			is_point <- vapply(
+				p$layers,
+				function(l) inherits(l$geom, "GeomPoint"),
+				logical(1)
+			)
+			ld <- ggplot2::layer_data(p, which(is_point))
+			expect_setequal(ld$x, .esu515_panel()$reached)
+		}
+	)
+
+	# Parity checks.
 
 	test_that(
 		paste0("eventStudy() applies the simultaneous band (", est, ")"),
@@ -232,25 +251,6 @@ for (est in c("fetwfe", "etwfe", "betwfe")) {
 				family = "event_study"
 			))
 			expect_equal(sc$critical_value, stats::qnorm(1 - 0.05 / (2 * sc$K)))
-		}
-	)
-
-	test_that(
-		paste0(
-			"plot() draws a point at each reached event time only (",
-			est,
-			")"
-		),
-		{
-			skip_if_not_installed("ggplot2")
-			p <- plot(.esu515_fit(est))
-			is_point <- vapply(
-				p$layers,
-				function(l) inherits(l$geom, "GeomPoint"),
-				logical(1)
-			)
-			ld <- ggplot2::layer_data(p, which(is_point))
-			expect_setequal(ld$x, .esu515_panel()$reached)
 		}
 	)
 }
