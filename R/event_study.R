@@ -993,7 +993,7 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #'   cohort helper).
 #'
 #'   Wherever `ses` is not finite, the simultaneous bounds and adjusted p-values
-#'   are forced back to `NA` (#197).
+#'   are forced back to `NA`.
 #' @param x A fully-classed `fetwfe`/`etwfe`/`betwfe` object.
 #' @param alpha Numeric significance level.
 #' @param estimates,ses The per-event-time point estimates and SEs the
