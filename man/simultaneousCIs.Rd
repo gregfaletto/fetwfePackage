@@ -180,10 +180,11 @@ differences, where effects share the regression-coefficient variance piece).
 }
 \details{
 \strong{Family resolution and \code{K}.} \code{"event_study"} resolves to one effect per
-post-treatment event time \verb{e = 0, ..., T - 2} (\code{K = T - 1}); \code{"cohort"} to
-one effect per treated cohort (\code{K = G}); \code{"all_post_treatment"} to one
-effect per \verb{(g, t)} cell (\code{K = num_treats}); \code{"custom"} to the
-\code{K = nrow(contrasts)} user-supplied contrasts.
+post-treatment event time \code{e} from 0 to \code{T - 2} that at least one cohort
+reaches (\code{K <= T - 1}); \code{"cohort"} to one effect per treated cohort
+(\code{K = G}); \code{"all_post_treatment"} to one effect per \verb{(g, t)} cell
+(\code{K = num_treats}); \code{"custom"} to the \code{K = nrow(contrasts)} user-supplied
+contrasts.
 
 \strong{Joint covariance.} The \verb{K x K} covariance \code{Sigma = Sigma_1 + Sigma_2} is
 reconstructed at call time from the fit's stored slots (design matrix,
@@ -195,22 +196,16 @@ machinery (the same machinery \code{eventStudy()} uses). By construction
 for the corresponding effects. The \code{Sigma} blocks are not persisted on the
 fit; re-derivation is sub-second.
 
-\strong{Degenerate effects.} An effect whose entire contribution
-to the selected support is zeroed by the bridge penalty -- or, in
-scattered-cohort panels, an event time with an empty valid-cohort set -- has
-a standard error of exactly 0 by construction, so its simultaneous and
-pointwise CIs collapse to a point at the estimate and it is excluded from the
-joint correlation matrix (it adds no family-wise risk; the critical value is
-computed over the non-degenerate sub-family). This \code{se = 0} convention is the
-simultaneous-CI analog of the \code{NA} standard error \code{eventStudy()} reports for
-the same structurally-degenerate event times; both assign the effect an
-estimate of 0. On every band built from the selected support, which is
-every band but the desparsified one a high-dimensional \code{fetwfe()} fit gets
-under \code{method = "bootstrap"}, a signed \code{"custom"} contrast whose weights
-cancel on that support is degenerate too: its estimate and standard error
-are exactly 0 or rounding error, so which side of zero its point-sized
-interval falls on carries no information, and its \code{NA} adjusted p-value is
-the signal.
+\strong{Degenerate effects.} On every band built from the selected support, which
+is every band but the desparsified one a high-dimensional \code{fetwfe()} fit gets
+under \code{method = "bootstrap"}, an effect whose entire contribution to that
+support is zeroed by the bridge penalty has a standard error of exactly 0 by
+construction, so its simultaneous and pointwise CIs collapse to a point at
+the estimate and it is excluded from the joint correlation matrix. A signed
+\code{"custom"} contrast whose weights cancel on that support is degenerate too:
+its estimate and standard error are exactly 0 or rounding error, so which
+side of zero its point-sized interval falls on carries no information, and
+its \code{NA} adjusted p-value is the signal.
 
 \strong{High-dimensional (\code{p >= NT}) bands.} One route out of the four is
 uniformly valid: a \code{fetwfe()} fit under

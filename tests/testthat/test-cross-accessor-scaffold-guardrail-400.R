@@ -130,7 +130,7 @@
 	expect_lt(max(abs(cta$se - .g400_se_of_sci(ap))), 1e-12)
 
 	# Anchor B -- per-event-time: eventStudy <-> event_study. Compare finite rows
-	# only (degenerate event times are NA in eventStudy).
+	# only.
 	es <- eventStudy(fit)
 	esr <- simultaneousCIs(fit, family = "event_study", alpha = a)
 	fin <- is.finite(es$se)

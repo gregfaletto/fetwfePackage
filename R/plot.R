@@ -320,9 +320,12 @@ plot.twfeCovs <- function(x, ...) {
 	p <- ggplot2::ggplot(
 		es,
 		ggplot2::aes(x = event_time, y = estimate)
-	) +
-		ggplot2::geom_line(color = "steelblue") +
-		ggplot2::geom_point(size = 3, color = "steelblue")
+	)
+	# One row has no line to join, and geom_line() messages if asked to draw one.
+	if (nrow(es) > 1L) {
+		p <- p + ggplot2::geom_line(color = "steelblue")
+	}
+	p <- p + ggplot2::geom_point(size = 3, color = "steelblue")
 	if (isTRUE(conf_int)) {
 		p <- p +
 			ggplot2::geom_errorbar(

@@ -24,8 +24,7 @@ version 1.16.0 (no \code{ci_type} slot) \code{NULL} falls back to \code{"pointwi
 critical-value multiplier, and the \code{p_value} differ (under
 \code{"simultaneous"} the \code{p_value} is the single-step max-T multiplicity-
 adjusted dual of the band, under \code{"pointwise"} the per-effect Wald
-p-value; #200). Degenerate event times (no valid contributing cohorts)
-carry \code{NA} bounds and \code{NA} \code{p_value} under both settings.
+p-value; #200).
 
 \strong{High-dimensional (\code{p >= NT}):} the \code{"simultaneous"} band here is the
 analytic post-selection band on the selected support (or \code{NA} bounds on a
@@ -39,8 +38,9 @@ Such a call \strong{emits a warning}; see Details.}
 A data frame with class \code{c("eventStudy", "data.frame")} and
 columns:
 \describe{
-\item{event_time}{Integer; event time \code{e = t - g}, ranging from 0
-to \code{T - 2}.}
+\item{event_time}{Integer; event time \code{e = t - g}, for each \code{e} from 0
+to \code{T - 2} that at least one cohort reaches, so the frame can have
+fewer than \code{T - 1} rows.}
 \item{n_cohorts}{Integer; number of cohorts contributing to the
 pooled estimate at event time \code{e}.}
 \item{estimate}{Numeric; the pooled event-time ATT estimate.}
@@ -70,9 +70,7 @@ differently for different calls: on a fit carrying
 \code{catt_band_applied = TRUE}, \code{attr(eventStudy(fit), "band_applied")} is
 \code{TRUE} while \code{attr(eventStudy(fit, ci_type = "pointwise"), "band_applied")}
 is \code{FALSE}. Like the slot, it records only that the band was applied: \code{TRUE} does not imply the
-bounds are wider than the pointwise ones, and does not imply every row is
-informative --- degenerate event times are masked to \code{NA} while the band is
-still reported as applied.
+bounds are wider than the pointwise ones.
 Only post-treatment event times (\code{e >= 0}) are included; pre-treatment
 placebo periods would require an extended regression specification and
 are out of scope for this initial release.
