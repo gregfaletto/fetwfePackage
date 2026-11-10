@@ -431,6 +431,7 @@ test_that("eventStudy() keeps the simultaneous band on a panel with an unreached
 	)
 	es <- eventStudy(fit)
 	pw <- eventStudy(fit, ci_type = "pointwise")
+	expect_lt(nrow(es), fit$T - 1L)
 	expect_true(attr(es, "band_applied"))
 	pos <- is.finite(es$se) & es$se > 0
 	expect_gte(sum(pos), 2L)
