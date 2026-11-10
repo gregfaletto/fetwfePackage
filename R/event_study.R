@@ -993,8 +993,8 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #'   Bonferroni-substitution `message()` (same verbose-gating rationale as the
 #'   cohort helper).
 #'
-#'   BLOCKER FIX (#197 round 1): wherever `ses` is not finite, the simultaneous
-#'   bounds and adjusted p-values are forced back to `NA`.
+#'   Wherever `ses` is not finite, the simultaneous bounds and adjusted p-values
+#'   are forced back to `NA` (#197).
 #' @param x A fully-classed `fetwfe`/`etwfe`/`betwfe` object.
 #' @param alpha Numeric significance level.
 #' @param estimates,ses The per-event-time point estimates and SEs the

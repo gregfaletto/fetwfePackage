@@ -417,8 +417,8 @@ test_that("ci_type works across etwfe / betwfe / twfeCovs", {
 
 # ------------------------------------------------------------------------------
 # Test 11: on the scattered panel, whose last event time no cohort reaches,
-# eventStudy() keeps the simultaneous band; and the band's NA mask (#197's
-# round-1 blocker fix) leaves NA bounds and p-values where se is NA.
+# eventStudy() keeps the simultaneous band; and the band's NA mask leaves NA
+# bounds and p-values where se is NA.
 # ------------------------------------------------------------------------------
 test_that("eventStudy() keeps the simultaneous band on a panel with an unreached event time", {
 	pdata <- make_scattered_degenerate_panel()
