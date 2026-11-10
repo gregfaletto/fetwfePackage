@@ -280,22 +280,21 @@ test_that("on a fit with standard errors the catt plot draws the fit's own bound
 })
 
 # ----------------------------------------------------------------------
-# 8) A one-row event study (#515).
+# 8) One- and two-row event studies (#515).
 # ----------------------------------------------------------------------
 
-test_that("plot() draws a one-row event study's point without a line", {
-	skip_if_not_installed("ggplot2")
-	# One cohort, adopting in the last of five periods, reaches only event
-	# time 0.
+# One cohort, adopting in period `adopt` of five beside never-treated units,
+# reaches event times 0 to 5 - adopt.
+.one_cohort_fit_515 <- function(adopt) {
 	set.seed(515)
 	pd <- expand.grid(
 		year = 1:5,
 		unit = paste0("u", 1:60),
 		stringsAsFactors = FALSE
 	)
-	pd$treated <- as.integer(pd$unit %in% paste0("u", 1:30) & pd$year == 5L)
+	pd$treated <- as.integer(pd$unit %in% paste0("u", 1:30) & pd$year >= adopt)
 	pd$y <- stats::rnorm(nrow(pd)) + 0.5 * pd$treated
-	fit <- etwfe(
+	etwfe(
 		pdata = pd,
 		time_var = "year",
 		unit_var = "unit",
@@ -303,12 +302,24 @@ test_that("plot() draws a one-row event study's point without a line", {
 		response = "y",
 		verbose = FALSE
 	)
+}
+
+.geom_names_515 <- function(fit) {
+	vapply(plot(fit)$layers, function(l) class(l$geom)[1L], character(1L))
+}
+
+test_that("plot() draws a one-row event study's point without a line", {
+	skip_if_not_installed("ggplot2")
+	fit <- .one_cohort_fit_515(5L)
 	expect_identical(nrow(eventStudy(fit)), 1L)
-	geom_names <- vapply(
-		plot(fit)$layers,
-		function(l) class(l$geom)[1L],
-		character(1L)
-	)
+	geom_names <- .geom_names_515(fit)
 	expect_true("GeomPoint" %in% geom_names)
 	expect_false("GeomLine" %in% geom_names)
+})
+
+test_that("plot() joins a two-row event study's points with a line", {
+	skip_if_not_installed("ggplot2")
+	fit <- .one_cohort_fit_515(4L)
+	expect_identical(nrow(eventStudy(fit)), 2L)
+	expect_true("GeomLine" %in% .geom_names_515(fit))
 })
