@@ -178,10 +178,11 @@ utils::globalVariables(c(
 #'   losses, and whether the theory-scale fallback fired).
 #' @details
 #' **Family resolution and `K`.** `"event_study"` resolves to one effect per
-#' post-treatment event time `e = 0, ..., T - 2` (`K = T - 1`); `"cohort"` to
-#' one effect per treated cohort (`K = G`); `"all_post_treatment"` to one
-#' effect per `(g, t)` cell (`K = num_treats`); `"custom"` to the
-#' `K = nrow(contrasts)` user-supplied contrasts.
+#' post-treatment event time `e` from 0 to `T - 2` that at least one cohort
+#' reaches (`K <= T - 1`); `"cohort"` to one effect per treated cohort
+#' (`K = G`); `"all_post_treatment"` to one effect per `(g, t)` cell
+#' (`K = num_treats`); `"custom"` to the `K = nrow(contrasts)` user-supplied
+#' contrasts.
 #'
 #' **Joint covariance.** The `K x K` covariance `Sigma = Sigma_1 + Sigma_2` is
 #' reconstructed at call time from the fit's stored slots (design matrix,
@@ -193,16 +194,11 @@ utils::globalVariables(c(
 #' for the corresponding effects. The `Sigma` blocks are not persisted on the
 #' fit; re-derivation is sub-second.
 #'
-#' **Degenerate effects.** An effect whose entire contribution
-#' to the selected support is zeroed by the bridge penalty -- or, in
-#' scattered-cohort panels, an event time with an empty valid-cohort set -- has
-#' a standard error of exactly 0 by construction, so its simultaneous and
-#' pointwise CIs collapse to a point at the estimate and it is excluded from the
-#' joint correlation matrix (it adds no family-wise risk; the critical value is
-#' computed over the non-degenerate sub-family). This `se = 0` convention is the
-#' simultaneous-CI analog of the `NA` standard error `eventStudy()` reports for
-#' the same structurally-degenerate event times; both assign the effect an
-#' estimate of 0. On every band built from the selected support, which is
+#' **Degenerate effects.** An effect whose entire contribution to the selected
+#' support is zeroed by the bridge penalty has a standard error of exactly 0 by
+#' construction, so its simultaneous and pointwise CIs collapse to a point at
+#' the estimate and it is excluded from the joint correlation matrix. On every
+#' band built from the selected support, which is
 #' every band but the desparsified one a high-dimensional `fetwfe()` fit gets
 #' under `method = "bootstrap"`, a signed `"custom"` contrast whose weights
 #' cancel on that support is degenerate too: its estimate and standard error
@@ -1745,10 +1741,10 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 		return(diag(num_treats))
 	}
 
-	# family == "event_study": one effect per post-treatment event time
-	# e = 0, ..., T - 2. Effect e pools the cells (g, e) over the valid cohort
-	# set V_e, with sample-cohort-size weights.
-	event_times <- 0:(T - 2L)
+	# family == "event_study": one effect per event time `.reached_event_times()`
+	# returns. Effect e pools the cells (g, e) over the valid cohort set V_e,
+	# with sample-cohort-size weights.
+	event_times <- .reached_event_times(cohort_offsets_int, T)
 	K <- length(event_times)
 	psi_tes <- matrix(0, nrow = K, ncol = num_treats)
 	for (kk in seq_len(K)) {
@@ -1800,7 +1796,7 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 	zero_jac <- matrix(0, nrow = G, ncol = p_sel)
 
 	if (family == "event_study") {
-		event_times <- 0:(T - 2L)
+		event_times <- .reached_event_times(cohort_offsets_int, T)
 		return(lapply(seq_len(K), function(kk) {
 			e <- event_times[kk]
 			V_e <- which(cohort_offsets_int <= T - e)
@@ -1838,7 +1834,7 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 	cohort_offsets_int
 ) {
 	if (family == "event_study") {
-		return(paste0("e", 0:(T - 2L)))
+		return(paste0("e", .reached_event_times(cohort_offsets_int, T)))
 	}
 	if (family == "cohort") {
 		return(paste0("Cohort ", cohort_offsets_int[seq_len(G)]))

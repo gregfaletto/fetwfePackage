@@ -31,7 +31,7 @@ make_ci_panel <- function(
 
 # Scattered / short-overlap panel whose LAST event time is degenerate
 # (cohorts adopting at calendar 3, 5, 6 + never-treated, T = 7 -> event time 5
-# has no contributing cohort). Used by the blocker regression test (Test 11).
+# has no contributing cohort). Used by Test 11.
 make_scattered_degenerate_panel <- function(n_per = 40, T = 7, seed = 909) {
 	set.seed(seed)
 	adopt <- c(3L, 5L, 6L, NA_integer_) # NA = never-treated
@@ -416,12 +416,11 @@ test_that("ci_type works across etwfe / betwfe / twfeCovs", {
 })
 
 # ------------------------------------------------------------------------------
-# Test 11: BLOCKER regression -- a degenerate event-time row stays NA, not 0,
-# under the default simultaneous band. The worker returns 0/0 for the
-# zero-variance effect; eventStudy() represents it as NA/NA; the fix preserves
-# NA. WITHOUT the fix the worker's 0/0 would overwrite NA/NA.
+# Test 11: on the scattered panel, whose last event time no cohort reaches,
+# eventStudy() keeps the simultaneous band; and the band's NA mask (#197's
+# round-1 blocker fix) leaves NA bounds and p-values where se is NA.
 # ------------------------------------------------------------------------------
-test_that("degenerate event-time row stays NA (not 0) under the simultaneous default", {
+test_that("eventStudy() keeps the simultaneous band on a panel with an unreached event time", {
 	pdata <- make_scattered_degenerate_panel()
 	fit <- etwfe(
 		pdata = pdata,
@@ -431,19 +430,35 @@ test_that("degenerate event-time row stays NA (not 0) under the simultaneous def
 		response = "y",
 		verbose = FALSE
 	)
-	expect_identical(fit$ci_type, "simultaneous")
-	es <- eventStudy(fit) # default simultaneous
-	# There must be at least one degenerate (NA-se) event time for this test
-	# to be non-vacuous.
-	na_rows <- which(is.na(es$se))
-	expect_gte(length(na_rows), 1L)
-	# The blocker: those rows' bounds must be NA, NOT 0.
-	expect_true(all(is.na(es$ci_low[na_rows])))
-	expect_true(all(is.na(es$ci_high[na_rows])))
-	# And finite-SE rows still carry (wider-than-pointwise) simultaneous bounds.
-	fin <- is.finite(es$se) & es$se > 0
-	expect_gte(sum(fin), 1L)
-	expect_true(all(is.finite(es$ci_low[fin])))
+	es <- eventStudy(fit)
+	pw <- eventStudy(fit, ci_type = "pointwise")
+	expect_true(attr(es, "band_applied"))
+	pos <- is.finite(es$se) & es$se > 0
+	expect_gte(sum(pos), 2L)
+	expect_true(all(
+		es$ci_high[pos] - es$ci_low[pos] > pw$ci_high[pos] - pw$ci_low[pos]
+	))
+})
+
+test_that("the event-study band keeps NA bounds and p-values where se is NA", {
+	local_mocked_bindings(
+		.fit_band_for_family = function(...) {
+			list(
+				ci_low = c(0, -1),
+				ci_high = c(0, 1),
+				adjusted_p_values = c(0.5, 0.04)
+			)
+		}
+	)
+	sb <- fetwfe:::.event_study_simultaneous_bounds(
+		NULL,
+		alpha = 0.05,
+		estimates = c(0, 0.1),
+		ses = c(NA_real_, 0.3)
+	)
+	expect_identical(sb$ci_low, c(NA_real_, -1))
+	expect_identical(sb$ci_high, c(NA_real_, 1))
+	expect_identical(sb$adjusted_p_values, c(NA_real_, 0.04))
 })
 
 # ------------------------------------------------------------------------------

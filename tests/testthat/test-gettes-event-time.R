@@ -192,8 +192,7 @@ test_that(".true_event_time_effects returns NA at an event time no cohort reache
 
 test_that(".true_event_time_effects() single-sources eventStudy()'s estimand (fetwfe/etwfe/betwfe, #389)", {
 	# After #389 both estimator loops compute their point estimates by calling
-	# `.true_event_time_effects()` (with `empty_value = 0`), so
-	# `eventStudy(fit)$estimate` equals the helper's output.
+	# `.true_event_time_effects()` (with `empty_value = 0`).
 	for (seed in 1:6) {
 		coefs <- genCoefs(
 			G = 3,

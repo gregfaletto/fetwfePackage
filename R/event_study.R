@@ -49,8 +49,7 @@ utils::globalVariables(c("event_time", "estimate", "ci_low", "ci_high"))
 #'   critical-value multiplier, and the `p_value` differ (under
 #'   `"simultaneous"` the `p_value` is the single-step max-T multiplicity-
 #'   adjusted dual of the band, under `"pointwise"` the per-effect Wald
-#'   p-value; #200). Degenerate event times (no valid contributing cohorts)
-#'   carry `NA` bounds and `NA` `p_value` under both settings.
+#'   p-value; #200).
 #'
 #'   **High-dimensional (`p >= NT`):** the `"simultaneous"` band here is the
 #'   analytic post-selection band on the selected support (or `NA` bounds on a
@@ -91,8 +90,9 @@ utils::globalVariables(c("event_time", "estimate", "ci_low", "ci_high"))
 #' @return A data frame with class `c("eventStudy", "data.frame")` and
 #'   columns:
 #'   \describe{
-#'     \item{event_time}{Integer; event time `e = t - g`, ranging from 0
-#'       to `T - 2`.}
+#'     \item{event_time}{Integer; event time `e = t - g`, for each `e` from 0
+#'       to `T - 2` that at least one cohort reaches, so the frame can have
+#'       fewer than `T - 1` rows.}
 #'     \item{n_cohorts}{Integer; number of cohorts contributing to the
 #'       pooled estimate at event time `e`.}
 #'     \item{estimate}{Numeric; the pooled event-time ATT estimate.}
@@ -122,9 +122,7 @@ utils::globalVariables(c("event_time", "estimate", "ci_low", "ci_high"))
 #'   `catt_band_applied = TRUE`, `attr(eventStudy(fit), "band_applied")` is
 #'   `TRUE` while `attr(eventStudy(fit, ci_type = "pointwise"), "band_applied")`
 #'   is `FALSE`. Like the slot, it records only that the band was applied: `TRUE` does not imply the
-#'   bounds are wider than the pointwise ones, and does not imply every row is
-#'   informative --- degenerate event times are masked to `NA` while the band is
-#'   still reported as applied.
+#'   bounds are wider than the pointwise ones.
 #'   Only post-treatment event times (`e >= 0`) are included; pre-treatment
 #'   placebo periods would require an extended regression specification and
 #'   are out of scope for this initial release.
@@ -280,9 +278,8 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #'   event-study loops (`.event_study_fetwfe()` / `.event_study_etwfe_betwfe()`,
 #'   with `empty_value = 0`) and by [getTes()] (truth side, default
 #'   `empty_value = NA`); #389 folded the previously-triplicated aggregation
-#'   here. Feeding a fit's estimated cells reproduces
-#'   `eventStudy(fit)$estimate`; feeding a DGP's true cells
-#'   (`coefs$beta[treat_inds]`) gives the true event-time effects.
+#'   here. Feeding a DGP's true cells (`coefs$beta[treat_inds]`) gives the true
+#'   event-time effects.
 #' @param cell_effects Numeric length `num_treats`; per-`(g, t)` effects in
 #'   `treat_inds` order.
 #' @param first_inds Integer length `G`; index within `cell_effects` of each
@@ -295,8 +292,7 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #' @param empty_value Numeric scalar written at an event time no cohort reaches
 #'   (`length(V_e) == 0`) or where the within-`V_e` probability mass is
 #'   non-positive/non-finite. Defaults to `NA_real_` (the truth convention: the
-#'   effect is undefined there); the estimator loops pass `0` (they report a
-#'   zero pooled estimate for an empty event time).
+#'   effect is undefined there); the estimator loops pass `0`.
 #' @return Named numeric length `T - 1`; the event-time effects with names
 #'   `as.character(0:(T - 2))`, `empty_value` where no cohort reaches that event
 #'   time.
@@ -333,6 +329,24 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	}
 	names(out) <- as.character(event_times)
 	out
+}
+
+#' Event times some cohort reaches
+#'
+#' @description Internal helper (#515): the event times `e` in `0:(T - 2)` whose
+#'   valid cohort set `V_e`, the cohorts with `cohort_offsets_int <= T - e`, is
+#'   not empty.
+#' @inheritParams .true_event_time_effects
+#' @return Integer vector of those event times, in increasing order.
+#' @keywords internal
+#' @noRd
+.reached_event_times <- function(cohort_offsets_int, T) {
+	event_times <- 0:(T - 2L)
+	event_times[vapply(
+		event_times,
+		function(e) any(cohort_offsets_int <= T - e),
+		logical(1L)
+	)]
 }
 
 #' Event-study aggregation for ETWFE / BETWFE
@@ -425,13 +439,11 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 		calc_ses <- FALSE
 	}
 
-	max_event <- T - 2L
-	event_times <- 0:max_event
+	event_times <- .reached_event_times(cohort_offsets_int, T)
 	# Point estimates: single-sourced through the shared aggregation helper
-	# (#389). `empty_value = 0` matches the loop's degenerate convention (a zero
-	# pooled estimate for an empty event time). The SE loop below recomputes
-	# `V_e` / `weights_Ve` (and, for etwfe/betwfe, `psi_e_tes`) for the variance
-	# terms; only the point estimate is factored out here.
+	# (#389). The SE loop below recomputes `V_e` / `weights_Ve` (and, for
+	# etwfe/betwfe, `psi_e_tes`) for the variance terms; only the point estimate
+	# is factored out here.
 	estimates <- unname(.true_event_time_effects(
 		cell_effects = tes,
 		first_inds = first_inds,
@@ -439,7 +451,7 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 		cohort_probs = cohort_probs_overall,
 		T = T,
 		empty_value = 0
-	))
+	))[event_times + 1L]
 	ses <- numeric(length(event_times))
 	n_cohorts <- integer(length(event_times))
 
@@ -646,13 +658,11 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 		calc_ses <- FALSE
 	}
 
-	max_event <- T - 2L
-	event_times <- 0:max_event
+	event_times <- .reached_event_times(cohort_offsets_int, T)
 	# Point estimates: single-sourced through the shared aggregation helper
-	# (#389). `empty_value = 0` matches the loop's degenerate convention (a zero
-	# pooled estimate for an empty event time). The SE loop below recomputes
-	# `V_e` / `weights_Ve` (and, for etwfe/betwfe, `psi_e_tes`) for the variance
-	# terms; only the point estimate is factored out here.
+	# (#389). The SE loop below recomputes `V_e` / `weights_Ve` (and, for
+	# etwfe/betwfe, `psi_e_tes`) for the variance terms; only the point estimate
+	# is factored out here.
 	estimates <- unname(.true_event_time_effects(
 		cell_effects = tes,
 		first_inds = first_inds,
@@ -660,7 +670,7 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 		cohort_probs = cohort_probs_overall,
 		T = T,
 		empty_value = 0
-	))
+	))[event_times + 1L]
 	ses <- numeric(length(event_times))
 	n_cohorts <- integer(length(event_times))
 
@@ -976,22 +986,15 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #' @description Internal helper for the `ci_type = "simultaneous"` default
 #'   (#197). Calls the #192 event-study-family worker
 #'   `.simultaneous_cis_impl(family = "event_study")` and returns its
-#'   `simultaneous_ci_low` / `simultaneous_ci_high`, aligned to event-time
-#'   order `0:(T-2)` (the same order the `eventStudy()` loop produces).
+#'   `simultaneous_ci_low` / `simultaneous_ci_high`, aligned by position to the
+#'   event times `eventStudy()` reports.
 #'   Returns `NULL` to fall back to pointwise on any error or shape mismatch.
 #'   `suppressMessages()` silences the `se_type = "conservative"`
 #'   Bonferroni-substitution `message()` (same verbose-gating rationale as the
 #'   cohort helper).
 #'
-#'   BLOCKER FIX (#197 round 1): preserves `NA` on every degenerate event-time
-#'   row (where `eventStudy()`'s own loop set `se = NA`). The worker routes a
-#'   zero-variance / empty-valid-cohort-set effect through its zero-variance
-#'   handling and returns `0/0`; `eventStudy()` represents it as `NA/NA`.
-#'   Blindly mapping the worker's `0/0` would silently turn `NA/NA` into `0/0`
-#'   --- a representation change contradicting the documented invariant
-#'   "bounds are `NA` under both settings when SEs are unavailable". So
-#'   wherever `ses` is not finite, the simultaneous bounds are forced back to
-#'   `NA`.
+#'   BLOCKER FIX (#197 round 1): wherever `ses` is not finite, the simultaneous
+#'   bounds and adjusted p-values are forced back to `NA`.
 #' @param x A fully-classed `fetwfe`/`etwfe`/`betwfe` object.
 #' @param alpha Numeric significance level.
 #' @param estimates,ses The per-event-time point estimates and SEs the
@@ -999,13 +1002,10 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #' @return A list with `ci_low` / `ci_high` / `adjusted_p_values` (length
 #'   `length(estimates)`), or `NULL` to fall back to pointwise. Under
 #'   `ci_type = "simultaneous"` the adjusted p-values are the single-step max-T
-#'   duals of the band (#200); degenerate rows are `NA` to match the bounds.
+#'   duals of the band (#200).
 #' @keywords internal
 #' @noRd
 .event_study_simultaneous_bounds <- function(x, alpha, estimates, ses) {
-	# Positional alignment: `.build_psi_tes_for_family(family = "event_study")`
-	# iterates over event_times 0:(T-2), the SAME order the eventStudy() loop
-	# produces, so the worker's rows map to `estimates` by position.
 	# `.fit_band_for_family()` degrades to NULL on error and asserts the row
 	# count (`length(estimates)`) defensively. It keeps the #304 degenerate
 	# notice a message() here, but this call site deliberately opts IN to the
@@ -1032,10 +1032,6 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	}
 	ci_low <- band$ci_low
 	ci_high <- band$ci_high
-	# BLOCKER FIX (#197 round 1): preserve NA on degenerate event-time rows.
-	# `eventStudy()`'s loop sets se = NA -> NA bounds for an empty/degenerate
-	# valid-cohort-set event time; the worker returns 0/0 there. Mapping the
-	# worker's 0/0 would silently turn NA/NA into 0/0.
 	na_rows <- !is.finite(ses)
 	ci_low[na_rows] <- NA_real_
 	ci_high[na_rows] <- NA_real_

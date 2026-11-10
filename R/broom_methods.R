@@ -519,8 +519,7 @@ tidy.betwfe <- function(
 #' `conf.high` PASS THROUGH those stored bounds rather than recomputing from
 #' `estimate +/- z * se` --- so the tidied event-study CIs agree with
 #' `print` / `summary` / `plot` and with [simultaneousCIs()] under the default.
-#' When `conf.int = FALSE`, the CI columns are omitted. (Degenerate event times
-#' carry `NA` bounds under both `ci_type` settings.)
+#' When `conf.int = FALSE`, the CI columns are omitted.
 #'
 #' @param x An object of class `"eventStudy"` returned by
 #'   [eventStudy()].
