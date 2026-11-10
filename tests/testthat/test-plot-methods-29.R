@@ -278,3 +278,37 @@ test_that("on a fit with standard errors the catt plot draws the fit's own bound
 		expect_identical(p$data[[b]], x, info = b)
 	}
 })
+
+# ----------------------------------------------------------------------
+# 8) A one-row event study (#515).
+# ----------------------------------------------------------------------
+
+test_that("plot() draws a one-row event study's point without a line", {
+	skip_if_not_installed("ggplot2")
+	# One cohort, adopting in the last of five periods, reaches only event
+	# time 0.
+	set.seed(515)
+	pd <- expand.grid(
+		year = 1:5,
+		unit = paste0("u", 1:60),
+		stringsAsFactors = FALSE
+	)
+	pd$treated <- as.integer(pd$unit %in% paste0("u", 1:30) & pd$year == 5L)
+	pd$y <- stats::rnorm(nrow(pd)) + 0.5 * pd$treated
+	fit <- etwfe(
+		pdata = pd,
+		time_var = "year",
+		unit_var = "unit",
+		treatment = "treated",
+		response = "y",
+		verbose = FALSE
+	)
+	expect_identical(nrow(eventStudy(fit)), 1L)
+	geom_names <- vapply(
+		plot(fit)$layers,
+		function(l) class(l$geom)[1L],
+		character(1L)
+	)
+	expect_true("GeomPoint" %in% geom_names)
+	expect_false("GeomLine" %in% geom_names)
+})
