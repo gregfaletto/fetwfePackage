@@ -128,6 +128,24 @@ for (est in c("fetwfe", "etwfe", "betwfe")) {
 		}
 	)
 
+	test_that(
+		paste0(
+			"eventStudy()'s conservative p-values are Bonferroni over the ",
+			"reached event times (",
+			est,
+			")"
+		),
+		{
+			fit <- .esu515_fit(est, "conservative")
+			es <- eventStudy(fit)
+			pw <- eventStudy(fit, ci_type = "pointwise")
+			expect_equal(
+				es$p_value,
+				pmin(1, length(.esu515_panel()$reached) * pw$p_value)
+			)
+		}
+	)
+
 	# Parity checks: the two surfaces agree row for row.
 
 	test_that(
@@ -177,6 +195,28 @@ for (est in c("fetwfe", "etwfe", "betwfe")) {
 			fit <- .esu515_fit(est)
 			sc <- simultaneousCIs(fit, family = "event_study")
 			expect_equal(sc$ci$estimate, eventStudy(fit)$estimate)
+		}
+	)
+
+	test_that(
+		paste0("eventStudy()'s pointwise bounds are the family's (", est, ")"),
+		{
+			fit <- .esu515_fit(est)
+			es <- eventStudy(fit, ci_type = "pointwise")
+			sc <- simultaneousCIs(fit, family = "event_study")
+			expect_equal(es$ci_low, sc$ci$pointwise_ci_low)
+			expect_equal(es$ci_high, sc$ci$pointwise_ci_high)
+		}
+	)
+
+	test_that(
+		paste0("eventStudy()'s conservative band is the family's (", est, ")"),
+		{
+			fit <- .esu515_fit(est, "conservative")
+			es <- eventStudy(fit)
+			sc <- suppressMessages(simultaneousCIs(fit, family = "event_study"))
+			expect_equal(es$ci_low, sc$ci$simultaneous_ci_low)
+			expect_equal(es$ci_high, sc$ci$simultaneous_ci_high)
 		}
 	)
 
