@@ -4,7 +4,7 @@
 # `test-simultaneous-cis.R`'s 500-rep MC coverage test + the
 # `sqrt(diag(Sigma)) == se` identity); these tests lock the fit-time WIRING,
 # the backward-compat `ci_type = "pointwise"` reproduction, the graceful
-# degradation, the K = 1 bypass, the event-study NA-preservation blocker fix,
+# degradation, the K = 1 bypass, the event-study NA mask,
 # and the Option-B tidy pass-through. Seeds are pinned; no PASS total pinned.
 
 # Shared consecutive-cohort fixture (no degenerate event time): used by most
@@ -278,8 +278,7 @@ test_that("catt_df fit-time bounds are wired to the #192 cohort worker (row-alig
 
 # ------------------------------------------------------------------------------
 # Test 6: ROW-ALIGNMENT + WIRING LOCK (event-study analog of Test 5). Compared
-# on finite-SE rows only -- the degenerate rows are NA in eventStudy()
-# post-blocker-fix but 0 in the raw worker $ci (intentional; see Test 11).
+# on finite-SE rows only.
 # ------------------------------------------------------------------------------
 test_that("eventStudy fit-time bounds are wired to the #192 event-study worker (row-aligned)", {
 	sim <- make_ci_panel()

@@ -870,8 +870,7 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #'   sibling `_with_bounds()` copy). `se` is always the same pointwise quantity;
 #'   `p_value` defaults to the pointwise Wald p but is overridden when the
 #'   `p_value` argument is supplied --- the `ci_type = "simultaneous"`
-#'   single-step max-T adjusted dual (#200), masked to `NA` on the same
-#'   degenerate rows as the bounds.
+#'   single-step max-T adjusted dual (#200).
 #' @param event_times,n_cohorts,estimates,ses,z See the per-event-time loops.
 #' @param ci_low,ci_high Optional numeric vectors (length `length(estimates)`)
 #'   to use as the CI bounds instead of `estimate +/- z * se`. `NULL` (default)
@@ -932,7 +931,7 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #'   `ci_type == "simultaneous"` and SEs are available (`calc_ses` -- the LOCAL
 #'   value, FALSE if the selected-support Gram was singular), overrides the
 #'   pointwise bounds with the event-study-family simultaneous band (degrading
-#'   to pointwise on any error, preserving `NA` on degenerate rows); then builds
+#'   to pointwise on any error); then builds
 #'   the event-study data frame via `.assemble_event_study_df()`. Consolidated
 #'   from a byte-identical tail previously duplicated across the two workers
 #'   (#401 item 1).
@@ -1036,8 +1035,6 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	ci_low[na_rows] <- NA_real_
 	ci_high[na_rows] <- NA_real_
 	# Single-step max-T adjusted p-values (#200) -- the dual of the band.
-	# Force NA on the same degenerate rows the bounds are NA'd on, mirroring
-	# `.compute_p_values()` (which returns NA wherever se is NA).
 	adjusted_p_values <- band$adjusted_p_values
 	adjusted_p_values[na_rows] <- NA_real_
 	list(

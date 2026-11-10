@@ -1365,8 +1365,7 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 #'   the high-dim degenerate notice a `message()` the user only gets by calling
 #'   `simultaneousCIs()` / `eventStudy()` directly -- is the lockstep concern
 #'   single-sourced here (#401 item 7). Each caller keeps its own specifics (the
-#'   cohort `has_valid_ses` guard; the event-study `NA`-masking on degenerate
-#'   rows).
+#'   cohort `has_valid_ses` guard; the event-study `NA`-masking).
 #' @details **The #304 lockstep does not extend to #433.** The two callers
 #'   choose differently on the post-selection-fallback warning: the fit-time
 #'   precompute stays silent (fitting must not chatter), while
