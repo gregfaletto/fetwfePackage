@@ -196,17 +196,16 @@ machinery (the same machinery \code{eventStudy()} uses). By construction
 for the corresponding effects. The \code{Sigma} blocks are not persisted on the
 fit; re-derivation is sub-second.
 
-\strong{Degenerate effects.} An effect whose entire contribution to the selected
+\strong{Degenerate effects.} On every band built from the selected support, which
+is every band but the desparsified one a high-dimensional \code{fetwfe()} fit gets
+under \code{method = "bootstrap"}, an effect whose entire contribution to that
 support is zeroed by the bridge penalty has a standard error of exactly 0 by
 construction, so its simultaneous and pointwise CIs collapse to a point at
-the estimate and it is excluded from the joint correlation matrix. On every
-band built from the selected support, which is
-every band but the desparsified one a high-dimensional \code{fetwfe()} fit gets
-under \code{method = "bootstrap"}, a signed \code{"custom"} contrast whose weights
-cancel on that support is degenerate too: its estimate and standard error
-are exactly 0 or rounding error, so which side of zero its point-sized
-interval falls on carries no information, and its \code{NA} adjusted p-value is
-the signal.
+the estimate and it is excluded from the joint correlation matrix. A signed
+\code{"custom"} contrast whose weights cancel on that support is degenerate too:
+its estimate and standard error are exactly 0 or rounding error, so which
+side of zero its point-sized interval falls on carries no information, and
+its \code{NA} adjusted p-value is the signal.
 
 \strong{High-dimensional (\code{p >= NT}) bands.} One route out of the four is
 uniformly valid: a \code{fetwfe()} fit under
