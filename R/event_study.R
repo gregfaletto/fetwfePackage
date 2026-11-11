@@ -380,11 +380,9 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	y_final <- x$y_final
 	se_type <- if (is.null(x$se_type)) "default" else x$se_type
 	is_indep <- isTRUE(x$indep_counts_used)
-	# v1.13.3 (#174): if cohort labels on the fit are parseable as panel-
-	# time values (and the fit exposes its `first_year`), use the actual
-	# offsets so scattered-cohort panels (`bacondecomp::divorce` is the
-	# canonical reproducer) work; otherwise fall back to the consecutive-
-	# cohort assumption.
+	# v1.13.3 (#174): offset resolution lives in the shared helper
+	# `.resolve_cohort_offsets_and_first_inds()` at the top of this
+	# file.
 	# `cohort_offsets_int` is also used for the per-event-time validity
 	# set `V_e <- which(cohort_offsets_int <= T - e)`; for consecutive
 	# cohorts this reduces to the pre-#174 `seq_len(G) <= T - 1L - e`.

@@ -177,15 +177,14 @@ cohortTimeATTs <- function(result, alpha = NULL) {
 	c_names <- as.character(x$catt_df$cohort)
 	stopifnot(length(c_names) == G)
 
-	# Cohort offsets + first-treatment indices (same resolution eventStudy()
-	# uses: integer-coercible cohort labels map to period positions).
+	# Cohort offsets + first-treatment indices (the resolver eventStudy() uses).
 	offs <- .resolve_cohort_offsets_and_first_inds(x, G = G, T = T)
 	cohort_offsets_int <- offs$cohort_offsets_int
 	first_inds <- offs$first_inds
 	first_year <- x$internal$first_year
 	# The sorted time values label the cells only when the offsets were mapped
-	# from the fit's cohort labels, the signal the cohort family of
-	# simultaneousCIs() keys its labels on too.
+	# from the fit's cohort labels (the resolver's `cohort_labels`; see its
+	# `@return`).
 	time_values <- if (is.null(offs$cohort_labels)) {
 		NULL
 	} else {
