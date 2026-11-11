@@ -181,10 +181,16 @@ for (est_name in c("fetwfe", "etwfe", "betwfe")) {
 		})
 
 		test_that(paste0(lab, "simultaneousCIs() agrees with the 1..8 fit"), {
+			# For etwfe() and betwfe() the all_post_treatment family reads no
+			# cohort offsets, so it is compared for fetwfe() only.
 			.expect_sci_agrees506(
 				.fit506(est_name, coding),
 				.fit506(est_name, "ref"),
-				.all_families506
+				if (est_name == "fetwfe") {
+					.all_families506
+				} else {
+					c("cohort", "event_study")
+				}
 			)
 		})
 
@@ -271,9 +277,13 @@ test_that("event-study fusion, gap coding: cohortTimeATTs() and the cohort famil
 # Its cohorts' positions are not the consecutive 2, 3, 4.
 # ----------------------------------------------------------------------------
 
-.scattered_panel506 <- function() {
+# 30 units per entry of `adopt_periods` (`NA` is never-treated), over
+# `T_panel` periods; the defaults give the panel above.
+.scattered_panel506 <- function(
+	adopt_periods = c(3L, 5L, 6L, NA),
+	T_panel = 7L
+) {
 	set.seed(174)
-	T_panel <- 7L
 	make_cohort <- function(ids, adopt) {
 		do.call(
 			rbind,
@@ -301,11 +311,13 @@ test_that("event-study fusion, gap coding: cohortTimeATTs() and the cohort famil
 			})
 		)
 	}
-	rbind(
-		make_cohort(1:30, 3L),
-		make_cohort(31:60, 5L),
-		make_cohort(61:90, 6L),
-		make_cohort(91:120, NA)
+	do.call(
+		rbind,
+		Map(
+			function(k, adopt) make_cohort((k - 1L) * 30L + 1:30, adopt),
+			seq_along(adopt_periods),
+			adopt_periods
+		)
 	)
 }
 .scattered_codes506 <- as.integer(2000 + 2 * (0:6))
@@ -353,8 +365,44 @@ test_that("scattered cohorts in steps of 2: catt_df agrees with the 1..7 fit, wi
 })
 
 # ----------------------------------------------------------------------------
+# The same builder with cohorts adopting at periods 3, 5, 6 and 8 of 8 and no
+# never-treated units, so the fit truncates the panel
+# (`allow_no_never_treated`).
+# ----------------------------------------------------------------------------
+
+.truncated_codes506 <- as.integer(2000 + 2 * (0:7))
+
+.fit_truncated506 <- function(coding) {
+	.cached506(paste("truncated", coding, sep = "|"), {
+		pd <- .scattered_panel506(c(3L, 5L, 6L, 8L), T_panel = 8L)
+		if (coding != "ref") {
+			pd <- .recode506(pd, "year", .truncated_codes506)
+		}
+		# The fits warn that they truncate the panel.
+		suppressWarnings(etwfe(
+			pdata = pd,
+			time_var = "year",
+			unit_var = "unit",
+			treatment = "treated",
+			response = "y",
+			covs = "x1"
+		))
+	})
+}
+
+test_that("no never-treated units, in steps of 2: eventStudy() and cohortTimeATTs() agree with the 1..8 fit, with the band applied", {
+	ref <- .fit_truncated506("ref")
+	alt <- .fit_truncated506("steps2")
+	.expect_event_study_agrees506(alt, ref)
+	.expect_cta_agrees506(alt, ref)
+	expect_true(ref$catt_band_applied)
+	expect_true(alt$catt_band_applied)
+})
+
+# ----------------------------------------------------------------------------
 # bacondecomp::divorce, the paper's data application, with its years as given
-# ("ref") and in steps of 2 ("steps2").
+# ("ref") and in steps of 2 ("steps2"). Its fits are slow, so its blocks skip
+# on CRAN.
 # ----------------------------------------------------------------------------
 
 .divorce_panel506 <- function() {
@@ -510,4 +558,19 @@ test_that(".fit_time_values() returns the sorted time values the fit saw, or NUL
 	expect_null(.fit_time_values(rename_block(function(nm) {
 		replace(nm, 1L, "t_x")
 	})))
+})
+
+test_that("without time-dummy names, a fit coded 2001..2008 takes the arithmetic fallback", {
+	fit <- .fit506(
+		"etwfe",
+		"ref",
+		tag = "2001",
+		pd = .recode506(.sim506$pdata, "time", 2001:2008)
+	)
+	unnamed <- fit
+	colnames(unnamed$X_ints) <- NULL
+	colnames(unnamed$internal$X_ints) <- NULL
+	expect_null(.fit_time_values(unnamed))
+	expect_identical(.derive_cohort_offsets_from_fit(unnamed), 2:4)
+	expect_equal(cohortTimeATTs(unnamed)$time, cohortTimeATTs(fit)$time)
 })
