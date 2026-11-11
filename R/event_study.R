@@ -13,8 +13,10 @@ utils::globalVariables(c("event_time", "estimate", "ci_low", "ci_high"))
 #' For a fitted object from `fetwfe()`, `etwfe()`, or `betwfe()`, computes the
 #' pooled event-time treatment-effect estimates `tau_E(e)`, defined as
 #' cohort-weighted averages of the cell-level treatment-effect estimates at
-#' each post-treatment event time `e = t - g` (where `t` is calendar time and
-#' `g` is the cohort's first-treated calendar time). Weights are
+#' each post-treatment event time `e = t - g`, the number of periods since the
+#' cohort's first treated period (`t` and `g` are periods, counted along the
+#' sorted values of the time variable, so `e` counts periods whatever the
+#' time coding). Weights are
 #' sample-cohort-size weights (matching `did::aggte(type = "dynamic")`
 #' convention).
 #'
@@ -91,8 +93,9 @@ utils::globalVariables(c("event_time", "estimate", "ci_low", "ci_high"))
 #' @return A data frame with class `c("eventStudy", "data.frame")` and
 #'   columns:
 #'   \describe{
-#'     \item{event_time}{Integer; event time `e = t - g`, ranging from 0
-#'       to `T - 2`.}
+#'     \item{event_time}{Integer; event time `e = t - g`, the number of
+#'       periods since the cohort's first treated period, ranging from 0 to
+#'       `T - 2`.}
 #'     \item{n_cohorts}{Integer; number of cohorts contributing to the
 #'       pooled estimate at event time `e`.}
 #'     \item{estimate}{Numeric; the pooled event-time ATT estimate.}
@@ -235,9 +238,9 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #' `simultaneousCIs()`, and `debiasedATT()` (#318). Wraps
 #' `.derive_cohort_offsets_from_fit(x)` and the conditional dispatch between
 #' `getFirstInds(G, T)` (the consecutive-cohort assumption, used as a fall-back
-#' when `cohort_probs` carry no integer-coercible names --- true of synthetic
-#' genCoefs-based fixtures) and `getFirstIndsFromOffsets(...)` (the
-#' scattered-cohort path used on real panels like `bacondecomp::divorce`).
+#' when `.derive_cohort_offsets_from_fit(x)` returns `NULL`) and
+#' `getFirstIndsFromOffsets(...)` (the scattered-cohort path used on real
+#' panels like `bacondecomp::divorce`).
 #'
 #' Extracted in v1.13.3 (#174) to eliminate a byte-identical 10-line block
 #' that had appeared in both `.event_study_etwfe_betwfe()` and
@@ -245,11 +248,14 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #' (e.g., adding a "cohort_probs names are factor levels" branch) land in
 #' this one helper.
 #'
-#' @param x A fitted estimator object passing `.check_for_event_study(x)`.
+#' @param x A fitted `"fetwfe"`, `"etwfe"`, `"betwfe"` or `"twfeCovs"` object.
 #' @param G Integer; the number of treated cohorts.
 #' @param T Integer; the number of time periods.
-#' @return A list with two elements: `cohort_offsets_int` (integer vector of
-#'   length `G`) and `first_inds` (integer vector of length `G`).
+#' @return A list with three elements: `cohort_offsets_int` (integer vector of
+#'   length `G`), `first_inds` (integer vector of length `G`), and
+#'   `cohort_labels`, the fit's cohort labels (`.fit_cohort_labels(x)`) when
+#'   the offsets were mapped from them, or `NULL` when the resolver fell back
+#'   to the consecutive-cohort offsets.
 #' @keywords internal
 #' @noRd
 .resolve_cohort_offsets_and_first_inds <- function(x, G, T) {
@@ -257,7 +263,8 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	if (is.null(cohort_offsets_int)) {
 		list(
 			cohort_offsets_int = seq.int(2L, G + 1L),
-			first_inds = getFirstInds(G = G, T = T)
+			first_inds = getFirstInds(G = G, T = T),
+			cohort_labels = NULL
 		)
 	} else {
 		list(
@@ -265,7 +272,8 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 			first_inds = getFirstIndsFromOffsets(
 				cohort_offsets_int = cohort_offsets_int,
 				T = T
-			)
+			),
+			cohort_labels = .fit_cohort_labels(x)
 		)
 	}
 }
@@ -287,8 +295,8 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #'   `treat_inds` order.
 #' @param first_inds Integer length `G`; index within `cell_effects` of each
 #'   cohort's event-time-0 cell.
-#' @param cohort_offsets_int Integer length `G`; each cohort's adoption offset
-#'   (calendar adoption time), used to decide which cohorts reach event time `e`.
+#' @param cohort_offsets_int Integer length `G`; each cohort's adoption offset,
+#'   used to decide which cohorts reach event time `e`.
 #' @param cohort_probs Numeric length `G`; cohort probabilities (any positive
 #'   scaling; normalized within `V_e`).
 #' @param T Integer; number of time periods. Event times run `0:(T - 2)`.
@@ -376,8 +384,7 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	# time values (and the fit exposes its `first_year`), use the actual
 	# offsets so scattered-cohort panels (`bacondecomp::divorce` is the
 	# canonical reproducer) work; otherwise fall back to the consecutive-
-	# cohort assumption to preserve byte-identical results on synthetic
-	# fixtures whose `cohort_probs` carry no integer-coercible names.
+	# cohort assumption.
 	# `cohort_offsets_int` is also used for the per-event-time validity
 	# set `V_e <- which(cohort_offsets_int <= T - e)`; for consecutive
 	# cohorts this reduces to the pre-#174 `seq_len(G) <= T - 1L - e`.
@@ -598,8 +605,7 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	is_indep <- isTRUE(x$indep_counts_used)
 	# v1.13.3 (#174): offset resolution lives in the shared helper
 	# `.resolve_cohort_offsets_and_first_inds()` at the top of this
-	# file. The fall-back keeps synthetic-fixture results byte-identical
-	# to the pre-#174 path.
+	# file.
 	offs <- .resolve_cohort_offsets_and_first_inds(x, G = G, T = T)
 	cohort_offsets_int <- offs$cohort_offsets_int
 	first_inds <- offs$first_inds

@@ -675,7 +675,8 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 		K = K,
 		G = G,
 		T = T_,
-		cohort_offsets_int = cohort_offsets_int
+		cohort_offsets_int = cohort_offsets_int,
+		cohort_labels = offs$cohort_labels
 	)
 
 	# --- 5. Edge case 1: no valid SEs -> stop(), EXCEPT the Omega-free band. ---
@@ -1578,13 +1579,12 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 	# Cohort family. Positional alignment: `.build_psi_tes_for_family(family =
 	# "cohort")` iterates g = 1:G in cohort-block order, the SAME order
 	# `getCohortATTsFinal()` builds `catt_df`, so the worker's `sci$ci` is
-	# already row-aligned to `catt_df` (the `effect` labels differ --
-	# "Cohort <offset>" vs `catt_df$cohort` = `c_names` -- so rely on position,
-	# not labels). `.fit_band_for_family()` degrades to NULL on error and
-	# asserts the row count defensively; this call site silences the worker's
-	# ADVISORY output by three mechanisms and no more: `suppressMessages()` and
-	# `warn_degenerate_highdim = FALSE` inside the helper (#304), plus the
-	# explicit `warn_highdim_postselection = FALSE` below (#433). Silence is a
+	# already row-aligned to `catt_df`. `.fit_band_for_family()` degrades to
+	# NULL on error and asserts the row count defensively; this call site
+	# silences the worker's ADVISORY output by three mechanisms and no more:
+	# `suppressMessages()` and `warn_degenerate_highdim = FALSE` inside the
+	# helper (#304), plus the explicit `warn_highdim_postselection = FALSE`
+	# below (#433). Silence is a
 	# per-caller choice rather than a property of the helper -- the event-study
 	# call site (`R/event_study.R`) passes TRUE for the third one -- so a fourth
 	# advisory mechanism added later belongs here, not there.
@@ -1827,6 +1827,10 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 
 #' @title Build the `effect` column labels for a family
 #' @param family,K,G,T,cohort_offsets_int See `.simultaneous_cis_impl()`.
+#' @param cohort_labels The cohort family labels cohort `g` `"Cohort "` plus
+#'   `cohort_labels[g]`, or, when `cohort_labels` is `NULL`, plus
+#'   `cohort_offsets_int[g]`. Which of the two its caller passes is
+#'   `.resolve_cohort_offsets_and_first_inds()`'s `cohort_labels` element.
 #' @return A character vector of length `K`.
 #' @keywords internal
 #' @noRd
@@ -1835,13 +1839,19 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 	K,
 	G,
 	T,
-	cohort_offsets_int
+	cohort_offsets_int,
+	cohort_labels
 ) {
 	if (family == "event_study") {
 		return(paste0("e", 0:(T - 2L)))
 	}
 	if (family == "cohort") {
-		return(paste0("Cohort ", cohort_offsets_int[seq_len(G)]))
+		cohorts <- if (is.null(cohort_labels)) {
+			cohort_offsets_int[seq_len(G)]
+		} else {
+			cohort_labels[seq_len(G)]
+		}
+		return(paste0("Cohort ", cohorts))
 	}
 	if (family == "all_post_treatment") {
 		return(paste0("cell_", seq_len(K)))

@@ -203,9 +203,10 @@ NULL
 #' @title Class-dispatched access to the fitted design matrix
 #'
 #' @description
-#' `fetwfe` wraps its design matrix in a nested `$internal` sublist
-#' (`x$internal$X_ints`), while `etwfe` and `betwfe` put it at the top level
-#' (`x$X_ints`). This helper hides that asymmetry from `augment()`.
+#' `fetwfe` keeps its design matrix only in a nested `$internal` sublist
+#' (`x$internal$X_ints`), while `etwfe`, `betwfe` and `twfeCovs` also keep a
+#' copy at the top level (`x$X_ints`), which this helper reads for them. It
+#' hides that asymmetry from its callers.
 #' @keywords internal
 #' @noRd
 .get_X_ints <- function(x) {

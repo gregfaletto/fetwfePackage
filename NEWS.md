@@ -100,6 +100,9 @@
 - `debiasedATT()` and `debiasedATTWithSimulatedData()` were withheld from the
   exported API; #527 tracks their re-export.
 
+- `simultaneousCIs(family = "cohort")` labels each cohort by its time value, as
+  `tidy()` does, not by its period position (#506).
+
 ### Defensive improvements
 
 - A negative cohort-probability variance is no longer discarded in silence
@@ -320,6 +323,10 @@
   of `catt_df` and of `cohortStudy()`, and `tidy()`'s `std.error`, are numeric
   `NA` rather than logical `NA`; a saved fit keeps the types it was stored
   with.
+
+- `eventStudy()`, `simultaneousCIs()`, `cohortTimeATTs()` and the fit-time
+  cohort band are right on panels whose time codes do not step by 1, such as
+  biennial, gapped or YYYYMM codes (#506).
 
 ### Internal
 

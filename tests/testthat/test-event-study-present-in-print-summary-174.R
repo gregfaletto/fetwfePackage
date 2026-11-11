@@ -16,10 +16,8 @@ library(fetwfe)
 # (the new offset-aware variant added in `R/utility.R`) reduces to
 # the existing `getFirstInds(R, T)` on consecutive offsets `2..R+1`.
 # This guards byte-identical results on synthetic fixtures that use
-# `genCoefs()`-based panels (their `cohort_probs` carry no integer-
-# coercible names, so the offset-aware path falls back to
-# `getFirstInds`; the parity test guarantees the math is the same
-# regardless of which path is taken).
+# `genCoefs()`-based panels (the parity test guarantees the math is the
+# same regardless of which path is taken).
 
 # ----------------------------------------------------------------------
 # 1) Event-study-present on the consecutive-cohort synthetic fixture.
@@ -91,6 +89,10 @@ test_that("print(res) and summary(res) render an Event Study section on divorce 
 	expect_identical(as.integer(res$T), 33L)
 	offsets <- fetwfe:::.derive_cohort_offsets_from_fit(res)
 	expect_false(identical(offsets, seq.int(2L, res$R + 1L)))
+	expect_identical(
+		as.integer(offsets),
+		c(6L, 7L, 8L, 9L, 10L, 11L, 12L, 13L, 14L, 17L, 21L, 22L)
+	)
 
 	# Sanity: eventStudy() returns a non-empty data frame
 	# (pre-#174 it errored before reaching this line).
@@ -176,6 +178,7 @@ test_that("print(res) and summary(res) render an Event Study section on a synthe
 	expect_false(
 		identical(as.integer(offsets), seq.int(2L, as.integer(res$R) + 1L))
 	)
+	expect_identical(as.integer(offsets), c(3L, 5L, 6L))
 
 	# eventStudy() returns a non-empty data frame (pre-#174 it errored
 	# before reaching this line on scattered cohorts).

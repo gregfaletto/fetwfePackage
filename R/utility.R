@@ -1212,15 +1212,16 @@ getFirstInds <- function(G, T) {
 #' First treatment-effect indices for arbitrary (non-consecutive) cohort offsets
 #'
 #' @description
-#' Generalisation of `getFirstInds(G, T)` that drops the consecutive-cohort
+#' Generalization of `getFirstInds(G, T)` that drops the consecutive-cohort
 #' assumption. Computes the starting indices of treatment-effect parameters
 #' for each cohort in the concatenated treatment block, given an arbitrary
 #' (strictly increasing) vector of cohort offsets into the panel's time-index
 #' space.
 #'
-#' For a cohort with offset `o` (`o = (year - first_panel_year + 1)`) into the
-#' time-index space, the number of treatment effects estimated for that cohort
-#' is `T - o + 1`. Concatenating per-cohort effects in cohort order then gives:
+#' For a cohort with offset `o` (the position of its adoption period among the
+#' panel's sorted time values) into the time-index space, the number of
+#' treatment effects estimated for that cohort is `T - o + 1`. Concatenating
+#' per-cohort effects in cohort order then gives:
 #'
 #' \preformatted{
 #' first_inds[g] = 1 + sum_{k = 1}^{g - 1} (T - offsets[k] + 1)
@@ -1234,7 +1235,7 @@ getFirstInds <- function(G, T) {
 #' @param cohort_offsets_int Integer vector of length `G`, strictly
 #'   increasing, with each entry in `2:T`. Each entry is the 1-based
 #'   panel-time-index offset at which the corresponding cohort first adopts
-#'   treatment (`offset = (treatment_start_year - first_panel_year + 1)`).
+#'   treatment (see `.derive_cohort_offsets_from_fit()`).
 #' @param T Integer; the total number of time periods.
 #'
 #' @return An integer vector of length `length(cohort_offsets_int)`; element
@@ -1277,29 +1278,69 @@ getFirstIndsFromOffsets <- function(cohort_offsets_int, T) {
 	f_inds
 }
 
-#' Derive integer cohort offsets from a fitted estimator object
+#' The sorted time values a fitted object saw
 #'
 #' @description
-#' Internal helper used by `eventStudy()`. Reads `names(x$cohort_probs)` and
-#' attempts to interpret them as panel-time values (e.g., calendar years like
-#' `"1969"`, `"1970"`). If interpretation succeeds and the panel's first year
-#' is available on the fit (`x$internal$first_year`), returns the 1-based
-#' panel-time-index offsets at which each cohort first adopts treatment:
-#' `offsets[g] = (year_g - first_panel_year + 1L)`.
+#' Rebuilds the sorted distinct values of the fit's time variable, which label
+#' its periods `1, ..., T`, from the fit itself. The first is
+#' `x$internal$first_year`; the other `T - 1` are the names of the design's
+#' time-dummy block, columns `x$G + seq_len(x$T - 1)` of `.get_X_ints(x)`,
+#' which `addDummies()` (R/design_matrix.R) names `t_<value>`, stripped of
+#' that prefix.
 #'
-#' Returns `NULL` when offsets cannot be derived from the fit's cohort labels
-#' (e.g., names are absent, non-integer-coercible, or the fit was produced by
-#' a code path that did not surface `first_year`). Callers fall back to
-#' `getFirstInds(G, T)` (the consecutive-cohort assumption) in that case so
-#' synthetic fixtures from `genCoefs()` (whose cohort labels reduce to
-#' consecutive offsets `2, 3, ..., G + 1`) remain byte-identical post-#174.
+#' @param x A fitted `"fetwfe"`, `"etwfe"`, `"betwfe"` or `"twfeCovs"` object.
 #'
-#' @param x A fitted object (one of `"fetwfe"`, `"etwfe"`, `"betwfe"`).
-#'
-#' @return Integer vector of cohort offsets, or `NULL` to signal fall back.
+#' @return An integer vector of length `x$T`, or `NULL` unless every block name
+#'   carries the `t_` prefix and all `T` values are integers, strictly
+#'   increasing.
 #' @keywords internal
 #' @noRd
-.derive_cohort_offsets_from_fit <- function(x) {
+.fit_time_values <- function(x) {
+	first_year <- x$internal$first_year
+	G <- x$G
+	T <- x$T
+	if (
+		length(first_year) != 1L ||
+			length(G) != 1L ||
+			length(T) != 1L ||
+			is.na(G) ||
+			is.na(T)
+	) {
+		return(NULL)
+	}
+	G <- as.integer(G)
+	T <- as.integer(T)
+	design_names <- colnames(.get_X_ints(x))
+	if (length(design_names) < G + T - 1L) {
+		return(NULL)
+	}
+	block_names <- design_names[G + seq_len(T - 1L)]
+	if (anyNA(block_names) || !all(startsWith(block_names, "t_"))) {
+		return(NULL)
+	}
+	values <- suppressWarnings(c(
+		as.integer(first_year),
+		as.integer(sub("^t_", "", block_names))
+	))
+	if (anyNA(values) || is.unsorted(values, strictly = TRUE)) {
+		return(NULL)
+	}
+	values
+}
+
+#' The cohort labels a fitted object carries
+#'
+#' @description
+#' The fit's cohort labels, in cohort order, as stored: each is the time value
+#' at which its cohort first adopts treatment.
+#'
+#' @param x A fitted `"fetwfe"`, `"etwfe"`, `"betwfe"` or `"twfeCovs"` object.
+#'
+#' @return A character vector, or `NULL` when the fit carries no non-empty
+#'   labels.
+#' @keywords internal
+#' @noRd
+.fit_cohort_labels <- function(x) {
 	# Cohort adoption-time labels. Primary source: the names of `cohort_probs`.
 	# On older (pre-#288) saved fits produced with `indep_counts`, `cohort_probs`
 	# is the indep version, which was built unnamed --- fall back to
@@ -1329,6 +1370,38 @@ getFirstIndsFromOffsets <- function(cohort_offsets_int, T) {
 	) {
 		return(NULL)
 	}
+	cohort_names
+}
+
+#' Derive integer cohort offsets from a fitted estimator object
+#'
+#' @description
+#' Internal helper behind `.resolve_cohort_offsets_and_first_inds()`. Reads the
+#' fit's cohort labels (`.fit_cohort_labels()`), coerces them to integer time
+#' values, and returns each cohort's adoption offset: the position of its label
+#' among the sorted time values the fit saw (`.fit_time_values()`), so that
+#' offsets count periods whatever the time coding, as the paper indexes them
+#' (cohorts `g` in `{2, ..., T}` and periods `t` in `[T]` at `att.cohort.time`;
+#' event time `e := t - g` in Section `event.study.sec`). On a fit whose time
+#' values cannot be rebuilt, the offset is `label - first_year + 1`, which is
+#' the position only when the time values step by 1.
+#'
+#' Returns `NULL` when offsets cannot be derived (labels absent, not
+#' integer-coercible or not among the time values; no stored `first_year`; or
+#' offsets outside `2:T` or not strictly increasing). The resolver then falls
+#' back to the consecutive-cohort offsets `2, ..., G + 1`.
+#'
+#' @param x A fitted `"fetwfe"`, `"etwfe"`, `"betwfe"` or `"twfeCovs"` object.
+#'
+#' @return Integer vector of cohort offsets, or `NULL` to signal fall back.
+#' @keywords internal
+#' @noRd
+.derive_cohort_offsets_from_fit <- function(x) {
+	# The labels' source and their precedence: `.fit_cohort_labels()`.
+	cohort_names <- .fit_cohort_labels(x)
+	if (is.null(cohort_names)) {
+		return(NULL)
+	}
 	# Try integer-coerce; suppress the introduced-by-coercion warning so the
 	# fall-back path doesn't pollute caller output. NA = uncoercible.
 	offsets_year <- suppressWarnings(as.integer(cohort_names))
@@ -1345,7 +1418,15 @@ getFirstIndsFromOffsets <- function(cohort_offsets_int, T) {
 		return(NULL)
 	}
 
-	offsets <- offsets_year - first_year_int + 1L
+	time_values <- .fit_time_values(x)
+	offsets <- if (is.null(time_values)) {
+		offsets_year - first_year_int + 1L
+	} else {
+		match(offsets_year, time_values)
+	}
+	if (anyNA(offsets)) {
+		return(NULL)
+	}
 
 	# Validity guards: every offset must be in `2:T` and strictly increasing.
 	# `x$T` is the post-truncation panel length stamped on the fit.
@@ -2257,10 +2338,8 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 		# Carry over the cohort-year labels from the (named) in-sample vectors
 		# (#288). `indep_counts` describes the SAME cohorts as the in-sample
 		# counts in the same order --- only the probability values differ --- but
-		# the indep vectors are built unnamed from the raw count vector. Without
-		# these names `.derive_cohort_offsets_from_fit()` cannot recover the
-		# adoption timing, so `eventStudy()` / `cohortTimeATTs()` fall back to the
-		# earliest-timing `getFirstInds()` and trip `first_inds[G] <= n_vars`.
+		# the indep vectors are built unnamed from the raw count vector. How a
+		# fit's readers use these names: `.fit_cohort_labels()`.
 		names(cohort_probs) <- names(res$cohort_probs)
 		names(cohort_probs_overall) <- names(res$cohort_probs_overall)
 	} else {

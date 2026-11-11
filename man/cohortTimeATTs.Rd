@@ -21,13 +21,13 @@ cohort then time, with columns:
 \describe{
 \item{cohort}{Character; the cohort label (the calendar time at which the
 cohort first received treatment), matching \code{\link[=cohortStudy]{cohortStudy()}}.}
-\item{time}{Numeric; the calendar time of the cell, equal to the cohort's
-adoption time plus the event time (\verb{0, 1, ...}). Real panels carry their
-actual calendar times. For synthetic \code{genCoefs()} / \code{simulateData()}
-fixtures (whose panel runs \verb{1, ..., T}, so the stored first year is \code{1})
-this coincides with the 1-based panel-time index. (Only a hand-built or
-legacy fit with no stored first year falls back to that panel-time index
-directly.)}
+\item{time}{Numeric; the time value of the cell: the panel's time value
+\code{e} periods after the cohort's adoption, where the event time
+\verb{e = 0, 1, ...} counts periods along the sorted time values. Real panels
+carry their actual time values. For synthetic \code{genCoefs()} /
+\code{simulateData()} fixtures (whose panel runs \verb{1, ..., T}) this coincides
+with the 1-based panel-time index. (Only a hand-built or legacy fit with
+no stored first year falls back to that panel-time index directly.)}
 \item{estimate}{Numeric; the cell's ATT estimate.}
 \item{se}{Numeric; the pointwise standard error. \code{0} for a cell zeroed
 out by the fusion/bridge penalty while other cells survive

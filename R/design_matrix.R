@@ -339,12 +339,12 @@ prepXints <- function(
 		# v1.13.3 (#174): expose the panel's first (earliest) time-period
 		# value so downstream consumers (notably `eventStudy()`) can map
 		# `cohort_probs`' cohort-year-string names back to 1-based panel
-		# offsets via `offset = year - first_year + 1`. Without this slot
-		# the event-study D-inverse-matrix construction would have to
-		# assume consecutive cohort offsets `2, 3, ..., G + 1`, which
-		# fails on panels with scattered cohort adoption years
-		# (`bacondecomp::divorce` is the canonical reproducer; see
-		# `R/utility.R::getFirstIndsFromOffsets`).
+		# offsets, as `.derive_cohort_offsets_from_fit()` (R/utility.R)
+		# describes. Without this slot the event-study D-inverse-matrix
+		# construction would have to assume consecutive cohort offsets
+		# `2, 3, ..., G + 1`, which fails on panels with scattered cohort
+		# adoption years (`bacondecomp::divorce` is the canonical reproducer;
+		# see `R/utility.R::getFirstIndsFromOffsets`).
 		first_year = times[1]
 	))
 }
@@ -885,7 +885,8 @@ addDummies <- function(
 	# Add time dummies for all but first time
 	time_var_mat <- matrix(0L, nrow = N * T, ncol = T - 1)
 	if (T > 1) {
-		# Only if there's more than one time period
+		# Only if there's more than one time period. `.fit_time_values()`
+		# (R/utility.R) reads these names back.
 		time_var_names <- paste0("t_", times[2:T])
 		colnames(time_var_mat) <- time_var_names
 		for (t_idx in 2:T) {
