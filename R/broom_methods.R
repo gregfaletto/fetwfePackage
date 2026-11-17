@@ -204,7 +204,7 @@ NULL
 #'
 #' @description
 #' `fetwfe` keeps its design matrix only in a nested `$internal` sublist
-#' (`x$internal$X_ints`), while `etwfe`, `betwfe` and `twfeCovs` also keep a
+#' (`x$internal$X_ints`), while `fetwfe_etwfe`, `betwfe` and `twfeCovs` also keep a
 #' copy at the top level (`x$X_ints`), which this helper reads for them. It
 #' hides that asymmetry from its callers.
 #' @keywords internal

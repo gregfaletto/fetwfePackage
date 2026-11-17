@@ -66,9 +66,8 @@ print.summary.fetwfe_etwfe <- function(x, ...) {
 
 #-------------------------------------------------------------------------------
 # Constructor validator (#85). See R/fetwfe_class.R for the design rationale.
-# ETWFE differs from FETWFE in: no `att_selected`, no `internal` sublist
-# (X_ints/y/X_final/y_final/calc_ses are top-level), no lambda.* slots
-# (pure OLS -- no bridge regularization).
+# ETWFE differs from FETWFE in: no `att_selected`, no lambda.* slots (pure
+# OLS -- no bridge regularization).
 #-------------------------------------------------------------------------------
 
 .EXPECTED_SLOTS_ETWFE <- c(

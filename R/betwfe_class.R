@@ -19,9 +19,8 @@ coef.betwfe <- function(object, ...) {
 #
 # `betwfe` is the hybrid: has `att_selected` and lambda.* slots like
 # fetwfe (so `show_att_selected = TRUE`, `show_lambda = TRUE`), but
-# `X_ints` / `y` / `calc_ses` live at the TOP level like etwfe (so the
-# three `_path` extractor functions read top-level fields, NOT the
-# `$internal`-nested shape that fetwfe uses). Asymmetry documented at
+# `X_ints` / `y` / `calc_ses` live at the TOP level (so the three `_path`
+# extractor functions read top-level fields). Asymmetry documented at
 # .plans/feat-etwfe-betwfe-vignette-17/PLAN.md.
 #—--------------------------------------------------------------------
 #' @export
@@ -73,7 +72,7 @@ print.summary.betwfe <- function(x, ...) {
 #-------------------------------------------------------------------------------
 # Constructor validator (#85). See R/fetwfe_class.R for the design rationale.
 # BETWFE is the hybrid: has `att_selected` and lambda.* slots like fetwfe,
-# but X_ints/y/X_final/y_final/calc_ses are at TOP level like etwfe.
+# but X_ints/y/X_final/y_final/calc_ses are at TOP level.
 #-------------------------------------------------------------------------------
 
 .EXPECTED_SLOTS_BETWFE <- c(

@@ -176,7 +176,7 @@
 #' errors, so all SE-bearing slots must be NA. This is the contract whose
 #' violation produced issue #73 (`eventStudy()` reporting finite SEs for
 #' q >= 1). `calc_ses_path` is the string path to read `calc_ses` from
-#' (e.g., `"calc_ses"` for top-level, `"internal$calc_ses"` for fetwfe).
+#' (e.g., `"calc_ses"` or `"internal$calc_ses"`).
 #' @keywords internal
 #' @noRd
 .check_se_consistency <- function(x, calc_ses_path, cls) {
@@ -614,9 +614,8 @@
 #       method can use rather than re-deriving them.
 #
 # This is what fixes #73: .check_for_event_study(x) returns
-# `has_valid_ses` derived from `x$internal$calc_ses` (fetwfe) or
-# `x$calc_ses` (fetwfe_etwfe/betwfe), and the .event_study_* dispatchers
-# AND-gate their SE-computation branch on it.
+# `has_valid_ses`, and the .event_study_* dispatchers AND-gate their
+# SE-computation branch on it.
 #-------------------------------------------------------------------------------
 
 #' @title Universal dispatcher: validate any estimator-class object
@@ -688,9 +687,7 @@
 
 #' @title Method precondition: eventStudy
 #' @description Validates the input + derives `has_valid_ses` (the
-#' contract gate that fixes #73). `calc_ses` lives in different paths
-#' across classes: nested under `$internal` for fetwfe; top-level for
-#' fetwfe_etwfe/betwfe.
+#' contract gate that fixes #73).
 #' @return list(has_valid_ses = logical).
 #' @keywords internal
 #' @noRd
@@ -738,9 +735,7 @@
 
 #' @title Method precondition: simultaneousCIs
 #' @description Validates the input + derives `has_valid_ses` (the contract
-#' gate). Mirrors `.check_for_event_study(x)`. `calc_ses` lives in different
-#' paths across classes: nested under `$internal` for fetwfe; top-level for
-#' fetwfe_etwfe/betwfe/twfeCovs.
+#' gate). Mirrors `.check_for_event_study(x)`.
 #' @return list(has_valid_ses = logical).
 #' @keywords internal
 #' @noRd
@@ -1264,8 +1259,7 @@
 #' header banner, (b) whether the `Selected:` row appears under the
 #' Overall-ATT block, (c) whether the `Selected size` / `Lambda*` rows
 #' appear in Model Details, and (d) where `X_ints`, `y`, and `calc_ses`
-#' live on the fit object (top-level for `fetwfe_etwfe` / `betwfe`, nested under
-#' `$internal` for `fetwfe`). All four are passed in by the caller; the
+#' live on the fit object. All four are passed in by the caller; the
 #' helper renders the full output.
 #'
 #' @param x The fit object (one of `"fetwfe"` / `"fetwfe_etwfe"` / `"betwfe"`).
@@ -1283,10 +1277,8 @@
 #'   `Lambda*:` rows under Model Details. Same pattern as
 #'   `show_att_selected`.
 #' @param X_ints_path,y_path,calc_ses_path Path-extractor functions that
-#'   read `X_ints`, `y`, and `calc_ses` off `x`. For `fetwfe` these
-#'   return `x$internal$X_ints` / `x$internal$y` / `x$internal$calc_ses`;
-#'   for `fetwfe_etwfe` / `betwfe` they return the top-level fields. Functions
-#'   are passed (not path strings) for readability.
+#'   read `X_ints`, `y`, and `calc_ses` off `x`. Functions are passed (not
+#'   path strings) for readability.
 #' @param max_cohorts Integer; the pre-resolved option value. The wrapper
 #'   resolves the per-class option key (`fetwfe.max_cohorts` etc.) and passes
 #'   the integer.
