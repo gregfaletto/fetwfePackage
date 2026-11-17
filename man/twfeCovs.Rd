@@ -30,7 +30,10 @@ observation of a unit at a time. Should contain columns as described below.}
 \item{time_var}{Character; the name of a single column containing a variable
 for the time period. This column is expected to contain integer values (for
 example, years). Recommended encodings for dates include format YYYY, YYYYMM,
-or YYYYMMDD, whichever is appropriate for your data.}
+or YYYYMMDD, whichever is appropriate for your data. The sorted distinct
+values are the panel's periods, and event time, the number of periods since
+a cohort's adoption, counts steps along them whatever the coding: under
+YYYYMM, 199012 to 199101 is one period.}
 
 \item{unit_var}{Character; the name of a single column containing a variable
 for each unit. This column is expected to contain character values (i.e. the

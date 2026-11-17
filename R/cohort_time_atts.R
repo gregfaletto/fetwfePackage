@@ -62,13 +62,12 @@
 #'   \describe{
 #'     \item{cohort}{Character; the cohort label (the calendar time at which the
 #'       cohort first received treatment), matching [cohortStudy()].}
-#'     \item{time}{Numeric; the calendar time of the cell, equal to the cohort's
-#'       adoption time plus the event time (`0, 1, ...`). Real panels carry their
-#'       actual calendar times. For synthetic `genCoefs()` / `simulateData()`
-#'       fixtures (whose panel runs `1, ..., T`, so the stored first year is `1`)
-#'       this coincides with the 1-based panel-time index. (Only a hand-built or
-#'       legacy fit with no stored first year falls back to that panel-time index
-#'       directly.)}
+#'     \item{time}{Numeric; the time value of the cell: the panel's time value
+#'       `e` periods after the cohort's adoption, where the event time
+#'       `e = 0, 1, ...` counts periods along the sorted time values. Real panels
+#'       carry their actual time values. For synthetic `genCoefs()` /
+#'       `simulateData()` fixtures (whose panel runs `1, ..., T`) this coincides
+#'       with the 1-based panel-time index.}
 #'     \item{estimate}{Numeric; the cell's ATT estimate.}
 #'     \item{se}{Numeric; the pointwise standard error. `0` for a cell zeroed
 #'       out by the fusion/bridge penalty while other cells survive
@@ -177,14 +176,19 @@ cohortTimeATTs <- function(result, alpha = NULL) {
 	c_names <- as.character(x$catt_df$cohort)
 	stopifnot(length(c_names) == G)
 
-	# Cohort offsets + first-treatment indices (same resolution eventStudy()
-	# uses: real panels map integer-coercible cohort labels to panel-time
-	# offsets; synthetic fixtures fall back to the consecutive-cohort
-	# assumption).
+	# Cohort offsets + first-treatment indices (the resolver eventStudy() uses).
 	offs <- .resolve_cohort_offsets_and_first_inds(x, G = G, T = T)
 	cohort_offsets_int <- offs$cohort_offsets_int
 	first_inds <- offs$first_inds
 	first_year <- x$internal$first_year
+	# The sorted time values label the cells only when the offsets were mapped
+	# from the fit's cohort labels (the resolver's `cohort_labels`; see its
+	# `@return`).
+	time_values <- if (is.null(offs$cohort_labels)) {
+		NULL
+	} else {
+		.fit_time_values(x)
+	}
 
 	# ---- Class-specific support + design ----------------------------------
 	is_fetwfe <- inherits(x, "fetwfe")
@@ -254,14 +258,13 @@ cohortTimeATTs <- function(result, alpha = NULL) {
 			row <- row + 1L
 
 			cohorts[row] <- c_names[g]
-			# Calendar time of the cell = adoption time + event time. Every fit
-			# produced through the public API stamps `first_year` (= the first
-			# panel time; see design_matrix.R), so the calendar branch runs:
-			# synthetic genCoefs()/simulateData() fixtures carry first_year = 1
-			# (with consecutive offsets 2, ..., G + 1), so it reduces to the
-			# 1-based panel-time index. The is.null() branch is a defensive
-			# fall-back for hand-built/legacy objects lacking the slot.
-			times[row] <- if (is.null(first_year)) {
+			# The cell's time value: the panel's time value at the cell's period,
+			# `e` periods after the cohort's adoption period. The other two
+			# branches serve hand-built objects: `first_year` plus the
+			# period minus 1, or, with no `first_year` slot, the period itself.
+			times[row] <- if (!is.null(time_values)) {
+				time_values[cohort_offsets_int[g] + e]
+			} else if (is.null(first_year)) {
 				cohort_offsets_int[g] + e
 			} else {
 				first_year + cohort_offsets_int[g] + e - 1

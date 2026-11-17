@@ -38,7 +38,8 @@ Such a call \strong{emits a warning}; see Details.}
 A data frame with class \code{c("eventStudy", "data.frame")} and
 columns:
 \describe{
-\item{event_time}{Integer; event time \code{e = t - g}, for each \code{e} from 0
+\item{event_time}{Integer; event time \code{e = t - g}, the number of
+periods since the cohort's first treated period, for each \code{e} from 0
 to \code{T - 2} that at least one cohort reaches, so the frame can have
 fewer than \code{T - 1} rows.}
 \item{n_cohorts}{Integer; number of cohorts contributing to the
@@ -79,8 +80,10 @@ are out of scope for this initial release.
 For a fitted object from \code{fetwfe()}, \code{etwfe()}, or \code{betwfe()}, computes the
 pooled event-time treatment-effect estimates \code{tau_E(e)}, defined as
 cohort-weighted averages of the cell-level treatment-effect estimates at
-each post-treatment event time \code{e = t - g} (where \code{t} is calendar time and
-\code{g} is the cohort's first-treated calendar time). Weights are
+each post-treatment event time \code{e = t - g}, the number of periods since the
+cohort's first treated period (\code{t} and \code{g} are periods, counted along the
+sorted values of the time variable, so \code{e} counts periods whatever the
+time coding). Weights are
 sample-cohort-size weights (matching \code{did::aggte(type = "dynamic")}
 convention).
 
