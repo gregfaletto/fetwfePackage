@@ -235,9 +235,9 @@ whether the theory-scale fallback fired).
 ## Details
 
 **Family resolution and `K`.** `"event_study"` resolves to one effect
-per post-treatment event time `e = 0, ..., T - 2` (`K = T - 1`);
-`"cohort"` to one effect per treated cohort (`K = G`);
-`"all_post_treatment"` to one effect per `(g, t)` cell
+per post-treatment event time `e` from 0 to `T - 2` that at least one
+cohort reaches (`K <= T - 1`); `"cohort"` to one effect per treated
+cohort (`K = G`); `"all_post_treatment"` to one effect per `(g, t)` cell
 (`K = num_treats`); `"custom"` to the `K = nrow(contrasts)`
 user-supplied contrasts.
 
@@ -253,22 +253,15 @@ uses). By construction `sqrt(diag(Sigma))` equals the package's existing
 per-point standard errors for the corresponding effects. The `Sigma`
 blocks are not persisted on the fit; re-derivation is sub-second.
 
-**Degenerate effects.** An effect whose entire contribution to the
-selected support is zeroed by the bridge penalty – or, in
-scattered-cohort panels, an event time with an empty valid-cohort set –
-has a standard error of exactly 0 by construction, so its simultaneous
-and pointwise CIs collapse to a point at the estimate and it is excluded
-from the joint correlation matrix (it adds no family-wise risk; the
-critical value is computed over the non-degenerate sub-family). This
-`se = 0` convention is the simultaneous-CI analog of the `NA` standard
-error
-[`eventStudy()`](https://gregfaletto.github.io/fetwfePackage/reference/eventStudy.md)
-reports for the same structurally-degenerate event times; both assign
-the effect an estimate of 0. On every band built from the selected
-support, which is every band but the desparsified one a high-dimensional
+**Degenerate effects.** On every band built from the selected support,
+which is every band but the desparsified one a high-dimensional
 [`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)
-fit gets under `method = "bootstrap"`, a signed `"custom"` contrast
-whose weights cancel on that support is degenerate too: its estimate and
+fit gets under `method = "bootstrap"`, an effect whose entire
+contribution to that support is zeroed by the bridge penalty has a
+standard error of exactly 0 by construction, so its simultaneous and
+pointwise CIs collapse to a point at the estimate and it is excluded
+from the joint correlation matrix. A signed `"custom"` contrast whose
+weights cancel on that support is degenerate too: its estimate and
 standard error are exactly 0 or rounding error, so which side of zero
 its point-sized interval falls on carries no information, and its `NA`
 adjusted p-value is the signal.

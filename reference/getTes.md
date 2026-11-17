@@ -65,10 +65,8 @@ elements:
   the cohorts still observed at that event time, weighted in proportion
   to `cohort_weights` — the same aggregation
   [`eventStudy()`](https://gregfaletto.github.io/fetwfePackage/reference/eventStudy.md)
-  estimates on a fitted panel. `NA` at an event time no cohort reaches
-  (where
-  [`eventStudy()`](https://gregfaletto.github.io/fetwfePackage/reference/eventStudy.md)
-  instead reports `0`). New in 1.56.7.
+  estimates on a fitted panel. `NA` at an event time no cohort reaches.
+  New in 1.56.7.
 
 - cohort_times:
 

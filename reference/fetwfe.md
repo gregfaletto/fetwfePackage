@@ -834,7 +834,7 @@ if (requireNamespace("bacondecomp", quietly = TRUE)) {
 #>  0.7325567
 #>  0.1849492
 #>  0.1856232
-#>   ... and 22 more event times.
+#>   ... and 18 more event times.
 #> 
 #> Model Details:
 #>   Units (N)           : 42

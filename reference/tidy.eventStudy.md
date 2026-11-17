@@ -58,8 +58,6 @@ recomputing from `estimate +/- z * se` — so the tidied event-study CIs
 agree with `print` / `summary` / `plot` and with
 [`simultaneousCIs()`](https://gregfaletto.github.io/fetwfePackage/reference/simultaneousCIs.md)
 under the default. When `conf.int = FALSE`, the CI columns are omitted.
-(Degenerate event times carry `NA` bounds under both `ci_type`
-settings.)
 
 ## Examples
 

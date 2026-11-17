@@ -60,9 +60,7 @@ eventStudy(x, alpha = NULL, ci_type = NULL)
   interval bounds, their critical-value multiplier, and the `p_value`
   differ (under `"simultaneous"` the `p_value` is the single-step max-T
   multiplicity- adjusted dual of the band, under `"pointwise"` the
-  per-effect Wald p-value; \#200). Degenerate event times (no valid
-  contributing cohorts) carry `NA` bounds and `NA` `p_value` under both
-  settings.
+  per-effect Wald p-value; \#200).
 
   **High-dimensional (`p >= NT`):** the `"simultaneous"` band here is
   the analytic post-selection band on the selected support (or `NA`
@@ -79,7 +77,9 @@ A data frame with class `c("eventStudy", "data.frame")` and columns:
 
 - event_time:
 
-  Integer; event time `e = t - g`, ranging from 0 to `T - 2`.
+  Integer; event time `e = t - g`, for each `e` from 0 to `T - 2` that
+  at least one cohort reaches, so the frame can have fewer than `T - 1`
+  rows.
 
 - n_cohorts:
 
@@ -127,9 +127,7 @@ answers differently for different calls: on a fit carrying
 `TRUE` while
 `attr(eventStudy(fit, ci_type = "pointwise"), "band_applied")` is
 `FALSE`. Like the slot, it records only that the band was applied:
-`TRUE` does not imply the bounds are wider than the pointwise ones, and
-does not imply every row is informative — degenerate event times are
-masked to `NA` while the band is still reported as applied. Only
+`TRUE` does not imply the bounds are wider than the pointwise ones. Only
 post-treatment event times (`e >= 0`) are included; pre-treatment
 placebo periods would require an extended regression specification and
 are out of scope for this initial release.
