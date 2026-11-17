@@ -62,7 +62,7 @@
 
 # Reconstruct the dispatch state .simultaneous_cis_impl() builds for the
 # event_study family, so the propensity-IF builder can be exercised directly
-# (the mutation-checkable anchor below). Mirrors R/simultaneous_cis.R:421-707.
+# (the mutation-checkable anchor below).
 .es_dispatch_state <- function(fit) {
 	N <- fit$N
 	T_ <- fit$T

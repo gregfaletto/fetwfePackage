@@ -5,8 +5,8 @@
 # DIRECTLY, with hand-built one-slot fixtures, so "helper body ->
 # invisible(NULL)" is dead as a mutant. What survives is one level up: deleting
 # the `.check_c6_dims_toplevel(x, cls)` call from any ONE of the three class
-# validators (R/etwfe_class.R:147, R/betwfe_class.R:165,
-# R/twfeCovs_class.R:158) leaves that direct unit test green. Nothing else
+# validators (R/etwfe_class.R, R/betwfe_class.R,
+# R/twfeCovs_class.R) leaves that direct unit test green. Nothing else
 # covers it -- tests/testthat/test-class-validators.R:181-192 is the only
 # validator-level C6 test and it drives .validate_fetwfe(), which has its own
 # NESTED C6 variant and never calls this helper at all.
