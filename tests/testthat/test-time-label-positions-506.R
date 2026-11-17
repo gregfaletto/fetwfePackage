@@ -94,12 +94,39 @@ library(fetwfe)
 	)
 }
 
+# Columns that hold a simultaneous band or its p-values, which pass through
+# mvtnorm's quasi-Monte Carlo integration: another BLAS can move them past the
+# default tolerance (#541), so they compare at 1e-4, every other column at the
+# default.
+.band_cols506 <- c(
+	"ci_low",
+	"ci_high",
+	"p_value",
+	"simultaneous_ci_low",
+	"simultaneous_ci_high"
+)
+.expect_frame_agrees506 <- function(alt, ref, drop = character(0), ...) {
+	band <- intersect(names(ref), .band_cols506)
+	not_band <- setdiff(names(ref), band)
+	expect_equal(
+		.plain506(alt, c(drop, band)),
+		.plain506(ref, c(drop, band)),
+		...
+	)
+	expect_equal(
+		.plain506(alt, not_band),
+		.plain506(ref, not_band),
+		...,
+		tolerance = 1e-4
+	)
+}
+
 # The checks shared by every fixture, each comparing a recoded fit `alt` with
 # its reference fit `ref`.
 .expect_event_study_agrees506 <- function(alt, ref) {
 	es_alt <- eventStudy(alt)
 	es_ref <- eventStudy(ref)
-	expect_equal(.plain506(es_alt), .plain506(es_ref), tolerance = 1e-4)
+	.expect_frame_agrees506(es_alt, es_ref)
 	expect_identical(
 		attr(es_alt, "band_applied"),
 		attr(es_ref, "band_applied")
@@ -112,7 +139,11 @@ library(fetwfe)
 			alt$catt_df[[col]],
 			ref$catt_df[[col]],
 			info = col,
-			tolerance = 1e-4
+			tolerance = if (col %in% .band_cols506) {
+				1e-4
+			} else {
+				testthat_tolerance()
+			}
 		)
 	}
 	expect_identical(alt$catt_band_applied, ref$catt_band_applied)
@@ -124,12 +155,7 @@ library(fetwfe)
 		sci_alt <- simultaneousCIs(alt, family = fam)
 		sci_ref <- simultaneousCIs(ref, family = fam)
 		drop <- if (fam == "cohort") "effect" else character(0)
-		expect_equal(
-			.plain506(sci_alt$ci, drop = drop),
-			.plain506(sci_ref$ci, drop = drop),
-			info = fam,
-			tolerance = 1e-4
-		)
+		.expect_frame_agrees506(sci_alt$ci, sci_ref$ci, drop = drop, info = fam)
 		expect_equal(
 			sci_alt$adjusted_p_values,
 			sci_ref$adjusted_p_values,
@@ -526,11 +552,10 @@ test_that("a covariate named like a time dummy leaves the map intact (steps of 2
 			pd = pd,
 			covs = "t_2004"
 		)
-		expect_equal(
-			.plain506(eventStudy(alt)),
-			.plain506(eventStudy(ref)),
-			info = est_name,
-			tolerance = 1e-4
+		.expect_frame_agrees506(
+			eventStudy(alt),
+			eventStudy(ref),
+			info = est_name
 		)
 		expect_equal(
 			cohortTimeATTs(alt)$time,
