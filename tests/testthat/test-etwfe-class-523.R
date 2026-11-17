@@ -200,3 +200,24 @@ test_that("the accessors reject a saved etwfe() fit of class etwfe with the refi
 		expect_null(call_of(e), info = nm)
 	}
 })
+
+test_that(".stop_unsupported_class() lists one constructor alone and joins two with or (#523)", {
+	one <- tryCatch(
+		fetwfe:::.stop_unsupported_class(1L, "f", "fetwfe"),
+		error = function(e) e
+	)
+	two <- tryCatch(
+		fetwfe:::.stop_unsupported_class(1L, "f", c("fetwfe", "etwfe")),
+		error = function(e) e
+	)
+	expect_true(grepl(
+		"f() requires a fitted object from fetwfe(). Got class: ",
+		msg_of(one),
+		fixed = TRUE
+	))
+	expect_true(grepl(
+		"f() requires a fitted object from fetwfe() or etwfe(). Got class: ",
+		msg_of(two),
+		fixed = TRUE
+	))
+})

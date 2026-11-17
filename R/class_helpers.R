@@ -660,7 +660,13 @@
 .stop_unsupported_class <- function(x, fn, constructors) {
 	ctors <- paste0(constructors, "()")
 	n <- length(ctors)
-	listed <- paste0(paste(ctors[-n], collapse = ", "), ", or ", ctors[n])
+	listed <- if (n == 1L) {
+		ctors
+	} else if (n == 2L) {
+		paste(ctors, collapse = " or ")
+	} else {
+		paste0(paste(ctors[-n], collapse = ", "), ", or ", ctors[n])
+	}
 	refit <- if (inherits(x, "etwfe")) {
 		paste0(
 			" An object of class \"etwfe\" is either a fit from the etwfe ",
