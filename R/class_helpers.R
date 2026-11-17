@@ -94,11 +94,11 @@
 	es
 }
 
-#' @title Print a CATT data frame with the package's standard formatting
+#' @title Print a data frame with the package's standard formatting
 #'
 #' @description
 #' Internal one-line helper that wraps `print()` with `row.names = FALSE` and
-#' `right = TRUE` to render the cohort table consistently. Returns
+#' `right = TRUE` to render the preview tables consistently. Returns
 #' `invisible()` so it can be chained inside a print-method body without
 #' producing a second visible printout.
 #'

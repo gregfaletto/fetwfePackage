@@ -1,7 +1,7 @@
 # Tests for the lexicographic-vs-numeric cohort sort fix.
 #
-# Background: prior to v1.9.3, .truncate_catt() (R/class_helpers.R:40)
-# and .tidy_estimator_output() (R/broom_methods.R:57) both used
+# Background: prior to v1.9.3, .truncate_catt() and
+# .tidy_estimator_output() both used
 # order(catt$Cohort) on a character column. R's default order() on
 # character is lexicographic, so for cohorts ≥ 10 the output came back
 # as "10","11","12","2","3" rather than "2","3","10","11","12". For
