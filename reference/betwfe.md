@@ -46,7 +46,10 @@ betwfe(
   Character; the name of a single column containing a variable for the
   time period. This column is expected to contain integer values (for
   example, years). Recommended encodings for dates include format YYYY,
-  YYYYMM, or YYYYMMDD, whichever is appropriate for your data.
+  YYYYMM, or YYYYMMDD, whichever is appropriate for your data. The
+  sorted distinct values are the panel's periods, and event time, the
+  number of periods since a cohort's adoption, counts steps along them
+  whatever the coding: under YYYYMM, 199012 to 199101 is one period.
 
 - unit_var:
 
@@ -674,12 +677,12 @@ if (requireNamespace("bacondecomp", quietly = TRUE)) {
 #> No covariates provided; skipping covariate processing.
 #> Getting omega sqrt inverse estimate...
 #> Done! Time to estimate noise variances:
-#> 0.230598449707031
+#> 0.237594842910767
 #> Time to get sqrt inverse matrix:
-#> 0.000282049179077148
+#> 0.000286579132080078
 #> Estimating bridge regression with 10-fold CV...
 #> Done! Time for estimation:
-#> 0.0827140808105469
+#> 0.0930931568145752
 #> No treatment features selected; all treatment effects estimated to be 0.
 #>   cohort estimate se ci_low ci_high p_value selected
 #> 1   2005        0  0      0       0      NA    FALSE

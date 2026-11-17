@@ -7,10 +7,11 @@ or
 [`betwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/betwfe.md),
 computes the pooled event-time treatment-effect estimates `tau_E(e)`,
 defined as cohort-weighted averages of the cell-level treatment-effect
-estimates at each post-treatment event time `e = t - g` (where `t` is
-calendar time and `g` is the cohort's first-treated calendar time).
-Weights are sample-cohort-size weights (matching
-`did::aggte(type = "dynamic")` convention).
+estimates at each post-treatment event time `e = t - g`, the number of
+periods since the cohort's first treated period (`t` and `g` are
+periods, counted along the sorted values of the time variable, so `e`
+counts periods whatever the time coding). Weights are sample-cohort-size
+weights (matching `did::aggte(type = "dynamic")` convention).
 
 Standard errors combine two terms, mirroring the package's existing
 overall-ATT SE machinery: `var_1(e)` from regression-coefficient noise
@@ -77,8 +78,9 @@ A data frame with class `c("eventStudy", "data.frame")` and columns:
 
 - event_time:
 
-  Integer; event time `e = t - g`, for each `e` from 0 to `T - 2` that
-  at least one cohort reaches, so the frame can have fewer than `T - 1`
+  Integer; event time `e = t - g`, the number of periods since the
+  cohort's first treated period, for each `e` from 0 to `T - 2` that at
+  least one cohort reaches, so the frame can have fewer than `T - 1`
   rows.
 
 - n_cohorts:

@@ -384,13 +384,13 @@ dispatches to a method) and a companion
 [`eventStudy()`](https://gregfaletto.github.io/fetwfePackage/reference/eventStudy.md)
 helper that returns a tidy data frame of pooled-event-time
 treatment-effect estimates. The plot is an event study: x-axis is event
-time `e = t - r` (calendar time minus the cohort’s first-treated time),
-y-axis is the cohort-weighted average of cell-level treatment-effect
-estimates at each event time, with confidence intervals. Pooling weights
-are sample-cohort-size weights (matching `did::aggte(type = "dynamic")`
-convention). The variance combines a regression-coefficient term and a
-cohort-probability term, mirroring the package’s existing overall-ATT SE
-machinery.
+time `e = t - r` (the number of periods since the cohort’s first treated
+period), y-axis is the cohort-weighted average of cell-level
+treatment-effect estimates at each event time, with confidence
+intervals. Pooling weights are sample-cohort-size weights (matching
+`did::aggte(type = "dynamic")` convention). The variance combines a
+regression-coefficient term and a cohort-probability term, mirroring the
+package’s existing overall-ATT SE machinery.
 
 Event-time estimates from
 [`etwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/etwfe.md):

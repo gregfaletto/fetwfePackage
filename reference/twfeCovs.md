@@ -45,7 +45,10 @@ twfeCovs(
   Character; the name of a single column containing a variable for the
   time period. This column is expected to contain integer values (for
   example, years). Recommended encodings for dates include format YYYY,
-  YYYYMM, or YYYYMMDD, whichever is appropriate for your data.
+  YYYYMM, or YYYYMMDD, whichever is appropriate for your data. The
+  sorted distinct values are the panel's periods, and event time, the
+  number of periods since a cohort's adoption, counts steps along them
+  whatever the coding: under YYYYMM, 199012 to 199101 is one period.
 
 - unit_var:
 

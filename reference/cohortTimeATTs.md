@@ -77,16 +77,15 @@ then time, with columns:
 
 - time:
 
-  Numeric; the calendar time of the cell, equal to the cohort's adoption
-  time plus the event time (`0, 1, ...`). Real panels carry their actual
-  calendar times. For synthetic
+  Numeric; the time value of the cell: the panel's time value `e`
+  periods after the cohort's adoption, where the event time
+  `e = 0, 1, ...` counts periods along the sorted time values. Real
+  panels carry their actual time values. For synthetic
   [`genCoefs()`](https://gregfaletto.github.io/fetwfePackage/reference/genCoefs.md)
   /
   [`simulateData()`](https://gregfaletto.github.io/fetwfePackage/reference/simulateData.md)
-  fixtures (whose panel runs `1, ..., T`, so the stored first year is
-  `1`) this coincides with the 1-based panel-time index. (Only a
-  hand-built or legacy fit with no stored first year falls back to that
-  panel-time index directly.)
+  fixtures (whose panel runs `1, ..., T`) this coincides with the
+  1-based panel-time index.
 
 - estimate:
 

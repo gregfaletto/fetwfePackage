@@ -95,7 +95,10 @@ observation of a unit at a time. Should contain columns as described below.</p><
 <dd><p>Character; the name of a single column containing a variable
 for the time period. This column is expected to contain integer values (for
 example, years). Recommended encodings for dates include format YYYY, YYYYMM,
-or YYYYMMDD, whichever is appropriate for your data.</p></dd>
+or YYYYMMDD, whichever is appropriate for your data. The sorted distinct
+values are the panel's periods, and event time, the number of periods since
+a cohort's adoption, counts steps along them whatever the coding: under
+YYYYMM, 199012 to 199101 is one period.</p></dd>
 
 
 <dt id="arg-unit-var">unit_var<a class="anchor" aria-label="anchor" href="#arg-unit-var"></a></dt>

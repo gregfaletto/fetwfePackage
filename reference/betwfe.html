@@ -87,7 +87,10 @@ observation of a unit at a time. Should contain columns as described below.</p><
 <dd><p>Character; the name of a single column containing a variable
 for the time period. This column is expected to contain integer values (for
 example, years). Recommended encodings for dates include format YYYY, YYYYMM,
-or YYYYMMDD, whichever is appropriate for your data.</p></dd>
+or YYYYMMDD, whichever is appropriate for your data. The sorted distinct
+values are the panel's periods, and event time, the number of periods since
+a cohort's adoption, counts steps along them whatever the coding: under
+YYYYMM, 199012 to 199101 is one period.</p></dd>
 
 
 <dt id="arg-unit-var">unit_var<a class="anchor" aria-label="anchor" href="#arg-unit-var"></a></dt>
@@ -626,12 +629,12 @@ S and S-PLUS</em>. Springer.</p>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> No covariates provided; skipping covariate processing.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Getting omega sqrt inverse estimate...</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Done! Time to estimate noise variances:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> 0.230598449707031</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 0.237594842910767</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Time to get sqrt inverse matrix:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> 0.000282049179077148</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 0.000286579132080078</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Estimating bridge regression with 10-fold CV...</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Done! Time for estimation:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> 0.0827140808105469</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 0.0930931568145752</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> No treatment features selected; all treatment effects estimated to be 0.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   cohort estimate se ci_low ci_high p_value selected</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1   2005        0  0      0       0      NA    FALSE</span>
