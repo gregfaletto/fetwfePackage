@@ -165,6 +165,40 @@ for (est in c("fetwfe", "etwfe", "betwfe")) {
 		}
 	)
 
+	test_that(
+		paste0("summary() lists the reached event times (", est, ")"),
+		{
+			expect_identical(
+				summary(.esu515_fit(est))$event_study$event_time,
+				.esu515_panel()$reached
+			)
+		}
+	)
+
+	test_that(
+		paste0("print() previews the reached event times (", est, ")"),
+		{
+			# With room for one row fewer than the reached event times, the
+			# preview reports exactly one more.
+			n <- length(.esu515_panel()$reached)
+			out <- capture.output(print(
+				.esu515_fit(est),
+				max_event_times = n - 1L
+			))
+			expect_match(paste(out, collapse = "\n"), "and 1 more event times")
+		}
+	)
+
+	test_that(
+		paste0("tidy(eventStudy()) lists the reached event times (", est, ")"),
+		{
+			expect_identical(
+				generics::tidy(eventStudy(.esu515_fit(est)))$event_time,
+				.esu515_panel()$reached
+			)
+		}
+	)
+
 	# Parity checks.
 
 	test_that(
