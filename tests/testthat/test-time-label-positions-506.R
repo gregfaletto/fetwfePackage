@@ -106,6 +106,7 @@ library(fetwfe)
 	"simultaneous_ci_high"
 )
 .expect_frame_agrees506 <- function(alt, ref, drop = character(0), ...) {
+	expect_identical(names(alt), names(ref), ...)
 	band <- intersect(names(ref), .band_cols506)
 	not_band <- setdiff(names(ref), band)
 	expect_equal(
