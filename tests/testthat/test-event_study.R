@@ -46,7 +46,6 @@ test_that("eventStudy returns expected structure", {
 			"p_value"
 		)
 	)
-	# T = 6, so max_event = 4, length = 5
 	expect_equal(nrow(es), 5L)
 	expect_equal(es$event_time, 0:4)
 	# Estimate and SE columns are numeric, finite, non-negative SE
@@ -338,7 +337,7 @@ test_that("eventStudy works on a fit from an auto-truncated panel", {
 	)
 
 	# Event times span 0..(T_post - 2). With T_post >= 3, event_times has
-	# >= 2 entries. The documented schema is `e = 0..(T_post - 2)`.
+	# >= 2 entries.
 	T_post <- res$T
 	expect_equal(es$event_time, seq.int(0L, T_post - 2L))
 	# At least 2 retained cohorts (the truncation produces >= 2 cohorts here

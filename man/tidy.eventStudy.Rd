@@ -41,8 +41,7 @@ The \code{eventStudy()} output stores its confidence-interval bounds (\code{ci_l
 \code{conf.high} PASS THROUGH those stored bounds rather than recomputing from
 \verb{estimate +/- z * se} --- so the tidied event-study CIs agree with
 \code{print} / \code{summary} / \code{plot} and with \code{\link[=simultaneousCIs]{simultaneousCIs()}} under the default.
-When \code{conf.int = FALSE}, the CI columns are omitted. (Degenerate event times
-carry \code{NA} bounds under both \code{ci_type} settings.)
+When \code{conf.int = FALSE}, the CI columns are omitted.
 }
 \examples{
 \dontrun{
