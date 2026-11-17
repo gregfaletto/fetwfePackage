@@ -37,7 +37,7 @@
 # used a sparse hand-rolled list with only the slots `print.<class>()`
 # read; #174 removed the silent-swallow `tryCatch(eventStudy(x), ...)`
 # in `print` so it now also exercises the full slot inventory via
-# `eventStudy()`'s precondition (which calls `.validate_<class>()`).
+# `eventStudy()`'s precondition (which calls the class's validator).
 # Sourcing the fixture once per call keeps the test focused on
 # truncation behavior while satisfying the post-#174 contract.
 # The fixture pins R = 5 because the validator's C4 contract requires

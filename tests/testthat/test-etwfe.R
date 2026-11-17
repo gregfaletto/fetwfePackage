@@ -576,7 +576,7 @@ test_that("single treated cohort (G = 1) is supported", {
 		response = "y",
 		verbose = FALSE
 	)
-	expect_s3_class(res, "etwfe")
+	expect_s3_class(res, "fetwfe_etwfe")
 	expect_equal(res$G, 1)
 	expect_true(is.finite(res$att_hat))
 })
@@ -1211,7 +1211,7 @@ test_that("etwfe auto-truncates a panel with no never-treated units (default)", 
 		),
 		"auto-truncated"
 	)
-	expect_s3_class(res, "etwfe")
+	expect_s3_class(res, "fetwfe_etwfe")
 	expect_true(is.finite(res$att_hat))
 	expect_s3_class(res$catt_df, "data.frame")
 })
@@ -1242,7 +1242,7 @@ test_that("etwfe cluster SE is finite and positive on an auto-truncated panel", 
 		),
 		"auto-truncated"
 	)
-	expect_s3_class(res, "etwfe")
+	expect_s3_class(res, "fetwfe_etwfe")
 	expect_true(is.finite(res$att_se))
 	expect_false(is.na(res$att_se))
 	expect_gt(res$att_se, 0)

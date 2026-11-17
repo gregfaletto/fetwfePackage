@@ -36,7 +36,7 @@ utils::globalVariables(c("event_time", "estimate", "ci_low", "ci_high"))
 #' `indep_counts` was supplied at fit time, the tight formula applies
 #' regardless of `se_type` (two-sample regime, Theorem (b)).
 #'
-#' @param x A fitted object of class `"fetwfe"`, `"etwfe"`, or `"betwfe"`.
+#' @param x A fitted object of class `"fetwfe"`, `"fetwfe_etwfe"`, or `"betwfe"`.
 #' @param alpha (Optional) Significance level for confidence intervals.
 #'   Defaults to `x$alpha` (the alpha used at fit time).
 #' @param ci_type (Optional) Character; one of `"simultaneous"` or
@@ -143,16 +143,10 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	if (inherits(x, "fetwfe")) {
 		return(.event_study_fetwfe(x, alpha, ci_type))
 	}
-	if (inherits(x, "etwfe") || inherits(x, "betwfe")) {
+	if (inherits(x, "fetwfe_etwfe") || inherits(x, "betwfe")) {
 		return(.event_study_etwfe_betwfe(x, alpha, ci_type))
 	}
-	stop(
-		"eventStudy() requires an object of class 'fetwfe', 'etwfe', or ",
-		"'betwfe'. Got class: ",
-		paste(class(x), collapse = ", "),
-		".",
-		call. = FALSE
-	)
+	.stop_unsupported_class(x, "eventStudy", c("fetwfe", "etwfe", "betwfe"))
 }
 
 #' Call `eventStudy()` without the high-dimensional post-selection band warning
@@ -194,7 +188,7 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #'   the #304 degenerate-band warning, anything a future change signals --
 #'   propagates normally.
 #'
-#' @param x A fitted object of class `"fetwfe"`, `"etwfe"`, or `"betwfe"`.
+#' @param x A fitted object of class `"fetwfe"`, `"fetwfe_etwfe"`, or `"betwfe"`.
 #' @param ... Passed through to [eventStudy()] (`.plot_event_study()` passes
 #'   `alpha`).
 #' @return Whatever [eventStudy()] returns.
@@ -246,7 +240,7 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #' (e.g., adding a "cohort_probs names are factor levels" branch) land in
 #' this one helper.
 #'
-#' @param x A fitted `"fetwfe"`, `"etwfe"`, `"betwfe"` or `"twfeCovs"` object.
+#' @param x A fitted `"fetwfe"`, `"fetwfe_etwfe"`, `"betwfe"` or `"twfeCovs"` object.
 #' @param G Integer; the number of treated cohorts.
 #' @param T Integer; the number of time periods.
 #' @return A list with three elements: `cohort_offsets_int` (integer vector of
@@ -939,7 +933,7 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #'   the event-study data frame via `.assemble_event_study_df()`. Consolidated
 #'   from a byte-identical tail previously duplicated across the two workers
 #'   (#401 item 1).
-#' @param x A fully-classed `fetwfe`/`etwfe`/`betwfe` object.
+#' @param x A fully-classed `fetwfe`/`fetwfe_etwfe`/`betwfe` object.
 #' @param alpha Numeric significance level.
 #' @param ci_type `"simultaneous"` or `"pointwise"`.
 #' @param calc_ses Logical; the LOCAL SE-availability gate.
@@ -998,7 +992,7 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #'
 #'   Wherever `ses` is not finite, the simultaneous bounds and adjusted p-values
 #'   are forced back to `NA`.
-#' @param x A fully-classed `fetwfe`/`etwfe`/`betwfe` object.
+#' @param x A fully-classed `fetwfe`/`fetwfe_etwfe`/`betwfe` object.
 #' @param alpha Numeric significance level.
 #' @param estimates,ses The per-event-time point estimates and SEs the
 #'   `eventStudy()` loop already computed (used for the `NA`-preservation mask).

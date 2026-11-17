@@ -123,7 +123,7 @@
 #'   When standard errors are unavailable
 #'   (e.g., a rank-deficient design) the bounds are `NA` under both settings.
 #'   Default is `"simultaneous"`.
-#' @return An object of class \code{etwfe} containing the following elements:
+#' @return An object of class \code{fetwfe_etwfe} containing the following elements:
 #' \item{att_hat}{The
 #' estimated overall average treatment effect for a randomly selected treated
 #' unit.} \item{att_se}{A standard error for the ATT. If the Gram matrix is not
@@ -326,7 +326,7 @@ etwfe <- function(
 		prep = prep,
 		core_fn = etwfe_core,
 		validator_fn = .validate_etwfe,
-		class_name = "etwfe",
+		class_name = "fetwfe_etwfe",
 		field_order = "etwfe",
 		indep_counts = indep_counts,
 		sig_eps_sq = sig_eps_sq,
@@ -410,7 +410,7 @@ etwfe <- function(
 #'   When standard errors are unavailable
 #'   (e.g., a rank-deficient design) the bounds are `NA` under both settings.
 #'   Default is `"simultaneous"`.
-#' @return An object of class \code{etwfe} containing the following elements:
+#' @return An object of class \code{fetwfe_etwfe} containing the following elements:
 #' \item{att_hat}{The
 #' estimated overall average treatment effect for a randomly selected treated
 #' unit.} \item{att_se}{A standard error for the ATT. If the Gram matrix is not

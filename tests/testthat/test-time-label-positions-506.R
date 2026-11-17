@@ -203,7 +203,14 @@ for (est_name in c("fetwfe", "etwfe", "betwfe")) {
 		lab <- paste0(est_name, " ", coding, ": ")
 
 		test_that(paste0(lab, "the fit succeeds"), {
-			expect_s3_class(.fit506(est_name, coding), est_name)
+			expect_s3_class(
+				.fit506(est_name, coding),
+				c(
+					fetwfe = "fetwfe",
+					etwfe = "fetwfe_etwfe",
+					betwfe = "betwfe"
+				)[[est_name]]
+			)
 		})
 
 		test_that(paste0(lab, "eventStudy() agrees with the 1..8 fit"), {

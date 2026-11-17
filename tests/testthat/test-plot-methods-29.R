@@ -1,7 +1,7 @@
 library(testthat)
 library(fetwfe)
 
-# Issue #29: plot.fetwfe / plot.etwfe / plot.betwfe methods. Three S3
+# Issue #29: plot.fetwfe / plot.fetwfe_etwfe / plot.betwfe methods. Three S3
 # methods, each delegating to .plot_estimator(). Returns a ggplot object;
 # selection encoding (shape + color by `selected`) appears for fetwfe /
 # betwfe only; uniform styling for etwfe.

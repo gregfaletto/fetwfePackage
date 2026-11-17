@@ -259,7 +259,7 @@ test_that(".compute_cluster_robust_sandwich matches hand-rolled Liang-Zeger on a
 # ------------------------------------------------------------------------------
 # Test 7: plot methods return ggplot objects with expected layer structure.
 # ------------------------------------------------------------------------------
-test_that("plot.fetwfe / plot.etwfe / plot.betwfe return ggplot objects", {
+test_that("plot.fetwfe / plot.fetwfe_etwfe / plot.betwfe return ggplot objects", {
 	skip_if_not_installed("ggplot2")
 	sim <- make_es_panel(R = 3, T = 6, d = 0, N = 200)
 	res_f <- fetwfeWithSimulatedData(sim, q = 0.5)

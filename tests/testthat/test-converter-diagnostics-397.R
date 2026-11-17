@@ -92,5 +92,8 @@ test_that("the estimator input validator names NA response / time / indep_counts
 	)
 
 	# A normal fit (no NA anywhere) is unaffected.
-	expect_s3_class(do.call(etwfe, c(list(pdata = sim$pdata), base)), "etwfe")
+	expect_s3_class(
+		do.call(etwfe, c(list(pdata = sim$pdata), base)),
+		"fetwfe_etwfe"
+	)
 })

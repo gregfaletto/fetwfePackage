@@ -74,7 +74,7 @@ utils::globalVariables(c(
 #'
 #' @seealso [cohortStudy()] for the per-cohort accessor;
 #'   [eventStudy()] for the event-time accessor;
-#'   [plot.etwfe()], [plot.betwfe()] for the parallel methods.
+#'   [plot.fetwfe_etwfe()], [plot.betwfe()] for the parallel methods.
 #'
 #' @examples
 #' \dontrun{
@@ -125,7 +125,7 @@ plot.fetwfe <- function(
 #'   }
 #' }
 #' @export
-plot.etwfe <- function(
+plot.fetwfe_etwfe <- function(
 	x,
 	type = c("event_study", "catt"),
 	conf_int = TRUE,

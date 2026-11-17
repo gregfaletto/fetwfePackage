@@ -70,14 +70,12 @@
 #' }
 #' @export
 cohortStudy <- function(result) {
-	fitted_classes <- c("fetwfe", "etwfe", "betwfe", "twfeCovs")
+	fitted_classes <- c("fetwfe", "fetwfe_etwfe", "betwfe", "twfeCovs")
 	if (!inherits(result, fitted_classes)) {
-		stop(
-			"cohortStudy() requires a fitted object from fetwfe(), etwfe(), ",
-			"betwfe(), or twfeCovs(). Got class: ",
-			paste(class(result), collapse = ", "),
-			".",
-			call. = FALSE
+		.stop_unsupported_class(
+			result,
+			"cohortStudy",
+			c("fetwfe", "etwfe", "betwfe", "twfeCovs")
 		)
 	}
 	if (is.null(result$catt_df)) {

@@ -50,7 +50,7 @@ utils::globalVariables(c(
 #' effects are positively correlated (as is typical in difference-in-
 #' differences, where effects share the regression-coefficient variance piece).
 #'
-#' @param result A fitted object of class `"fetwfe"`, `"etwfe"`, `"betwfe"`,
+#' @param result A fitted object of class `"fetwfe"`, `"fetwfe_etwfe"`, `"betwfe"`,
 #'   or `"twfeCovs"`.
 #' @param family Character; one of `"event_study"`, `"cohort"`,
 #'   `"all_post_treatment"`, or `"custom"`. See Details for each family's
@@ -319,11 +319,10 @@ simultaneousCIs <- function(
 
 #' @export
 simultaneousCIs.default <- function(result, ...) {
-	stop(
-		"simultaneousCIs() requires a fetwfe, etwfe, betwfe, or twfeCovs fit ",
-		"object; got class: ",
-		paste(class(result), collapse = ", "),
-		call. = FALSE
+	.stop_unsupported_class(
+		result,
+		"simultaneousCIs",
+		c("fetwfe", "etwfe", "betwfe", "twfeCovs")
 	)
 }
 
@@ -361,9 +360,9 @@ simultaneousCIs.fetwfe <- function(
 	)
 }
 
-#' @method simultaneousCIs etwfe
+#' @method simultaneousCIs fetwfe_etwfe
 #' @export
-simultaneousCIs.etwfe <- simultaneousCIs.fetwfe
+simultaneousCIs.fetwfe_etwfe <- simultaneousCIs.fetwfe
 
 #' @method simultaneousCIs betwfe
 #' @export
@@ -373,7 +372,7 @@ simultaneousCIs.betwfe <- simultaneousCIs.fetwfe
 #'   simultaneous CIs returned here are still mathematically well-defined on
 #'   the `twfeCovs` CATT vector under the package's variance machinery, but the
 #'   underlying point estimates are not unbiased. Prefer
-#'   `simultaneousCIs.fetwfe` / `.etwfe` / `.betwfe` for inference. `twfeCovs`
+#'   `simultaneousCIs.fetwfe` / `.fetwfe_etwfe` / `.betwfe` for inference. `twfeCovs`
 #'   estimates a single pooled effect per cohort (no per-`(g, t)` cell or
 #'   event-time structure), so only `family = "cohort"` and
 #'   `family = "custom"` are defined for it; `"event_study"` and
@@ -1553,7 +1552,7 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 #'   includes but is not limited to `K = 1`), the worker returns bounds equal to
 #'   the existing pointwise bounds (no widening) and any error short-circuits to
 #'   `NULL` (leave `catt_df` unchanged).
-#' @param x A fully-classed `fetwfe`/`etwfe`/`betwfe`/`twfeCovs` object.
+#' @param x A fully-classed `fetwfe`/`fetwfe_etwfe`/`betwfe`/`twfeCovs` object.
 #' @param alpha Numeric; the alpha the fit's `catt_df` was built at (`x$alpha`
 #'   for all four classes; twfeCovs gained an `alpha` slot in #204). Passed
 #'   explicitly so all four callers agree.
@@ -1633,7 +1632,7 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 #'   header over bounds that are not a simultaneous band. The reader at the
 #'   other end is `.band_label()` (`R/class_helpers.R`), which labels the CATT
 #'   preview header from this slot.
-#' @param out A fully-classed `fetwfe`/`etwfe`/`betwfe`/`twfeCovs` object.
+#' @param out A fully-classed `fetwfe`/`fetwfe_etwfe`/`betwfe`/`twfeCovs` object.
 #' @param alpha Numeric; the alpha the fit used (read from the fit's `alpha` slot).
 #' @return `out` with `catt_df` bounds overwritten when simultaneous, else
 #'   `out` unchanged; in both cases carrying `catt_band_applied` reflecting

@@ -121,7 +121,7 @@ cohortTimeATTs <- function(result, alpha = NULL) {
 	# Restrict to the estimators with a per-cohort-time treatment-effect block
 	# (mirrors eventStudy()'s dispatcher). twfeCovs has one effect per cohort
 	# (num_treats == G), so there is nothing to disaggregate over time.
-	if (!inherits(result, c("fetwfe", "etwfe", "betwfe"))) {
+	if (!inherits(result, c("fetwfe", "fetwfe_etwfe", "betwfe"))) {
 		if (inherits(result, "twfeCovs")) {
 			stop(
 				"cohortTimeATTs() is not available for twfeCovs objects: the ",
@@ -131,12 +131,10 @@ cohortTimeATTs <- function(result, alpha = NULL) {
 				call. = FALSE
 			)
 		}
-		stop(
-			"cohortTimeATTs() requires a fitted object from fetwfe(), etwfe(), ",
-			"or betwfe(). Got class: ",
-			paste(class(result), collapse = ", "),
-			".",
-			call. = FALSE
+		.stop_unsupported_class(
+			result,
+			"cohortTimeATTs",
+			c("fetwfe", "etwfe", "betwfe")
 		)
 	}
 

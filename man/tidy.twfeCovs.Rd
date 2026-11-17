@@ -22,7 +22,7 @@ at \code{conf.level} (#197). See \code{\link[=tidy.fetwfe]{tidy.fetwfe()}}.}
 A data frame with \code{G + 1} rows.
 }
 \description{
-Like \code{\link[=tidy.etwfe]{tidy.etwfe()}} but for a TWFE-with-covariates fit. Has no \code{selected}
+Like \code{\link[=tidy.fetwfe_etwfe]{tidy.fetwfe_etwfe()}} but for a TWFE-with-covariates fit. Has no \code{selected}
 column (\code{twfeCovs} is pure OLS and does no regularized selection).
 \code{twfeCovs} estimates one pooled effect per cohort, so the returned frame
 has the same \code{G + 1} rows (overall ATT in row 1, then one row per cohort)

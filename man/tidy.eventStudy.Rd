@@ -30,7 +30,7 @@ Returns a \code{broom}-style tidy data frame for the output of
 \code{\link[=eventStudy]{eventStudy()}}. Renames existing columns to broom conventions
 (\code{se} \eqn{\to} \code{std.error}, \code{p_value} \eqn{\to} \code{p.value}) and adds a \code{term}
 column (\code{"e<event_time>"}) plus a \code{statistic} column
-(\code{estimate / std.error}) so the schema matches \verb{tidy.<estimator>()}
+(\code{estimate / std.error}) so the schema matches a fit's \code{tidy()}
 for downstream \code{bind_rows()} consumers.
 }
 \details{

@@ -15,7 +15,7 @@
 A one-row data frame with 11 columns.
 }
 \description{
-Like \code{\link[=glance.etwfe]{glance.etwfe()}} (and with the same schema): omits the \code{lambda_star} /
+Like \code{\link[=glance.fetwfe_etwfe]{glance.fetwfe_etwfe()}} (and with the same schema): omits the \code{lambda_star} /
 \code{lambda_star_model_size} columns, since \code{twfeCovs} performs no
 regularization.
 }
