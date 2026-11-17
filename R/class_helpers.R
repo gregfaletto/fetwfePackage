@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-# Shared helpers for fetwfe / etwfe / betwfe S3 class methods
+# Shared helpers for S3 class methods
 #-------------------------------------------------------------------------------
 
 #' @title Reorder and truncate a CATT data frame for printing
@@ -280,9 +280,8 @@
 }
 
 #' @title Resolve the alpha a fit's catt_df was built at
-#' @description Returns `x$alpha` for all four classes
-#'   (fetwfe/etwfe/betwfe/twfeCovs); every fit now carries an `alpha`
-#'   slot recording the level its catt_df band was built at (#204).
+#' @description Returns `x$alpha` for all four classes; every fit now carries
+#'   an `alpha` slot recording the level its catt_df band was built at (#204).
 #' @keywords internal
 #' @noRd
 .alpha_of <- function(x) {
@@ -495,9 +494,8 @@
 
 #' @title C8 -- Type sanity (universal across all 4 classes)
 #' @description
-#' `has_alpha` is TRUE for all four classes (fetwfe/etwfe/betwfe/twfeCovs all
-#' carry an `alpha` slot; twfeCovs gained one in #204). `has_att_selected` is
-#' TRUE for fetwfe/betwfe.
+#' `has_alpha` is TRUE for all four classes. `has_att_selected` is TRUE for
+#' fetwfe/betwfe.
 #' @keywords internal
 #' @noRd
 .check_type_sanity <- function(
@@ -692,7 +690,7 @@
 #' @description Validates the input + derives `has_valid_ses` (the
 #' contract gate that fixes #73). `calc_ses` lives in different paths
 #' across classes: nested under `$internal` for fetwfe; top-level for
-#' etwfe/betwfe.
+#' fetwfe_etwfe/betwfe.
 #' @return list(has_valid_ses = logical).
 #' @keywords internal
 #' @noRd
@@ -742,7 +740,7 @@
 #' @description Validates the input + derives `has_valid_ses` (the contract
 #' gate). Mirrors `.check_for_event_study(x)`. `calc_ses` lives in different
 #' paths across classes: nested under `$internal` for fetwfe; top-level for
-#' etwfe/betwfe/twfeCovs.
+#' fetwfe_etwfe/betwfe/twfeCovs.
 #' @return list(has_valid_ses = logical).
 #' @keywords internal
 #' @noRd
@@ -1025,7 +1023,7 @@
 #'   hand, differing only in whether the object was called `x` or `object`.
 #' @details **`calc_ses` is derived, not read off the top level.** Where
 #'   `calc_ses` lives is class-dependent -- nested under `$internal` for
-#'   `fetwfe`, top-level for `etwfe` / `betwfe` / `twfeCovs` -- and getting that
+#'   `fetwfe`, top-level for `fetwfe_etwfe` / `betwfe` / `twfeCovs` -- and getting that
 #'   wrong is issue #73, the canonical cross-method contradiction this file's
 #'   preconditions exist for. `.check_for_event_study()` and
 #'   `.check_for_simultaneous_cis()` both implement the same one-line
