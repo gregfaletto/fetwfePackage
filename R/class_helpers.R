@@ -615,7 +615,7 @@
 #
 # This is what fixes #73: .check_for_event_study(x) returns
 # `has_valid_ses` derived from `x$internal$calc_ses` (fetwfe) or
-# `x$calc_ses` (etwfe/betwfe), and the .event_study_* dispatchers
+# `x$calc_ses` (fetwfe_etwfe/betwfe), and the .event_study_* dispatchers
 # AND-gate their SE-computation branch on it.
 #-------------------------------------------------------------------------------
 
@@ -1264,7 +1264,7 @@
 #' header banner, (b) whether the `Selected:` row appears under the
 #' Overall-ATT block, (c) whether the `Selected size` / `Lambda*` rows
 #' appear in Model Details, and (d) where `X_ints`, `y`, and `calc_ses`
-#' live on the fit object (top-level for `etwfe` / `betwfe`, nested under
+#' live on the fit object (top-level for `fetwfe_etwfe` / `betwfe`, nested under
 #' `$internal` for `fetwfe`). All four are passed in by the caller; the
 #' helper renders the full output.
 #'
@@ -1285,7 +1285,7 @@
 #' @param X_ints_path,y_path,calc_ses_path Path-extractor functions that
 #'   read `X_ints`, `y`, and `calc_ses` off `x`. For `fetwfe` these
 #'   return `x$internal$X_ints` / `x$internal$y` / `x$internal$calc_ses`;
-#'   for `etwfe` / `betwfe` they return the top-level fields. Functions
+#'   for `fetwfe_etwfe` / `betwfe` they return the top-level fields. Functions
 #'   are passed (not path strings) for readability.
 #' @param max_cohorts Integer; the pre-resolved option value. The wrapper
 #'   resolves the per-class option key (`fetwfe.max_cohorts` etc.) and passes
