@@ -629,7 +629,7 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 	# cohort ATT), not one effect per (g, t) cell. There is therefore no
 	# event-time or per-cell structure to expand: only the `cohort` and
 	# `custom` families are well-defined (this is why eventStudy() excludes
-	# twfeCovs, R/event_study.R:73-75). Override first_inds to the per-cohort
+	# twfeCovs). Override first_inds to the per-cohort
 	# singletons and reject the per-cell families with a clear message.
 	if (inherits(x, "twfeCovs")) {
 		if (!family %in% c("cohort", "custom")) {
