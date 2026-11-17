@@ -201,6 +201,20 @@ test_that("the accessors reject a saved etwfe() fit of class etwfe with the refi
 	}
 })
 
+test_that("the accessors reject a plain fixest fit of class fixest without the refit sentence (#523)", {
+	m <- structure(list(), class = "fixest")
+	for (nm in names(.accessors523)) {
+		e <- tryCatch(.accessors523[[nm]](m), error = function(e) e)
+		expect_true(grepl(.first523[[nm]], msg_of(e), fixed = TRUE), info = nm)
+		expect_true(
+			grepl("Got class: fixest.", msg_of(e), fixed = TRUE),
+			info = nm
+		)
+		expect_false(grepl(.refit523, msg_of(e), fixed = TRUE), info = nm)
+		expect_null(call_of(e), info = nm)
+	}
+})
+
 test_that(".stop_unsupported_class() lists one constructor alone and joins two with or (#523)", {
 	one <- tryCatch(
 		fetwfe:::.stop_unsupported_class(1L, "f", "fetwfe"),
