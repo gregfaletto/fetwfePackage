@@ -7,7 +7,7 @@ test_that("eventStudy() dispatch error echoes the offending class (#325 item 4)"
 	# Matches the cohortStudy() sibling pattern: the message names the class it got.
 	expect_error(
 		eventStudy(42L),
-		"requires a fitted object from.*Got class: integer",
+		"eventStudy\\(\\) requires a fitted object from.*Got class: integer",
 		fixed = FALSE
 	)
 	expect_error(
