@@ -112,15 +112,16 @@ library(fetwfe)
 	}
 	expect_identical(alt$catt_band_applied, ref$catt_band_applied)
 }
-# The `effect` column is left out: it carries the cohort labels, which differ
-# across codings by design and have blocks of their own.
+# The cohort family's `effect` labels differ across codings by design and have
+# blocks of their own, so they are left out.
 .expect_sci_agrees506 <- function(alt, ref, families) {
 	for (fam in families) {
 		sci_alt <- simultaneousCIs(alt, family = fam)
 		sci_ref <- simultaneousCIs(ref, family = fam)
+		drop <- if (fam == "cohort") "effect" else character(0)
 		expect_equal(
-			.plain506(sci_alt$ci, drop = "effect"),
-			.plain506(sci_ref$ci, drop = "effect"),
+			.plain506(sci_alt$ci, drop = drop),
+			.plain506(sci_ref$ci, drop = drop),
 			info = fam
 		)
 		expect_equal(
