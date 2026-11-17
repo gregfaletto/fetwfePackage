@@ -67,8 +67,7 @@
 #'       `e = 0, 1, ...` counts periods along the sorted time values. Real panels
 #'       carry their actual time values. For synthetic `genCoefs()` /
 #'       `simulateData()` fixtures (whose panel runs `1, ..., T`) this coincides
-#'       with the 1-based panel-time index. (Only a hand-built or legacy fit with
-#'       no stored first year falls back to that panel-time index directly.)}
+#'       with the 1-based panel-time index.}
 #'     \item{estimate}{Numeric; the cell's ATT estimate.}
 #'     \item{se}{Numeric; the pointwise standard error. `0` for a cell zeroed
 #'       out by the fusion/bridge penalty while other cells survive
@@ -261,7 +260,7 @@ cohortTimeATTs <- function(result, alpha = NULL) {
 			cohorts[row] <- c_names[g]
 			# The cell's time value: the panel's time value at the cell's period,
 			# `e` periods after the cohort's adoption period. The other two
-			# branches serve hand-built and legacy objects: `first_year` plus the
+			# branches serve hand-built objects: `first_year` plus the
 			# period minus 1, or, with no `first_year` slot, the period itself.
 			times[row] <- if (!is.null(time_values)) {
 				time_values[cohort_offsets_int[g] + e]

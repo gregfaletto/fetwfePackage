@@ -26,8 +26,7 @@ cohort first received treatment), matching \code{\link[=cohortStudy]{cohortStudy
 \verb{e = 0, 1, ...} counts periods along the sorted time values. Real panels
 carry their actual time values. For synthetic \code{genCoefs()} /
 \code{simulateData()} fixtures (whose panel runs \verb{1, ..., T}) this coincides
-with the 1-based panel-time index. (Only a hand-built or legacy fit with
-no stored first year falls back to that panel-time index directly.)}
+with the 1-based panel-time index.}
 \item{estimate}{Numeric; the cell's ATT estimate.}
 \item{se}{Numeric; the pointwise standard error. \code{0} for a cell zeroed
 out by the fusion/bridge penalty while other cells survive
