@@ -100,6 +100,10 @@
 - `debiasedATT()` and `debiasedATTWithSimulatedData()` were withheld from the
   exported API; #527 tracks their re-export.
 
+- `eventStudy()` and `simultaneousCIs(family = "event_study")` omit event times no
+  cohort reaches, rather than reporting an estimate of 0 there, so a
+  `se_type = "conservative"` band no longer counts them (#515).
+
 - `simultaneousCIs(family = "cohort")` labels each cohort by its time value, as
   `tidy()` does, not by its period position (#506).
 
