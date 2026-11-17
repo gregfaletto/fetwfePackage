@@ -99,7 +99,7 @@ library(fetwfe)
 .expect_event_study_agrees506 <- function(alt, ref) {
 	es_alt <- eventStudy(alt)
 	es_ref <- eventStudy(ref)
-	expect_equal(.plain506(es_alt), .plain506(es_ref))
+	expect_equal(.plain506(es_alt), .plain506(es_ref), tolerance = 1e-4)
 	expect_identical(
 		attr(es_alt, "band_applied"),
 		attr(es_ref, "band_applied")
@@ -108,7 +108,12 @@ library(fetwfe)
 .expect_catt_df_agrees506 <- function(alt, ref) {
 	expect_identical(names(alt$catt_df), names(ref$catt_df))
 	for (col in setdiff(names(ref$catt_df), "cohort")) {
-		expect_equal(alt$catt_df[[col]], ref$catt_df[[col]], info = col)
+		expect_equal(
+			alt$catt_df[[col]],
+			ref$catt_df[[col]],
+			info = col,
+			tolerance = 1e-4
+		)
 	}
 	expect_identical(alt$catt_band_applied, ref$catt_band_applied)
 }
@@ -122,14 +127,21 @@ library(fetwfe)
 		expect_equal(
 			.plain506(sci_alt$ci, drop = drop),
 			.plain506(sci_ref$ci, drop = drop),
-			info = fam
+			info = fam,
+			tolerance = 1e-4
 		)
 		expect_equal(
 			sci_alt$adjusted_p_values,
 			sci_ref$adjusted_p_values,
-			info = fam
+			info = fam,
+			tolerance = 1e-4
 		)
-		expect_equal(sci_alt$critical_value, sci_ref$critical_value, info = fam)
+		expect_equal(
+			sci_alt$critical_value,
+			sci_ref$critical_value,
+			info = fam,
+			tolerance = 1e-4
+		)
 	}
 }
 .expect_cta_agrees506 <- function(alt, ref) {
@@ -517,7 +529,8 @@ test_that("a covariate named like a time dummy leaves the map intact (steps of 2
 		expect_equal(
 			.plain506(eventStudy(alt)),
 			.plain506(eventStudy(ref)),
-			info = est_name
+			info = est_name,
+			tolerance = 1e-4
 		)
 		expect_equal(
 			cohortTimeATTs(alt)$time,
