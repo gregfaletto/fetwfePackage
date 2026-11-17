@@ -2,8 +2,7 @@
 # `cohortStudy()` (per-cohort) and `eventStudy()` (per-event-time). Returns one
 # row per treatment-effect *cell* (cohort g first treated, calendar time t),
 # i.e. the `num_treats` underlying parameters with no averaging over either
-# axis. See issue #280 (umbrella gregfaletto/fetwfe#48) and
-# `.plans/feat-cohort-time-atts-280/PLAN.md`.
+# axis. See issue #280 (umbrella gregfaletto/fetwfe#48).
 #
 # Supports fetwfe / etwfe / betwfe (the estimators with a per-cohort-time
 # treatment-effect block), mirroring eventStudy(). twfeCovs is excluded: the

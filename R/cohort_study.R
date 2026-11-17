@@ -1,6 +1,6 @@
 # Cohort-study accessor: a function-style wrapper around `result$catt_df`,
 # parallel to `eventStudy()` in shape and discoverability. See issue #137
-# and `.plans/cohort-study-wrapper-137/PLAN.md` for the design rationale.
+# for the design rationale.
 
 #' Per-cohort average treatment effects
 #'

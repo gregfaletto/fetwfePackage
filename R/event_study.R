@@ -1,6 +1,5 @@
 # Event-study aggregation and plotting for fetwfe / etwfe / betwfe.
-# See vignettes/etwfe_betwfe_vignette.Rmd for usage; see
-# `.plans/feat-event-study-plot/plan.md` for the design rationale.
+# See vignettes/etwfe_betwfe_vignette.Rmd for usage.
 
 # Bare column names referenced inside ggplot2::aes() in .plot_event_study()
 # are intentional (NSE); declare them here so R CMD check doesn't emit a

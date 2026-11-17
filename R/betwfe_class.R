@@ -20,8 +20,7 @@ coef.betwfe <- function(object, ...) {
 # `betwfe` is the hybrid: has `att_selected` and lambda.* slots like
 # fetwfe (so `show_att_selected = TRUE`, `show_lambda = TRUE`), but
 # `X_ints` / `y` / `calc_ses` live at the TOP level (so the three `_path`
-# extractor functions read top-level fields). Asymmetry documented at
-# .plans/feat-etwfe-betwfe-vignette-17/PLAN.md.
+# extractor functions read top-level fields).
 #—--------------------------------------------------------------------
 #' @export
 print.betwfe <- function(

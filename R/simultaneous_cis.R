@@ -8,7 +8,7 @@
 # eventStudy() reconstructs per-event-time variances) using the K-effect
 # generalizations of the package's variance machinery
 # (.assemble_joint_cov_var1 / .assemble_joint_cov_var2 in
-# R/variance_machinery.R). See .plans/feat-simultaneous-cis-192/PLAN.md.
+# R/variance_machinery.R).
 
 # Bare column names referenced inside ggplot2::aes() in
 # plot.simultaneous_cis() are intentional (NSE); declare them here so R CMD
@@ -482,8 +482,7 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 #' @description Reconstructs the K x K joint covariance from the fit's stored
 #'   slots, computes the simultaneous critical value via `mvtnorm::qmvnorm()`,
 #'   and assembles the `simultaneous_cis` result. Class-aware shims read the
-#'   FETWFE-vs-OLS-family slot shapes. See the file-level comment and
-#'   `.plans/feat-simultaneous-cis-192/PLAN.md`.
+#'   FETWFE-vs-OLS-family slot shapes. See the file-level comment.
 #' @param x A validated fitted estimator object.
 #' @param family Character (already `match.arg`-resolved by the caller).
 #' @param alpha Numeric significance level, or `NULL` to inherit `.alpha_of(x)`
