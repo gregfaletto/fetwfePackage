@@ -190,7 +190,7 @@ test_that("etwfe recovers the known ATT at G = 1", {
 	skip_on_cran()
 	fx <- .sc112_sim()
 	res <- .sc112_fit(fx$sim, etwfe)
-	expect_s3_class(res, "etwfe")
+	expect_s3_class(res, "fetwfe_etwfe")
 	expect_equal(res$G, 1)
 	expect_true(is.finite(res$att_hat))
 	expect_equal(res$att_hat, fx$att_true, tolerance = 0.3)

@@ -39,7 +39,7 @@ library(fetwfe)
 
 # Implementation note: under #174 `eventStudy()`'s preconditon
 # (`.check_for_event_study()`) runs `.assert_estimator_object()`, which
-# in turn runs `.validate_<class>()`. The validator catches the
+# in turn runs the class's validator. The validator catches the
 # missing-slot mutation BEFORE the eventStudy body's own `stop()` on the
 # same condition fires. Either origin proves the silent-swallow
 # tryCatch is gone (the prior tryCatch swallowed both); the test

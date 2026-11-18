@@ -743,7 +743,7 @@ getTes <- function(coefs_obj, distribution = "gaussian") {
 	# at calendar time g + 1 (cohort 0 = never-treated, by convention
 	# encoded in the panel's `time` integer values 1..T). Stored so
 	# downstream tooling (e.g., `tidy.FETWFE_tes`) can label rows with the
-	# same scheme that `tidy.<estimator>` uses on a fitted panel.
+	# same scheme that `tidy()` uses on a fitted panel.
 	cohort_times <- as.integer(seq_len(G) + 1L)
 
 	# True per-event-time effects (periods since adoption): the same aggregation

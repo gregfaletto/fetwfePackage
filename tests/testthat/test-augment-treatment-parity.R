@@ -107,7 +107,7 @@ test_that("augment auto-trim and no-trim paths return identical column sets", {
 
 test_that("augment column parity holds for etwfe and betwfe on auto-trim path", {
 	# `.augment_estimator_output()` is the shared body for augment.fetwfe,
-	# augment.etwfe, and augment.betwfe — so the fix in v1.9.4 applies to all
+	# augment.fetwfe_etwfe, and augment.betwfe — so the fix in v1.9.4 applies to all
 	# three. This block locks in that behavior so a future class-conditional
 	# regression that only breaks etwfe/betwfe doesn't slip through.
 	fx <- .parity_fixture()

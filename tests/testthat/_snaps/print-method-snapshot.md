@@ -66,7 +66,7 @@
         Selected size       : 0
         Lambda*             : 0.0302
 
-# print.etwfe output is stable
+# print.fetwfe_etwfe output is stable
 
     Code
       print(fit_etwfe)
@@ -99,7 +99,7 @@
         Covariates (d)      : 2
         Features (p)        : 41
 
-# print.summary.etwfe output is stable
+# print.summary.fetwfe_etwfe output is stable
 
     Code
       print(summary(fit_etwfe))

@@ -1,13 +1,14 @@
 #' @title Extended Two-Way Fixed Effects Output Class
-#' @description S3 class for the output of \code{etwfe()}.
+#' @description S3 class \code{"fetwfe_etwfe"}, the output of \code{etwfe()}.
 #' @name etwfe-class
+#' @aliases fetwfe_etwfe-class fetwfe_etwfe
 NULL
 
 #----------------------------------------------------------------------
 # coef() method
 #----------------------------------------------------------------------
 #' @export
-coef.etwfe <- function(object, ...) {
+coef.fetwfe_etwfe <- function(object, ...) {
 	.check_for_coef(object)
 	object$beta_hat
 }
@@ -18,7 +19,7 @@ coef.etwfe <- function(object, ...) {
 # See R/fetwfe_class.R for the design rationale (issue #77 step 2).
 #----------------------------------------------------------------------
 #' @export
-print.etwfe <- function(
+print.fetwfe_etwfe <- function(
 	x,
 	max_cohorts = getOption("etwfe.max_cohorts", 10),
 	order_by = c("cohort", "estimate", "abs_estimate", "pvalue", "none"),
@@ -43,10 +44,10 @@ print.etwfe <- function(
 }
 
 #' @export
-summary.etwfe <- function(object, full_catt = FALSE, ...) {
+summary.fetwfe_etwfe <- function(object, full_catt = FALSE, ...) {
 	.summary_estimator_output(
 		object,
-		output_class = "summary.etwfe",
+		output_class = "summary.fetwfe_etwfe",
 		include_att_selected = FALSE,
 		include_lambda = FALSE,
 		full_catt = full_catt
@@ -54,7 +55,7 @@ summary.etwfe <- function(object, full_catt = FALSE, ...) {
 }
 
 #' @export
-print.summary.etwfe <- function(x, ...) {
+print.summary.fetwfe_etwfe <- function(x, ...) {
 	.print_summary_estimator_output(
 		x,
 		header = "Summary of Extended Two-Way Fixed Effects\n========================================\n\n",
@@ -65,9 +66,8 @@ print.summary.etwfe <- function(x, ...) {
 
 #-------------------------------------------------------------------------------
 # Constructor validator (#85). See R/fetwfe_class.R for the design rationale.
-# ETWFE differs from FETWFE in: no `att_selected`, no `internal` sublist
-# (X_ints/y/X_final/y_final/calc_ses are top-level), no lambda.* slots
-# (pure OLS -- no bridge regularization).
+# ETWFE differs from FETWFE in: no `att_selected`, no lambda.* slots (pure
+# OLS -- no bridge regularization).
 #-------------------------------------------------------------------------------
 
 .EXPECTED_SLOTS_ETWFE <- c(
@@ -130,7 +130,7 @@ print.summary.etwfe <- function(x, ...) {
 	"first_year"
 )
 
-#' @title Validate an `etwfe`-classed object's contracts
+#' @title Validate a `fetwfe_etwfe` object's contracts
 #' @keywords internal
 #' @noRd
 .validate_etwfe <- function(x) {

@@ -2,8 +2,7 @@
 # `cohortStudy()` (per-cohort) and `eventStudy()` (per-event-time). Returns one
 # row per treatment-effect *cell* (cohort g first treated, calendar time t),
 # i.e. the `num_treats` underlying parameters with no averaging over either
-# axis. See issue #280 (umbrella gregfaletto/fetwfe#48) and
-# `.plans/feat-cohort-time-atts-280/PLAN.md`.
+# axis. See issue #280 (umbrella gregfaletto/fetwfe#48).
 #
 # Supports fetwfe / etwfe / betwfe (the estimators with a per-cohort-time
 # treatment-effect block), mirroring eventStudy(). twfeCovs is excluded: the
@@ -121,7 +120,7 @@ cohortTimeATTs <- function(result, alpha = NULL) {
 	# Restrict to the estimators with a per-cohort-time treatment-effect block
 	# (mirrors eventStudy()'s dispatcher). twfeCovs has one effect per cohort
 	# (num_treats == G), so there is nothing to disaggregate over time.
-	if (!inherits(result, c("fetwfe", "etwfe", "betwfe"))) {
+	if (!inherits(result, c("fetwfe", "fetwfe_etwfe", "betwfe"))) {
 		if (inherits(result, "twfeCovs")) {
 			stop(
 				"cohortTimeATTs() is not available for twfeCovs objects: the ",
@@ -131,12 +130,10 @@ cohortTimeATTs <- function(result, alpha = NULL) {
 				call. = FALSE
 			)
 		}
-		stop(
-			"cohortTimeATTs() requires a fitted object from fetwfe(), etwfe(), ",
-			"or betwfe(). Got class: ",
-			paste(class(result), collapse = ", "),
-			".",
-			call. = FALSE
+		.stop_unsupported_class(
+			result,
+			"cohortTimeATTs",
+			c("fetwfe", "etwfe", "betwfe")
 		)
 	}
 

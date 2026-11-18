@@ -34,7 +34,7 @@ object returned by \code{\link[=getTes]{getTes()}}. Row 1 is the overall true AT
 (\code{term = "ATT_true"}); subsequent rows are the true cohort ATTs
 (\code{term = "Cohort <adoption-time>"}, using the simulator's
 convention that cohort \code{g} adopts at calendar time \code{g + 1}, so
-the labels match what \verb{tidy.<estimator>} uses on a fitted panel
+the labels match what \code{tidy()} uses on a fitted panel
 generated from the same \code{FETWFE_coefs}). Standard error /
 statistic / p-value columns are always \code{NA_real_} --- there is no
 sampling distribution for a population truth. When

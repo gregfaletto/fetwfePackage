@@ -123,11 +123,11 @@ test_that("print.summary.fetwfe output is stable", {
 	expect_snapshot(print(summary(fit_fetwfe)))
 })
 
-test_that("print.etwfe output is stable", {
+test_that("print.fetwfe_etwfe output is stable", {
 	expect_snapshot(print(fit_etwfe))
 })
 
-test_that("print.summary.etwfe output is stable", {
+test_that("print.summary.fetwfe_etwfe output is stable", {
 	expect_snapshot(print(summary(fit_etwfe)))
 })
 

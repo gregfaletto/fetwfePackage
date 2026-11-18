@@ -73,5 +73,5 @@ all points are uniformly styled.
 \seealso{
 \code{\link[=cohortStudy]{cohortStudy()}} for the per-cohort accessor;
 \code{\link[=eventStudy]{eventStudy()}} for the event-time accessor;
-\code{\link[=plot.etwfe]{plot.etwfe()}}, \code{\link[=plot.betwfe]{plot.betwfe()}} for the parallel methods.
+\code{\link[=plot.fetwfe_etwfe]{plot.fetwfe_etwfe()}}, \code{\link[=plot.betwfe]{plot.betwfe()}} for the parallel methods.
 }

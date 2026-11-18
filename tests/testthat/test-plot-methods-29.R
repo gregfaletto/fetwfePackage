@@ -1,7 +1,7 @@
 library(testthat)
 library(fetwfe)
 
-# Issue #29: plot.fetwfe / plot.etwfe / plot.betwfe methods. Three S3
+# Issue #29: plot.fetwfe / plot.fetwfe_etwfe / plot.betwfe methods. Three S3
 # methods, each delegating to .plot_estimator(). Returns a ggplot object;
 # selection encoding (shape + color by `selected`) appears for fetwfe /
 # betwfe only; uniform styling for etwfe.
@@ -20,7 +20,7 @@ library(fetwfe)
 # 1) All three plot methods return a ggplot object for both `type` values.
 # ----------------------------------------------------------------------
 
-test_that("plot.fetwfe / .etwfe / .betwfe return ggplot objects (both types)", {
+test_that("plot.fetwfe / .fetwfe_etwfe / .betwfe return ggplot objects (both types)", {
 	skip_if_not_installed("ggplot2")
 	sim <- .plot_setup()
 	cases <- list(

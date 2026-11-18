@@ -21,7 +21,7 @@ simultaneousCIs(
 )
 }
 \arguments{
-\item{result}{A fitted object of class \code{"fetwfe"}, \code{"etwfe"}, \code{"betwfe"},
+\item{result}{A fitted object of class \code{"fetwfe"}, \code{"fetwfe_etwfe"}, \code{"betwfe"},
 or \code{"twfeCovs"}.}
 
 \item{family}{Character; one of \code{"event_study"}, \code{"cohort"},

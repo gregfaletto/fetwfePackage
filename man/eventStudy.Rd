@@ -7,7 +7,7 @@
 eventStudy(x, alpha = NULL, ci_type = NULL)
 }
 \arguments{
-\item{x}{A fitted object of class \code{"fetwfe"}, \code{"etwfe"}, or \code{"betwfe"}.}
+\item{x}{A fitted object of class \code{"fetwfe"}, \code{"fetwfe_etwfe"}, or \code{"betwfe"}.}
 
 \item{alpha}{(Optional) Significance level for confidence intervals.
 Defaults to \code{x$alpha} (the alpha used at fit time).}

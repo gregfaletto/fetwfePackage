@@ -1,22 +1,18 @@
 #-------------------------------------------------------------------------------
-# Shared helpers for fetwfe / etwfe / betwfe S3 class methods
+# Shared helpers for S3 class methods
 #-------------------------------------------------------------------------------
 
 #' @title Reorder and truncate a CATT data frame for printing
 #'
 #' @description
-#' Internal helper used by `print.fetwfe()`, `print.etwfe()`, `print.betwfe()`
-#' and their `summary.*` companions to render the cohort-average-treatment-
-#' effect table. Reorders `catt_df` by one of five orderings and truncates to
-#' the first `max_cohorts` rows. When truncation occurs, attaches the
-#' attributes `truncated = TRUE` and `n_discarded = <number dropped>` so the
-#' caller can print a "... and N more cohorts" suffix.
+#' Reorders `catt_df` by one of five orderings and truncates to the first
+#' `max_cohorts` rows. When truncation occurs, attaches the attributes
+#' `truncated = TRUE` and `n_discarded = <number dropped>` so the caller can
+#' print a "... and N more cohorts" suffix.
 #'
 #' Every call site passes `max_cohorts` explicitly, so the parameter is
-#' positional-required. The per-class option keys
-#' (`fetwfe.max_cohorts` / `etwfe.max_cohorts` / `betwfe.max_cohorts`) are
-#' resolved on each `print.<class>()` method's own `max_cohorts =`
-#' argument, not here.
+#' positional-required. The per-class option keys are resolved on each
+#' `print.<class>()` method's own `max_cohorts =` argument, not here.
 #'
 #' @param catt_df A data frame with at least the columns `cohort` and
 #'   `estimate`, plus `p_value` if `order_by = "pvalue"` is used.
@@ -98,14 +94,13 @@
 	es
 }
 
-#' @title Print a CATT data frame with the package's standard formatting
+#' @title Print a data frame with the package's standard formatting
 #'
 #' @description
 #' Internal one-line helper that wraps `print()` with `row.names = FALSE` and
-#' `right = TRUE`, used by every `print.fetwfe()` / `print.etwfe()` /
-#' `print.betwfe()` and their `print.summary.*` companions to render the
-#' cohort table consistently. Returns `invisible()` so it can be chained
-#' inside a print-method body without producing a second visible printout.
+#' `right = TRUE` to render the preview tables consistently. Returns
+#' `invisible()` so it can be chained inside a print-method body without
+#' producing a second visible printout.
 #'
 #' @param df A data frame to print.
 #' @return `invisible(NULL)`.
@@ -176,7 +171,7 @@
 #' errors, so all SE-bearing slots must be NA. This is the contract whose
 #' violation produced issue #73 (`eventStudy()` reporting finite SEs for
 #' q >= 1). `calc_ses_path` is the string path to read `calc_ses` from
-#' (e.g., `"calc_ses"` for top-level, `"internal$calc_ses"` for fetwfe).
+#' (e.g., `"calc_ses"` or `"internal$calc_ses"`).
 #' @keywords internal
 #' @noRd
 .check_se_consistency <- function(x, calc_ses_path, cls) {
@@ -280,9 +275,8 @@
 }
 
 #' @title Resolve the alpha a fit's catt_df was built at
-#' @description Returns `x$alpha` for all four classes
-#'   (fetwfe/etwfe/betwfe/twfeCovs); every fit now carries an `alpha`
-#'   slot recording the level its catt_df band was built at (#204).
+#' @description Returns `x$alpha` for all four classes; every fit now carries
+#'   an `alpha` slot recording the level its catt_df band was built at (#204).
 #' @keywords internal
 #' @noRd
 .alpha_of <- function(x) {
@@ -495,9 +489,8 @@
 
 #' @title C8 -- Type sanity (universal across all 4 classes)
 #' @description
-#' `has_alpha` is TRUE for all four classes (fetwfe/etwfe/betwfe/twfeCovs all
-#' carry an `alpha` slot; twfeCovs gained one in #204). `has_att_selected` is
-#' TRUE for fetwfe/betwfe.
+#' `has_alpha` is TRUE for all four classes. `has_att_selected` is TRUE for
+#' fetwfe/betwfe.
 #' @keywords internal
 #' @noRd
 .check_type_sanity <- function(
@@ -616,21 +609,20 @@
 #       method can use rather than re-deriving them.
 #
 # This is what fixes #73: .check_for_event_study(x) returns
-# `has_valid_ses` derived from `x$internal$calc_ses` (fetwfe) or
-# `x$calc_ses` (etwfe/betwfe), and the .event_study_* dispatchers
-# AND-gate their SE-computation branch on it.
+# `has_valid_ses`, and the .event_study_* dispatchers AND-gate their
+# SE-computation branch on it.
 #-------------------------------------------------------------------------------
 
 #' @title Universal dispatcher: validate any estimator-class object
 #' @description Dispatches via `inherits()` to the appropriate
-#' `.validate_<class>` helper from #85. As of #76, `twfeCovs` is now
+#' validator from #85. As of #76, `twfeCovs` is now
 #' a classed list and its `.validate_twfeCovs` branch is wired up.
 #' @keywords internal
 #' @noRd
 .assert_estimator_object <- function(x) {
 	if (inherits(x, "fetwfe")) {
 		.validate_fetwfe(x)
-	} else if (inherits(x, "etwfe")) {
+	} else if (inherits(x, "fetwfe_etwfe")) {
 		.validate_etwfe(x)
 	} else if (inherits(x, "betwfe")) {
 		.validate_betwfe(x)
@@ -638,7 +630,7 @@
 		.validate_twfeCovs(x)
 	} else {
 		stop(
-			"Expected a `fetwfe`, `etwfe`, `betwfe`, or `twfeCovs` object; got class(es): ",
+			"Expected a `fetwfe`, `fetwfe_etwfe`, `betwfe`, or `twfeCovs` object; got class(es): ",
 			paste(class(x), collapse = ", "),
 			call. = FALSE
 		)
@@ -646,11 +638,51 @@
 	invisible(x)
 }
 
+#' @title Stop with an accessor's class error
+#' @description The error an accessor raises for an object of a class it does
+#'   not accept, with the refit sentence for an object of class `"etwfe"`
+#'   (#523).
+#' @param x The object the accessor received.
+#' @param fn The accessor's name, without parentheses.
+#' @param constructors The functions whose fits `fn` accepts, without
+#'   parentheses.
+#' @return Does not return.
+#' @keywords internal
+#' @noRd
+.stop_unsupported_class <- function(x, fn, constructors) {
+	ctors <- paste0(constructors, "()")
+	n <- length(ctors)
+	listed <- if (n == 1L) {
+		ctors
+	} else if (n == 2L) {
+		paste(ctors, collapse = " or ")
+	} else {
+		paste0(paste(ctors[-n], collapse = ", "), ", or ", ctors[n])
+	}
+	refit <- if (inherits(x, "etwfe")) {
+		paste0(
+			" An object of class \"etwfe\" is either a fit from the etwfe ",
+			"package or an etwfe() fit saved by an earlier version of fetwfe, ",
+			"which must be refit."
+		)
+	} else {
+		""
+	}
+	stop(
+		fn,
+		"() requires a fitted object from ",
+		listed,
+		". Got class: ",
+		paste(class(x), collapse = ", "),
+		".",
+		refit,
+		call. = FALSE
+	)
+}
+
 #' @title Method precondition: eventStudy
 #' @description Validates the input + derives `has_valid_ses` (the
-#' contract gate that fixes #73). `calc_ses` lives in different paths
-#' across classes: nested under `$internal` for fetwfe; top-level for
-#' etwfe/betwfe.
+#' contract gate that fixes #73).
 #' @return list(has_valid_ses = logical).
 #' @keywords internal
 #' @noRd
@@ -698,9 +730,7 @@
 
 #' @title Method precondition: simultaneousCIs
 #' @description Validates the input + derives `has_valid_ses` (the contract
-#' gate). Mirrors `.check_for_event_study(x)`. `calc_ses` lives in different
-#' paths across classes: nested under `$internal` for fetwfe; top-level for
-#' etwfe/betwfe/twfeCovs.
+#' gate). Mirrors `.check_for_event_study(x)`.
 #' @return list(has_valid_ses = logical).
 #' @keywords internal
 #' @noRd
@@ -723,8 +753,7 @@
 }
 
 #-------------------------------------------------------------------------------
-# Consolidated print/summary/print.summary bodies for the three S3 classes
-# (`fetwfe`, `etwfe`, `betwfe`). Each per-class method in R/<class>_class.R
+# Consolidated print/summary/print.summary bodies. Each per-class method
 # is now a thin wrapper that pre-resolves the per-class options
 # (header text, gating flags, path-extractor functions, max_cohorts /
 # order_by) and delegates here. Issue #77 step 2 / PR following PR #90.
@@ -983,7 +1012,7 @@
 #'   hand, differing only in whether the object was called `x` or `object`.
 #' @details **`calc_ses` is derived, not read off the top level.** Where
 #'   `calc_ses` lives is class-dependent -- nested under `$internal` for
-#'   `fetwfe`, top-level for `etwfe` / `betwfe` / `twfeCovs` -- and getting that
+#'   `fetwfe`, top-level for `fetwfe_etwfe` / `betwfe` / `twfeCovs` -- and getting that
 #'   wrong is issue #73, the canonical cross-method contradiction this file's
 #'   preconditions exist for. `.check_for_event_study()` and
 #'   `.check_for_simultaneous_cis()` both implement the same one-line
@@ -992,7 +1021,7 @@
 #'   because `R/fetwfe.R` duplicates the value at top level for parity (#180,
 #'   pinned by `tests/testthat/test-internal-slot-parity.R`) -- an incidental
 #'   duplication, not the derivation the package treats as canonical.
-#' @param x A fitted `fetwfe` / `etwfe` / `betwfe` / `twfeCovs` object (never a
+#' @param x A fitted `fetwfe` / `fetwfe_etwfe` / `betwfe` / `twfeCovs` object (never a
 #'   `summary.*` list, which carries no top-level `p` / `N` / `T`).
 #' @return A length-1 character ready to `cat()`, or `NULL` when no notice
 #'   applies.
@@ -1216,40 +1245,31 @@
 	invisible(NULL)
 }
 
-#' @title Consolidated body of `print.<class>` for the three estimator classes
+#' @title Consolidated body of `print.<class>`
 #'
 #' @description
-#' Internal helper called by `print.fetwfe()`, `print.etwfe()`, and
-#' `print.betwfe()`. The three per-class methods differ only in (a) the
-#' header banner, (b) whether the `Selected:` row appears under the
-#' Overall-ATT block, (c) whether the `Selected size` / `Lambda*` rows
-#' appear in Model Details, and (d) where `X_ints`, `y`, and `calc_ses`
-#' live on the fit object (top-level for `etwfe` / `betwfe`, nested under
-#' `$internal` for `fetwfe`). All four are passed in by the caller; the
-#' helper renders the full output.
+#' The per-class methods differ in (a) the header banner, (b) whether the
+#' `Selected:` row appears under the Overall-ATT block, (c) whether the
+#' `Selected size` / `Lambda*` rows appear in Model Details, and (d) where
+#' `X_ints`, `y`, and `calc_ses` live on the fit object. All four are passed
+#' in by the caller; the helper renders the full output.
 #'
-#' @param x The fit object (one of `"fetwfe"` / `"etwfe"` / `"betwfe"`).
+#' @param x The fit object.
 #' @param header Single string containing the title line plus its `====`
 #'   divider plus two trailing newlines (e.g.
 #'   `"Foo Results\n===\n\n"`). Passed verbatim to `cat()`. The
 #'   title-versus-divider length relationship is inconsistent across the
-#'   three classes, so the helper does not compute the divider --
-#'   each per-class wrapper passes its full banner as a literal string.
+#'   classes, so the helper does not compute the divider -- each per-class
+#'   wrapper passes its full banner as a literal string.
 #' @param show_att_selected Logical; if `TRUE`, render the
-#'   `Selected:` row under the Overall ATT block. `fetwfe` / `betwfe`
-#'   pass `TRUE`; `etwfe` passes `FALSE` (etwfe is pure OLS with no
-#'   selection).
+#'   `Selected:` row under the Overall ATT block.
 #' @param show_lambda Logical; if `TRUE`, render `Selected size:` and
-#'   `Lambda*:` rows under Model Details. Same pattern as
-#'   `show_att_selected`.
+#'   `Lambda*:` rows under Model Details.
 #' @param X_ints_path,y_path,calc_ses_path Path-extractor functions that
-#'   read `X_ints`, `y`, and `calc_ses` off `x`. For `fetwfe` these
-#'   return `x$internal$X_ints` / `x$internal$y` / `x$internal$calc_ses`;
-#'   for `etwfe` / `betwfe` they return the top-level fields. Functions
-#'   are passed (not path strings) for readability.
-#' @param max_cohorts Integer; pre-resolved
-#'   `getOption("<class>.max_cohorts", 10)` value. The wrapper resolves
-#'   the per-class option key (`fetwfe.max_cohorts` etc.) and passes
+#'   read `X_ints`, `y`, and `calc_ses` off `x`. Functions are passed (not
+#'   path strings) for readability.
+#' @param max_cohorts Integer; the pre-resolved option value. The wrapper
+#'   resolves the per-class option key (`fetwfe.max_cohorts` etc.) and passes
 #'   the integer.
 #' @param order_by Character; pre-validated (via `match.arg()` in the
 #'   wrapper) one of `"cohort"`, `"estimate"`, `"abs_estimate"`,
@@ -1409,17 +1429,14 @@
 	invisible(x)
 }
 
-#' @title Consolidated body of `summary.<class>` for the three estimator classes
+#' @title Consolidated body of `summary.<class>`
 #'
 #' @description
-#' Internal helper called by `summary.fetwfe()`, `summary.etwfe()`, and
-#' `summary.betwfe()`. Builds the summary list whose `print` method is
-#' dispatched on `output_class`. The three per-class summaries differ in
-#' (a) the assigned class name (`"summary.fetwfe"` / `"summary.etwfe"` /
-#' `"summary.betwfe"`), (b) whether `att_selected` appears between
-#' `att` and `catt` (fetwfe / betwfe only), and (c) whether
-#' `lambda_star` / `model_size` appear inside `model_info` between
-#' `p` and `sig_eps_sq` (fetwfe / betwfe only).
+#' Builds the summary list whose `print` method is dispatched on
+#' `output_class`. The per-class summaries differ in (a) the assigned class
+#' name, (b) whether `att_selected` appears between `att` and `catt`, and (c)
+#' whether `lambda_star` / `model_size` appear inside `model_info` between `p`
+#' and `sig_eps_sq`.
 #'
 #' **List-key ordering is contractual.** `att_selected` (when present)
 #' must come between `att` and `catt`; `lambda_star` / `model_size`
@@ -1431,15 +1448,13 @@
 #' a name-vector selection to keep a single source of truth.
 #'
 #' @param object The fit object.
-#' @param output_class Character; one of `"summary.fetwfe"`,
-#'   `"summary.etwfe"`, `"summary.betwfe"`. Set as the class of
-#'   the returned list.
+#' @param output_class Character; set as the class of the returned list.
 #' @param include_att_selected Logical; if `TRUE`, include
 #'   `att_selected = object$att_selected` between `att` and
-#'   `catt`. fetwfe / betwfe pass `TRUE`; etwfe passes `FALSE`.
+#'   `catt`.
 #' @param include_lambda Logical; if `TRUE`, include
 #'   `lambda_star` and `model_size` between `p` and `sig_eps_sq`
-#'   inside `model_info`. Same gating as `include_att_selected`.
+#'   inside `model_info`.
 #' @param full_catt Logical; passed through from the wrapper's
 #'   `full_catt` argument. If `TRUE`, the un-truncated `catt_df`
 #'   appears; otherwise the helper truncates to the first 20
@@ -1571,12 +1586,10 @@
 	structure(out, class = output_class)
 }
 
-#' @title Consolidated body of `print.summary.<class>` for the three classes
+#' @title Consolidated body of `print.summary.<class>`
 #'
 #' @description
-#' Internal helper called by `print.summary.fetwfe()`,
-#' `print.summary.etwfe()`, and `print.summary.betwfe()`. The three
-#' per-class methods differ only in (a) the header banner, (b) whether
+#' The per-class methods differ only in (a) the header banner, (b) whether
 #' the `Selected:` line appears under the one-line ATT, and (c) whether
 #' the `Selected size` / `Lambda*` rows appear under Model Details.
 #' All three are passed in by the caller.
@@ -1587,16 +1600,13 @@
 #' `lambda_star_model_size` / `lambda_star` slots that
 #' `.print_estimator_output()` reads.
 #'
-#' @param x A summary object (one of `"summary.fetwfe"` /
-#'   `"summary.etwfe"` / `"summary.betwfe"`).
+#' @param x A summary object.
 #' @param header Single string containing the title plus its
 #'   `===` divider plus two trailing newlines, verbatim. Same
 #'   shape as in `.print_estimator_output()`.
 #' @param show_att_selected Logical; if `TRUE`, render
-#'   `Selected: <value>` after the one-line Overall ATT. fetwfe /
-#'   betwfe pass `TRUE`; etwfe passes `FALSE`. Spacing matches the
-#'   existing snapshots: one blank line after the Overall ATT line
-#'   in all three cases.
+#'   `Selected: <value>` after the one-line Overall ATT. Spacing matches
+#'   the existing snapshots: one blank line after the Overall ATT line.
 #' @param show_lambda Logical; if `TRUE`, render `Selected size:` and
 #'   `Lambda*:` rows under Model Details.
 #' @return `invisible(x)`.

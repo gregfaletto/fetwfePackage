@@ -43,7 +43,7 @@ NULL
 #' @title Assemble a broom-style tidy data frame from an estimator output
 #'
 #' @description
-#' Shared implementation behind `tidy.fetwfe()` / `tidy.etwfe()` /
+#' Shared implementation behind `tidy.fetwfe()` / `tidy.fetwfe_etwfe()` /
 #' `tidy.betwfe()`. Builds a data frame with row 1 = overall ATT and rows
 #' 2..(G+1) = per-cohort CATTs, sorted by ascending cohort label. Columns
 #' follow broom conventions: `term`, `estimate`, `std.error`, `statistic`,
@@ -58,7 +58,7 @@ NULL
 #' (`estimate / std.error`) --- so under the simultaneous default `p.value`
 #' is the adjusted dual of the band rather than `2 * pnorm(-|statistic|)`.
 #'
-#' @param x A fitted object of class `"fetwfe"`, `"etwfe"`, or `"betwfe"`.
+#' @param x A fitted object of class `"fetwfe"`, `"fetwfe_etwfe"`, or `"betwfe"`.
 #' @param conf.int Logical; include `conf.low` / `conf.high` columns.
 #' @param conf.level Numeric in (0, 1); confidence level for the overall-ATT
 #'   row's CI only (the cohort rows pass through the fit-time `catt_df`
@@ -204,7 +204,7 @@ NULL
 #'
 #' @description
 #' `fetwfe` keeps its design matrix only in a nested `$internal` sublist
-#' (`x$internal$X_ints`), while `etwfe`, `betwfe` and `twfeCovs` also keep a
+#' (`x$internal$X_ints`), while `fetwfe_etwfe`, `betwfe` and `twfeCovs` also keep a
 #' copy at the top level (`x$X_ints`), which this helper reads for them. It
 #' hides that asymmetry from its callers.
 #' @keywords internal
@@ -413,7 +413,7 @@ tidy.fetwfe <- function(
 #' Like [tidy.fetwfe()] but for an ETWFE fit. Has no `selected` column
 #' (ETWFE does no regularized selection).
 #'
-#' @param x An object of class `"etwfe"` returned by [etwfe()].
+#' @param x An object of class `"fetwfe_etwfe"` returned by [etwfe()].
 #' @param conf.int Logical; include CI columns.
 #' @param conf.level Numeric in (0, 1); defaults to `1 - x$alpha`. Applies only
 #'   to the overall-ATT row; the cohort rows pass through the fit-time
@@ -430,7 +430,7 @@ tidy.fetwfe <- function(
 #'   broom::tidy(res)
 #' }
 #' @export
-tidy.etwfe <- function(
+tidy.fetwfe_etwfe <- function(
 	x,
 	conf.int = TRUE,
 	conf.level = 1 - x$alpha,
@@ -441,7 +441,7 @@ tidy.etwfe <- function(
 
 #' Tidy a `twfeCovs` fitted object
 #'
-#' Like [tidy.etwfe()] but for a TWFE-with-covariates fit. Has no `selected`
+#' Like [tidy.fetwfe_etwfe()] but for a TWFE-with-covariates fit. Has no `selected`
 #' column (`twfeCovs` is pure OLS and does no regularized selection).
 #' `twfeCovs` estimates one pooled effect per cohort, so the returned frame
 #' has the same `G + 1` rows (overall ATT in row 1, then one row per cohort)
@@ -510,7 +510,7 @@ tidy.betwfe <- function(
 #' [eventStudy()]. Renames existing columns to broom conventions
 #' (`se` \eqn{\to} `std.error`, `p_value` \eqn{\to} `p.value`) and adds a `term`
 #' column (`"e<event_time>"`) plus a `statistic` column
-#' (`estimate / std.error`) so the schema matches `tidy.<estimator>()`
+#' (`estimate / std.error`) so the schema matches a fit's `tidy()`
 #' for downstream `bind_rows()` consumers.
 #'
 #' The `eventStudy()` output stores its confidence-interval bounds (`ci_low` /
@@ -769,7 +769,7 @@ tidy.cohortTimeATTs <- function(x, ...) {
 #' (`term = "ATT_true"`); subsequent rows are the true cohort ATTs
 #' (`term = "Cohort <adoption-time>"`, using the simulator's
 #' convention that cohort `g` adopts at calendar time `g + 1`, so
-#' the labels match what `tidy.<estimator>` uses on a fitted panel
+#' the labels match what `tidy()` uses on a fitted panel
 #' generated from the same `FETWFE_coefs`). Standard error /
 #' statistic / p-value columns are always `NA_real_` --- there is no
 #' sampling distribution for a population truth. When
@@ -855,7 +855,7 @@ glance.fetwfe <- function(x, ...) {
 #' Like [glance.fetwfe()] but omits the `lambda_star` /
 #' `lambda_star_model_size` columns --- ETWFE has no regularization.
 #'
-#' @param x An object of class `"etwfe"`.
+#' @param x An object of class `"fetwfe_etwfe"`.
 #' @param ... Unused.
 #' @return A one-row data frame with 11 columns.
 #' @examples
@@ -867,13 +867,13 @@ glance.fetwfe <- function(x, ...) {
 #'   broom::glance(res)
 #' }
 #' @export
-glance.etwfe <- function(x, ...) {
+glance.fetwfe_etwfe <- function(x, ...) {
 	.glance_etwfe(x)
 }
 
 #' Glance a `twfeCovs` fitted object
 #'
-#' Like [glance.etwfe()] (and with the same schema): omits the `lambda_star` /
+#' Like [glance.fetwfe_etwfe()] (and with the same schema): omits the `lambda_star` /
 #' `lambda_star_model_size` columns, since `twfeCovs` performs no
 #' regularization.
 #'
@@ -957,11 +957,11 @@ augment.fetwfe <- function(x, data, ...) {
 
 #' Augment user-supplied data with fitted values and residuals from an etwfe fit
 #'
-#' Same shape as [augment.fetwfe()], dispatched on class `"etwfe"`. `data`
+#' Same shape as [augment.fetwfe()], dispatched on class `"fetwfe_etwfe"`. `data`
 #' is auto-sorted by `(unit, time)` and any first-period-treated units
 #' are auto-trimmed; pass the same raw `pdata` you handed to `etwfe()`.
 #'
-#' @param x An object of class `"etwfe"`.
+#' @param x An object of class `"fetwfe_etwfe"`.
 #' @param data A panel `data.frame` with the response column under
 #'   `x$response_col_name`. Any sort order; first-period-treated units
 #'   are auto-trimmed.
@@ -976,7 +976,7 @@ augment.fetwfe <- function(x, data, ...) {
 #'   broom::augment(res, data = sim$pdata)
 #' }
 #' @export
-augment.etwfe <- function(x, data, ...) {
+augment.fetwfe_etwfe <- function(x, data, ...) {
 	.augment_estimator_output(x, data, ...)
 }
 

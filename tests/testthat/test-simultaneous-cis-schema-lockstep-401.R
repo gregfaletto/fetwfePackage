@@ -19,7 +19,7 @@ test_that("simultaneousCIs.<class> methods are aliases of one implementation (#4
 	# impossible to drift; if a future change re-expands one method into its own
 	# body, these expectations fail.
 	fe <- getS3method("simultaneousCIs", "fetwfe")
-	expect_identical(getS3method("simultaneousCIs", "etwfe"), fe)
+	expect_identical(getS3method("simultaneousCIs", "fetwfe_etwfe"), fe)
 	expect_identical(getS3method("simultaneousCIs", "betwfe"), fe)
 	expect_identical(getS3method("simultaneousCIs", "twfeCovs"), fe)
 })

@@ -2,7 +2,9 @@
 % Please edit documentation in R/etwfe_class.R
 \name{etwfe-class}
 \alias{etwfe-class}
+\alias{fetwfe_etwfe-class}
+\alias{fetwfe_etwfe}
 \title{Extended Two-Way Fixed Effects Output Class}
 \description{
-S3 class for the output of \code{etwfe()}.
+S3 class \code{"fetwfe_etwfe"}, the output of \code{etwfe()}.
 }

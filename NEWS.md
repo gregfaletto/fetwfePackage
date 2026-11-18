@@ -42,11 +42,11 @@
   where no tier fires at all.
 
 - **A fit serialized by a released version is no longer readable by every
-  method, and the failure is not uniform across the four classes** (#460). The
+  method, and the failure is not uniform across the classes** (#460). The
   new `catt_band_applied` slot is required by the class validators, exactly as
   `ci_type` has been since 1.16.0, so an object saved by an older version is
-  missing it. Measured, per class and per method: on `fetwfe`, `etwfe` and
-  `betwfe`, `print()`, `summary()`, `eventStudy()`, `tidy()` and `plot()` all
+  missing it. Measured, per class and per method: on `fetwfe` and `betwfe`,
+  `print()`, `summary()`, `eventStudy()`, `tidy()` and `plot()` all
   raise `malformed <class> object. Missing slot(s): catt_band_applied`. On
   `twfeCovs` only `tidy()` raises it --- `eventStudy()` and `plot()` refuse the
   class rather than the slot, and `print()` and `summary()` **do not raise at
@@ -106,6 +106,12 @@
 
 - `simultaneousCIs(family = "cohort")` labels each cohort by its time value, as
   `tidy()` does, not by its period position (#506).
+
+- `etwfe()` returns class `"fetwfe_etwfe"` instead of `"etwfe"`, so loading
+  fetwfe no longer changes how the etwfe package's fits print, summarize, tidy
+  or plot; `inherits(fit, "etwfe")` is `FALSE` for new fits, `etwfe()` fits
+  saved by earlier versions lose fetwfe's methods and must be refit, and the
+  method help topics are renamed, for example to `?tidy.fetwfe_etwfe` (#523).
 
 ### Defensive improvements
 
@@ -228,6 +234,11 @@
   makes no comparison --- passed validation outright and failed later inside
   the coefficient assembly. What these functions accept is unchanged: every
   such input already failed, just without saying which argument was at fault.
+
+- Given a fit from the etwfe package, `eventStudy()`, `cohortStudy()`,
+  `cohortTimeATTs()` and `simultaneousCIs()` raise an error naming its class and
+  the functions a fit must come from, instead of reporting missing slots and
+  asking for an issue (#523).
 
 ### Bug fixes
 

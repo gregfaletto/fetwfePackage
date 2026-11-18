@@ -8,8 +8,7 @@
 # formula targeted the wrong estimand whenever the bridge solver zeroed
 # out some-but-not-all of a cohort's coefficients. Per-cohort SEs were
 # inflated by factor k_full / k_sel; overall att_se shifted (direction
-# depends on cohort-dispersion structure). See
-# .plans/follow-ups/issue-draft-betwfe-se-partial-selection.md.
+# depends on cohort-dispersion structure).
 
 test_that("getPsiGUnfused invariant: t(psi_g) %*% theta_sel == cohort_tes[g]", {
 	# Constructed scenario: cohort 1 occupies indices 1..4 (k_full = 4); the

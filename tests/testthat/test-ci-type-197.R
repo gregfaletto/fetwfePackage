@@ -309,18 +309,14 @@ test_that("ci_type = 'simultaneous' degrades gracefully when calc_ses = FALSE (q
 })
 
 # ------------------------------------------------------------------------------
-# Test 8: K = 1 bypass via a DIRECT unit test of .apply_simultaneous_catt_band()
-# on a hand-built 1-row catt_df. (Since #112/#251 a K = 1 family is also
+# Test 8: K = 1 bypass via a direct unit test.
+# (Since #112/#251 a K = 1 family is also
 # simulator-constructible -- e.g. genCoefs(G = 1, T = 2) -- but the direct unit
 # test remains the most surgical way to exercise the K = 1 branch in isolation.)
 # The worker's K = 1 branch (R/simultaneous_cis.R: sum(nondeg) <= 1 ->
 # crit = pointwise_crit) makes simultaneous == pointwise.
 # ------------------------------------------------------------------------------
-test_that("K = 1 cohort family: simultaneous bound equals pointwise (direct unit test)", {
-	# Build a real 1-cohort etwfe-classed object is impossible via the
-	# simulator; instead fit a normal etwfe and surgically reduce its cohort
-	# family to a single cohort, then call the helper directly. The worker
-	# reconstructs Sigma from the (single) selected treatment cell.
+test_that("K = 1 family: simultaneous bound equals pointwise (direct unit test)", {
 	sim <- make_ci_panel(R = 4, T = 6, eff_size = 2)
 	fit <- etwfeWithSimulatedData(sim)
 	# Sanity: the full helper widens for K >= 2.
@@ -331,8 +327,8 @@ test_that("K = 1 cohort family: simultaneous bound equals pointwise (direct unit
 	)
 	expect_false(is.null(band_full))
 
-	# Direct K = 1 reach: a custom-family contrast of a single cohort routes
-	# through the worker's K = 1 branch, returning crit = pointwise_crit.
+	# Direct K = 1 reach: a custom-family contrast routes through the worker's
+	# K = 1 branch, returning crit = pointwise_crit.
 	one_cohort <- matrix(0, nrow = 1L, ncol = length(fit$treat_inds))
 	one_cohort[1, 1] <- 1
 	sci1 <- fetwfe:::.simultaneous_cis_impl(

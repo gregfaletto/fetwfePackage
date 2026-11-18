@@ -85,7 +85,7 @@ test_that("tidy.fetwfe returns broom-schema columns with selected", {
 	expect_equal(as.numeric(cohort_labels), sort(as.numeric(cohort_labels)))
 })
 
-test_that("tidy.etwfe has no selected column (no regularized selection)", {
+test_that("tidy.fetwfe_etwfe has no selected column (no regularized selection)", {
 	res <- .etwfe_fixture()
 	td <- broom::tidy(res)
 	expect_false("selected" %in% names(td))
@@ -198,7 +198,7 @@ test_that("glance.fetwfe returns 16 columns including lambda_star and lambda_sel
 	expect_equal(gl$n_periods, res$T)
 })
 
-test_that("glance.etwfe omits lambda_star columns (11 columns)", {
+test_that("glance.fetwfe_etwfe omits lambda_star columns (11 columns)", {
 	res <- .etwfe_fixture()
 	gl <- broom::glance(res)
 	expect_equal(nrow(gl), 1L)
@@ -496,7 +496,7 @@ test_that("augment row order is invariant after auto-trim of first-period-treate
 	expect_equal(nrow(aug_shuf), res$N * res$T)
 })
 
-test_that("augment.etwfe and augment.betwfe work with flat X_ints slot", {
+test_that("augment.fetwfe_etwfe and augment.betwfe work with flat X_ints slot", {
 	setup <- .simulated_setup()
 	res_etwfe <- etwfeWithSimulatedData(setup$sim)
 	aug_etwfe <- broom::augment(res_etwfe, data = setup$sim$pdata)
@@ -663,7 +663,7 @@ test_that("tidy.FETWFE_tes has NA_real_ for SE columns and Cohort <time> terms",
 # Dispatch
 # ------------------------------------------------------------------------------
 
-test_that("broom S3 methods are registered AND dispatch correctly for fetwfe / etwfe / betwfe", {
+test_that("broom S3 methods dispatch correctly for fetwfe / fetwfe_etwfe / betwfe", {
 	skip_if_not_installed("broom")
 	# Replaces a prior tautology (calling `broom::tidy(res)` twice and
 	# asserting identity) that passed even when no S3 method was
@@ -699,7 +699,7 @@ test_that("broom S3 methods are registered AND dispatch correctly for fetwfe / e
 	}
 	# Belt-and-suspenders: also confirm the method name lookups succeed
 	# (catches renames even when registration is intact).
-	for (cls in c("fetwfe", "etwfe", "betwfe")) {
+	for (cls in c("fetwfe", "fetwfe_etwfe", "betwfe")) {
 		for (gen in c("tidy", "glance", "augment")) {
 			expect_false(
 				is.null(getS3method(gen, cls, optional = TRUE)),

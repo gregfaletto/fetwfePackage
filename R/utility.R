@@ -1288,7 +1288,7 @@ getFirstIndsFromOffsets <- function(cohort_offsets_int, T) {
 #' which `addDummies()` (R/design_matrix.R) names `t_<value>`, stripped of
 #' that prefix.
 #'
-#' @param x A fitted `"fetwfe"`, `"etwfe"`, `"betwfe"` or `"twfeCovs"` object.
+#' @param x A fitted `"fetwfe"`, `"fetwfe_etwfe"`, `"betwfe"` or `"twfeCovs"` object.
 #'
 #' @return An integer vector of length `x$T`, or `NULL` unless every block name
 #'   carries the `t_` prefix and all `T` values are integers, strictly
@@ -1334,7 +1334,7 @@ getFirstIndsFromOffsets <- function(cohort_offsets_int, T) {
 #' The fit's cohort labels, in cohort order, as stored: each is the time value
 #' at which its cohort first adopts treatment.
 #'
-#' @param x A fitted `"fetwfe"`, `"etwfe"`, `"betwfe"` or `"twfeCovs"` object.
+#' @param x A fitted `"fetwfe"`, `"fetwfe_etwfe"`, `"betwfe"` or `"twfeCovs"` object.
 #'
 #' @return A character vector, or `NULL` when the fit carries no non-empty
 #'   labels.
@@ -1391,7 +1391,7 @@ getFirstIndsFromOffsets <- function(cohort_offsets_int, T) {
 #' offsets outside `2:T` or not strictly increasing). The resolver then falls
 #' back to the consecutive-cohort offsets `2, ..., G + 1`.
 #'
-#' @param x A fitted `"fetwfe"`, `"etwfe"`, `"betwfe"` or `"twfeCovs"` object.
+#' @param x A fitted `"fetwfe"`, `"fetwfe_etwfe"`, `"betwfe"` or `"twfeCovs"` object.
 #'
 #' @return Integer vector of cohort offsets, or `NULL` to signal fall back.
 #' @keywords internal

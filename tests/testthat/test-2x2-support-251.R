@@ -121,7 +121,7 @@ test_that("all four estimators fit a 2x2 (T = 2, G = 1) panel", {
 	expect_equal(res_f$att_hat, 2, tolerance = 0.3)
 
 	res_e <- .s251_fit(p22, etwfe)
-	expect_s3_class(res_e, "etwfe")
+	expect_s3_class(res_e, "fetwfe_etwfe")
 	expect_equal(res_e$T, 2)
 	expect_equal(res_e$att_hat, 2, tolerance = 0.3)
 
@@ -218,7 +218,7 @@ test_that("all four estimators fit a late-adopting (G = 1, T = 5) num_treats = 1
 	expect_equal(res_f$att_hat, 2, tolerance = 0.4)
 
 	res_e <- .s251_fit(plate, etwfe)
-	expect_s3_class(res_e, "etwfe")
+	expect_s3_class(res_e, "fetwfe_etwfe")
 	expect_equal(res_e$att_hat, 2, tolerance = 0.4)
 
 	res_b <- .s251_fit(plate, betwfe)
