@@ -64,20 +64,22 @@ test_that("conf_int = FALSE drops the error-bar layer", {
 	skip_if_not_installed("ggplot2")
 	sim <- .plot_setup()
 	res <- fetwfeWithSimulatedData(sim)
-	p_with <- plot(res, conf_int = TRUE)
-	p_without <- plot(res, conf_int = FALSE)
-	geom_names_with <- vapply(
-		p_with$layers,
-		function(l) class(l$geom)[1L],
-		character(1L)
-	)
-	geom_names_without <- vapply(
-		p_without$layers,
-		function(l) class(l$geom)[1L],
-		character(1L)
-	)
-	expect_true("GeomErrorbar" %in% geom_names_with)
-	expect_false("GeomErrorbar" %in% geom_names_without)
+	for (ty in c("event_study", "catt")) {
+		p_with <- plot(res, type = ty)
+		p_without <- plot(res, type = ty, conf_int = FALSE)
+		geom_names_with <- vapply(
+			p_with$layers,
+			function(l) class(l$geom)[1L],
+			character(1L)
+		)
+		geom_names_without <- vapply(
+			p_without$layers,
+			function(l) class(l$geom)[1L],
+			character(1L)
+		)
+		expect_true("GeomErrorbar" %in% geom_names_with, info = ty)
+		expect_false("GeomErrorbar" %in% geom_names_without, info = ty)
+	}
 })
 
 # ----------------------------------------------------------------------
