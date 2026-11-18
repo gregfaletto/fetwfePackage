@@ -235,6 +235,11 @@
   the coefficient assembly. What these functions accept is unchanged: every
   such input already failed, just without saying which argument was at fault.
 
+- `eventStudy()`, `cohortStudy()`, `cohortTimeATTs()` and `simultaneousCIs()`
+  reject an object of class `"etwfe"`, such as an `etwfe()` fit saved by an
+  earlier version, with an error that says such a fit must be refit, instead of
+  reporting missing slots and asking for an issue (#523).
+
 ### Bug fixes
 
 - `print()` and `summary()` no longer label a confidence-interval preview
