@@ -146,6 +146,18 @@ test_that("etwfe() returns class fetwfe_etwfe, with fetwfe's methods and accesso
 	expect_s3_class(cohortStudy(fit), "data.frame")
 	expect_s3_class(cohortTimeATTs(fit), "data.frame")
 	expect_no_error(simultaneousCIs(fit))
+	expect_false(any(grepl(
+		"more event times",
+		capture.output(print(fit)),
+		fixed = TRUE
+	)))
+	old <- options(etwfe.max_event_times = 1)
+	on.exit(options(old), add = TRUE)
+	expect_true(any(grepl(
+		"more event times",
+		capture.output(print(fit)),
+		fixed = TRUE
+	)))
 	skip_if_not_installed("ggplot2")
 	expect_s3_class(plot(fit), "ggplot")
 })
