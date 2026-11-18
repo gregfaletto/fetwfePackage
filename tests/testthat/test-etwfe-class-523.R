@@ -4,6 +4,9 @@
 #
 # Each dispatch block defines its stubs beside the generics it calls; see #537.
 
+# The refit sentence. Blocks that expect it pin it whole; blocks that expect
+# none look for its last words.
+.refit_sentence523 <- "An object of class \"etwfe\" is either a fit from the etwfe package or an etwfe() fit saved by an earlier version of fetwfe, which must be refit."
 .refit523 <- "must be refit"
 
 .sim523 <- function() {
@@ -171,7 +174,10 @@ test_that("the accessors reject an etwfe-package fit with the refit sentence (#5
 			grepl("Got class: etwfe, fixest.", msg_of(e), fixed = TRUE),
 			info = nm
 		)
-		expect_true(grepl(.refit523, msg_of(e), fixed = TRUE), info = nm)
+		expect_true(
+			grepl(.refit_sentence523, msg_of(e), fixed = TRUE),
+			info = nm
+		)
 		expect_null(call_of(e), info = nm)
 	}
 })
@@ -196,7 +202,10 @@ test_that("the accessors reject a saved etwfe() fit of class etwfe with the refi
 			grepl("Got class: etwfe.", msg_of(e), fixed = TRUE),
 			info = nm
 		)
-		expect_true(grepl(.refit523, msg_of(e), fixed = TRUE), info = nm)
+		expect_true(
+			grepl(.refit_sentence523, msg_of(e), fixed = TRUE),
+			info = nm
+		)
 		expect_null(call_of(e), info = nm)
 	}
 })
