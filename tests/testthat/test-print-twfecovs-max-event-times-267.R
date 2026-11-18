@@ -13,6 +13,7 @@ library(fetwfe)
 # behavior is "accepted and ignored", not an error.
 # ------------------------------------------------------------------------------
 test_that("print.twfeCovs() accepts max_event_times without erroring (#267)", {
+	skip_if_not_installed("lme4")
 	df <- generate_panel_data(N = 30, T = 5, R = 2, seed = 123)
 	tc <- twfeCovs(
 		pdata = df,

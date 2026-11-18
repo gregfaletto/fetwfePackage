@@ -5,8 +5,7 @@
 # the within-estimator implementation. The fix replaces it with REML via
 # `lme4::lmer(y ~ X + (1 | unit), REML = TRUE)`. Tests below verify that the
 # new estimator recovers both variance components to within a factor of 2 of
-# truth on synthetic panels, and that the dependency-fallback path works
-# when lme4 isn't available.
+# truth on synthetic panels.
 #
 # The tests deliberately call `fetwfe()` and `fetwfe:::estOmegaSqrtInv()`
 # DIRECTLY (not `fetwfeWithSimulatedData()`), because the latter passes the
@@ -91,11 +90,6 @@ test_that("fetwfe() invokes the REML estimator when sig values are NA", {
 })
 
 test_that("estOmegaSqrtInv error path mentions lme4 in the message body", {
-	# We can't reliably stub requireNamespace from outside the package
-	# namespace, so this test reads the function's source to verify the
-	# error message points users at install.packages('lme4') or supplying
-	# σ values manually. A weaker check than runtime stubbing but
-	# sufficient to catch regression of the user-facing message text.
 	src <- paste(
 		deparse(body(fetwfe:::estOmegaSqrtInv)),
 		collapse = "\n"

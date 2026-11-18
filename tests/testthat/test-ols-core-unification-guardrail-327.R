@@ -248,6 +248,7 @@
 
 test_that("etwfe() / twfeCovs() numeric output matches the pre-#327 golden to numeric tolerance (#327)", {
 	skip_on_cran()
+	skip_if_not_installed("lme4")
 	for (est in c("etwfe", "twfeCovs")) {
 		for (nm in names(.CONFIGS_327)) {
 			cfg <- .CONFIGS_327[[nm]]

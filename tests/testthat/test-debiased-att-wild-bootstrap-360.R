@@ -15,6 +15,7 @@ library(fetwfe)
 
 # Single-sample fixtures (the wild bootstrap requires single-sample fits;
 # fetwfeWithSimulatedData() uses indep_counts, which is unsupported -- see below).
+skip_if_not_installed("lme4")
 .wb_fixedp <- local({
 	cf <- genCoefs(G = 3, T = 5, d = 2, density = 0.5, eff_size = 2, seed = 1)
 	sim <- simulateData(

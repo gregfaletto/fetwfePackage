@@ -186,6 +186,7 @@ test_that("print.FETWFE_tes writes the expected sections", {
 # estimators' catt_df$cohort -- never the 1-based loop index.
 # ------------------------------------------------------------------------------
 test_that("FETWFE_tes cohort labels agree across print/summary/tidy (adoption time, #261)", {
+	skip_if_not_installed("broom")
 	coefs <- genCoefs(
 		G = 3,
 		T = 5,

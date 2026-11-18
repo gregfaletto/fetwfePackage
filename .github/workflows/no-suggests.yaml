@@ -1,0 +1,49 @@
+# Workflow derived from R-CMD-check.yaml in this directory
+# Need help debugging build failures? Start at https://github.com/r-lib/actions#where-to-find-help
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+name: no-suggests.yaml
+
+permissions: read-all
+
+jobs:
+  no-suggests:
+    runs-on: ubuntu-latest
+
+    name: no-Suggests check (ubuntu-latest, release)
+
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: yes
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: r-lib/actions/setup-pandoc@v2
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::rcmdcheck
+          needs: check
+
+      - uses: r-lib/actions/check-r-package@v2
+        # R CMD check with the Suggests packages hidden from the tests and the
+        # examples by R's depends-only switches. They are set one by one
+        # because _R_CHECK_DEPENDS_ONLY_ would also hide them from the vignette
+        # rebuild, and the vignettes need them. NOT_CRAN is set so that tests
+        # marked skip_on_cran() run here too.
+        env:
+          _R_CHECK_DEPENDS_ONLY_TESTS_: true
+          _R_CHECK_DEPENDS_ONLY_EXAMPLES_: true
+          NOT_CRAN: true
+        with:
+          upload-snapshots: true
+          build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
+          error-on: '"error"'

@@ -226,6 +226,7 @@ test_that("summary() carries catt_band_applied through the keep whitelist (#460)
 #    satisfied by a `.band_label()` hardcoded to "pointwise".
 # ------------------------------------------------------------------------------
 test_that("a fit with both bands applied prints two simultaneous headers (#460)", {
+	skip_if_not_installed("lme4")
 	fit <- .bas460_fp_fit()
 
 	expect_true(fit$catt_band_applied)
@@ -246,6 +247,7 @@ test_that("a fit with both bands applied prints two simultaneous headers (#460)"
 #    behavior, pinned here so #460 cannot quietly alter it.
 # ------------------------------------------------------------------------------
 test_that("ci_type = 'pointwise' sets neither signal and labels both headers (#460)", {
+	skip_if_not_installed("lme4")
 	fit <- .bas460_fp_fit(ci_type = "pointwise")
 
 	expect_false(fit$catt_band_applied)
@@ -275,6 +277,7 @@ test_that("ci_type = 'pointwise' sets neither signal and labels both headers (#4
 #    header is labelled from `x$catt_band_applied` instead of the attribute.
 # ------------------------------------------------------------------------------
 test_that("a calc_ses fit whose cohort band failed labels only that header pointwise (#460)", {
+	skip_if_not_installed("lme4")
 	fit <- with_mocked_bindings(
 		.bas460_fp_fit(),
 		.apply_simultaneous_catt_band = function(x, alpha, has_valid_ses) NULL,
@@ -310,8 +313,7 @@ test_that("a calc_ses fit whose cohort band failed labels only that header point
 #    (`tests/testthat/test-highdim-postselection-band-warning-433.R`), whose
 #    fit-building blocks all skip for the same reason. Per
 #    `.workflow/PROFILE.md` section 3 this skips almost nowhere it will actually
-#    run: `setup-r` exports `NOT_CRAN=true`, so all six CI jobs exercise it on
-#    every PR.
+#    run: `setup-r` exports `NOT_CRAN=true`, so CI exercises it on every PR.
 # ------------------------------------------------------------------------------
 test_that("the #433 caveat renames its subject when no band was applied (#460)", {
 	skip_on_cran()
@@ -373,6 +375,7 @@ test_that("the #433 caveat renames its subject when no band was applied (#460)",
 #    attribute removed.
 # ------------------------------------------------------------------------------
 test_that("the event-study band_applied attribute survives truncation (#460)", {
+	skip_if_not_installed("lme4")
 	fit <- local({
 		cf <- genCoefs(
 			G = 3,
@@ -431,6 +434,7 @@ test_that("the event-study band_applied attribute survives truncation (#460)", {
 #    event-study band is never even requested.
 # ------------------------------------------------------------------------------
 test_that("the two families disagree on the standard print fixture (#460)", {
+	skip_if_not_installed("lme4")
 	fit <- fetwfe(
 		pdata = generate_panel_data(N = 30, T = 5, R = 2, seed = 123),
 		time_var = "time",
@@ -471,6 +475,7 @@ test_that("the two families disagree on the standard print fixture (#460)", {
 #     satisfied by a validator that has simply stopped checking.
 # ------------------------------------------------------------------------------
 test_that("C10 gates on the applied signal, not on ci_type (#460)", {
+	skip_if_not_installed("lme4")
 	fit <- with_mocked_bindings(
 		.bas460_fp_fit(),
 		.apply_simultaneous_catt_band = function(x, alpha, has_valid_ses) NULL,

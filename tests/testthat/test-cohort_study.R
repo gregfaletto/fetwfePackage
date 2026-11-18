@@ -383,6 +383,7 @@ test_that("cohortStudy() rejects a non-data.frame catt_df slot", {
 })
 
 test_that("tidy.cohortStudy() localizes error when required columns are missing", {
+	skip_if_not_installed("broom")
 	setup <- .cs_setup()
 	res <- fetwfeWithSimulatedData(setup$sim)
 	cs <- cohortStudy(res)

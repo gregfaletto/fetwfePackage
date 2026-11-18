@@ -300,6 +300,7 @@ test_that("eventStudy errors on objects of unsupported class", {
 # dimensions.
 # ------------------------------------------------------------------------------
 test_that("eventStudy works on a fit from an auto-truncated panel", {
+	skip_if_not_installed("lme4")
 	df_bad <- generate_bad_panel_data(N = 200, T = 10, seed = 123)
 
 	# Auto-truncation surface: the documented "auto-truncated" warning fires
