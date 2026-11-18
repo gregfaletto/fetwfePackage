@@ -79,6 +79,11 @@ test_that("conf_int = FALSE drops the error-bar layer", {
 		)
 		expect_true("GeomErrorbar" %in% geom_names_with, info = ty)
 		expect_false("GeomErrorbar" %in% geom_names_without, info = ty)
+		expect_identical(
+			geom_names_without,
+			geom_names_with[geom_names_with != "GeomErrorbar"],
+			info = ty
+		)
 	}
 })
 
