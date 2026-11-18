@@ -1,7 +1,7 @@
 # Glance a `twfeCovs` fitted object
 
 Like
-[`glance.etwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/glance.etwfe.md)
+[`glance.fetwfe_etwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/glance.fetwfe_etwfe.md)
 (and with the same schema): omits the `lambda_star` /
 `lambda_star_model_size` columns, since `twfeCovs` performs no
 regularization.

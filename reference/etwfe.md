@@ -205,7 +205,7 @@ etwfe(
 
 ## Value
 
-An object of class `etwfe` containing the following elements:
+An object of class `fetwfe_etwfe` containing the following elements:
 
 - att_hat:
 

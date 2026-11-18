@@ -82,7 +82,7 @@ layer-addition syntax (e.g., `plot(res) + ggplot2::theme_classic()`).
 for the per-cohort accessor;
 [`eventStudy()`](https://gregfaletto.github.io/fetwfePackage/reference/eventStudy.md)
 for the event-time accessor;
-[`plot.etwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/plot.etwfe.md),
+[`plot.fetwfe_etwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/plot.fetwfe_etwfe.md),
 [`plot.betwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/plot.betwfe.md)
 for the parallel methods.
 

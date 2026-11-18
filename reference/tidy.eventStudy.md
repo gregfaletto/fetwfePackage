@@ -5,8 +5,9 @@ Returns a `broom`-style tidy data frame for the output of
 Renames existing columns to broom conventions (`se` \\\to\\ `std.error`,
 `p_value` \\\to\\ `p.value`) and adds a `term` column
 (`"e<event_time>"`) plus a `statistic` column (`estimate / std.error`)
-so the schema matches `tidy.<estimator>()` for downstream `bind_rows()`
-consumers.
+so the schema matches a fit's
+[`tidy()`](https://generics.r-lib.org/reference/tidy.html) for
+downstream `bind_rows()` consumers.
 
 ## Usage
 

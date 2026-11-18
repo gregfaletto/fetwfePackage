@@ -107,11 +107,6 @@ the fitted objects.
 
   Tidy a `cohortTimeATTs` object
 
-- [`tidy(`*`<etwfe>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/tidy.etwfe.md)
-  :
-
-  Tidy an `etwfe` fitted object
-
 - [`tidy(`*`<eventStudy>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/tidy.eventStudy.md)
   :
 
@@ -121,6 +116,11 @@ the fitted objects.
   :
 
   Tidy an `fetwfe` fitted object
+
+- [`tidy(`*`<fetwfe_etwfe>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/tidy.fetwfe_etwfe.md)
+  :
+
+  Tidy an `etwfe` fitted object
 
 - [`tidy(`*`<simultaneous_cis>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/tidy.simultaneous_cis.md)
   : Tidy a simultaneous-confidence-interval object
@@ -135,15 +135,15 @@ the fitted objects.
 
   Glance a `betwfe` fitted object
 
-- [`glance(`*`<etwfe>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/glance.etwfe.md)
-  :
-
-  Glance an `etwfe` fitted object
-
 - [`glance(`*`<fetwfe>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/glance.fetwfe.md)
   :
 
   Glance an `fetwfe` fitted object
+
+- [`glance(`*`<fetwfe_etwfe>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/glance.fetwfe_etwfe.md)
+  :
+
+  Glance an `etwfe` fitted object
 
 - [`glance(`*`<twfeCovs>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/glance.twfeCovs.md)
   :
@@ -154,13 +154,13 @@ the fitted objects.
   : Augment user-supplied data with fitted values and residuals from a
   betwfe fit
 
-- [`augment(`*`<etwfe>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/augment.etwfe.md)
-  : Augment user-supplied data with fitted values and residuals from an
-  etwfe fit
-
 - [`augment(`*`<fetwfe>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/augment.fetwfe.md)
   : Augment user-supplied data with fitted values and residuals from a
   fetwfe fit
+
+- [`augment(`*`<fetwfe_etwfe>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/augment.fetwfe_etwfe.md)
+  : Augment user-supplied data with fitted values and residuals from an
+  etwfe fit
 
 - [`augment(`*`<twfeCovs>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/augment.twfeCovs.md)
   : Augment is not defined for a twfeCovs fit (documented omission)
@@ -168,12 +168,12 @@ the fitted objects.
 - [`plot(`*`<betwfe>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/plot.betwfe.md)
   : Plot CATT or event-study estimates from a fitted BETWFE
 
-- [`plot(`*`<etwfe>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/plot.etwfe.md)
-  : Plot CATT or event-study estimates from a fitted ETWFE
-
 - [`plot(`*`<fetwfe>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/plot.fetwfe.md)
   : Plot CATT or event-study estimates from a fitted FETWFE / ETWFE /
   BETWFE
+
+- [`plot(`*`<fetwfe_etwfe>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/plot.fetwfe_etwfe.md)
+  : Plot CATT or event-study estimates from a fitted ETWFE
 
 - [`plot(`*`<simultaneous_cis>`*`)`](https://gregfaletto.github.io/fetwfePackage/reference/plot.simultaneous_cis.md)
   : Plot a simultaneous-confidence-interval object
@@ -201,6 +201,8 @@ Class definitions and the `catt_df` element accessors.
   : Bridge-Penalized Extended Two-Way Fixed Effects Output Class
 
 - [`etwfe-class`](https://gregfaletto.github.io/fetwfePackage/reference/etwfe-class.md)
+  [`fetwfe_etwfe-class`](https://gregfaletto.github.io/fetwfePackage/reference/etwfe-class.md)
+  [`fetwfe_etwfe`](https://gregfaletto.github.io/fetwfePackage/reference/etwfe-class.md)
   : Extended Two-Way Fixed Effects Output Class
 
 - [`fetwfe-class`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe-class.md)

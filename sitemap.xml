@@ -20,8 +20,8 @@
 <url><loc>https://gregfaletto.github.io/fetwfePackage/reference/FETWFE_tes-class.html</loc></url>
 <url><loc>https://gregfaletto.github.io/fetwfePackage/reference/attgtToFetwfeDf.html</loc></url>
 <url><loc>https://gregfaletto.github.io/fetwfePackage/reference/augment.betwfe.html</loc></url>
-<url><loc>https://gregfaletto.github.io/fetwfePackage/reference/augment.etwfe.html</loc></url>
 <url><loc>https://gregfaletto.github.io/fetwfePackage/reference/augment.fetwfe.html</loc></url>
+<url><loc>https://gregfaletto.github.io/fetwfePackage/reference/augment.fetwfe_etwfe.html</loc></url>
 <url><loc>https://gregfaletto.github.io/fetwfePackage/reference/augment.twfeCovs.html</loc></url>
 <url><loc>https://gregfaletto.github.io/fetwfePackage/reference/betwfe-class.html</loc></url>
 <url><loc>https://gregfaletto.github.io/fetwfePackage/reference/betwfe.html</loc></url>
@@ -44,13 +44,13 @@
 <url><loc>https://gregfaletto.github.io/fetwfePackage/reference/genCoefsCore.html</loc></url>
 <url><loc>https://gregfaletto.github.io/fetwfePackage/reference/getTes.html</loc></url>
 <url><loc>https://gregfaletto.github.io/fetwfePackage/reference/glance.betwfe.html</loc></url>
-<url><loc>https://gregfaletto.github.io/fetwfePackage/reference/glance.etwfe.html</loc></url>
 <url><loc>https://gregfaletto.github.io/fetwfePackage/reference/glance.fetwfe.html</loc></url>
+<url><loc>https://gregfaletto.github.io/fetwfePackage/reference/glance.fetwfe_etwfe.html</loc></url>
 <url><loc>https://gregfaletto.github.io/fetwfePackage/reference/glance.twfeCovs.html</loc></url>
 <url><loc>https://gregfaletto.github.io/fetwfePackage/reference/index.html</loc></url>
 <url><loc>https://gregfaletto.github.io/fetwfePackage/reference/plot.betwfe.html</loc></url>
-<url><loc>https://gregfaletto.github.io/fetwfePackage/reference/plot.etwfe.html</loc></url>
 <url><loc>https://gregfaletto.github.io/fetwfePackage/reference/plot.fetwfe.html</loc></url>
+<url><loc>https://gregfaletto.github.io/fetwfePackage/reference/plot.fetwfe_etwfe.html</loc></url>
 <url><loc>https://gregfaletto.github.io/fetwfePackage/reference/plot.simultaneous_cis.html</loc></url>
 <url><loc>https://gregfaletto.github.io/fetwfePackage/reference/plot.twfeCovs.html</loc></url>
 <url><loc>https://gregfaletto.github.io/fetwfePackage/reference/print.debiased_att.html</loc></url>
@@ -67,9 +67,9 @@
 <url><loc>https://gregfaletto.github.io/fetwfePackage/reference/tidy.cohortStudy.html</loc></url>
 <url><loc>https://gregfaletto.github.io/fetwfePackage/reference/tidy.cohortTimeATTs.html</loc></url>
 <url><loc>https://gregfaletto.github.io/fetwfePackage/reference/tidy.debiased_att.html</loc></url>
-<url><loc>https://gregfaletto.github.io/fetwfePackage/reference/tidy.etwfe.html</loc></url>
 <url><loc>https://gregfaletto.github.io/fetwfePackage/reference/tidy.eventStudy.html</loc></url>
 <url><loc>https://gregfaletto.github.io/fetwfePackage/reference/tidy.fetwfe.html</loc></url>
+<url><loc>https://gregfaletto.github.io/fetwfePackage/reference/tidy.fetwfe_etwfe.html</loc></url>
 <url><loc>https://gregfaletto.github.io/fetwfePackage/reference/tidy.simultaneous_cis.html</loc></url>
 <url><loc>https://gregfaletto.github.io/fetwfePackage/reference/tidy.twfeCovs.html</loc></url>
 <url><loc>https://gregfaletto.github.io/fetwfePackage/reference/twfeCovs-class.html</loc></url>

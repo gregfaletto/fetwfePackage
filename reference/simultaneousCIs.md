@@ -44,7 +44,7 @@ simultaneousCIs(
 
 - result:
 
-  A fitted object of class `"fetwfe"`, `"etwfe"`, `"betwfe"`, or
+  A fitted object of class `"fetwfe"`, `"fetwfe_etwfe"`, `"betwfe"`, or
   `"twfeCovs"`.
 
 - family:

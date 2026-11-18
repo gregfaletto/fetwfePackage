@@ -1,7 +1,7 @@
 # Tidy a `twfeCovs` fitted object
 
 Like
-[`tidy.etwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/tidy.etwfe.md)
+[`tidy.fetwfe_etwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/tidy.fetwfe_etwfe.md)
 but for a TWFE-with-covariates fit. Has no `selected` column (`twfeCovs`
 is pure OLS and does no regularized selection). `twfeCovs` estimates one
 pooled effect per cohort, so the returned frame has the same `G + 1`

@@ -6,9 +6,10 @@ returned by
 Row 1 is the overall true ATT (`term = "ATT_true"`); subsequent rows are
 the true cohort ATTs (`term = "Cohort <adoption-time>"`, using the
 simulator's convention that cohort `g` adopts at calendar time `g + 1`,
-so the labels match what `tidy.<estimator>` uses on a fitted panel
-generated from the same `FETWFE_coefs`). Standard error / statistic /
-p-value columns are always `NA_real_` — there is no sampling
+so the labels match what
+[`tidy()`](https://generics.r-lib.org/reference/tidy.html) uses on a
+fitted panel generated from the same `FETWFE_coefs`). Standard error /
+statistic / p-value columns are always `NA_real_` — there is no sampling
 distribution for a population truth. When `conf.int = TRUE` (default,
 matching the sibling tidy methods), `conf.low` / `conf.high` columns are
 included and also set to `NA_real_`. When `conf.int = FALSE`, those

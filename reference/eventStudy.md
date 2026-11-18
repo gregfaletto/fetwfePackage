@@ -40,7 +40,7 @@ eventStudy(x, alpha = NULL, ci_type = NULL)
 
 - x:
 
-  A fitted object of class `"fetwfe"`, `"etwfe"`, or `"betwfe"`.
+  A fitted object of class `"fetwfe"`, `"fetwfe_etwfe"`, or `"betwfe"`.
 
 - alpha:
 
