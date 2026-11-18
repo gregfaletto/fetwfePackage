@@ -20,7 +20,7 @@ library(fetwfe)
 # 1) All three plot methods return a ggplot object for both `type` values.
 # ----------------------------------------------------------------------
 
-test_that("plot.fetwfe / .etwfe / .betwfe return ggplot objects (both types)", {
+test_that("plot.fetwfe / .fetwfe_etwfe / .betwfe return ggplot objects (both types)", {
 	skip_if_not_installed("ggplot2")
 	sim <- .plot_setup()
 	cases <- list(

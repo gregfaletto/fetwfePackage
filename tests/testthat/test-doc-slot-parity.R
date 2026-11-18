@@ -421,8 +421,8 @@ test_that("cross-class slot inventory matches the documented divergence table", 
 # Parallel to Test 1 but for the event-study aggregation surface. The
 # eventStudy() @return uses \describe{\item{KEY}{...}} structure so we
 # reuse the existing .extract_value_items() parser. Covers all three
-# estimator classes that eventStudy() accepts (fetwfe, etwfe, betwfe;
-# twfeCovs is rejected with a stop()).
+# estimators that eventStudy() accepts (fetwfe, etwfe, betwfe; twfeCovs
+# is rejected with a stop()).
 # ------------------------------------------------------------------------------
 
 test_that("eventStudy() @return matches live names() across estimator classes (#84 item 4)", {

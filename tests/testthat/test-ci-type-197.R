@@ -317,10 +317,9 @@ test_that("ci_type = 'simultaneous' degrades gracefully when calc_ses = FALSE (q
 # crit = pointwise_crit) makes simultaneous == pointwise.
 # ------------------------------------------------------------------------------
 test_that("K = 1 cohort family: simultaneous bound equals pointwise (direct unit test)", {
-	# Build a real 1-cohort etwfe-classed object is impossible via the
-	# simulator; instead fit a normal etwfe and surgically reduce its cohort
-	# family to a single cohort, then call the helper directly. The worker
-	# reconstructs Sigma from the (single) selected treatment cell.
+	# Fit a normal etwfe and surgically reduce its cohort family to a single
+	# cohort, then call the helper directly. The worker reconstructs Sigma
+	# from the (single) selected treatment cell.
 	sim <- make_ci_panel(R = 4, T = 6, eff_size = 2)
 	fit <- etwfeWithSimulatedData(sim)
 	# Sanity: the full helper widens for K >= 2.
