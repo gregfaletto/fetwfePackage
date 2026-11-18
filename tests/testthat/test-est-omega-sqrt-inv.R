@@ -5,8 +5,7 @@
 # the within-estimator implementation. The fix replaces it with REML via
 # `lme4::lmer(y ~ X + (1 | unit), REML = TRUE)`. Tests below verify that the
 # new estimator recovers both variance components to within a factor of 2 of
-# truth on synthetic panels, and that the dependency-fallback path works
-# when lme4 isn't available.
+# truth on synthetic panels.
 #
 # The tests deliberately call `fetwfe()` and `fetwfe:::estOmegaSqrtInv()`
 # DIRECTLY (not `fetwfeWithSimulatedData()`), because the latter passes the
