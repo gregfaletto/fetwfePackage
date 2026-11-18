@@ -5,9 +5,6 @@ library(fetwfe)
 # methods, each delegating to .plot_estimator(). Returns a ggplot object;
 # selection encoding (shape + color by `selected`) appears for fetwfe /
 # betwfe only; uniform styling for etwfe.
-#
-# These tests skip gracefully if ggplot2 isn't installed (it's a
-# Suggests dependency).
 
 .plot_setup <- function() {
 	set.seed(2026)
@@ -130,32 +127,61 @@ test_that("invalid `type` is rejected", {
 })
 
 # ----------------------------------------------------------------------
-# 6) Helpful error if ggplot2 is unavailable. Use a mocked
-#    `requireNamespace` (testthat::with_mocked_bindings is the clean
-#    way, but we can simulate by directly invoking the internal helper
-#    when ggplot2 is loaded -- the production check fires at call time
-#    so this is best-effort).
+# 6) Without ggplot2, plot() stops with its method's own message. The
+#    plot() calls run under a mock of base::requireNamespace() that
+#    reports ggplot2 alone as missing, after the fits are built.
 # ----------------------------------------------------------------------
 
-test_that("internal helper rejects with helpful message when ggplot2 missing", {
-	# Synthetic test: trace through the message logic without removing
-	# ggplot2 from the search path. Stop with the expected error if we
-	# manually call .plot_estimator() with a stub that fails the
-	# requireNamespace check.
-	stub_check <- function() FALSE
-	# Replicate the helper's error path:
-	expect_error(
+test_that("plot() stops with its method's message when ggplot2 is missing", {
+	sim <- .plot_setup()
+	fits <- list(
+		fetwfe = fetwfeWithSimulatedData(sim),
+		fetwfe_etwfe = etwfeWithSimulatedData(sim),
+		betwfe = betwfeWithSimulatedData(sim)
+	)
+	sci <- simultaneousCIs(fits$fetwfe)
+	msg_est <- paste0(
+		"plot() for fetwfe / etwfe / betwfe results requires the ",
+		"`ggplot2` package. Install it with ",
+		"`install.packages(\"ggplot2\")`."
+	)
+	msg_sci <- paste0(
+		"plot.simultaneous_cis requires ggplot2. Install via ",
+		"install.packages('ggplot2')."
+	)
+	rn <- base::requireNamespace
+	testthat::with_mocked_bindings(
 		{
-			if (!stub_check()) {
-				stop(
-					"plot() for fetwfe / etwfe / betwfe results requires the ",
-					"`ggplot2` package. Install it with ",
-					"`install.packages(\"ggplot2\")`.",
-					call. = FALSE
-				)
+			for (nm in names(fits)) {
+				for (ty in c("event_study", "catt")) {
+					expect_identical(
+						tryCatch(
+							{
+								plot(fits[[nm]], type = ty)
+								"no error"
+							},
+							error = conditionMessage
+						),
+						msg_est,
+						info = paste(nm, ty)
+					)
+				}
 			}
+			expect_identical(
+				tryCatch(
+					{
+						plot(sci)
+						"no error"
+					},
+					error = conditionMessage
+				),
+				msg_sci
+			)
 		},
-		"requires the .ggplot2. package"
+		requireNamespace = function(package, ...) {
+			if (identical(package, "ggplot2")) FALSE else rn(package, ...)
+		},
+		.package = "base"
 	)
 })
 
