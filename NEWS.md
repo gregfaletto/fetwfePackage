@@ -235,10 +235,10 @@
   the coefficient assembly. What these functions accept is unchanged: every
   such input already failed, just without saying which argument was at fault.
 
-- `eventStudy()`, `cohortStudy()`, `cohortTimeATTs()` and `simultaneousCIs()`
-  reject an object of class `"etwfe"`, such as an `etwfe()` fit saved by an
-  earlier version, with an error that says such a fit must be refit, instead of
-  reporting missing slots and asking for an issue (#523).
+- Given a fit from the etwfe package, `eventStudy()`, `cohortStudy()`,
+  `cohortTimeATTs()` and `simultaneousCIs()` raise an error naming its class and
+  the functions a fit must come from, instead of reporting missing slots and
+  asking for an issue (#523).
 
 ### Bug fixes
 
