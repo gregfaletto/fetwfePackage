@@ -663,7 +663,7 @@ test_that("tidy.FETWFE_tes has NA_real_ for SE columns and Cohort <time> terms",
 # Dispatch
 # ------------------------------------------------------------------------------
 
-test_that("broom S3 methods are registered AND dispatch correctly for fetwfe / etwfe / betwfe", {
+test_that("broom S3 methods are registered AND dispatch correctly for fetwfe / fetwfe_etwfe / betwfe", {
 	skip_if_not_installed("broom")
 	# Replaces a prior tautology (calling `broom::tidy(res)` twice and
 	# asserting identity) that passed even when no S3 method was
