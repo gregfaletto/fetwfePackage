@@ -141,6 +141,7 @@ processCovs_reference <- function(
 # Test 1: Check that valid input produces a list with the expected output elements.
 # ------------------------------------------------------------------------------
 test_that("etwfe returns expected output structure with valid input", {
+	skip_if_not_installed("lme4")
 	df <- generate_panel_data(N = 30, T = 5, R = 2, seed = 123)
 
 	result <- etwfe(
@@ -332,6 +333,7 @@ test_that("etwfe errors when response is not numeric", {
 # Test 9: Warning when alpha > 0.5.
 # ------------------------------------------------------------------------------
 test_that("etwfe warns when alpha > 0.5", {
+	skip_if_not_installed("lme4")
 	df <- generate_panel_data(N = 30, T = 5, R = 2, seed = 123)
 
 	expect_warning(
@@ -431,6 +433,7 @@ test_that("etwfe errors when data has fewer than 4 rows", {
 # Test 13: Test that the function returns a standard error
 # ------------------------------------------------------------------------------
 test_that("etwfe returns att_se", {
+	skip_if_not_installed("lme4")
 	df <- generate_panel_data(N = 30, T = 5, R = 2, seed = 123)
 
 	result1 <- etwfe(
@@ -451,6 +454,7 @@ test_that("etwfe returns att_se", {
 # Test 14: Test that a warning is thrown when all covariates are constant.
 # ------------------------------------------------------------------------------
 test_that("etwfe warns when all covariates are removed due to constant values", {
+	skip_if_not_installed("lme4")
 	df_const <- generate_panel_data(N = 30, T = 5, R = 2, seed = 101)
 	# Set both covariates to a constant value
 	df_const$cov1 <- 1
@@ -476,6 +480,7 @@ test_that("etwfe warns when all covariates are removed due to constant values", 
 # Test 15: Test that the overall ATT (att_hat) is numeric and non-missing.
 # ------------------------------------------------------------------------------
 test_that("etwfe returns a valid numeric overall ATT", {
+	skip_if_not_installed("lme4")
 	df <- generate_panel_data(N = 30, T = 5, R = 2, seed = 202)
 
 	result <- etwfe(
@@ -541,6 +546,7 @@ test_that("minimal data set requires provided noise variance", {
 # Test 18: Test that function works on only two cohorts
 # ------------------------------------------------------------------------------
 test_that("etwfe works on only two cohorts", {
+	skip_if_not_installed("lme4")
 	# Create a balanced panel with N = 6 units and T = 5 time periods.
 	df <- generate_panel_data(N = 30, T = 10, R = 2, seed = 202)
 
@@ -562,6 +568,7 @@ test_that("etwfe works on only two cohorts", {
 # Test 19: A single treated cohort (G = 1) is now supported (#112).
 # ------------------------------------------------------------------------------
 test_that("single treated cohort (G = 1) is supported", {
+	skip_if_not_installed("lme4")
 	# A balanced panel with N = 30 units and T = 10 periods. With R = 1 the
 	# helper produces a single treated cohort (adopting at t = 2) plus
 	# never-treated units.
@@ -871,6 +878,8 @@ test_that("Overall and cohort-specific treatment effects are valid", {
 # (processCovs() should issue a warning but continue.)
 # ------------------------------------------------------------------------------
 test_that("Estimator works with no covariates again", {
+	skip_if_not_installed("dplyr")
+	skip_if_not_installed("lme4")
 	set.seed(123456L)
 
 	# 5 time periods, 30 individuals, and 4 waves of treatment
@@ -949,6 +958,7 @@ test_that("Estimator works with no covariates again", {
 # Test 26: Test that adding ridge regularization works
 # ------------------------------------------------------------------------------
 test_that("adding ridge regularization to etwfe works", {
+	skip_if_not_installed("lme4")
 	df <- generate_panel_data(N = 30, T = 5, R = 2, seed = 202)
 
 	result <- etwfe(
@@ -981,6 +991,7 @@ test_that("adding ridge regularization to etwfe works", {
 })
 
 test_that("data application works with ridge penalty", {
+	skip_if_not_installed("bacondecomp")
 	set.seed(23451)
 
 	library(bacondecomp)
@@ -1066,6 +1077,8 @@ test_that("etwfe handles factor covariates appropriately", {
 # Test 29: Check that tibbles work
 # ------------------------------------------------------------------------------
 test_that("tibbles work as input to fewtfe", {
+	skip_if_not_installed("lme4")
+	skip_if_not_installed("tibble")
 	df <- generate_panel_data(N = 30, T = 5, R = 2, seed = 123) # uses N = 30, T = 10 by default
 
 	result <- etwfe(
@@ -1118,6 +1131,7 @@ test_that("tibbles work as input to fewtfe", {
 # Test 30: Error when a cohort contains fewer than d + 1 units
 # ------------------------------------------------------------------------------
 test_that("etwfe throws error when a cohort contains fewer than d + 1 units", {
+	skip_if_not_installed("lme4")
 	df <- generate_panel_data(N = 30, T = 10, R = 9, seed = 123)
 
 	expect_error(
@@ -1197,6 +1211,7 @@ test_that("etwfe surfaces p_value but not selected in catt_df", {
 # Test: etwfe auto-truncates a no-never-treated panel (default)
 # ------------------------------------------------------------------------------
 test_that("etwfe auto-truncates a panel with no never-treated units (default)", {
+	skip_if_not_installed("lme4")
 	df_bad <- generate_bad_panel_data(N = 200, T = 10, seed = 123)
 
 	expect_warning(
@@ -1226,6 +1241,7 @@ test_that("etwfe auto-truncates a panel with no never-treated units (default)", 
 # exactly, which a finiteness-only check would pass vacuously.
 # ------------------------------------------------------------------------------
 test_that("etwfe cluster SE is finite and positive on an auto-truncated panel", {
+	skip_if_not_installed("lme4")
 	df_bad <- generate_bad_panel_data(N = 200, T = 10, seed = 123)
 
 	expect_warning(

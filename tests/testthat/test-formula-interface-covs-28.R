@@ -116,6 +116,7 @@ test_that("non-character, non-formula input is rejected with class info", {
 }
 
 test_that("fetwfe(): formula and character forms produce matching results", {
+	skip_if_not_installed("lme4")
 	sim <- .covs_setup()
 	df <- sim$pdata
 	# fetwfeWithSimulatedData() goes through fetwfe() with the sim's
@@ -147,6 +148,7 @@ test_that("fetwfe(): formula and character forms produce matching results", {
 })
 
 test_that("etwfe(): formula and character forms produce matching results", {
+	skip_if_not_installed("lme4")
 	sim <- .covs_setup()
 	df <- sim$pdata
 	res_char <- etwfe(
@@ -171,6 +173,7 @@ test_that("etwfe(): formula and character forms produce matching results", {
 })
 
 test_that("betwfe(): formula and character forms produce matching results", {
+	skip_if_not_installed("lme4")
 	sim <- .covs_setup()
 	df <- sim$pdata
 	res_char <- betwfe(
@@ -196,6 +199,7 @@ test_that("betwfe(): formula and character forms produce matching results", {
 })
 
 test_that("twfeCovs(): formula and character forms produce matching results", {
+	skip_if_not_installed("lme4")
 	sim <- .covs_setup()
 	df <- sim$pdata
 	res_char <- twfeCovs(

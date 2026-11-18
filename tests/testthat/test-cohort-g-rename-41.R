@@ -190,6 +190,7 @@ test_that("ci_type = 'simultaneous' fit exposes $G == $R (cross-feature with #19
 # ------------------------------------------------------------------------------
 
 test_that("a representative pipeline emits no deprecation warning", {
+	skip_if_not_installed("broom")
 	# Collect every warning the pipeline signals and assert that NONE of them
 	# is the package's own deprecation warning (i.e. no in-package caller
 	# self-triggers the `R` deprecation). Unrelated benign warnings, if any,

@@ -310,6 +310,7 @@ test_that("on a fit with standard errors the catt plot draws the fit's own bound
 
 test_that("plot() draws a one-row event study's point without a line", {
 	skip_if_not_installed("ggplot2")
+	skip_if_not_installed("lme4")
 	fit <- .one_cohort_fit_515(5L)
 	expect_identical(nrow(eventStudy(fit)), 1L)
 	geom_names <- .geom_names_515(fit)
@@ -319,6 +320,7 @@ test_that("plot() draws a one-row event study's point without a line", {
 
 test_that("plot() joins a two-row event study's points with a line", {
 	skip_if_not_installed("ggplot2")
+	skip_if_not_installed("lme4")
 	fit <- .one_cohort_fit_515(4L)
 	expect_identical(nrow(eventStudy(fit)), 2L)
 	expect_true("GeomLine" %in% .geom_names_515(fit))

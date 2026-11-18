@@ -35,6 +35,7 @@ library(fetwfe)
 
 pdata <- generate_panel_data(N = 30, T = 5, R = 2, seed = 123)
 
+skip_if_not_installed("lme4")
 fit_baseline <- betwfe(
 	pdata = pdata,
 	time_var = "time",

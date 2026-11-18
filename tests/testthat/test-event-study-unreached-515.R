@@ -71,6 +71,7 @@ for (est in c("fetwfe", "etwfe", "betwfe")) {
 	test_that(
 		paste0("eventStudy() reports the reached event times (", est, ")"),
 		{
+			skip_if_not_installed("lme4")
 			es <- eventStudy(.esu515_fit(est))
 			expect_identical(es$event_time, .esu515_panel()$reached)
 			expect_true(all(es$n_cohorts >= 1L))
@@ -84,6 +85,7 @@ for (est in c("fetwfe", "etwfe", "betwfe")) {
 			")"
 		),
 		{
+			skip_if_not_installed("lme4")
 			es <- eventStudy(.esu515_fit(est), ci_type = "pointwise")
 			expect_identical(es$event_time, .esu515_panel()$reached)
 		}
@@ -92,6 +94,7 @@ for (est in c("fetwfe", "etwfe", "betwfe")) {
 	test_that(
 		paste0("the event-study family's K is the reached count (", est, ")"),
 		{
+			skip_if_not_installed("lme4")
 			sc <- simultaneousCIs(.esu515_fit(est), family = "event_study")
 			expect_identical(sc$K, length(.esu515_panel()$reached))
 		}
@@ -104,6 +107,7 @@ for (est in c("fetwfe", "etwfe", "betwfe")) {
 			")"
 		),
 		{
+			skip_if_not_installed("lme4")
 			sc <- simultaneousCIs(.esu515_fit(est), family = "event_study")
 			expect_identical(sc$ci$effect, paste0("e", .esu515_panel()$reached))
 		}
@@ -117,6 +121,7 @@ for (est in c("fetwfe", "etwfe", "betwfe")) {
 			")"
 		),
 		{
+			skip_if_not_installed("lme4")
 			sc <- suppressMessages(simultaneousCIs(
 				.esu515_fit(est, "conservative"),
 				family = "event_study"
@@ -136,6 +141,7 @@ for (est in c("fetwfe", "etwfe", "betwfe")) {
 			")"
 		),
 		{
+			skip_if_not_installed("lme4")
 			fit <- .esu515_fit(est, "conservative")
 			es <- eventStudy(fit)
 			pw <- eventStudy(fit, ci_type = "pointwise")
@@ -154,6 +160,7 @@ for (est in c("fetwfe", "etwfe", "betwfe")) {
 		),
 		{
 			skip_if_not_installed("ggplot2")
+			skip_if_not_installed("lme4")
 			p <- plot(.esu515_fit(est))
 			is_point <- vapply(
 				p$layers,
@@ -168,6 +175,7 @@ for (est in c("fetwfe", "etwfe", "betwfe")) {
 	test_that(
 		paste0("summary() lists the reached event times (", est, ")"),
 		{
+			skip_if_not_installed("lme4")
 			expect_identical(
 				summary(.esu515_fit(est))$event_study$event_time,
 				.esu515_panel()$reached
@@ -178,6 +186,7 @@ for (est in c("fetwfe", "etwfe", "betwfe")) {
 	test_that(
 		paste0("print() previews the reached event times (", est, ")"),
 		{
+			skip_if_not_installed("lme4")
 			# With room for one row fewer than the reached event times, the
 			# preview reports exactly one more.
 			n <- length(.esu515_panel()$reached)
@@ -192,6 +201,7 @@ for (est in c("fetwfe", "etwfe", "betwfe")) {
 	test_that(
 		paste0("tidy(eventStudy()) lists the reached event times (", est, ")"),
 		{
+			skip_if_not_installed("lme4")
 			expect_identical(
 				generics::tidy(eventStudy(.esu515_fit(est)))$event_time,
 				.esu515_panel()$reached
@@ -204,6 +214,7 @@ for (est in c("fetwfe", "etwfe", "betwfe")) {
 	test_that(
 		paste0("eventStudy() applies the simultaneous band (", est, ")"),
 		{
+			skip_if_not_installed("lme4")
 			es <- eventStudy(.esu515_fit(est))
 			expect_identical(attr(es, "band_applied"), TRUE)
 		}
@@ -216,6 +227,7 @@ for (est in c("fetwfe", "etwfe", "betwfe")) {
 			")"
 		),
 		{
+			skip_if_not_installed("lme4")
 			fit <- .esu515_fit(est)
 			sc <- simultaneousCIs(fit, family = "event_study")
 			expect_identical(sc$K, nrow(eventStudy(fit)))
@@ -229,6 +241,7 @@ for (est in c("fetwfe", "etwfe", "betwfe")) {
 			")"
 		),
 		{
+			skip_if_not_installed("lme4")
 			fit <- .esu515_fit(est)
 			sc <- simultaneousCIs(fit, family = "event_study")
 			expect_identical(
@@ -245,6 +258,7 @@ for (est in c("fetwfe", "etwfe", "betwfe")) {
 			")"
 		),
 		{
+			skip_if_not_installed("lme4")
 			fit <- .esu515_fit(est)
 			sc <- simultaneousCIs(fit, family = "event_study")
 			expect_equal(sc$ci$estimate, eventStudy(fit)$estimate)
@@ -254,6 +268,7 @@ for (est in c("fetwfe", "etwfe", "betwfe")) {
 	test_that(
 		paste0("eventStudy()'s pointwise bounds are the family's (", est, ")"),
 		{
+			skip_if_not_installed("lme4")
 			fit <- .esu515_fit(est)
 			es <- eventStudy(fit, ci_type = "pointwise")
 			sc <- simultaneousCIs(fit, family = "event_study")
@@ -265,6 +280,7 @@ for (est in c("fetwfe", "etwfe", "betwfe")) {
 	test_that(
 		paste0("eventStudy()'s conservative band is the family's (", est, ")"),
 		{
+			skip_if_not_installed("lme4")
 			fit <- .esu515_fit(est, "conservative")
 			es <- eventStudy(fit)
 			sc <- suppressMessages(simultaneousCIs(fit, family = "event_study"))
@@ -280,6 +296,7 @@ for (est in c("fetwfe", "etwfe", "betwfe")) {
 			")"
 		),
 		{
+			skip_if_not_installed("lme4")
 			sc <- suppressMessages(simultaneousCIs(
 				.esu515_fit(est, "conservative"),
 				family = "event_study"
@@ -290,6 +307,7 @@ for (est in c("fetwfe", "etwfe", "betwfe")) {
 }
 
 test_that("the bootstrap event-study family's K is the reached count (fetwfe)", {
+	skip_if_not_installed("lme4")
 	sc <- simultaneousCIs(
 		.esu515_fit("fetwfe"),
 		family = "event_study",
@@ -301,6 +319,7 @@ test_that("the bootstrap event-study family's K is the reached count (fetwfe)", 
 })
 
 test_that("the bootstrap event-study family labels the reached event times (fetwfe)", {
+	skip_if_not_installed("lme4")
 	sc <- simultaneousCIs(
 		.esu515_fit("fetwfe"),
 		family = "event_study",

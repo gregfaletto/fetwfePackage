@@ -10,6 +10,7 @@
 # the diagnostics aren't a source of fragility.
 
 # Shared fixtures (built once): a fixed-p fit and a high-dim scattered fit.
+skip_if_not_installed("lme4")
 .fp_fit_326 <- local({
 	cf <- genCoefs(G = 3, T = 5, d = 2, density = 0.5, eff_size = 2, seed = 1)
 	sim <- simulateData(

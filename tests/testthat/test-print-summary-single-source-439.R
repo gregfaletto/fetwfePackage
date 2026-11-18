@@ -117,6 +117,7 @@ library(fetwfe)
 	)
 }
 
+skip_if_not_installed("lme4")
 .fit_distinct_439 <- .fit_distinct_at()
 
 # ------------------------------------------------------------------------------

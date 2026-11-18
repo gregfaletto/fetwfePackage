@@ -42,6 +42,7 @@ testthat::local_edition(3)
 
 pdata <- generate_panel_data(N = 30, T = 5, R = 2, seed = 123)
 
+skip_if_not_installed("lme4")
 fit_fetwfe <- fetwfe(
 	pdata = pdata,
 	time_var = "time",

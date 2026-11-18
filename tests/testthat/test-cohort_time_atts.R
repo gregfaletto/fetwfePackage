@@ -240,6 +240,7 @@ test_that("fully fused fit (no cells selected) yields all-NA SEs", {
 })
 
 test_that("tidy.cohortTimeATTs renames columns and computes statistic", {
+	skip_if_not_installed("broom")
 	cta <- cohortTimeATTs(.cta_fits$fetwfe)
 	td <- broom::tidy(cta)
 
@@ -278,6 +279,7 @@ test_that("tidy.cohortTimeATTs renames columns and computes statistic", {
 })
 
 test_that("tidy.cohortTimeATTs guards against a mutated frame", {
+	skip_if_not_installed("broom")
 	cta <- cohortTimeATTs(.cta_fits$etwfe)
 	bad <- cta
 	bad$time <- NULL

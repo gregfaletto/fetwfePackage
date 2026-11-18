@@ -81,6 +81,7 @@ for (est in c("fetwfe", "etwfe", "betwfe")) {
 			")"
 		),
 		{
+			skip_if_not_installed("lme4")
 			panel <- .make_late_adoption_panel()
 			fit_no <- .fit_estimator(est, panel$pdata)
 			fit_ic <- .fit_estimator(est, panel$pdata, panel$indep_counts)
@@ -131,6 +132,7 @@ for (est in c("fetwfe", "etwfe", "betwfe")) {
 }
 
 test_that("legacy indep fit with unnamed cohort_probs is rescued via catt_df", {
+	skip_if_not_installed("lme4")
 	# Simulate a pre-#288 saved object: the indep_counts fix did not yet attach
 	# names, so cohort_probs / cohort_probs_overall are unnamed. The catt_df
 	# fallback in .derive_cohort_offsets_from_fit() must still recover the
@@ -160,6 +162,7 @@ test_that("legacy indep fit with unnamed cohort_probs is rescued via catt_df", {
 })
 
 test_that("indep_counts re-weights eventStudy / att_hat but not cohortTimeATTs cells", {
+	skip_if_not_installed("lme4")
 	# Executable guard for the invariance nuance in NEWS: with indep_counts that
 	# DIFFER from the in-sample cohort counts, the overall att_hat and the
 	# eventStudy() event-time estimates are re-weighted by the independent-sample

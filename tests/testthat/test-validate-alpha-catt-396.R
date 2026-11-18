@@ -38,6 +38,7 @@ test_that("every CI accessor rejects an invalid alpha with the shared (0, 1) mes
 })
 
 test_that("plot(type = 'catt') orders the cohort axis numerically, not alphabetically (#396)", {
+	skip_if_not_installed("ggplot2")
 	# >= 10 cohorts so the string order ("10" before "2") diverges from numeric.
 	cf <- genCoefs(G = 10, T = 12, d = 1, density = 0.5, eff_size = 2, seed = 2)
 	sim <- simulateData(
