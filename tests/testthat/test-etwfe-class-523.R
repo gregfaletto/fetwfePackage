@@ -6,8 +6,13 @@
 
 # The refit sentence. Blocks that expect it pin it whole; blocks that expect
 # none look for its last words.
-.refit_sentence523 <- "An object of class \"etwfe\" is either a fit from the etwfe package or an etwfe() fit saved by an earlier version of fetwfe, which must be refit."
 .refit523 <- "must be refit"
+.refit_sentence523 <- paste0(
+	"An object of class \"etwfe\" is either a fit from the etwfe package or an ",
+	"etwfe() fit saved by an earlier version of fetwfe, which ",
+	.refit523,
+	"."
+)
 
 .sim523 <- function() {
 	coefs <- genCoefs(
