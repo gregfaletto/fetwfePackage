@@ -313,8 +313,7 @@ test_that("a calc_ses fit whose cohort band failed labels only that header point
 #    (`tests/testthat/test-highdim-postselection-band-warning-433.R`), whose
 #    fit-building blocks all skip for the same reason. Per
 #    `.workflow/PROFILE.md` section 3 this skips almost nowhere it will actually
-#    run: `setup-r` exports `NOT_CRAN=true`, so all six CI jobs exercise it on
-#    every PR.
+#    run: `setup-r` exports `NOT_CRAN=true`, so CI exercises it on every PR.
 # ------------------------------------------------------------------------------
 test_that("the #433 caveat renames its subject when no band was applied (#460)", {
 	skip_on_cran()
