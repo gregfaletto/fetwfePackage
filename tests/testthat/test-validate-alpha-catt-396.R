@@ -18,7 +18,7 @@
 
 test_that("every CI accessor rejects an invalid alpha with the shared (0, 1) message (#396)", {
 	msg <- "must be a single number in \\(0, 1\\)"
-	# One formerly-unguarded bug site: eventStudy().
+	# eventStudy().
 	expect_error(eventStudy(.fit_396, alpha = 1.5), msg)
 	expect_error(eventStudy(.fit_396, alpha = NA_real_), msg)
 	# The three consolidated sites keep rejecting it (now via the shared helper).
@@ -33,7 +33,7 @@ test_that("every CI accessor rejects an invalid alpha with the shared (0, 1) mes
 	expect_s3_class(eventStudy(.fit_396), "eventStudy")
 	expect_s3_class(eventStudy(.fit_396, alpha = 0.1), "eventStudy")
 	expect_s3_class(cohortTimeATTs(.fit_396, alpha = 0.1), "cohortTimeATTs")
-	# The other formerly-unguarded bug site: plot(), both views.
+	# plot(), both views.
 	skip_if_not_installed("ggplot2")
 	expect_error(plot(.fit_396, type = "catt", alpha = 1.5), msg)
 	expect_error(plot(.fit_396, type = "event_study", alpha = 1.5), msg)
