@@ -146,9 +146,9 @@ adjusted p-value matching the band, under \code{"pointwise"} the per-cohort
 Wald p-value (#200). The standard errors (\code{se}) and selection flags
 (\code{selected}) are the same under both settings, and the overall-ATT
 confidence interval (a single scalar) is
-unaffected. When standard errors are unavailable (\code{q >= 1}, or a
-rank-deficient design) the bounds are \code{NA} under both settings. Default
-is \code{"simultaneous"}.}
+unaffected. When standard errors are unavailable (\code{calc_ses} is \code{FALSE};
+for example \code{q >= 1}, \code{gls = FALSE}, or a rank-deficient design) the
+bounds are \code{NA} under both settings. Default is \code{"simultaneous"}.}
 
 \item{fusion_structure}{Character; one of \code{"cohort"} or \code{"event_study"}.
 \code{"cohort"} (the default) uses the within-cohort / between-cohort two-way
@@ -201,7 +201,7 @@ An object of class \code{fetwfe} containing the following elements:
 \item{att_p_value}{A two-sided p-value for the overall ATT against the null \code{H_0: tau = 0}, computed as \verb{2 * pnorm(-|att_hat / att_se|)}. \code{NA} if \code{att_se} is zero or \code{NA} (e.g., under the bridge solver's selected-out fallback). See the package vignette section "Testing the zero-effect null" for interpretation guidance under selection consistency.}
 \item{att_selected}{Logical scalar; \code{TRUE} if \code{att_hat} is not exactly zero (i.e., at least one cohort's bridge-penalized coefficient survived selection), \code{FALSE} otherwise. Under FETWFE Theorem 6.2 (restriction selection consistency), \code{att_selected = FALSE} is the asymptotic statement that the truth is zero. For ridge (\code{q = 2}) the bridge solver does not zero coefficients, so this will typically be \code{TRUE}.}
 \item{catt_hats}{A named vector containing the estimated average treatment effects for each cohort.}
-\item{catt_ses}{If \code{q < 1}, a named vector containing the (asymptotically exact, non-conservative) standard errors for the estimated average treatment effects within each cohort.}
+\item{catt_ses}{A named vector containing the (asymptotically exact, non-conservative) standard errors for the estimated average treatment effects within each cohort. \code{NA} when \code{calc_ses} is \code{FALSE}, for example when \code{q >= 1} or \code{gls = FALSE}.}
 \item{cohort_probs}{A vector of the estimated probabilities of being in each cohort conditional on being treated, which was used in calculating \code{att_hat}. If \code{indep_counts} was provided, \code{cohort_probs} was calculated from that; otherwise, it was calculated from the counts of units in each treated cohort in \code{pdata}.}
 \item{catt_df}{A data frame (with S3 class \code{c("catt_df", "data.frame")}) displaying the cohort names (\code{cohort}), average treatment effects (\code{estimate}), standard errors (\code{se}), \code{1 - alpha} confidence interval bounds (\code{ci_low}, \code{ci_high}), per-cohort p-values (\code{p_value}), and a \code{selected} logical flag (\code{TRUE} when the bridge penalty left the cohort's CATT nonzero). For selected-out cohorts (\code{selected = FALSE}), \code{p_value} is \code{NA} --- the inferential content lives in \code{selected}. The \code{catt_df} S3 class makes \code{[[} / \code{$} / \code{[} access on the pre-1.11.0 Title-Case column names (\code{Cohort}, \verb{Estimated TE}, \code{SE}, \code{ConfIntLow}, \code{ConfIntHigh}, \code{P_value}) \code{stop()} with a migration message pointing to the new name. See \code{NEWS.md} for the rename table.}
 \item{beta_hat}{The full vector of estimated coefficients.}

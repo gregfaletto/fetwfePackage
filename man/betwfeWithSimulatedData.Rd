@@ -159,9 +159,10 @@ assumption different from the one Theorem 6.2 establishes for FETWFE. For
 ridge (\code{q = 2}) the bridge solver does not zero coefficients, so this will
 typically be \code{TRUE}.}
 \item{catt_hats}{A named vector containing the estimated average treatment
-effects for each cohort.} \item{catt_ses}{If \code{q < 1}, a named vector
-containing the (asymptotically exact, non-conservative) standard errors for
-the estimated average treatment effects within each cohort.}
+effects for each cohort.} \item{catt_ses}{A named vector containing the
+(asymptotically exact, non-conservative) standard errors for the estimated
+average treatment effects within each cohort. \code{NA} when \code{calc_ses} is
+\code{FALSE}, for example when \code{q >= 1}.}
 \item{cohort_probs}{A vector of the estimated probabilities of being in each
 cohort conditional on being treated, which was used in calculating \code{att_hat}.
 If \code{indep_counts} was provided, \code{cohort_probs} was calculated from that;

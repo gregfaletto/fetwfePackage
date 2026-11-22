@@ -230,16 +230,16 @@
 #'   Wald p-value (#200). The standard errors (`se`) and selection flags
 #'   (`selected`) are the same under both settings, and the overall-ATT
 #'   confidence interval (a single scalar) is
-#'   unaffected. When standard errors are unavailable (`q >= 1`, or a
-#'   rank-deficient design) the bounds are `NA` under both settings. Default
-#'   is `"simultaneous"`.
+#'   unaffected. When standard errors are unavailable (`calc_ses` is `FALSE`;
+#'   for example `q >= 1`, `gls = FALSE`, or a rank-deficient design) the
+#'   bounds are `NA` under both settings. Default is `"simultaneous"`.
 #' @return An object of class \code{fetwfe} containing the following elements:
 #' \item{att_hat}{The estimated overall average treatment effect for a randomly selected treated unit.}
-#' \item{att_se}{If `q < 1`, a standard error for the ATT. Under the default `se_type = "default"`, the SE is the tight Gaussian variance `sqrt(att_var_1 + att_var_2)` (Theorem (c$'$) under Assumption (Psi-IF); paper line 1233 onwards). Assumption (Psi-IF) is satisfied by the package's default cohort sample-proportions estimator `hat_pi_g = N_g / N` (and by multinomial logit, any GLM on `W | X`, and kernel/series regression of `1{W = g}` on `X`), so the default SE is asymptotically exact for the package's default estimator. Under `se_type = "conservative"` (or in version <= 1.11.7 by default), the SE is the Cauchy-Schwarz upper bound `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from Theorem (c). When `indep_counts` is provided, the two-sample exact formula `sqrt(att_var_1 + att_var_2)` is used regardless of `se_type`. If `q >= 1`, this will be NA.}
+#' \item{att_se}{A standard error for the ATT. Under the default `se_type = "default"`, the SE is the tight Gaussian variance `sqrt(att_var_1 + att_var_2)` (Theorem (c$'$) under Assumption (Psi-IF); paper line 1233 onwards). Assumption (Psi-IF) is satisfied by the package's default cohort sample-proportions estimator `hat_pi_g = N_g / N` (and by multinomial logit, any GLM on `W | X`, and kernel/series regression of `1{W = g}` on `X`), so the default SE is asymptotically exact for the package's default estimator. Under `se_type = "conservative"` (or in version <= 1.11.7 by default), the SE is the Cauchy-Schwarz upper bound `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from Theorem (c). When `indep_counts` is provided, the two-sample exact formula `sqrt(att_var_1 + att_var_2)` is used regardless of `se_type`. `NA` when standard errors were not computed (`calc_ses` is `FALSE`), for example when `q >= 1` or `gls = FALSE`.}
 #' \item{att_p_value}{A two-sided p-value for the overall ATT against the null `H_0: tau = 0`, computed as `2 * pnorm(-|att_hat / att_se|)`. `NA` if `att_se` is zero or `NA` (e.g., under the bridge solver's selected-out fallback). See the package vignette section "Testing the zero-effect null" for interpretation guidance under selection consistency.}
 #' \item{att_selected}{Logical scalar; `TRUE` if `att_hat` is not exactly zero (i.e., at least one cohort's bridge-penalized coefficient survived selection), `FALSE` otherwise. Under FETWFE Theorem 6.2 (restriction selection consistency), `att_selected = FALSE` is the asymptotic statement that the truth is zero. For ridge (`q = 2`) the bridge solver does not zero coefficients, so this will typically be `TRUE`.}
 #' \item{catt_hats}{A named vector containing the estimated average treatment effects for each cohort.}
-#' \item{catt_ses}{If `q < 1`, a named vector containing the (asymptotically exact, non-conservative) standard errors for the estimated average treatment effects within each cohort.}
+#' \item{catt_ses}{A named vector containing the (asymptotically exact, non-conservative) standard errors for the estimated average treatment effects within each cohort. `NA` when `calc_ses` is `FALSE`, for example when `q >= 1` or `gls = FALSE`.}
 #' \item{cohort_probs}{A vector of the estimated probabilities of being in each cohort conditional on being treated, which was used in calculating `att_hat`. If `indep_counts` was provided, `cohort_probs` was calculated from that; otherwise, it was calculated from the counts of units in each treated cohort in `pdata`.}
 #' \item{catt_df}{A data frame (with S3 class `c("catt_df", "data.frame")`) displaying the cohort names (`cohort`), average treatment effects (`estimate`), standard errors (`se`), `1 - alpha` confidence interval bounds (`ci_low`, `ci_high`), per-cohort p-values (`p_value`), and a `selected` logical flag (`TRUE` when the bridge penalty left the cohort's CATT nonzero). For selected-out cohorts (`selected = FALSE`), `p_value` is `NA` --- the inferential content lives in `selected`. The `catt_df` S3 class makes `[[` / `$` / `[` access on the pre-1.11.0 Title-Case column names (`Cohort`, `Estimated TE`, `SE`, `ConfIntLow`, `ConfIntHigh`, `P_value`) `stop()` with a migration message pointing to the new name. See `NEWS.md` for the rename table.}
 #' \item{beta_hat}{The full vector of estimated coefficients.}
@@ -723,16 +723,16 @@ fetwfe <- function(
 #'   Wald p-value (#200). The standard errors (`se`) and selection flags
 #'   (`selected`) are the same under both settings, and the overall-ATT
 #'   confidence interval (a single scalar) is
-#'   unaffected. When standard errors are unavailable (`q >= 1`, or a
-#'   rank-deficient design) the bounds are `NA` under both settings. Default
-#'   is `"simultaneous"`.
+#'   unaffected. When standard errors are unavailable (`calc_ses` is `FALSE`;
+#'   for example `q >= 1`, `gls = FALSE`, or a rank-deficient design) the
+#'   bounds are `NA` under both settings. Default is `"simultaneous"`.
 #' @return An object of class \code{fetwfe} containing the following elements:
 #' \item{att_hat}{The estimated overall average treatment effect for a randomly selected treated unit.}
 #' \item{att_se}{A standard error for the ATT (see `se_type`). `NA` when standard errors were not computed (`calc_ses` is `FALSE`), for example when `q >= 1` or `gls = FALSE`.}
 #' \item{att_p_value}{A two-sided p-value for the overall ATT against the null `H_0: tau = 0`, computed as `2 * pnorm(-|att_hat / att_se|)`. `NA` if `att_se` is zero or `NA` (e.g., under the bridge solver's selected-out fallback). See the package vignette section "Testing the zero-effect null" for interpretation guidance under selection consistency.}
 #' \item{att_selected}{Logical scalar; `TRUE` if `att_hat` is not exactly zero (i.e., at least one cohort's bridge-penalized coefficient survived selection), `FALSE` otherwise. Under FETWFE Theorem 6.2 (restriction selection consistency), `att_selected = FALSE` is the asymptotic statement that the truth is zero. For ridge (`q = 2`) the bridge solver does not zero coefficients, so this will typically be `TRUE`.}
 #' \item{catt_hats}{A named vector containing the estimated average treatment effects for each cohort.}
-#' \item{catt_ses}{If `q < 1`, a named vector containing the (asymptotically exact, non-conservative) standard errors for the estimated average treatment effects within each cohort.}
+#' \item{catt_ses}{A named vector containing the (asymptotically exact, non-conservative) standard errors for the estimated average treatment effects within each cohort. `NA` when `calc_ses` is `FALSE`, for example when `q >= 1` or `gls = FALSE`.}
 #' \item{cohort_probs}{A vector of the estimated probabilities of being in each cohort conditional on being treated, which was used in calculating `att_hat`. If `indep_counts` was provided, `cohort_probs` was calculated from that; otherwise, it was calculated from the counts of units in each treated cohort in `pdata`.}
 #' \item{catt_df}{A data frame (with S3 class `c("catt_df", "data.frame")`) displaying the cohort names (`cohort`), average treatment effects (`estimate`), standard errors (`se`), `1 - alpha` confidence interval bounds (`ci_low`, `ci_high`), per-cohort p-values (`p_value`), and a `selected` logical flag (`TRUE` when the bridge penalty left the cohort's CATT nonzero). For selected-out cohorts (`selected = FALSE`), `p_value` is `NA` --- the inferential content lives in `selected`. The `catt_df` S3 class makes `[[` / `$` / `[` access on the pre-1.11.0 Title-Case column names (`Cohort`, `Estimated TE`, `SE`, `ConfIntLow`, `ConfIntHigh`, `P_value`) `stop()` with a migration message pointing to the new name. See `NEWS.md` for the rename table.}
 #' \item{beta_hat}{The full vector of estimated coefficients.}

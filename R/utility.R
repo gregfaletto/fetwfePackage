@@ -2277,11 +2277,9 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #' `q` argument to discriminate. For fetwfe/betwfe callers (non-NA
 #' `q`), the SE-non-NA guard runs only when `q < 1 && res$calc_ses` in
 #' both branches. For etwfe/twfeCovs callers (`q == NA`), the SE-non-NA
-#' guard on `res$indep_att_se` runs unconditionally in the indep
-#' branch (matching pre-#79 etwfe/twfeCovs behavior: rank-deficient
-#' fits with `indep_counts` still trip this guard); the in-sample
-#' branch carries no SE-non-NA guard for these callers. Consolidated
-#' by GitHub #79.
+#' guard on `res$indep_att_se` runs in the indep branch when
+#' `res$calc_ses` is `TRUE`; the in-sample branch carries no SE-non-NA
+#' guard for these callers. Consolidated by GitHub #79.
 #' @param res A list returned by `fetwfe_core()`, `etwfe_core()`,
 #'   `betwfe_core()`, or `twfeCovs_core()`. Required fields are
 #'   `att_hat`, `att_se`, `cohort_probs`, `cohort_probs_overall`,
@@ -2312,17 +2310,8 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 				stopifnot(!is.na(res$indep_att_se))
 			}
 		} else {
-			# Issue #84 item 8: gate the etwfe/twfeCovs unconditional
-			# guard on `calc_ses`. The pre-#79 behavior stopped()-d on
-			# `is.na(res$indep_att_se)` even when SEs had been
-			# intentionally not computed (e.g., a future code path
-			# where calc_ses = FALSE flows through this branch with
-			# valid indep counts). Currently `calc_ses = FALSE` is
-			# only reachable via the `q >= 1` bridge regime, so no
-			# live code path can trip the un-gated guard today — but
-			# the explicit gate hardens against a future refactor that
-			# routes a calc_ses = FALSE etwfe/twfeCovs fit through
-			# this branch.
+			# Issue #84 item 8: gated on `calc_ses`, so a fit whose SEs were
+			# intentionally not computed does not stop here.
 			if (res$calc_ses) {
 				stopifnot(!is.na(res$indep_att_se))
 			}

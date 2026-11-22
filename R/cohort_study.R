@@ -31,9 +31,12 @@
 #'     \item{cohort}{Character; the cohort label (the calendar time at which
 #'       the cohort first received treatment).}
 #'     \item{estimate}{Numeric; the per-cohort ATT estimate.}
-#'     \item{se}{Numeric; standard error for the per-cohort ATT (`NA` when
-#'       the Gram matrix is singular or, for `fetwfe()` / `betwfe()`, the
-#'       bridge penalty zeroed out the cohort).}
+#'     \item{se}{Numeric; standard error for the per-cohort ATT. `NA` for
+#'       every cohort when the fit computed no standard errors (`calc_ses` is
+#'       `FALSE`, for example when the Gram matrix is singular), a cohort the
+#'       bridge penalty zeroed out included. Otherwise, for `fetwfe()` /
+#'       `betwfe()`, `0` for a cohort the bridge penalty zeroed out
+#'       (`selected = FALSE`).}
 #'     \item{ci_low, ci_high}{Numeric; the stored lower and upper
 #'       confidence-interval bounds, reflecting the fit's `ci_type` --
 #'       simultaneous (family-wise) by default, or pointwise `1 - alpha`

@@ -34,8 +34,10 @@ cohort-specific ATTs (\code{term = "Cohort <adoption-time>"}), one per
 treated cohort, sorted by ascending cohort label. Standard error,
 z-statistic, and p-value reflect the value of \code{se_type} used at fit time
 (model-based by default, cluster-robust under \code{se_type = "cluster"}).
-Cohorts that the bridge penalty zeroed out (\code{selected = FALSE}) carry
-\code{NA} for \code{std.error} / \code{statistic} / \code{p.value}.
+On a fit with standard errors (\code{calc_ses} is \code{TRUE}), a cohort that the
+bridge penalty zeroed out (\code{selected = FALSE}) carries \code{0} for \code{std.error}
+and \code{NA} for \code{statistic} and \code{p.value}. On a fit without them, every
+cohort's \code{std.error} is \code{NA}.
 }
 \details{
 The cohort-row \code{conf.low} / \code{conf.high} columns pass through the fit's

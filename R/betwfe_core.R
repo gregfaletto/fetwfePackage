@@ -191,9 +191,10 @@
 #' ridge (`q = 2`) the bridge solver does not zero coefficients, so this will
 #' typically be `TRUE`.}
 #' \item{catt_hats}{A named vector containing the estimated average treatment
-#' effects for each cohort.} \item{catt_ses}{If `q < 1`, a named vector
-#' containing the (asymptotically exact, non-conservative) standard errors for
-#' the estimated average treatment effects within each cohort.}
+#' effects for each cohort.} \item{catt_ses}{A named vector containing the
+#' (asymptotically exact, non-conservative) standard errors for the estimated
+#' average treatment effects within each cohort. `NA` when `calc_ses` is
+#' `FALSE`, for example when `q >= 1`.}
 #' \item{cohort_probs}{A vector of the estimated probabilities of being in each
 #' cohort conditional on being treated, which was used in calculating `att_hat`.
 #' If `indep_counts` was provided, `cohort_probs` was calculated from that;
@@ -631,9 +632,10 @@ betwfe <- function(
 #' ridge (`q = 2`) the bridge solver does not zero coefficients, so this will
 #' typically be `TRUE`.}
 #' \item{catt_hats}{A named vector containing the estimated average treatment
-#' effects for each cohort.} \item{catt_ses}{If `q < 1`, a named vector
-#' containing the (asymptotically exact, non-conservative) standard errors for
-#' the estimated average treatment effects within each cohort.}
+#' effects for each cohort.} \item{catt_ses}{A named vector containing the
+#' (asymptotically exact, non-conservative) standard errors for the estimated
+#' average treatment effects within each cohort. `NA` when `calc_ses` is
+#' `FALSE`, for example when `q >= 1`.}
 #' \item{cohort_probs}{A vector of the estimated probabilities of being in each
 #' cohort conditional on being treated, which was used in calculating `att_hat`.
 #' If `indep_counts` was provided, `cohort_probs` was calculated from that;
@@ -929,7 +931,7 @@ betwfeWithSimulatedData <- function(
 #'   \item{indep_att_hat}{Estimated overall ATT using `indep_counts` cohort probabilities (NA if `indep_counts` not provided).}
 #'   \item{indep_att_se}{Standard error for `indep_att_hat` (NA if not applicable).}
 #'   \item{catt_hats}{A named vector of estimated CATTs for each cohort.}
-#'   \item{catt_ses}{A named vector of SEs for `catt_hats` (NA if `q >= 1`).}
+#'   \item{catt_ses}{A named vector of SEs for `catt_hats` (NA when `calc_ses` is `FALSE`).}
 #'   \item{catt_df}{A data frame (with S3 class `c("catt_df", "data.frame")`) summarizing CATTs (`cohort`, `estimate`, `se`, `ci_low`, `ci_high`, `p_value`) and a `selected` logical flag (`TRUE` when the bridge penalty left the cohort's CATT nonzero). The `catt_df` S3 class makes `[[` / `$` / `[` access on the pre-1.11.0 Title-Case column names `stop()` with a migration message pointing to the new name.}
 #'   \item{beta_hat}{The vector of estimated coefficients.}
 #'   \item{treat_inds}{Indices in `beta_hat` corresponding to base treatment effects.}

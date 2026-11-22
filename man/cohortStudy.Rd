@@ -18,9 +18,12 @@ containing one row per treated cohort and columns:
 \item{cohort}{Character; the cohort label (the calendar time at which
 the cohort first received treatment).}
 \item{estimate}{Numeric; the per-cohort ATT estimate.}
-\item{se}{Numeric; standard error for the per-cohort ATT (\code{NA} when
-the Gram matrix is singular or, for \code{fetwfe()} / \code{betwfe()}, the
-bridge penalty zeroed out the cohort).}
+\item{se}{Numeric; standard error for the per-cohort ATT. \code{NA} for
+every cohort when the fit computed no standard errors (\code{calc_ses} is
+\code{FALSE}, for example when the Gram matrix is singular), a cohort the
+bridge penalty zeroed out included. Otherwise, for \code{fetwfe()} /
+\code{betwfe()}, \code{0} for a cohort the bridge penalty zeroed out
+(\code{selected = FALSE}).}
 \item{ci_low, ci_high}{Numeric; the stored lower and upper
 confidence-interval bounds, reflecting the fit's \code{ci_type} --
 simultaneous (family-wise) by default, or pointwise \code{1 - alpha}
