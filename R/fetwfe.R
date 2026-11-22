@@ -217,6 +217,8 @@
 #'   also gives it cluster-robust simultaneous confidence bands, and when
 #'   `p < NT` it has no standard errors. `add_ridge = TRUE` is not supported, and
 #'   supplied `sig_eps_sq` / `sig_eps_c_sq` are ignored, under `gls = FALSE`.
+#'   A `gls = FALSE` fit is not standardized by a noise-variance estimate, so
+#'   its estimates depend on the units of the response (#490).
 #' @param ci_type Character; one of `"simultaneous"` (default) or
 #'   `"pointwise"`. Controls the confidence-interval bounds reported for the
 #'   cohort-specific ATTs (in `catt_df`) and the event-study effects (from
@@ -715,6 +717,8 @@ fetwfe <- function(
 #'   also gives it cluster-robust simultaneous confidence bands, and when
 #'   `p < NT` it has no standard errors. `add_ridge = TRUE` is not supported, and
 #'   supplied `sig_eps_sq` / `sig_eps_c_sq` are ignored, under `gls = FALSE`.
+#'   A `gls = FALSE` fit is not standardized by a noise-variance estimate, so
+#'   its estimates depend on the units of the response (#490).
 #' @param ci_type Character; one of `"simultaneous"` (default) or
 #'   `"pointwise"`. Controls the confidence-interval bounds reported for the
 #'   cohort-specific ATTs (in `catt_df`) and the event-study effects (from

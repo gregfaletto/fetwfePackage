@@ -197,7 +197,9 @@ un-whitened \code{internal$X_final} / \code{internal$y_final}. It gives point
 estimates; when \code{p >= NT}, \code{\link[=simultaneousCIs]{simultaneousCIs()}} with \code{method = "bootstrap"}
 also gives it cluster-robust simultaneous confidence bands, and when
 \code{p < NT} it has no standard errors. \code{add_ridge = TRUE} is not supported, and
-supplied \code{sig_eps_sq} / \code{sig_eps_c_sq} are ignored, under \code{gls = FALSE}.}
+supplied \code{sig_eps_sq} / \code{sig_eps_c_sq} are ignored, under \code{gls = FALSE}.
+A \code{gls = FALSE} fit is not standardized by a noise-variance estimate, so
+its estimates depend on the units of the response (#490).}
 }
 \value{
 An object of class \code{fetwfe} containing the following elements:
