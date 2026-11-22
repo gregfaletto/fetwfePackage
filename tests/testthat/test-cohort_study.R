@@ -141,7 +141,7 @@ test_that("cohortStudy column types are well-formed", {
 	# package; see fetwfe()'s catt_df spec). Numeric coercion succeeds.
 	expect_true(is.character(cs$cohort) || is.numeric(cs$cohort))
 	expect_false(anyNA(suppressWarnings(as.numeric(cs$cohort))))
-	# Numeric columns are numeric (may be NA for selected-out cohorts).
+	# Numeric columns are numeric.
 	expect_true(is.numeric(cs$estimate))
 	expect_true(is.numeric(cs$se))
 	expect_true(is.numeric(cs$ci_low))
@@ -149,6 +149,46 @@ test_that("cohortStudy column types are well-formed", {
 	expect_true(is.numeric(cs$p_value))
 	# `selected` is logical.
 	expect_true(is.logical(cs$selected))
+})
+
+test_that("zeroed-out cohorts carry se 0 and p-value NA; fits without SEs carry se NA (#516)", {
+	setup <- .cs_setup(seed = 2026)
+	fits <- list(
+		fetwfe = fetwfeWithSimulatedData(setup$sim),
+		betwfe = betwfeWithSimulatedData(setup$sim)
+	)
+	for (est in names(fits)) {
+		cs <- cohortStudy(fits[[est]])
+		zeroed <- !cs$selected
+		expect_true(any(zeroed), info = est)
+		expect_equal(cs$se[zeroed], rep(0, sum(zeroed)), info = est)
+		expect_equal(cs$ci_low[zeroed], rep(0, sum(zeroed)), info = est)
+		expect_equal(cs$ci_high[zeroed], rep(0, sum(zeroed)), info = est)
+		expect_true(all(is.na(cs$p_value[zeroed])), info = est)
+	}
+
+	fit_q1 <- fetwfeWithSimulatedData(setup$sim, q = 1)
+	expect_false(fit_q1$calc_ses)
+	expect_true(all(is.na(cohortStudy(fit_q1)$se)))
+
+	skip_if_not_installed("broom")
+	for (est in names(fits)) {
+		n_zeroed <- sum(!cohortStudy(fits[[est]])$selected)
+
+		td_fit <- broom::tidy(fits[[est]])
+		rows_fit <- td_fit$term != "ATT" & !td_fit$selected
+		expect_equal(sum(rows_fit), n_zeroed, info = est)
+		expect_equal(td_fit$std.error[rows_fit], rep(0, n_zeroed), info = est)
+		expect_true(all(is.na(td_fit$statistic[rows_fit])), info = est)
+		expect_true(all(is.na(td_fit$p.value[rows_fit])), info = est)
+
+		td_cs <- broom::tidy(cohortStudy(fits[[est]]))
+		rows_cs <- !td_cs$selected
+		expect_equal(sum(rows_cs), n_zeroed, info = est)
+		expect_equal(td_cs$std.error[rows_cs], rep(0, n_zeroed), info = est)
+		expect_true(all(is.na(td_cs$statistic[rows_cs])), info = est)
+		expect_true(all(is.na(td_cs$p.value[rows_cs])), info = est)
+	}
 })
 
 # ------------------------------------------------------------------------
