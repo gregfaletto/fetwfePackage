@@ -71,21 +71,19 @@ estimation will proceed, but it will only be valid under unconditional
 versions of the parallel trends and no anticipation assumptions. Default
 is c().}
 
-\item{indep_counts}{(Optional.) Integer; a vector. If you have a sufficiently
-large number of units, you can optionally randomly split your data set in
-half (with \code{N} units in each data set). The data for half of the units should
-go in the \code{pdata} argument provided above. For the other \code{N} units, simply
-provide the counts for how many units appear in the untreated cohort plus
-each of the other \code{G} cohorts in this argument \code{indep_counts}. The benefit
-of doing this is that the standard error for the average treatment effect
-will be (asymptotically) exact instead of conservative. The length of
-\code{indep_counts} must equal 1 plus the number of treated cohorts in \code{pdata}.
-All entries of \code{indep_counts} must be strictly positive (if you are concerned
-that this might not work out, maybe your data set is on the small side and
-it's best to just leave your full data set in \code{pdata}). The sum of all the
-counts in \code{indep_counts} must match the total number of units in \code{pdata}.
-Default is NA (in which case conservative standard errors will be calculated
-if \code{q < 1}.)}
+\item{indep_counts}{(Optional.) Integer; a vector of cohort counts from a
+sample independent of \code{pdata}: the number of units in the untreated cohort,
+then in each treated cohort in adoption order. When supplied, the cohort
+probabilities that weight the overall ATT come from these counts instead of
+from \code{pdata}. The counts describe the panel the estimator fits: units
+treated in the first period are dropped, and on a panel with no
+never-treated units the latest cohort becomes the untreated cohort (see
+\code{allow_no_never_treated}). So the length of \code{indep_counts} must equal 1 plus
+the number of treated cohorts that remain, all entries must be strictly
+positive, and the counts must sum to the number of units that remain. It is
+not needed for an exact standard error: the default standard error is
+already asymptotically exact (see \code{se_type}). Default is NA (cohort
+probabilities come from \code{pdata}).}
 
 \item{sig_eps_sq}{(Optional.) Numeric; the variance of the row-level IID
 noise assumed to apply to each observation. See Section 2 of Faletto (2025)
@@ -159,13 +157,17 @@ already contains never-treated units. Default is \code{TRUE}.}
 
 \item{se_type}{Character; one of \code{"default"}, \code{"conservative"}, or
 \code{"cluster"}. \code{"default"} returns the tight Gaussian variance
-\code{sqrt(att_var_1 + att_var_2)} from Theorem (c$'$) under Assumption
-(Psi-IF); this is asymptotically exact for the package's default
-cohort sample-proportions estimator and for every standard
+\code{sqrt(att_var_1 + att_var_2)}: Theorem (c$'$) under Assumption (Psi-IF),
+with the paper's differences matrix \code{D_N} the identity on every
+coefficient block, since \code{betwfe()} applies the bridge penalty to the
+coefficients themselves. This is asymptotically exact for the package's
+default cohort sample-proportions estimator and for every standard
 propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
 any GLM on \code{W | X}, kernel/series regression of \verb{1\{W = g\}} on \code{X}).
 \code{"conservative"} returns the Cauchy-Schwarz upper bound from Theorem
 (c); use only if the propensity-score estimator violates (Psi-IF).
+Supplying \code{indep_counts} makes \code{"conservative"} give the same standard
+error as \code{"default"}.
 \code{"cluster"} is an \emph{experimental} unit-clustered Liang-Zeger sandwich
 SE on the bridge-selected support (see the companion vignette
 \code{inference_vignette} for details). \code{"cluster"} is only meaningful
@@ -222,9 +224,9 @@ is \code{"simultaneous"}.}
 An object of class \code{betwfe} containing the following elements:
 \item{att_hat}{The
 estimated overall average treatment effect for a randomly selected treated
-unit.} \item{att_se}{If \code{q < 1}, a standard error for the ATT. If
-\code{indep_counts} was provided, this standard error is asymptotically exact; if
-not, it is asymptotically conservative. If \code{q >= 1}, this will be NA.}
+unit.} \item{att_se}{A standard error for the ATT (see \code{se_type}). \code{NA} when
+standard errors were not computed (\code{calc_ses} is \code{FALSE}), for example when
+\code{q >= 1}.}
 \item{att_p_value}{A two-sided p-value for the overall ATT against the
 null \code{H_0: tau = 0}, computed as \verb{2 * pnorm(-|att_hat / att_se|)}. \code{NA} if
 \code{att_se} is zero or \code{NA} (e.g., under the bridge solver's selected-out
@@ -326,7 +328,7 @@ expansion). Consumed by \code{augment.betwfe()}.}
 on the overall sample (treated and untreated), used in computing the
 variance of the overall ATT.}
 \item{indep_counts_used}{Logical scalar; \code{TRUE} if a valid \code{indep_counts}
-argument was provided and used for asymptotically-exact ATT inference,
+argument was provided, so the cohort probabilities came from it, and
 \code{FALSE} otherwise.}
 \item{se_type}{Character scalar; the \code{se_type} argument the user passed
 (\code{"default"}, \code{"conservative"}, or \code{"cluster"}).}
@@ -398,7 +400,7 @@ if (requireNamespace("bacondecomp", quietly = TRUE)) {
   # units)
   100 * res$att_hat
 
-  # Conservative 95\% confidence interval for ATT (in percentage point units)
+  # 95\% confidence interval for ATT (in percentage point units)
 
   low_att <- 100 * (res$att_hat - qnorm(1 - 0.05 / 2) * res$att_se)
   high_att <- 100 * (res$att_hat + qnorm(1 - 0.05 / 2) * res$att_se)

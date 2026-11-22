@@ -85,7 +85,7 @@ cat("Squared error:", (res_etwfe$att_hat - true_tes$att_true)^2, "\n")
 
 # `betwfe()`: bridge-penalized ETWFE
 
-`betwfe()` extends `etwfe()` by adding a bridge (`L_q`, `0 < q < 1`) regularization penalty on the cohort-time effects. Compared to `etwfe()`, this trades a small amount of bias for lower variance — the same idea as `fetwfe()`, but without the fusion transformation that `fetwfe()` applies. So `betwfe()` is essentially "fetwfe minus the fusion."
+`betwfe()` extends `etwfe()` by adding a bridge (`L_q`, `0 < q < 1`) regularization penalty. Compared to `etwfe()`, this trades a small amount of bias for lower variance — the same idea as `fetwfe()`, but without the fusion transformation that `fetwfe()` applies. So `betwfe()` is essentially "fetwfe minus the fusion."
 
 ```{r}
 res_betwfe <- betwfeWithSimulatedData(sim_data)

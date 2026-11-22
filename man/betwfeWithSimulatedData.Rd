@@ -76,20 +76,24 @@ already contains never-treated units. Default is \code{TRUE}.}
 
 \item{se_type}{Character; one of \code{"default"}, \code{"conservative"}, or
 \code{"cluster"}. \code{"default"} returns the tight Gaussian variance
-\code{sqrt(att_var_1 + att_var_2)} from Theorem (c$'$) under Assumption
-(Psi-IF); this is asymptotically exact for the package's default
-cohort sample-proportions estimator and for every standard
+\code{sqrt(att_var_1 + att_var_2)}: Theorem (c$'$) under Assumption (Psi-IF),
+with the paper's differences matrix \code{D_N} the identity on every
+coefficient block, since \code{betwfe()} applies the bridge penalty to the
+coefficients themselves. This is asymptotically exact for the package's
+default cohort sample-proportions estimator and for every standard
 propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
 any GLM on \code{W | X}, kernel/series regression of \verb{1\{W = g\}} on \code{X}).
-\code{"conservative"} returns the Cauchy-Schwarz upper bound from Theorem
-(c); use only if the propensity-score estimator violates (Psi-IF).
+In \code{betwfe()}, \code{"conservative"} returns the Cauchy-Schwarz upper bound
+from Theorem (c), meant for a propensity-score estimator that violates
+(Psi-IF). This wrapper passes the simulator's independent cohort counts
+(\code{simulated_obj$indep_counts}) to \code{betwfe()}, so its fit is the
+two-sample case and \code{"conservative"} gives the same \code{att_se} as
+\code{"default"}.
 \code{"cluster"} is an \emph{experimental} unit-clustered Liang-Zeger sandwich
 SE on the bridge-selected support (see the companion vignette
 \code{inference_vignette} for details). \code{"cluster"} is only meaningful
 when \code{q < 1} (the bridge oracle property is required); for \code{q >= 1}
-the SE will be \code{NA} regardless of \code{se_type}. The default \code{"default"}
-was the conservative Cauchy-Schwarz formula in versions <= 1.11.7;
-v1.12.0 switched the default to the tight Gaussian variance.
+the SE will be \code{NA} regardless of \code{se_type}.
 Default is \code{"default"}.}
 
 \item{lambda_selection}{Character; method for selecting the bridge
@@ -139,9 +143,9 @@ is \code{"simultaneous"}.}
 An object of class \code{betwfe} containing the following elements:
 \item{att_hat}{The
 estimated overall average treatment effect for a randomly selected treated
-unit.} \item{att_se}{If \code{q < 1}, a standard error for the ATT. If
-\code{indep_counts} was provided, this standard error is asymptotically exact; if
-not, it is asymptotically conservative. If \code{q >= 1}, this will be NA.}
+unit.} \item{att_se}{A standard error for the ATT (see \code{se_type}). \code{NA} when
+standard errors were not computed (\code{calc_ses} is \code{FALSE}), for example when
+\code{q >= 1}.}
 \item{att_p_value}{A two-sided p-value for the overall ATT against the
 null \code{H_0: tau = 0}, computed as \verb{2 * pnorm(-|att_hat / att_se|)}. \code{NA} if
 \code{att_se} is zero or \code{NA} (e.g., under the bridge solver's selected-out
@@ -233,7 +237,7 @@ set of covariates used to estimate the model.}
 on the overall sample (treated and untreated), used in computing the
 variance of the overall ATT.}
 \item{indep_counts_used}{Logical scalar; \code{TRUE} if a valid \code{indep_counts}
-argument was provided and used for asymptotically-exact ATT inference,
+argument was provided, so the cohort probabilities came from it, and
 \code{FALSE} otherwise.}
 \item{se_type}{Character scalar; the \code{se_type} argument the user passed
 (\code{"default"}, \code{"conservative"}, or \code{"cluster"}).}

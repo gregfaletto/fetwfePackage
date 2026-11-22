@@ -39,24 +39,24 @@ already contains never-treated units. Default is \code{TRUE}.}
 
 \item{se_type}{Character; one of \code{"default"}, \code{"conservative"}, or
 \code{"cluster"}. \code{"default"} returns the tight Gaussian variance
-\code{sqrt(att_var_1 + att_var_2)} from Theorem (c$'$) under Assumption
-(Psi-IF); this is asymptotically exact for the package's default
-cohort sample-proportions estimator and for every standard
-propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
-any GLM on \code{W | X}, kernel/series regression of \verb{1\{W = g\}} on \code{X}).
-\code{"conservative"} returns the Cauchy-Schwarz upper bound
+\code{sqrt(att_var_1 + att_var_2)}, by the argument of Theorem (c$'$) under
+Assumption (Psi-IF) with no selection step: \code{etwfe()} is least squares on
+the GLS-whitened full design. This is asymptotically exact for the
+package's default cohort sample-proportions estimator and for every
+standard propensity-score estimator that satisfies (Psi-IF) (multinomial
+logit, any GLM on \code{W | X}, kernel/series regression of \verb{1\{W = g\}} on \code{X}).
+In \code{etwfe()}, \code{"conservative"} returns the Cauchy-Schwarz upper bound
 \code{sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))} from
-Theorem (c); use only if the propensity-score estimator violates
+Theorem (c), meant for a propensity-score estimator that violates
 (Psi-IF) (e.g., a Robins-Rotnitzky-augmented doubly-robust estimator,
-which the package does not currently implement). \code{"cluster"} is an
+which the package does not currently implement). This wrapper passes the
+simulator's independent cohort counts (\code{simulated_obj$indep_counts}) to
+\code{etwfe()}, so its fit is the two-sample case and \code{"conservative"} gives
+the same \code{att_se} as \code{"default"}. \code{"cluster"} is an
 \emph{experimental} unit-clustered Liang-Zeger sandwich SE on the
 OLS-selected support (see the companion vignette
 \code{inference_vignette} for the formula, the assumptions, and the
-theory-pending caveat). The default value of \code{"default"} corresponds
-to the new tight Gaussian default introduced in version 1.12.0;
-previous versions used the conservative Cauchy-Schwarz formula as the
-default. To recover the prior conservative default behavior, pass
-\code{se_type = "conservative"}.}
+theory-pending caveat).}
 
 \item{ci_type}{Character; one of \code{"simultaneous"} (default) or
 \code{"pointwise"}. Controls the confidence-interval bounds reported for the
@@ -137,7 +137,7 @@ set of covariates used to estimate the model.}
 on the overall sample (treated and untreated), used in computing the
 variance of the overall ATT.}
 \item{indep_counts_used}{Logical scalar; \code{TRUE} if a valid \code{indep_counts}
-argument was provided and used for asymptotically-exact ATT inference,
+argument was provided, so the cohort probabilities came from it, and
 \code{FALSE} otherwise.}
 \item{se_type}{Character scalar; the \code{se_type} argument the user passed
 (\code{"default"}, \code{"conservative"}, or \code{"cluster"}).}

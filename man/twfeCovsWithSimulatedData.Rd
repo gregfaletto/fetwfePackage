@@ -39,17 +39,20 @@ already contains never-treated units. Default is \code{TRUE}.}
 
 \item{se_type}{Character; one of \code{"default"}, \code{"conservative"}, or
 \code{"cluster"}. \code{"default"} returns the tight Gaussian variance
-\code{sqrt(att_var_1 + att_var_2)} from Theorem (c$'$) under Assumption
-(Psi-IF) (asymptotically exact for the package's default cohort
-sample-proportions estimator); \code{"conservative"} returns the
-Cauchy-Schwarz upper bound from Theorem (c) (use only when the
-propensity-score estimator violates (Psi-IF)); \code{"cluster"} is an
+\code{sqrt(att_var_1 + att_var_2)}, which is asymptotically exact for the
+package's default cohort sample-proportions estimator by the argument of
+Theorem (c$'$) under Assumption (Psi-IF) applied to least squares on
+\code{twfeCovs()}'s GLS-whitened model, so it holds when that model does (see
+the Description of \code{\link[=twfeCovs]{twfeCovs()}}). In \code{twfeCovs()}, \code{"conservative"}
+returns the Cauchy-Schwarz upper bound from Theorem (c), meant for a
+propensity-score estimator that violates (Psi-IF). This wrapper passes
+the simulator's independent cohort counts (\code{simulated_obj$indep_counts})
+to \code{twfeCovs()}, so its fit is the two-sample case and \code{"conservative"}
+gives the same \code{att_se} as \code{"default"}. \code{"cluster"} is an
 \emph{experimental} unit-clustered Liang-Zeger sandwich SE on the
 OLS-selected support (see the companion vignette \code{inference_vignette}
 for the formula, the assumptions, and the theory-pending caveat).
-Default is \code{"default"}. v1.12.0 introduced the tight Gaussian default;
-versions <= 1.11.7 used the conservative Cauchy-Schwarz formula as
-the default.}
+Default is \code{"default"}.}
 
 \item{ci_type}{Character; one of \code{"simultaneous"} (default) or
 \code{"pointwise"}. Controls the confidence-interval bounds reported for the
@@ -72,10 +75,8 @@ are \code{NA} under both settings. Default is \code{"simultaneous"}.}
 An object of class \code{twfeCovs} containing the following elements:
 \item{att_hat}{The
 estimated overall average treatment effect for a randomly selected treated
-unit.} \item{att_se}{A standard error for the ATT. If \code{indep_counts} was
-provided, this standard error is asymptotically exact; otherwise, it is
-asymptotically conservative. If the Gram matrix is not invertible, this
-will be NA.}
+unit.} \item{att_se}{A standard error for the ATT (see \code{se_type}). If the
+Gram matrix is not invertible, this will be NA.}
 \item{att_p_value}{A two-sided p-value for the overall ATT against the
 null \code{H_0: tau = 0}, computed as \verb{2 * pnorm(-|att_hat / att_se|)}. \code{NA} if
 \code{att_se} is zero or \code{NA}. Standard post-OLS interpretation; \code{twfeCovs} does
@@ -130,7 +131,7 @@ set of covariates used to estimate the model.}
 on the overall sample (treated and untreated), used in computing the
 variance of the overall ATT.}
 \item{indep_counts_used}{Logical scalar; \code{TRUE} if a valid \code{indep_counts}
-argument was provided and used for asymptotically-exact ATT inference,
+argument was provided, so the cohort probabilities came from it, and
 \code{FALSE} otherwise.}
 \item{se_type}{Character scalar; the \code{se_type} argument the user passed
 (\code{"default"}, \code{"conservative"}, or \code{"cluster"}).}
@@ -190,8 +191,8 @@ the coefficient vector lives in a reduced cohort-level basis that
 informative error (#58).
 }
 \description{
-This function runs the bridge-penalized extended two-way fixed effects estimator (\code{twfeCovs()}) on
-simulated data. It is simply a wrapper for \code{twfeCovs()}: it accepts an object of class
+This function runs the two-way fixed effects estimator with covariates, fit by least squares
+(\code{twfeCovs()}), on simulated data. It is simply a wrapper for \code{twfeCovs()}: it accepts an object of class
 \code{"FETWFE_simulated"} (produced by \code{simulateData()}) and unpacks the necessary
 components to pass to \code{twfeCovs()}. So the outputs match \code{twfeCovs()}, and the needed inputs
 match their counterparts in \code{twfeCovs()}.

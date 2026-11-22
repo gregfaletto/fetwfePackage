@@ -2447,7 +2447,7 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 		))
 	}
 
-	# Tight Gaussian (Theorem (c'), independent two-sample case) and
+	# Tight Gaussian (Theorem (c')) and
 	# Cauchy-Schwarz conservative bound (Theorem (c)) -- the two same-data
 	# combinations the package exposes.
 	att_var_tight <- att_var_1 + att_var_2

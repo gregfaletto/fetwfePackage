@@ -84,21 +84,20 @@ already contains never-treated units. Default is \code{TRUE}.}
 cohort sample-proportions estimator and for every standard
 propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
 any GLM on \code{W | X}, kernel/series regression of \verb{1\{W = g\}} on \code{X}).
-\code{"conservative"} returns the Cauchy-Schwarz upper bound
+In \code{fetwfe()}, \code{"conservative"} returns the Cauchy-Schwarz upper bound
 \code{sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))} from
-Theorem (c); use only if the propensity-score estimator violates
+Theorem (c), meant for a propensity-score estimator that violates
 (Psi-IF) (e.g., a Robins-Rotnitzky-augmented doubly-robust estimator,
-which the package does not currently implement). \code{"cluster"} is an
+which the package does not currently implement). This wrapper passes the
+simulator's independent cohort counts (\code{simulated_obj$indep_counts}) to
+\code{fetwfe()}, so its fit is the two-sample case and \code{"conservative"} gives
+the same \code{att_se} as \code{"default"}. \code{"cluster"} is an
 \emph{experimental} unit-clustered Liang-Zeger sandwich SE on the
 bridge-selected support (see the companion vignette
 \code{inference_vignette} for the formula, the assumptions, and the
 theory-pending caveat); only meaningful when \code{q < 1} (the bridge
 oracle property is required), and for \code{q >= 1} the SE will be \code{NA}
-regardless of \code{se_type}. The default value of \code{"default"} corresponds
-to the new tight Gaussian default introduced in version 1.12.0;
-previous versions used the conservative Cauchy-Schwarz formula as the
-default. To recover the prior conservative default behavior, pass
-\code{se_type = "conservative"}.}
+regardless of \code{se_type}.}
 
 \item{lambda_selection}{Character; method for selecting the bridge
 penalty parameter \code{lambda}. Either \code{"cv"} (10-fold cross-validation
@@ -198,7 +197,7 @@ supplied \code{sig_eps_sq} / \code{sig_eps_c_sq} are ignored, under \code{gls = 
 \value{
 An object of class \code{fetwfe} containing the following elements:
 \item{att_hat}{The estimated overall average treatment effect for a randomly selected treated unit.}
-\item{att_se}{If \code{q < 1}, a standard error for the ATT. Under the default \code{se_type = "default"}, the SE is the tight Gaussian variance \code{sqrt(att_var_1 + att_var_2)} (Theorem (c$'$) under Assumption (Psi-IF); paper line 1233 onwards). Assumption (Psi-IF) is satisfied by the package's default cohort sample-proportions estimator \code{hat_pi_g = N_g / N} (and by multinomial logit, any GLM on \code{W | X}, and kernel/series regression of \verb{1\{W = g\}} on \code{X}), so the default SE is asymptotically exact for the package's default estimator. Under \code{se_type = "conservative"} (or in version <= 1.11.7 by default), the SE is the Cauchy-Schwarz upper bound \code{sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))} from Theorem (c). When \code{indep_counts} is provided, the two-sample exact formula \code{sqrt(att_var_1 + att_var_2)} is used regardless of \code{se_type}. If \code{q >= 1}, this will be NA.}
+\item{att_se}{A standard error for the ATT (see \code{se_type}). \code{NA} when standard errors were not computed (\code{calc_ses} is \code{FALSE}), for example when \code{q >= 1} or \code{gls = FALSE}.}
 \item{att_p_value}{A two-sided p-value for the overall ATT against the null \code{H_0: tau = 0}, computed as \verb{2 * pnorm(-|att_hat / att_se|)}. \code{NA} if \code{att_se} is zero or \code{NA} (e.g., under the bridge solver's selected-out fallback). See the package vignette section "Testing the zero-effect null" for interpretation guidance under selection consistency.}
 \item{att_selected}{Logical scalar; \code{TRUE} if \code{att_hat} is not exactly zero (i.e., at least one cohort's bridge-penalized coefficient survived selection), \code{FALSE} otherwise. Under FETWFE Theorem 6.2 (restriction selection consistency), \code{att_selected = FALSE} is the asymptotic statement that the truth is zero. For ridge (\code{q = 2}) the bridge solver does not zero coefficients, so this will typically be \code{TRUE}.}
 \item{catt_hats}{A named vector containing the estimated average treatment effects for each cohort.}
@@ -233,7 +232,7 @@ An object of class \code{fetwfe} containing the following elements:
 on the overall sample (treated and untreated), used in computing the
 variance of the overall ATT.}
 \item{indep_counts_used}{Logical scalar; \code{TRUE} if a valid \code{indep_counts}
-argument was provided and used for asymptotically-exact ATT inference,
+argument was provided, so the cohort probabilities came from it, and
 \code{FALSE} otherwise.}
 \item{se_type}{Character scalar; the \code{se_type} argument the user passed
 (\code{"default"}, \code{"conservative"}, or \code{"cluster"}).}

@@ -745,9 +745,8 @@ getPsiGUnfused <- function(
 #'   \(\Psi=(\psi_1,\dots,\psi_R)\).
 #' * *Term 2* - randomness from \(\widehat\pi\) itself.
 #'   It equals \(N^{-1}\theta_{\text{sel}}^{\!\top}J^{\!\top}
-#'   \widehat\Sigma_\pi J\theta_{\text{sel}}\) when cohort counts and outcomes
-#'   come from independent samples, and it enters a conservative sum of
-#'   variances otherwise.
+#'   \widehat\Sigma_\pi J\theta_{\text{sel}}\); Details say how it combines
+#'   with Term 1.
 #' @param sig_eps_sq Numeric scalar; variance of the idiosyncratic error term.
 #' @param N Integer; total number of units.
 #' @param T Integer; total number of time periods.
@@ -775,9 +774,8 @@ getPsiGUnfused <- function(
 #'   transformed (fused) space for selected treatment effects.
 #' @param calc_ses Logical; if `TRUE`, calculate standard errors.
 #' @param indep_probs Logical; if `TRUE`, assumes `cohort_probs` (and
-#'   `cohort_probs_overall`) were estimated from an independent sample, leading
-#'   to a different SE formula (sum of variances) compared to when they are
-#'   estimated from the same sample (conservative SE including a covariance term).
+#'   `cohort_probs_overall`) were estimated from an independent sample. Details
+#'   say how this changes the standard error.
 #' @param se_type Character; one of `"default"` (tight Gaussian variance under
 #'   Assumption (Psi-IF), Theorem (c$'$)), `"conservative"` (Cauchy-Schwarz
 #'   upper bound from Theorem (c) for non-(Psi-IF) propensity estimators), or

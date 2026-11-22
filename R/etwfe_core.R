@@ -100,8 +100,8 @@ checkEtwfeInputs <- function(
 #'   each cohort's first treatment effect within the treatment effect block.
 #' @param indep_counts (Optional) An integer vector of counts for how many units
 #'   appear in the untreated cohort plus each of the other `G` cohorts, derived
-#'   from an independent dataset. Used for asymptotically exact standard errors for
-#'   the ATT. Default is `NA`.
+#'   from an independent dataset. See the exported wrapper `etwfe()` for
+#'   details. Default is `NA`.
 #' @param sig_eps_sq (Optional) Numeric; the known variance of the observation-level
 #'   IID noise. If `NA`, it will be estimated. Default is `NA`.
 #' @param sig_eps_c_sq (Optional) Numeric; the known variance of the unit-level IID
@@ -112,7 +112,7 @@ checkEtwfeInputs <- function(
 #' @param add_ridge (Optional) Logical; if `TRUE`, adds a small L2 penalty to
 #'   the untransformed coefficients to stabilize estimation. Default is `FALSE`.
 #' @param se_type Character; the standard-error type, one of `"default"`
-#'   (tight Gaussian variance under (Psi-IF), Theorem (c$'$)),
+#'   (tight Gaussian variance under (Psi-IF)),
 #'   `"conservative"` (Cauchy-Schwarz upper bound from Theorem (c) for
 #'   non-(Psi-IF) propensity estimators), or `"cluster"` (experimental
 #'   unit-clustered Liang-Zeger sandwich SE on the OLS-selected support).
@@ -155,9 +155,8 @@ checkEtwfeInputs <- function(
 #'     point estimate and SE, using both in-sample probabilities and
 #'     independent probabilities when `indep_counts` is provided.
 #' }
-#' The standard errors for CATTs are asymptotically exact. For ATT, if
-#' `indep_counts` are provided, the SE is asymptotically exact; otherwise, it
-#' is asymptotically conservative.
+#' The standard errors for CATTs are asymptotically exact; for the ATT's, see
+#' `se_type`.
 #'
 #' @return A list containing detailed estimation results:
 #'   \item{in_sample_att_hat}{Estimated overall ATT using in-sample cohort probabilities.}

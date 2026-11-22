@@ -295,8 +295,8 @@ checkFetwfeInputs <- function(
 #'   each cohort's first treatment effect within the treatment effect block.
 #' @param indep_counts (Optional) An integer vector of counts for how many units
 #'   appear in the untreated cohort plus each of the other `G` cohorts, derived
-#'   from an independent dataset. Used for asymptotically exact standard errors for
-#'   the ATT. Default is `NA`.
+#'   from an independent dataset. See the exported wrapper `fetwfe()` for
+#'   details. Default is `NA`.
 #' @param sig_eps_sq (Optional) Numeric; the known variance of the observation-level
 #'   IID noise. If `NA`, it will be estimated. Default is `NA`.
 #' @param sig_eps_c_sq (Optional) Numeric; the known variance of the unit-level IID
@@ -388,9 +388,8 @@ checkFetwfeInputs <- function(
 #'     error, using both in-sample probabilities and independent probabilities
 #'     if `indep_counts` were provided.
 #' }
-#' The standard errors for CATTs are asymptotically exact. For ATT, if
-#' `indep_counts` are provided, the SE is asymptotically exact; otherwise, it's
-#' asymptotically conservative (if `q < 1`).
+#' The standard errors for CATTs are asymptotically exact; for the ATT's, see
+#' `se_type`.
 #'
 #' @return A list containing detailed estimation results:
 #'   \item{in_sample_att_hat}{Estimated overall ATT using in-sample cohort probabilities.}
