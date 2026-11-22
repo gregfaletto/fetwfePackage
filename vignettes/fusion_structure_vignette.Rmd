@@ -279,12 +279,12 @@ Row/column `i` corresponds to base treatment effect `i`:
 
 - The cohorts come in adoption order, and each cohort's effects come in
   event-time order (`tau_{g, 0}, tau_{g, 1}, ...`).
-- A cohort first treated in the k-th of the `T` sorted periods has `T - k + 1`
-  effects, and `num_treats` is their total over the treated cohorts. The
-  periods and cohorts are those of the panel `fetwfe()` fits (see the
-  `treatment` and `allow_no_never_treated` entries of `?fetwfe`). The simulator
-  codes time `1, ..., T`, so on this panel the count is `sum(n_k)`, with the
-  `n_k` computed above. When the cohorts adopt in consecutive periods
+- A cohort first treated at position `k` among the `T` sorted periods has
+  `T - k + 1` effects, and `num_treats` is their total over the treated
+  cohorts. The periods and cohorts are those of the panel `fetwfe()` fits (see
+  the `treatment` and `allow_no_never_treated` entries of `?fetwfe`). The
+  simulator codes time `1, ..., T`, so on this panel the count is `sum(n_k)`,
+  with the `n_k` computed above. When the cohorts adopt in consecutive periods
   `2, ..., G + 1`, the total is `T * G - G * (G + 1) / 2`.
 - Cohort `g` occupies rows `first_inds[g]:(first_inds[g + 1] - 1)` (the last
   cohort runs through `num_treats`), where

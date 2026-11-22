@@ -187,7 +187,7 @@
 #'   order used internally for the treatment effects: row/column `i`
 #'   corresponds to base treatment effect `i`, with the cohorts in adoption
 #'   order and each cohort's effects in event-time order. A cohort first
-#'   treated in the k-th of the `T` periods has `T - k + 1` effects, and
+#'   treated at position `k` among the `T` periods has `T - k + 1` effects, and
 #'   `num_treats` is their total over the treated cohorts; when the cohorts
 #'   adopt in consecutive periods `2, ..., G + 1`, it equals
 #'   `T * G - G * (G + 1) / 2`. The periods and cohorts are those of the panel
@@ -687,7 +687,7 @@ fetwfe <- function(
 #'   order used internally for the treatment effects: row/column `i`
 #'   corresponds to base treatment effect `i`, with the cohorts in adoption
 #'   order and each cohort's effects in event-time order. A cohort first
-#'   treated in the k-th of the `T` periods has `T - k + 1` effects, and
+#'   treated at position `k` among the `T` periods has `T - k + 1` effects, and
 #'   `num_treats` is their total over the treated cohorts; when the cohorts
 #'   adopt in consecutive periods `2, ..., G + 1`, it equals
 #'   `T * G - G * (G + 1) / 2`. The periods and cohorts are those of the panel

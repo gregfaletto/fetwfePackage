@@ -249,7 +249,7 @@ internally. The rows/columns are interpreted in the cohort-major \verb{(g, t)}
 order used internally for the treatment effects: row/column \code{i}
 corresponds to base treatment effect \code{i}, with the cohorts in adoption
 order and each cohort's effects in event-time order. A cohort first
-treated in the k-th of the \code{T} periods has \code{T - k + 1} effects, and
+treated at position \code{k} among the \code{T} periods has \code{T - k + 1} effects, and
 \code{num_treats} is their total over the treated cohorts; when the cohorts
 adopt in consecutive periods \verb{2, ..., G + 1}, it equals
 \code{T * G - G * (G + 1) / 2}. The periods and cohorts are those of the panel
