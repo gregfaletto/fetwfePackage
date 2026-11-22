@@ -1250,20 +1250,6 @@ genXintsData <- function(
 		N_UNTREATED = N_UNTREATED
 	)
 
-	# The first G columns are the cohort fixed effects in order
-	# Next T are time fixed effects in order
-	# Next d are X
-	# Next d*G are cohort effects interacted with X. (The first d of these
-	# are first cohort effects interacted with X, and so on until the Rth
-	# cohort.)
-	# Next d*T are time effects interacted with X (similarly to the above,
-	# the first d are first time effects interacted with X, and so on until
-	# the Tth time).
-	# Next num_treats = G*T - G*(G + 1)/2 columns are base treatment effects
-	# (for each cohort and time)
-	# Finally, the next num_treats*d are interactions of all of these
-	# treatment effects over time--first d are the first column of
-	# treat_mat_long interacted with all of the columns of X, and so on.
 	X_int <- cbind(X_int, X_long_treat)
 
 	if (ncol(X_int) != p) {

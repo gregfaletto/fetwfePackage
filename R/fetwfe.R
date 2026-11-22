@@ -184,11 +184,16 @@
 #'   overrides `fusion_structure` for the treatment-effect block only (the
 #'   fixed-effect blocks are unchanged); the estimator uses `solve(fusion_matrix)`
 #'   internally. The rows/columns are interpreted in the cohort-major `(g, t)`
-#'   order used internally for the treatment effects (the order `getFirstInds()`
-#'   / `getTreatInds()` encode): row/column `i` corresponds to
-#'   base treatment effect `i`, with cohort `g` occupying rows
-#'   `first_inds[g]:(first_inds[g + 1] - 1)` ordered by event time. `num_treats`
-#'   equals `T * G - G * (G + 1) / 2`. `fusion_matrix` must be a finite,
+#'   order used internally for the treatment effects: row/column `i`
+#'   corresponds to base treatment effect `i`, with the cohorts in adoption
+#'   order and each cohort's effects in event-time order. A cohort first
+#'   treated in the k-th of the `T` periods has `T - k + 1` effects, and
+#'   `num_treats` is their total over the treated cohorts; when the cohorts
+#'   adopt in consecutive periods `2, ..., G + 1`, it equals
+#'   `T * G - G * (G + 1) / 2`. The periods and cohorts are those of the panel
+#'   `fetwfe()` fits (see the `treatment` and `allow_no_never_treated` entries
+#'   of [fetwfe()]), and `length(fit$treat_inds)` from a fit on the same data
+#'   gives `num_treats`. `fusion_matrix` must be a finite,
 #'   invertible numeric matrix of that exact dimension (otherwise `fetwfe()`
 #'   stops). Under the paper's fixed-dimension scoping, *any* finite invertible
 #'   `D_N` of that dimension inherits the paper's inferential guarantees: the
@@ -677,11 +682,16 @@ fetwfe <- function(
 #'   overrides `fusion_structure` for the treatment-effect block only (the
 #'   fixed-effect blocks are unchanged); the estimator uses `solve(fusion_matrix)`
 #'   internally. The rows/columns are interpreted in the cohort-major `(g, t)`
-#'   order used internally for the treatment effects (the order `getFirstInds()`
-#'   / `getTreatInds()` encode): row/column `i` corresponds to
-#'   base treatment effect `i`, with cohort `g` occupying rows
-#'   `first_inds[g]:(first_inds[g + 1] - 1)` ordered by event time. `num_treats`
-#'   equals `T * G - G * (G + 1) / 2`. `fusion_matrix` must be a finite,
+#'   order used internally for the treatment effects: row/column `i`
+#'   corresponds to base treatment effect `i`, with the cohorts in adoption
+#'   order and each cohort's effects in event-time order. A cohort first
+#'   treated in the k-th of the `T` periods has `T - k + 1` effects, and
+#'   `num_treats` is their total over the treated cohorts; when the cohorts
+#'   adopt in consecutive periods `2, ..., G + 1`, it equals
+#'   `T * G - G * (G + 1) / 2`. The periods and cohorts are those of the panel
+#'   `fetwfe()` fits (see the `treatment` and `allow_no_never_treated` entries
+#'   of [fetwfe()]), and `length(fit$treat_inds)` from a fit on the same data
+#'   gives `num_treats`. `fusion_matrix` must be a finite,
 #'   invertible numeric matrix of that exact dimension (otherwise `fetwfe()`
 #'   stops). Under the paper's fixed-dimension scoping, *any* finite invertible
 #'   `D_N` of that dimension inherits the paper's inferential guarantees: the

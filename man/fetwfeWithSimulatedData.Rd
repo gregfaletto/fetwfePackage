@@ -164,11 +164,16 @@ arbitrary fusion structure beyond the two built-ins. When non-\code{NULL} it
 overrides \code{fusion_structure} for the treatment-effect block only (the
 fixed-effect blocks are unchanged); the estimator uses \code{solve(fusion_matrix)}
 internally. The rows/columns are interpreted in the cohort-major \verb{(g, t)}
-order used internally for the treatment effects (the order \code{getFirstInds()}
-/ \code{getTreatInds()} encode): row/column \code{i} corresponds to
-base treatment effect \code{i}, with cohort \code{g} occupying rows
-\code{first_inds[g]:(first_inds[g + 1] - 1)} ordered by event time. \code{num_treats}
-equals \code{T * G - G * (G + 1) / 2}. \code{fusion_matrix} must be a finite,
+order used internally for the treatment effects: row/column \code{i}
+corresponds to base treatment effect \code{i}, with the cohorts in adoption
+order and each cohort's effects in event-time order. A cohort first
+treated in the k-th of the \code{T} periods has \code{T - k + 1} effects, and
+\code{num_treats} is their total over the treated cohorts; when the cohorts
+adopt in consecutive periods \verb{2, ..., G + 1}, it equals
+\code{T * G - G * (G + 1) / 2}. The periods and cohorts are those of the panel
+\code{fetwfe()} fits (see the \code{treatment} and \code{allow_no_never_treated} entries
+of \code{\link[=fetwfe]{fetwfe()}}), and \code{length(fit$treat_inds)} from a fit on the same data
+gives \code{num_treats}. \code{fusion_matrix} must be a finite,
 invertible numeric matrix of that exact dimension (otherwise \code{fetwfe()}
 stops). Under the paper's fixed-dimension scoping, \emph{any} finite invertible
 \code{D_N} of that dimension inherits the paper's inferential guarantees: the
