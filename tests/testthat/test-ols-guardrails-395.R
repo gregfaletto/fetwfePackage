@@ -31,6 +31,7 @@
 }
 
 test_that("collinear covariates yield an informative rank-deficiency error, not a bare assertion (#395)", {
+	skip_if_not_installed("lme4")
 	# Cohorts of 4 units (>= d + 1 = 3), so the d+1 gate does NOT pre-empt: the
 	# design reaches lm(), which aliases the collinear column -> the informative
 	# rank-deficiency error (defect 1), for both OLS estimators.

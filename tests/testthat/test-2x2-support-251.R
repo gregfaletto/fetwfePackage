@@ -107,6 +107,7 @@
 
 test_that("all four estimators fit a 2x2 (T = 2, G = 1) panel", {
 	skip_on_cran()
+	skip_if_not_installed("lme4")
 	p22 <- .s251_make_panel(N = 240, T = 2, adopt = 2, tau = 2, seed = 2202)
 
 	res_f <- suppressWarnings(.s251_fit(p22, fetwfe))
@@ -143,6 +144,7 @@ test_that("all four estimators fit a 2x2 (T = 2, G = 1) panel", {
 
 test_that("fetwfe add_ridge fits a 2x2 panel (the relaxed T >= 2L fusion guard)", {
 	skip_on_cran()
+	skip_if_not_installed("lme4")
 	# The add_ridge path builds genFullInvFusionTransformMat, whose `T >= 3L`
 	# stopifnot used to reject T = 2; #251 relaxed it to `T >= 2L`.
 	p22 <- .s251_make_panel(N = 240, T = 2, adopt = 2, tau = 2, seed = 2203)
@@ -155,6 +157,7 @@ test_that("fetwfe add_ridge fits a 2x2 panel (the relaxed T >= 2L fusion guard)"
 
 test_that("accessors and SE paths work at T = 2", {
 	skip_on_cran()
+	skip_if_not_installed("lme4")
 	p22 <- .s251_make_panel(N = 240, T = 2, adopt = 2, tau = 2, seed = 2204)
 	res <- suppressWarnings(.s251_fit(p22, fetwfe))
 
@@ -204,6 +207,7 @@ test_that("accessors and SE paths work at T = 2", {
 
 test_that("all four estimators fit a late-adopting (G = 1, T = 5) num_treats = 1 panel", {
 	skip_on_cran()
+	skip_if_not_installed("lme4")
 	plate <- .s251_make_panel(N = 240, T = 5, adopt = 5, tau = 2, seed = 2205)
 
 	res_f <- .s251_fit(plate, fetwfe)
@@ -238,6 +242,7 @@ test_that("all four estimators fit a late-adopting (G = 1, T = 5) num_treats = 1
 # ------------------------------------------------------------------------------
 
 test_that("fetwfe() warns about no fusion at T = 2", {
+	skip_if_not_installed("lme4")
 	# MUTATION TARGET: deleting the `if (T == 2) warning(...)` block in fetwfe()
 	# makes this test FAIL (the fit succeeds silently). Verified by the
 	# implementer (recorded in the #251 PR).
@@ -250,6 +255,7 @@ test_that("fetwfe() warns about no fusion at T = 2", {
 })
 
 test_that("fetwfe() does NOT warn at a late-adopting num_treats = 1 case (T >= 3)", {
+	skip_if_not_installed("lme4")
 	# T = 5, adopt at t = 5 -> num_treats = 1, but the time FEs (T - 1 = 4 of
 	# them) still fuse, so there IS fusion -> no warning.
 	plate <- .s251_make_panel(N = 120, T = 5, adopt = 5, tau = 0, seed = 2211)
@@ -257,12 +263,14 @@ test_that("fetwfe() does NOT warn at a late-adopting num_treats = 1 case (T >= 3
 })
 
 test_that("fetwfe() does NOT warn at num_treats >= 2", {
+	skip_if_not_installed("lme4")
 	# Standard multi-period single cohort (T = 6, adopt 2 -> num_treats = 5).
 	pmulti <- .s251_make_panel(N = 120, T = 6, adopt = 2, tau = 0, seed = 2212)
 	expect_warning(.s251_fit(pmulti, fetwfe), NA)
 })
 
 test_that("betwfe() and etwfe() do NOT warn at T = 2", {
+	skip_if_not_installed("lme4")
 	# betwfe applies the bridge to the RAW coefficients (never fuses), and etwfe
 	# is unpenalized, so neither emits the no-fusion warning -- it is fetwfe-only.
 	p22 <- .s251_make_panel(N = 120, T = 2, adopt = 2, tau = 0, seed = 2213)
@@ -280,6 +288,7 @@ test_that("betwfe() and etwfe() do NOT warn at T = 2", {
 
 test_that("fetwfe() runs across a T = 2..6 sweep, warning only at T = 2", {
 	skip_on_cran()
+	skip_if_not_installed("lme4")
 	for (Tval in 2:6) {
 		pdata <- .s251_make_panel(
 			N = 160,
@@ -317,6 +326,7 @@ test_that("fetwfe() runs across a T = 2..6 sweep, warning only at T = 2", {
 # ------------------------------------------------------------------------------
 
 test_that("genCoefs and simulateData round-trip at T = 2", {
+	skip_if_not_installed("lme4")
 	# seed = 251 yields a non-zero single treatment effect (att_true = 2), so the
 	# att_true / att_hat assertions below exercise a real effect rather than a
 	# tautological 0 ~ 0. At density 0.5 the lone num_treats = 1 effect is

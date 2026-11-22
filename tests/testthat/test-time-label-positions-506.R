@@ -203,6 +203,7 @@ for (est_name in c("fetwfe", "etwfe", "betwfe")) {
 		lab <- paste0(est_name, " ", coding, ": ")
 
 		test_that(paste0(lab, "the fit succeeds"), {
+			skip_if_not_installed("lme4")
 			expect_s3_class(
 				.fit506(est_name, coding),
 				c(
@@ -214,6 +215,7 @@ for (est_name in c("fetwfe", "etwfe", "betwfe")) {
 		})
 
 		test_that(paste0(lab, "eventStudy() agrees with the 1..8 fit"), {
+			skip_if_not_installed("lme4")
 			.expect_event_study_agrees506(
 				.fit506(est_name, coding),
 				.fit506(est_name, "ref")
@@ -221,6 +223,7 @@ for (est_name in c("fetwfe", "etwfe", "betwfe")) {
 		})
 
 		test_that(paste0(lab, "catt_df agrees with the 1..8 fit"), {
+			skip_if_not_installed("lme4")
 			.expect_catt_df_agrees506(
 				.fit506(est_name, coding),
 				.fit506(est_name, "ref")
@@ -228,6 +231,7 @@ for (est_name in c("fetwfe", "etwfe", "betwfe")) {
 		})
 
 		test_that(paste0(lab, "simultaneousCIs() agrees with the 1..8 fit"), {
+			skip_if_not_installed("lme4")
 			# For etwfe() and betwfe() the all_post_treatment family reads no
 			# cohort offsets, so it is compared for fetwfe() only.
 			.expect_sci_agrees506(
@@ -242,6 +246,7 @@ for (est_name in c("fetwfe", "etwfe", "betwfe")) {
 		})
 
 		test_that(paste0(lab, "cohortTimeATTs() agrees with the 1..8 fit"), {
+			skip_if_not_installed("lme4")
 			.expect_cta_agrees506(
 				.fit506(est_name, coding),
 				.fit506(est_name, "ref")
@@ -251,6 +256,7 @@ for (est_name in c("fetwfe", "etwfe", "betwfe")) {
 		test_that(
 			paste0(lab, "cohortTimeATTs() labels cells with time values"),
 			{
+				skip_if_not_installed("lme4")
 				.expect_cta_labels506(
 					.fit506(est_name, coding),
 					.fit506(est_name, "ref"),
@@ -263,6 +269,7 @@ for (est_name in c("fetwfe", "etwfe", "betwfe")) {
 		test_that(
 			paste0(lab, "the cohort family labels cohorts by time value"),
 			{
+				skip_if_not_installed("lme4")
 				.expect_cohort_family_labels506(.fit506(est_name, coding))
 			}
 		)
@@ -277,12 +284,14 @@ for (coding in names(.codes506)) {
 			": the cohort family labels cohorts by time value"
 		),
 		{
+			skip_if_not_installed("lme4")
 			.expect_cohort_family_labels506(.fit506("twfeCovs", coding))
 		}
 	)
 }
 
 test_that("event-study fusion, gap coding: the accessors agree with the 1..8 fit", {
+	skip_if_not_installed("lme4")
 	ref <- .fit506(
 		"fetwfe",
 		"ref",
@@ -302,6 +311,7 @@ test_that("event-study fusion, gap coding: the accessors agree with the 1..8 fit
 })
 
 test_that("event-study fusion, gap coding: cohortTimeATTs() and the cohort family label by time value", {
+	skip_if_not_installed("lme4")
 	ref <- .fit506(
 		"fetwfe",
 		"ref",
@@ -389,6 +399,7 @@ test_that("event-study fusion, gap coding: cohortTimeATTs() and the cohort famil
 }
 
 test_that("scattered cohorts in steps of 2: eventStudy() agrees with the 1..7 fit", {
+	skip_if_not_installed("lme4")
 	.expect_event_study_agrees506(
 		.fit_scattered506("steps2"),
 		.fit_scattered506("ref")
@@ -396,6 +407,7 @@ test_that("scattered cohorts in steps of 2: eventStudy() agrees with the 1..7 fi
 })
 
 test_that("scattered cohorts in steps of 2: simultaneousCIs() agrees with the 1..7 fit", {
+	skip_if_not_installed("lme4")
 	.expect_sci_agrees506(
 		.fit_scattered506("steps2"),
 		.fit_scattered506("ref"),
@@ -404,6 +416,7 @@ test_that("scattered cohorts in steps of 2: simultaneousCIs() agrees with the 1.
 })
 
 test_that("scattered cohorts in steps of 2: catt_df agrees with the 1..7 fit, with the band applied", {
+	skip_if_not_installed("lme4")
 	ref <- .fit_scattered506("ref")
 	alt <- .fit_scattered506("steps2")
 	.expect_catt_df_agrees506(alt, ref)
@@ -438,6 +451,7 @@ test_that("scattered cohorts in steps of 2: catt_df agrees with the 1..7 fit, wi
 }
 
 test_that("no never-treated units, in steps of 2: eventStudy() and cohortTimeATTs() agree with the 1..8 fit, with the band applied", {
+	skip_if_not_installed("lme4")
 	ref <- .fit_truncated506("ref")
 	alt <- .fit_truncated506("steps2")
 	.expect_event_study_agrees506(alt, ref)
@@ -500,6 +514,7 @@ test_that("no never-treated units, in steps of 2: eventStudy() and cohortTimeATT
 test_that("divorce in steps of 2, fetwfe() paper call: the accessors agree with the yearly fit", {
 	skip_on_cran()
 	skip_if_not_installed("bacondecomp")
+	skip_if_not_installed("lme4")
 	ref <- .fit_divorce506("fetwfe", "ref")
 	alt <- .fit_divorce506("fetwfe", "steps2")
 	.expect_event_study_agrees506(alt, ref)
@@ -513,6 +528,7 @@ test_that("divorce in steps of 2, fetwfe() paper call: the accessors agree with 
 test_that("divorce, fetwfe() paper call: cohortTimeATTs() and the cohort family label by time value", {
 	skip_on_cran()
 	skip_if_not_installed("bacondecomp")
+	skip_if_not_installed("lme4")
 	ref <- .fit_divorce506("fetwfe", "ref")
 	alt <- .fit_divorce506("fetwfe", "steps2")
 	.expect_cta_labels506(
@@ -532,6 +548,7 @@ test_that("divorce, fetwfe() paper call: cohortTimeATTs() and the cohort family 
 test_that("divorce in steps of 2, etwfe() without covariates: eventStudy() and cohortTimeATTs() agree with the yearly fit", {
 	skip_on_cran()
 	skip_if_not_installed("bacondecomp")
+	skip_if_not_installed("lme4")
 	ref <- .fit_divorce506("etwfe", "ref")
 	alt <- .fit_divorce506("etwfe", "steps2")
 	.expect_event_study_agrees506(alt, ref)
@@ -543,6 +560,7 @@ test_that("divorce in steps of 2, etwfe() without covariates: eventStudy() and c
 # ----------------------------------------------------------------------------
 
 test_that("a covariate named like a time dummy leaves the map intact (steps of 2)", {
+	skip_if_not_installed("lme4")
 	pd <- .sim506$pdata
 	names(pd)[names(pd) == "cov1"] <- "t_2004"
 	for (est_name in c("fetwfe", "etwfe")) {
@@ -574,6 +592,7 @@ test_that("a covariate named like a time dummy leaves the map intact (steps of 2
 })
 
 test_that(".fit_time_values() returns the sorted time values the fit saw, or NULL", {
+	skip_if_not_installed("lme4")
 	fit <- .fit506("etwfe", "steps2")
 	expect_identical(.fit_time_values(fit), .codes506$steps2)
 
@@ -608,6 +627,7 @@ test_that(".fit_time_values() returns the sorted time values the fit saw, or NUL
 })
 
 test_that("without time-dummy names, a fit coded 2001..2008 takes the arithmetic fallback", {
+	skip_if_not_installed("lme4")
 	fit <- .fit506(
 		"etwfe",
 		"ref",

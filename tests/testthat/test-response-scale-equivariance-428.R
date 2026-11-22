@@ -195,6 +195,7 @@
 }
 
 test_that("fetwfe() on the default route (CV, q = 0.5) is equivariant (#428)", {
+	skip_if_not_installed("lme4")
 	.rse428_expect_route(
 		pw = .rse428_fits(
 			function(k) .rse428_shared("pointwise", k),
@@ -208,6 +209,7 @@ test_that("fetwfe() on the default route (CV, q = 0.5) is equivariant (#428)", {
 })
 
 test_that("fetwfe() with lambda_selection = \"bic\" is equivariant (#428)", {
+	skip_if_not_installed("lme4")
 	.rse428_expect_route(
 		pw = .rse428_fits(
 			function(k) {
@@ -228,6 +230,7 @@ test_that("fetwfe() with lambda_selection = \"bic\" is equivariant (#428)", {
 })
 
 test_that("betwfe() is equivariant on both selection routes (#428)", {
+	skip_if_not_installed("lme4")
 	for (route in c("cv", "bic")) {
 		.rse428_expect_route(
 			pw = .rse428_fits(
@@ -263,6 +266,7 @@ for (.rse428_row in names(.rse428_ridge_rows)) {
 	test_that(
 		sprintf("%s(add_ridge = TRUE) is equivariant (#428)", .rse428_row),
 		{
+			skip_if_not_installed("lme4")
 			row <- .rse428_ridge_rows[[.rse428_row]]
 			at <- .rse428_fits(
 				function(k) {
@@ -365,6 +369,7 @@ for (.rse428_q_val in c(1, 2)) {
 	test_that(
 		sprintf("fetwfe(q = %g) is equivariant (#428)", .rse428_q_val),
 		{
+			skip_if_not_installed("lme4")
 			q <- .rse428_q_val
 			at <- .rse428_fits(
 				function(k) .rse428_scaled_fit(fetwfe, k, q = q),
@@ -381,6 +386,7 @@ for (.rse428_q_val in c(1, 2)) {
 }
 
 test_that("eventStudy(), cohortStudy() and cohortTimeATTs() are equivariant (#428)", {
+	skip_if_not_installed("lme4")
 	df <- function(k) .rse428_shared("default", k)
 	pw <- function(k) .rse428_shared("pointwise", k)
 	.rse428_expect_live(df(1))
@@ -441,6 +447,7 @@ test_that("eventStudy(), cohortStudy() and cohortTimeATTs() are equivariant (#42
 )
 
 test_that("simultaneousCIs() is equivariant under both methods (#428)", {
+	skip_if_not_installed("lme4")
 	.rse428_expect_live(.rse428_shared("default", 1))
 	for (band in .rse428_sci_methods) {
 		at <- .rse428_fits(band, .RSE428_SCALES)
@@ -450,6 +457,7 @@ test_that("simultaneousCIs() is equivariant under both methods (#428)", {
 })
 
 test_that("simultaneousCIs() gives the same critical value and adjusted p-values at k = 1e-4 as at k = 1 (#489)", {
+	skip_if_not_installed("lme4")
 	for (band in .rse428_sci_methods) {
 		at <- .rse428_fits(band, 1e-4)
 		.rse428_expect_band_live(at(1)$adjusted_p_values)
@@ -462,6 +470,7 @@ test_that("simultaneousCIs() gives the same critical value and adjusted p-values
 })
 
 test_that("debiasedATT() is equivariant under both methods (#428)", {
+	skip_if_not_installed("lme4")
 	df <- function(k) .rse428_shared("default", k)
 	.rse428_expect_live(df(1))
 	.rse428_expect_equivariant(
@@ -512,6 +521,7 @@ test_that("debiasedATT()'s estimate on a fixed-p gls = FALSE fit is equivariant 
 })
 
 test_that("a supplied lambda.max keeps its meaning on the BIC route: non-regression pin (#428)", {
+	skip_if_not_installed("lme4")
 	# The values origin/main returns at 7179af7.
 	fit <- .rse428_scaled_fit(
 		fetwfe,
@@ -528,6 +538,7 @@ test_that("a supplied lambda.max keeps its meaning on the BIC route: non-regress
 })
 
 test_that("a supplied lambda.min keeps its meaning on the BIC route: non-regression pin (#428)", {
+	skip_if_not_installed("lme4")
 	fit <- .rse428_scaled_fit(
 		fetwfe,
 		1,
@@ -570,6 +581,7 @@ test_that("fetwfe() rejects add_ridge = TRUE with gls = FALSE without a variance
 })
 
 test_that("fetwfe() and betwfe() standardize by the sig_eps_sq their GLS step used (#428)", {
+	skip_if_not_installed("lme4")
 	# An equivariance assertion cannot tell which variance a core hands the
 	# dispatcher, so record it.
 	real <- fetwfe:::.bridge_response_scale
@@ -604,6 +616,7 @@ test_that("fetwfe() and betwfe() standardize by the sig_eps_sq their GLS step us
 })
 
 test_that("the bridge fits the GLS response divided by sqrt(sig_eps_sq) (#428)", {
+	skip_if_not_installed("lme4")
 	# The response's own SD is equivariant too, so equivariance alone cannot
 	# tell it from the noise SD.
 	real_cv <- fetwfe:::getBetaCV
@@ -815,6 +828,7 @@ test_that("high dimensions, gls = FALSE: debiasedATT() and the bootstrap band ar
 )
 for (.rse428_row in names(.rse428_option_rows)) {
 	test_that(sprintf("%s is equivariant (#428)", .rse428_row), {
+		skip_if_not_installed("lme4")
 		at <- .rse428_fits(
 			.rse428_option_rows[[.rse428_row]],
 			.RSE428_SCALES
@@ -854,6 +868,7 @@ for (.rse428_row in names(.rse428_option_rows)) {
 )
 for (.rse428_row in names(.rse428_band_rows)) {
 	test_that(sprintf("the band of %s is equivariant (#489)", .rse428_row), {
+		skip_if_not_installed("lme4")
 		row <- .rse428_band_rows[[.rse428_row]]
 		at <- .rse428_fits(row$make, .RSE428_SCALES)
 		.rse428_expect_live(at(1), penalized = row$penalized)

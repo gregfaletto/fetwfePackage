@@ -21,8 +21,8 @@
 #
 # PER DECISION LOG D8 THIS FILE CARRIES NO DRAW-COUNT PIN, unlike its
 # genCoefsCore() sibling. Replaying 1,000,000 rmultinom draws to pin the
-# boundary costs a second-scale replay on every run of a 9-minute suite across
-# six CI jobs -- against 0.006 s for the genCoefsCore() pin -- and what it
+# boundary costs a second-scale replay on every run of a 9-minute suite
+# -- against 0.006 s for the genCoefsCore() pin -- and what it
 # would buy is detection of a `>` vs `>=` off-by-one that
 # moves the budget by one draw in a million and has no user-visible
 # consequence whatsoever. An ABSENT cap is caught by the timeout guard, and a

@@ -147,6 +147,7 @@ test_that("ordered DGP: empirical cohort proportions match cutpoint structure", 
 # ------------------------------------------------------------------------------
 test_that("FETWFE smoke test: fits run cleanly on multinomial and ordered DGPs", {
 	skip_on_cran()
+	skip_if_not_installed("lme4")
 	# Well-formedness only (per round-1 sentinel NOTE: not load-bearing
 	# for numerical correctness; that's covered by test #5 below).
 	for (type in c("multinomial", "ordered")) {

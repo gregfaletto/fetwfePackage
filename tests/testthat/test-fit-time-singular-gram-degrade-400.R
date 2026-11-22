@@ -40,6 +40,7 @@ test_that("a public etwfe() fit reaches the fit-time singular-Gram degrade (#400
 	# the package has no CI, so a cross-platform shift would first surface as a
 	# CRAN failure. Keep the assertions strict, but only run them locally.
 	skip_on_cran()
+	skip_if_not_installed("lme4")
 
 	df <- .singular_gram_panel(1e-6)
 
@@ -71,6 +72,7 @@ test_that("tighter collinearity is intercepted by the #395 rank gate instead (#4
 	# Same BLAS/no-CI caveat as above: the boundary this pins is only meaningful
 	# on the eigenvalue margin this machine's LAPACK produces.
 	skip_on_cran()
+	skip_if_not_installed("lme4")
 
 	df <- .singular_gram_panel(1e-8)
 

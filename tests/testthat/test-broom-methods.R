@@ -329,6 +329,7 @@ test_that("augment aligns rows to X_ints regardless of input row order", {
 })
 
 test_that("augment works with factor covariates in the user's data", {
+	skip_if_not_installed("lme4")
 	# Factor covariates: the estimator expands them to dummies internally
 	# via processFactors() during fitting; the user's pdata keeps the
 	# original factor column. augment should produce correct fitted values
@@ -368,6 +369,7 @@ test_that("augment works with factor covariates in the user's data", {
 })
 
 test_that("augment auto-trims first-period-treated units when present in data", {
+	skip_if_not_installed("lme4")
 	setup <- .simulated_setup()
 	# Take the simulated panel and mark one never-treated unit as treated at
 	# time 1, simulating a real-data panel that needs idCohorts trimming.
@@ -436,6 +438,7 @@ test_that("augment auto-trims first-period-treated units when present in data", 
 # tautology.
 # ------------------------------------------------------------------------------
 test_that("augment row order is invariant after auto-trim of first-period-treated units", {
+	skip_if_not_installed("lme4")
 	setup <- .simulated_setup()
 	pdata <- setup$sim$pdata
 	# Mark one never-treated unit as treated at time 1, so the estimator and

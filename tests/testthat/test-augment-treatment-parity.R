@@ -80,6 +80,7 @@ if (!requireNamespace("broom", quietly = TRUE)) {
 }
 
 test_that("augment auto-trim and no-trim paths return identical column sets", {
+	skip_if_not_installed("lme4")
 	fx <- .parity_fixture()
 
 	aug_auto <- suppressWarnings(broom::augment(fx$res, data = fx$pdata))
@@ -106,6 +107,7 @@ test_that("augment auto-trim and no-trim paths return identical column sets", {
 })
 
 test_that("augment column parity holds for etwfe and betwfe on auto-trim path", {
+	skip_if_not_installed("lme4")
 	# `.augment_estimator_output()` is the shared body for augment.fetwfe,
 	# augment.fetwfe_etwfe, and augment.betwfe — so the fix in v1.9.4 applies to all
 	# three. This block locks in that behavior so a future class-conditional
@@ -151,6 +153,7 @@ test_that("augment column parity holds for etwfe and betwfe on auto-trim path", 
 })
 
 test_that("augment auto-trim path preserves extra user columns", {
+	skip_if_not_installed("lme4")
 	fx <- .parity_fixture()
 
 	# Add columns the estimator does not know about. These should flow

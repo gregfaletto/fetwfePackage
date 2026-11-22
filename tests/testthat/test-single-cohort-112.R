@@ -175,6 +175,7 @@
 
 test_that("fetwfe recovers the known ATT at G = 1", {
 	skip_on_cran()
+	skip_if_not_installed("lme4")
 	fx <- .sc112_sim()
 	res <- .sc112_fit(fx$sim, fetwfe)
 	expect_s3_class(res, "fetwfe")
@@ -188,6 +189,7 @@ test_that("fetwfe recovers the known ATT at G = 1", {
 
 test_that("etwfe recovers the known ATT at G = 1", {
 	skip_on_cran()
+	skip_if_not_installed("lme4")
 	fx <- .sc112_sim()
 	res <- .sc112_fit(fx$sim, etwfe)
 	expect_s3_class(res, "fetwfe_etwfe")
@@ -198,6 +200,7 @@ test_that("etwfe recovers the known ATT at G = 1", {
 
 test_that("betwfe recovers the known ATT at G = 1", {
 	skip_on_cran()
+	skip_if_not_installed("lme4")
 	fx <- .sc112_sim()
 	res <- .sc112_fit(fx$sim, betwfe)
 	expect_s3_class(res, "betwfe")
@@ -208,6 +211,7 @@ test_that("betwfe recovers the known ATT at G = 1", {
 
 test_that("twfeCovs fits at G = 1 (biased by design, so finiteness only)", {
 	skip_on_cran()
+	skip_if_not_installed("lme4")
 	fx <- .sc112_sim()
 	res <- .sc112_fit(fx$sim, twfeCovs)
 	expect_s3_class(res, "twfeCovs")
@@ -227,6 +231,7 @@ test_that("twfeCovs fits at G = 1 (biased by design, so finiteness only)", {
 
 test_that("cohort and event_study fusion match at G = 1", {
 	skip_on_cran()
+	skip_if_not_installed("lme4")
 	fx <- .sc112_sim()
 	res_cohort <- .sc112_fit(fx$sim, fetwfe, fusion_structure = "cohort")
 	res_es <- .sc112_fit(fx$sim, fetwfe, fusion_structure = "event_study")
@@ -243,6 +248,7 @@ test_that("cohort and event_study fusion match at G = 1", {
 
 test_that("a custom fusion_matrix fits at G = 1", {
 	skip_on_cran()
+	skip_if_not_installed("lme4")
 	fx <- .sc112_sim()
 	# num_treats = T - 1 = 5 for the offset-2 single cohort; a num_treats x
 	# num_treats fusion matrix (here the identity, i.e. a ridge-on-theta penalty)
@@ -263,6 +269,7 @@ test_that("a custom fusion_matrix fits at G = 1", {
 
 test_that("a scattered-offset (offset 3) single cohort fits and recovers ATT", {
 	skip_on_cran()
+	skip_if_not_installed("lme4")
 	# T = 6, single cohort adopts at t = 3 -> offset 3, num_treats = 4, with a
 	# true additive effect tau = 2.
 	pdata <- .sc112_make_panel(N = 240, T = 6, adopt = 3, tau = 2, seed = 311)
@@ -293,6 +300,7 @@ test_that("a scattered-offset (offset 3) single cohort fits and recovers ATT", {
 # ------------------------------------------------------------------------------
 
 test_that("T = 2 (num_treats = 1) now fits at G = 1", {
+	skip_if_not_installed("lme4")
 	# T = 2, single cohort adopting at t = 2 -> exactly one post-treatment
 	# period -> num_treats = 1.
 	pdata <- .sc112_make_panel(N = 60, T = 2, adopt = 2, tau = 0, seed = 12)
@@ -314,6 +322,7 @@ test_that("T = 2 (num_treats = 1) now fits at G = 1", {
 })
 
 test_that("a late-adopting single cohort (offset = T, num_treats = 1) now fits", {
+	skip_if_not_installed("lme4")
 	# T = 5, single cohort adopts at the FINAL period t = 5 -> one
 	# post-treatment period -> num_treats = 1, despite T >= 3. getNumTreats(G, T)
 	# would report T - 1 = 4 here; the offset-aware count produces a single
@@ -388,6 +397,7 @@ test_that("no-never-treated single cohort adopting at t = 3 trips the cohort che
 # ------------------------------------------------------------------------------
 
 test_that("two-cohort no-never-treated panel truncating to one cohort fits (G = 1)", {
+	skip_if_not_installed("lme4")
 	# Half the units adopt at t = 3, half at t = 5; no never-treated. r_max = 5,
 	# truncation keeps t = 1..4 (>= 2 periods) and retains the t = 3 cohort only
 	# -> a valid single-cohort sub-panel.
@@ -420,6 +430,7 @@ test_that("two-cohort no-never-treated panel truncating to one cohort fits (G = 
 
 test_that("eventStudy, cohortStudy, and simultaneousCIs work at G = 1", {
 	skip_on_cran()
+	skip_if_not_installed("lme4")
 	fx <- .sc112_sim()
 	res <- .sc112_fit(fx$sim, fetwfe)
 
@@ -452,6 +463,7 @@ test_that("eventStudy, cohortStudy, and simultaneousCIs work at G = 1", {
 
 test_that("conservative and cluster SE paths work at G = 1", {
 	skip_on_cran()
+	skip_if_not_installed("lme4")
 	fx <- .sc112_sim()
 
 	res_cons <- .sc112_fit(fx$sim, fetwfe, se_type = "conservative")
@@ -467,6 +479,7 @@ test_that("conservative and cluster SE paths work at G = 1", {
 
 test_that("add_ridge and REML (sig_eps_sq = NA) paths work at G = 1", {
 	skip_on_cran()
+	skip_if_not_installed("lme4")
 	fx <- .sc112_sim()
 
 	# add_ridge at the standard multi-period single-cohort fixture (T = 6,

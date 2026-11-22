@@ -113,6 +113,7 @@ test_that("high-dim simultaneousCIs(bootstrap) accepts q in {0.5,1,2}; band cent
 # no debiasedATT()/simultaneousCIs() test before.
 # ------------------------------------------------------------------------------
 test_that("debiasedATT() and simultaneousCIs() run on a d=0 (no-covariate) panel (#328)", {
+	skip_if_not_installed("lme4")
 	coefs <- genCoefs(
 		G = 3,
 		T = 5,
@@ -170,6 +171,7 @@ test_that("debiasedATT() and simultaneousCIs() run on a d=0 (no-covariate) panel
 })
 
 test_that("debiasedATT() and simultaneousCIs() run on a G=1 (single-cohort) panel (#328)", {
+	skip_if_not_installed("lme4")
 	coefs <- genCoefs(
 		G = 1,
 		T = 5,
@@ -221,6 +223,7 @@ test_that("debiasedATT() and simultaneousCIs() run on a G=1 (single-cohort) pane
 # Gap 5: schema pins for tidy.simultaneous_cis and debiasedATTWithSimulatedData.
 # ------------------------------------------------------------------------------
 test_that("tidy.simultaneous_cis returns the documented column schema (#328)", {
+	skip_if_not_installed("lme4")
 	coefs <- genCoefs(
 		G = 3,
 		T = 6,

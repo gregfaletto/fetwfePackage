@@ -99,6 +99,7 @@ test_that(".simultaneous_bootstrap_crit() applies var_ref in variance units (#48
 }
 
 test_that("a custom contrast whose variance is rounding error gets an NA adjusted p-value at every scale (#489)", {
+	skip_if_not_installed("lme4")
 	ref <- .bdf489_fit(1)
 	est <- cohortTimeATTs(ref)$estimate
 	# The first three cells that share one nonzero estimate.
@@ -184,6 +185,7 @@ test_that("a custom contrast whose variance is rounding error gets an NA adjuste
 )
 
 test_that("a custom family's band does not depend on the scale of its rows' weights (#501)", {
+	skip_if_not_installed("lme4")
 	fits <- list(
 		default = .bdf489_fit(1, sim = .bdf489_sim428),
 		conservative = .bdf489_fit(
@@ -281,6 +283,7 @@ test_that("a custom family's band does not depend on the scale of its rows' weig
 })
 
 test_that("the rule receives the reference sig_eps_sq / (N * T), or var(y) / (N * T) from a fit without sig_eps_sq, the conservative branch's squared standard errors, and a custom family's squared row norms on the analytic, bootstrap, conservative and desparsified routes (#501)", {
+	skip_if_not_installed("lme4")
 	fit <- .bdf489_fit(1, sim = .bdf489_sim428)
 	fit_cons <- .bdf489_fit(1, se_type = "conservative", sim = .bdf489_sim428)
 	real <- fetwfe:::.band_nondegenerate

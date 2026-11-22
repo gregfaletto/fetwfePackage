@@ -48,6 +48,7 @@ test_that("attgtToFetwfeDf: no false 'reversal' warning; output is row-order-inv
 })
 
 test_that("the estimator input validator names NA response / time / indep_counts violations (#397)", {
+	skip_if_not_installed("lme4")
 	cf <- genCoefs(G = 3, T = 5, d = 2, density = 0.5, eff_size = 2, seed = 1)
 	sim <- simulateData(
 		cf,

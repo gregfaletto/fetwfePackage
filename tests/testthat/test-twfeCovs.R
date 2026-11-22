@@ -9,6 +9,7 @@ library(fetwfe)
 # Test 1: Check that valid input produces a list with the expected output elements.
 # ------------------------------------------------------------------------------
 test_that("twfeCovs returns expected output structure with valid input", {
+	skip_if_not_installed("lme4")
 	df <- generate_panel_data(N = 30, T = 5, R = 2, seed = 123)
 
 	result <- twfeCovs(
@@ -200,6 +201,7 @@ test_that("twfeCovs errors when response is not numeric", {
 # Test 9: Warning when alpha > 0.5.
 # ------------------------------------------------------------------------------
 test_that("twfeCovs warns when alpha > 0.5", {
+	skip_if_not_installed("lme4")
 	df <- generate_panel_data(N = 30, T = 5, R = 2, seed = 123)
 
 	expect_warning(
@@ -299,6 +301,7 @@ test_that("twfeCovs errors when data has fewer than 4 rows", {
 # Test 13: Test that the function returns a standard error
 # ------------------------------------------------------------------------------
 test_that("twfeCovs returns att_se", {
+	skip_if_not_installed("lme4")
 	df <- generate_panel_data(N = 30, T = 5, R = 2, seed = 123)
 
 	result1 <- twfeCovs(
@@ -319,6 +322,7 @@ test_that("twfeCovs returns att_se", {
 # Test 14: Test that a warning is thrown when all covariates are constant.
 # ------------------------------------------------------------------------------
 test_that("twfeCovs warns when all covariates are removed due to constant values", {
+	skip_if_not_installed("lme4")
 	df_const <- generate_panel_data(N = 30, T = 5, R = 2, seed = 101)
 	# Set both covariates to a constant value
 	df_const$cov1 <- 1
@@ -344,6 +348,7 @@ test_that("twfeCovs warns when all covariates are removed due to constant values
 # Test 15: Test that the overall ATT (att_hat) is numeric and non-missing.
 # ------------------------------------------------------------------------------
 test_that("twfeCovs returns a valid numeric overall ATT", {
+	skip_if_not_installed("lme4")
 	df <- generate_panel_data(N = 30, T = 5, R = 2, seed = 202)
 
 	result <- twfeCovs(
@@ -409,6 +414,7 @@ test_that("minimal data set requires provided noise variance", {
 # Test 18: Test that function works on only two cohorts
 # ------------------------------------------------------------------------------
 test_that("twfeCovs works on only two cohorts", {
+	skip_if_not_installed("lme4")
 	# Create a balanced panel with N = 6 units and T = 5 time periods.
 	df <- generate_panel_data(N = 30, T = 10, R = 2, seed = 202)
 
@@ -430,6 +436,7 @@ test_that("twfeCovs works on only two cohorts", {
 # Test 19: A single treated cohort (G = 1) is now supported (#112).
 # ------------------------------------------------------------------------------
 test_that("single treated cohort (G = 1) is supported", {
+	skip_if_not_installed("lme4")
 	# A balanced panel with N = 30 units and T = 10 periods. With R = 1 the
 	# helper produces a single treated cohort (adopting at t = 2) plus
 	# never-treated units.
@@ -576,6 +583,8 @@ test_that("Overall and cohort-specific treatment effects are valid", {
 # (processCovs() should issue a warning but continue.)
 # ------------------------------------------------------------------------------
 test_that("Estimator works with no covariates again", {
+	skip_if_not_installed("dplyr")
+	skip_if_not_installed("lme4")
 	set.seed(123456L)
 
 	# 5 time periods, 30 individuals, and 4 waves of treatment
@@ -654,6 +663,7 @@ test_that("Estimator works with no covariates again", {
 # Test 26: Test that adding ridge regularization works
 # ------------------------------------------------------------------------------
 test_that("adding ridge regularization to twfeCovs works", {
+	skip_if_not_installed("lme4")
 	df <- generate_panel_data(N = 30, T = 5, R = 2, seed = 202)
 
 	result <- twfeCovs(
@@ -686,6 +696,7 @@ test_that("adding ridge regularization to twfeCovs works", {
 })
 
 test_that("data application works with ridge penalty", {
+	skip_if_not_installed("bacondecomp")
 	set.seed(23451)
 
 	library(bacondecomp)
@@ -771,6 +782,8 @@ test_that("twfeCovs handles factor covariates appropriately", {
 # Test 29: Check that tibbles work
 # ------------------------------------------------------------------------------
 test_that("tibbles work as input to twfeCovs", {
+	skip_if_not_installed("lme4")
+	skip_if_not_installed("tibble")
 	df <- generate_panel_data(N = 30, T = 5, R = 2, seed = 123) # uses N = 30, T = 10 by default
 
 	result <- twfeCovs(
@@ -823,6 +836,7 @@ test_that("tibbles work as input to twfeCovs", {
 # Test 30: a small-cohort covariate design fits (the d+1 gate is etwfe-only, #395)
 # ------------------------------------------------------------------------------
 test_that("twfeCovs fits a small-cohort covariate design without the d+1 gate (#395)", {
+	skip_if_not_installed("lme4")
 	# R = 9 cohorts across N = 30 units includes cohort(s) with fewer than
 	# d + 1 (= 3) units. The d+1-per-cohort rank condition is a requirement of the
 	# FULL ETWFE design (each cohort's cohort x covariate interaction block);
@@ -890,6 +904,7 @@ test_that("twfeCovs surfaces p_value but not selected in catt_df", {
 # Test: twfeCovs auto-truncates a no-never-treated panel (default)
 # ------------------------------------------------------------------------------
 test_that("twfeCovs auto-truncates a panel with no never-treated units (default)", {
+	skip_if_not_installed("lme4")
 	df_bad <- generate_bad_panel_data(N = 200, T = 10, seed = 123)
 
 	expect_warning(
@@ -920,6 +935,7 @@ test_that("twfeCovs auto-truncates a panel with no never-treated units (default)
 # etwfe Gap 2 test in test-etwfe.R.
 # ------------------------------------------------------------------------------
 test_that("twfeCovs cluster SE is finite and positive on an auto-truncated panel", {
+	skip_if_not_installed("lme4")
 	df_bad <- generate_bad_panel_data(N = 200, T = 10, seed = 123)
 
 	expect_warning(

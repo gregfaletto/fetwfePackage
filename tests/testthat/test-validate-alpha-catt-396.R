@@ -18,11 +18,9 @@
 
 test_that("every CI accessor rejects an invalid alpha with the shared (0, 1) message (#396)", {
 	msg <- "must be a single number in \\(0, 1\\)"
-	# The two formerly-unguarded bug sites: eventStudy() and plot() (both views).
+	# eventStudy().
 	expect_error(eventStudy(.fit_396, alpha = 1.5), msg)
 	expect_error(eventStudy(.fit_396, alpha = NA_real_), msg)
-	expect_error(plot(.fit_396, type = "catt", alpha = 1.5), msg)
-	expect_error(plot(.fit_396, type = "event_study", alpha = 1.5), msg)
 	# The three consolidated sites keep rejecting it (now via the shared helper).
 	expect_error(cohortTimeATTs(.fit_396, alpha = 1.5), msg)
 	expect_error(debiasedATT(.fit_396, alpha = 1.5), msg)
@@ -35,9 +33,14 @@ test_that("every CI accessor rejects an invalid alpha with the shared (0, 1) mes
 	expect_s3_class(eventStudy(.fit_396), "eventStudy")
 	expect_s3_class(eventStudy(.fit_396, alpha = 0.1), "eventStudy")
 	expect_s3_class(cohortTimeATTs(.fit_396, alpha = 0.1), "cohortTimeATTs")
+	# plot(), both views.
+	skip_if_not_installed("ggplot2")
+	expect_error(plot(.fit_396, type = "catt", alpha = 1.5), msg)
+	expect_error(plot(.fit_396, type = "event_study", alpha = 1.5), msg)
 })
 
 test_that("plot(type = 'catt') orders the cohort axis numerically, not alphabetically (#396)", {
+	skip_if_not_installed("ggplot2")
 	# >= 10 cohorts so the string order ("10" before "2") diverges from numeric.
 	cf <- genCoefs(G = 10, T = 12, d = 1, density = 0.5, eff_size = 2, seed = 2)
 	sim <- simulateData(

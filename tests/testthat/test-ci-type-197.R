@@ -416,6 +416,7 @@ test_that("ci_type works across etwfe / betwfe / twfeCovs", {
 # bounds and p-values where se is NA.
 # ------------------------------------------------------------------------------
 test_that("eventStudy() keeps the simultaneous band on a panel with an unreached event time", {
+	skip_if_not_installed("lme4")
 	pdata <- make_scattered_degenerate_panel()
 	fit <- etwfe(
 		pdata = pdata,
@@ -730,6 +731,7 @@ test_that("ci_type x indep_counts: simultaneous band well-formed when indep_coun
 # truncation emits a one-time "auto-truncated" warning).
 # ------------------------------------------------------------------------------
 test_that("ci_type x allow_no_never_treated = TRUE: finalizer handles the auto-truncated degenerate fit", {
+	skip_if_not_installed("lme4")
 	df_bad <- generate_bad_panel_data(N = 200, T = 10, seed = 123)
 	common <- list(
 		pdata = df_bad,
