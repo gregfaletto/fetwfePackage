@@ -184,6 +184,10 @@ test_that("zeroed-out cohorts carry se 0 on a fit with SEs; on a fit without SEs
 		generics::tidy(fit_no_se)$std.error,
 		rep(NA_real_, nrow(fit_no_se$catt_df) + 1L)
 	)
+	expect_identical(
+		cohortTimeATTs(fit_no_se)$se,
+		rep(NA_real_, length(fit_no_se$treat_inds))
+	)
 
 	skip_if_not_installed("broom")
 	for (est in names(fits)) {
