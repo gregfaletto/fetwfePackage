@@ -106,7 +106,7 @@ where $\widehat G^{-1}$ is the Gram inverse on the bridge-selected support and $
 
 The propensity-score piece accounts for variability from estimating the cohort-membership probabilities $\widehat{\pi}_g$. It scales like $1/N$ and is unrelated to the regression residuals. This piece is stored as `result$internal$variance_components$att_var_2`, with paper-notation per-unit-scaled `V_2 = N * att_var_2`.
 
-## 2.3 The combined variance: `tilde_v_N` and the paper's catalogue
+## 2.3 The combined variance: `tilde_v_N` and the paper's catalog
 
 The unit-scaled total variance is
 
