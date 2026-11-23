@@ -1146,7 +1146,7 @@ betwfe_core <- function(
 		# Apply ridge adjustment locally before early-exit return; doesn't
 		# affect later code paths (they re-compute `beta_hat` from
 		# `beta_hat_slopes` separately and run the non-early-exit
-		# `add_ridge` scaling at line ~1108). Plan D3.
+		# `add_ridge` scaling).
 		if (add_ridge) {
 			lambda_ridge <- ifelse(is.na(lambda_ridge), 0, lambda_ridge)
 			beta_hat_slopes <- beta_hat_slopes * (1 + lambda_ridge)

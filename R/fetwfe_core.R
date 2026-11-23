@@ -685,8 +685,7 @@ fetwfe_core <- function(
 		)
 		# Apply ridge adjustment locally before early-exit return; doesn't
 		# affect later code paths (they re-compute `beta_hat` separately
-		# and run the non-early-exit `add_ridge` scaling at line ~1083).
-		# Plan D3.
+		# and run the non-early-exit `add_ridge` scaling).
 		if (add_ridge) {
 			lambda_ridge <- ifelse(is.na(lambda_ridge), 0, lambda_ridge)
 			beta_hat_early_exit <- beta_hat_early_exit * (1 + lambda_ridge)

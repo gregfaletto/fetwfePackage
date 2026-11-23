@@ -230,8 +230,7 @@ test_that(".compute_att_pair() names the te function and stays small (#431 item 
 # is the exhaustive algebraic identity over the (G, T, d) domain, which nothing
 # in the suite provides. This is a CONSOLIDATION-PARITY guardrail: it pins that
 # the folded form equals the pre-fold form, not that either matches
-# the paper, and it cannot detect a formula that was always wrong. Given
-# this PR's "no math changes" criterion, that is the right instrument.
+# the paper, and it cannot detect a formula that was always wrong.
 #
 # num_treats MUST BE BOUND AND NON-ZERO. The identity holds for all num_treats
 # including 0, but the mutation this block guards (getP() folded as

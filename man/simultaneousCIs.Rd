@@ -254,8 +254,7 @@ band is built from the empirical per-unit influence function.
 \strong{Paper grounding.} Theorem (c') tight Gaussianity (Faletto 2025)
 guarantees the joint asymptotic normality; Assumption (Psi-IF) is the
 influence-function condition the package's default
-cohort-sample-proportions estimator satisfies; the fixed-dim framing follows
-the paper's AE point 1(d).
+cohort-sample-proportions estimator satisfies.
 
 \strong{Conservative fallback.} The function falls back to Bonferroni-corrected
 pointwise CIs only when the fit was made with \code{se_type = "conservative"}

@@ -820,9 +820,8 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	# Diagonal: (S_V - pi_g)/S_V^2 * d_inv_treat_sel[idx(g, e), ]
 	# Off-diagonal: subtract pi_{g'}/S_V^2 * d_inv_treat_sel[idx(g', e), ]
 	# for g' in V_e \ {g}. Off-diagonal coefficient uses the COLUMN-index
-	# pi_{g'}. Consolidated into `.build_jacobian()`
-	# (#192, WORKFLOW_LESSONS §14 Class A); the per-effect-masked path returns
-	# this construction byte-identically.
+	# pi_{g'}. Consolidated into `.build_jacobian()` (#192); the
+	# per-effect-masked path returns this construction byte-identically.
 	jacobian_e <- .build_jacobian(
 		cohort_probs_overall = cohort_probs_overall,
 		G = G,

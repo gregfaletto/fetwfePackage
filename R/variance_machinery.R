@@ -1412,8 +1412,8 @@ getSecondVarTermDataApp <- function(
 	## Each column block of d_inv_treat_sel belongs to a selected theta coordinate;
 	## averaging the rows of cohorts gives the vector needed to multiply theta_sel.
 	##
-	## Consolidated into `.build_jacobian()` (#192, WORKFLOW_LESSONS §14 Class
-	## A); the FETWFE scalar-block-averaging path (d_inv non-NULL) returns the
+	## Consolidated into `.build_jacobian()` (#192); the FETWFE
+	## scalar-block-averaging path (d_inv non-NULL) returns the
 	## G x p_sel block-averaged Jacobian byte-identically.
 	jacobian_mat <- .build_jacobian(
 		cohort_probs_overall = cohort_probs_overall,
@@ -1465,8 +1465,7 @@ getSecondVarTermDataApp <- function(
 #' three pre-#192 inline Jacobian-build sites
 #' (`getSecondVarTermOLS()`, `getSecondVarTermDataApp()`, and
 #' `.event_study_var2_fetwfe()` in `R/event_study.R`) plus the new
-#' `simultaneousCIs()` call site into one helper (WORKFLOW_LESSONS section 14 Class A:
-#' the third copy triggers a refactor). All four sites implement the same
+#' `simultaneousCIs()` call site into one helper. All four sites implement the same
 #' delta-method gradient of \eqn{f_g(\pi)=\pi_g/\sum_k \pi_k}; the column-index
 #' off-diagonal coefficient \eqn{J_{rs}=-\pi_s/S^2} matches the explicit Jacobian
 #' in the proof of paper Theorem 6.1 (label `main.te.cons.thm`). Prior to

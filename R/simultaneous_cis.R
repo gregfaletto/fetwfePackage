@@ -252,8 +252,7 @@ utils::globalVariables(c(
 #' **Paper grounding.** Theorem (c') tight Gaussianity (Faletto 2025)
 #' guarantees the joint asymptotic normality; Assumption (Psi-IF) is the
 #' influence-function condition the package's default
-#' cohort-sample-proportions estimator satisfies; the fixed-dim framing follows
-#' the paper's AE point 1(d).
+#' cohort-sample-proportions estimator satisfies.
 #'
 #' **Conservative fallback.** The function falls back to Bonferroni-corrected
 #' pointwise CIs only when the fit was made with `se_type = "conservative"`
@@ -1101,7 +1100,7 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 					call. = FALSE
 				)
 			}
-			# Paper grounding (WORKFLOW_LESSONS §12): Theorem (c') tight
+			# Paper grounding: Theorem (c') tight
 			# Gaussianity (Faletto 2025) gives the joint
 			# Z = sqrt(N) * (theta_hat - theta_0) -> N(0, V); the simultaneous
 			# (1 - alpha) critical value is the (1 - alpha) quantile of

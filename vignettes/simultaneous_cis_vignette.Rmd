@@ -54,7 +54,7 @@ res_default <- fetwfe(
 
 The package's per-point standard errors and Wald intervals deliver `(1 - alpha)` coverage *per effect*: for any single cohort ATT, or any single event-time coefficient, the CI contains the true value with probability approximately `1 - alpha`. But when you make a claim involving multiple effects jointly --- for example, "no event-time coefficient is significantly positive at the 5% level" --- per-effect coverage does not imply family-wise coverage. The probability that *every* coefficient in a family of `K` effects lies in its per-point CI can be far below `1 - alpha` when `K` is large.
 
-`simultaneousCIs()` returns intervals that maintain family-wise coverage at the requested `1 - alpha`, using the exact joint multivariate-normal critical value $c_{1-\alpha}$ defined as the $(1 - \alpha)$ quantile of $\max_k |Z_k|$ where $Z \sim N(0, \rho)$ and $\rho$ is the correlation matrix of the effect family's joint covariance. Under Theorem (c$'$) and Assumption $(\Psi\text{-IF})$, this joint Gaussianity is exact asymptotically; under the paper's fixed-dim framing (AE 1(d)), no high-dimensional correction is needed.
+`simultaneousCIs()` returns intervals that maintain family-wise coverage at the requested `1 - alpha`, using the exact joint multivariate-normal critical value $c_{1-\alpha}$ defined as the $(1 - \alpha)$ quantile of $\max_k |Z_k|$ where $Z \sim N(0, \rho)$ and $\rho$ is the correlation matrix of the effect family's joint covariance. Under Theorem (c$'$) and Assumption $(\Psi\text{-IF})$, this joint Gaussianity is exact asymptotically; under the paper's fixed-dim framing, no high-dimensional correction is needed.
 
 For an event-study family on the fitted `res_default` object from the setup above:
 
