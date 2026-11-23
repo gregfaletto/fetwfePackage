@@ -776,10 +776,7 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #' `getSecondVarTermDataApp` in `R/variance_machinery.R` (the cohort-block time-
 #' averaging is replaced by a single-row selection at `idx(g, e)`, and
 #' `cohort_probs_overall` is masked to zero outside `V_e`). Both helpers
-#' take their Jacobian from `.build_jacobian()`, whose off-diagonal
-#' coefficient `J_{rs} = -pi_s / S^2` uses the column-index marginal cohort
-#' probability. (Prior to v1.8.0 the off-diagonal coefficient was indexed by
-#' the outer-loop row; see issue #46.)
+#' take their Jacobian from `.build_jacobian()`.
 #'
 #' The returned value is floored at zero and diagnosed by
 #' `.floor_cohort_prob_var()` (#474). It carried NO floor at all until then,
