@@ -288,7 +288,7 @@ cta <- cohortTimeATTs(res_demo)
 head(cta)
 ```
 
-Its standard errors are the per-cell regression standard errors, recomputed from the fit exactly as `eventStudy()` does (each cell is a single coefficient, so the cohort-probability sampling variance that contributes to the aggregated SEs is identically zero here). Confidence intervals and p-values are pointwise; a cell the fusion penalty zeroed out has `estimate = 0`, `se = 0`, and `selected = FALSE`. `broom::tidy()` works here too (`term = "cohort_<g>_time_<t>"`). For simultaneous (family-wise) bands over the `(cohort, time)` cell family, use `simultaneousCIs(res_demo, family = "all_post_treatment")`.
+Its standard errors are the per-cell regression standard errors, recomputed from the fit exactly as `eventStudy()` does (each cell is a single coefficient, so the cohort-probability sampling variance that contributes to the aggregated SEs is identically zero here). Confidence intervals and p-values are pointwise; a cell the fusion penalty zeroed out has `estimate = 0` and `selected = FALSE`. `broom::tidy()` works here too (`term = "cohort_<g>_time_<t>"`). For simultaneous (family-wise) bands over the `(cohort, time)` cell family, use `simultaneousCIs(res_demo, family = "all_post_treatment")`.
 
 ```{r cohort-time-atts-tidy, eval = requireNamespace("broom", quietly = TRUE)}
 head(broom::tidy(cta))

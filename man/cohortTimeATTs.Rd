@@ -82,9 +82,7 @@ inverse fusion transform \eqn{D^{-1}} in the transformed (theta) coordinate
 space, for \code{betwfe()} / \code{etwfe()} a unit selector in the original (beta)
 coordinate space restricted to the selected support. It is
 never gated on the point estimate: a cell whose estimate is exactly zero
-because the penalty fused it away has an all-zero \code{psi}, while a cell whose
-estimate happens to be near zero for other reasons still receives its proper
-nonzero SE.
+because the penalty fused it away has an all-zero \code{psi}.
 }
 \examples{
 \dontrun{

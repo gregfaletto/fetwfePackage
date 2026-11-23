@@ -144,8 +144,7 @@
 	# blocks (3 + 4); BETWFE blocks (1 + 2) omit it.
 	# Variance-component slots (issue #141/#146): when the bridge zeros
 	# out every coefficient, `att_var_1` / `att_var_2` are zero (mirroring
-	# `att_se = 0` under `q < 1`) or NA (mirroring `att_se = NA` under
-	# `q >= 1`).
+	# `att_se = 0`) or NA (mirroring `att_se = NA`).
 	ret_var <- if (ses_valid) 0 else NA
 
 	out <- list(

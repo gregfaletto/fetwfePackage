@@ -1814,7 +1814,7 @@ getSecondVarTermDataApp <- function(
 #'   `getPsiGUnfused()` and no `d_inv_treat_sel` is returned.
 #' @param calc_ses Logical; if `TRUE`, attempts to calculate standard errors.
 #'   For OLS callers pass `TRUE` (the gram-matrix inverse is needed
-#'   unconditionally for SEs); for bridge callers pass `q < 1`.
+#'   unconditionally for SEs).
 #' @param include_selected Logical; if `TRUE`, appends a trailing `selected =
 #'   cohort_tes != 0` column to `cohort_te_df`. The column is meaningful only
 #'   when a bridge penalty produced the `tes` (FETWFE / BETWFE), so OLS

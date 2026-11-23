@@ -14,9 +14,7 @@
 # eventStudy per-event-time machinery specialized to a singleton validity set
 # `V_e = {g}`: the second variance term `var_2` (cohort-probability sampling)
 # vanishes identically, and the per-cell SE is the pure regression `var_1`
-# `sqrt(sig_eps_sq * psi' gram_inv psi / (N * T))`. The SE is driven entirely by
-# `psi` (NOT gated on `estimate == 0`): a cell fused/zeroed away has an all-zero
-# `psi`.
+# `sqrt(sig_eps_sq * psi' gram_inv psi / (N * T))`.
 
 #' Per-(cohort, time) average treatment effects
 #'
@@ -93,9 +91,7 @@
 #' space, for `betwfe()` / `etwfe()` a unit selector in the original (beta)
 #' coordinate space restricted to the selected support. It is
 #' never gated on the point estimate: a cell whose estimate is exactly zero
-#' because the penalty fused it away has an all-zero `psi`, while a cell whose
-#' estimate happens to be near zero for other reasons still receives its proper
-#' nonzero SE.
+#' because the penalty fused it away has an all-zero `psi`.
 #'
 #' @seealso [cohortStudy()] for the per-cohort (time-averaged) accessor;
 #'   [eventStudy()] for the per-event-time (cohort-averaged) accessor;
