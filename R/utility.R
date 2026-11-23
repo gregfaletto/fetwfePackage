@@ -2477,8 +2477,8 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #'   across `R/fetwfe_core.R` and `R/betwfe_core.R`. The duplication was
 #'   a documented drift risk (issue #119); future fixes to the lambda
 #'   path now have a single landing site.
-#' @param X_final_scaled Numeric matrix; the design matrix (typically
-#'   GLS-then-fusion transformed and scaled).
+#' @param X_final_scaled Numeric matrix; `X_final_scaled` from
+#'   `prep_for_etwfe_regression()`.
 #' @param y_final Numeric vector; `.dispatch_bridge_selection()`'s `y_final`,
 #'   in the units that function fits it in.
 #' @param q Numeric scalar; the bridge-penalty exponent passed as `gamma` to
