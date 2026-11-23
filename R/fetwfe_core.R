@@ -380,9 +380,8 @@ checkFetwfeInputs <- function(
 #'       \item Extracts cohort-specific average treatment effects (CATTs) from
 #'         `beta_hat`.
 #'       \item Calls `getCohortATTsFinal` to calculate CATT point estimates,
-#'         standard errors (when `calc_ses` is `TRUE`), and confidence
-#'         intervals. This involves computing the Gram matrix and related
-#'         quantities.
+#'         standard errors, and confidence intervals. This involves computing
+#'         the Gram matrix and related quantities.
 #'     }
 #'   \item **Overall ATT Calculation:** Calls `getTeResults2` to calculate the
 #'     overall average treatment effect on the treated (ATT) and its standard

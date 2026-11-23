@@ -28,16 +28,16 @@ carry their actual time values. For synthetic \code{genCoefs()} /
 \code{simulateData()} fixtures (whose panel runs \verb{1, ..., T}) this coincides
 with the 1-based panel-time index.}
 \item{estimate}{Numeric; the cell's ATT estimate.}
-\item{se}{Numeric; the pointwise standard error. \code{0} for a cell zeroed
-out by the fusion/bridge penalty while other cells survive
-(\code{fetwfe()} / \code{betwfe()}); \code{NA} when standard errors are unavailable ---
-the fit was computed with \code{q >= 1}, the Gram matrix on the selected
-support is singular, or the penalty zeroed the \emph{entire} treatment block
-(no cells selected, so there is no support to recompute the Gram from;
-this matches \code{\link[=eventStudy]{eventStudy()}}).}
+\item{se}{Numeric; the pointwise standard error. \code{NA} when standard
+errors are unavailable --- the fit computed none (\code{calc_ses} is
+\code{FALSE}), the Gram matrix on the selected support is singular, or the
+penalty zeroed the \emph{entire} treatment block (no cells selected, so there
+is no support to recompute the Gram from; this matches \code{\link[=eventStudy]{eventStudy()}}).
+Otherwise \code{0} for a cell zeroed out by the fusion/bridge penalty while
+other cells survive (\code{fetwfe()} / \code{betwfe()}).}
 \item{ci_low, ci_high}{Numeric; the pointwise \code{1 - alpha} Wald bounds
-\verb{estimate -/+ qnorm(1 - alpha/2) * se}. \verb{(0, 0)} for a fused-away cell;
-\code{NA} when \code{se} is \code{NA}.}
+\verb{estimate -/+ qnorm(1 - alpha/2) * se}. \code{NA} when \code{se} is \code{NA};
+otherwise \verb{(0, 0)} for a fused-away cell.}
 \item{p_value}{Numeric; the two-sided pointwise Wald p-value
 \verb{2 * pnorm(-|estimate / se|)}. \code{NA} when \code{se} is \code{0} or \code{NA}.}
 \item{selected}{(\code{fetwfe()} / \code{betwfe()} only.) Logical; \code{TRUE} when the
@@ -82,9 +82,9 @@ inverse fusion transform \eqn{D^{-1}} in the transformed (theta) coordinate
 space, for \code{betwfe()} / \code{etwfe()} a unit selector in the original (beta)
 coordinate space restricted to the selected support. It is
 never gated on the point estimate: a cell whose estimate is exactly zero
-because the penalty fused it away has an all-zero \code{psi} and therefore
-\code{se = 0} (the correct degenerate value), while a cell whose estimate happens
-to be near zero for other reasons still receives its proper nonzero SE.
+because the penalty fused it away has an all-zero \code{psi}, while a cell whose
+estimate happens to be near zero for other reasons still receives its proper
+nonzero SE.
 }
 \examples{
 \dontrun{

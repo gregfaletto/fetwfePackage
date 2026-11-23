@@ -123,7 +123,7 @@ cbind(
 )
 ```
 
-Because the tidiers pass the object's bounds straight through, every CI surface in the package agrees under the default: `broom::tidy(fit)`'s cohort rows, `summary(fit)`, `cohortStudy(fit)`, and `plot(fit, type = "catt")` all report the same simultaneous bounds. (The overall-ATT row of `broom::tidy(fit)` stays the scalar pointwise interval.) When standard errors are unavailable (`q >= 1` for the bridge estimators, or a rank-deficient design) the bounds are `NA` under both settings, and the fit still succeeds --- the simultaneous path degrades cleanly to the (`NA`) pointwise bounds rather than throwing an error.
+Because the tidiers pass the object's bounds straight through, every CI surface in the package agrees under the default: `broom::tidy(fit)`'s cohort rows, `summary(fit)`, `cohortStudy(fit)`, and `plot(fit, type = "catt")` all report the same simultaneous bounds. (The overall-ATT row of `broom::tidy(fit)` stays the scalar pointwise interval.) When standard errors are unavailable, the bounds are `NA` under both settings, and the fit still succeeds --- the simultaneous path degrades cleanly to the (`NA`) pointwise bounds rather than throwing an error.
 
 # 2. Selection consistency as an implicit zero-effect test
 
@@ -132,7 +132,7 @@ A question applied users ask constantly is: *is this cohort's treatment effect d
 * `selected = TRUE` (estimate $\neq 0$) is the asymptotic analogue of **reject $H_0$**: the effect is nonzero.
 * `selected = FALSE` (estimate exactly $0$) is the asymptotic analogue of **fail to reject $H_0$** --- and, under Theorem 6.2, it is the *stronger* statement that the truth is zero with probability tending to one.
 
-The conclusion for a selected-out cohort is delivered by the `selected` flag, **not** by a p-value. A cohort the penalty zeros out has `estimate == 0`, `se == 0`, and `p_value == NA` by construction --- there is no Wald p-value to read, and the inferential content lives entirely in `selected`. (A condensed, first-time-user-oriented version of this discussion appears under "Testing the zero-effect null" in the main package vignette; the treatment here is the deeper, inference-focused one.)
+The conclusion for a selected-out cohort is delivered by the `selected` flag, **not** by a p-value. On a fit with standard errors, a cohort the penalty zeros out has `estimate == 0`, `se == 0`, and `p_value == NA` by construction --- there is no Wald p-value to read, and the inferential content lives entirely in `selected`. (A condensed, first-time-user-oriented version of this discussion appears under "Testing the zero-effect null" in the main package vignette; the treatment here is the deeper, inference-focused one.)
 
 ## Why this is stronger than a confidence interval on an unregularized estimator
 

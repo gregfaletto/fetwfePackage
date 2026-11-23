@@ -16,8 +16,7 @@
 # vanishes identically, and the per-cell SE is the pure regression `var_1`
 # `sqrt(sig_eps_sq * psi' gram_inv psi / (N * T))`. The SE is driven entirely by
 # `psi` (NOT gated on `estimate == 0`): a cell fused/zeroed away has an all-zero
-# `psi`, hence `se = 0` and `(0, 0)` bounds, which is the correct degenerate
-# answer rather than a missing one.
+# `psi`.
 
 #' Per-(cohort, time) average treatment effects
 #'
@@ -68,16 +67,16 @@
 #'       `simulateData()` fixtures (whose panel runs `1, ..., T`) this coincides
 #'       with the 1-based panel-time index.}
 #'     \item{estimate}{Numeric; the cell's ATT estimate.}
-#'     \item{se}{Numeric; the pointwise standard error. `0` for a cell zeroed
-#'       out by the fusion/bridge penalty while other cells survive
-#'       (`fetwfe()` / `betwfe()`); `NA` when standard errors are unavailable ---
-#'       the fit was computed with `q >= 1`, the Gram matrix on the selected
-#'       support is singular, or the penalty zeroed the *entire* treatment block
-#'       (no cells selected, so there is no support to recompute the Gram from;
-#'       this matches [eventStudy()]).}
+#'     \item{se}{Numeric; the pointwise standard error. `NA` when standard
+#'       errors are unavailable --- the fit computed none (`calc_ses` is
+#'       `FALSE`), the Gram matrix on the selected support is singular, or the
+#'       penalty zeroed the *entire* treatment block (no cells selected, so there
+#'       is no support to recompute the Gram from; this matches [eventStudy()]).
+#'       Otherwise `0` for a cell zeroed out by the fusion/bridge penalty while
+#'       other cells survive (`fetwfe()` / `betwfe()`).}
 #'     \item{ci_low, ci_high}{Numeric; the pointwise `1 - alpha` Wald bounds
-#'       `estimate -/+ qnorm(1 - alpha/2) * se`. `(0, 0)` for a fused-away cell;
-#'       `NA` when `se` is `NA`.}
+#'       `estimate -/+ qnorm(1 - alpha/2) * se`. `NA` when `se` is `NA`;
+#'       otherwise `(0, 0)` for a fused-away cell.}
 #'     \item{p_value}{Numeric; the two-sided pointwise Wald p-value
 #'       `2 * pnorm(-|estimate / se|)`. `NA` when `se` is `0` or `NA`.}
 #'     \item{selected}{(`fetwfe()` / `betwfe()` only.) Logical; `TRUE` when the
@@ -94,9 +93,9 @@
 #' space, for `betwfe()` / `etwfe()` a unit selector in the original (beta)
 #' coordinate space restricted to the selected support. It is
 #' never gated on the point estimate: a cell whose estimate is exactly zero
-#' because the penalty fused it away has an all-zero `psi` and therefore
-#' `se = 0` (the correct degenerate value), while a cell whose estimate happens
-#' to be near zero for other reasons still receives its proper nonzero SE.
+#' because the penalty fused it away has an all-zero `psi`, while a cell whose
+#' estimate happens to be near zero for other reasons still receives its proper
+#' nonzero SE.
 #'
 #' @seealso [cohortStudy()] for the per-cohort (time-averaged) accessor;
 #'   [eventStudy()] for the per-event-time (cohort-averaged) accessor;
@@ -137,8 +136,7 @@ cohortTimeATTs <- function(result, alpha = NULL) {
 		)
 	}
 
-	# Validate the object and derive the SE-validity gate (the #73 contract:
-	# SEs are NA when the fit was computed with q >= 1). Reuses the same
+	# Validate the object and derive the SE-validity gate. Reuses the same
 	# precondition eventStudy() / simultaneousCIs() use.
 	contract <- .check_for_event_study(result)
 	x <- result

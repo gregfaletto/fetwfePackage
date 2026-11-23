@@ -1496,7 +1496,7 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #' `2 * pnorm(-|t|)` p-value for rows where the standard error is positive,
 #' and `NA_real_` for rows where the standard error is zero or `NA`. The
 #' zero-SE case happens when the estimator zeros a coefficient (selected
-#' out under FETWFE / BETWFE bridge regression with `q < 1`), or in
+#' out under FETWFE / BETWFE bridge regression when `calc_ses` is `TRUE`), or in
 #' degenerate fallback paths where SEs cannot be computed. Routing all
 #' p-value computation through this single helper avoids the
 #' `0 / 0 = NaN` trap and gives one canonical formula to audit.
@@ -2281,18 +2281,13 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #' `res$calc_ses` is `TRUE`; the in-sample branch carries no SE-non-NA
 #' guard for these callers. Consolidated by GitHub #79.
 #' @param res A list returned by `fetwfe_core()`, `etwfe_core()`,
-#'   `betwfe_core()`, or `twfeCovs_core()`. Required fields are
-#'   `att_hat`, `att_se`, `cohort_probs`, `cohort_probs_overall`,
-#'   `indep_att_hat`, `indep_att_se`, `indep_cohort_probs`,
-#'   `indep_cohort_probs_overall`, `in_sample_att_hat`,
-#'   `in_sample_att_se`, and `calc_ses`.
+#'   `betwfe_core()`, or `twfeCovs_core()`.
 #' @param indep_count_data_available Logical scalar; if `TRUE`, the
 #'   indep_* branch is selected.
 #' @param q Numeric scalar; the bridge penalty exponent. `NA` (default)
 #'   for etwfe/twfeCovs callers; non-NA for fetwfe/betwfe callers.
 #'   Selects which SE-non-NA guards run (see Description).
-#' @return A list with four elements: `att_hat`, `att_se`,
-#'   `cohort_probs`, `cohort_probs_overall`.
+#' @return A list.
 #' @keywords internal
 #' @noRd
 .select_att_branch <- function(
@@ -2310,8 +2305,7 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 				stopifnot(!is.na(res$indep_att_se))
 			}
 		} else {
-			# Issue #84 item 8: gated on `calc_ses`, so a fit whose SEs were
-			# intentionally not computed does not stop here.
+			# Issue #84 item 8.
 			if (res$calc_ses) {
 				stopifnot(!is.na(res$indep_att_se))
 			}
