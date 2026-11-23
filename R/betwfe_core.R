@@ -61,7 +61,7 @@
 #' `lme4::lmer` (Bates et al. 2015; Patterson & Thompson 1971). When both
 #' variances are supplied, `sig_eps_sq` also sets the scale of the bridge
 #' penalty's grid (the response is divided by `sqrt(sig_eps_sq)` before the
-#' fit), so at `q != 1` a value supplied in the wrong units moves the
+#' fit), so at `q != 1` a value supplied in the wrong units can move the
 #' estimates, not only their standard errors. Default is NA.
 #' @param sig_eps_c_sq (Optional.) Numeric; the variance of the unit-level IID
 #' noise (random effects) assumed to apply to each observation. See Section 2 of
