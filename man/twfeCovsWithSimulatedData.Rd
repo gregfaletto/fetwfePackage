@@ -38,21 +38,10 @@ behavior prior to version 1.5.6). The argument has no effect when the input
 already contains never-treated units. Default is \code{TRUE}.}
 
 \item{se_type}{Character; one of \code{"default"}, \code{"conservative"}, or
-\code{"cluster"}. \code{"default"} returns the tight Gaussian variance
-\code{sqrt(att_var_1 + att_var_2)}, which is asymptotically exact for the
-package's default cohort sample-proportions estimator by the argument of
-Theorem (c$'$) under Assumption (Psi-IF) applied to least squares on
-\code{twfeCovs()}'s GLS-whitened model, so it holds when that model does (see
-the Description of \code{\link[=twfeCovs]{twfeCovs()}}). In \code{twfeCovs()}, \code{"conservative"}
-returns the Cauchy-Schwarz upper bound from Theorem (c), meant for a
-propensity-score estimator that violates (Psi-IF). This wrapper passes
-the simulator's independent cohort counts (\code{simulated_obj$indep_counts})
-to \code{twfeCovs()}, so its fit is the two-sample case and \code{"conservative"}
-gives the same \code{att_se} as \code{"default"}. \code{"cluster"} is an
-\emph{experimental} unit-clustered Liang-Zeger sandwich SE on the
-OLS-selected support (see the companion vignette \code{inference_vignette}
-for the formula, the assumptions, and the theory-pending caveat).
-Default is \code{"default"}.}
+\code{"cluster"}, as in \code{\link[=twfeCovs]{twfeCovs()}}; see its \code{se_type} entry. This wrapper
+passes the simulator's independent cohort counts
+(\code{simulated_obj$indep_counts}) to \code{twfeCovs()}, so \code{"conservative"} gives
+the same \code{att_se} as \code{"default"}. Default is \code{"default"}.}
 
 \item{ci_type}{Character; one of \code{"simultaneous"} (default) or
 \code{"pointwise"}. Controls the confidence-interval bounds reported for the

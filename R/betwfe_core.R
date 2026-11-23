@@ -562,25 +562,9 @@ betwfe <- function(
 #' behavior prior to version 1.5.6). The argument has no effect when the input
 #' already contains never-treated units. Default is `TRUE`.
 #' @param se_type Character; one of `"default"`, `"conservative"`, or
-#' `"cluster"`. `"default"` returns the tight Gaussian variance
-#' `sqrt(att_var_1 + att_var_2)`: Theorem (c$'$) under Assumption (Psi-IF),
-#' with the paper's differences matrix `D_N` the identity on every
-#' coefficient block, since `betwfe()` applies the bridge penalty to the
-#' coefficients themselves. This is asymptotically exact for the package's
-#' default cohort sample-proportions estimator and for every standard
-#' propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
-#' any GLM on `W | X`, kernel/series regression of `1{W = g}` on `X`).
-#' In `betwfe()`, `"conservative"` returns the Cauchy-Schwarz upper bound
-#' from Theorem (c), meant for a propensity-score estimator that violates
-#' (Psi-IF). This wrapper passes the simulator's independent cohort counts
-#' (`simulated_obj$indep_counts`) to `betwfe()`, so its fit is the
-#' two-sample case and `"conservative"` gives the same `att_se` as
-#' `"default"`.
-#' `"cluster"` is an *experimental* unit-clustered Liang-Zeger sandwich
-#' SE on the bridge-selected support (see the companion vignette
-#' `inference_vignette` for details). `"cluster"` is only meaningful
-#' when `q < 1` (the bridge oracle property is required); for `q >= 1`
-#' the SE will be `NA` regardless of `se_type`.
+#' `"cluster"`, as in [betwfe()]; see its `se_type` entry. This wrapper passes
+#' the simulator's independent cohort counts (`simulated_obj$indep_counts`) to
+#' `betwfe()`, so `"conservative"` gives the same `att_se` as `"default"`.
 #' Default is `"default"`.
 #' @param lambda_selection Character; method for selecting the bridge
 #'   penalty parameter `lambda`. Either `"cv"` (10-fold cross-validation

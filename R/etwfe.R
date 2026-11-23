@@ -97,9 +97,8 @@
 #' which the package does not currently implement). Supplying
 #' `indep_counts` makes `"conservative"` give the same standard error as
 #' `"default"`. `"cluster"` is an
-#' *experimental* unit-clustered Liang-Zeger sandwich SE on the
-#' OLS-selected support (see the companion vignette
-#' `inference_vignette` for the formula, the assumptions, and the
+#' *experimental* unit-clustered Liang-Zeger sandwich SE (see the companion
+#' vignette `inference_vignette` for the formula, the assumptions, and the
 #' theory-pending caveat). The default value of `"default"` corresponds
 #' to the new tight Gaussian default introduced in version 1.12.0;
 #' previous versions used the conservative Cauchy-Schwarz formula as the
@@ -373,25 +372,9 @@ etwfe <- function(
 #' behavior prior to version 1.5.6). The argument has no effect when the input
 #' already contains never-treated units. Default is `TRUE`.
 #' @param se_type Character; one of `"default"`, `"conservative"`, or
-#' `"cluster"`. `"default"` returns the tight Gaussian variance
-#' `sqrt(att_var_1 + att_var_2)`, by the argument of Theorem (c$'$) under
-#' Assumption (Psi-IF) with no selection step: `etwfe()` is least squares on
-#' the GLS-whitened full design. This is asymptotically exact for the
-#' package's default cohort sample-proportions estimator and for every
-#' standard propensity-score estimator that satisfies (Psi-IF) (multinomial
-#' logit, any GLM on `W | X`, kernel/series regression of `1{W = g}` on `X`).
-#' In `etwfe()`, `"conservative"` returns the Cauchy-Schwarz upper bound
-#' `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from
-#' Theorem (c), meant for a propensity-score estimator that violates
-#' (Psi-IF) (e.g., a Robins-Rotnitzky-augmented doubly-robust estimator,
-#' which the package does not currently implement). This wrapper passes the
-#' simulator's independent cohort counts (`simulated_obj$indep_counts`) to
-#' `etwfe()`, so its fit is the two-sample case and `"conservative"` gives
-#' the same `att_se` as `"default"`. `"cluster"` is an
-#' *experimental* unit-clustered Liang-Zeger sandwich SE on the
-#' OLS-selected support (see the companion vignette
-#' `inference_vignette` for the formula, the assumptions, and the
-#' theory-pending caveat).
+#' `"cluster"`, as in [etwfe()]; see its `se_type` entry. This wrapper passes
+#' the simulator's independent cohort counts (`simulated_obj$indep_counts`) to
+#' `etwfe()`, so `"conservative"` gives the same `att_se` as `"default"`.
 #' @param ci_type Character; one of `"simultaneous"` (default) or
 #'   `"pointwise"`. Controls the confidence-interval bounds reported for the
 #'   cohort-specific ATTs (in `catt_df`) and the event-study effects (from

@@ -99,9 +99,9 @@
 #' propensity-score estimator violates (Psi-IF)). Supplying `indep_counts`
 #' makes `"conservative"` give the same standard error as `"default"`.
 #' `"cluster"` is an
-#' *experimental* unit-clustered Liang-Zeger sandwich SE on the
-#' OLS-selected support (see the companion vignette `inference_vignette`
-#' for the formula, the assumptions, and the theory-pending caveat).
+#' *experimental* unit-clustered Liang-Zeger sandwich SE (see the companion
+#' vignette `inference_vignette` for the formula, the assumptions, and the
+#' theory-pending caveat).
 #' Default is `"default"`. v1.12.0 introduced the tight Gaussian default;
 #' versions <= 1.11.7 used the conservative Cauchy-Schwarz formula as
 #' the default.
@@ -368,21 +368,10 @@ twfeCovs <- function(
 #' behavior prior to version 1.5.6). The argument has no effect when the input
 #' already contains never-treated units. Default is `TRUE`.
 #' @param se_type Character; one of `"default"`, `"conservative"`, or
-#' `"cluster"`. `"default"` returns the tight Gaussian variance
-#' `sqrt(att_var_1 + att_var_2)`, which is asymptotically exact for the
-#' package's default cohort sample-proportions estimator by the argument of
-#' Theorem (c$'$) under Assumption (Psi-IF) applied to least squares on
-#' `twfeCovs()`'s GLS-whitened model, so it holds when that model does (see
-#' the Description of [twfeCovs()]). In `twfeCovs()`, `"conservative"`
-#' returns the Cauchy-Schwarz upper bound from Theorem (c), meant for a
-#' propensity-score estimator that violates (Psi-IF). This wrapper passes
-#' the simulator's independent cohort counts (`simulated_obj$indep_counts`)
-#' to `twfeCovs()`, so its fit is the two-sample case and `"conservative"`
-#' gives the same `att_se` as `"default"`. `"cluster"` is an
-#' *experimental* unit-clustered Liang-Zeger sandwich SE on the
-#' OLS-selected support (see the companion vignette `inference_vignette`
-#' for the formula, the assumptions, and the theory-pending caveat).
-#' Default is `"default"`.
+#' `"cluster"`, as in [twfeCovs()]; see its `se_type` entry. This wrapper
+#' passes the simulator's independent cohort counts
+#' (`simulated_obj$indep_counts`) to `twfeCovs()`, so `"conservative"` gives
+#' the same `att_se` as `"default"`. Default is `"default"`.
 #' @param ci_type Character; one of `"simultaneous"` (default) or
 #'   `"pointwise"`. Controls the confidence-interval bounds reported for the
 #'   cohort-specific ATTs (in `catt_df`). `"simultaneous"` reports parametric

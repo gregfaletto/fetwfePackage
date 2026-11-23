@@ -126,9 +126,9 @@ Cauchy-Schwarz upper bound from Theorem (c) (use only when the
 propensity-score estimator violates (Psi-IF)). Supplying \code{indep_counts}
 makes \code{"conservative"} give the same standard error as \code{"default"}.
 \code{"cluster"} is an
-\emph{experimental} unit-clustered Liang-Zeger sandwich SE on the
-OLS-selected support (see the companion vignette \code{inference_vignette}
-for the formula, the assumptions, and the theory-pending caveat).
+\emph{experimental} unit-clustered Liang-Zeger sandwich SE (see the companion
+vignette \code{inference_vignette} for the formula, the assumptions, and the
+theory-pending caveat).
 Default is \code{"default"}. v1.12.0 introduced the tight Gaussian default;
 versions <= 1.11.7 used the conservative Cauchy-Schwarz formula as
 the default.}

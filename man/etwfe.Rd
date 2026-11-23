@@ -129,9 +129,8 @@ Theorem (c); use only if the propensity-score estimator violates
 which the package does not currently implement). Supplying
 \code{indep_counts} makes \code{"conservative"} give the same standard error as
 \code{"default"}. \code{"cluster"} is an
-\emph{experimental} unit-clustered Liang-Zeger sandwich SE on the
-OLS-selected support (see the companion vignette
-\code{inference_vignette} for the formula, the assumptions, and the
+\emph{experimental} unit-clustered Liang-Zeger sandwich SE (see the companion
+vignette \code{inference_vignette} for the formula, the assumptions, and the
 theory-pending caveat). The default value of \code{"default"} corresponds
 to the new tight Gaussian default introduced in version 1.12.0;
 previous versions used the conservative Cauchy-Schwarz formula as the

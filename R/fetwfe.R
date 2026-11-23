@@ -636,26 +636,9 @@ fetwfe <- function(
 #' behavior prior to version 1.5.6). The argument has no effect when the input
 #' already contains never-treated units. Default is `TRUE`.
 #' @param se_type Character; one of `"default"`, `"conservative"`, or
-#' `"cluster"`. `"default"` returns the tight Gaussian variance
-#' `sqrt(att_var_1 + att_var_2)` from Theorem (c$'$) under Assumption
-#' (Psi-IF); this is asymptotically exact for the package's default
-#' cohort sample-proportions estimator and for every standard
-#' propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
-#' any GLM on `W | X`, kernel/series regression of `1{W = g}` on `X`).
-#' In `fetwfe()`, `"conservative"` returns the Cauchy-Schwarz upper bound
-#' `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from
-#' Theorem (c), meant for a propensity-score estimator that violates
-#' (Psi-IF) (e.g., a Robins-Rotnitzky-augmented doubly-robust estimator,
-#' which the package does not currently implement). This wrapper passes the
-#' simulator's independent cohort counts (`simulated_obj$indep_counts`) to
-#' `fetwfe()`, so its fit is the two-sample case and `"conservative"` gives
-#' the same `att_se` as `"default"`. `"cluster"` is an
-#' *experimental* unit-clustered Liang-Zeger sandwich SE on the
-#' bridge-selected support (see the companion vignette
-#' `inference_vignette` for the formula, the assumptions, and the
-#' theory-pending caveat); only meaningful when `q < 1` (the bridge
-#' oracle property is required), and for `q >= 1` the SE will be `NA`
-#' regardless of `se_type`.
+#' `"cluster"`, as in [fetwfe()]; see its `se_type` entry. This wrapper passes
+#' the simulator's independent cohort counts (`simulated_obj$indep_counts`) to
+#' `fetwfe()`, so `"conservative"` gives the same `att_se` as `"default"`.
 #' @param lambda_selection Character; method for selecting the bridge
 #'   penalty parameter `lambda`. Either `"cv"` (10-fold cross-validation
 #'   on `cv.grpreg`; the v1.13.0+ default) or `"bic"` (BIC over the

@@ -115,7 +115,7 @@ checkEtwfeInputs <- function(
 #'   (tight Gaussian variance under (Psi-IF)),
 #'   `"conservative"` (Cauchy-Schwarz upper bound from Theorem (c) for
 #'   non-(Psi-IF) propensity estimators), or `"cluster"` (experimental
-#'   unit-clustered Liang-Zeger sandwich SE on the OLS-selected support).
+#'   unit-clustered Liang-Zeger sandwich SE).
 #'   See the exported wrapper `etwfe()` for details. Default is
 #'   `"default"`.
 #' @param is_twfe_covs Logical; selects the treatment-effect basis. `FALSE`

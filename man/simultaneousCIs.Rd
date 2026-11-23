@@ -136,11 +136,12 @@ max-T multiplicity-adjusted (family-wise) p-value for each effect, the
 exact dual of the simultaneous band (a coefficient lies outside the
 \code{(1 - alpha)} band iff its adjusted p-value is \verb{< alpha}). Computed via
 \code{mvtnorm::pmvnorm()} over the same correlation matrix the band uses
-(or, under \code{se_type = "conservative"}, the Bonferroni adjustment
-\code{min(1, K * pointwise_p)}). \code{NA} for degenerate effects. (#200)}
+(or, in the conservative fallback described in Details, the
+Bonferroni adjustment \code{min(1, K * pointwise_p)}). \code{NA} for degenerate
+effects. (#200)}
 \item{critical_value}{The simultaneous critical value \verb{c_\{1 - alpha\}}
-(or, when the fit used \code{se_type = "conservative"}, the Bonferroni critical value
-\verb{qnorm(1 - alpha/(2K))} -- see Details).}
+(or, in the conservative fallback described in Details, the Bonferroni
+critical value \verb{qnorm(1 - alpha/(2K))}).}
 \item{pointwise_critical_value}{\code{qnorm(1 - alpha/2)}, for reference.}
 \item{bonferroni_critical_value}{\verb{qnorm(1 - alpha/(2K))}, for reference.}
 \item{family}{The requested family (character).}
@@ -257,11 +258,14 @@ paper line 1268) is the influence-function condition the package's default
 cohort-sample-proportions estimator satisfies; the fixed-dim framing follows
 the paper's AE point 1(d).
 
-\strong{Conservative fallback.} When the fit was made with \code{se_type = "conservative"}, the function
-falls back to Bonferroni-corrected pointwise CIs (the Cauchy-Schwarz upper
-bound used for the conservative scalar SE does not generalize to a \verb{K x K}
-covariance matrix) and emits a brief \code{message()}. The \verb{$critical_value}
-field is set to the Bonferroni value in this branch.
+\strong{Conservative fallback.} The function falls back to Bonferroni-corrected
+pointwise CIs only when the fit was made with \code{se_type = "conservative"}
+and without \code{indep_counts}, under the default \code{method = "analytic"}: the
+Cauchy-Schwarz upper bound used for the conservative scalar SE does not
+generalize to a \verb{K x K} covariance matrix. It then emits a brief
+\code{message()}, and \verb{$critical_value} is the Bonferroni value. Two cases are
+handled before this branch: a fit without standard errors stops, and an
+all-zeroed support returns the degenerate band.
 
 \strong{Numerical integration.} The critical value is computed via
 \code{mvtnorm::qmvnorm(..., algorithm = mvtnorm::GenzBretz())} (mvtnorm's default
@@ -269,8 +273,8 @@ quasi-Monte Carlo integrator; sub-second through \code{K} up to about 100, so no
 \code{K} cap is of practical concern for FETWFE families). \code{mvtnorm} is an
 \code{Imports} dependency (as of version 1.16.0, when simultaneous bands became
 the default reported confidence interval; see the \code{ci_type} argument of
-\code{\link[=fetwfe]{fetwfe()}}). The function uses it only when \code{K > 1} and
-\code{se_type != "conservative"} (the \code{K = 1} and conservative paths bypass the
+\code{\link[=fetwfe]{fetwfe()}}). The function uses it only when \code{K > 1} and the conservative
+fallback does not apply (the \code{K = 1} and fallback paths bypass the
 dependency), and retains a defensive \code{stop()} with an actionable message if
 it is somehow unavailable (e.g., a corrupted install).
 

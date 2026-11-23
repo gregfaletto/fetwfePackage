@@ -38,25 +38,9 @@ behavior prior to version 1.5.6). The argument has no effect when the input
 already contains never-treated units. Default is \code{TRUE}.}
 
 \item{se_type}{Character; one of \code{"default"}, \code{"conservative"}, or
-\code{"cluster"}. \code{"default"} returns the tight Gaussian variance
-\code{sqrt(att_var_1 + att_var_2)}, by the argument of Theorem (c$'$) under
-Assumption (Psi-IF) with no selection step: \code{etwfe()} is least squares on
-the GLS-whitened full design. This is asymptotically exact for the
-package's default cohort sample-proportions estimator and for every
-standard propensity-score estimator that satisfies (Psi-IF) (multinomial
-logit, any GLM on \code{W | X}, kernel/series regression of \verb{1\{W = g\}} on \code{X}).
-In \code{etwfe()}, \code{"conservative"} returns the Cauchy-Schwarz upper bound
-\code{sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))} from
-Theorem (c), meant for a propensity-score estimator that violates
-(Psi-IF) (e.g., a Robins-Rotnitzky-augmented doubly-robust estimator,
-which the package does not currently implement). This wrapper passes the
-simulator's independent cohort counts (\code{simulated_obj$indep_counts}) to
-\code{etwfe()}, so its fit is the two-sample case and \code{"conservative"} gives
-the same \code{att_se} as \code{"default"}. \code{"cluster"} is an
-\emph{experimental} unit-clustered Liang-Zeger sandwich SE on the
-OLS-selected support (see the companion vignette
-\code{inference_vignette} for the formula, the assumptions, and the
-theory-pending caveat).}
+\code{"cluster"}, as in \code{\link[=etwfe]{etwfe()}}; see its \code{se_type} entry. This wrapper passes
+the simulator's independent cohort counts (\code{simulated_obj$indep_counts}) to
+\code{etwfe()}, so \code{"conservative"} gives the same \code{att_se} as \code{"default"}.}
 
 \item{ci_type}{Character; one of \code{"simultaneous"} (default) or
 \code{"pointwise"}. Controls the confidence-interval bounds reported for the

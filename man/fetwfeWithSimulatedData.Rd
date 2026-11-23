@@ -78,26 +78,9 @@ behavior prior to version 1.5.6). The argument has no effect when the input
 already contains never-treated units. Default is \code{TRUE}.}
 
 \item{se_type}{Character; one of \code{"default"}, \code{"conservative"}, or
-\code{"cluster"}. \code{"default"} returns the tight Gaussian variance
-\code{sqrt(att_var_1 + att_var_2)} from Theorem (c$'$) under Assumption
-(Psi-IF); this is asymptotically exact for the package's default
-cohort sample-proportions estimator and for every standard
-propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
-any GLM on \code{W | X}, kernel/series regression of \verb{1\{W = g\}} on \code{X}).
-In \code{fetwfe()}, \code{"conservative"} returns the Cauchy-Schwarz upper bound
-\code{sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))} from
-Theorem (c), meant for a propensity-score estimator that violates
-(Psi-IF) (e.g., a Robins-Rotnitzky-augmented doubly-robust estimator,
-which the package does not currently implement). This wrapper passes the
-simulator's independent cohort counts (\code{simulated_obj$indep_counts}) to
-\code{fetwfe()}, so its fit is the two-sample case and \code{"conservative"} gives
-the same \code{att_se} as \code{"default"}. \code{"cluster"} is an
-\emph{experimental} unit-clustered Liang-Zeger sandwich SE on the
-bridge-selected support (see the companion vignette
-\code{inference_vignette} for the formula, the assumptions, and the
-theory-pending caveat); only meaningful when \code{q < 1} (the bridge
-oracle property is required), and for \code{q >= 1} the SE will be \code{NA}
-regardless of \code{se_type}.}
+\code{"cluster"}, as in \code{\link[=fetwfe]{fetwfe()}}; see its \code{se_type} entry. This wrapper passes
+the simulator's independent cohort counts (\code{simulated_obj$indep_counts}) to
+\code{fetwfe()}, so \code{"conservative"} gives the same \code{att_se} as \code{"default"}.}
 
 \item{lambda_selection}{Character; method for selecting the bridge
 penalty parameter \code{lambda}. Either \code{"cv"} (10-fold cross-validation
