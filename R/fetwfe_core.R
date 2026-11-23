@@ -406,8 +406,8 @@ checkFetwfeInputs <- function(
 #'   \item{lambda_star_model_size}{Number of selected features (excluding the intercept) for `lambda_star`.}
 #'   \item{X_ints}{The original input design matrix from `prepXints`.}
 #'   \item{y}{The original input centered response vector from `prepXints`.}
-#'   \item{X_final}{The design matrix after fusion transformation.}
-#'   \item{y_final}{The response vector.}
+#'   \item{X_final}{See `internal$X_final` in `?fetwfe`'s value.}
+#'   \item{y_final}{See `internal$y_final` in `?fetwfe`'s value.}
 #'   \item{N, T, G, d, p}{Dimensions used in estimation.}
 #' @keywords internal
 #' @noRd

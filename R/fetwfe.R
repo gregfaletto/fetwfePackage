@@ -304,7 +304,7 @@
 #'     \item{X_ints}{The design matrix created containing all interactions, time and cohort dummies, etc.}
 #'     \item{y}{The vector of responses, containing `nrow(X_ints)` entries.}
 #'     \item{X_final}{The design matrix after applying the change in coordinates to fit the model, GLS-whitened when `gls` is `TRUE` (see `gls`).}
-#'     \item{y_final}{The final response, GLS-whitened when `gls` is `TRUE` (see `gls`).}
+#'     \item{y_final}{The final response, GLS-whitened when `gls` is `TRUE` (see `gls`), with `p` zeros appended for the ridge penalty when `add_ridge` is `TRUE`.}
 #'     \item{theta_hat}{The vector of estimated coefficients in the transformed (fused) space, including the intercept as the first element.}
 #'     \item{calc_ses}{Logical indicating whether standard errors were calculated.}
 #'     \item{variance_components}{A list exposing the two variance pieces (`att_var_1`, `att_var_2`) plus their paper-notation counterparts (`V_1`, `V_2`) and the unit-scaled variance estimators (`tilde_v_N`, `hat_v_N`, `tilde_v_N_C`, `tilde_v_N_C_pi_hat`, `tilde_v_N_C_pi_hat_cons`, `tilde_v_N_cons`). The Wald CI is `[hat_T_N +- qnorm(1-alpha/2) * sqrt(tilde_v_N / N)]` (paper Eq. `conf.int.form`). New in v1.12.0 (issue #141 + #146).}
@@ -787,7 +787,7 @@ fetwfe <- function(
 #'     \item{X_ints}{The design matrix created containing all interactions, time and cohort dummies, etc.}
 #'     \item{y}{The vector of responses, containing `nrow(X_ints)` entries.}
 #'     \item{X_final}{The design matrix after applying the change in coordinates to fit the model, GLS-whitened when `gls` is `TRUE` (see `gls`).}
-#'     \item{y_final}{The final response, GLS-whitened when `gls` is `TRUE` (see `gls`).}
+#'     \item{y_final}{The final response, GLS-whitened when `gls` is `TRUE` (see `gls`), with `p` zeros appended for the ridge penalty when `add_ridge` is `TRUE`.}
 #'     \item{theta_hat}{The vector of estimated coefficients in the transformed (fused) space, including the intercept as the first element.}
 #'     \item{calc_ses}{Logical indicating whether standard errors were calculated.}
 #'     \item{variance_components}{A list exposing the two variance pieces (`att_var_1`, `att_var_2`) plus their paper-notation counterparts (`V_1`, `V_2`) and the unit-scaled variance estimators (`tilde_v_N`, `hat_v_N`, `tilde_v_N_C`, `tilde_v_N_C_pi_hat`, `tilde_v_N_C_pi_hat_cons`, `tilde_v_N_cons`). The Wald CI is `[hat_T_N +- qnorm(1-alpha/2) * sqrt(tilde_v_N / N)]` (paper Eq. `conf.int.form`). New in v1.12.0 (issue #141 + #146).}
