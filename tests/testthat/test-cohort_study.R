@@ -180,6 +180,10 @@ test_that("zeroed-out cohorts carry se 0 on a fit with SEs; on a fit without SEs
 	cs_no_se <- cohortStudy(fit_no_se)
 	expect_true(any(!cs_no_se$selected))
 	expect_identical(cs_no_se[["se"]], rep(NA_real_, nrow(fit_no_se$catt_df)))
+	expect_identical(
+		generics::tidy(fit_no_se)$std.error,
+		rep(NA_real_, nrow(fit_no_se$catt_df) + 1L)
+	)
 
 	skip_if_not_installed("broom")
 	for (est in names(fits)) {
