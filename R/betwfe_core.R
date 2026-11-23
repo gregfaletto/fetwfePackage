@@ -814,7 +814,7 @@ betwfeWithSimulatedData <- function(
 #' This function implements the core estimation steps of the BETWFE methodology.
 #' It takes a pre-processed design matrix and response, handles variance
 #' components, performs bridge regression, selects the optimal penalty, and
-#' calculates treatment effects and their standard errors.
+#' calculates treatment effects.
 #'
 #' @param X_ints The design matrix with all fixed effects, covariates, treatment
 #'   dummies, and their interactions, as produced by `prepXints`.
@@ -895,14 +895,13 @@ betwfeWithSimulatedData <- function(
 #'     \itemize{
 #'       \item Extracts cohort-specific average treatment effects (CATTs) from
 #'         `beta_hat`.
-#'       \item Calls `getCohortATTsFinal` to calculate CATT point estimates,
-#'         standard errors (if `q < 1`), and confidence intervals. This involves
-#'         computing the Gram matrix and related quantities.
+#'       \item Calls `getCohortATTsFinal` for the CATT point estimates and
+#'         `catt_df`; the `catt_ses` item says when they carry standard errors.
 #'     }
 #'   \item **Overall ATT Calculation:** Calls `getTeResultsOLS` to calculate the
-#'     overall average treatment effect on the treated (ATT) and its standard
-#'     error, using both in-sample probabilities and independent probabilities
-#'     if `indep_counts` were provided.
+#'     overall average treatment effect on the treated (ATT), using both
+#'     in-sample probabilities and independent probabilities if `indep_counts`
+#'     were provided.
 #' }
 #' The standard errors for CATTs are asymptotically exact; for the ATT's, see
 #' `se_type`.
