@@ -51,7 +51,7 @@ number of \code{lambda} penalty parameters considered. See the description of
 \code{lambda.max} for details. Default is 100.}
 
 \item{q}{(Optional.) Numeric; determines what \code{L_q} penalty is used for the
-fusion regularization. \code{q} = 1 is the lasso, and for 0 < \code{q} < 1, it is
+regularization. \code{q} = 1 is the lasso, and for 0 < \code{q} < 1, it is
 possible to get standard errors and confidence intervals. \code{q} = 2 is ridge
 regression. See Faletto (2025) for details. Default is 0.5.}
 

@@ -542,7 +542,7 @@ betwfe <- function(
 #' number of `lambda` penalty parameters considered. See the description of
 #' `lambda.max` for details. Default is 100.
 #' @param q (Optional.) Numeric; determines what `L_q` penalty is used for the
-#' fusion regularization. `q` = 1 is the lasso, and for 0 < `q` < 1, it is
+#' regularization. `q` = 1 is the lasso, and for 0 < `q` < 1, it is
 #' possible to get standard errors and confidence intervals. `q` = 2 is ridge
 #' regression. See Faletto (2025) for details. Default is 0.5.
 #' @param verbose Logical; if TRUE, more details on the progress of the function will
@@ -840,7 +840,7 @@ betwfeWithSimulatedData <- function(
 #'   If `NA`, `grpreg` selects it. Default is `NA`.
 #' @param nlambda (Optional) Integer; the number of `lambda` values in the grid.
 #'   Default is 100.
-#' @param q (Optional) Numeric; the power of the Lq penalty for fusion regularization
+#' @param q (Optional) Numeric; the power of the Lq penalty for regularization
 #'   (0 < q <= 2). `q=0.5` is default, `q=1` is lasso, `q=2` is ridge.
 #'   Default is 0.5.
 #' @param verbose Logical; if `TRUE`, prints progress messages. Default is `FALSE`.
