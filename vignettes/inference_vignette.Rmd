@@ -176,7 +176,7 @@ Setting `se_type = "cluster"` swaps the model-based regression-coefficient varia
 
 ## 3.1 The formula
 
-Let $\widehat{S}$ be the support selected by the bridge regression, $X_{\widehat{S}}$ the corresponding design matrix in the coordinate system the regression was solved in (GLS-transformed for ETWFE/twfeCovs, fusion-then-GLS-transformed for FETWFE/BETWFE), and $\widehat\varepsilon$ the residuals from OLS on that selected support. The cluster-robust variance is
+Let $\widehat{S}$ be the support selected by the bridge regression, $X_{\widehat{S}}$ the corresponding design matrix in the coordinate system the regression was solved in (GLS-transformed for ETWFE/twfeCovs/BETWFE, fusion-then-GLS-transformed for FETWFE), and $\widehat\varepsilon$ the residuals from OLS on that selected support. The cluster-robust variance is
 
 $$
 V_{\text{CR}}
