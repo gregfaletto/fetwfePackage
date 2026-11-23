@@ -1331,12 +1331,7 @@ getPsiGFused <- function(
 #'         \(-\widehat\pi_g\widehat\pi_s\) off-diagonal).
 #'   \item \(J\) is the Jacobian of the weighting function
 #'         \(f_g(\pi)=\pi_g/\sum_{k}\pi_k\) evaluated at
-#'         \(\widehat\pi\).  In matrix form
-#'         \eqn{J_{rs}=
-#'           \begin{cases}
-#'             (1-\widehat\pi_g)/S^2,& g=s,\\[4pt]
-#'             -\,\widehat\pi_g    /S^2,& g\neq s,
-#'           \end{cases}} with \(S=\sum_k\widehat\pi_k\).
+#'         \(\widehat\pi\), from `.build_jacobian()`.
 #'   \item Each column of `d_inv_treat_sel` is a selected **transformed**
 #'         treatment coefficient; row-averaging over the rows belonging to
 #'         cohort \(s\) produces the part of \(J\) that multiplies
