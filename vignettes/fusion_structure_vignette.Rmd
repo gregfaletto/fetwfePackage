@@ -114,9 +114,7 @@ the data-generating effects exactly, we can measure recovery error directly.
 We use the package's simulation utilities (`genCoefs()` / `simulateData()` /
 `fetwfeWithSimulatedData()`; see the *Simulation* vignette for a full tour). The
 treatment-effect coefficients occupy a known block of the coefficient vector;
-`fetwfe()` reports their positions in its `treat_inds` slot (see `?fetwfe`), and
-those positions depend only on the panel shape (`G` cohorts, `T` periods, `d`
-covariates):
+`fetwfe()` reports their positions in its `treat_inds` slot (see `?fetwfe`):
 
 ```{r}
 G <- 6L

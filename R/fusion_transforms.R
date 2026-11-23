@@ -878,8 +878,7 @@ genInvEventStudyFusionTransformMat <- function(n_vars, first_inds, G) {
 #'   `fusion_matrix` is `NULL` (the default) it returns `NULL` unchanged, so the
 #'   built-in `fusion_structure` dispatch is used.
 #'
-#'   Checks (in order), all referencing the cohort-major `(g, t)` row order of
-#'   `getFirstInds()` / `getTreatInds()`:
+#'   Checks (in order):
 #'   \enumerate{
 #'     \item type/shape: a finite numeric matrix with
 #'       `nrow == ncol == num_treats` (else `stop()`, naming the expected
