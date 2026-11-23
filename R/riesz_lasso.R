@@ -94,8 +94,8 @@ lambda_node_default <- function(p, N, const = 1.0, scale = 1.0) {
 #'   and the two high-dim bootstrap channels (`.build_regression_if_highdim()`
 #'   and `.build_debiased_treat_cells_highdim()`): scale the theory penalty by
 #'   `max(abs(a))`, solve the L1-penalized Riesz representer, and read back the
-#'   KKT `feasibility` / `converged` diagnostics. The `gregfaletto/fetwfe#88`
-#'   coverage validity relies on the point estimate and both band channels
+#'   KKT `feasibility` / `converged` diagnostics. Coverage validity relies on
+#'   the point estimate and both band channels
 #'   solving the IDENTICAL direction, so this contract is single-sourced here
 #'   (the callers diverge only on what they do with `v`). Theory: the relaxed-inverse
 #'   constraint `||Sig v - a||_inf <= lambda_node` this solves is eq.
