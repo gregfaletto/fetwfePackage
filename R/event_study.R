@@ -772,11 +772,7 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #' outside `V_e`. When `|V_e| = 1` the Jacobian rows vanish exactly and
 #' `var_2(e) = 0`.
 #'
-#' Design choice: this helper is structurally parallel to
-#' `getSecondVarTermDataApp` in `R/variance_machinery.R` (the cohort-block time-
-#' averaging is replaced by a single-row selection at `idx(g, e)`, and
-#' `cohort_probs_overall` is masked to zero outside `V_e`). Both helpers
-#' take their Jacobian from `.build_jacobian()`.
+#' Both helpers take their Jacobian from `.build_jacobian()`.
 #'
 #' The returned value is floored at zero and diagnosed by
 #' `.floor_cohort_prob_var()` (#474). It carried NO floor at all until then,
@@ -812,13 +808,7 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	# Multinomial Sigma_pi_hat on the masked cohort probabilities.
 	Sigma_pi_hat <- .multinomial_cov(masked)
 
-	# Per-event-time Jacobian: G rows, length(sel_treat_inds_shifted) cols.
-	# Rows for g not in V_e are zero (and are zero-killed by Sigma_pi_hat).
-	# Diagonal: (S_V - pi_g)/S_V^2 * d_inv_treat_sel[idx(g, e), ]
-	# Off-diagonal: subtract pi_{g'}/S_V^2 * d_inv_treat_sel[idx(g', e), ]
-	# for g' in V_e \ {g}. Off-diagonal coefficient uses the COLUMN-index
-	# pi_{g'}. Consolidated into `.build_jacobian()` (#192); the
-	# per-effect-masked path returns this construction byte-identically.
+	# Per-event-time Jacobian. Consolidated into `.build_jacobian()` (#192).
 	jacobian_e <- .build_jacobian(
 		cohort_probs_overall = cohort_probs_overall,
 		G = G,

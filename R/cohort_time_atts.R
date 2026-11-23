@@ -12,9 +12,7 @@
 #
 # Each cell is a single (g, e) with aggregation weight 1, so this is the
 # eventStudy per-event-time machinery specialized to a singleton validity set
-# `V_e = {g}`: the second variance term `var_2` (cohort-probability sampling)
-# vanishes identically, and the per-cell SE is the pure regression `var_1`
-# `sqrt(sig_eps_sq * psi' gram_inv psi / (N * T))`.
+# `V_e = {g}`.
 
 #' Per-(cohort, time) average treatment effects
 #'
