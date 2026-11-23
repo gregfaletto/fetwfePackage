@@ -347,8 +347,7 @@ checkFetwfeInputs <- function(
 #'   \item **Variance Component Handling:**
 #'     \itemize{
 #'       \item If `sig_eps_sq` or `sig_eps_c_sq` are `NA`, `estOmegaSqrtInv` is
-#'         called to estimate them from the data using a fixed-effects ridge
-#'         regression.
+#'         called to estimate them from the data.
 #'       \item Constructs the covariance matrix `Omega` and its inverse square
 #'         root `Omega_sqrt_inv`.
 #'       \item Pre-multiplies `y` and `X_mod` by `sqrt(sig_eps_sq) * Omega_sqrt_inv`
