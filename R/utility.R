@@ -2356,7 +2356,7 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #' @description
 #' Internal helper that maps the package's finite-sample variance pieces
 #' (`att_var_1`, `att_var_2`) onto the paper-notation slots a user would
-#' look up against `paper_arxiv.tex` (issue #141 + #146). The slots:
+#' look up (issue #141 + #146). The slots:
 #'
 #' * `att_var_1`, `att_var_2`: the same numbers the package has always
 #'   stored internally. `att_var_1 = sigma^2 psi^T G^{-1} psi / (NT)` is
@@ -2373,17 +2373,16 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #'   See the cluster-robust standard errors section of
 #'   `vignettes/inference_vignette.Rmd` for the cluster-path V_1 definition.
 #' * `tilde_v_N`, `hat_v_N`: paper-notation unit-scaled (`tilde_v_N`) and
-#'   un-scaled (`hat_v_N`) total variance, where `tilde_v_N := hat_v_N / T`
-#'   (paper line 2004). The Wald CI is
-#'   `[hat_T_N +- qnorm(1-alpha/2) * sqrt(tilde_v_N / N)]`
-#'   (paper Eq. `conf.int.form`, line 1259), so `att_se = sqrt(tilde_v_N / N)`.
+#'   un-scaled (`hat_v_N`) total variance, where `tilde_v_N := hat_v_N / T`.
+#'   The Wald CI is `[hat_T_N +- qnorm(1-alpha/2) * sqrt(tilde_v_N / N)]`
+#'   (paper Eq. `conf.int.form`), so `att_se = sqrt(tilde_v_N / N)`.
 #'   The combination matches the value used to compute `att_se`:
 #'   tight `att_var_1 + att_var_2` under the default `(Psi-IF)`-satisfying
 #'   path, conservative `att_var_1 + att_var_2 + 2 sqrt(att_var_1 * att_var_2)`
 #'   under `se_type = "conservative"`.
 #' * `tilde_v_N_C`, `tilde_v_N_C_pi_hat`, `tilde_v_N_C_pi_hat_cons`,
 #'   `tilde_v_N_cons`: the unit-scaled counterparts of the paper's six
-#'   variance estimators catalogued at line 2006. `tilde_v_N_C` corresponds
+#'   variance estimators. `tilde_v_N_C` corresponds
 #'   to the fixed-pi exact variance (paper Eq. `v.n.r.t.att.const`), equal
 #'   to `N * att_var_1`. `tilde_v_N_C_pi_hat` is the random-pi exact
 #'   variance (paper Eq. `v.n.r.t.att.rand`), equal to `N * (att_var_1 +
@@ -2439,8 +2438,8 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 		2 * sqrt(att_var_1 * att_var_2)
 
 	# Which combination is the headline `att_se`? `att_se = sqrt(<this> / N) * N`
-	# below, i.e., `tilde_v_N = N * <this>`. Per paper line 1259, the Wald CI
-	# half-width is `qnorm * sqrt(tilde_v_N / N)`, matching `att_se` exactly.
+	# below, i.e., `tilde_v_N = N * <this>`. The Wald CI half-width is
+	# `qnorm * sqrt(tilde_v_N / N)`, matching `att_se` exactly.
 	att_var_headline <- .combine_att_variance(
 		att_var_1,
 		att_var_2,
@@ -2680,7 +2679,7 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 	sig_eps_sq
 ) {
 	# On y / resp_scale, a penalty lambda is lambda / resp_scale^(2 - q)
-	# (paper_arxiv.tex \eqref{opt.prob}; #428; #490 for gls = FALSE fits).
+	# (paper \eqref{opt.prob}; #428; #490 for gls = FALSE fits).
 	resp_scale <- .bridge_response_scale(sig_eps_sq)
 	lambda_unit <- resp_scale^(2 - q)
 	y_final <- y_final / resp_scale

@@ -249,10 +249,9 @@ utils::globalVariables(c(
 #' than warning; `method = "bootstrap"` still works, because the desparsified
 #' band is built from the empirical per-unit influence function.
 #'
-#' **Paper grounding.** Theorem (c') tight Gaussianity (Faletto 2025,
-#' `paper_arxiv.tex:1233`) guarantees the joint asymptotic normality; Assumption
-#' (Psi-IF) (assumption equation `paper_arxiv.tex:2013`; in-prose discussion at
-#' paper line 1268) is the influence-function condition the package's default
+#' **Paper grounding.** Theorem (c') tight Gaussianity (Faletto 2025)
+#' guarantees the joint asymptotic normality; Assumption (Psi-IF) is the
+#' influence-function condition the package's default
 #' cohort-sample-proportions estimator satisfies; the fixed-dim framing follows
 #' the paper's AE point 1(d).
 #'
@@ -1103,7 +1102,7 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 				)
 			}
 			# Paper grounding (WORKFLOW_LESSONS §12): Theorem (c') tight
-			# Gaussianity (Faletto 2025, paper_arxiv.tex:1233) gives the joint
+			# Gaussianity (Faletto 2025) gives the joint
 			# Z = sqrt(N) * (theta_hat - theta_0) -> N(0, V); the simultaneous
 			# (1 - alpha) critical value is the (1 - alpha) quantile of
 			# max_k |Z_k / sqrt(V_kk)|, computed by mvtnorm::qmvnorm() over the
@@ -1266,7 +1265,7 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 #'   depend on the response's units (#489). Dividing by `w2` keeps it from
 #'   depending on the scale of a contrast's weights either (#501).
 #'
-#'   Paper: Remark `nondegeneracy.remark` in `paper_arxiv.tex`.
+#'   Paper: Remark `nondegeneracy.remark`.
 #' @param v Numeric vector; the family's effect variances, or a common positive
 #'   multiple of them.
 #' @param v_ref Numeric scalar; the reference variance, on the same scale as

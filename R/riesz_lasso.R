@@ -100,7 +100,7 @@ lambda_node_default <- function(p, N, const = 1.0, scale = 1.0) {
 #'   (the callers diverge only on what they do with `v`). Theory: the relaxed-inverse
 #'   constraint `||Sig v - a||_inf <= lambda_node` this solves is eq.
 #'   `debiased.highdim.v`, cited by Theorem `debiased.highdim.thm` (uniformly valid
-#'   debiased ATT) of `paper_arxiv.tex`; Theorem `debiased.highdim.joint.thm`
+#'   debiased ATT); Theorem `debiased.highdim.joint.thm`
 #'   (simultaneous bands) derives its per-functional representation from that one,
 #'   which is why the same primitive serves the point estimate and both bands. (#366)
 #'

@@ -49,7 +49,7 @@ $$
 \sqrt{\tilde{v}_N \,/\, N},
 $$
 
-where $\tilde{v}_N := \hat{v}_N / T$ is the unit-scaled paper-notation variance estimator (paper line 2004), and the Wald confidence interval is
+where $\tilde{v}_N := \hat{v}_N / T$ is the unit-scaled paper-notation variance estimator, and the Wald confidence interval is
 
 $$
 \text{CI}_N(\tilde{v}_N;\,\alpha)
@@ -59,7 +59,7 @@ $$
 \,\right]
 $$
 
-per paper Eq. `conf.int.form` (line 1259). The same combined variance backs the per-cohort entries of `catt_ses` and the `catt_df` confidence-interval columns.
+per paper Eq. `conf.int.form`. The same combined variance backs the per-cohort entries of `catt_ses` and the `catt_df` confidence-interval columns.
 
 ## 1.1 Which propensity-score estimators satisfy (Ψ-IF)?
 
@@ -70,7 +70,7 @@ Assumption (Ψ-IF) requires the cohort-weight estimator $\widehat{\boldsymbol{\p
 * **Any GLM** fit by maximum likelihood on $W \mid \boldsymbol{X}$.
 * **Kernel or series regression** of $\mathbf{1}\{W = g\}$ on $\boldsymbol{X}$.
 
-(See the discussion at paper line 1268: "When (Ψ-IF) holds --- which is the case for every standard parametric or semi-parametric propensity-score estimator listed in Remark `psi.if.coverage` (cohort sample proportions, multinomial logit, any GLM, kernel/series regression) --- Theorem `te.asym.norm.thm`(c$'$) gives asymptotic Gaussianity with the tight variance $V_1 + V_2$.")
+(See the paper's discussion: "When (Ψ-IF) holds --- which is the case for every standard parametric or semi-parametric propensity-score estimator listed in Remark `psi.if.coverage` (cohort sample proportions, multinomial logit, any GLM, kernel/series regression) --- Theorem `te.asym.norm.thm`(c$'$) gives asymptotic Gaussianity with the tight variance $V_1 + V_2$.")
 
 The (Ψ-IF) condition fails for **Robins-Rotnitzky-style augmented doubly-robust estimators** that augment the propensity score with outcome residuals. The package does not currently implement these; when it does, users will be able to opt out of the tight CI via `se_type = "conservative"` (see the conservative-fallback note in Section 2.3).
 
@@ -116,7 +116,7 @@ $$
 
 stored as `result$internal$variance_components$tilde_v_N`. The original (un-scaled) paper notation `hat_v_N = T * tilde_v_N` is also exposed.
 
-The paper catalogues six variance estimators at line 2006; the package exposes the four that apply to the ATT (the other two apply to the CATT(x), which connects to the on-hold `predict()` work in issue #33):
+The paper catalogues six variance estimators; the package exposes the four that apply to the ATT (the other two apply to the CATT(x), which connects to the on-hold `predict()` work in issue #33):
 
 | Slot                          | Paper Eq.                                     | Meaning                                     |
 |-------------------------------|-----------------------------------------------|---------------------------------------------|

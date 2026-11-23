@@ -381,13 +381,13 @@
 #' `pi_hat_g = N_g / N`, so estimating those probabilities contributes variance.
 #' This builds the per-unit influence function of that channel, the delta-method
 #' image of the cohort-sample-proportion IF `xi_i = e_{W_i} - psi*` (paper
-#' `\eqref{psi.if.assum}`, line 2072; `e_{W_i}` is the one-hot of unit `i`'s
+#' `\eqref{psi.if.assum}`; `e_{W_i}` is the one-hot of unit `i`'s
 #' cohort, `0` for never-treated):
 #'
 #'   `F_pi[i, k] = T * a_k' (e_{W_i} - pi_hat)`,  `a_k = J_k theta_sel`  (length `G`).
 #'
 #' Per-effect this reproduces the analytic `V_2 = v_psi = M' grad-f' Sigma_M
-#' grad-f M` (line 2925), so `colSums(F_pi^2) / (N*T)^2 == diag(Sigma_2)` exactly
+#' grad-f M`, so `colSums(F_pi^2) / (N*T)^2 == diag(Sigma_2)` exactly
 #' (because `sum_i (e_{W_i} - pi_hat)(e_{W_i} - pi_hat)' = N * Sigma_pi`). The
 #' leading `c = T` is PINNED by matching that anchor against
 #' `.assemble_joint_cov_var2`'s `diag(Sigma_2)_k = T * a_k' Sigma_pi a_k / (N*T)
@@ -396,8 +396,8 @@
 #' This channel is perturbed with its OWN independent multiplier stream (`eta`),
 #' separate from the regression channel's (`xi`): the paper's per-unit IF is
 #' `f_i = f_reg,i + f_pi,i` with `Var(f_i) = V_1 + V_2` and ZERO cross-term
-#' (proof of Thm C.1, "Step 5 -- verify the cross-covariance vanishes", line
-#' 3641: `E[IF^{(beta)}_{(it)} xi_i'] = 0` since `w_{it}` and `xi_i` are both
+#' (proof of Thm C.1, "Step 5 -- verify the cross-covariance vanishes":
+#' `E[IF^{(beta)}_{(it)} xi_i'] = 0` since `w_{it}` and `xi_i` are both
 #' `(W_i, X_i)`-measurable while the GLS residual is conditionally mean-zero).
 #' A SHARED multiplier would inject the empirical `sum_i F_reg[i,k] F_pi[i,k]`
 #' cross-term (absent from the analytic `Sigma`), mis-studentizing the sup-t.

@@ -174,7 +174,7 @@ test_that("variance_components block exposes paper-notation V_1, V_2, and tilde_
 	expect_equal(vc$V_1, res$N * vc$att_var_1)
 	expect_equal(vc$V_2, res$N * vc$att_var_2)
 
-	# tilde_v_N := hat_v_N / T (paper line 2004), hat_v_N = T * tilde_v_N.
+	# tilde_v_N := hat_v_N / T, hat_v_N = T * tilde_v_N.
 	expect_equal(vc$hat_v_N, res$T * vc$tilde_v_N)
 
 	# Headline `tilde_v_N` matches the variance underlying `att_se`:

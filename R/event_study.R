@@ -545,7 +545,7 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 		# Combine the two variance pieces. Mirrors the overall-ATT logic in
 		# `getTeResultsOLS()` / `getTeResults2()` (R/variance_machinery.R):
 		# the tight Gaussian formula is the default for the same-data path
-		# under (Psi-IF) (Theorem (c$'$), paper line 1233 onwards); the
+		# under (Psi-IF) (Theorem (c$'$)); the
 		# Cauchy-Schwarz upper bound is opt-in via `se_type = "conservative"`
 		# for the rare non-(Psi-IF) propensity-score-estimator case.
 		ses[k] <- sqrt(.combine_att_variance(
@@ -776,10 +776,10 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #' `getSecondVarTermDataApp` in `R/variance_machinery.R` (the cohort-block time-
 #' averaging is replaced by a single-row selection at `idx(g, e)`, and
 #' `cohort_probs_overall` is masked to zero outside `V_e`). Both helpers
-#' implement paper Theorem 6.3's Jacobian formula (`paper_arxiv.tex:2577-
-#' 2592`) where the off-diagonal coefficient `J_{rs} = -pi_s / S^2` uses the
-#' column-index marginal cohort probability. (Prior to v1.8.0 the off-
-#' diagonal coefficient was indexed by the outer-loop row; see issue #46.)
+#' take their Jacobian from `.build_jacobian()`, whose off-diagonal
+#' coefficient `J_{rs} = -pi_s / S^2` uses the column-index marginal cohort
+#' probability. (Prior to v1.8.0 the off-diagonal coefficient was indexed by
+#' the outer-loop row; see issue #46.)
 #'
 #' The returned value is floored at zero and diagnosed by
 #' `.floor_cohort_prob_var()` (#474). It carried NO floor at all until then,
@@ -820,7 +820,7 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	# Diagonal: (S_V - pi_g)/S_V^2 * d_inv_treat_sel[idx(g, e), ]
 	# Off-diagonal: subtract pi_{g'}/S_V^2 * d_inv_treat_sel[idx(g', e), ]
 	# for g' in V_e \ {g}. Off-diagonal coefficient uses the COLUMN-index
-	# pi_{g'}, matching paper Theorem 6.3. Consolidated into `.build_jacobian()`
+	# pi_{g'}. Consolidated into `.build_jacobian()`
 	# (#192, WORKFLOW_LESSONS §14 Class A); the per-effect-masked path returns
 	# this construction byte-identically.
 	jacobian_e <- .build_jacobian(

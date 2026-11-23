@@ -6,7 +6,7 @@
 #'   `att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2)` (same-data
 #'   non-(Psi-IF) case via `se_type = "conservative"`). Returns a VARIANCE;
 #'   callers apply `sqrt()` for a standard error. Theorem (c') / (c),
-#'   Assumption (Psi-IF); see `paper_arxiv.tex` ~ line 1233 and ~ line 2013.
+#'   Assumption (Psi-IF).
 #'   Consolidates five copies of this selection (#209): `getTeResultsOLS()`,
 #'   `getTeResults2()`, `.build_variance_components()`, and the two
 #'   `.event_study_*` helpers.
@@ -100,11 +100,10 @@
 #'     combination depends on `se_type`:
 #'     * `"default"` (or `"cluster"`) uses the tight Gaussian variance
 #'       `sqrt(att_var_1 + att_var_2)`, asymptotically exact under the paper's
-#'       Theorem `te.asym.norm.thm`(c$'$) and Assumption (Psi-IF). Paper line
-#'       1233 onwards. (Psi-IF) is satisfied by the package's default cohort
-#'       sample-proportions estimator `hat_pi_g = N_g / N`, by multinomial
-#'       logit, by any GLM on `W | X`, and by kernel/series regression of
-#'       `1{W = g}` on `X`.
+#'       Theorem `te.asym.norm.thm`(c$'$) and Assumption (Psi-IF). (Psi-IF) is
+#'       satisfied by the package's default cohort sample-proportions
+#'       estimator `hat_pi_g = N_g / N`, by multinomial logit, by any GLM on
+#'       `W | X`, and by kernel/series regression of `1{W = g}` on `X`.
 #'     * `"conservative"` uses the Cauchy-Schwarz upper bound
 #'       `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from
 #'       Theorem (c) of the paper. This is the right tool only when the
@@ -818,8 +817,7 @@ getPsiGUnfused <- function(
 #'     combination depends on `se_type`:
 #'     * `"default"` (or `"cluster"`) uses the tight Gaussian variance
 #'       `sqrt(att_var_1 + att_var_2)`, asymptotically exact under the paper's
-#'       Theorem `te.asym.norm.thm`(c$'$) and Assumption (Psi-IF). Paper line
-#'       1233 onwards.
+#'       Theorem `te.asym.norm.thm`(c$'$) and Assumption (Psi-IF).
 #'     * `"conservative"` uses the Cauchy-Schwarz upper bound
 #'       `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from
 #'       Theorem (c). This is the right tool only when the propensity-score
@@ -1398,8 +1396,7 @@ getSecondVarTermDataApp <- function(
 	stopifnot(nrow(Sigma_pi_hat) == G)
 	stopifnot(ncol(Sigma_pi_hat) == G)
 
-	# Jacobian (paper Theorem 6.1 proof, label `main.te.cons.thm`; was a stale
-	# "Theorem 6.3 / 2577-2592" reference, corrected #325):
+	# Jacobian (paper Theorem 6.1 proof, label `main.te.cons.thm`):
 	##
 	## J_{rs} =  (S-pi_g)/S^2      if g = s
 	##           -pi_s   /S^2      if g != s    (off-diagonal uses COLUMN index s)
@@ -1472,9 +1469,8 @@ getSecondVarTermDataApp <- function(
 #' the third copy triggers a refactor). All four sites implement the same
 #' delta-method gradient of \eqn{f_g(\pi)=\pi_g/\sum_k \pi_k}; the column-index
 #' off-diagonal coefficient \eqn{J_{rs}=-\pi_s/S^2} matches the explicit Jacobian
-#' in the proof of paper Theorem 6.1 (label `main.te.cons.thm`; was a stale
-#' "Theorem 6.3 / 2577-2592" reference, corrected #325). Prior to v1.8.0 the
-#' off-diagonal used the outer-loop row index; see issue #46.
+#' in the proof of paper Theorem 6.1 (label `main.te.cons.thm`). Prior to
+#' v1.8.0 the off-diagonal used the outer-loop row index; see issue #46.
 #' @param cohort_probs_overall Numeric vector of length `G`; marginal cohort
 #'   probabilities P(W = g). For `mode = "per_effect_masked"` the caller passes
 #'   the full (un-masked) vector; this helper masks to `V_e` internally.

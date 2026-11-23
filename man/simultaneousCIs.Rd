@@ -251,10 +251,9 @@ analytic standard errors at all, so \code{method = "analytic"} errors there rath
 than warning; \code{method = "bootstrap"} still works, because the desparsified
 band is built from the empirical per-unit influence function.
 
-\strong{Paper grounding.} Theorem (c') tight Gaussianity (Faletto 2025,
-\code{paper_arxiv.tex:1233}) guarantees the joint asymptotic normality; Assumption
-(Psi-IF) (assumption equation \code{paper_arxiv.tex:2013}; in-prose discussion at
-paper line 1268) is the influence-function condition the package's default
+\strong{Paper grounding.} Theorem (c') tight Gaussianity (Faletto 2025)
+guarantees the joint asymptotic normality; Assumption (Psi-IF) is the
+influence-function condition the package's default
 cohort-sample-proportions estimator satisfies; the fixed-dim framing follows
 the paper's AE point 1(d).
 
