@@ -116,7 +116,7 @@ $$
 
 stored as `result$internal$variance_components$tilde_v_N`. The original (un-scaled) paper notation `hat_v_N = T * tilde_v_N` is also exposed.
 
-The paper catalogues six variance estimators; the package exposes the four that apply to the ATT (the other two apply to the CATT(x), which connects to the on-hold `predict()` work in issue #33):
+The paper catalogs six variance estimators; the package exposes the four that apply to the ATT (the other two apply to the CATT(x), which connects to the on-hold `predict()` work in issue #33):
 
 | Slot                          | Paper Eq.                                     | Meaning                                     |
 |-------------------------------|-----------------------------------------------|---------------------------------------------|
