@@ -188,6 +188,13 @@ test_that("zeroed-out cohorts carry se 0 on a fit with SEs; on a fit without SEs
 		cohortTimeATTs(fit_no_se)$se,
 		rep(NA_real_, length(fit_no_se$treat_inds))
 	)
+	expect_identical(
+		unlist(
+			cohortTimeATTs(fit_no_se)[c("ci_low", "ci_high")],
+			use.names = FALSE
+		),
+		rep(NA_real_, 2L * length(fit_no_se$treat_inds))
+	)
 
 	skip_if_not_installed("broom")
 	for (est in names(fits)) {
