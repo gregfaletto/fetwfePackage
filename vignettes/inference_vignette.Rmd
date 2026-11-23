@@ -100,7 +100,7 @@ $$
 \frac{\sigma_\varepsilon^2}{NT}\;\psi_{\text{att}}^\top \widehat G^{-1} \psi_{\text{att}},
 $$
 
-where $\widehat G^{-1}$ is the Gram inverse on the bridge-selected support and $\psi_{\text{att}}$ encodes the cohort-weighted ATT contrast. The per-cohort SEs (`catt_ses`) have the same form with a cohort selector $\psi_g$ in place of $\psi_{\text{att}}$. This piece is stored on the fitted object as `result$internal$variance_components$att_var_1`; the paper-notation per-unit-scaled version is `result$internal$variance_components$V_1` (with `V_1 = N * att_var_1`).
+where $\widehat G^{-1}$ is the Gram inverse on the support $\widehat{S}$ that Section 3.1 defines and $\psi_{\text{att}}$ encodes the cohort-weighted ATT contrast. The per-cohort SEs (`catt_ses`) have the same form with a cohort selector $\psi_g$ in place of $\psi_{\text{att}}$. This piece is stored on the fitted object as `result$internal$variance_components$att_var_1`; the paper-notation per-unit-scaled version is `result$internal$variance_components$V_1` (with `V_1 = N * att_var_1`).
 
 ## 2.2 $V_2$: propensity-score variance
 
@@ -172,11 +172,11 @@ Starting in version 1.6.0, all four estimators accept an experimental `se_type` 
 fetwfe(..., se_type = "cluster")
 ```
 
-Setting `se_type = "cluster"` swaps the model-based regression-coefficient variance $V_1$ for a **unit-clustered Liang-Zeger CR1 sandwich** computed on the bridge-selected support. The $V_2$ piece and the (Ψ-IF)-tight combination $V_1 + V_2$ are unchanged --- only the $V_1$ formula switches.
+Setting `se_type = "cluster"` swaps the model-based regression-coefficient variance $V_1$ for a **unit-clustered Liang-Zeger CR1 sandwich** computed on the support that Section 3.1 defines. The $V_2$ piece and the (Ψ-IF)-tight combination $V_1 + V_2$ are unchanged --- only the $V_1$ formula switches.
 
 ## 3.1 The formula
 
-Let $\widehat{S}$ be the support selected by the bridge regression, $X_{\widehat{S}}$ the corresponding design matrix in the coordinate system the regression was solved in (GLS-transformed for ETWFE/twfeCovs/BETWFE, fusion-then-GLS-transformed for FETWFE), and $\widehat\varepsilon$ the residuals from OLS on that selected support. The cluster-robust variance is
+Let $\widehat{S}$ be the bridge-selected support for FETWFE and BETWFE, and the full design for ETWFE and twfeCovs, which have no bridge and select nothing. Let $X_{\widehat{S}}$ be the corresponding design matrix in the coordinate system the regression was solved in (GLS-transformed for ETWFE/twfeCovs/BETWFE, fusion-then-GLS-transformed for FETWFE), and $\widehat\varepsilon$ the residuals from OLS on $\widehat{S}$. The cluster-robust variance is
 
 $$
 V_{\text{CR}}
@@ -187,7 +187,7 @@ V_{\text{CR}}
 (X_{\widehat{S}}^\top X_{\widehat{S}})^{-1},
 $$
 
-with units $i = 1, \dots, N$ as clusters and an $N/(N-1)$ small-sample adjustment (matching `sandwich::vcovCL(cadjust = TRUE, type = "HC0")`). The CATT SE for cohort $g$ is $\sqrt{\psi_g^\top V_{\text{CR}} \psi_g}$ (using a zero-padded $\psi_g$ on the full selected support); the ATT regression-coefficient variance is $\psi_{\text{att}}^\top V_{\text{CR}} \psi_{\text{att}}$, replacing $V_1$ above. The propensity-score piece $V_2$ is unchanged because it depends on empirical cohort proportions, not regression residuals.
+with units $i = 1, \dots, N$ as clusters and an $N/(N-1)$ small-sample adjustment (matching `sandwich::vcovCL(cadjust = TRUE, type = "HC0")`). The CATT SE for cohort $g$ is $\sqrt{\psi_g^\top V_{\text{CR}} \psi_g}$ (using $\psi_g$ zero-padded to all of $\widehat{S}$); the ATT regression-coefficient variance is $\psi_{\text{att}}^\top V_{\text{CR}} \psi_{\text{att}}$, replacing $V_1$ above. The propensity-score piece $V_2$ is unchanged because it depends on empirical cohort proportions, not regression residuals.
 
 For FETWFE and BETWFE, `se_type = "cluster"` is only meaningful when `q < 1` (the bridge oracle property is required); for `q >= 1` the cluster path returns `NA` just like the default. ETWFE and `twfeCovs` have no `q` argument, so the cluster path always runs when the Gram matrix is invertible.
 
