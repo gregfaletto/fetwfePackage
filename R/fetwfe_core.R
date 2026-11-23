@@ -298,9 +298,9 @@ checkFetwfeInputs <- function(
 #'   from an independent dataset. See the exported wrapper `fetwfe()` for
 #'   details. Default is `NA`.
 #' @param sig_eps_sq (Optional) Numeric; the known variance of the observation-level
-#'   IID noise. If `NA`, it will be estimated. Default is `NA`.
+#'   IID noise. Default is `NA`.
 #' @param sig_eps_c_sq (Optional) Numeric; the known variance of the unit-level IID
-#'   noise (random effects). If `NA`, it will be estimated. Default is `NA`.
+#'   noise (random effects). Default is `NA`.
 #' @param lambda.max (Optional) Numeric; the maximum `lambda` penalty parameter for
 #'   the bridge regression grid search. If `NA`, `grpreg` selects it. Default is `NA`.
 #' @param lambda.min (Optional) Numeric; the minimum `lambda` penalty parameter.
@@ -344,16 +344,9 @@ checkFetwfeInputs <- function(
 #'     `X_ints` into `X_mod`. This transformation allows a standard bridge
 #'     regression penalty on `X_mod` to achieve the desired fusion penalties
 #'     on the original coefficients.
-#'   \item **Variance Component Handling:**
-#'     \itemize{
-#'       \item If `sig_eps_sq` or `sig_eps_c_sq` are `NA`, `estOmegaSqrtInv` is
-#'         called to estimate them from the data.
-#'       \item Constructs the covariance matrix `Omega` and its inverse square
-#'         root `Omega_sqrt_inv`.
-#'       \item Pre-multiplies `y` and `X_mod` by `sqrt(sig_eps_sq) * Omega_sqrt_inv`
-#'         (via Kronecker product) to obtain `y_final` and `X_final`, effectively
-#'         performing a GLS transformation.
-#'     }
+#'   \item **Variance Component Handling:** `.estimate_variance_and_gls()` when
+#'     `gls` is `TRUE`; the `gls` entry of `?fetwfe` says what a `gls = FALSE`
+#'     fit skips.
 #'   \item **Optional Ridge Penalty:** If `add_ridge` is `TRUE`, `X_final_scaled`
 #'     (scaled version of `X_final`) and `y_final` are augmented to add an L2
 #'     penalty on the *original* (untransformed) coefficient scale. This involves
@@ -415,8 +408,8 @@ checkFetwfeInputs <- function(
 #'   \item{lambda_star_model_size}{Number of selected features (excluding the intercept) for `lambda_star`.}
 #'   \item{X_ints}{The original input design matrix from `prepXints`.}
 #'   \item{y}{The original input centered response vector from `prepXints`.}
-#'   \item{X_final}{The design matrix after fusion transformation and GLS weighting.}
-#'   \item{y_final}{The response vector after GLS weighting.}
+#'   \item{X_final}{The design matrix after fusion transformation.}
+#'   \item{y_final}{The response vector.}
 #'   \item{N, T, G, d, p}{Dimensions used in estimation.}
 #' @keywords internal
 #' @noRd
