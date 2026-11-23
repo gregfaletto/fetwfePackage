@@ -72,7 +72,7 @@
 #'       other cells survive (`fetwfe()` / `betwfe()`).}
 #'     \item{ci_low, ci_high}{Numeric; the pointwise `1 - alpha` Wald bounds
 #'       `estimate -/+ qnorm(1 - alpha/2) * se`. `NA` when `se` is `NA`;
-#'       otherwise `(0, 0)` for a fused-away cell.}
+#'       otherwise `(0, 0)` for a zeroed-out cell.}
 #'     \item{p_value}{Numeric; the two-sided pointwise Wald p-value
 #'       `2 * pnorm(-|estimate / se|)`. `NA` when `se` is `0` or `NA`.}
 #'     \item{selected}{(`fetwfe()` / `betwfe()` only.) Logical; `TRUE` when the
@@ -89,7 +89,7 @@
 #' space, for `betwfe()` / `etwfe()` a unit selector in the original (beta)
 #' coordinate space restricted to the selected support. It is
 #' never gated on the point estimate: a cell whose estimate is exactly zero
-#' because the penalty fused it away has an all-zero `psi`.
+#' because the penalty zeroed it out has an all-zero `psi`.
 #'
 #' @seealso [cohortStudy()] for the per-cohort (time-averaged) accessor;
 #'   [eventStudy()] for the per-event-time (cohort-averaged) accessor;

@@ -37,7 +37,7 @@ Otherwise \code{0} for a cell zeroed out by the fusion/bridge penalty while
 other cells survive (\code{fetwfe()} / \code{betwfe()}).}
 \item{ci_low, ci_high}{Numeric; the pointwise \code{1 - alpha} Wald bounds
 \verb{estimate -/+ qnorm(1 - alpha/2) * se}. \code{NA} when \code{se} is \code{NA};
-otherwise \verb{(0, 0)} for a fused-away cell.}
+otherwise \verb{(0, 0)} for a zeroed-out cell.}
 \item{p_value}{Numeric; the two-sided pointwise Wald p-value
 \verb{2 * pnorm(-|estimate / se|)}. \code{NA} when \code{se} is \code{0} or \code{NA}.}
 \item{selected}{(\code{fetwfe()} / \code{betwfe()} only.) Logical; \code{TRUE} when the
@@ -82,7 +82,7 @@ inverse fusion transform \eqn{D^{-1}} in the transformed (theta) coordinate
 space, for \code{betwfe()} / \code{etwfe()} a unit selector in the original (beta)
 coordinate space restricted to the selected support. It is
 never gated on the point estimate: a cell whose estimate is exactly zero
-because the penalty fused it away has an all-zero \code{psi}.
+because the penalty zeroed it out has an all-zero \code{psi}.
 }
 \examples{
 \dontrun{
