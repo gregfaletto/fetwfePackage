@@ -151,7 +151,7 @@ test_that("cohortStudy column types are well-formed", {
 	expect_true(is.logical(cs$selected))
 })
 
-test_that("zeroed-out cohorts carry se 0 and p-value NA; fits without SEs carry se NA (#516)", {
+test_that("zeroed-out cohorts carry se 0 on a fit with SEs; on a fit without SEs every se is NA, theirs included (#516)", {
 	setup <- .cs_setup(seed = 2026)
 	fits <- list(
 		fetwfe = fetwfeWithSimulatedData(setup$sim),
@@ -167,9 +167,19 @@ test_that("zeroed-out cohorts carry se 0 and p-value NA; fits without SEs carry 
 		expect_true(all(is.na(cs$p_value[zeroed])), info = est)
 	}
 
-	fit_q1 <- fetwfeWithSimulatedData(setup$sim, q = 1)
-	expect_false(fit_q1$calc_ses)
-	expect_true(all(is.na(cohortStudy(fit_q1)$se)))
+	fit_no_se <- fetwfe(
+		pdata = setup$sim$pdata,
+		time_var = setup$sim$time_var,
+		unit_var = setup$sim$unit_var,
+		treatment = setup$sim$treatment,
+		response = setup$sim$response,
+		covs = setup$sim$covs,
+		gls = FALSE
+	)
+	expect_false(fit_no_se$calc_ses)
+	cs_no_se <- cohortStudy(fit_no_se)
+	expect_true(any(!cs_no_se$selected))
+	expect_identical(cs_no_se[["se"]], rep(NA_real_, nrow(fit_no_se$catt_df)))
 
 	skip_if_not_installed("broom")
 	for (est in names(fits)) {
