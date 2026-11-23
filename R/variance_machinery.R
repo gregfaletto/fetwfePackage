@@ -1407,9 +1407,7 @@ getSecondVarTermDataApp <- function(
 	## Each column block of d_inv_treat_sel belongs to a selected theta coordinate;
 	## averaging the rows of cohorts gives the vector needed to multiply theta_sel.
 	##
-	## Consolidated into `.build_jacobian()` (#192); the FETWFE
-	## scalar-block-averaging path (d_inv non-NULL) returns the
-	## G x p_sel block-averaged Jacobian byte-identically.
+	## Consolidated into `.build_jacobian()` (#192).
 	jacobian_mat <- .build_jacobian(
 		cohort_probs_overall = cohort_probs_overall,
 		G = G,
