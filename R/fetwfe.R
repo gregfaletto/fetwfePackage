@@ -65,20 +65,20 @@
 #' probabilities come from `pdata`).
 #' @param sig_eps_sq (Optional.) Numeric; the variance of the row-level IID
 #' noise assumed to apply to each observation. See Section 2 of Faletto (2025)
-#' for details. It is best to provide this variance if it is known (for example,
-#' if you are using simulated data). If this variance is unknown, this argument
-#' can be omitted, and the variance will be estimated by
+#' for details. When `gls` is `TRUE`, it is best to provide this variance if it
+#' is known (for example, if you are using simulated data); if it is unknown,
+#' this argument can be omitted, and the variance will be estimated by
 #' REML on the linear mixed-effects model `y ~ X + (1 | unit)` via
-#' `lme4::lmer` (Bates et al. 2015; Patterson & Thompson 1971). When
-#' supplied, the value also sets the scale of the bridge penalty's grid (the
+#' `lme4::lmer` (Bates et al. 2015; Patterson & Thompson 1971). When `gls` is
+#' `TRUE`, a supplied value also sets the scale of the bridge penalty's grid (the
 #' response is divided by `sqrt(sig_eps_sq)` before the fit), so at `q != 1` a
 #' value supplied in the wrong units moves the estimates, not only their
 #' standard errors. Default is NA.
 #' @param sig_eps_c_sq (Optional.) Numeric; the variance of the unit-level IID
 #' noise (random effects) assumed to apply to each observation. See Section 2 of
-#' Faletto (2025) for details. It is best to provide this variance if it is
-#' known (for example, if you are using simulated data). If this variance is
-#' unknown, this argument can be omitted, and the variance will be estimated
+#' Faletto (2025) for details. When `gls` is `TRUE`, it is best to provide this
+#' variance if it is known (for example, if you are using simulated data); if it
+#' is unknown, this argument can be omitted, and the variance will be estimated
 #' by REML via `lme4::lmer` on the
 #' linear mixed-effects model `y ~ X + (1 | unit)` (Bates et al. 2015;
 #' Patterson & Thompson 1971). Default is NA.
@@ -252,8 +252,8 @@
 #' \item{beta_hat}{The full vector of estimated coefficients.}
 #' \item{treat_inds}{The indices of `beta_hat` corresponding to the treatment effects for each cohort at each time.}
 #' \item{treat_int_inds}{The indices of `beta_hat` corresponding to the interactions between the treatment effects for each cohort at each time and the covariates.}
-#' \item{sig_eps_sq}{Either the provided `sig_eps_sq` or the estimated one, if a value wasn't provided.}
-#' \item{sig_eps_c_sq}{Either the provided `sig_eps_c_sq` or the estimated one, if a value wasn't provided.}
+#' \item{sig_eps_sq}{When `gls` is `TRUE`, either the provided `sig_eps_sq` or the estimated one, if a value wasn't provided; `NA` when `gls` is `FALSE`.}
+#' \item{sig_eps_c_sq}{When `gls` is `TRUE`, either the provided `sig_eps_c_sq` or the estimated one, if a value wasn't provided; `NA` when `gls` is `FALSE`.}
 #' \item{lambda.max}{The largest `lambda` of the grid used, which is a supplied `lambda.max` only on the BIC route. (This is returned to help with getting a reasonable range of `lambda` values for grid search.)}
 #' \item{lambda.max_model_size}{The number of selected features (excluding the always-present intercept) at `lambda.max` (for `q <= 1`, this will be the smallest model size). As mentioned above, for `q <= 1` ideally this value is close to 0.}
 #' \item{lambda.min}{Either the provided `lambda.min` or the one that was used, if a value wasn't provided.}
@@ -301,8 +301,8 @@
 #'   \describe{
 #'     \item{X_ints}{The design matrix created containing all interactions, time and cohort dummies, etc.}
 #'     \item{y}{The vector of responses, containing `nrow(X_ints)` entries.}
-#'     \item{X_final}{The design matrix after applying the change in coordinates to fit the model and also multiplying on the left by the square root inverse of the estimated covariance matrix for each unit.}
-#'     \item{y_final}{The final response after multiplying on the left by the square root inverse of the estimated covariance matrix for each unit.}
+#'     \item{X_final}{The design matrix after applying the change in coordinates to fit the model, GLS-whitened when `gls` is `TRUE` (see `gls`).}
+#'     \item{y_final}{The final response, GLS-whitened when `gls` is `TRUE` (see `gls`).}
 #'     \item{theta_hat}{The vector of estimated coefficients in the transformed (fused) space, including the intercept as the first element.}
 #'     \item{calc_ses}{Logical indicating whether standard errors were calculated.}
 #'     \item{variance_components}{A list exposing the two variance pieces (`att_var_1`, `att_var_2`) plus their paper-notation counterparts (`V_1`, `V_2`) and the unit-scaled variance estimators (`tilde_v_N`, `hat_v_N`, `tilde_v_N_C`, `tilde_v_N_C_pi_hat`, `tilde_v_N_C_pi_hat_cons`, `tilde_v_N_cons`). The Wald CI is `[hat_T_N +- qnorm(1-alpha/2) * sqrt(tilde_v_N / N)]` (paper Eq. `conf.int.form`). New in v1.12.0 (issue #141 + #146).}
@@ -735,8 +735,8 @@ fetwfe <- function(
 #' \item{beta_hat}{The full vector of estimated coefficients.}
 #' \item{treat_inds}{The indices of `beta_hat` corresponding to the treatment effects for each cohort at each time.}
 #' \item{treat_int_inds}{The indices of `beta_hat` corresponding to the interactions between the treatment effects for each cohort at each time and the covariates.}
-#' \item{sig_eps_sq}{Either the provided `sig_eps_sq` or the estimated one, if a value wasn't provided.}
-#' \item{sig_eps_c_sq}{Either the provided `sig_eps_c_sq` or the estimated one, if a value wasn't provided.}
+#' \item{sig_eps_sq}{When `gls` is `TRUE`, either the provided `sig_eps_sq` or the estimated one, if a value wasn't provided; `NA` when `gls` is `FALSE`.}
+#' \item{sig_eps_c_sq}{When `gls` is `TRUE`, either the provided `sig_eps_c_sq` or the estimated one, if a value wasn't provided; `NA` when `gls` is `FALSE`.}
 #' \item{lambda.max}{The largest `lambda` of the grid used, which is a supplied `lambda.max` only on the BIC route. (This is returned to help with getting a reasonable range of `lambda` values for grid search.)}
 #' \item{lambda.max_model_size}{The number of selected features (excluding the always-present intercept) at `lambda.max` (for `q <= 1`, this will be the smallest model size). As mentioned above, for `q <= 1` ideally this value is close to 0.}
 #' \item{lambda.min}{Either the provided `lambda.min` or the one that was used, if a value wasn't provided.}
@@ -784,8 +784,8 @@ fetwfe <- function(
 #'   \describe{
 #'     \item{X_ints}{The design matrix created containing all interactions, time and cohort dummies, etc.}
 #'     \item{y}{The vector of responses, containing `nrow(X_ints)` entries.}
-#'     \item{X_final}{The design matrix after applying the change in coordinates to fit the model and also multiplying on the left by the square root inverse of the estimated covariance matrix for each unit.}
-#'     \item{y_final}{The final response after multiplying on the left by the square root inverse of the estimated covariance matrix for each unit.}
+#'     \item{X_final}{The design matrix after applying the change in coordinates to fit the model, GLS-whitened when `gls` is `TRUE` (see `gls`).}
+#'     \item{y_final}{The final response, GLS-whitened when `gls` is `TRUE` (see `gls`).}
 #'     \item{theta_hat}{The vector of estimated coefficients in the transformed (fused) space, including the intercept as the first element.}
 #'     \item{calc_ses}{Logical indicating whether standard errors were calculated.}
 #'     \item{variance_components}{A list exposing the two variance pieces (`att_var_1`, `att_var_2`) plus their paper-notation counterparts (`V_1`, `V_2`) and the unit-scaled variance estimators (`tilde_v_N`, `hat_v_N`, `tilde_v_N_C`, `tilde_v_N_C_pi_hat`, `tilde_v_N_C_pi_hat_cons`, `tilde_v_N_cons`). The Wald CI is `[hat_T_N +- qnorm(1-alpha/2) * sqrt(tilde_v_N / N)]` (paper Eq. `conf.int.form`). New in v1.12.0 (issue #141 + #146).}

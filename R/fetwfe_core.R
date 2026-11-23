@@ -396,8 +396,8 @@ checkFetwfeInputs <- function(
 #'   \item{treat_int_inds}{Indices in `beta_hat` corresponding to treatment-covariate interactions.}
 #'   \item{cohort_probs}{Estimated cohort probabilities conditional on being treated, from `in_sample_counts`.}
 #'   \item{indep_cohort_probs}{Estimated cohort probabilities from `indep_counts` (NA if not provided).}
-#'   \item{sig_eps_sq}{The (possibly estimated) variance of observation-level noise.}
-#'   \item{sig_eps_c_sq}{The (possibly estimated) variance of unit-level random effects.}
+#'   \item{sig_eps_sq}{See the `sig_eps_sq` item of `?fetwfe`'s value.}
+#'   \item{sig_eps_c_sq}{See the `sig_eps_c_sq` item of `?fetwfe`'s value.}
 #'   \item{lambda.max}{The largest lambda of the grid (units: see `.dispatch_bridge_selection()`).}
 #'   \item{lambda.max_model_size}{Number of selected features (excluding the intercept) for `lambda.max`.}
 #'   \item{lambda.min}{The smallest lambda of the grid (units: see `.dispatch_bridge_selection()`).}

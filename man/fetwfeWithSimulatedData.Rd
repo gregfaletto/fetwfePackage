@@ -197,8 +197,8 @@ An object of class \code{fetwfe} containing the following elements:
 \item{beta_hat}{The full vector of estimated coefficients.}
 \item{treat_inds}{The indices of \code{beta_hat} corresponding to the treatment effects for each cohort at each time.}
 \item{treat_int_inds}{The indices of \code{beta_hat} corresponding to the interactions between the treatment effects for each cohort at each time and the covariates.}
-\item{sig_eps_sq}{Either the provided \code{sig_eps_sq} or the estimated one, if a value wasn't provided.}
-\item{sig_eps_c_sq}{Either the provided \code{sig_eps_c_sq} or the estimated one, if a value wasn't provided.}
+\item{sig_eps_sq}{When \code{gls} is \code{TRUE}, either the provided \code{sig_eps_sq} or the estimated one, if a value wasn't provided; \code{NA} when \code{gls} is \code{FALSE}.}
+\item{sig_eps_c_sq}{When \code{gls} is \code{TRUE}, either the provided \code{sig_eps_c_sq} or the estimated one, if a value wasn't provided; \code{NA} when \code{gls} is \code{FALSE}.}
 \item{lambda.max}{The largest \code{lambda} of the grid used, which is a supplied \code{lambda.max} only on the BIC route. (This is returned to help with getting a reasonable range of \code{lambda} values for grid search.)}
 \item{lambda.max_model_size}{The number of selected features (excluding the always-present intercept) at \code{lambda.max} (for \code{q <= 1}, this will be the smallest model size). As mentioned above, for \code{q <= 1} ideally this value is close to 0.}
 \item{lambda.min}{Either the provided \code{lambda.min} or the one that was used, if a value wasn't provided.}
@@ -246,8 +246,8 @@ internally). Consumed by \verb{augment.<class>()}.}
 \describe{
 \item{X_ints}{The design matrix created containing all interactions, time and cohort dummies, etc.}
 \item{y}{The vector of responses, containing \code{nrow(X_ints)} entries.}
-\item{X_final}{The design matrix after applying the change in coordinates to fit the model and also multiplying on the left by the square root inverse of the estimated covariance matrix for each unit.}
-\item{y_final}{The final response after multiplying on the left by the square root inverse of the estimated covariance matrix for each unit.}
+\item{X_final}{The design matrix after applying the change in coordinates to fit the model, GLS-whitened when \code{gls} is \code{TRUE} (see \code{gls}).}
+\item{y_final}{The final response, GLS-whitened when \code{gls} is \code{TRUE} (see \code{gls}).}
 \item{theta_hat}{The vector of estimated coefficients in the transformed (fused) space, including the intercept as the first element.}
 \item{calc_ses}{Logical indicating whether standard errors were calculated.}
 \item{variance_components}{A list exposing the two variance pieces (\code{att_var_1}, \code{att_var_2}) plus their paper-notation counterparts (\code{V_1}, \code{V_2}) and the unit-scaled variance estimators (\code{tilde_v_N}, \code{hat_v_N}, \code{tilde_v_N_C}, \code{tilde_v_N_C_pi_hat}, \code{tilde_v_N_C_pi_hat_cons}, \code{tilde_v_N_cons}). The Wald CI is \verb{[hat_T_N +- qnorm(1-alpha/2) * sqrt(tilde_v_N / N)]} (paper Eq. \code{conf.int.form}). New in v1.12.0 (issue #141 + #146).}
