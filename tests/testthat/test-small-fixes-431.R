@@ -224,21 +224,13 @@ test_that(".compute_att_pair() names the te function and stays small (#431 item 
 # Item 3: getP() and .collapse_design_for_twfe_covs() now call .base_cols()
 # instead of re-deriving the pre-treatment column-count formula inline.
 #
-# WHAT THIS ADDS. Both fold sites are ALREADY covered by the existing suite --
-# folding getP() wrongly produces 5 failures + 15 errors, and dropping
-# `+ num_treats` from the input_prep.R fold produces 2 errors. What is new here
-# is the exhaustive algebraic identity over the (G, T, d) domain, which nothing
-# in the suite provides. This is a CONSOLIDATION-PARITY guardrail: it pins that
-# the folded form equals the pre-fold form, not that either matches
-# the paper, and it cannot detect a formula that was always wrong.
+# This is a CONSOLIDATION-PARITY guardrail: it pins that the folded form equals
+# the pre-fold form, not that either matches the paper.
 #
 # num_treats MUST BE BOUND AND NON-ZERO. The identity holds for all num_treats
-# including 0, but the mutation this block guards (getP() folded as
-# `num_treats * d` instead of `num_treats * (1 + d)`) differs from the correct
-# value by exactly num_treats -- so at num_treats = 0 there are ZERO visible
-# cells over the whole grid and the block stays green under its own mutation.
-# getNumTreats(G, T) is positive everywhere on this grid (minimum
-# getNumTreats(1, 2) == 1), and it is what arms the mutation.
+# including 0, but at num_treats = 0 the comparison does not exercise getP()'s
+# num_treats terms. getNumTreats(G, T) is positive everywhere on this grid
+# (minimum getNumTreats(1, 2) == 1).
 #
 # Loop variables are deliberately NOT named `T`: item 4's fixture below needs
 # `T` to resolve to base::T, and although test_that() blocks do not leak, using
@@ -263,7 +255,7 @@ test_that(".base_cols() folds are algebraically identical to the inline forms (#
 	# of this block spent 5,131 assertions on it and more than doubled the
 	# suite's assertion count for two identities.
 	nt <- mapply(fetwfe:::getNumTreats, grid$g_v, grid$t_v)
-	expect_true(all(nt > 0)) # what arms the mutation; see the header
+	expect_true(all(nt > 0)) # see the header
 
 	# Report the offending cell rather than "vectors differ" on failure.
 	whiff <- function(actual, oracle) {

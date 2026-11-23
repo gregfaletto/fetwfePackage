@@ -265,8 +265,7 @@ utils::globalVariables(c(
 #'
 #' **Numerical integration.** The critical value is computed via
 #' `mvtnorm::qmvnorm(..., algorithm = mvtnorm::GenzBretz())` (mvtnorm's default
-#' quasi-Monte Carlo integrator; sub-second through `K` up to about 100, so no
-#' `K` cap is of practical concern for FETWFE families). `mvtnorm` is an
+#' quasi-Monte Carlo integrator). `mvtnorm` is an
 #' `Imports` dependency (as of version 1.16.0, when simultaneous bands became
 #' the default reported confidence interval; see the `ci_type` argument of
 #' [fetwfe()]). The function uses it only when `K > 1` and the conservative
@@ -1106,9 +1105,6 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 			# (1 - alpha) critical value is the (1 - alpha) quantile of
 			# max_k |Z_k / sqrt(V_kk)|, computed by mvtnorm::qmvnorm() over the
 			# correlation matrix cov2cor(V) (Hothorn, Bretz, Westfall 2008).
-			#
-			# mvtnorm::GenzBretz() (mvtnorm's default; quasi-Monte Carlo) is
-			# sub-second through K ~ 100.
 			rng_out <- .with_preserved_rng(1L, {
 				qmv <- mvtnorm::qmvnorm(
 					p = 1 - alpha,

@@ -10,9 +10,6 @@ library(fetwfe)
 # off-by-one index. The fix uses the column index, matching the paper and the
 # parallel `getSecondVarTermOLS()` in `R/variance_machinery.R`. The same fix flows
 # through `.event_study_var2_fetwfe()`.
-#
-# These tests are regression coverage for the corrected formula. They also
-# explicitly reconstruct the buggy formula inline to catch any future revert.
 # ------------------------------------------------------------------------------
 
 # Helper: deterministically fit FETWFE on R=3, T=6, d=0, N=300. Returns a list

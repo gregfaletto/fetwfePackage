@@ -267,8 +267,7 @@ all-zeroed support returns the degenerate band.
 
 \strong{Numerical integration.} The critical value is computed via
 \code{mvtnorm::qmvnorm(..., algorithm = mvtnorm::GenzBretz())} (mvtnorm's default
-quasi-Monte Carlo integrator; sub-second through \code{K} up to about 100, so no
-\code{K} cap is of practical concern for FETWFE families). \code{mvtnorm} is an
+quasi-Monte Carlo integrator). \code{mvtnorm} is an
 \code{Imports} dependency (as of version 1.16.0, when simultaneous bands became
 the default reported confidence interval; see the \code{ci_type} argument of
 \code{\link[=fetwfe]{fetwfe()}}). The function uses it only when \code{K > 1} and the conservative
