@@ -60,17 +60,17 @@
 #' probabilities come from `pdata`).
 #' @param sig_eps_sq (Optional.) Numeric; the variance of the row-level IID
 #' noise assumed to apply to each observation. See Section 2 of Faletto (2025)
-#' for details. It is best to provide this variance if it is known (for example,
-#' if you are using simulated data). If this variance is unknown, this argument
-#' can be omitted, and the variance will be estimated by
-#' REML on the linear mixed-effects model `y ~ X + (1 | unit)` via
+#' for details. It is best to provide this variance and `sig_eps_c_sq` if both
+#' are known (for example, if you are using simulated data); if this variance
+#' is unknown, this argument can be omitted, and the variance will be estimated
+#' by REML on the linear mixed-effects model `y ~ X + (1 | unit)` via
 #' `lme4::lmer` (Bates et al. 2015; Patterson & Thompson 1971). Default is NA.
 #' @param sig_eps_c_sq (Optional.) Numeric; the variance of the unit-level IID
 #' noise (random effects) assumed to apply to each observation. See Section 2 of
-#' Faletto (2025) for details. It is best to provide this variance if it is
-#' known (for example, if you are using simulated data). If this variance is
-#' unknown, this argument can be omitted, and the variance will be estimated
-#' by REML via `lme4::lmer` on the
+#' Faletto (2025) for details. It is best to provide this variance and
+#' `sig_eps_sq` if both are known (for example, if you are using simulated
+#' data); if this variance is unknown, this argument can be omitted, and the
+#' variance will be estimated by REML via `lme4::lmer` on the
 #' linear mixed-effects model `y ~ X + (1 | unit)` (Bates et al. 2015;
 #' Patterson & Thompson 1971). Default is NA.
 #' @param verbose Logical; if TRUE, more details on the progress of the function will
