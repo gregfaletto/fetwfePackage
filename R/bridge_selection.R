@@ -227,17 +227,17 @@ getBetaBIC <- function(fit, N, T, p, X_mod, y, scale_center, scale_scale) {
 #'   `as.integer(N * T)` so consecutive calls on the same dataset are
 #'   reproducible without user intervention. The seed drives the fold draw in
 #'   `.cv_grpreg_label_free()`, which describes how the folds are assigned.
-#' @param X_final_scaled Numeric matrix; the design matrix after fusion +
-#'   GLS transformations and `my_scale()` centering/scaling. Same matrix
-#'   handed to `gBridge()` in the BIC path.
+#' @param X_final_scaled Numeric matrix; `X_final_scaled` from
+#'   `prep_for_etwfe_regression()`. Same matrix handed to `gBridge()` in the
+#'   BIC path.
 #' @param N Integer; number of unique units.
 #' @param T Integer; number of time periods.
 #' @param p Integer; number of predictors in `X_final_scaled` (excluding intercept).
 #' @param scale_center Numeric vector of length `p`; the centering values
 #'   `my_scale()` produced.
 #' @param scale_scale Numeric vector of length `p`; the scaling values.
-#' @param y_final Numeric vector; the GLS-transformed response, in the units
-#'   `.dispatch_bridge_selection()` fits it in.
+#' @param y_final Numeric vector; `.dispatch_bridge_selection()`'s `y_final`,
+#'   in the units that function fits it in.
 #' @param gamma Numeric scalar; the bridge-penalty exponent `q`. Passed
 #'   through to `cv.grpreg(penalty = "gBridge", gamma = gamma)`.
 #' @param cv_folds Integer; number of folds for `cv.grpreg`.

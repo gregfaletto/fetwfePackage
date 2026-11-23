@@ -179,7 +179,7 @@ checkEtwfeInputs <- function(
 #'   \item{y}{The original input centered response vector from `prepXints`.}
 #'   \item{X_final}{The design matrix after GLS weighting (no fusion
 #'     transformation on the OLS path).}
-#'   \item{y_final}{The response vector after GLS weighting.}
+#'   \item{y_final}{See `y_final` in `?etwfe`'s or `?twfeCovs`'s value.}
 #'   \item{N, T, G, d, p}{Dimensions used in estimation.}
 #' @keywords internal
 #' @noRd

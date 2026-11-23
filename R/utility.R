@@ -2479,8 +2479,8 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #'   path now have a single landing site.
 #' @param X_final_scaled Numeric matrix; the design matrix (typically
 #'   GLS-then-fusion transformed and scaled).
-#' @param y_final Numeric vector; the GLS-transformed response, in the units
-#'   `.dispatch_bridge_selection()` fits it in.
+#' @param y_final Numeric vector; `.dispatch_bridge_selection()`'s `y_final`,
+#'   in the units that function fits it in.
 #' @param q Numeric scalar; the bridge-penalty exponent passed as `gamma` to
 #'   `gBridge()`.
 #' @param lambda.max Numeric scalar or `NA`; if non-NA, pass through to

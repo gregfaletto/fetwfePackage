@@ -159,12 +159,11 @@
 #' provided, and otherwise the REML estimate.}
 #' \item{X_ints}{The design matrix created containing all
 #' interactions, time and cohort dummies, etc.} \item{y}{The vector of
-#' responses, containing `nrow(X_ints)` entries.} \item{X_final}{The design
-#' matrix after applying the change in coordinates to fit the model and also
-#' multiplying on the left by the square root inverse of the estimated
-#' covariance matrix for each unit.} \item{y_final}{The final response after
-#' multiplying on the left by the square root inverse of the estimated
-#' covariance matrix for each unit.} \item{N}{The final number of units that
+#' responses, containing `nrow(X_ints)` entries.}
+#' \item{X_final}{The GLS-whitened design matrix `X_ints`.}
+#' \item{y_final}{The GLS-whitened response `y`, with `p` zeros appended for
+#' the ridge penalty when `add_ridge` is `TRUE`.}
+#' \item{N}{The final number of units that
 #' were in the  data set used for estimation (after any units may have been
 #' removed because they were treated in the first time period).} \item{T}{The
 #' number of time periods in the final data set.} \item{G}{The final number of
@@ -212,8 +211,7 @@
 #'     \item{X_ints}{The design matrix containing all interactions,
 #'       time and cohort dummies, etc. Same value as top-level `X_ints`.}
 #'     \item{y}{The vector of responses. Same as top-level `y`.}
-#'     \item{X_final}{The design matrix after the change-of-coordinates
-#'       step. Same as top-level `X_final`.}
+#'     \item{X_final}{Same as top-level `X_final`.}
 #'     \item{y_final}{The transformed response vector. Same as top-level
 #'       `y_final`.}
 #'     \item{calc_ses}{Logical indicating whether standard errors were
@@ -430,12 +428,11 @@ etwfe <- function(
 #' the provided `sig_eps_c_sq` or the estimated one, if a value wasn't
 #' provided.} \item{X_ints}{The design matrix created containing all
 #' interactions, time and cohort dummies, etc.} \item{y}{The vector of
-#' responses, containing `nrow(X_ints)` entries.} \item{X_final}{The design
-#' matrix after applying the change in coordinates to fit the model and also
-#' multiplying on the left by the square root inverse of the estimated
-#' covariance matrix for each unit.} \item{y_final}{The final response after
-#' multiplying on the left by the square root inverse of the estimated
-#' covariance matrix for each unit.} \item{N}{The final number of units that
+#' responses, containing `nrow(X_ints)` entries.}
+#' \item{X_final}{The GLS-whitened design matrix `X_ints`.}
+#' \item{y_final}{The GLS-whitened response `y`, with `p` zeros appended for
+#' the ridge penalty when `add_ridge` is `TRUE`.}
+#' \item{N}{The final number of units that
 #' were in the  data set used for estimation (after any units may have been
 #' removed because they were treated in the first time period).} \item{T}{The
 #' number of time periods in the final data set.} \item{G}{The final number of
@@ -481,8 +478,7 @@ etwfe <- function(
 #'     \item{X_ints}{The design matrix containing all interactions,
 #'       time and cohort dummies, etc. Same value as top-level `X_ints`.}
 #'     \item{y}{The vector of responses. Same as top-level `y`.}
-#'     \item{X_final}{The design matrix after the change-of-coordinates
-#'       step. Same as top-level `X_final`.}
+#'     \item{X_final}{Same as top-level `X_final`.}
 #'     \item{y_final}{The transformed response vector. Same as top-level
 #'       `y_final`.}
 #'     \item{calc_ses}{Logical indicating whether standard errors were

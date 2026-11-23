@@ -248,12 +248,11 @@
 #' \item{catt_band_applied}{Logical scalar; `TRUE` when the fit-time cohort-family simultaneous band was computed and written into `catt_df`, and `FALSE` otherwise --- including when `ci_type = "pointwise"`, when standard errors were unavailable, and when the band construction degraded. It records only whether the band was applied: it does not imply the band is wider than the pointwise interval (they coincide when fewer than two effects have positive variance) and does not imply the band is informative (a degenerate fit can carry an all-zero band with `TRUE`).}
 #' \item{X_ints}{The design matrix created containing all
 #' interactions, time and cohort dummies, etc.} \item{y}{The vector of
-#' responses, containing `nrow(X_ints)` entries.} \item{X_final}{The design
-#' matrix after applying the change in coordinates to fit the model and also
-#' multiplying on the left by the square root inverse of the estimated
-#' covariance matrix for each unit.} \item{y_final}{The final response after
-#' multiplying on the left by the square root inverse of the estimated
-#' covariance matrix for each unit.} \item{N}{The final number of units that
+#' responses, containing `nrow(X_ints)` entries.}
+#' \item{X_final}{The GLS-whitened design matrix `X_ints`.}
+#' \item{y_final}{The GLS-whitened response `y`, with `p` zeros appended for
+#' the ridge penalty when `add_ridge` is `TRUE`.}
+#' \item{N}{The final number of units that
 #' were in the  data set used for estimation (after any units may have been
 #' removed because they were treated in the first time period).} \item{T}{The
 #' number of time periods in the final data set.} \item{G}{The final number of
@@ -297,8 +296,7 @@
 #'     \item{X_ints}{The design matrix containing all interactions,
 #'       time and cohort dummies, etc. Same value as top-level `X_ints`.}
 #'     \item{y}{The vector of responses. Same as top-level `y`.}
-#'     \item{X_final}{The design matrix after the change-of-coordinates
-#'       step. Same as top-level `X_final`.}
+#'     \item{X_final}{Same as top-level `X_final`.}
 #'     \item{y_final}{The transformed response vector. Same as top-level
 #'       `y_final`.}
 #'     \item{calc_ses}{Logical indicating whether standard errors were
@@ -673,12 +671,11 @@ betwfe <- function(
 #' \item{catt_band_applied}{Logical scalar; `TRUE` when the fit-time cohort-family simultaneous band was computed and written into `catt_df`, and `FALSE` otherwise --- including when `ci_type = "pointwise"`, when standard errors were unavailable, and when the band construction degraded. It records only whether the band was applied: it does not imply the band is wider than the pointwise interval (they coincide when fewer than two effects have positive variance) and does not imply the band is informative (a degenerate fit can carry an all-zero band with `TRUE`).}
 #' \item{X_ints}{The design matrix created containing all
 #' interactions, time and cohort dummies, etc.} \item{y}{The vector of
-#' responses, containing `nrow(X_ints)` entries.} \item{X_final}{The design
-#' matrix after applying the change in coordinates to fit the model and also
-#' multiplying on the left by the square root inverse of the estimated
-#' covariance matrix for each unit.} \item{y_final}{The final response after
-#' multiplying on the left by the square root inverse of the estimated
-#' covariance matrix for each unit.} \item{N}{The final number of units that
+#' responses, containing `nrow(X_ints)` entries.}
+#' \item{X_final}{The GLS-whitened design matrix `X_ints`.}
+#' \item{y_final}{The GLS-whitened response `y`, with `p` zeros appended for
+#' the ridge penalty when `add_ridge` is `TRUE`.}
+#' \item{N}{The final number of units that
 #' were in the  data set used for estimation (after any units may have been
 #' removed because they were treated in the first time period).} \item{T}{The
 #' number of time periods in the final data set.} \item{G}{The final number of
@@ -721,8 +718,7 @@ betwfe <- function(
 #'     \item{X_ints}{The design matrix containing all interactions,
 #'       time and cohort dummies, etc. Same value as top-level `X_ints`.}
 #'     \item{y}{The vector of responses. Same as top-level `y`.}
-#'     \item{X_final}{The design matrix after the change-of-coordinates
-#'       step. Same as top-level `X_final`.}
+#'     \item{X_final}{Same as top-level `X_final`.}
 #'     \item{y_final}{The transformed response vector. Same as top-level
 #'       `y_final`.}
 #'     \item{calc_ses}{Logical indicating whether standard errors were
@@ -932,7 +928,7 @@ betwfeWithSimulatedData <- function(
 #'   \item{X_ints}{The original input design matrix from `prepXints`.}
 #'   \item{y}{The original input centered response vector from `prepXints`.}
 #'   \item{X_final}{The design matrix after GLS weighting.}
-#'   \item{y_final}{The response vector after GLS weighting.}
+#'   \item{y_final}{See `y_final` in `?betwfe`'s value.}
 #'   \item{N, T, G, d, p}{Dimensions used in estimation.}
 #' @keywords internal
 #' @noRd
