@@ -1461,8 +1461,7 @@ getSecondVarTermDataApp <- function(
 #' `simultaneousCIs()` call site into one helper. All four sites implement the same
 #' delta-method gradient of \eqn{f_g(\pi)=\pi_g/\sum_k \pi_k}; the column-index
 #' off-diagonal coefficient \eqn{J_{rs}=-\pi_s/S^2} matches the explicit Jacobian
-#' in the proof of paper Theorem 6.1 (label `main.te.cons.thm`). Prior to
-#' v1.8.0 the off-diagonal used the outer-loop row index; see issue #46.
+#' in the proof of paper Theorem 6.1 (label `main.te.cons.thm`).
 #' @param cohort_probs_overall Numeric vector of length `G`; marginal cohort
 #'   probabilities P(W = g). For `mode = "per_effect_masked"` the caller passes
 #'   the full (un-masked) vector; this helper masks to `V_e` internally.
