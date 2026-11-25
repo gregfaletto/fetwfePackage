@@ -377,8 +377,8 @@
 #' The `event_study` family is the one family whose simultaneous-band variance
 #' carries a non-zero cohort-probability (propensity) channel `Sigma_2`: each
 #' event-time effect pools across the cohorts treated by that event time, with
-#' weights equal to the estimated cohort-membership probabilities
-#' `pi_hat_g = N_g / N`, so estimating those probabilities contributes variance.
+#' weights equal to the estimated cohort-membership probabilities, so
+#' estimating those probabilities contributes variance.
 #' This builds the per-unit influence function of that channel, the delta-method
 #' image of the cohort-sample-proportion IF `xi_i = e_{W_i} - psi*` (paper
 #' `\eqref{psi.if.assum}`; `e_{W_i}` is the one-hot of unit `i`'s
@@ -417,8 +417,8 @@
 #'   parameters (theta-space for FETWFE, beta-space for the OLS family / BETWFE).
 #'   Used only on the fixed-p path; `NULL` when `A` is supplied.
 #' @param cohort_probs_overall Numeric; cohort-membership probabilities
-#'   `pi_hat_g = N_g / N` (length `>= G`; `[1:G]` are the treated cohorts, the
-#'   residual mass is never-treated).
+#'   (length `>= G`; `[1:G]` are the treated cohorts, the residual mass is
+#'   never-treated).
 #' @param G Integer; number of treated cohorts.
 #' @param N,T Integers; units and periods. (Period arg named `T` to match the
 #'   sibling variance helpers `.assemble_joint_cov_var2()` / `.build_jacobian()`.)
@@ -842,7 +842,7 @@
 
 	# Propensity (cohort-probability) channel `F_pi`: non-zero only for the
 	# event_study family, whose pooled event-time effects weight cohorts by the
-	# estimated probabilities `pi_hat_g = N_g/N`. Built for event_study in BOTH
+	# estimated cohort probabilities. Built for event_study in BOTH
 	# regimes from the same `J_list` / `Sigma_pi` the analytic `Sigma_2` uses.
 	# NULL for the other families (`Sigma_2 = 0`), keeping their draw byte-identical.
 	#
