@@ -70,7 +70,7 @@ Assumption (Ψ-IF) requires the cohort-weight estimator $\widehat{\boldsymbol{\p
 * **Any GLM** fit by maximum likelihood on $W \mid \boldsymbol{X}$.
 * **Kernel or series regression** of $\mathbf{1}\{W = g\}$ on $\boldsymbol{X}$.
 
-(See the paper's discussion: "When (Ψ-IF) holds --- which is the case for every standard parametric or semi-parametric propensity-score estimator listed in Remark `psi.if.coverage` (cohort sample proportions, multinomial logit, any GLM, kernel/series regression) --- Theorem `te.asym.norm.thm`(c$'$) gives asymptotic Gaussianity with the tight variance $V_1 + V_2$.")
+(See the paper's discussion: "When (Ψ-IF) holds --- which is the case for every standard parametric or semi-parametric propensity-score estimator listed in Remark `psi.if.coverage` (cohort sample proportions, multinomial logit, any GLM, kernel/series regression) --- Theorem `te.asym.norm.thm`(c$'$) gives asymptotic Gaussianity with the tight variance $V_1 + V_2$ ...")
 
 The (Ψ-IF) condition fails for **Robins-Rotnitzky-style augmented doubly-robust estimators** that augment the propensity score with outcome residuals. The package does not currently implement these; when it does, users will be able to opt out of the tight CI via `se_type = "conservative"` (see the conservative-fallback note in Section 2.3).
 
