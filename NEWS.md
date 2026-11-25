@@ -103,7 +103,8 @@
 
 - `eventStudy()` and `simultaneousCIs(family = "event_study")` omit event times no
   cohort reaches, rather than reporting an estimate of 0 there, so a
-  `se_type = "conservative"` band no longer counts them (#515).
+  `se_type = "conservative"` band without `indep_counts` no longer counts them
+  (#515).
 
 - `simultaneousCIs(family = "cohort")` labels each cohort by its time value, as
   `tidy()` does, not by its period position (#506).
@@ -313,11 +314,11 @@
   the pointwise band, with `NA` adjusted p-values and no warning, for a response
   with small values, and no longer do (#489).
 
-- Under `se_type = "conservative"`, `simultaneousCIs()` gave a finite adjusted
-  p-value to a custom contrast whose variance is only rounding error, which
-  weights that cancel across cells the bridge fused to one value can leave; it
-  now gives `NA`, as the default `se_type` and `method = "bootstrap"` already
-  did (#489).
+- Under `se_type = "conservative"` without `indep_counts`, `simultaneousCIs()`
+  gave a finite adjusted p-value to a custom contrast whose variance is only
+  rounding error, which weights that cancel across cells the bridge fused to
+  one value can leave; it now gives `NA`, as the default `se_type` and
+  `method = "bootstrap"` already did (#489).
 
 - In `simultaneousCIs()`, a `"custom"` family whose rows' weights were very
   small, or differed in size by a large factor, lost its simultaneous band or
