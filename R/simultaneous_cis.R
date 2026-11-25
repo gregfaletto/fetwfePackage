@@ -1737,7 +1737,7 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 
 	# family == "event_study": one effect per event time `.reached_event_times()`
 	# returns. Effect e pools the cells (g, e) over the valid cohort set V_e,
-	# with sample-cohort-size weights.
+	# with cohort-size weights.
 	event_times <- .reached_event_times(cohort_offsets_int, T)
 	K <- length(event_times)
 	psi_tes <- matrix(0, nrow = K, ncol = num_treats)

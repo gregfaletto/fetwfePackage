@@ -15,9 +15,9 @@ utils::globalVariables(c("event_time", "estimate", "ci_low", "ci_high"))
 #' each post-treatment event time `e = t - g`, the number of periods since the
 #' cohort's first treated period (`t` and `g` are periods, counted along the
 #' sorted values of the time variable, so `e` counts periods whatever the
-#' time coding). Weights are
-#' sample-cohort-size weights (matching `did::aggte(type = "dynamic")`
-#' convention).
+#' time coding). Weights are cohort-size weights: the sample's cohort shares,
+#' as in `did::aggte(type = "dynamic")`, or the shares in `indep_counts` when
+#' the fit was given them.
 #'
 #' Standard errors combine two terms, mirroring the package's existing
 #' overall-ATT SE machinery: `var_1(e)` from regression-coefficient noise
@@ -468,7 +468,7 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 			next
 		}
 
-		# Cohort-size weights, renormalized over V_e (sample-cohort-size convention)
+		# Cohort-size weights, renormalized over V_e
 		probs_Ve <- cohort_probs_overall[V_e]
 		S_V <- sum(probs_Ve)
 		if (S_V <= 0) {
