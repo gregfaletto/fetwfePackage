@@ -2,7 +2,7 @@
 # (#142, Phase 3). event_study is the one family whose simultaneous-band variance
 # carries a non-zero cohort-probability (propensity) channel Sigma_2: each
 # event-time effect pools across cohorts weighted by the estimated cohort
-# probabilities pi_hat_g = N_g/N, so estimating those probabilities contributes
+# probabilities, so estimating those probabilities contributes
 # variance. The bootstrap perturbs the per-unit propensity influence function
 # F_pi[i,k] = T * a_k'(e_{W_i} - pi_hat) (a_k = J_k theta_sel) with its OWN
 # independent multiplier stream, combined with the regression channel as a
