@@ -169,10 +169,11 @@ null \code{H_0: tau = 0}, computed as \verb{2 * pnorm(-|att_hat / att_se|)}. \co
 \code{att_se} is zero or \code{NA}. Standard post-OLS interpretation; ETWFE does not
 perform selection.}
 \item{catt_hats}{A named vector containing the
-estimated average treatment effects for each cohort.} \item{catt_ses}{A named
+estimated average treatment effects for each cohort.} \item{catt_ses}{A
 vector containing the (asymptotically exact) standard errors for
-the estimated average treatment effects within each cohort. If the Gram
-matrix is not invertible, the entries are NA.}
+the estimated average treatment effects within each cohort, named by cohort
+when they were computed. If the Gram matrix is not invertible, the entries
+are NA.}
 \item{cohort_probs}{A vector of the estimated probabilities of being in each
 cohort conditional on being treated, which was used in calculating \code{att_hat}.
 If \code{indep_counts} was provided, \code{cohort_probs} was calculated from that;

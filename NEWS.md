@@ -73,7 +73,7 @@
   where `delta` had distorted the old fit.
   Because a `sig_eps_sq` supplied together with `sig_eps_c_sq` now also sets
   where the lambda grid sits, a variance supplied in the wrong units can move
-  the estimates at `q != 1`, not only their standard errors.
+  the estimates, not only their standard errors.
   `fetwfe(gls = FALSE)` fits, which estimate no
   noise variance, are not standardized and still depend on the units (#490). The
   `q = 1` nuisance behind `debiasedATT()` and the high-dimensional bootstrap

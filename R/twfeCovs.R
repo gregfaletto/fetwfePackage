@@ -131,10 +131,11 @@
 #' `att_se` is zero or `NA`. Standard post-OLS interpretation; `twfeCovs` does
 #' not perform selection.}
 #' \item{catt_hats}{A named vector containing the
-#' estimated average treatment effects for each cohort.} \item{catt_ses}{A named
+#' estimated average treatment effects for each cohort.} \item{catt_ses}{A
 #' vector containing the (asymptotically exact) standard errors for
-#' the estimated average treatment effects within each cohort. If the Gram
-#' matrix is not invertible, the entries are NA.}
+#' the estimated average treatment effects within each cohort, named by cohort
+#' when they were computed. If the Gram matrix is not invertible, the entries
+#' are NA.}
 #' \item{cohort_probs}{A vector of the estimated probabilities of being in each
 #' cohort conditional on being treated, which was used in calculating `att_hat`.
 #' If `indep_counts` was provided, `cohort_probs` was calculated from that;
@@ -399,10 +400,10 @@ twfeCovs <- function(
 #' `att_se` is zero or `NA`. Standard post-OLS interpretation; `twfeCovs` does
 #' not perform selection.}
 #' \item{catt_hats}{A named vector containing the estimated average treatment
-#' effects for each cohort.} \item{catt_ses}{A named vector containing the
+#' effects for each cohort.} \item{catt_ses}{A vector containing the
 #' (asymptotically exact, non-conservative) standard errors for the estimated
-#' average treatment effects within each cohort. If the Gram matrix is not
-#' invertible, the entries are NA.}
+#' average treatment effects within each cohort, named by cohort when they were
+#' computed. If the Gram matrix is not invertible, the entries are NA.}
 #' \item{cohort_probs}{A vector of the estimated probabilities of being in each
 #' cohort conditional on being treated, which was used in calculating `att_hat`.
 #' If `indep_counts` was provided, `cohort_probs` was calculated from that;

@@ -95,7 +95,7 @@ by REML on the linear mixed-effects model \code{y ~ X + (1 | unit)} via
 \code{lme4::lmer} (Bates et al. 2015; Patterson & Thompson 1971). When both
 variances are supplied, \code{sig_eps_sq} also sets the scale of the bridge
 penalty's grid (the response is divided by \code{sqrt(sig_eps_sq)} before the
-fit), so at \code{q != 1} a value supplied in the wrong units can move the
+fit), so a value supplied in the wrong units can move the
 estimates, not only their standard errors. Default is NA.}
 
 \item{sig_eps_c_sq}{(Optional.) Numeric; the variance of the unit-level IID
@@ -242,10 +242,10 @@ assumption different from the one Theorem 6.2 establishes for FETWFE. For
 ridge (\code{q = 2}) the bridge solver does not zero coefficients, so this will
 typically be \code{TRUE}.}
 \item{catt_hats}{A named vector containing the estimated average treatment
-effects for each cohort.} \item{catt_ses}{A named vector containing the
+effects for each cohort.} \item{catt_ses}{A vector containing the
 (asymptotically exact, non-conservative) standard errors for the estimated
-average treatment effects within each cohort. \code{NA} when \code{calc_ses} is
-\code{FALSE}, for example when \code{q >= 1}.}
+average treatment effects within each cohort, named by cohort when they were
+computed. \code{NA} when \code{calc_ses} is \code{FALSE}, for example when \code{q >= 1}.}
 \item{cohort_probs}{A vector of the estimated probabilities of being in each
 cohort conditional on being treated, which was used in calculating \code{att_hat}.
 If \code{indep_counts} was provided, \code{cohort_probs} was calculated from that;
