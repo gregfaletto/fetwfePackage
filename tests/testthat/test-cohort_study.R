@@ -165,6 +165,26 @@ test_that("zeroed-out cohorts carry se 0 on a fit with SEs; on a fit without SEs
 		expect_equal(cs$ci_low[zeroed], rep(0, sum(zeroed)), info = est)
 		expect_equal(cs$ci_high[zeroed], rep(0, sum(zeroed)), info = est)
 		expect_true(all(is.na(cs$p_value[zeroed])), info = est)
+
+		cta <- cohortTimeATTs(fits[[est]])
+		zeroed_cells <- !cta$selected
+		expect_true(any(zeroed_cells), info = est)
+		expect_equal(
+			cta$se[zeroed_cells],
+			rep(0, sum(zeroed_cells)),
+			info = est
+		)
+		expect_equal(
+			cta$ci_low[zeroed_cells],
+			rep(0, sum(zeroed_cells)),
+			info = est
+		)
+		expect_equal(
+			cta$ci_high[zeroed_cells],
+			rep(0, sum(zeroed_cells)),
+			info = est
+		)
+		expect_true(all(is.na(cta$p_value[zeroed_cells])), info = est)
 	}
 
 	fit_no_se <- fetwfe(
@@ -181,8 +201,16 @@ test_that("zeroed-out cohorts carry se 0 on a fit with SEs; on a fit without SEs
 	expect_true(any(!cs_no_se$selected))
 	expect_identical(cs_no_se[["se"]], rep(NA_real_, nrow(fit_no_se$catt_df)))
 	expect_identical(
+		unlist(cs_no_se[c("ci_low", "ci_high")], use.names = FALSE),
+		rep(NA_real_, 2L * nrow(fit_no_se$catt_df))
+	)
+	expect_identical(
 		generics::tidy(fit_no_se)$std.error,
 		rep(NA_real_, nrow(fit_no_se$catt_df) + 1L)
+	)
+	expect_identical(
+		generics::tidy(cs_no_se)$std.error,
+		rep(NA_real_, nrow(fit_no_se$catt_df))
 	)
 	expect_true(any(cohortTimeATTs(fit_no_se)$estimate != 0))
 	expect_identical(
