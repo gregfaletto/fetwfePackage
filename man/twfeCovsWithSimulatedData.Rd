@@ -92,10 +92,10 @@ rename table.}
 the treatment effects for each cohort.}
 \item{treat_int_inds}{The indices of \code{beta_hat} corresponding to the
 interactions between the treatment effects for each cohort and
-the covariates.} \item{sig_eps_sq}{Either the provided \code{sig_eps_sq} or
-the estimated one, if a value wasn't provided.} \item{sig_eps_c_sq}{Either
-the provided \code{sig_eps_c_sq} or the estimated one, if a value wasn't
-provided.}
+the covariates.} \item{sig_eps_sq}{The provided \code{sig_eps_sq} if both
+variances were provided, and otherwise the REML estimate.}
+\item{sig_eps_c_sq}{The provided \code{sig_eps_c_sq} if both variances were
+provided, and otherwise the REML estimate.}
 \item{X_ints}{The design matrix created containing all
 interactions, time and cohort dummies, etc.} \item{y}{The vector of
 responses, containing \code{nrow(X_ints)} entries.}

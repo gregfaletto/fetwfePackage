@@ -638,10 +638,11 @@ betwfe <- function(
 #' the treatment effects for each cohort at each time.}
 #' \item{treat_int_inds}{The indices of `beta_hat` corresponding to the
 #' interactions between the treatment effects for each cohort at each time and
-#' the covariates.} \item{sig_eps_sq}{Either the provided `sig_eps_sq` or
-#' the estimated one, if a value wasn't provided.} \item{sig_eps_c_sq}{Either
-#' the provided `sig_eps_c_sq` or the estimated one, if a value wasn't
-#' provided.} \item{lambda.max}{The largest `lambda` of the grid used, which
+#' the covariates.} \item{sig_eps_sq}{The provided `sig_eps_sq` if both
+#' variances were provided, and otherwise the REML estimate.}
+#' \item{sig_eps_c_sq}{The provided `sig_eps_c_sq` if both variances were
+#' provided, and otherwise the REML estimate.}
+#' \item{lambda.max}{The largest `lambda` of the grid used, which
 #' is a supplied `lambda.max` only on the BIC route. (This is returned to help
 #' with getting a reasonable range of `lambda` values for grid search.)}
 #' \item{lambda.max_model_size}{The number of selected features (excluding the
