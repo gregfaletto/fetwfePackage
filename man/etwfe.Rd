@@ -67,8 +67,9 @@ is c().}
 \item{indep_counts}{(Optional.) Integer; a vector of cohort counts from a
 sample independent of \code{pdata}: the number of units in the untreated cohort,
 then in each treated cohort in adoption order. When supplied, the cohort
-probabilities that weight the overall ATT come from these counts instead of
-from \code{pdata}. The counts describe the panel the estimator fits: units
+probabilities that weight the overall ATT and the \code{\link[=eventStudy]{eventStudy()}} estimates
+come from these counts instead of from \code{pdata}.
+The counts describe the panel the estimator fits: units
 treated in the first period are dropped, and on a panel with no
 never-treated units the latest cohort becomes the untreated cohort (see
 \code{allow_no_never_treated}). So the length of \code{indep_counts} must equal 1 plus

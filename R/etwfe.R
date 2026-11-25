@@ -42,8 +42,9 @@
 #' @param indep_counts (Optional.) Integer; a vector of cohort counts from a
 #' sample independent of `pdata`: the number of units in the untreated cohort,
 #' then in each treated cohort in adoption order. When supplied, the cohort
-#' probabilities that weight the overall ATT come from these counts instead of
-#' from `pdata`. The counts describe the panel the estimator fits: units
+#' probabilities that weight the overall ATT and the [eventStudy()] estimates
+#' come from these counts instead of from `pdata`.
+#' The counts describe the panel the estimator fits: units
 #' treated in the first period are dropped, and on a panel with no
 #' never-treated units the latest cohort becomes the untreated cohort (see
 #' `allow_no_never_treated`). So the length of `indep_counts` must equal 1 plus
