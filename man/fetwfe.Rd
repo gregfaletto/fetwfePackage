@@ -163,14 +163,14 @@ already contains never-treated units. Default is \code{TRUE}.}
 
 \item{se_type}{Character; one of \code{"default"}, \code{"conservative"}, or
 \code{"cluster"}. \code{"default"} returns the tight Gaussian variance
-\code{sqrt(att_var_1 + att_var_2)} from Theorem (c$'$) under Assumption
+\code{sqrt(att_var_1 + att_var_2)} from Theorem 6.4(c') under Assumption
 (Psi-IF); this is asymptotically exact for the package's default
 cohort sample-proportions estimator and for every standard
 propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
 any GLM on \code{W | X}, kernel/series regression of \verb{1\{W = g\}} on \code{X}).
 \code{"conservative"} returns the Cauchy-Schwarz upper bound
 \code{sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))} from
-Theorem (c); use only if the propensity-score estimator violates
+Theorem 6.4(c); use only if the propensity-score estimator violates
 (Psi-IF) (e.g., a Robins-Rotnitzky-augmented doubly-robust estimator,
 which the package does not currently implement). Supplying
 \code{indep_counts} makes \code{"conservative"} give the same standard error as
@@ -292,7 +292,7 @@ its estimates depend on the units of the response (#490).}
 \value{
 An object of class \code{fetwfe} containing the following elements:
 \item{att_hat}{The estimated overall average treatment effect for a randomly selected treated unit.}
-\item{att_se}{A standard error for the ATT. Under the default \code{se_type = "default"}, the SE is the tight Gaussian variance \code{sqrt(att_var_1 + att_var_2)} (Theorem (c$'$) under Assumption (Psi-IF)). Assumption (Psi-IF) is satisfied by the package's default cohort sample-proportions estimator \code{hat_pi_g = N_g / N} (and by multinomial logit, any GLM on \code{W | X}, and kernel/series regression of \verb{1\{W = g\}} on \code{X}), so the default SE is asymptotically exact for the package's default estimator. Under \code{se_type = "conservative"} (or in version <= 1.11.7 by default), the SE is the Cauchy-Schwarz upper bound \code{sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))} from Theorem (c). When \code{indep_counts} is provided, \code{"conservative"} gives the same \code{att_se} as \code{"default"}, and \code{"cluster"} still uses the cluster-robust sandwich for \code{att_var_1}. \code{NA} when standard errors were not computed (\code{calc_ses} is \code{FALSE}), for example when \code{q >= 1} or \code{gls = FALSE}.}
+\item{att_se}{A standard error for the ATT. Under the default \code{se_type = "default"}, the SE is the tight Gaussian variance \code{sqrt(att_var_1 + att_var_2)} (Theorem 6.4(c') under Assumption (Psi-IF)). Assumption (Psi-IF) is satisfied by the package's default cohort sample-proportions estimator \code{hat_pi_g = N_g / N} (and by multinomial logit, any GLM on \code{W | X}, and kernel/series regression of \verb{1\{W = g\}} on \code{X}), so the default SE is asymptotically exact for the package's default estimator. Under \code{se_type = "conservative"} (or in version <= 1.11.7 by default), the SE is the Cauchy-Schwarz upper bound \code{sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))} from Theorem 6.4(c). When \code{indep_counts} is provided, \code{"conservative"} gives the same \code{att_se} as \code{"default"}, and \code{"cluster"} still uses the cluster-robust sandwich for \code{att_var_1}. \code{NA} when standard errors were not computed (\code{calc_ses} is \code{FALSE}), for example when \code{q >= 1} or \code{gls = FALSE}.}
 \item{att_p_value}{A two-sided p-value for the overall ATT against the null \code{H_0: tau = 0}, computed as \verb{2 * pnorm(-|att_hat / att_se|)}. \code{NA} if \code{att_se} is zero or \code{NA} (e.g., under the bridge solver's selected-out fallback). See the package vignette section "Testing the zero-effect null" for interpretation guidance under selection consistency.}
 \item{att_selected}{Logical scalar; \code{TRUE} if \code{att_hat} is not exactly zero (i.e., at least one cohort's bridge-penalized coefficient survived selection), \code{FALSE} otherwise. Under FETWFE Theorem 6.2 (restriction selection consistency), \code{att_selected = FALSE} is the asymptotic statement that the truth is zero. For ridge (\code{q = 2}) the bridge solver does not zero coefficients, so this will typically be \code{TRUE}.}
 \item{catt_hats}{A named vector containing the estimated average treatment effects for each cohort.}

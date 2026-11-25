@@ -158,7 +158,7 @@ already contains never-treated units. Default is \code{TRUE}.}
 
 \item{se_type}{Character; one of \code{"default"}, \code{"conservative"}, or
 \code{"cluster"}. \code{"default"} returns the tight Gaussian variance
-\code{sqrt(att_var_1 + att_var_2)}: Theorem (c$'$) under Assumption (Psi-IF),
+\code{sqrt(att_var_1 + att_var_2)}: Theorem 6.4(c') under Assumption (Psi-IF),
 with the paper's differences matrix \code{D_N} the identity on every
 coefficient block, since \code{betwfe()} applies the bridge penalty to the
 coefficients themselves. This is asymptotically exact for the package's
@@ -166,7 +166,7 @@ default cohort sample-proportions estimator and for every standard
 propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
 any GLM on \code{W | X}, kernel/series regression of \verb{1\{W = g\}} on \code{X}).
 \code{"conservative"} returns the Cauchy-Schwarz upper bound from Theorem
-(c); use only if the propensity-score estimator violates (Psi-IF).
+6.4(c); use only if the propensity-score estimator violates (Psi-IF).
 Supplying \code{indep_counts} makes \code{"conservative"} give the same standard
 error as \code{"default"}.
 \code{"cluster"} is an \emph{experimental} unit-clustered Liang-Zeger sandwich

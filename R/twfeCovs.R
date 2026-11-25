@@ -92,10 +92,10 @@
 #' `"cluster"`. `"default"` returns the tight Gaussian variance
 #' `sqrt(att_var_1 + att_var_2)`, which is asymptotically exact for the
 #' package's default cohort sample-proportions estimator by the argument of
-#' Theorem (c$'$) under Assumption (Psi-IF) applied to least squares on
+#' Theorem 6.4(c') under Assumption (Psi-IF) applied to least squares on
 #' `twfeCovs()`'s GLS-whitened model, so it holds when that model does (see
 #' the Description of [twfeCovs()]); `"conservative"` returns the
-#' Cauchy-Schwarz upper bound from Theorem (c) (use only when the
+#' Cauchy-Schwarz upper bound from Theorem 6.4(c) (use only when the
 #' propensity-score estimator violates (Psi-IF)). Supplying `indep_counts`
 #' makes `"conservative"` give the same standard error as `"default"`.
 #' `"cluster"` is an

@@ -85,7 +85,7 @@
 #' already contains never-treated units. Default is `TRUE`.
 #' @param se_type Character; one of `"default"`, `"conservative"`, or
 #' `"cluster"`. `"default"` returns the tight Gaussian variance
-#' `sqrt(att_var_1 + att_var_2)`, by the argument of Theorem (c$'$) under
+#' `sqrt(att_var_1 + att_var_2)`, by the argument of Theorem 6.4(c') under
 #' Assumption (Psi-IF) with no selection step: `etwfe()` is least squares on
 #' the GLS-whitened full design. This is asymptotically exact for the
 #' package's default cohort sample-proportions estimator and for every
@@ -93,7 +93,7 @@
 #' logit, any GLM on `W | X`, kernel/series regression of `1{W = g}` on `X`).
 #' `"conservative"` returns the Cauchy-Schwarz upper bound
 #' `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from
-#' Theorem (c); use only if the propensity-score estimator violates
+#' Theorem 6.4(c); use only if the propensity-score estimator violates
 #' (Psi-IF) (e.g., a Robins-Rotnitzky-augmented doubly-robust estimator,
 #' which the package does not currently implement). Supplying
 #' `indep_counts` makes `"conservative"` give the same standard error as

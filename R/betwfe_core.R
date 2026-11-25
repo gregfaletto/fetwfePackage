@@ -115,7 +115,7 @@
 #' already contains never-treated units. Default is `TRUE`.
 #' @param se_type Character; one of `"default"`, `"conservative"`, or
 #' `"cluster"`. `"default"` returns the tight Gaussian variance
-#' `sqrt(att_var_1 + att_var_2)`: Theorem (c$'$) under Assumption (Psi-IF),
+#' `sqrt(att_var_1 + att_var_2)`: Theorem 6.4(c') under Assumption (Psi-IF),
 #' with the paper's differences matrix `D_N` the identity on every
 #' coefficient block, since `betwfe()` applies the bridge penalty to the
 #' coefficients themselves. This is asymptotically exact for the package's
@@ -123,7 +123,7 @@
 #' propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
 #' any GLM on `W | X`, kernel/series regression of `1{W = g}` on `X`).
 #' `"conservative"` returns the Cauchy-Schwarz upper bound from Theorem
-#' (c); use only if the propensity-score estimator violates (Psi-IF).
+#' 6.4(c); use only if the propensity-score estimator violates (Psi-IF).
 #' Supplying `indep_counts` makes `"conservative"` give the same standard
 #' error as `"default"`.
 #' `"cluster"` is an *experimental* unit-clustered Liang-Zeger sandwich
@@ -853,7 +853,7 @@ betwfeWithSimulatedData <- function(
 #'   the coefficients to stabilize estimation. Default is `FALSE`.
 #' @param se_type Character; the standard-error type, one of `"default"`
 #'   (tight Gaussian variance under (Psi-IF)),
-#'   `"conservative"` (Cauchy-Schwarz upper bound from Theorem (c) for
+#'   `"conservative"` (Cauchy-Schwarz upper bound from Theorem 6.4(c) for
 #'   non-(Psi-IF) propensity estimators), or `"cluster"` (experimental
 #'   unit-clustered Liang-Zeger sandwich SE on the bridge-selected
 #'   support). See the exported wrapper `betwfe()` for details. Default

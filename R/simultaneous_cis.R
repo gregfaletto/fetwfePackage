@@ -38,7 +38,7 @@ utils::globalVariables(c(
 #' is the `(1 - alpha)` quantile of `max_k |Z_k|` where `Z` follows a
 #' multivariate normal with correlation matrix `cov2cor(Sigma)`; it is
 #' computed deterministically via `mvtnorm::qmvnorm()`. Under Faletto (2025)
-#' Theorem (c') tight Gaussianity and Assumption (Psi-IF), the family of
+#' Theorem 6.4(c') tight Gaussianity and Assumption (Psi-IF), the family of
 #' psi-linear effects is asymptotically multivariate normal with a covariance
 #' that is estimable from the package's existing variance machinery; under the
 #' paper's fixed-dim framing no high-dimensional correction is needed.
@@ -249,7 +249,7 @@ utils::globalVariables(c(
 #' than warning; `method = "bootstrap"` still works, because the desparsified
 #' band is built from the empirical per-unit influence function.
 #'
-#' **Paper grounding.** Theorem (c') tight Gaussianity (Faletto 2025)
+#' **Paper grounding.** Theorem 6.4(c') tight Gaussianity (Faletto 2025)
 #' guarantees the joint asymptotic normality; Assumption (Psi-IF) is the
 #' influence-function condition the package's default
 #' cohort-sample-proportions estimator satisfies.
@@ -1099,7 +1099,7 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 					call. = FALSE
 				)
 			}
-			# Paper grounding: Theorem (c') tight
+			# Paper grounding: Theorem 6.4(c') tight
 			# Gaussianity (Faletto 2025) gives the joint
 			# Z = sqrt(N) * (theta_hat - theta_0) -> N(0, V); the simultaneous
 			# (1 - alpha) critical value is the (1 - alpha) quantile of

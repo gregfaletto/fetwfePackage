@@ -545,7 +545,7 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 		# Combine the two variance pieces. Mirrors the overall-ATT logic in
 		# `getTeResultsOLS()` / `getTeResults2()` (R/variance_machinery.R):
 		# the tight Gaussian formula is the default for the same-data path
-		# under (Psi-IF) (Theorem (c$'$)); the
+		# under (Psi-IF) (Theorem 6.4(c')); the
 		# Cauchy-Schwarz upper bound is opt-in via `se_type = "conservative"`
 		# for the rare non-(Psi-IF) propensity-score-estimator case.
 		ses[k] <- sqrt(.combine_att_variance(

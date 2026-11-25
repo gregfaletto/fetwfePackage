@@ -167,7 +167,7 @@ BETWFE / twfeCovs object. The simultaneous critical value \verb{c_\{1 - alpha\}}
 is the \code{(1 - alpha)} quantile of \verb{max_k |Z_k|} where \code{Z} follows a
 multivariate normal with correlation matrix \code{cov2cor(Sigma)}; it is
 computed deterministically via \code{mvtnorm::qmvnorm()}. Under Faletto (2025)
-Theorem (c') tight Gaussianity and Assumption (Psi-IF), the family of
+Theorem 6.4(c') tight Gaussianity and Assumption (Psi-IF), the family of
 psi-linear effects is asymptotically multivariate normal with a covariance
 that is estimable from the package's existing variance machinery; under the
 paper's fixed-dim framing no high-dimensional correction is needed.
@@ -251,7 +251,7 @@ analytic standard errors at all, so \code{method = "analytic"} errors there rath
 than warning; \code{method = "bootstrap"} still works, because the desparsified
 band is built from the empirical per-unit influence function.
 
-\strong{Paper grounding.} Theorem (c') tight Gaussianity (Faletto 2025)
+\strong{Paper grounding.} Theorem 6.4(c') tight Gaussianity (Faletto 2025)
 guarantees the joint asymptotic normality; Assumption (Psi-IF) is the
 influence-function condition the package's default
 cohort-sample-proportions estimator satisfies.

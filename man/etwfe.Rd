@@ -117,7 +117,7 @@ already contains never-treated units. Default is \code{TRUE}.}
 
 \item{se_type}{Character; one of \code{"default"}, \code{"conservative"}, or
 \code{"cluster"}. \code{"default"} returns the tight Gaussian variance
-\code{sqrt(att_var_1 + att_var_2)}, by the argument of Theorem (c$'$) under
+\code{sqrt(att_var_1 + att_var_2)}, by the argument of Theorem 6.4(c') under
 Assumption (Psi-IF) with no selection step: \code{etwfe()} is least squares on
 the GLS-whitened full design. This is asymptotically exact for the
 package's default cohort sample-proportions estimator and for every
@@ -125,7 +125,7 @@ standard propensity-score estimator that satisfies (Psi-IF) (multinomial
 logit, any GLM on \code{W | X}, kernel/series regression of \verb{1\{W = g\}} on \code{X}).
 \code{"conservative"} returns the Cauchy-Schwarz upper bound
 \code{sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))} from
-Theorem (c); use only if the propensity-score estimator violates
+Theorem 6.4(c); use only if the propensity-score estimator violates
 (Psi-IF) (e.g., a Robins-Rotnitzky-augmented doubly-robust estimator,
 which the package does not currently implement). Supplying
 \code{indep_counts} makes \code{"conservative"} give the same standard error as

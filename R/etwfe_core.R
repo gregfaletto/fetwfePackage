@@ -113,7 +113,7 @@ checkEtwfeInputs <- function(
 #'   the untransformed coefficients to stabilize estimation. Default is `FALSE`.
 #' @param se_type Character; the standard-error type, one of `"default"`
 #'   (tight Gaussian variance under (Psi-IF)),
-#'   `"conservative"` (Cauchy-Schwarz upper bound from Theorem (c) for
+#'   `"conservative"` (Cauchy-Schwarz upper bound from Theorem 6.4(c) for
 #'   non-(Psi-IF) propensity estimators), or `"cluster"` (experimental
 #'   unit-clustered Liang-Zeger sandwich SE).
 #'   See the exported wrapper `etwfe()` for details. Default is

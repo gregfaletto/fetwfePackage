@@ -5,7 +5,7 @@
 #'   `se_type != "conservative"`) or the Cauchy-Schwarz upper bound
 #'   `att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2)` (same-data
 #'   non-(Psi-IF) case via `se_type = "conservative"`). Returns a VARIANCE;
-#'   callers apply `sqrt()` for a standard error. Theorem (c') / (c),
+#'   callers apply `sqrt()` for a standard error. Theorem 6.4(c') / (c),
 #'   Assumption (Psi-IF).
 #'   Consolidates five copies of this selection (#209): `getTeResultsOLS()`,
 #'   `getTeResults2()`, `.build_variance_components()`, and the two
