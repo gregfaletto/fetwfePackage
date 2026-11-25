@@ -171,8 +171,9 @@ error as \code{"default"}.
 \code{"cluster"} is an \emph{experimental} unit-clustered Liang-Zeger sandwich
 SE on the bridge-selected support (see the companion vignette
 \code{inference_vignette} for details). \code{"cluster"} is only meaningful
-when \code{q < 1} (the bridge oracle property is required); for \code{q >= 1}
-the SE will be \code{NA} regardless of \code{se_type}. The default \code{"default"}
+when \code{q < 1} (the bridge oracle property is required), and the SE is
+\code{NA} regardless of \code{se_type} whenever \code{calc_ses} is \code{FALSE} (see
+\code{att_se}). The default \code{"default"}
 was the conservative Cauchy-Schwarz formula in versions <= 1.11.7;
 v1.12.0 switched the default to the tight Gaussian variance.
 Default is \code{"default"}.}

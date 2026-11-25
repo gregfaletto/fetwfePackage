@@ -171,17 +171,20 @@ any GLM on \code{W | X}, kernel/series regression of \verb{1\{W = g\}} on \code{
 \code{sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))} from
 Theorem (c); use only if the propensity-score estimator violates
 (Psi-IF) (e.g., a Robins-Rotnitzky-augmented doubly-robust estimator,
-which the package does not currently implement). \code{"cluster"} is an
+which the package does not currently implement). Supplying
+\code{indep_counts} makes \code{"conservative"} give the same standard error as
+\code{"default"}. \code{"cluster"} is an
 \emph{experimental} unit-clustered Liang-Zeger sandwich SE on the
 bridge-selected support (see the companion vignette
 \code{inference_vignette} for the formula, the assumptions, and the
 theory-pending caveat); only meaningful when \code{q < 1} (the bridge
-oracle property is required), and for \code{q >= 1} the SE will be \code{NA}
-regardless of \code{se_type}. The default value of \code{"default"} corresponds
-to the new tight Gaussian default introduced in version 1.12.0;
-previous versions used the conservative Cauchy-Schwarz formula as the
-default. To recover the prior conservative default behavior, pass
-\code{se_type = "conservative"}.}
+oracle property is required), and the SE is \code{NA} regardless of
+\code{se_type} whenever \code{calc_ses} is \code{FALSE} (see \code{att_se}). The default
+value of \code{"default"} corresponds to the new tight Gaussian default
+introduced in version 1.12.0; previous versions used the conservative
+Cauchy-Schwarz formula as the default. To recover the prior
+conservative default behavior, pass \code{se_type = "conservative"} without
+\code{indep_counts}.}
 
 \item{lambda_selection}{Character; method for selecting the bridge
 penalty parameter \code{lambda}. Either \code{"cv"} (10-fold cross-validation

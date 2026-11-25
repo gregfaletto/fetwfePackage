@@ -136,17 +136,20 @@
 #' `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from
 #' Theorem (c); use only if the propensity-score estimator violates
 #' (Psi-IF) (e.g., a Robins-Rotnitzky-augmented doubly-robust estimator,
-#' which the package does not currently implement). `"cluster"` is an
+#' which the package does not currently implement). Supplying
+#' `indep_counts` makes `"conservative"` give the same standard error as
+#' `"default"`. `"cluster"` is an
 #' *experimental* unit-clustered Liang-Zeger sandwich SE on the
 #' bridge-selected support (see the companion vignette
 #' `inference_vignette` for the formula, the assumptions, and the
 #' theory-pending caveat); only meaningful when `q < 1` (the bridge
-#' oracle property is required), and for `q >= 1` the SE will be `NA`
-#' regardless of `se_type`. The default value of `"default"` corresponds
-#' to the new tight Gaussian default introduced in version 1.12.0;
-#' previous versions used the conservative Cauchy-Schwarz formula as the
-#' default. To recover the prior conservative default behavior, pass
-#' `se_type = "conservative"`.
+#' oracle property is required), and the SE is `NA` regardless of
+#' `se_type` whenever `calc_ses` is `FALSE` (see `att_se`). The default
+#' value of `"default"` corresponds to the new tight Gaussian default
+#' introduced in version 1.12.0; previous versions used the conservative
+#' Cauchy-Schwarz formula as the default. To recover the prior
+#' conservative default behavior, pass `se_type = "conservative"` without
+#' `indep_counts`.
 #' @param lambda_selection Character; method for selecting the bridge
 #'   penalty parameter `lambda`. Either `"cv"` (10-fold cross-validation
 #'   on `cv.grpreg`; the v1.13.0+ default) or `"bic"` (BIC over the

@@ -135,7 +135,7 @@ theory-pending caveat). The default value of \code{"default"} corresponds
 to the new tight Gaussian default introduced in version 1.12.0;
 previous versions used the conservative Cauchy-Schwarz formula as the
 default. To recover the prior conservative default behavior, pass
-\code{se_type = "conservative"}.}
+\code{se_type = "conservative"} without \code{indep_counts}.}
 
 \item{ci_type}{Character; one of \code{"simultaneous"} (default) or
 \code{"pointwise"}. Controls the confidence-interval bounds reported for the

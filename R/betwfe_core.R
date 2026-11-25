@@ -128,8 +128,9 @@
 #' `"cluster"` is an *experimental* unit-clustered Liang-Zeger sandwich
 #' SE on the bridge-selected support (see the companion vignette
 #' `inference_vignette` for details). `"cluster"` is only meaningful
-#' when `q < 1` (the bridge oracle property is required); for `q >= 1`
-#' the SE will be `NA` regardless of `se_type`. The default `"default"`
+#' when `q < 1` (the bridge oracle property is required), and the SE is
+#' `NA` regardless of `se_type` whenever `calc_ses` is `FALSE` (see
+#' `att_se`). The default `"default"`
 #' was the conservative Cauchy-Schwarz formula in versions <= 1.11.7;
 #' v1.12.0 switched the default to the tight Gaussian variance.
 #' Default is `"default"`.

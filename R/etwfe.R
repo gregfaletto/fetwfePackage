@@ -103,7 +103,7 @@
 #' to the new tight Gaussian default introduced in version 1.12.0;
 #' previous versions used the conservative Cauchy-Schwarz formula as the
 #' default. To recover the prior conservative default behavior, pass
-#' `se_type = "conservative"`.
+#' `se_type = "conservative"` without `indep_counts`.
 #' @param ci_type Character; one of `"simultaneous"` (default) or
 #'   `"pointwise"`. Controls the confidence-interval bounds reported for the
 #'   cohort-specific ATTs (in `catt_df`) and the event-study effects (from
