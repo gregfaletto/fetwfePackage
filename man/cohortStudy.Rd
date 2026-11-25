@@ -28,7 +28,8 @@ bridge penalty zeroed out included. Otherwise, for \code{fetwfe()} /
 confidence-interval bounds, reflecting the fit's \code{ci_type} --
 simultaneous (family-wise) by default, or pointwise \code{1 - alpha}
 Wald bounds when the fit used \code{ci_type = "pointwise"} (\code{alpha} is
-the value passed at fit time).}
+the value passed at fit time). \code{NA} when \code{se} is \code{NA}; otherwise
+\verb{(0, 0)} for a zeroed-out cohort.}
 \item{p_value}{Numeric; follows the fit's \code{ci_type}. Under
 \code{"pointwise"}, the two-sided Wald p-value
 (\verb{2 * pnorm(-|estimate / se|)}); under \code{"simultaneous"} (the
