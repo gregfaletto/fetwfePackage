@@ -380,9 +380,8 @@
 #' weights equal to the estimated cohort-membership probabilities, so
 #' estimating those probabilities contributes variance.
 #' This builds the per-unit influence function of that channel, the delta-method
-#' image of the cohort-sample-proportion IF `xi_i = e_{W_i} - psi*` (paper
-#' `\eqref{psi.if.assum}`; `e_{W_i}` is the one-hot of unit `i`'s
-#' cohort, `0` for never-treated):
+#' image of the IF `xi_i = e_{W_i} - psi*` (paper `\eqref{psi.if.assum}`;
+#' `e_{W_i}` is the one-hot of row `i`'s cohort, `0` for never-treated):
 #'
 #'   `F_pi[i, k] = T * a_k' (e_{W_i} - pi_hat)`,  `a_k = J_k theta_sel`  (length `G`).
 #'
