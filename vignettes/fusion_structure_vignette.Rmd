@@ -123,11 +123,11 @@ d <- 1L
 N <- 400L
 
 # Generate truth that is sparse in the event-study basis directly, with
-# fusion_structure = "event_study". seed 10 is a representative draw (see the
+# fusion_structure = "event_study". seed 23 is a representative draw (see the
 # note after the plot); density 0.25 keeps the truth genuinely sparse in the
 # event-study basis.
 coefs <- genCoefs(
-  G = G, T = T, d = d, density = 0.25, eff_size = 2, seed = 10,
+  G = G, T = T, d = d, density = 0.25, eff_size = 2, seed = 23,
   fusion_structure = "event_study"
 )
 
@@ -148,16 +148,15 @@ event_time <- unlist(lapply(n_k, function(nk) 0:(nk - 1)))
 # The true per-cell treatment effects, generated natively (not hand-built).
 true_te <- coefs$beta[treat_inds]
 
-sim <- simulateData(coefs, N = N, sig_eps_sq = 1, sig_eps_c_sq = 0.5, seed = 10)
+sim <- simulateData(coefs, N = N, sig_eps_sq = 1, sig_eps_c_sq = 0.5, seed = 23)
 ```
 
 Now fit the same simulated panel under each fusion structure:
 
 ```{r, message = FALSE, warning = FALSE}
-fit_cohort <- fetwfeWithSimulatedData(sim, lambda_selection = "bic")
+fit_cohort <- fetwfeWithSimulatedData(sim)
 fit_event <- fetwfeWithSimulatedData(
   sim,
-  lambda_selection = "bic",
   fusion_structure = "event_study"
 )
 
@@ -326,7 +325,6 @@ for (k in seq_along(first_inds)) {
 
 fit_custom <- fetwfeWithSimulatedData(
   sim,
-  lambda_selection = "bic",
   fusion_matrix = D_N
 )
 
@@ -364,7 +362,7 @@ means a better-conditioned `D_N` would serve you better.
 near_singular <- diag(num_treats)
 near_singular[1, 1] <- 1e-12
 fit_warned <- tryCatch(
-  fetwfeWithSimulatedData(sim, lambda_selection = "bic", fusion_matrix = near_singular),
+  fetwfeWithSimulatedData(sim, fusion_matrix = near_singular),
   warning = function(w) conditionMessage(w)
 )
 # The warning message (estimation still succeeds if you allow the warning):

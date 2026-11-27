@@ -48,7 +48,7 @@ Below is a complete simulation pipeline, step by step.
 The `genCoefs()` function returns an object of class `"FETWFE_coefs"`, containing both the coefficient vector and its simulation parameters. The `fusion_structure` argument (mirroring `fetwfe()`) additionally controls the *basis* in which the true treatment effects are sparse — `"cohort"` (the default) or `"event_study"`; see the vignette `vignette("fusion_structure_vignette", package = "fetwfe")`. In this example we set:
 
 - **G** (number of treated cohorts) = 3
-- **T** (number of time periods) = 6
+- **T** (number of time periods) = 4
 - **d** (number of covariates) = 2  
 - **density** (sparsity level) = 0.1  
 - **eff_size** (effect‐size multiplier) = 2  
@@ -105,7 +105,7 @@ head(sim_data$pdata)
 
 ## Step 3: Run the FETWFE Estimator on Simulated Data
 
-We then run the estimator on the simulated data using `fetwfeWithSimulatedData()`. (We could get the same results by manually unpacking `sim_data` and passing the arguments appropriately to `fewtfe()`. `fetwfeWithSimulatedData()` is just a wrapper function that takes care of this for us.)
+We then run the estimator on the simulated data using `fetwfeWithSimulatedData()`. (We could get the same results by manually unpacking `sim_data` and passing the arguments appropriately to `fetwfe()`. `fetwfeWithSimulatedData()` is just a wrapper function that takes care of this for us.)
 
 ```{r}
 result <- fetwfeWithSimulatedData(sim_data)

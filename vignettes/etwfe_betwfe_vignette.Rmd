@@ -26,7 +26,7 @@ library(fetwfe)
 
 # Introduction
 
-The `{fetwfe}` package implements `fetwfe()` as its recommended estimator for difference-in-differences with staggered adoptions. It also exports two related estimators that serve as comparison baselines:
+The `{fetwfe}` package implements `fetwfe()` as its recommended estimator for difference-in-differences with staggered adoptions. It also exports related estimators that serve as comparison baselines, among them the two this vignette covers:
 
 - `etwfe()` — Wooldridge-style extended two-way fixed effects.
 - `betwfe()` — bridge-penalized ETWFE; like `fetwfe()` but without the fusion transformation.
@@ -35,7 +35,7 @@ This vignette demonstrates both, on simulated data so we can compare each estima
 
 For background on staggered-adoption DiD and a real-data application of the recommended `fetwfe()` estimator, see [the main vignette](https://CRAN.R-project.org/package=fetwfe). For the underlying simulation pipeline used here, see [the simulation vignette](https://CRAN.R-project.org/package=fetwfe). For methodological details, see [Faletto (2025)](https://arxiv.org/abs/2312.05985).
 
-All three estimators (`fetwfe()`, `etwfe()`, `betwfe()`) accept the same call signature, so a user familiar with `fetwfe()` can drop in `etwfe()` or `betwfe()` simply by changing the function name. Below we use the `*WithSimulatedData()` wrappers to keep the simulation flow concise.
+All three estimators (`fetwfe()`, `etwfe()`, `betwfe()`) share their data and inference arguments, so a user familiar with `fetwfe()` can switch estimators mostly by changing the function name. `etwfe()` has none of `q`, `lambda.max`, `lambda.min`, `nlambda`, `lambda_selection`, `cv_folds`, `cv_seed`, `fusion_structure`, `fusion_matrix` or `gls`, and `betwfe()` has none of `fusion_structure`, `fusion_matrix` or `gls`. Below we use the `*WithSimulatedData()` wrappers to keep the simulation flow concise.
 
 # Setup: simulating panel data
 

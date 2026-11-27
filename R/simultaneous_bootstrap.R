@@ -198,8 +198,8 @@
 #' @description
 #' The full-design desparsified construction of `debiasedATT()` (#31), generalized
 #' to `K` effects. With `p >= NT` the OLS refit overfits and the Gram `X'X/n` is
-#' singular, so this uses the *full* (uncentered) design `X`, the regularized
-#' **bridge** residuals `resid`, and a per-effect **nodewise (desparsified-lasso)**
+#' singular, so this uses the *full* (uncentered) design `X`, the residuals
+#' `resid` its caller supplies, and a per-effect **nodewise (desparsified-lasso)**
 #' direction `v_k = riesz_lasso(Sig, targets[,k], lambda_node_k)`. Then
 #' `F[i,k] = sum_t (x_{it}' v_k) * resid_{it}` -- exactly `debiasedATT()`'s
 #' high-dim per-unit score, one direction per effect. `targets[,k]` is effect
