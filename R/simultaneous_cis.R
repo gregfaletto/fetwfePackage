@@ -66,8 +66,9 @@ utils::globalVariables(c(
 #'   for the other families. Note that the `"custom"` family omits the
 #'   cohort-probability variance term (`Sigma_2 = 0`), so a custom contrast
 #'   that pools across cohorts in a probability-weighted way is
-#'   anti-conservative (its band can under-cover); use `family = "cohort"` for
-#'   cohort-pooled effects.
+#'   anti-conservative (its band can under-cover). Only `family = "event_study"`
+#'   carries that term, for event-time effects pooled across cohorts; no family
+#'   adds it to a custom contrast.
 #' @param method Character; how the simultaneous critical value is computed.
 #'   `"analytic"` (default) uses the exact multivariate-normal sup-t quantile via
 #'   `mvtnorm::qmvnorm()`. `"bootstrap"` uses the multiplier bootstrap of
@@ -285,6 +286,11 @@ utils::globalVariables(c(
 #' call `set.seed()` before `simultaneousCIs()` to get reproducible results,
 #' and downstream RNG-using code observes no perturbation.
 #' @references
+#' Chernozhukov, V., Chetverikov, D., & Kato, K. (2013). Gaussian
+#'   Approximations and Multiplier Bootstrap for Maxima of Sums of
+#'   High-Dimensional Random Vectors. \emph{The Annals of Statistics} 41(6),
+#'   2786-2819.
+#'
 #' Faletto, G. (2025). Fused Extended Two-Way Fixed Effects for Difference-in-
 #'   Differences with Staggered Adoptions. arXiv:2312.05985.
 #'

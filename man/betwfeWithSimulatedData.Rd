@@ -286,3 +286,13 @@ match their counterparts in \code{betwfe()}.
 }
 
 }
+\references{
+Faletto, G (2025). Fused Extended Two-Way Fixed Effects for
+Difference-in-Differences with Staggered Adoptions.
+\emph{arXiv preprint arXiv:2312.05985}.
+\url{https://arxiv.org/abs/2312.05985}.
+
+Kock, A. B. (2013). Oracle Efficient Variable Selection in Random and
+Fixed Effects Panel Data Models. \emph{Econometric Theory}, 29(1),
+115-152.
+}

@@ -328,6 +328,10 @@
 #' Linear Mixed-Effects Models Using lme4. \emph{Journal of Statistical
 #' Software}, 67(1), 1-48. \doi{10.18637/jss.v067.i01}.
 #'
+#' Kock, A. B. (2013). Oracle Efficient Variable Selection in Random and
+#' Fixed Effects Panel Data Models. \emph{Econometric Theory}, 29(1),
+#' 115-152.
+#'
 #' Patterson, H. D., & Thompson, R. (1971). Recovery of inter-block
 #' information when block sizes are unequal. \emph{Biometrika}, 58(3),
 #' 545-554.
@@ -344,9 +348,7 @@
 #'
 #'   # Response: the log homicide rate. Treatment: `cdl` records the share of
 #'   # the year the castle-doctrine law was in effect, so `cdl > 0` gives the
-#'   # absorbing 0/1 treatment indicator. No `covs`: castle's smallest
-#'   # adoption cohorts contain a single state, so the design is
-#'   # rank-deficient once any covariate is added.
+#'   # absorbing 0/1 treatment indicator.
 #'   castle$l_homicide <- log(castle$homicide)
 #'   castle$treated <- as.integer(castle$cdl > 0)
 #'
@@ -740,6 +742,15 @@ betwfe <- function(
 #'       the labels are integer-coercible. New in v1.13.3 (issue #174).}
 #'   }
 #' }
+#' @references
+#' Faletto, G (2025). Fused Extended Two-Way Fixed Effects for
+#' Difference-in-Differences with Staggered Adoptions.
+#' \emph{arXiv preprint arXiv:2312.05985}.
+#' \url{https://arxiv.org/abs/2312.05985}.
+#'
+#' Kock, A. B. (2013). Oracle Efficient Variable Selection in Random and
+#' Fixed Effects Panel Data Models. \emph{Econometric Theory}, 29(1),
+#' 115-152.
 #'
 #' @examples
 #' \dontrun{
