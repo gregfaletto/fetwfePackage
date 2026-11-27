@@ -210,6 +210,14 @@ test_that(".cv_lambda_node's backstop does not fire while the clock stands still
 	expect_equal(r$cv_loss, base$cv_loss)
 })
 
+test_that(".cv_elapsed() reads proc.time()'s elapsed seconds (#570)", {
+	# The two reads are adjacent rather than simultaneous, hence the tolerance.
+	e <- .cv_elapsed()
+	r <- proc.time()[["elapsed"]]
+	expect_null(attributes(e))
+	expect_lt(abs(e / r - 1), 0.5)
+})
+
 # ===================== end-to-end tests on a real p >= NT fit =================
 # A genuine high-dim fetwfe fit (N=20, T=8, d=12 => p=376 >> NT=160). The
 # simulator enforces N >= (G+1)(d+1), so build the raw panel directly and supply
