@@ -253,11 +253,9 @@ test_that("event_study differs from cohort at d=0 and d>0; slot stored/printed; 
 
 test_that("event_study recovers native event-study truth better than cohort (#237)", {
 	skip_on_cran()
-	# Pinned to the fusion_structure vignette's showcase draw (the shape,
-	# seeds and CV default of its setup chunk), with the truth generated
-	# natively by fusion_structure = "event_study". Asserts that the
-	# event-study penalty recovers the per-cell treatment effects with lower
-	# MSE than the default cohort penalty.
+	# Pinned to the shape, seeds and fits of the fusion_structure vignette's
+	# side-by-side demo, with the truth generated natively by
+	# fusion_structure = "event_study".
 	G <- 6L
 	T <- 9L
 	d <- 1L
