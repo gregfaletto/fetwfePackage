@@ -179,7 +179,7 @@ Version 1.14.0 of `{fetwfe}` introduces two covariate-dependent DGPs to `genCoef
   $$P(W' \le g \mid x) = \mathrm{plogis}(\alpha_g - \gamma^\top x), \quad g = 1, \ldots, G,$$
   with a single shared $\gamma$ vector and cutpoints $\alpha_g$ chosen so the marginal cohort probabilities are approximately uniform $1/(G + 1)$. As $\gamma^\top x$ increases monotonically, the modal cohort traverses the ordinal scale in order: cohort 1 $\to$ cohort 2 $\to \ldots \to$ cohort $G$ $\to$ never-treated. Low $\gamma^\top x$ concentrates mass at the *bottom* of the scale (earliest-adopting cohorts); high $\gamma^\top x$ concentrates mass at the *top* (never-treated, with later cohorts at intermediate values). $\gamma$ is the propensity for being *later* on the treatment-timing scale.
 
-Both DGPs are the canonical reference models named in the FETWFE paper (Faletto 2025, line 1016).
+Both DGPs are the canonical reference models named in the FETWFE paper (Faletto 2025).
 
 ## Multinomial-logit DGP
 
@@ -341,7 +341,7 @@ The interaction columns are constructed internally inside the propensity model e
 Under the default marginal DGP, the overall true ATT is the equal-weighted average of the cohort-specific effects:
 $$\tau_\mathrm{ATT} = \frac{1}{G} \sum_{g = 1}^{G} \tau_\mathrm{ATT}(g).$$
 
-Under covariate-dependent DGPs this aggregation must use cohort-share weights instead, matching Faletto (2025) Eq. `att.estimator.weighted` (line 837). `getTes()` automatically computes the propensity-weighted aggregation when the input `FETWFE_coefs` object was built with a non-marginal `assignment_type`:
+Under covariate-dependent DGPs this aggregation must use cohort-share weights instead, matching Faletto (2025) Eq. `att.estimator.weighted`. `getTes()` automatically computes the propensity-weighted aggregation when the input `FETWFE_coefs` object was built with a non-marginal `assignment_type`:
 
 ```{r}
 te_mn <- getTes(sim_coefs_mn)

@@ -126,11 +126,11 @@
 #' interval).
 #'
 #' The augmented linear predictor extends the standard multinomial-logit
-#' / proportional-odds parameterization (see Faletto 2025 line 1016 for
+#' / proportional-odds parameterization (see Faletto 2025 for
 #' the linear-in-X form). Interaction terms are user-specified pairwise
 #' products of covariate columns and remain within the paper's framework
 #' because the multinomial-logit MLE with interaction features still
-#' satisfies Assumption (Psi-IF) (line 2018) via M-estimator theory.
+#' satisfies Assumption (Psi-IF) via M-estimator theory.
 #'
 #' @keywords internal
 #' @noRd
@@ -199,7 +199,7 @@
 	# reduce to qlogis((1:G) / (G + 1)) by construction. With interactions,
 	# the MC sample integrates over the augmented covariate distribution so
 	# the marginal-uniform invariant is preserved up to MC noise. See
-	# Faletto 2025 line 1016 for the linear-in-X form; this extends the
+	# Faletto 2025 for the linear-in-X form; this extends the
 	# parameterization to include user-specified pairwise interactions.
 	M_cutpoints <- 5000L
 	X_mc <- matrix(
@@ -300,7 +300,7 @@
 	stopifnot(!is.null(assignment_coefs))
 	type <- assignment_coefs$type
 	# Interactions (NULL or empty list -> no augmentation; v1.14.0 byte path).
-	# See Faletto 2025 line 1016 for the linear-in-X form; this extends the
+	# See Faletto 2025 for the linear-in-X form; this extends the
 	# parameterization to include user-specified pairwise interactions.
 	interactions <- assignment_coefs$interactions
 	delta <- assignment_coefs$delta

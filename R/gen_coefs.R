@@ -283,9 +283,9 @@
 #' }
 #'
 #' The multinomial-logit and proportional-odds reference DGPs are the
-#' canonical parametric propensity-score models named in Faletto (2025)
-#' line 1016; the propensity-weighted population-truth aggregation matches
-#' Eq. \code{att.estimator.weighted} (line 837).
+#' canonical parametric propensity-score models named in Faletto (2025);
+#' the propensity-weighted population-truth aggregation matches
+#' Eq. \code{att.estimator.weighted}.
 #'
 #' Note on the random-number generator: passing an explicit numeric
 #' \code{seed} calls \code{set.seed(seed)} internally and \strong{leaves the
@@ -542,7 +542,7 @@ genCoefs <- function(
 #' covariate-dependent DGPs introduced in 1.14.0, the overall ATT is a
 #' propensity-weighted mean using cohort weights
 #' \eqn{E[\pi_g(X)] / \sum_{g' \text{ treated}} E[\pi_{g'}(X)]}{E[pi_g(X)] / sum_{g' treated} E[pi_g'(X)]},
-#' matching Faletto (2025) Eq. \code{att.estimator.weighted} (line 837) at the
+#' matching Faletto (2025) Eq. \code{att.estimator.weighted} at the
 #' population level. The expected propensities are computed by Monte Carlo
 #' integration over the covariate distribution.
 #'
@@ -707,7 +707,7 @@ getTes <- function(coefs_obj, distribution = "gaussian") {
 	} else {
 		# Compute E[pi_g(X)] under the propensity-score DGP via MC
 		# integration. Reserved-offset seed convention: +2L from main seed.
-		# This matches paper Eq. att.estimator.weighted (line 837):
+		# This matches paper Eq. att.estimator.weighted:
 		#   tau_ATT = sum_{g in treated} (N_g / N_tau) * tau_ATT(g)
 		# at the population level, where N_g / N_tau converges to
 		#   E[pi_g(X)] / sum_{g' treated} E[pi_g'(X)].

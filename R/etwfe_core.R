@@ -100,8 +100,8 @@ checkEtwfeInputs <- function(
 #'   each cohort's first treatment effect within the treatment effect block.
 #' @param indep_counts (Optional) An integer vector of counts for how many units
 #'   appear in the untreated cohort plus each of the other `G` cohorts, derived
-#'   from an independent dataset. Used for asymptotically exact standard errors for
-#'   the ATT. Default is `NA`.
+#'   from an independent dataset. See the exported wrapper `etwfe()` for
+#'   details. Default is `NA`.
 #' @param sig_eps_sq (Optional) Numeric; the known variance of the observation-level
 #'   IID noise. If `NA`, it will be estimated. Default is `NA`.
 #' @param sig_eps_c_sq (Optional) Numeric; the known variance of the unit-level IID
@@ -112,10 +112,10 @@ checkEtwfeInputs <- function(
 #' @param add_ridge (Optional) Logical; if `TRUE`, adds a small L2 penalty to
 #'   the untransformed coefficients to stabilize estimation. Default is `FALSE`.
 #' @param se_type Character; the standard-error type, one of `"default"`
-#'   (tight Gaussian variance under (Psi-IF), Theorem (c$'$)),
-#'   `"conservative"` (Cauchy-Schwarz upper bound from Theorem (c) for
+#'   (tight Gaussian variance under (Psi-IF)),
+#'   `"conservative"` (Cauchy-Schwarz upper bound from Theorem 6.4(c) for
 #'   non-(Psi-IF) propensity estimators), or `"cluster"` (experimental
-#'   unit-clustered Liang-Zeger sandwich SE on the OLS-selected support).
+#'   unit-clustered Liang-Zeger sandwich SE).
 #'   See the exported wrapper `etwfe()` for details. Default is
 #'   `"default"`.
 #' @param is_twfe_covs Logical; selects the treatment-effect basis. `FALSE`
@@ -155,9 +155,8 @@ checkEtwfeInputs <- function(
 #'     point estimate and SE, using both in-sample probabilities and
 #'     independent probabilities when `indep_counts` is provided.
 #' }
-#' The standard errors for CATTs are asymptotically exact. For ATT, if
-#' `indep_counts` are provided, the SE is asymptotically exact; otherwise, it
-#' is asymptotically conservative.
+#' The standard errors for CATTs are asymptotically exact; for the ATT's, see
+#' `se_type`.
 #'
 #' @return A list containing detailed estimation results:
 #'   \item{in_sample_att_hat}{Estimated overall ATT using in-sample cohort probabilities.}
@@ -166,7 +165,7 @@ checkEtwfeInputs <- function(
 #'   \item{indep_att_hat}{Estimated overall ATT using `indep_counts` cohort probabilities (NA if `indep_counts` not provided).}
 #'   \item{indep_att_se}{Standard error for `indep_att_hat` (NA if not applicable).}
 #'   \item{catt_hats}{A named vector of estimated CATTs for each cohort.}
-#'   \item{catt_ses}{A named vector of SEs for `catt_hats` (NA when the Gram matrix is not invertible).}
+#'   \item{catt_ses}{See `catt_ses` in `?etwfe`'s or `?twfeCovs`'s value.}
 #'   \item{catt_df}{A data frame (with S3 class `c("catt_df", "data.frame")`) summarizing CATTs (`cohort`, `estimate`, `se`, `ci_low`, `ci_high`, `p_value`). The `catt_df` S3 class makes `[[` / `$` / `[` access on the pre-1.11.0 Title-Case column names `stop()` with a migration message pointing to the new name.}
 #'   \item{beta_hat}{The vector of estimated coefficients in the *original*
 #'     space (no bridge fusion transformation; the OLS path is pure OLS).}
@@ -180,7 +179,7 @@ checkEtwfeInputs <- function(
 #'   \item{y}{The original input centered response vector from `prepXints`.}
 #'   \item{X_final}{The design matrix after GLS weighting (no fusion
 #'     transformation on the OLS path).}
-#'   \item{y_final}{The response vector after GLS weighting.}
+#'   \item{y_final}{See `y_final` in `?etwfe`'s or `?twfeCovs`'s value.}
 #'   \item{N, T, G, d, p}{Dimensions used in estimation.}
 #' @keywords internal
 #' @noRd

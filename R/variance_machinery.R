@@ -5,8 +5,8 @@
 #'   `se_type != "conservative"`) or the Cauchy-Schwarz upper bound
 #'   `att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2)` (same-data
 #'   non-(Psi-IF) case via `se_type = "conservative"`). Returns a VARIANCE;
-#'   callers apply `sqrt()` for a standard error. Theorem (c') / (c),
-#'   Assumption (Psi-IF); see `paper_arxiv.tex` ~ line 1233 and ~ line 2013.
+#'   callers apply `sqrt()` for a standard error. Theorem 6.4(c') / (c),
+#'   Assumption (Psi-IF).
 #'   Consolidates five copies of this selection (#209): `getTeResultsOLS()`,
 #'   `getTeResults2()`, `.build_variance_components()`, and the two
 #'   `.event_study_*` helpers.
@@ -100,11 +100,10 @@
 #'     combination depends on `se_type`:
 #'     * `"default"` (or `"cluster"`) uses the tight Gaussian variance
 #'       `sqrt(att_var_1 + att_var_2)`, asymptotically exact under the paper's
-#'       Theorem `te.asym.norm.thm`(c$'$) and Assumption (Psi-IF). Paper line
-#'       1233 onwards. (Psi-IF) is satisfied by the package's default cohort
-#'       sample-proportions estimator `hat_pi_g = N_g / N`, by multinomial
-#'       logit, by any GLM on `W | X`, and by kernel/series regression of
-#'       `1{W = g}` on `X`.
+#'       Theorem `te.asym.norm.thm`(c$'$) and Assumption (Psi-IF). (Psi-IF) is
+#'       satisfied by the package's default cohort sample-proportions
+#'       estimator `hat_pi_g = N_g / N`, by multinomial logit, by any GLM on
+#'       `W | X`, and by kernel/series regression of `1{W = g}` on `X`.
 #'     * `"conservative"` uses the Cauchy-Schwarz upper bound
 #'       `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from
 #'       Theorem (c) of the paper. This is the right tool only when the
@@ -745,9 +744,8 @@ getPsiGUnfused <- function(
 #'   \(\Psi=(\psi_1,\dots,\psi_R)\).
 #' * *Term 2* - randomness from \(\widehat\pi\) itself.
 #'   It equals \(N^{-1}\theta_{\text{sel}}^{\!\top}J^{\!\top}
-#'   \widehat\Sigma_\pi J\theta_{\text{sel}}\) when cohort counts and outcomes
-#'   come from independent samples, and it enters a conservative sum of
-#'   variances otherwise.
+#'   \widehat\Sigma_\pi J\theta_{\text{sel}}\); Details say how it combines
+#'   with Term 1.
 #' @param sig_eps_sq Numeric scalar; variance of the idiosyncratic error term.
 #' @param N Integer; total number of units.
 #' @param T Integer; total number of time periods.
@@ -775,9 +773,8 @@ getPsiGUnfused <- function(
 #'   transformed (fused) space for selected treatment effects.
 #' @param calc_ses Logical; if `TRUE`, calculate standard errors.
 #' @param indep_probs Logical; if `TRUE`, assumes `cohort_probs` (and
-#'   `cohort_probs_overall`) were estimated from an independent sample, leading
-#'   to a different SE formula (sum of variances) compared to when they are
-#'   estimated from the same sample (conservative SE including a covariance term).
+#'   `cohort_probs_overall`) were estimated from an independent sample. Details
+#'   say how this changes the standard error.
 #' @param se_type Character; one of `"default"` (tight Gaussian variance under
 #'   Assumption (Psi-IF), Theorem (c$'$)), `"conservative"` (Cauchy-Schwarz
 #'   upper bound from Theorem (c) for non-(Psi-IF) propensity estimators), or
@@ -820,8 +817,7 @@ getPsiGUnfused <- function(
 #'     combination depends on `se_type`:
 #'     * `"default"` (or `"cluster"`) uses the tight Gaussian variance
 #'       `sqrt(att_var_1 + att_var_2)`, asymptotically exact under the paper's
-#'       Theorem `te.asym.norm.thm`(c$'$) and Assumption (Psi-IF). Paper line
-#'       1233 onwards.
+#'       Theorem `te.asym.norm.thm`(c$'$) and Assumption (Psi-IF).
 #'     * `"conservative"` uses the Cauchy-Schwarz upper bound
 #'       `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from
 #'       Theorem (c). This is the right tool only when the propensity-score
@@ -1335,12 +1331,7 @@ getPsiGFused <- function(
 #'         \(-\widehat\pi_g\widehat\pi_s\) off-diagonal).
 #'   \item \(J\) is the Jacobian of the weighting function
 #'         \(f_g(\pi)=\pi_g/\sum_{k}\pi_k\) evaluated at
-#'         \(\widehat\pi\).  In matrix form
-#'         \eqn{J_{rs}=
-#'           \begin{cases}
-#'             (1-\widehat\pi_g)/S^2,& g=s,\\[4pt]
-#'             -\,\widehat\pi_g    /S^2,& g\neq s,
-#'           \end{cases}} with \(S=\sum_k\widehat\pi_k\).
+#'         \(\widehat\pi\), from `.build_jacobian()`.
 #'   \item Each column of `d_inv_treat_sel` is a selected **transformed**
 #'         treatment coefficient; row-averaging over the rows belonging to
 #'         cohort \(s\) produces the part of \(J\) that multiplies
@@ -1400,8 +1391,7 @@ getSecondVarTermDataApp <- function(
 	stopifnot(nrow(Sigma_pi_hat) == G)
 	stopifnot(ncol(Sigma_pi_hat) == G)
 
-	# Jacobian (paper Theorem 6.1 proof, label `main.te.cons.thm`; was a stale
-	# "Theorem 6.3 / 2577-2592" reference, corrected #325):
+	# Jacobian (paper Theorem 6.1 proof, label `main.te.cons.thm`):
 	##
 	## J_{rs} =  (S-pi_g)/S^2      if g = s
 	##           -pi_s   /S^2      if g != s    (off-diagonal uses COLUMN index s)
@@ -1417,9 +1407,7 @@ getSecondVarTermDataApp <- function(
 	## Each column block of d_inv_treat_sel belongs to a selected theta coordinate;
 	## averaging the rows of cohorts gives the vector needed to multiply theta_sel.
 	##
-	## Consolidated into `.build_jacobian()` (#192, WORKFLOW_LESSONS §14 Class
-	## A); the FETWFE scalar-block-averaging path (d_inv non-NULL) returns the
-	## G x p_sel block-averaged Jacobian byte-identically.
+	## Consolidated into `.build_jacobian()` (#192).
 	jacobian_mat <- .build_jacobian(
 		cohort_probs_overall = cohort_probs_overall,
 		G = G,
@@ -1470,13 +1458,10 @@ getSecondVarTermDataApp <- function(
 #' three pre-#192 inline Jacobian-build sites
 #' (`getSecondVarTermOLS()`, `getSecondVarTermDataApp()`, and
 #' `.event_study_var2_fetwfe()` in `R/event_study.R`) plus the new
-#' `simultaneousCIs()` call site into one helper (WORKFLOW_LESSONS section 14 Class A:
-#' the third copy triggers a refactor). All four sites implement the same
+#' `simultaneousCIs()` call site into one helper. All four sites implement the same
 #' delta-method gradient of \eqn{f_g(\pi)=\pi_g/\sum_k \pi_k}; the column-index
 #' off-diagonal coefficient \eqn{J_{rs}=-\pi_s/S^2} matches the explicit Jacobian
-#' in the proof of paper Theorem 6.1 (label `main.te.cons.thm`; was a stale
-#' "Theorem 6.3 / 2577-2592" reference, corrected #325). Prior to v1.8.0 the
-#' off-diagonal used the outer-loop row index; see issue #46.
+#' in the proof of paper Theorem 6.1 (label `main.te.cons.thm`).
 #' @param cohort_probs_overall Numeric vector of length `G`; marginal cohort
 #'   probabilities P(W = g). For `mode = "per_effect_masked"` the caller passes
 #'   the full (un-masked) vector; this helper masks to `V_e` internally.
@@ -1821,7 +1806,7 @@ getSecondVarTermDataApp <- function(
 #'   `getPsiGUnfused()` and no `d_inv_treat_sel` is returned.
 #' @param calc_ses Logical; if `TRUE`, attempts to calculate standard errors.
 #'   For OLS callers pass `TRUE` (the gram-matrix inverse is needed
-#'   unconditionally for SEs); for bridge callers pass `q < 1`.
+#'   unconditionally for SEs).
 #' @param include_selected Logical; if `TRUE`, appends a trailing `selected =
 #'   cohort_tes != 0` column to `cohort_te_df`. The column is meaningful only
 #'   when a bridge penalty produced the `tes` (FETWFE / BETWFE), so OLS

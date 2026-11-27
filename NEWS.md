@@ -71,9 +71,10 @@
   reported lambda values stay in the response's units, and on the BIC route a
   supplied `lambda.max` without `add_ridge` gives the same fit as before, except
   where `delta` had distorted the old fit.
-  Because a supplied `sig_eps_sq` now also sets where the lambda grid sits, a
-  variance supplied in the wrong units moves the estimates at `q != 1`, not
-  only their standard errors. `fetwfe(gls = FALSE)` fits, which estimate no
+  Because a `sig_eps_sq` supplied together with `sig_eps_c_sq` now also sets
+  where the lambda grid sits, a variance supplied in the wrong units can move
+  the estimates, not only their standard errors.
+  `fetwfe(gls = FALSE)` fits, which estimate no
   noise variance, are not standardized and still depend on the units (#490). The
   `q = 1` nuisance behind `debiasedATT()` and the high-dimensional bootstrap
   band of `simultaneousCIs()` is standardized too, by the response's standard
@@ -102,7 +103,8 @@
 
 - `eventStudy()` and `simultaneousCIs(family = "event_study")` omit event times no
   cohort reaches, rather than reporting an estimate of 0 there, so a
-  `se_type = "conservative"` band no longer counts them (#515).
+  `se_type = "conservative"` band without `indep_counts` no longer counts them
+  (#515).
 
 - `simultaneousCIs(family = "cohort")` labels each cohort by its time value, as
   `tidy()` does, not by its period position (#506).
@@ -312,11 +314,11 @@
   the pointwise band, with `NA` adjusted p-values and no warning, for a response
   with small values, and no longer do (#489).
 
-- Under `se_type = "conservative"`, `simultaneousCIs()` gave a finite adjusted
-  p-value to a custom contrast whose variance is only rounding error, which
-  weights that cancel across cells the bridge fused to one value can leave; it
-  now gives `NA`, as the default `se_type` and `method = "bootstrap"` already
-  did (#489).
+- Under `se_type = "conservative"` without `indep_counts`, `simultaneousCIs()`
+  gave a finite adjusted p-value to a custom contrast whose variance is only
+  rounding error, which weights that cancel across cells the bridge fused to
+  one value can leave; it now gives `NA`, as the default `se_type` and
+  `method = "bootstrap"` already did (#489).
 
 - In `simultaneousCIs()`, a `"custom"` family whose rows' weights were very
   small, or differed in size by a large factor, lost its simultaneous band or

@@ -272,6 +272,55 @@ test_that("fetwfe() stops end-to-end on a malformed fusion_matrix", {
 	)
 })
 
+test_that("fusion_matrix's size is the general num_treats count when cohorts adopt in non-consecutive periods (#434)", {
+	skip_on_cran()
+	coefs <- genCoefs(
+		G = 3,
+		T = 5,
+		d = 2,
+		density = 0.5,
+		eff_size = 2,
+		seed = 1
+	)
+	sim <- simulateData(
+		coefs,
+		N = 120,
+		sig_eps_sq = 0.5,
+		sig_eps_c_sq = 0.5,
+		seed = 1
+	)
+	pd <- sim$pdata
+	first_treated <- tapply(
+		ifelse(pd[[sim$treatment]] == 1, pd[[sim$time_var]], Inf),
+		pd[[sim$unit_var]],
+		min
+	)
+	# Dropping the period-3 cohort leaves adoption in periods 2 and 4 of 5:
+	# 4 + 2 = 6 effects, where the consecutive-adoption formula gives 7.
+	pd <- pd[
+		!pd[[sim$unit_var]] %in% names(first_treated)[first_treated == 3],
+	]
+	fit_with <- function(fusion_matrix) {
+		fetwfe(
+			pdata = pd,
+			time_var = sim$time_var,
+			unit_var = sim$unit_var,
+			treatment = sim$treatment,
+			response = sim$response,
+			covs = sim$covs,
+			sig_eps_sq = sim$sig_eps_sq,
+			sig_eps_c_sq = sim$sig_eps_c_sq,
+			fusion_matrix = fusion_matrix
+		)
+	}
+
+	expect_identical(length(fit_with(diag(6))$treat_inds), 6L)
+	err <- tryCatch(fit_with(diag(7)), error = identity)
+	expect_s3_class(err, "error")
+	expect_match(conditionMessage(err), "expected num_treats = 6\\b")
+	expect_false(grepl("getFirstInds|getTreatInds", conditionMessage(err)))
+})
+
 # ------------------------------------------------------------------------------
 # 4. Conditioning. The svd singular-value-lemma policing is gone: under fixed-dim
 #    Assumption (D) any finite invertible D_N inherits the guarantees, so a

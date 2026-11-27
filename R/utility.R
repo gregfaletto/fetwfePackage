@@ -1496,7 +1496,7 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #' `2 * pnorm(-|t|)` p-value for rows where the standard error is positive,
 #' and `NA_real_` for rows where the standard error is zero or `NA`. The
 #' zero-SE case happens when the estimator zeros a coefficient (selected
-#' out under FETWFE / BETWFE bridge regression with `q < 1`), or in
+#' out under FETWFE / BETWFE bridge regression when `calc_ses` is `TRUE`), or in
 #' degenerate fallback paths where SEs cannot be computed. Routing all
 #' p-value computation through this single helper avoids the
 #' `0 / 0 = NaN` trap and gives one canonical formula to audit.
@@ -2277,24 +2277,17 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #' `q` argument to discriminate. For fetwfe/betwfe callers (non-NA
 #' `q`), the SE-non-NA guard runs only when `q < 1 && res$calc_ses` in
 #' both branches. For etwfe/twfeCovs callers (`q == NA`), the SE-non-NA
-#' guard on `res$indep_att_se` runs unconditionally in the indep
-#' branch (matching pre-#79 etwfe/twfeCovs behavior: rank-deficient
-#' fits with `indep_counts` still trip this guard); the in-sample
-#' branch carries no SE-non-NA guard for these callers. Consolidated
-#' by GitHub #79.
+#' guard on `res$indep_att_se` runs in the indep branch when
+#' `res$calc_ses` is `TRUE`; the in-sample branch carries no SE-non-NA
+#' guard for these callers. Consolidated by GitHub #79.
 #' @param res A list returned by `fetwfe_core()`, `etwfe_core()`,
-#'   `betwfe_core()`, or `twfeCovs_core()`. Required fields are
-#'   `att_hat`, `att_se`, `cohort_probs`, `cohort_probs_overall`,
-#'   `indep_att_hat`, `indep_att_se`, `indep_cohort_probs`,
-#'   `indep_cohort_probs_overall`, `in_sample_att_hat`,
-#'   `in_sample_att_se`, and `calc_ses`.
+#'   `betwfe_core()`, or `twfeCovs_core()`.
 #' @param indep_count_data_available Logical scalar; if `TRUE`, the
 #'   indep_* branch is selected.
 #' @param q Numeric scalar; the bridge penalty exponent. `NA` (default)
 #'   for etwfe/twfeCovs callers; non-NA for fetwfe/betwfe callers.
 #'   Selects which SE-non-NA guards run (see Description).
-#' @return A list with four elements: `att_hat`, `att_se`,
-#'   `cohort_probs`, `cohort_probs_overall`.
+#' @return A list.
 #' @keywords internal
 #' @noRd
 .select_att_branch <- function(
@@ -2312,17 +2305,7 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 				stopifnot(!is.na(res$indep_att_se))
 			}
 		} else {
-			# Issue #84 item 8: gate the etwfe/twfeCovs unconditional
-			# guard on `calc_ses`. The pre-#79 behavior stopped()-d on
-			# `is.na(res$indep_att_se)` even when SEs had been
-			# intentionally not computed (e.g., a future code path
-			# where calc_ses = FALSE flows through this branch with
-			# valid indep counts). Currently `calc_ses = FALSE` is
-			# only reachable via the `q >= 1` bridge regime, so no
-			# live code path can trip the un-gated guard today — but
-			# the explicit gate hardens against a future refactor that
-			# routes a calc_ses = FALSE etwfe/twfeCovs fit through
-			# this branch.
+			# Issue #84 item 8.
 			if (res$calc_ses) {
 				stopifnot(!is.na(res$indep_att_se))
 			}
@@ -2373,7 +2356,7 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #' @description
 #' Internal helper that maps the package's finite-sample variance pieces
 #' (`att_var_1`, `att_var_2`) onto the paper-notation slots a user would
-#' look up against `paper_arxiv.tex` (issue #141 + #146). The slots:
+#' look up (issue #141 + #146). The slots:
 #'
 #' * `att_var_1`, `att_var_2`: the same numbers the package has always
 #'   stored internally. `att_var_1 = sigma^2 psi^T G^{-1} psi / (NT)` is
@@ -2390,17 +2373,16 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #'   See the cluster-robust standard errors section of
 #'   `vignettes/inference_vignette.Rmd` for the cluster-path V_1 definition.
 #' * `tilde_v_N`, `hat_v_N`: paper-notation unit-scaled (`tilde_v_N`) and
-#'   un-scaled (`hat_v_N`) total variance, where `tilde_v_N := hat_v_N / T`
-#'   (paper line 2004). The Wald CI is
-#'   `[hat_T_N +- qnorm(1-alpha/2) * sqrt(tilde_v_N / N)]`
-#'   (paper Eq. `conf.int.form`, line 1259), so `att_se = sqrt(tilde_v_N / N)`.
+#'   un-scaled (`hat_v_N`) total variance, where `tilde_v_N := hat_v_N / T`.
+#'   The Wald CI is `[hat_T_N +- qnorm(1-alpha/2) * sqrt(tilde_v_N / N)]`
+#'   (paper Eq. `conf.int.form`), so `att_se = sqrt(tilde_v_N / N)`.
 #'   The combination matches the value used to compute `att_se`:
 #'   tight `att_var_1 + att_var_2` under the default `(Psi-IF)`-satisfying
 #'   path, conservative `att_var_1 + att_var_2 + 2 sqrt(att_var_1 * att_var_2)`
 #'   under `se_type = "conservative"`.
 #' * `tilde_v_N_C`, `tilde_v_N_C_pi_hat`, `tilde_v_N_C_pi_hat_cons`,
 #'   `tilde_v_N_cons`: the unit-scaled counterparts of the paper's six
-#'   variance estimators catalogued at line 2006. `tilde_v_N_C` corresponds
+#'   variance estimators. `tilde_v_N_C` corresponds
 #'   to the fixed-pi exact variance (paper Eq. `v.n.r.t.att.const`), equal
 #'   to `N * att_var_1`. `tilde_v_N_C_pi_hat` is the random-pi exact
 #'   variance (paper Eq. `v.n.r.t.att.rand`), equal to `N * (att_var_1 +
@@ -2447,8 +2429,8 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 		))
 	}
 
-	# Tight Gaussian (Theorem (c'), independent two-sample case) and
-	# Cauchy-Schwarz conservative bound (Theorem (c)) -- the two same-data
+	# Tight Gaussian (Theorem 6.4(c')) and
+	# Cauchy-Schwarz conservative bound (Theorem 6.4(c)) -- the two same-data
 	# combinations the package exposes.
 	att_var_tight <- att_var_1 + att_var_2
 	att_var_cons <- att_var_1 +
@@ -2456,8 +2438,8 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 		2 * sqrt(att_var_1 * att_var_2)
 
 	# Which combination is the headline `att_se`? `att_se = sqrt(<this> / N) * N`
-	# below, i.e., `tilde_v_N = N * <this>`. Per paper line 1259, the Wald CI
-	# half-width is `qnorm * sqrt(tilde_v_N / N)`, matching `att_se` exactly.
+	# below, i.e., `tilde_v_N = N * <this>`. The Wald CI half-width is
+	# `qnorm * sqrt(tilde_v_N / N)`, matching `att_se` exactly.
 	att_var_headline <- .combine_att_variance(
 		att_var_1,
 		att_var_2,
@@ -2495,10 +2477,10 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #'   across `R/fetwfe_core.R` and `R/betwfe_core.R`. The duplication was
 #'   a documented drift risk (issue #119); future fixes to the lambda
 #'   path now have a single landing site.
-#' @param X_final_scaled Numeric matrix; the design matrix (typically
-#'   GLS-then-fusion transformed and scaled).
-#' @param y_final Numeric vector; the GLS-transformed response, in the units
-#'   `.dispatch_bridge_selection()` fits it in.
+#' @param X_final_scaled Numeric matrix; `X_final_scaled` from
+#'   `prep_for_etwfe_regression()`.
+#' @param y_final Numeric vector; `.dispatch_bridge_selection()`'s `y_final`,
+#'   in the units that function fits it in.
 #' @param q Numeric scalar; the bridge-penalty exponent passed as `gamma` to
 #'   `gBridge()`.
 #' @param lambda.max Numeric scalar or `NA`; if non-NA, pass through to
@@ -2697,7 +2679,7 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 	sig_eps_sq
 ) {
 	# On y / resp_scale, a penalty lambda is lambda / resp_scale^(2 - q)
-	# (paper_arxiv.tex \eqref{opt.prob}; #428; #490 for gls = FALSE fits).
+	# (paper \eqref{opt.prob}; #428; #490 for gls = FALSE fits).
 	resp_scale <- .bridge_response_scale(sig_eps_sq)
 	lambda_unit <- resp_scale^(2 - q)
 	y_final <- y_final / resp_scale

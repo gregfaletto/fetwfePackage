@@ -38,7 +38,7 @@ utils::globalVariables(c(
 #' is the `(1 - alpha)` quantile of `max_k |Z_k|` where `Z` follows a
 #' multivariate normal with correlation matrix `cov2cor(Sigma)`; it is
 #' computed deterministically via `mvtnorm::qmvnorm()`. Under Faletto (2025)
-#' Theorem (c') tight Gaussianity and Assumption (Psi-IF), the family of
+#' Theorem 6.4(c') tight Gaussianity and Assumption (Psi-IF), the family of
 #' psi-linear effects is asymptotically multivariate normal with a covariance
 #' that is estimable from the package's existing variance machinery; under the
 #' paper's fixed-dim framing no high-dimensional correction is needed.
@@ -154,11 +154,12 @@ utils::globalVariables(c(
 #'       exact dual of the simultaneous band (a coefficient lies outside the
 #'       `(1 - alpha)` band iff its adjusted p-value is `< alpha`). Computed via
 #'       `mvtnorm::pmvnorm()` over the same correlation matrix the band uses
-#'       (or, under `se_type = "conservative"`, the Bonferroni adjustment
-#'       `min(1, K * pointwise_p)`). `NA` for degenerate effects. (#200)}
+#'       (or, in the conservative fallback described in Details, the
+#'       Bonferroni adjustment `min(1, K * pointwise_p)`). `NA` for degenerate
+#'       effects. (#200)}
 #'     \item{critical_value}{The simultaneous critical value `c_{1 - alpha}`
-#'       (or, when the fit used `se_type = "conservative"`, the Bonferroni critical value
-#'       `qnorm(1 - alpha/(2K))` -- see Details).}
+#'       (or, in the conservative fallback described in Details, the Bonferroni
+#'       critical value `qnorm(1 - alpha/(2K))`).}
 #'     \item{pointwise_critical_value}{`qnorm(1 - alpha/2)`, for reference.}
 #'     \item{bonferroni_critical_value}{`qnorm(1 - alpha/(2K))`, for reference.}
 #'     \item{family}{The requested family (character).}
@@ -248,27 +249,27 @@ utils::globalVariables(c(
 #' than warning; `method = "bootstrap"` still works, because the desparsified
 #' band is built from the empirical per-unit influence function.
 #'
-#' **Paper grounding.** Theorem (c') tight Gaussianity (Faletto 2025,
-#' `paper_arxiv.tex:1233`) guarantees the joint asymptotic normality; Assumption
-#' (Psi-IF) (assumption equation `paper_arxiv.tex:2013`; in-prose discussion at
-#' paper line 1268) is the influence-function condition the package's default
-#' cohort-sample-proportions estimator satisfies; the fixed-dim framing follows
-#' the paper's AE point 1(d).
+#' **Paper grounding.** Theorem 6.4(c') tight Gaussianity (Faletto 2025)
+#' guarantees the joint asymptotic normality; Assumption (Psi-IF) is the
+#' influence-function condition the package's default
+#' cohort-sample-proportions estimator satisfies.
 #'
-#' **Conservative fallback.** When the fit was made with `se_type = "conservative"`, the function
-#' falls back to Bonferroni-corrected pointwise CIs (the Cauchy-Schwarz upper
-#' bound used for the conservative scalar SE does not generalize to a `K x K`
-#' covariance matrix) and emits a brief `message()`. The `$critical_value`
-#' field is set to the Bonferroni value in this branch.
+#' **Conservative fallback.** The function falls back to Bonferroni-corrected
+#' pointwise CIs only when the fit was made with `se_type = "conservative"`
+#' and without `indep_counts`, under the default `method = "analytic"`: the
+#' Cauchy-Schwarz upper bound used for the conservative scalar SE does not
+#' generalize to a `K x K` covariance matrix. It then emits a brief
+#' `message()`, and `$critical_value` is the Bonferroni value. Two cases are
+#' handled before this branch: a fit without standard errors stops, and an
+#' all-zeroed support returns the degenerate band.
 #'
 #' **Numerical integration.** The critical value is computed via
 #' `mvtnorm::qmvnorm(..., algorithm = mvtnorm::GenzBretz())` (mvtnorm's default
-#' quasi-Monte Carlo integrator; sub-second through `K` up to about 100, so no
-#' `K` cap is of practical concern for FETWFE families). `mvtnorm` is an
+#' quasi-Monte Carlo integrator). `mvtnorm` is an
 #' `Imports` dependency (as of version 1.16.0, when simultaneous bands became
 #' the default reported confidence interval; see the `ci_type` argument of
-#' [fetwfe()]). The function uses it only when `K > 1` and
-#' `se_type != "conservative"` (the `K = 1` and conservative paths bypass the
+#' [fetwfe()]). The function uses it only when `K > 1` and the conservative
+#' fallback does not apply (the `K = 1` and fallback paths bypass the
 #' dependency), and retains a defensive `stop()` with an actionable message if
 #' it is somehow unavailable (e.g., a corrupted install).
 #'
@@ -1098,15 +1099,12 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 					call. = FALSE
 				)
 			}
-			# Paper grounding (WORKFLOW_LESSONS §12): Theorem (c') tight
-			# Gaussianity (Faletto 2025, paper_arxiv.tex:1233) gives the joint
+			# Paper grounding: Theorem 6.4(c') tight
+			# Gaussianity (Faletto 2025) gives the joint
 			# Z = sqrt(N) * (theta_hat - theta_0) -> N(0, V); the simultaneous
 			# (1 - alpha) critical value is the (1 - alpha) quantile of
 			# max_k |Z_k / sqrt(V_kk)|, computed by mvtnorm::qmvnorm() over the
 			# correlation matrix cov2cor(V) (Hothorn, Bretz, Westfall 2008).
-			#
-			# mvtnorm::GenzBretz() (mvtnorm's default; quasi-Monte Carlo) is
-			# sub-second through K ~ 100.
 			rng_out <- .with_preserved_rng(1L, {
 				qmv <- mvtnorm::qmvnorm(
 					p = 1 - alpha,
@@ -1262,7 +1260,7 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 #'   depend on the response's units (#489). Dividing by `w2` keeps it from
 #'   depending on the scale of a contrast's weights either (#501).
 #'
-#'   Paper: Remark `nondegeneracy.remark` in `paper_arxiv.tex`.
+#'   Paper: Remark `nondegeneracy.remark`.
 #' @param v Numeric vector; the family's effect variances, or a common positive
 #'   multiple of them.
 #' @param v_ref Numeric scalar; the reference variance, on the same scale as
@@ -1282,7 +1280,7 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 # .cauchy_schwarz_se
 #' @title Conservative (Cauchy-Schwarz) combined standard error
 #' @description Combines the two per-effect variance components into the
-#'   conservative standard error used by the `se_type = "conservative"` band:
+#'   conservative standard error used by the conservative fallback band:
 #'   `v1` is the first-order / OLS-sandwich term (`diag(Sigma_1)`) and `v2` is
 #'   the cohort-probability term (`diag(Sigma_2)`). With the cross-covariance
 #'   left unrestricted, the Cauchy-Schwarz upper bound on
@@ -1739,7 +1737,7 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 
 	# family == "event_study": one effect per event time `.reached_event_times()`
 	# returns. Effect e pools the cells (g, e) over the valid cohort set V_e,
-	# with sample-cohort-size weights.
+	# with cohort-size weights.
 	event_times <- .reached_event_times(cohort_offsets_int, T)
 	K <- length(event_times)
 	psi_tes <- matrix(0, nrow = K, ncol = num_treats)

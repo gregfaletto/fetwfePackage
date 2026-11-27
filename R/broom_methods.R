@@ -365,8 +365,10 @@ NULL
 #' treated cohort, sorted by ascending cohort label. Standard error,
 #' z-statistic, and p-value reflect the value of `se_type` used at fit time
 #' (model-based by default, cluster-robust under `se_type = "cluster"`).
-#' Cohorts that the bridge penalty zeroed out (`selected = FALSE`) carry
-#' `NA` for `std.error` / `statistic` / `p.value`.
+#' On a fit with standard errors (`calc_ses` is `TRUE`), a cohort that the
+#' bridge penalty zeroed out (`selected = FALSE`) carries `0` for `std.error`
+#' and `NA` for `statistic` and `p.value`. On a fit without them, every
+#' cohort's `std.error` is `NA`.
 #'
 #' The cohort-row `conf.low` / `conf.high` columns pass through the fit's
 #' stored `catt_df` bounds, so they reflect the fit's `ci_type` (#197):

@@ -1,19 +1,7 @@
 # Tests for the event_study family of the simultaneousCIs() multiplier bootstrap
-# (#142, Phase 3). event_study is the one family whose simultaneous-band variance
-# carries a non-zero cohort-probability (propensity) channel Sigma_2: each
-# event-time effect pools across cohorts weighted by the estimated cohort
-# probabilities pi_hat_g = N_g/N, so estimating those probabilities contributes
-# variance. The bootstrap perturbs the per-unit propensity influence function
-# F_pi[i,k] = T * a_k'(e_{W_i} - pi_hat) (a_k = J_k theta_sel) with its OWN
-# independent multiplier stream, combined with the regression channel as a
-# two-channel bootstrap matching the analytic Sigma = Sigma_1 + Sigma_2 (paper
-# Thm C.1 Step 5 -- zero cross-term). The load-bearing correctness anchor:
-# colSums(F_pi^2)/(NT)^2 == diag(Sigma_2) (an independent code path from the
-# analytic delta-method sandwich, so not a round-trip); hence on a
-# se_type = "cluster" fit the bootstrap event_study SEs equal the analytic ones
-# to machine precision, and the bootstrap critical value matches qmvnorm up to
-# Monte-Carlo error. In fixed-p the propensity channel composes with the
-# selected-support regression channel; since #299 it also composes with the
+# (#142, Phase 3). `.build_propensity_if()`'s @description explains the
+# family's propensity channel. In fixed-p the propensity channel composes with
+# the selected-support regression channel; since #299 it also composes with the
 # high-dim desparsified regression channel (high-dim event_study uses both).
 
 .es_boot_fit <- function(

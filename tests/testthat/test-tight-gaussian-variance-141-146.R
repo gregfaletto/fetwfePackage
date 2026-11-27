@@ -14,7 +14,7 @@
 #
 # 3. The new `internal$variance_components` slot is populated correctly
 #    with the paper-notation names (`V_1`, `V_2`, `tilde_v_N`, the four
-#    catalogued `tilde_v_N_*` variants).
+#    cataloged `tilde_v_N_*` variants).
 #
 # Plus a coverage sanity check (skip_on_cran) -- the substantive
 # validation that the tight Gaussian default lands near nominal 95%
@@ -174,14 +174,14 @@ test_that("variance_components block exposes paper-notation V_1, V_2, and tilde_
 	expect_equal(vc$V_1, res$N * vc$att_var_1)
 	expect_equal(vc$V_2, res$N * vc$att_var_2)
 
-	# tilde_v_N := hat_v_N / T (paper line 2004), hat_v_N = T * tilde_v_N.
+	# tilde_v_N := hat_v_N / T, hat_v_N = T * tilde_v_N.
 	expect_equal(vc$hat_v_N, res$T * vc$tilde_v_N)
 
 	# Headline `tilde_v_N` matches the variance underlying `att_se`:
 	# att_se = sqrt(tilde_v_N / N) per paper Eq. conf.int.form.
 	expect_equal(res$att_se, sqrt(vc$tilde_v_N / res$N), tolerance = 1e-12)
 
-	# The six catalogued unit-scaled variance estimators.
+	# The six cataloged unit-scaled variance estimators.
 	# `tilde_v_N_C` is the fixed-pi exact (no propensity-score noise):
 	# equal to V_1 = N * att_var_1.
 	expect_equal(vc$tilde_v_N_C, res$N * vc$att_var_1)

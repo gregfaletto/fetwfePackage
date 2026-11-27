@@ -15,9 +15,9 @@ utils::globalVariables(c("event_time", "estimate", "ci_low", "ci_high"))
 #' each post-treatment event time `e = t - g`, the number of periods since the
 #' cohort's first treated period (`t` and `g` are periods, counted along the
 #' sorted values of the time variable, so `e` counts periods whatever the
-#' time coding). Weights are
-#' sample-cohort-size weights (matching `did::aggte(type = "dynamic")`
-#' convention).
+#' time coding). Weights are cohort-size weights: the sample's cohort shares,
+#' as in `did::aggte(type = "dynamic")`, or the shares in `indep_counts` when
+#' the fit was given them.
 #'
 #' Standard errors combine two terms, mirroring the package's existing
 #' overall-ATT SE machinery: `var_1(e)` from regression-coefficient noise
@@ -468,7 +468,7 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 			next
 		}
 
-		# Cohort-size weights, renormalized over V_e (sample-cohort-size convention)
+		# Cohort-size weights, renormalized over V_e
 		probs_Ve <- cohort_probs_overall[V_e]
 		S_V <- sum(probs_Ve)
 		if (S_V <= 0) {
@@ -545,7 +545,7 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 		# Combine the two variance pieces. Mirrors the overall-ATT logic in
 		# `getTeResultsOLS()` / `getTeResults2()` (R/variance_machinery.R):
 		# the tight Gaussian formula is the default for the same-data path
-		# under (Psi-IF) (Theorem (c$'$), paper line 1233 onwards); the
+		# under (Psi-IF) (Theorem 6.4(c')); the
 		# Cauchy-Schwarz upper bound is opt-in via `se_type = "conservative"`
 		# for the rare non-(Psi-IF) propensity-score-estimator case.
 		ses[k] <- sqrt(.combine_att_variance(
@@ -772,14 +772,7 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 #' outside `V_e`. When `|V_e| = 1` the Jacobian rows vanish exactly and
 #' `var_2(e) = 0`.
 #'
-#' Design choice: this helper is structurally parallel to
-#' `getSecondVarTermDataApp` in `R/variance_machinery.R` (the cohort-block time-
-#' averaging is replaced by a single-row selection at `idx(g, e)`, and
-#' `cohort_probs_overall` is masked to zero outside `V_e`). Both helpers
-#' implement paper Theorem 6.3's Jacobian formula (`paper_arxiv.tex:2577-
-#' 2592`) where the off-diagonal coefficient `J_{rs} = -pi_s / S^2` uses the
-#' column-index marginal cohort probability. (Prior to v1.8.0 the off-
-#' diagonal coefficient was indexed by the outer-loop row; see issue #46.)
+#' Both helpers take their Jacobian from `.build_jacobian()`.
 #'
 #' The returned value is floored at zero and diagnosed by
 #' `.floor_cohort_prob_var()` (#474). It carried NO floor at all until then,
@@ -815,14 +808,7 @@ eventStudy <- function(x, alpha = NULL, ci_type = NULL) {
 	# Multinomial Sigma_pi_hat on the masked cohort probabilities.
 	Sigma_pi_hat <- .multinomial_cov(masked)
 
-	# Per-event-time Jacobian: G rows, length(sel_treat_inds_shifted) cols.
-	# Rows for g not in V_e are zero (and are zero-killed by Sigma_pi_hat).
-	# Diagonal: (S_V - pi_g)/S_V^2 * d_inv_treat_sel[idx(g, e), ]
-	# Off-diagonal: subtract pi_{g'}/S_V^2 * d_inv_treat_sel[idx(g', e), ]
-	# for g' in V_e \ {g}. Off-diagonal coefficient uses the COLUMN-index
-	# pi_{g'}, matching paper Theorem 6.3. Consolidated into `.build_jacobian()`
-	# (#192, WORKFLOW_LESSONS §14 Class A); the per-effect-masked path returns
-	# this construction byte-identically.
+	# Per-event-time Jacobian. Consolidated into `.build_jacobian()` (#192).
 	jacobian_e <- .build_jacobian(
 		cohort_probs_overall = cohort_probs_overall,
 		G = G,

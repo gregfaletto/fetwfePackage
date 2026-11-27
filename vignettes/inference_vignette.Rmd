@@ -49,7 +49,7 @@ $$
 \sqrt{\tilde{v}_N \,/\, N},
 $$
 
-where $\tilde{v}_N := \hat{v}_N / T$ is the unit-scaled paper-notation variance estimator (paper line 2004), and the Wald confidence interval is
+where $\tilde{v}_N := \hat{v}_N / T$ is the unit-scaled paper-notation variance estimator, and the Wald confidence interval is
 
 $$
 \text{CI}_N(\tilde{v}_N;\,\alpha)
@@ -59,7 +59,7 @@ $$
 \,\right]
 $$
 
-per paper Eq. `conf.int.form` (line 1259). The same combined variance backs the per-cohort entries of `catt_ses` and the `catt_df` confidence-interval columns.
+per paper Eq. `conf.int.form`. The same combined variance backs the per-cohort entries of `catt_ses` and the `catt_df` confidence-interval columns.
 
 ## 1.1 Which propensity-score estimators satisfy (Ψ-IF)?
 
@@ -70,7 +70,7 @@ Assumption (Ψ-IF) requires the cohort-weight estimator $\widehat{\boldsymbol{\p
 * **Any GLM** fit by maximum likelihood on $W \mid \boldsymbol{X}$.
 * **Kernel or series regression** of $\mathbf{1}\{W = g\}$ on $\boldsymbol{X}$.
 
-(See the discussion at paper line 1268: "When (Ψ-IF) holds --- which is the case for every standard parametric or semi-parametric propensity-score estimator listed in Remark `psi.if.coverage` (cohort sample proportions, multinomial logit, any GLM, kernel/series regression) --- Theorem `te.asym.norm.thm`(c$'$) gives asymptotic Gaussianity with the tight variance $V_1 + V_2$.")
+(See the paper's discussion: "When (Ψ-IF) holds --- which is the case for every standard parametric or semi-parametric propensity-score estimator listed in Remark `psi.if.coverage` (cohort sample proportions, multinomial logit, any GLM, kernel/series regression) --- Theorem `te.asym.norm.thm`(c$'$) gives asymptotic Gaussianity with the tight variance $V_1 + V_2$ ...")
 
 The (Ψ-IF) condition fails for **Robins-Rotnitzky-style augmented doubly-robust estimators** that augment the propensity score with outcome residuals. The package does not currently implement these; when it does, users will be able to opt out of the tight CI via `se_type = "conservative"` (see the conservative-fallback note in Section 2.3).
 
@@ -100,13 +100,13 @@ $$
 \frac{\sigma_\varepsilon^2}{NT}\;\psi_{\text{att}}^\top \widehat G^{-1} \psi_{\text{att}},
 $$
 
-where $\widehat G^{-1}$ is the Gram inverse on the bridge-selected support and $\psi_{\text{att}}$ encodes the cohort-weighted ATT contrast. The per-cohort SEs (`catt_ses`) have the same form with a cohort selector $\psi_g$ in place of $\psi_{\text{att}}$. This piece is stored on the fitted object as `result$internal$variance_components$att_var_1`; the paper-notation per-unit-scaled version is `result$internal$variance_components$V_1` (with `V_1 = N * att_var_1`).
+where $\widehat G^{-1}$ is the Gram inverse on the support $\widehat{S}$ that Section 3.1 defines and $\psi_{\text{att}}$ encodes the cohort-weighted ATT contrast. The per-cohort SEs (`catt_ses`) have the same form with a cohort selector $\psi_g$ in place of $\psi_{\text{att}}$. This piece is stored on the fitted object as `result$internal$variance_components$att_var_1`; the paper-notation per-unit-scaled version is `result$internal$variance_components$V_1` (with `V_1 = N * att_var_1`).
 
 ## 2.2 $V_2$: propensity-score variance
 
 The propensity-score piece accounts for variability from estimating the cohort-membership probabilities $\widehat{\pi}_g$. It scales like $1/N$ and is unrelated to the regression residuals. This piece is stored as `result$internal$variance_components$att_var_2`, with paper-notation per-unit-scaled `V_2 = N * att_var_2`.
 
-## 2.3 The combined variance: `tilde_v_N` and the paper's catalogue
+## 2.3 The combined variance: `tilde_v_N` and the paper's catalog
 
 The unit-scaled total variance is
 
@@ -116,7 +116,7 @@ $$
 
 stored as `result$internal$variance_components$tilde_v_N`. The original (un-scaled) paper notation `hat_v_N = T * tilde_v_N` is also exposed.
 
-The paper catalogues six variance estimators at line 2006; the package exposes the four that apply to the ATT (the other two apply to the CATT(x), which connects to the on-hold `predict()` work in issue #33):
+The paper catalogs six variance estimators; the package exposes the four that apply to the ATT (the other two apply to the CATT(x), which connects to the on-hold `predict()` work in issue #33):
 
 | Slot                          | Paper Eq.                                     | Meaning                                     |
 |-------------------------------|-----------------------------------------------|---------------------------------------------|
@@ -125,7 +125,7 @@ The paper catalogues six variance estimators at line 2006; the package exposes t
 | `tilde_v_N_C_pi_hat_cons`     | `v.n.r.t.att.rand.cons`                       | Random-π conservative (Cauchy-Schwarz)      |
 | `tilde_v_N_cons`              | `var.est.kock.wooldridge.subgauss.cons`       | Subgaussian conservative bound              |
 
-The default `att_se` value is computed from `tilde_v_N_C_pi_hat` (via `sqrt(tilde_v_N_C_pi_hat / N)`); `se_type = "conservative"` switches the headline to `tilde_v_N_C_pi_hat_cons`. When `indep_counts` is supplied (two-sample regime), the two-sample-exact formula `tilde_v_N_C_pi_hat` is in force regardless of `se_type`.
+The default `att_se` value is computed from `tilde_v_N_C_pi_hat` (via `sqrt(tilde_v_N_C_pi_hat / N)`); `se_type = "conservative"` switches the headline to `tilde_v_N_C_pi_hat_cons`. When `indep_counts` is supplied (two-sample regime), the two-sample-exact formula `tilde_v_N_C_pi_hat` is in force under every `se_type`, so `"conservative"` gives the same `att_se` as `"default"`, and `"cluster"` still uses the cluster-robust sandwich for $V_1$ (Section 3).
 
 **Conservative fallback (`se_type = "conservative"`).** If a cohort-weight (propensity-score) estimator *violates* (Ψ-IF) --- the canonical case being a Robins-Rotnitzky-style augmented doubly-robust estimator that injects outcome-residual information into the weights --- Theorem (c$'$) no longer applies, and `se_type = "conservative"` switches the headline SE to the Cauchy-Schwarz upper bound $\sqrt{\widehat{\text{Var}}_1 + \widehat{\text{Var}}_2 + 2\sqrt{\widehat{\text{Var}}_1\,\widehat{\text{Var}}_2}}$ (`tilde_v_N_C_pi_hat_cons`, paper Theorem (c)). The package ships **no** non-(Ψ-IF) estimator --- its default cohort-sample-proportions weights $\widehat{\pi}_g = N_g/N$ satisfy (Ψ-IF) --- so under the default estimator there is no practical reason to set it, and **default users never need it**. It exists for users who supply their own propensity-score estimates (issue #32) or who want to reproduce the pre-v1.12.0 conservative default; see `?fetwfe`.
 
@@ -172,11 +172,11 @@ Starting in version 1.6.0, all four estimators accept an experimental `se_type` 
 fetwfe(..., se_type = "cluster")
 ```
 
-Setting `se_type = "cluster"` swaps the model-based regression-coefficient variance $V_1$ for a **unit-clustered Liang-Zeger CR1 sandwich** computed on the bridge-selected support. The $V_2$ piece and the (Ψ-IF)-tight combination $V_1 + V_2$ are unchanged --- only the $V_1$ formula switches.
+Setting `se_type = "cluster"` swaps the model-based regression-coefficient variance $V_1$ for a **unit-clustered Liang-Zeger CR1 sandwich** computed on the support that Section 3.1 defines. The $V_2$ piece and the (Ψ-IF)-tight combination $V_1 + V_2$ are unchanged --- only the $V_1$ formula switches.
 
 ## 3.1 The formula
 
-Let $\widehat{S}$ be the support selected by the bridge regression, $X_{\widehat{S}}$ the corresponding design matrix in the coordinate system the regression was solved in (GLS-transformed for ETWFE/twfeCovs, fusion-then-GLS-transformed for FETWFE/BETWFE), and $\widehat\varepsilon$ the residuals from OLS on that selected support. The cluster-robust variance is
+Let $\widehat{S}$ be the bridge-selected support for FETWFE and BETWFE, and the full design for ETWFE and twfeCovs, which have no bridge and select nothing. Let $X_{\widehat{S}}$ be the corresponding design matrix in the coordinate system the regression was solved in (GLS-transformed for ETWFE/twfeCovs/BETWFE, fusion-then-GLS-transformed for FETWFE), and $\widehat\varepsilon$ the residuals from OLS on $\widehat{S}$. The cluster-robust variance is
 
 $$
 V_{\text{CR}}
@@ -187,7 +187,7 @@ V_{\text{CR}}
 (X_{\widehat{S}}^\top X_{\widehat{S}})^{-1},
 $$
 
-with units $i = 1, \dots, N$ as clusters and an $N/(N-1)$ small-sample adjustment (matching `sandwich::vcovCL(cadjust = TRUE, type = "HC0")`). The CATT SE for cohort $g$ is $\sqrt{\psi_g^\top V_{\text{CR}} \psi_g}$ (using a zero-padded $\psi_g$ on the full selected support); the ATT regression-coefficient variance is $\psi_{\text{att}}^\top V_{\text{CR}} \psi_{\text{att}}$, replacing $V_1$ above. The propensity-score piece $V_2$ is unchanged because it depends on empirical cohort proportions, not regression residuals.
+with units $i = 1, \dots, N$ as clusters and an $N/(N-1)$ small-sample adjustment (matching `sandwich::vcovCL(cadjust = TRUE, type = "HC0")`). The CATT SE for cohort $g$ is $\sqrt{\psi_g^\top V_{\text{CR}} \psi_g}$ (using $\psi_g$ zero-padded to all of $\widehat{S}$); the ATT regression-coefficient variance is $\psi_{\text{att}}^\top V_{\text{CR}} \psi_{\text{att}}$, replacing $V_1$ above. The propensity-score piece $V_2$ is unchanged because it depends on empirical cohort proportions, not regression residuals.
 
 For FETWFE and BETWFE, `se_type = "cluster"` is only meaningful when `q < 1` (the bridge oracle property is required); for `q >= 1` the cluster path returns `NA` just like the default. ETWFE and `twfeCovs` have no `q` argument, so the cluster path always runs when the Gram matrix is invertible.
 
