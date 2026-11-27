@@ -2825,9 +2825,7 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #'   from the never-treated cohort through the `G` treated cohorts) and
 #'   `stop()`s -- or `warning()`s when `add_ridge = TRUE` -- if any cohort
 #'   contains fewer than `d + 1` units. The condition forces rank
-#'   deficiency in `etwfe()`, whose cohort-by-covariate interactions need
-#'   at least `d + 1` units in each cohort to identify `d` covariates plus
-#'   an intercept; `twfeCovs()` skips the check (see
+#'   deficiency in `etwfe()`'s design; `twfeCovs()` skips the check (see
 #'   `.assemble_ols_estimator()`, #395).
 #'
 #'   Extracted from `R/fetwfe.R` (the `etwfe()` wrapper) and
