@@ -165,7 +165,7 @@ test_that(".cv_lambda_node selection is invariant to the fold cap on a normal fi
 test_that(".cv_lambda_node wall-clock backstop stops early and falls back (#384)", {
 	s <- .cv295_synth()
 	# The mocked clock starts at 1e9 s, past any real session's uptime, and each
-	# read advances it one second, so the 2.5 s budget runs out before the fold
+	# read advances it one second, so the 10 s budget runs out before the fold
 	# sweep can finish.
 	now <- 1e9
 	local_mocked_bindings(
@@ -182,7 +182,7 @@ test_that(".cv_lambda_node wall-clock backstop stops early and falls back (#384)
 			s$X,
 			s$N_units,
 			s$T,
-			cv_time_budget = 2.5
+			cv_time_budget = 10
 		),
 		"cv_time_budget"
 	)
