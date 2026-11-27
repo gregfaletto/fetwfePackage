@@ -2827,12 +2827,6 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #'   contains fewer than `d + 1` units. The condition forces rank
 #'   deficiency in `etwfe()`'s design; `twfeCovs()` skips the check (see
 #'   `.assemble_ols_estimator()`, #395).
-#'
-#'   Extracted from `R/fetwfe.R` (the `etwfe()` wrapper) and
-#'   `R/twfeCovs.R` (the `twfeCovs()` wrapper). Pre-#119, these two sites
-#'   carried drifted wording ("is rank-deficient" vs "may be rank-
-#'   deficient"); this helper converges on the stronger etwfe wording --
-#'   the mathematically-accurate one.
 #' @param in_sample_counts Integer vector of length `G + 1`; the per-cohort
 #'   unit counts including the never-treated reference cohort.
 #' @param G Integer; number of treated cohorts.
