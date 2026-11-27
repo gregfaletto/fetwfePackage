@@ -874,7 +874,7 @@ test_that("fetwfe handles factor covariates appropriately", {
 # ------------------------------------------------------------------------------
 # Test 30: Check that tibbles work
 # ------------------------------------------------------------------------------
-test_that("tibbles work as input to fewtfe", {
+test_that("tibbles work as input to fetwfe", {
 	skip_if_not_installed("lme4")
 	skip_if_not_installed("tibble")
 	df <- generate_panel_data() # uses N = 30, T = 10 by default

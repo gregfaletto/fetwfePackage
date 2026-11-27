@@ -1076,7 +1076,7 @@ test_that("etwfe handles factor covariates appropriately", {
 # ------------------------------------------------------------------------------
 # Test 29: Check that tibbles work
 # ------------------------------------------------------------------------------
-test_that("tibbles work as input to fewtfe", {
+test_that("tibbles work as input to etwfe", {
 	skip_if_not_installed("lme4")
 	skip_if_not_installed("tibble")
 	df <- generate_panel_data(N = 30, T = 5, R = 2, seed = 123) # uses N = 30, T = 10 by default
