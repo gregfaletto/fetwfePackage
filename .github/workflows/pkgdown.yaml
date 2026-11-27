@@ -44,6 +44,9 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: JamesIves/github-pages-deploy-action@v4.5.0
         with:
-          clean: false
+          # Deviation from the stock template, which has clean: false: each deploy
+          # removes pages the build no longer makes (#533). Assumes _pkgdown.yml sets
+          # no development mode; a docs/dev build would remove the root site.
+          clean: true
           branch: gh-pages
           folder: docs
