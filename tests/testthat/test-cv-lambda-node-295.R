@@ -211,11 +211,14 @@ test_that(".cv_lambda_node's backstop does not fire while the clock stands still
 })
 
 test_that(".cv_elapsed() reads proc.time()'s elapsed seconds (#570)", {
-	# The two reads are adjacent rather than simultaneous, hence the tolerance.
+	before <- proc.time()[["elapsed"]]
 	e <- .cv_elapsed()
-	r <- proc.time()[["elapsed"]]
+	after <- proc.time()[["elapsed"]]
+	expect_type(e, "double")
+	expect_length(e, 1L)
 	expect_null(attributes(e))
-	expect_lt(abs(e / r - 1), 0.5)
+	expect_gte(e, before)
+	expect_lte(e, after)
 })
 
 # ===================== end-to-end tests on a real p >= NT fit =================
