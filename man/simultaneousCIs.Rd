@@ -303,8 +303,8 @@ Approximations and Multiplier Bootstrap for Maxima of Sums of
 High-Dimensional Random Vectors. \emph{The Annals of Statistics} 41(6),
 2786-2819.
 
-Faletto, G. (2025). Fused Extended Two-Way Fixed Effects for Difference-in-
-Differences with Staggered Adoptions. arXiv:2312.05985.
+Faletto, G. (2025). Fused Extended Two-Way Fixed Effects for
+Difference-in-Differences with Staggered Adoptions. arXiv:2312.05985.
 
 Hothorn, T., Bretz, F., & Westfall, P. (2008). Simultaneous Inference in
 General Parametric Models. \emph{Biometrical Journal} 50(3), 346-363.
