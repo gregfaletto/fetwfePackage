@@ -164,11 +164,17 @@ test_that(".cv_lambda_node selection is invariant to the fold cap on a normal fi
 
 test_that(".cv_lambda_node wall-clock backstop stops early and falls back (#384)", {
 	s <- .cv295_synth()
-	# A vanishing time budget leaves the fold sweep incomplete, so nothing is fully
-	# scored and it falls back to the theory scale with a warning. WHETHER the budget
-	# fires is machine-timed, but the OUTCOME once it fires is deterministic (partial
-	# sweep -> theory scale), so we assert the full fallback. (The default Inf path is
-	# deterministic and exercised by the other tests.)
+	# The mocked clock starts at 1e9 s, past any real session's uptime, and each
+	# read advances it one second, so the 2.5 s budget runs out before the fold
+	# sweep can finish.
+	now <- 1e9
+	local_mocked_bindings(
+		.cv_elapsed = function() {
+			now <<- now + 1
+			now
+		},
+		.package = "fetwfe"
+	)
 	expect_warning(
 		r <- .cv_lambda_node(
 			s$Sig,
@@ -176,13 +182,32 @@ test_that(".cv_lambda_node wall-clock backstop stops early and falls back (#384)
 			s$X,
 			s$N_units,
 			s$T,
-			cv_time_budget = 1e-6
+			cv_time_budget = 2.5
 		),
 		"cv_time_budget"
 	)
 	expect_true(r$fallback)
 	expect_identical(r$fallback_reason, "time")
 	expect_identical(r$lambda_c, 1.0)
+})
+
+test_that(".cv_lambda_node's backstop does not fire while the clock stands still (#570)", {
+	s <- .cv295_synth()
+	base <- .cv_lambda_node(s$Sig, s$a, s$X, s$N_units, s$T)
+	local_mocked_bindings(.cv_elapsed = function() 1e9, .package = "fetwfe")
+	expect_no_warning(
+		r <- .cv_lambda_node(
+			s$Sig,
+			s$a,
+			s$X,
+			s$N_units,
+			s$T,
+			cv_time_budget = 1e-6
+		)
+	)
+	expect_false(r$fallback)
+	expect_identical(r$lambda_c, base$lambda_c)
+	expect_equal(r$cv_loss, base$cv_loss)
 })
 
 # ===================== end-to-end tests on a real p >= NT fit =================
