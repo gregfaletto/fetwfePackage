@@ -56,7 +56,7 @@
                         <h4 data-toc-skip class="author">Gregory
 Faletto</h4>
             
-            <h4 data-toc-skip class="date">2026-11-22</h4>
+            <h4 data-toc-skip class="date">2026-11-27</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/gregfaletto/fetwfePackage/blob/main/vignettes/simultaneous_cis_vignette.Rmd" class="external-link"><code>vignettes/simultaneous_cis_vignette.Rmd</code></a></small>
       <div class="d-none name"><code>simultaneous_cis_vignette.Rmd</code></div>
@@ -127,14 +127,11 @@ and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>ρ</mi><annotation encoding="application/x-tex">\rho</annotation></semantics></math>
 is the correlation matrix of the effect family’s joint covariance. Under
 Theorem
-(c<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>′</mi><annotation encoding="application/x-tex">'</annotation></semantics></math>)
-(<code>paper_arxiv.tex:1233</code>) and Assumption
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi mathvariant="normal">Ψ</mi><mtext mathvariant="normal">-IF</mtext><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(\Psi\text{-IF})</annotation></semantics></math>
-(assumption equation <code>paper_arxiv.tex:2013</code>; in-prose
-discussion of when it implies tight Gaussianity at paper line 1268),
+6.4(c<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>′</mi><annotation encoding="application/x-tex">'</annotation></semantics></math>)
+and Assumption
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi mathvariant="normal">Ψ</mi><mtext mathvariant="normal">-IF</mtext><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(\Psi\text{-IF})</annotation></semantics></math>,
 this joint Gaussianity is exact asymptotically; under the paper’s
-fixed-dim framing (AE 1(d)), no high-dimensional correction is
-needed.</p>
+fixed-dim framing, no high-dimensional correction is needed.</p>
 <p>For an event-study family on the fitted <code>res_default</code>
 object from the setup above:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
@@ -263,10 +260,10 @@ The event-study family is the one whose propensity term
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi mathvariant="normal">Σ</mi><mn>2</mn></msub><annotation encoding="application/x-tex">\Sigma_2</annotation></semantics></math>
 is non-zero, because each event-time effect pools across the cohorts
 treated by that event time, weighted by the estimated cohort
-probabilities
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mover><mi>π</mi><mo accent="true">̂</mo></mover><mi>g</mi></msub><mo>=</mo><msub><mi>N</mi><mi>g</mi></msub><mi>/</mi><mi>N</mi></mrow><annotation encoding="application/x-tex">\hat\pi_g = N_g / N</annotation></semantics></math>;
-its per-unit propensity influence function is the
-cohort-sample-proportion summand
+probabilities. On a fit without <code>indep_counts</code> these are the
+sample proportions
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mover><mi>π</mi><mo accent="true">̂</mo></mover><mi>g</mi></msub><mo>=</mo><msub><mi>N</mi><mi>g</mi></msub><mi>/</mi><mi>N</mi></mrow><annotation encoding="application/x-tex">\hat\pi_g = N_g / N</annotation></semantics></math>,
+whose per-unit influence function is the summand
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>ξ</mi><mi>i</mi></msub><mo>=</mo><msub><mi>e</mi><msub><mi>W</mi><mi>i</mi></msub></msub><mo>−</mo><mover><mi>π</mi><mo accent="true">̂</mo></mover></mrow><annotation encoding="application/x-tex">\xi_i = e_{W_i} - \hat\pi</annotation></semantics></math>
 (paper assumption
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi mathvariant="normal">Ψ</mi><mtext mathvariant="normal">-IF</mtext><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(\Psi\text{-IF})</annotation></semantics></math>).
@@ -432,9 +429,8 @@ CI surface in the package agrees under the default:
 <code>cohortStudy(fit)</code>, and <code>plot(fit, type = "catt")</code>
 all report the same simultaneous bounds. (The overall-ATT row of
 <code>broom::tidy(fit)</code> stays the scalar pointwise interval.) When
-standard errors are unavailable (<code>q &gt;= 1</code> for the bridge
-estimators, or a rank-deficient design) the bounds are <code>NA</code>
-under both settings, and the fit still succeeds — the simultaneous path
+standard errors are unavailable, the bounds are <code>NA</code> under
+both settings, and the fit still succeeds — the simultaneous path
 degrades cleanly to the (<code>NA</code>) pointwise bounds rather than
 throwing an error.</p>
 </div>
@@ -467,14 +463,15 @@ is the asymptotic analogue of <strong>fail to reject
 truth is zero with probability tending to one.</li>
 </ul>
 <p>The conclusion for a selected-out cohort is delivered by the
-<code>selected</code> flag, <strong>not</strong> by a p-value. A cohort
-the penalty zeros out has <code>estimate == 0</code>,
-<code>se == 0</code>, and <code>p_value == NA</code> by construction —
-there is no Wald p-value to read, and the inferential content lives
-entirely in <code>selected</code>. (A condensed,
-first-time-user-oriented version of this discussion appears under
-“Testing the zero-effect null” in the main package vignette; the
-treatment here is the deeper, inference-focused one.)</p>
+<code>selected</code> flag, <strong>not</strong> by a p-value. On a fit
+with standard errors, a cohort the penalty zeros out has
+<code>estimate == 0</code>, <code>se == 0</code>, and
+<code>p_value == NA</code> by construction — there is no Wald p-value to
+read, and the inferential content lives entirely in
+<code>selected</code>. (A condensed, first-time-user-oriented version of
+this discussion appears under “Testing the zero-effect null” in the main
+package vignette; the treatment here is the deeper, inference-focused
+one.)</p>
 <div class="section level3">
 <h3 id="why-this-is-stronger-than-a-confidence-interval-on-an-unregularized-estimator">Why this is stronger than a confidence interval on an unregularized
 estimator<a class="anchor" aria-label="anchor" href="#why-this-is-stronger-than-a-confidence-interval-on-an-unregularized-estimator"></a>
@@ -526,8 +523,9 @@ property, Theorem 6.3), with the practical Wald confidence intervals and
 p-values of Theorem 6.4 — the same machinery documented in
 <code><a href="../articles/inference_vignette.html">vignette("inference_vignette")</a></code>. So
 <code>selected = TRUE</code> cohorts come with the usual valid CIs and
-finite p-values, while <code>selected = FALSE</code> cohorts carry the
-stronger, selection-based zero-effect conclusion.</p>
+finite p-values on a fit with standard errors, while
+<code>selected = FALSE</code> cohorts carry the stronger,
+selection-based zero-effect conclusion.</p>
 </div>
 <div class="section level3">
 <h3 id="the-q-1-caveat">The <code>q &lt; 1</code> caveat<a class="anchor" aria-label="anchor" href="#the-q-1-caveat"></a>

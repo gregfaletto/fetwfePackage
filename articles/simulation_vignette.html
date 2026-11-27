@@ -56,7 +56,7 @@
                         <h4 data-toc-skip class="author">Gregory
 Faletto</h4>
             
-            <h4 data-toc-skip class="date">2026-11-22</h4>
+            <h4 data-toc-skip class="date">2026-11-27</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/gregfaletto/fetwfePackage/blob/main/vignettes/simulation_vignette.Rmd" class="external-link"><code>vignettes/simulation_vignette.Rmd</code></a></small>
       <div class="d-none name"><code>simulation_vignette.Rmd</code></div>
@@ -360,7 +360,7 @@ is the propensity for being <em>later</em> on the treatment-timing
 scale.</li>
 </ul>
 <p>Both DGPs are the canonical reference models named in the FETWFE
-paper (Faletto 2025, line 1016).</p>
+paper (Faletto 2025).</p>
 <div class="section level3">
 <h3 id="multinomial-logit-dgp">Multinomial-logit DGP<a class="anchor" aria-label="anchor" href="#multinomial-logit-dgp"></a>
 </h3>
@@ -607,9 +607,9 @@ equal-weighted average of the cohort-specific effects:
 <math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>τ</mi><mrow><mi mathvariant="normal">A</mi><mi mathvariant="normal">T</mi><mi mathvariant="normal">T</mi></mrow></msub><mo>=</mo><mfrac><mn>1</mn><mi>G</mi></mfrac><munderover><mo>∑</mo><mrow><mi>g</mi><mo>=</mo><mn>1</mn></mrow><mi>G</mi></munderover><msub><mi>τ</mi><mrow><mi mathvariant="normal">A</mi><mi mathvariant="normal">T</mi><mi mathvariant="normal">T</mi></mrow></msub><mo stretchy="false" form="prefix">(</mo><mi>g</mi><mo stretchy="false" form="postfix">)</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">\tau_\mathrm{ATT} = \frac{1}{G} \sum_{g = 1}^{G} \tau_\mathrm{ATT}(g).</annotation></semantics></math></p>
 <p>Under covariate-dependent DGPs this aggregation must use cohort-share
 weights instead, matching Faletto (2025) Eq.
-<code>att.estimator.weighted</code> (line 837). <code><a href="../reference/getTes.html">getTes()</a></code>
-automatically computes the propensity-weighted aggregation when the
-input <code>FETWFE_coefs</code> object was built with a non-marginal
+<code>att.estimator.weighted</code>. <code><a href="../reference/getTes.html">getTes()</a></code> automatically
+computes the propensity-weighted aggregation when the input
+<code>FETWFE_coefs</code> object was built with a non-marginal
 <code>assignment_type</code>:</p>
 <div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">te_mn</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/getTes.html">getTes</a></span><span class="op">(</span><span class="va">sim_coefs_mn</span><span class="op">)</span></span>

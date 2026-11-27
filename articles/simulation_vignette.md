@@ -287,7 +287,7 @@ via the new `assignment_type` and `assignment_strength` arguments:
   treatment-timing scale.
 
 Both DGPs are the canonical reference models named in the FETWFE paper
-(Faletto 2025, line 1016).
+(Faletto 2025).
 
 ### Multinomial-logit DGP
 
@@ -531,8 +531,7 @@ equal-weighted average of the cohort-specific effects:
 ```
 
 Under covariate-dependent DGPs this aggregation must use cohort-share
-weights instead, matching Faletto (2025) Eq. `att.estimator.weighted`
-(line 837).
+weights instead, matching Faletto (2025) Eq. `att.estimator.weighted`.
 [`getTes()`](https://gregfaletto.github.io/fetwfePackage/reference/getTes.md)
 automatically computes the propensity-weighted aggregation when the
 input `FETWFE_coefs` object was built with a non-marginal

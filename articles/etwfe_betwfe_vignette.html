@@ -56,7 +56,7 @@
                         <h4 data-toc-skip class="author">Gregory
 Faletto</h4>
             
-            <h4 data-toc-skip class="date">2026-11-22</h4>
+            <h4 data-toc-skip class="date">2026-11-27</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/gregfaletto/fetwfePackage/blob/main/vignettes/etwfe_betwfe_vignette.Rmd" class="external-link"><code>vignettes/etwfe_betwfe_vignette.Rmd</code></a></small>
       <div class="d-none name"><code>etwfe_betwfe_vignette.Rmd</code></div>
@@ -186,12 +186,11 @@ floor).</p>
 <code>betwfe()</code>: bridge-penalized ETWFE<a class="anchor" aria-label="anchor" href="#betwfe-bridge-penalized-etwfe"></a>
 </h2>
 <p><code><a href="../reference/betwfe.html">betwfe()</a></code> extends <code><a href="../reference/etwfe.html">etwfe()</a></code> by adding a bridge
-(<code>L_q</code>, <code>0 &lt; q &lt; 1</code>) regularization penalty
-on the cohort-time effects. Compared to <code><a href="../reference/etwfe.html">etwfe()</a></code>, this
-trades a small amount of bias for lower variance — the same idea as
-<code><a href="../reference/fetwfe.html">fetwfe()</a></code>, but without the fusion transformation that
-<code><a href="../reference/fetwfe.html">fetwfe()</a></code> applies. So <code><a href="../reference/betwfe.html">betwfe()</a></code> is essentially
-“fetwfe minus the fusion.”</p>
+(<code>L_q</code>, <code>0 &lt; q &lt; 1</code>) regularization penalty.
+Compared to <code><a href="../reference/etwfe.html">etwfe()</a></code>, this trades a small amount of bias for
+lower variance — the same idea as <code><a href="../reference/fetwfe.html">fetwfe()</a></code>, but without the
+fusion transformation that <code><a href="../reference/fetwfe.html">fetwfe()</a></code> applies. So
+<code><a href="../reference/betwfe.html">betwfe()</a></code> is essentially “fetwfe minus the fusion.”</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">res_betwfe</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/betwfeWithSimulatedData.html">betwfeWithSimulatedData</a></span><span class="op">(</span><span class="va">sim_data</span><span class="op">)</span></span>
 <span></span>
@@ -380,10 +379,10 @@ treatment-effect estimates. The plot is an event study: x-axis is event
 time <code>e = t - r</code> (the number of periods since the cohort’s
 first treated period), y-axis is the cohort-weighted average of
 cell-level treatment-effect estimates at each event time, with
-confidence intervals. Pooling weights are sample-cohort-size weights
-(matching <code>did::aggte(type = "dynamic")</code> convention). The
-variance combines a regression-coefficient term and a cohort-probability
-term, mirroring the package’s existing overall-ATT SE machinery.</p>
+confidence intervals. Pooling weights are cohort-size weights, which
+<code><a href="../reference/eventStudy.html">?eventStudy</a></code> describes. The variance combines a
+regression-coefficient term and a cohort-probability term, mirroring the
+package’s existing overall-ATT SE machinery.</p>
 <p>Event-time estimates from <code><a href="../reference/etwfe.html">etwfe()</a></code>:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/eventStudy.html">eventStudy</a></span><span class="op">(</span><span class="va">res_etwfe</span><span class="op">)</span></span>

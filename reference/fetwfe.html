@@ -156,44 +156,45 @@ is c().</p></dd>
 
 
 <dt id="arg-indep-counts">indep_counts<a class="anchor" aria-label="anchor" href="#arg-indep-counts"></a></dt>
-<dd><p>(Optional.) Integer; a vector. If you have a sufficiently
-large number of units, you can optionally randomly split your data set in
-half (with <code>N</code> units in each data set). The data for half of the units should
-go in the <code>pdata</code> argument provided above. For the other <code>N</code> units, simply
-provide the counts for how many units appear in the untreated cohort plus
-each of the other <code>G</code> cohorts in this argument <code>indep_counts</code>. The benefit
-of doing this is that the standard error for the average treatment effect
-will be (asymptotically) exact instead of conservative. The length of
-<code>indep_counts</code> must equal 1 plus the number of treated cohorts in <code>pdata</code>.
-All entries of <code>indep_counts</code> must be strictly positive (if you are concerned
-that this might not work out, maybe your data set is on the small side and
-it's best to just leave your full data set in <code>pdata</code>). The sum of all the
-counts in <code>indep_counts</code> must match the total number of units in <code>pdata</code>.
-Default is NA (in which case conservative standard errors will be calculated
-if <code>q &lt; 1</code>.)</p></dd>
+<dd><p>(Optional.) Integer; a vector of cohort counts from a
+sample independent of <code>pdata</code>: the number of units in the untreated cohort,
+then in each treated cohort in adoption order. When supplied, the cohort
+probabilities that weight the overall ATT and the <code><a href="eventStudy.html">eventStudy()</a></code> estimates
+come from these counts instead of from <code>pdata</code>.
+The counts describe the panel the estimator fits: units
+treated in the first period are dropped, and on a panel with no
+never-treated units the latest cohort becomes the untreated cohort (see
+<code>allow_no_never_treated</code>). So the length of <code>indep_counts</code> must equal 1 plus
+the number of treated cohorts that remain, all entries must be strictly
+positive, and the counts must sum to the number of units that remain. It is
+not needed for an exact standard error: the default standard error is
+already asymptotically exact (see <code>se_type</code>). Default is NA (cohort
+probabilities come from <code>pdata</code>).</p></dd>
 
 
 <dt id="arg-sig-eps-sq">sig_eps_sq<a class="anchor" aria-label="anchor" href="#arg-sig-eps-sq"></a></dt>
 <dd><p>(Optional.) Numeric; the variance of the row-level IID
 noise assumed to apply to each observation. See Section 2 of Faletto (2025)
-for details. It is best to provide this variance if it is known (for example,
-if you are using simulated data). If this variance is unknown, this argument
-can be omitted, and the variance will be estimated by
+for details. When <code>gls</code> is <code>TRUE</code>, it is best to provide this variance and
+<code>sig_eps_c_sq</code> if both are known (for example, if you are using simulated
+data); if this variance is unknown, this argument can be omitted, and the
+variance will be estimated by
 REML on the linear mixed-effects model <code>y ~ X + (1 | unit)</code> via
-<code><a href="https://rdrr.io/pkg/lme4/man/lmer.html" class="external-link">lme4::lmer</a></code> (Bates et al. 2015; Patterson &amp; Thompson 1971). When
-supplied, the value also sets the scale of the bridge penalty's grid (the
-response is divided by <code>sqrt(sig_eps_sq)</code> before the fit), so at <code>q != 1</code> a
-value supplied in the wrong units moves the estimates, not only their
+<code><a href="https://rdrr.io/pkg/lme4/man/lmer.html" class="external-link">lme4::lmer</a></code> (Bates et al. 2015; Patterson &amp; Thompson 1971). When <code>gls</code> is
+<code>TRUE</code> and both variances are supplied, <code>sig_eps_sq</code> also sets the scale of
+the bridge penalty's grid (the
+response is divided by <code>sqrt(sig_eps_sq)</code> before the fit), so a
+value supplied in the wrong units can move the estimates, not only their
 standard errors. Default is NA.</p></dd>
 
 
 <dt id="arg-sig-eps-c-sq">sig_eps_c_sq<a class="anchor" aria-label="anchor" href="#arg-sig-eps-c-sq"></a></dt>
 <dd><p>(Optional.) Numeric; the variance of the unit-level IID
 noise (random effects) assumed to apply to each observation. See Section 2 of
-Faletto (2025) for details. It is best to provide this variance if it is
-known (for example, if you are using simulated data). If this variance is
-unknown, this argument can be omitted, and the variance will be estimated
-by REML via <code><a href="https://rdrr.io/pkg/lme4/man/lmer.html" class="external-link">lme4::lmer</a></code> on the
+Faletto (2025) for details. When <code>gls</code> is <code>TRUE</code>, it is best to provide this
+variance and <code>sig_eps_sq</code> if both are known (for example, if you are using
+simulated data); if this variance is unknown, this argument can be omitted,
+and the variance will be estimated by REML via <code><a href="https://rdrr.io/pkg/lme4/man/lmer.html" class="external-link">lme4::lmer</a></code> on the
 linear mixed-effects model <code>y ~ X + (1 | unit)</code> (Bates et al. 2015;
 Patterson &amp; Thompson 1971). Default is NA.</p></dd>
 
@@ -266,26 +267,29 @@ already contains never-treated units. Default is <code>TRUE</code>.</p></dd>
 <dt id="arg-se-type">se_type<a class="anchor" aria-label="anchor" href="#arg-se-type"></a></dt>
 <dd><p>Character; one of <code>"default"</code>, <code>"conservative"</code>, or
 <code>"cluster"</code>. <code>"default"</code> returns the tight Gaussian variance
-<code>sqrt(att_var_1 + att_var_2)</code> from Theorem (c$'$) under Assumption
+<code>sqrt(att_var_1 + att_var_2)</code> from Theorem 6.4(c') under Assumption
 (Psi-IF); this is asymptotically exact for the package's default
 cohort sample-proportions estimator and for every standard
 propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
 any GLM on <code>W | X</code>, kernel/series regression of <code>1{W = g}</code> on <code>X</code>).
 <code>"conservative"</code> returns the Cauchy-Schwarz upper bound
 <code>sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))</code> from
-Theorem (c); use only if the propensity-score estimator violates
+Theorem 6.4(c); use only if the propensity-score estimator violates
 (Psi-IF) (e.g., a Robins-Rotnitzky-augmented doubly-robust estimator,
-which the package does not currently implement). <code>"cluster"</code> is an
+which the package does not currently implement). Supplying
+<code>indep_counts</code> makes <code>"conservative"</code> give the same standard error as
+<code>"default"</code>. <code>"cluster"</code> is an
 <em>experimental</em> unit-clustered Liang-Zeger sandwich SE on the
 bridge-selected support (see the companion vignette
 <code>inference_vignette</code> for the formula, the assumptions, and the
 theory-pending caveat); only meaningful when <code>q &lt; 1</code> (the bridge
-oracle property is required), and for <code>q &gt;= 1</code> the SE will be <code>NA</code>
-regardless of <code>se_type</code>. The default value of <code>"default"</code> corresponds
-to the new tight Gaussian default introduced in version 1.12.0;
-previous versions used the conservative Cauchy-Schwarz formula as the
-default. To recover the prior conservative default behavior, pass
-<code>se_type = "conservative"</code>.</p></dd>
+oracle property is required), and the SE is <code>NA</code> regardless of
+<code>se_type</code> whenever <code>calc_ses</code> is <code>FALSE</code> (see <code>att_se</code>). The default
+value of <code>"default"</code> corresponds to the new tight Gaussian default
+introduced in version 1.12.0; previous versions used the conservative
+Cauchy-Schwarz formula as the default. To recover the prior
+conservative default behavior, pass <code>se_type = "conservative"</code> without
+<code>indep_counts</code>.</p></dd>
 
 
 <dt id="arg-lambda-selection">lambda_selection<a class="anchor" aria-label="anchor" href="#arg-lambda-selection"></a></dt>
@@ -342,9 +346,9 @@ adjusted p-value matching the band, under <code>"pointwise"</code> the per-cohor
 Wald p-value (#200). The standard errors (<code>se</code>) and selection flags
 (<code>selected</code>) are the same under both settings, and the overall-ATT
 confidence interval (a single scalar) is
-unaffected. When standard errors are unavailable (<code>q &gt;= 1</code>, or a
-rank-deficient design) the bounds are <code>NA</code> under both settings. Default
-is <code>"simultaneous"</code>.</p></dd>
+unaffected. When standard errors are unavailable (<code>calc_ses</code> is <code>FALSE</code>;
+for example <code>q &gt;= 1</code>, <code>gls = FALSE</code>, or a rank-deficient design) the
+bounds are <code>NA</code> under both settings. Default is <code>"simultaneous"</code>.</p></dd>
 
 
 <dt id="arg-fusion-structure">fusion_structure<a class="anchor" aria-label="anchor" href="#arg-fusion-structure"></a></dt>
@@ -364,11 +368,16 @@ arbitrary fusion structure beyond the two built-ins. When non-<code>NULL</code> 
 overrides <code>fusion_structure</code> for the treatment-effect block only (the
 fixed-effect blocks are unchanged); the estimator uses <code>solve(fusion_matrix)</code>
 internally. The rows/columns are interpreted in the cohort-major <code>(g, t)</code>
-order used internally for the treatment effects (the order <code>getFirstInds()</code>
-/ <code>getTreatInds()</code> encode): row/column <code>i</code> corresponds to
-base treatment effect <code>i</code>, with cohort <code>g</code> occupying rows
-<code>first_inds[g]:(first_inds[g + 1] - 1)</code> ordered by event time. <code>num_treats</code>
-equals <code>T * G - G * (G + 1) / 2</code>. <code>fusion_matrix</code> must be a finite,
+order used internally for the treatment effects: row/column <code>i</code>
+corresponds to base treatment effect <code>i</code>, with the cohorts in adoption
+order and each cohort's effects in event-time order. A cohort first
+treated at position <code>k</code> among the <code>T</code> periods has <code>T - k + 1</code> effects, and
+<code>num_treats</code> is their total over the treated cohorts; when the cohorts
+adopt in consecutive periods <code>2, ..., G + 1</code>, it equals
+<code>T * G - G * (G + 1) / 2</code>. The periods and cohorts are those of the panel
+<code>fetwfe()</code> fits (see the <code>treatment</code> and <code>allow_no_never_treated</code> entries
+of <code>fetwfe()</code>), and <code>length(fit$treat_inds)</code> from a fit on the same data
+gives <code>num_treats</code>. <code>fusion_matrix</code> must be a finite,
 invertible numeric matrix of that exact dimension (otherwise <code>fetwfe()</code>
 stops). Under the paper's fixed-dimension scoping, <em>any</em> finite invertible
 <code>D_N</code> of that dimension inherits the paper's inferential guarantees: the
@@ -394,7 +403,9 @@ un-whitened <code>internal$X_final</code> / <code>internal$y_final</code>. It gi
 estimates; when <code>p &gt;= NT</code>, <code><a href="simultaneousCIs.html">simultaneousCIs()</a></code> with <code>method = "bootstrap"</code>
 also gives it cluster-robust simultaneous confidence bands, and when
 <code>p &lt; NT</code> it has no standard errors. <code>add_ridge = TRUE</code> is not supported, and
-supplied <code>sig_eps_sq</code> / <code>sig_eps_c_sq</code> are ignored, under <code>gls = FALSE</code>.</p></dd>
+supplied <code>sig_eps_sq</code> / <code>sig_eps_c_sq</code> are ignored, under <code>gls = FALSE</code>.
+A <code>gls = FALSE</code> fit is not standardized by a noise-variance estimate, so
+its estimates depend on the units of the response (#490).</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -404,7 +415,7 @@ supplied <code>sig_eps_sq</code> / <code>sig_eps_c_sq</code> are ignored, under 
 <dd><p>The estimated overall average treatment effect for a randomly selected treated unit.</p></dd>
 
 <dt>att_se</dt>
-<dd><p>If <code>q &lt; 1</code>, a standard error for the ATT. Under the default <code>se_type = "default"</code>, the SE is the tight Gaussian variance <code>sqrt(att_var_1 + att_var_2)</code> (Theorem (c$'$) under Assumption (Psi-IF); paper line 1233 onwards). Assumption (Psi-IF) is satisfied by the package's default cohort sample-proportions estimator <code>hat_pi_g = N_g / N</code> (and by multinomial logit, any GLM on <code>W | X</code>, and kernel/series regression of <code>1{W = g}</code> on <code>X</code>), so the default SE is asymptotically exact for the package's default estimator. Under <code>se_type = "conservative"</code> (or in version &lt;= 1.11.7 by default), the SE is the Cauchy-Schwarz upper bound <code>sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))</code> from Theorem (c). When <code>indep_counts</code> is provided, the two-sample exact formula <code>sqrt(att_var_1 + att_var_2)</code> is used regardless of <code>se_type</code>. If <code>q &gt;= 1</code>, this will be NA.</p></dd>
+<dd><p>A standard error for the ATT. Under the default <code>se_type = "default"</code>, the SE is the tight Gaussian variance <code>sqrt(att_var_1 + att_var_2)</code> (Theorem 6.4(c') under Assumption (Psi-IF)). Assumption (Psi-IF) is satisfied by the package's default cohort sample-proportions estimator <code>hat_pi_g = N_g / N</code> (and by multinomial logit, any GLM on <code>W | X</code>, and kernel/series regression of <code>1{W = g}</code> on <code>X</code>), so the default SE is asymptotically exact for the package's default estimator. Under <code>se_type = "conservative"</code> (or in version &lt;= 1.11.7 by default), the SE is the Cauchy-Schwarz upper bound <code>sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))</code> from Theorem 6.4(c). When <code>indep_counts</code> is provided, <code>"conservative"</code> gives the same <code>att_se</code> as <code>"default"</code>, and <code>"cluster"</code> still uses the cluster-robust sandwich for <code>att_var_1</code>. <code>NA</code> when standard errors were not computed (<code>calc_ses</code> is <code>FALSE</code>), for example when <code>q &gt;= 1</code> or <code>gls = FALSE</code>.</p></dd>
 
 <dt>att_p_value</dt>
 <dd><p>A two-sided p-value for the overall ATT against the null <code>H_0: tau = 0</code>, computed as <code>2 * pnorm(-|att_hat / att_se|)</code>. <code>NA</code> if <code>att_se</code> is zero or <code>NA</code> (e.g., under the bridge solver's selected-out fallback). See the package vignette section "Testing the zero-effect null" for interpretation guidance under selection consistency.</p></dd>
@@ -416,7 +427,7 @@ supplied <code>sig_eps_sq</code> / <code>sig_eps_c_sq</code> are ignored, under 
 <dd><p>A named vector containing the estimated average treatment effects for each cohort.</p></dd>
 
 <dt>catt_ses</dt>
-<dd><p>If <code>q &lt; 1</code>, a named vector containing the (asymptotically exact, non-conservative) standard errors for the estimated average treatment effects within each cohort.</p></dd>
+<dd><p>A vector containing the (asymptotically exact, non-conservative) standard errors for the estimated average treatment effects within each cohort, named by cohort when they were computed. <code>NA</code> when <code>calc_ses</code> is <code>FALSE</code>, for example when <code>q &gt;= 1</code> or <code>gls = FALSE</code>.</p></dd>
 
 <dt>cohort_probs</dt>
 <dd><p>A vector of the estimated probabilities of being in each cohort conditional on being treated, which was used in calculating <code>att_hat</code>. If <code>indep_counts</code> was provided, <code>cohort_probs</code> was calculated from that; otherwise, it was calculated from the counts of units in each treated cohort in <code>pdata</code>.</p></dd>
@@ -434,10 +445,10 @@ supplied <code>sig_eps_sq</code> / <code>sig_eps_c_sq</code> are ignored, under 
 <dd><p>The indices of <code>beta_hat</code> corresponding to the interactions between the treatment effects for each cohort at each time and the covariates.</p></dd>
 
 <dt>sig_eps_sq</dt>
-<dd><p>Either the provided <code>sig_eps_sq</code> or the estimated one, if a value wasn't provided.</p></dd>
+<dd><p>When <code>gls</code> is <code>TRUE</code>, the provided <code>sig_eps_sq</code> if both variances were provided, and otherwise the REML estimate; <code>NA</code> when <code>gls</code> is <code>FALSE</code>.</p></dd>
 
 <dt>sig_eps_c_sq</dt>
-<dd><p>Either the provided <code>sig_eps_c_sq</code> or the estimated one, if a value wasn't provided.</p></dd>
+<dd><p>When <code>gls</code> is <code>TRUE</code>, the provided <code>sig_eps_c_sq</code> if both variances were provided, and otherwise the REML estimate; <code>NA</code> when <code>gls</code> is <code>FALSE</code>.</p></dd>
 
 <dt>lambda.max</dt>
 <dd><p>The largest <code>lambda</code> of the grid used, which is a supplied <code>lambda.max</code> only on the BIC route. (This is returned to help with getting a reasonable range of <code>lambda</code> values for grid search.)</p></dd>
@@ -503,7 +514,7 @@ variance of the overall ATT.</p></dd>
 
 <dt>indep_counts_used</dt>
 <dd><p>Logical scalar; <code>TRUE</code> if a valid <code>indep_counts</code>
-argument was provided and used for asymptotically-exact ATT inference,
+argument was provided, so the cohort probabilities came from it, and
 <code>FALSE</code> otherwise.</p></dd>
 
 <dt>se_type</dt>
@@ -546,10 +557,10 @@ internally). Consumed by <code>augment.&lt;class&gt;()</code>.</p></dd>
 <dd><p>The vector of responses, containing <code>nrow(X_ints)</code> entries.</p></dd>
 
 <dt>X_final</dt>
-<dd><p>The design matrix after applying the change in coordinates to fit the model and also multiplying on the left by the square root inverse of the estimated covariance matrix for each unit.</p></dd>
+<dd><p>The design matrix after applying the change in coordinates to fit the model, GLS-whitened when <code>gls</code> is <code>TRUE</code> (see <code>gls</code>).</p></dd>
 
 <dt>y_final</dt>
-<dd><p>The final response after multiplying on the left by the square root inverse of the estimated covariance matrix for each unit.</p></dd>
+<dd><p>The final response, GLS-whitened when <code>gls</code> is <code>TRUE</code> (see <code>gls</code>), with <code>p</code> zeros appended for the ridge penalty when <code>add_ridge</code> is <code>TRUE</code>.</p></dd>
 
 <dt>theta_hat</dt>
 <dd><p>The vector of estimated coefficients in the transformed (fused) space, including the intercept as the first element.</p></dd>
@@ -558,7 +569,7 @@ internally). Consumed by <code>augment.&lt;class&gt;()</code>.</p></dd>
 <dd><p>Logical indicating whether standard errors were calculated.</p></dd>
 
 <dt>variance_components</dt>
-<dd><p>A list exposing the two variance pieces (<code>att_var_1</code>, <code>att_var_2</code>) plus their paper-notation counterparts (<code>V_1</code>, <code>V_2</code>) and the unit-scaled variance estimators (<code>tilde_v_N</code>, <code>hat_v_N</code>, <code>tilde_v_N_C</code>, <code>tilde_v_N_C_pi_hat</code>, <code>tilde_v_N_C_pi_hat_cons</code>, <code>tilde_v_N_cons</code>) catalogued at paper line 2006. The Wald CI is <code>[hat_T_N +- qnorm(1-alpha/2) * sqrt(tilde_v_N / N)]</code> (paper Eq. <code>conf.int.form</code>). New in v1.12.0 (issue #141 + #146).</p></dd>
+<dd><p>A list exposing the two variance pieces (<code>att_var_1</code>, <code>att_var_2</code>) plus their paper-notation counterparts (<code>V_1</code>, <code>V_2</code>) and the unit-scaled variance estimators (<code>tilde_v_N</code>, <code>hat_v_N</code>, <code>tilde_v_N_C</code>, <code>tilde_v_N_C_pi_hat</code>, <code>tilde_v_N_C_pi_hat_cons</code>, <code>tilde_v_N_cons</code>). The Wald CI is <code>[hat_T_N +- qnorm(1-alpha/2) * sqrt(tilde_v_N / N)]</code> (paper Eq. <code>conf.int.form</code>). New in v1.12.0 (issue #141 + #146).</p></dd>
 
 <dt>first_year</dt>
 <dd><p>Integer or numeric scalar; the first (earliest) <code>time_var</code> value in the panel after <code>idCohorts()</code> processing. Consumed by <code><a href="eventStudy.html">eventStudy()</a></code> to map <code>cohort_probs</code>' cohort labels (treatment-start years) to 1-based panel-time-index offsets when the labels are integer-coercible. New in v1.13.3 (issue #174).</p></dd>

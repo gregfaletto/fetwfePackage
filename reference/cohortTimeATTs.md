@@ -93,22 +93,23 @@ then time, with columns:
 
 - se:
 
-  Numeric; the pointwise standard error. `0` for a cell zeroed out by
-  the fusion/bridge penalty while other cells survive
+  Numeric; the pointwise standard error. `NA` when standard errors are
+  unavailable — the fit computed none (`calc_ses` is `FALSE`), the Gram
+  matrix on the selected support is singular, or the penalty zeroed the
+  *entire* treatment block (no cells selected, so there is no support to
+  recompute the Gram from; this matches
+  [`eventStudy()`](https://gregfaletto.github.io/fetwfePackage/reference/eventStudy.md)).
+  Otherwise `0` for a cell zeroed out by the fusion/bridge penalty while
+  other cells survive
   ([`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)
   /
-  [`betwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/betwfe.md));
-  `NA` when standard errors are unavailable — the fit was computed with
-  `q >= 1`, the Gram matrix on the selected support is singular, or the
-  penalty zeroed the *entire* treatment block (no cells selected, so
-  there is no support to recompute the Gram from; this matches
-  [`eventStudy()`](https://gregfaletto.github.io/fetwfePackage/reference/eventStudy.md)).
+  [`betwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/betwfe.md)).
 
 - ci_low, ci_high:
 
   Numeric; the pointwise `1 - alpha` Wald bounds
-  `estimate -/+ qnorm(1 - alpha/2) * se`. `(0, 0)` for a fused-away
-  cell; `NA` when `se` is `NA`.
+  `estimate -/+ qnorm(1 - alpha/2) * se`. `NA` when `se` is `NA`;
+  otherwise `(0, 0)` for a zeroed-out cell.
 
 - p_value:
 
@@ -141,10 +142,8 @@ transformed (theta) coordinate space, for
 [`etwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/etwfe.md)
 a unit selector in the original (beta) coordinate space restricted to
 the selected support. It is never gated on the point estimate: a cell
-whose estimate is exactly zero because the penalty fused it away has an
-all-zero `psi` and therefore `se = 0` (the correct degenerate value),
-while a cell whose estimate happens to be near zero for other reasons
-still receives its proper nonzero SE.
+whose estimate is exactly zero because the penalty zeroed it out has an
+all-zero `psi`.
 
 ## See also
 

@@ -56,7 +56,7 @@
                         <h4 data-toc-skip class="author">Gregory
 Faletto</h4>
             
-            <h4 data-toc-skip class="date">2026-11-22</h4>
+            <h4 data-toc-skip class="date">2026-11-27</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/gregfaletto/fetwfePackage/blob/main/vignettes/fusion_structure_vignette.Rmd" class="external-link"><code>vignettes/fusion_structure_vignette.Rmd</code></a></small>
       <div class="d-none name"><code>fusion_structure_vignette.Rmd</code></div>
@@ -175,9 +175,7 @@ measure recovery error directly.</p>
 see the <em>Simulation</em> vignette for a full tour). The
 treatment-effect coefficients occupy a known block of the coefficient
 vector; <code><a href="../reference/fetwfe.html">fetwfe()</a></code> reports their positions in its
-<code>treat_inds</code> slot (see <code><a href="../reference/fetwfe.html">?fetwfe</a></code>), and those
-positions depend only on the panel shape (<code>G</code> cohorts,
-<code>T</code> periods, <code>d</code> covariates):</p>
+<code>treat_inds</code> slot (see <code><a href="../reference/fetwfe.html">?fetwfe</a></code>):</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">G</span> <span class="op">&lt;-</span> <span class="fl">6L</span></span>
 <span><span class="cn">T</span> <span class="op">&lt;-</span> <span class="fl">9L</span></span>
@@ -345,20 +343,26 @@ follow the same <strong>cohort-major <code>(g, t)</code> order</strong>
 the estimator uses for the treatment effects. Row/column <code>i</code>
 corresponds to base treatment effect <code>i</code>:</p>
 <ul>
-<li>
-<code>num_treats = T * G - G * (G + 1) / 2</code> is the total
-number of base treatment effects.</li>
-<li>
-<code>getFirstInds(G, T)</code> returns, for each cohort
-<code>g</code>, the 1-based row of its <strong>first</strong> effect
-<code>tau_{g, 0}</code>. Cohort <code>g</code> then occupies rows
+<li>The cohorts come in adoption order, and each cohort’s effects come
+in event-time order (<code>tau_{g, 0}, tau_{g, 1}, ...</code>).</li>
+<li>A cohort first treated at position <code>k</code> among the
+<code>T</code> sorted periods has <code>T - k + 1</code> effects, and
+<code>num_treats</code> is their total over the treated cohorts. The
+periods and cohorts are those of the panel <code><a href="../reference/fetwfe.html">fetwfe()</a></code> fits
+(see the <code>treatment</code> and <code>allow_no_never_treated</code>
+entries of <code><a href="../reference/fetwfe.html">?fetwfe</a></code>). The simulator codes time
+<code>1, ..., T</code>, so on this panel the count is
+<code>sum(n_k)</code>, with the <code>n_k</code> computed above. When
+the cohorts adopt in consecutive periods <code>2, ..., G + 1</code>, the
+total is <code>T * G - G * (G + 1) / 2</code>.</li>
+<li>Cohort <code>g</code> occupies rows
 <code>first_inds[g]:(first_inds[g + 1] - 1)</code> (the last cohort runs
-through <code>num_treats</code>), ordered by event time within the
-cohort (<code>tau_{g, 0}, tau_{g, 1}, ...</code>).</li>
+through <code>num_treats</code>), where
+<code>first_inds &lt;- cumsum(c(1, head(n_k, -1)))</code>.</li>
 <li>
-<code>getTreatInds(G, T, d, num_treats)</code> maps this block into
-the full design-matrix columns; <code>fit$treat_inds</code> reports the
-same positions on a fitted object.</li>
+<code>fit$treat_inds</code> reports the positions of these effects
+in a fitted object’s <code>beta_hat</code>, so
+<code>length(fit$treat_inds)</code> is <code>num_treats</code>.</li>
 </ul>
 <p>Interpreting <code>D_N</code> as forward differences:
 <code>theta = D_N %*% beta</code> is the penalized (sparse)
@@ -370,10 +374,10 @@ the original-scale effects. You supply <code>D_N</code>; the code uses
 <h3 id="worked-example">Worked example<a class="anchor" aria-label="anchor" href="#worked-example"></a>
 </h3>
 <p>We build <code>first_inds</code> from the per-cohort effect counts
-<code>n_k</code> (already computed above; no internal helper needed) so
-the matrix’s cohort-major layout is explicit, then supply a custom
-<code>D_N</code> and refit. (This reuses the <code>sim</code> panel from
-the side-by-side demo above.)</p>
+<code>n_k</code> (already computed above) so the matrix’s cohort-major
+layout is explicit, then supply a custom <code>D_N</code> and refit.
+(This reuses the <code>sim</code> panel from the side-by-side demo
+above.)</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># first_inds in the same cohort-major order the matrix must follow: cohort 1</span></span>
 <span><span class="co"># starts at row 1, and each later cohort starts after the previous cohort's</span></span>

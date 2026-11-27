@@ -9,9 +9,9 @@ mean of the cohort-specific effects. Under the covariate-dependent DGPs
 introduced in 1.14.0, the overall ATT is a propensity-weighted mean
 using cohort weights \\E\[\pi_g(X)\] / \sum\_{g' \text{ treated}}
 E\[\pi\_{g'}(X)\]\\, matching Faletto (2025) Eq.
-`att.estimator.weighted` (line 837) at the population level. The
-expected propensities are computed by Monte Carlo integration over the
-covariate distribution.
+`att.estimator.weighted` at the population level. The expected
+propensities are computed by Monte Carlo integration over the covariate
+distribution.
 
 ## Usage
 

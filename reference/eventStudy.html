@@ -5,9 +5,9 @@ cohort-weighted averages of the cell-level treatment-effect estimates at
 each post-treatment event time e = t - g, the number of periods since the
 cohort's first treated period (t and g are periods, counted along the
 sorted values of the time variable, so e counts periods whatever the
-time coding). Weights are
-sample-cohort-size weights (matching did::aggte(type = &quot;dynamic&quot;)
-convention).
+time coding). Weights are cohort-size weights: the sample's cohort shares,
+as in did::aggte(type = &quot;dynamic&quot;), or the shares in indep_counts when
+the fit was given them.
 Standard errors combine two terms, mirroring the package's existing
 overall-ATT SE machinery: var_1(e) from regression-coefficient noise
 (computed via the same gram_inv machinery the package uses for cohort
@@ -27,9 +27,9 @@ cohort-weighted averages of the cell-level treatment-effect estimates at
 each post-treatment event time e = t - g, the number of periods since the
 cohort's first treated period (t and g are periods, counted along the
 sorted values of the time variable, so e counts periods whatever the
-time coding). Weights are
-sample-cohort-size weights (matching did::aggte(type = &quot;dynamic&quot;)
-convention).
+time coding). Weights are cohort-size weights: the sample's cohort shares,
+as in did::aggte(type = &quot;dynamic&quot;), or the shares in indep_counts when
+the fit was given them.
 Standard errors combine two terms, mirroring the package's existing
 overall-ATT SE machinery: var_1(e) from regression-coefficient noise
 (computed via the same gram_inv machinery the package uses for cohort
@@ -87,9 +87,9 @@ cohort-weighted averages of the cell-level treatment-effect estimates at
 each post-treatment event time <code>e = t - g</code>, the number of periods since the
 cohort's first treated period (<code>t</code> and <code>g</code> are periods, counted along the
 sorted values of the time variable, so <code>e</code> counts periods whatever the
-time coding). Weights are
-sample-cohort-size weights (matching <code>did::aggte(type = "dynamic")</code>
-convention).</p>
+time coding). Weights are cohort-size weights: the sample's cohort shares,
+as in <code>did::aggte(type = "dynamic")</code>, or the shares in <code>indep_counts</code> when
+the fit was given them.</p>
 <p>Standard errors combine two terms, mirroring the package's existing
 overall-ATT SE machinery: <code>var_1(e)</code> from regression-coefficient noise
 (computed via the same <code>gram_inv</code> machinery the package uses for cohort

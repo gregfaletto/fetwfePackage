@@ -675,8 +675,7 @@ recomputed from the fit exactly as
 does (each cell is a single coefficient, so the cohort-probability
 sampling variance that contributes to the aggregated SEs is identically
 zero here). Confidence intervals and p-values are pointwise; a cell the
-fusion penalty zeroed out has `estimate = 0`, `se = 0`, and
-`selected = FALSE`.
+fusion penalty zeroed out has `estimate = 0` and `selected = FALSE`.
 [`broom::tidy()`](https://generics.r-lib.org/reference/tidy.html) works
 here too (`term = "cohort_<g>_time_<t>"`). For simultaneous
 (family-wise) bands over the `(cohort, time)` cell family, use

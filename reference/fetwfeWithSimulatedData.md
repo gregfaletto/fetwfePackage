@@ -113,28 +113,12 @@ fetwfeWithSimulatedData(
 
 - se_type:
 
-  Character; one of `"default"`, `"conservative"`, or `"cluster"`.
-  `"default"` returns the tight Gaussian variance
-  `sqrt(att_var_1 + att_var_2)` from Theorem (c\$'\$) under Assumption
-  (Psi-IF); this is asymptotically exact for the package's default
-  cohort sample-proportions estimator and for every standard
-  propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
-  any GLM on `W | X`, kernel/series regression of `1{W = g}` on `X`).
-  `"conservative"` returns the Cauchy-Schwarz upper bound
-  `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from
-  Theorem (c); use only if the propensity-score estimator violates
-  (Psi-IF) (e.g., a Robins-Rotnitzky-augmented doubly-robust estimator,
-  which the package does not currently implement). `"cluster"` is an
-  *experimental* unit-clustered Liang-Zeger sandwich SE on the
-  bridge-selected support (see the companion vignette
-  `inference_vignette` for the formula, the assumptions, and the
-  theory-pending caveat); only meaningful when `q < 1` (the bridge
-  oracle property is required), and for `q >= 1` the SE will be `NA`
-  regardless of `se_type`. The default value of `"default"` corresponds
-  to the new tight Gaussian default introduced in version 1.12.0;
-  previous versions used the conservative Cauchy-Schwarz formula as the
-  default. To recover the prior conservative default behavior, pass
-  `se_type = "conservative"`.
+  Character; one of `"default"`, `"conservative"`, or `"cluster"`, as in
+  [`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md);
+  see its `se_type` entry. This wrapper passes the simulator's
+  independent cohort counts (`simulated_obj$indep_counts`) to
+  [`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md),
+  so `"conservative"` gives the same `att_se` as `"default"`.
 
 - lambda_selection:
 
@@ -197,9 +181,10 @@ fetwfeWithSimulatedData(
   `"pointwise"` the per-cohort Wald p-value (#200). The standard errors
   (`se`) and selection flags (`selected`) are the same under both
   settings, and the overall-ATT confidence interval (a single scalar) is
-  unaffected. When standard errors are unavailable (`q >= 1`, or a
-  rank-deficient design) the bounds are `NA` under both settings.
-  Default is `"simultaneous"`.
+  unaffected. When standard errors are unavailable (`calc_ses` is
+  `FALSE`; for example `q >= 1`, `gls = FALSE`, or a rank-deficient
+  design) the bounds are `NA` under both settings. Default is
+  `"simultaneous"`.
 
 - fusion_structure:
 
@@ -221,12 +206,19 @@ fetwfeWithSimulatedData(
   (the fixed-effect blocks are unchanged); the estimator uses
   `solve(fusion_matrix)` internally. The rows/columns are interpreted in
   the cohort-major `(g, t)` order used internally for the treatment
-  effects (the order `getFirstInds()` / `getTreatInds()` encode):
-  row/column `i` corresponds to base treatment effect `i`, with cohort
-  `g` occupying rows `first_inds[g]:(first_inds[g + 1] - 1)` ordered by
-  event time. `num_treats` equals `T * G - G * (G + 1) / 2`.
-  `fusion_matrix` must be a finite, invertible numeric matrix of that
-  exact dimension (otherwise
+  effects: row/column `i` corresponds to base treatment effect `i`, with
+  the cohorts in adoption order and each cohort's effects in event-time
+  order. A cohort first treated at position `k` among the `T` periods
+  has `T - k + 1` effects, and `num_treats` is their total over the
+  treated cohorts; when the cohorts adopt in consecutive periods
+  `2, ..., G + 1`, it equals `T * G - G * (G + 1) / 2`. The periods and
+  cohorts are those of the panel
+  [`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)
+  fits (see the `treatment` and `allow_no_never_treated` entries of
+  [`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)),
+  and `length(fit$treat_inds)` from a fit on the same data gives
+  `num_treats`. `fusion_matrix` must be a finite, invertible numeric
+  matrix of that exact dimension (otherwise
   [`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)
   stops). Under the paper's fixed-dimension scoping, *any* finite
   invertible `D_N` of that dimension inherits the paper's inferential
@@ -258,7 +250,9 @@ fetwfeWithSimulatedData(
   with `method = "bootstrap"` also gives it cluster-robust simultaneous
   confidence bands, and when `p < NT` it has no standard errors.
   `add_ridge = TRUE` is not supported, and supplied `sig_eps_sq` /
-  `sig_eps_c_sq` are ignored, under `gls = FALSE`.
+  `sig_eps_c_sq` are ignored, under `gls = FALSE`. A `gls = FALSE` fit
+  is not standardized by a noise-variance estimate, so its estimates
+  depend on the units of the response (#490).
 
 ## Value
 
@@ -271,20 +265,9 @@ An object of class `fetwfe` containing the following elements:
 
 - att_se:
 
-  If `q < 1`, a standard error for the ATT. Under the default
-  `se_type = "default"`, the SE is the tight Gaussian variance
-  `sqrt(att_var_1 + att_var_2)` (Theorem (c\$'\$) under Assumption
-  (Psi-IF); paper line 1233 onwards). Assumption (Psi-IF) is satisfied
-  by the package's default cohort sample-proportions estimator
-  `hat_pi_g = N_g / N` (and by multinomial logit, any GLM on `W | X`,
-  and kernel/series regression of `1{W = g}` on `X`), so the default SE
-  is asymptotically exact for the package's default estimator. Under
-  `se_type = "conservative"` (or in version \<= 1.11.7 by default), the
-  SE is the Cauchy-Schwarz upper bound
-  `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from
-  Theorem (c). When `indep_counts` is provided, the two-sample exact
-  formula `sqrt(att_var_1 + att_var_2)` is used regardless of `se_type`.
-  If `q >= 1`, this will be NA.
+  A standard error for the ATT (see `se_type`). `NA` when standard
+  errors were not computed (`calc_ses` is `FALSE`), for example when
+  `q >= 1` or `gls = FALSE`.
 
 - att_p_value:
 
@@ -310,9 +293,10 @@ An object of class `fetwfe` containing the following elements:
 
 - catt_ses:
 
-  If `q < 1`, a named vector containing the (asymptotically exact,
-  non-conservative) standard errors for the estimated average treatment
-  effects within each cohort.
+  A vector containing the (asymptotically exact, non-conservative)
+  standard errors for the estimated average treatment effects within
+  each cohort, named by cohort when they were computed. `NA` when
+  `calc_ses` is `FALSE`, for example when `q >= 1` or `gls = FALSE`.
 
 - cohort_probs:
 
@@ -353,13 +337,14 @@ An object of class `fetwfe` containing the following elements:
 
 - sig_eps_sq:
 
-  Either the provided `sig_eps_sq` or the estimated one, if a value
-  wasn't provided.
+  When `gls` is `TRUE`, the provided `sig_eps_sq` if both variances were
+  provided, and otherwise the REML estimate; `NA` when `gls` is `FALSE`.
 
 - sig_eps_c_sq:
 
-  Either the provided `sig_eps_c_sq` or the estimated one, if a value
-  wasn't provided.
+  When `gls` is `TRUE`, the provided `sig_eps_c_sq` if both variances
+  were provided, and otherwise the REML estimate; `NA` when `gls` is
+  `FALSE`.
 
 - lambda.max:
 
@@ -487,8 +472,9 @@ An object of class `fetwfe` containing the following elements:
 
 - indep_counts_used:
 
-  Logical scalar; `TRUE` if a valid `indep_counts` argument was provided
-  and used for asymptotically-exact ATT inference, `FALSE` otherwise.
+  Logical scalar; `TRUE` if a valid `indep_counts` argument was
+  provided, so the cohort probabilities came from it, and `FALSE`
+  otherwise.
 
 - se_type:
 
@@ -559,13 +545,13 @@ An object of class `fetwfe` containing the following elements:
   X_final
 
   :   The design matrix after applying the change in coordinates to fit
-      the model and also multiplying on the left by the square root
-      inverse of the estimated covariance matrix for each unit.
+      the model, GLS-whitened when `gls` is `TRUE` (see `gls`).
 
   y_final
 
-  :   The final response after multiplying on the left by the square
-      root inverse of the estimated covariance matrix for each unit.
+  :   The final response, GLS-whitened when `gls` is `TRUE` (see `gls`),
+      with `p` zeros appended for the ridge penalty when `add_ridge` is
+      `TRUE`.
 
   theta_hat
 
@@ -582,7 +568,7 @@ An object of class `fetwfe` containing the following elements:
       plus their paper-notation counterparts (`V_1`, `V_2`) and the
       unit-scaled variance estimators (`tilde_v_N`, `hat_v_N`,
       `tilde_v_N_C`, `tilde_v_N_C_pi_hat`, `tilde_v_N_C_pi_hat_cons`,
-      `tilde_v_N_cons`) catalogued at paper line 2006. The Wald CI is
+      `tilde_v_N_cons`). The Wald CI is
       `[hat_T_N +- qnorm(1-alpha/2) * sqrt(tilde_v_N / N)]` (paper Eq.
       `conf.int.form`). New in v1.12.0 (issue \#141 + \#146).
 

@@ -56,7 +56,7 @@
                         <h4 data-toc-skip class="author">Gregory
 Faletto</h4>
             
-            <h4 data-toc-skip class="date">2026-11-22</h4>
+            <h4 data-toc-skip class="date">2026-11-27</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/gregfaletto/fetwfePackage/blob/main/vignettes/inference_vignette.Rmd" class="external-link"><code>vignettes/inference_vignette.Rmd</code></a></small>
       <div class="d-none name"><code>inference_vignette.Rmd</code></div>
@@ -126,8 +126,8 @@ theorem. Concretely, the package returns</p>
 </annotation></semantics></math></p>
 <p>where
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mover><mi>v</mi><mo accent="true">̃</mo></mover><mi>N</mi></msub><mo>:=</mo><msub><mover><mi>v</mi><mo accent="true">̂</mo></mover><mi>N</mi></msub><mi>/</mi><mi>T</mi></mrow><annotation encoding="application/x-tex">\tilde{v}_N := \hat{v}_N / T</annotation></semantics></math>
-is the unit-scaled paper-notation variance estimator (paper line 2004),
-and the Wald confidence interval is</p>
+is the unit-scaled paper-notation variance estimator, and the Wald
+confidence interval is</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mtext mathvariant="normal">CI</mtext><mi>N</mi></msub><mo stretchy="false" form="prefix">(</mo><msub><mover><mi>v</mi><mo accent="true">̃</mo></mover><mi>N</mi></msub><mo>;</mo><mspace width="0.167em"></mspace><mi>α</mi><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mrow><mo stretchy="true" form="prefix">[</mo><mspace width="0.167em"></mspace><msub><mover><mi>T</mi><mo accent="true">̂</mo></mover><mi>N</mi></msub><mspace width="0.278em"></mspace><mo>±</mo><mspace width="0.278em"></mspace><msub><mi>z</mi><mrow><mn>1</mn><mo>−</mo><mi>α</mi><mi>/</mi><mn>2</mn></mrow></msub><mspace width="0.167em"></mspace><msqrt><mrow><msub><mover><mi>v</mi><mo accent="true">̃</mo></mover><mi>N</mi></msub><mspace width="0.167em"></mspace><mi>/</mi><mspace width="0.167em"></mspace><mi>N</mi></mrow></msqrt><mspace width="0.167em"></mspace><mo stretchy="true" form="postfix">]</mo></mrow></mrow><annotation encoding="application/x-tex">
 \text{CI}_N(\tilde{v}_N;\,\alpha)
 \;=\;
@@ -135,9 +135,9 @@ and the Wald confidence interval is</p>
 \hat{T}_N \;\pm\; z_{1 - \alpha/2}\,\sqrt{\tilde{v}_N \,/\, N}
 \,\right]
 </annotation></semantics></math></p>
-<p>per paper Eq. <code>conf.int.form</code> (line 1259). The same
-combined variance backs the per-cohort entries of <code>catt_ses</code>
-and the <code>catt_df</code> confidence-interval columns.</p>
+<p>per paper Eq. <code>conf.int.form</code>. The same combined variance
+backs the per-cohort entries of <code>catt_ses</code> and the
+<code>catt_df</code> confidence-interval columns.</p>
 <div class="section level3">
 <h3 id="which-propensity-score-estimators-satisfy-ψ-if">1.1 Which propensity-score estimators satisfy (Ψ-IF)?<a class="anchor" aria-label="anchor" href="#which-propensity-score-estimators-satisfy-%CF%88-if"></a>
 </h3>
@@ -164,14 +164,15 @@ the box the tight Gaussian CI is asymptotically exact.</li>
 on
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>𝐗</mi><annotation encoding="application/x-tex">\boldsymbol{X}</annotation></semantics></math>.</li>
 </ul>
-<p>(See the discussion at paper line 1268: “When (Ψ-IF) holds — which is
-the case for every standard parametric or semi-parametric
-propensity-score estimator listed in Remark <code>psi.if.coverage</code>
-(cohort sample proportions, multinomial logit, any GLM, kernel/series
-regression) — Theorem
+<p>(See the paper’s discussion: “When (Ψ-IF) holds — which is the case
+for every standard parametric or semi-parametric propensity-score
+estimator listed in Remark <code>psi.if.coverage</code> (cohort sample
+proportions, multinomial logit, any GLM, kernel/series regression) —
+Theorem
 <code>te.asym.norm.thm</code>(c<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>′</mi><annotation encoding="application/x-tex">'</annotation></semantics></math>)
 gives asymptotic Gaussianity with the tight variance
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>V</mi><mn>1</mn></msub><mo>+</mo><msub><mi>V</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">V_1 + V_2</annotation></semantics></math>.”)</p>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>V</mi><mn>1</mn></msub><mo>+</mo><msub><mi>V</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">V_1 + V_2</annotation></semantics></math>
+…”)</p>
 <p>The (Ψ-IF) condition fails for <strong>Robins-Rotnitzky-style
 augmented doubly-robust estimators</strong> that augment the propensity
 score with outcome residuals. The package does not currently implement
@@ -220,7 +221,9 @@ regression-coefficient variance<a class="anchor" aria-label="anchor" href="#v_1-
 </annotation></semantics></math></p>
 <p>where
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mover><mi>G</mi><mo accent="true">̂</mo></mover><mrow><mi>−</mi><mn>1</mn></mrow></msup><annotation encoding="application/x-tex">\widehat G^{-1}</annotation></semantics></math>
-is the Gram inverse on the bridge-selected support and
+is the Gram inverse on the support
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mover><mi>S</mi><mo accent="true">̂</mo></mover><annotation encoding="application/x-tex">\widehat{S}</annotation></semantics></math>
+that Section 3.1 defines and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>ψ</mi><mtext mathvariant="normal">att</mtext></msub><annotation encoding="application/x-tex">\psi_{\text{att}}</annotation></semantics></math>
 encodes the cohort-weighted ATT contrast. The per-cohort SEs
 (<code>catt_ses</code>) have the same form with a cohort selector
@@ -248,8 +251,8 @@ and is unrelated to the regression residuals. This piece is stored as
 paper-notation per-unit-scaled <code>V_2 = N * att_var_2</code>.</p>
 </div>
 <div class="section level3">
-<h3 id="the-combined-variance-tilde_v_n-and-the-papers-catalogue">2.3 The combined variance: <code>tilde_v_N</code> and the paper’s
-catalogue<a class="anchor" aria-label="anchor" href="#the-combined-variance-tilde_v_n-and-the-papers-catalogue"></a>
+<h3 id="the-combined-variance-tilde_v_n-and-the-papers-catalog">2.3 The combined variance: <code>tilde_v_N</code> and the paper’s
+catalog<a class="anchor" aria-label="anchor" href="#the-combined-variance-tilde_v_n-and-the-papers-catalog"></a>
 </h3>
 <p>The unit-scaled total variance is</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mover><mi>v</mi><mo accent="true">̃</mo></mover><mi>N</mi></msub><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mi>N</mi><mo>⋅</mo><mover><mtext mathvariant="normal">Var</mtext><mo accent="true">̂</mo></mover><mo stretchy="false" form="prefix">(</mo><msub><mover><mi>T</mi><mo accent="true">̂</mo></mover><mi>N</mi></msub><mo stretchy="false" form="postfix">)</mo><mo>,</mo></mrow><annotation encoding="application/x-tex">
@@ -258,10 +261,9 @@ catalogue<a class="anchor" aria-label="anchor" href="#the-combined-variance-tild
 <p>stored as <code>result$internal$variance_components$tilde_v_N</code>.
 The original (un-scaled) paper notation
 <code>hat_v_N = T * tilde_v_N</code> is also exposed.</p>
-<p>The paper catalogues six variance estimators at line 2006; the
-package exposes the four that apply to the ATT (the other two apply to
-the CATT(x), which connects to the on-hold <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> work
-in issue #33):</p>
+<p>The paper catalogs six variance estimators; the package exposes the
+four that apply to the ATT (the other two apply to the CATT(x), which
+connects to the on-hold <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> work in issue #33):</p>
 <table class="table">
 <colgroup>
 <col width="25%">
@@ -302,8 +304,12 @@ in issue #33):</p>
 <code>se_type = "conservative"</code> switches the headline to
 <code>tilde_v_N_C_pi_hat_cons</code>. When <code>indep_counts</code> is
 supplied (two-sample regime), the two-sample-exact formula
-<code>tilde_v_N_C_pi_hat</code> is in force regardless of
-<code>se_type</code>.</p>
+<code>tilde_v_N_C_pi_hat</code> is in force under every
+<code>se_type</code>, so <code>"conservative"</code> gives the same
+<code>att_se</code> as <code>"default"</code>, and
+<code>"cluster"</code> still uses the cluster-robust sandwich for
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>V</mi><mn>1</mn></msub><annotation encoding="application/x-tex">V_1</annotation></semantics></math>
+(Section 3).</p>
 <p><strong>Conservative fallback
 (<code>se_type = "conservative"</code>).</strong> If a cohort-weight
 (propensity-score) estimator <em>violates</em> (Ψ-IF) — the canonical
@@ -391,7 +397,7 @@ variability.</li>
 regression-coefficient variance
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>V</mi><mn>1</mn></msub><annotation encoding="application/x-tex">V_1</annotation></semantics></math>
 for a <strong>unit-clustered Liang-Zeger CR1 sandwich</strong> computed
-on the bridge-selected support. The
+on the support that Section 3.1 defines. The
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>V</mi><mn>2</mn></msub><annotation encoding="application/x-tex">V_2</annotation></semantics></math>
 piece and the (Ψ-IF)-tight combination
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>V</mi><mn>1</mn></msub><mo>+</mo><msub><mi>V</mi><mn>2</mn></msub></mrow><annotation encoding="application/x-tex">V_1 + V_2</annotation></semantics></math>
@@ -403,14 +409,17 @@ formula switches.</p>
 </h3>
 <p>Let
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mover><mi>S</mi><mo accent="true">̂</mo></mover><annotation encoding="application/x-tex">\widehat{S}</annotation></semantics></math>
-be the support selected by the bridge regression,
+be the bridge-selected support for FETWFE and BETWFE, and the full
+design for ETWFE and twfeCovs, which have no bridge and select nothing.
+Let
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>X</mi><mover><mi>S</mi><mo accent="true">̂</mo></mover></msub><annotation encoding="application/x-tex">X_{\widehat{S}}</annotation></semantics></math>
-the corresponding design matrix in the coordinate system the regression
-was solved in (GLS-transformed for ETWFE/twfeCovs,
-fusion-then-GLS-transformed for FETWFE/BETWFE), and
+be the corresponding design matrix in the coordinate system the
+regression was solved in (GLS-transformed for ETWFE/twfeCovs/BETWFE,
+fusion-then-GLS-transformed for FETWFE), and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mover><mi>ε</mi><mo accent="true">̂</mo></mover><annotation encoding="application/x-tex">\widehat\varepsilon</annotation></semantics></math>
-the residuals from OLS on that selected support. The cluster-robust
-variance is</p>
+the residuals from OLS on
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mover><mi>S</mi><mo accent="true">̂</mo></mover><annotation encoding="application/x-tex">\widehat{S}</annotation></semantics></math>.
+The cluster-robust variance is</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>V</mi><mtext mathvariant="normal">CR</mtext></msub><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><mfrac><mi>N</mi><mrow><mi>N</mi><mo>−</mo><mn>1</mn></mrow></mfrac><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><msubsup><mi>X</mi><mover><mi>S</mi><mo accent="true">̂</mo></mover><mi>⊤</mi></msubsup><msub><mi>X</mi><mover><mi>S</mi><mo accent="true">̂</mo></mover></msub><msup><mo stretchy="false" form="postfix">)</mo><mrow><mi>−</mi><mn>1</mn></mrow></msup><mspace width="0.278em"></mspace><mrow><mo stretchy="true" form="prefix">(</mo><munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>N</mi></munderover><msubsup><mi>X</mi><mrow><mi>i</mi><mo>⋅</mo><mover><mi>S</mi><mo accent="true">̂</mo></mover></mrow><mi>⊤</mi></msubsup><msub><mover><mi>ε</mi><mo accent="true">̂</mo></mover><mrow><mi>i</mi><mo>⋅</mo></mrow></msub><msubsup><mover><mi>ε</mi><mo accent="true">̂</mo></mover><mrow><mi>i</mi><mo>⋅</mo></mrow><mi>⊤</mi></msubsup><msub><mi>X</mi><mrow><mi>i</mi><mo>⋅</mo><mover><mi>S</mi><mo accent="true">̂</mo></mover></mrow></msub><mo stretchy="true" form="postfix">)</mo></mrow><mspace width="0.278em"></mspace><mo stretchy="false" form="prefix">(</mo><msubsup><mi>X</mi><mover><mi>S</mi><mo accent="true">̂</mo></mover><mi>⊤</mi></msubsup><msub><mi>X</mi><mover><mi>S</mi><mo accent="true">̂</mo></mover></msub><msup><mo stretchy="false" form="postfix">)</mo><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo>,</mo></mrow><annotation encoding="application/x-tex">
 V_{\text{CR}}
 \;=\;
@@ -429,10 +438,11 @@ SE for cohort
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>g</mi><annotation encoding="application/x-tex">g</annotation></semantics></math>
 is
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msqrt><mrow><msubsup><mi>ψ</mi><mi>g</mi><mi>⊤</mi></msubsup><msub><mi>V</mi><mtext mathvariant="normal">CR</mtext></msub><msub><mi>ψ</mi><mi>g</mi></msub></mrow></msqrt><annotation encoding="application/x-tex">\sqrt{\psi_g^\top V_{\text{CR}} \psi_g}</annotation></semantics></math>
-(using a zero-padded
+(using
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>ψ</mi><mi>g</mi></msub><annotation encoding="application/x-tex">\psi_g</annotation></semantics></math>
-on the full selected support); the ATT regression-coefficient variance
-is
+zero-padded to all of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mover><mi>S</mi><mo accent="true">̂</mo></mover><annotation encoding="application/x-tex">\widehat{S}</annotation></semantics></math>);
+the ATT regression-coefficient variance is
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mi>ψ</mi><mtext mathvariant="normal">att</mtext><mi>⊤</mi></msubsup><msub><mi>V</mi><mtext mathvariant="normal">CR</mtext></msub><msub><mi>ψ</mi><mtext mathvariant="normal">att</mtext></msub></mrow><annotation encoding="application/x-tex">\psi_{\text{att}}^\top V_{\text{CR}} \psi_{\text{att}}</annotation></semantics></math>,
 replacing
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>V</mi><mn>1</mn></msub><annotation encoding="application/x-tex">V_1</annotation></semantics></math>

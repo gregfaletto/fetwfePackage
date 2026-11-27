@@ -7,7 +7,7 @@ BETWFE / twfeCovs object. The simultaneous critical value
 follows a multivariate normal with correlation matrix `cov2cor(Sigma)`;
 it is computed deterministically via
 [`mvtnorm::qmvnorm()`](https://rdrr.io/pkg/mvtnorm/man/qmvnorm.html).
-Under Faletto (2025) Theorem (c') tight Gaussianity and Assumption
+Under Faletto (2025) Theorem 6.4(c') tight Gaussianity and Assumption
 (Psi-IF), the family of psi-linear effects is asymptotically
 multivariate normal with a covariance that is estimable from the
 package's existing variance machinery; under the paper's fixed-dim
@@ -189,15 +189,15 @@ An object of S3 class `"simultaneous_cis"`: a list with
   `(1 - alpha)` band iff its adjusted p-value is `< alpha`). Computed
   via
   [`mvtnorm::pmvnorm()`](https://rdrr.io/pkg/mvtnorm/man/pmvnorm.html)
-  over the same correlation matrix the band uses (or, under
-  `se_type = "conservative"`, the Bonferroni adjustment
+  over the same correlation matrix the band uses (or, in the
+  conservative fallback described in Details, the Bonferroni adjustment
   `min(1, K * pointwise_p)`). `NA` for degenerate effects. (#200)
 
 - critical_value:
 
-  The simultaneous critical value `c_{1 - alpha}` (or, when the fit used
-  `se_type = "conservative"`, the Bonferroni critical value
-  `qnorm(1 - alpha/(2K))` – see Details).
+  The simultaneous critical value `c_{1 - alpha}` (or, in the
+  conservative fallback described in Details, the Bonferroni critical
+  value `qnorm(1 - alpha/(2K))`).
 
 - pointwise_critical_value:
 
@@ -323,34 +323,33 @@ errors there rather than warning; `method = "bootstrap"` still works,
 because the desparsified band is built from the empirical per-unit
 influence function.
 
-**Paper grounding.** Theorem (c') tight Gaussianity (Faletto 2025,
-`paper_arxiv.tex:1233`) guarantees the joint asymptotic normality;
-Assumption (Psi-IF) (assumption equation `paper_arxiv.tex:2013`;
-in-prose discussion at paper line 1268) is the influence-function
-condition the package's default cohort-sample-proportions estimator
-satisfies; the fixed-dim framing follows the paper's AE point 1(d).
+**Paper grounding.** Theorem 6.4(c') tight Gaussianity (Faletto 2025)
+guarantees the joint asymptotic normality; Assumption (Psi-IF) is the
+influence-function condition the package's default
+cohort-sample-proportions estimator satisfies.
 
-**Conservative fallback.** When the fit was made with
-`se_type = "conservative"`, the function falls back to
-Bonferroni-corrected pointwise CIs (the Cauchy-Schwarz upper bound used
-for the conservative scalar SE does not generalize to a `K x K`
-covariance matrix) and emits a brief
-[`message()`](https://rdrr.io/r/base/message.html). The
-`$critical_value` field is set to the Bonferroni value in this branch.
+**Conservative fallback.** The function falls back to
+Bonferroni-corrected pointwise CIs only when the fit was made with
+`se_type = "conservative"` and without `indep_counts`, under the default
+`method = "analytic"`: the Cauchy-Schwarz upper bound used for the
+conservative scalar SE does not generalize to a `K x K` covariance
+matrix. It then emits a brief
+[`message()`](https://rdrr.io/r/base/message.html), and
+`$critical_value` is the Bonferroni value. Two cases are handled before
+this branch: a fit without standard errors stops, and an all-zeroed
+support returns the degenerate band.
 
 **Numerical integration.** The critical value is computed via
 `mvtnorm::qmvnorm(..., algorithm = mvtnorm::GenzBretz())` (mvtnorm's
-default quasi-Monte Carlo integrator; sub-second through `K` up to about
-100, so no `K` cap is of practical concern for FETWFE families).
-`mvtnorm` is an `Imports` dependency (as of version 1.16.0, when
-simultaneous bands became the default reported confidence interval; see
-the `ci_type` argument of
+default quasi-Monte Carlo integrator). `mvtnorm` is an `Imports`
+dependency (as of version 1.16.0, when simultaneous bands became the
+default reported confidence interval; see the `ci_type` argument of
 [`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)).
-The function uses it only when `K > 1` and `se_type != "conservative"`
-(the `K = 1` and conservative paths bypass the dependency), and retains
-a defensive [`stop()`](https://rdrr.io/r/base/stop.html) with an
-actionable message if it is somehow unavailable (e.g., a corrupted
-install).
+The function uses it only when `K > 1` and the conservative fallback
+does not apply (the `K = 1` and fallback paths bypass the dependency),
+and retains a defensive [`stop()`](https://rdrr.io/r/base/stop.html)
+with an actionable message if it is somehow unavailable (e.g., a
+corrupted install).
 
 **Determinism contract.** The function is deterministic in its inputs:
 the same fit plus the same `family`, `alpha`, and `contrasts` always

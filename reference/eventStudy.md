@@ -10,8 +10,10 @@ defined as cohort-weighted averages of the cell-level treatment-effect
 estimates at each post-treatment event time `e = t - g`, the number of
 periods since the cohort's first treated period (`t` and `g` are
 periods, counted along the sorted values of the time variable, so `e`
-counts periods whatever the time coding). Weights are sample-cohort-size
-weights (matching `did::aggte(type = "dynamic")` convention).
+counts periods whatever the time coding). Weights are cohort-size
+weights: the sample's cohort shares, as in
+`did::aggte(type = "dynamic")`, or the shares in `indep_counts` when the
+fit was given them.
 
 Standard errors combine two terms, mirroring the package's existing
 overall-ATT SE machinery: `var_1(e)` from regression-coefficient noise

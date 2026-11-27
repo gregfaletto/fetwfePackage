@@ -154,8 +154,8 @@ cat("Squared error:", (res_etwfe$att_hat - true_tes$att_true)^2, "\n")
 [`betwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/betwfe.md)
 extends
 [`etwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/etwfe.md)
-by adding a bridge (`L_q`, `0 < q < 1`) regularization penalty on the
-cohort-time effects. Compared to
+by adding a bridge (`L_q`, `0 < q < 1`) regularization penalty. Compared
+to
 [`etwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/etwfe.md),
 this trades a small amount of bias for lower variance — the same idea as
 [`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md),
@@ -387,10 +387,11 @@ treatment-effect estimates. The plot is an event study: x-axis is event
 time `e = t - r` (the number of periods since the cohort’s first treated
 period), y-axis is the cohort-weighted average of cell-level
 treatment-effect estimates at each event time, with confidence
-intervals. Pooling weights are sample-cohort-size weights (matching
-`did::aggte(type = "dynamic")` convention). The variance combines a
-regression-coefficient term and a cohort-probability term, mirroring the
-package’s existing overall-ATT SE machinery.
+intervals. Pooling weights are cohort-size weights, which
+[`?eventStudy`](https://gregfaletto.github.io/fetwfePackage/reference/eventStudy.md)
+describes. The variance combines a regression-coefficient term and a
+cohort-probability term, mirroring the package’s existing overall-ATT SE
+machinery.
 
 Event-time estimates from
 [`etwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/etwfe.md):

@@ -146,18 +146,18 @@ with the 1-based panel-time index.</p></dd>
 <dd><p>Numeric; the cell's ATT estimate.</p></dd>
 
 <dt>se</dt>
-<dd><p>Numeric; the pointwise standard error. <code>0</code> for a cell zeroed
-out by the fusion/bridge penalty while other cells survive
-(<code><a href="fetwfe.html">fetwfe()</a></code> / <code><a href="betwfe.html">betwfe()</a></code>); <code>NA</code> when standard errors are unavailable —
-the fit was computed with <code>q &gt;= 1</code>, the Gram matrix on the selected
-support is singular, or the penalty zeroed the <em>entire</em> treatment block
-(no cells selected, so there is no support to recompute the Gram from;
-this matches <code><a href="eventStudy.html">eventStudy()</a></code>).</p></dd>
+<dd><p>Numeric; the pointwise standard error. <code>NA</code> when standard
+errors are unavailable — the fit computed none (<code>calc_ses</code> is
+<code>FALSE</code>), the Gram matrix on the selected support is singular, or the
+penalty zeroed the <em>entire</em> treatment block (no cells selected, so there
+is no support to recompute the Gram from; this matches <code><a href="eventStudy.html">eventStudy()</a></code>).
+Otherwise <code>0</code> for a cell zeroed out by the fusion/bridge penalty while
+other cells survive (<code><a href="fetwfe.html">fetwfe()</a></code> / <code><a href="betwfe.html">betwfe()</a></code>).</p></dd>
 
 <dt>ci_low, ci_high</dt>
 <dd><p>Numeric; the pointwise <code>1 - alpha</code> Wald bounds
-<code>estimate -/+ qnorm(1 - alpha/2) * se</code>. <code>(0, 0)</code> for a fused-away cell;
-<code>NA</code> when <code>se</code> is <code>NA</code>.</p></dd>
+<code>estimate -/+ qnorm(1 - alpha/2) * se</code>. <code>NA</code> when <code>se</code> is <code>NA</code>;
+otherwise <code>(0, 0)</code> for a zeroed-out cell.</p></dd>
 
 <dt>p_value</dt>
 <dd><p>Numeric; the two-sided pointwise Wald p-value
@@ -180,9 +180,7 @@ inverse fusion transform \(D^{-1}\) in the transformed (theta) coordinate
 space, for <code><a href="betwfe.html">betwfe()</a></code> / <code><a href="etwfe.html">etwfe()</a></code> a unit selector in the original (beta)
 coordinate space restricted to the selected support. It is
 never gated on the point estimate: a cell whose estimate is exactly zero
-because the penalty fused it away has an all-zero <code>psi</code> and therefore
-<code>se = 0</code> (the correct degenerate value), while a cell whose estimate happens
-to be near zero for other reasons still receives its proper nonzero SE.</p>
+because the penalty zeroed it out has an all-zero <code>psi</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

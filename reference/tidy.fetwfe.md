@@ -5,9 +5,11 @@ Returns a `broom`-style tidy data frame for an object of class
 are the cohort-specific ATTs (`term = "Cohort <adoption-time>"`), one
 per treated cohort, sorted by ascending cohort label. Standard error,
 z-statistic, and p-value reflect the value of `se_type` used at fit time
-(model-based by default, cluster-robust under `se_type = "cluster"`).
-Cohorts that the bridge penalty zeroed out (`selected = FALSE`) carry
-`NA` for `std.error` / `statistic` / `p.value`.
+(model-based by default, cluster-robust under `se_type = "cluster"`). On
+a fit with standard errors (`calc_ses` is `TRUE`), a cohort that the
+bridge penalty zeroed out (`selected = FALSE`) carries `0` for
+`std.error` and `NA` for `statistic` and `p.value`. On a fit without
+them, every cohort's `std.error` is `NA`.
 
 ## Usage
 

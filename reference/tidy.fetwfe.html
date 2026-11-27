@@ -5,15 +5,19 @@ cohort-specific ATTs (term = &quot;Cohort &amp;lt;adoption-time&amp;gt;&quot;), 
 treated cohort, sorted by ascending cohort label. Standard error,
 z-statistic, and p-value reflect the value of se_type used at fit time
 (model-based by default, cluster-robust under se_type = &quot;cluster&quot;).
-Cohorts that the bridge penalty zeroed out (selected = FALSE) carry
-NA for std.error / statistic / p.value."><meta property="og:description" content="Returns a broom-style tidy data frame for an object of class &quot;fetwfe&quot;.
+On a fit with standard errors (calc_ses is TRUE), a cohort that the
+bridge penalty zeroed out (selected = FALSE) carries 0 for std.error
+and NA for statistic and p.value. On a fit without them, every
+cohort's std.error is NA."><meta property="og:description" content="Returns a broom-style tidy data frame for an object of class &quot;fetwfe&quot;.
 Row 1 is the overall ATT (term = &quot;ATT&quot;); subsequent rows are the
 cohort-specific ATTs (term = &quot;Cohort &amp;lt;adoption-time&amp;gt;&quot;), one per
 treated cohort, sorted by ascending cohort label. Standard error,
 z-statistic, and p-value reflect the value of se_type used at fit time
 (model-based by default, cluster-robust under se_type = &quot;cluster&quot;).
-Cohorts that the bridge penalty zeroed out (selected = FALSE) carry
-NA for std.error / statistic / p.value."></head><body>
+On a fit with standard errors (calc_ses is TRUE), a cohort that the
+bridge penalty zeroed out (selected = FALSE) carries 0 for std.error
+and NA for statistic and p.value. On a fit without them, every
+cohort's std.error is NA."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -57,8 +61,10 @@ cohort-specific ATTs (<code>term = "Cohort &lt;adoption-time&gt;"</code>), one p
 treated cohort, sorted by ascending cohort label. Standard error,
 z-statistic, and p-value reflect the value of <code>se_type</code> used at fit time
 (model-based by default, cluster-robust under <code>se_type = "cluster"</code>).
-Cohorts that the bridge penalty zeroed out (<code>selected = FALSE</code>) carry
-<code>NA</code> for <code>std.error</code> / <code>statistic</code> / <code>p.value</code>.</p>
+On a fit with standard errors (<code>calc_ses</code> is <code>TRUE</code>), a cohort that the
+bridge penalty zeroed out (<code>selected = FALSE</code>) carries <code>0</code> for <code>std.error</code>
+and <code>NA</code> for <code>statistic</code> and <code>p.value</code>. On a fit without them, every
+cohort's <code>std.error</code> is <code>NA</code>.</p>
     </div>
 
     <div class="section level2">

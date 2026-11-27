@@ -84,31 +84,30 @@ etwfe(
 
 - indep_counts:
 
-  (Optional.) Integer; a vector. If you have a sufficiently large number
-  of units, you can optionally randomly split your data set in half
-  (with `N` units in each data set). The data for half of the units
-  should go in the `pdata` argument provided above. For the other `N`
-  units, simply provide the counts for how many units appear in the
-  untreated cohort plus each of the other `G` cohorts in this argument
-  `indep_counts`. The benefit of doing this is that the standard error
-  for the average treatment effect will be (asymptotically) exact
-  instead of conservative. The length of `indep_counts` must equal 1
-  plus the number of treated cohorts in `pdata`. All entries of
-  `indep_counts` must be strictly positive (if you are concerned that
-  this might not work out, maybe your data set is on the small side and
-  it's best to just leave your full data set in `pdata`). The sum of all
-  the counts in `indep_counts` must match the total number of units in
-  `pdata`. Default is NA (in which case conservative standard errors
-  will be calculated if `q < 1`.)
+  (Optional.) Integer; a vector of cohort counts from a sample
+  independent of `pdata`: the number of units in the untreated cohort,
+  then in each treated cohort in adoption order. When supplied, the
+  cohort probabilities that weight the overall ATT and the
+  [`eventStudy()`](https://gregfaletto.github.io/fetwfePackage/reference/eventStudy.md)
+  estimates come from these counts instead of from `pdata`. The counts
+  describe the panel the estimator fits: units treated in the first
+  period are dropped, and on a panel with no never-treated units the
+  latest cohort becomes the untreated cohort (see
+  `allow_no_never_treated`). So the length of `indep_counts` must equal
+  1 plus the number of treated cohorts that remain, all entries must be
+  strictly positive, and the counts must sum to the number of units that
+  remain. It is not needed for an exact standard error: the default
+  standard error is already asymptotically exact (see `se_type`).
+  Default is NA (cohort probabilities come from `pdata`).
 
 - sig_eps_sq:
 
   (Optional.) Numeric; the variance of the row-level IID noise assumed
   to apply to each observation. See Section 2 of Faletto (2025) for
-  details. It is best to provide this variance if it is known (for
-  example, if you are using simulated data). If this variance is
-  unknown, this argument can be omitted, and the variance will be
-  estimated by REML on the linear mixed-effects model
+  details. It is best to provide this variance and `sig_eps_c_sq` if
+  both are known (for example, if you are using simulated data); if this
+  variance is unknown, this argument can be omitted, and the variance
+  will be estimated by REML on the linear mixed-effects model
   `y ~ X + (1 | unit)` via
   [`lme4::lmer`](https://rdrr.io/pkg/lme4/man/lmer.html) (Bates et al.
   2015; Patterson & Thompson 1971). Default is NA.
@@ -117,10 +116,10 @@ etwfe(
 
   (Optional.) Numeric; the variance of the unit-level IID noise (random
   effects) assumed to apply to each observation. See Section 2 of
-  Faletto (2025) for details. It is best to provide this variance if it
-  is known (for example, if you are using simulated data). If this
-  variance is unknown, this argument can be omitted, and the variance
-  will be estimated by REML via
+  Faletto (2025) for details. It is best to provide this variance and
+  `sig_eps_sq` if both are known (for example, if you are using
+  simulated data); if this variance is unknown, this argument can be
+  omitted, and the variance will be estimated by REML via
   [`lme4::lmer`](https://rdrr.io/pkg/lme4/man/lmer.html) on the linear
   mixed-effects model `y ~ X + (1 | unit)` (Bates et al. 2015; Patterson
   & Thompson 1971). Default is NA.
@@ -157,23 +156,26 @@ etwfe(
 
   Character; one of `"default"`, `"conservative"`, or `"cluster"`.
   `"default"` returns the tight Gaussian variance
-  `sqrt(att_var_1 + att_var_2)` from Theorem (c\$'\$) under Assumption
-  (Psi-IF); this is asymptotically exact for the package's default
-  cohort sample-proportions estimator and for every standard
-  propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
-  any GLM on `W | X`, kernel/series regression of `1{W = g}` on `X`).
-  `"conservative"` returns the Cauchy-Schwarz upper bound
-  `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))` from
-  Theorem (c); use only if the propensity-score estimator violates
-  (Psi-IF) (e.g., a Robins-Rotnitzky-augmented doubly-robust estimator,
-  which the package does not currently implement). `"cluster"` is an
-  *experimental* unit-clustered Liang-Zeger sandwich SE on the
-  OLS-selected support (see the companion vignette `inference_vignette`
-  for the formula, the assumptions, and the theory-pending caveat). The
-  default value of `"default"` corresponds to the new tight Gaussian
-  default introduced in version 1.12.0; previous versions used the
-  conservative Cauchy-Schwarz formula as the default. To recover the
-  prior conservative default behavior, pass `se_type = "conservative"`.
+  `sqrt(att_var_1 + att_var_2)`, by the argument of Theorem 6.4(c')
+  under Assumption (Psi-IF) with no selection step: `etwfe()` is least
+  squares on the GLS-whitened full design. This is asymptotically exact
+  for the package's default cohort sample-proportions estimator and for
+  every standard propensity-score estimator that satisfies (Psi-IF)
+  (multinomial logit, any GLM on `W | X`, kernel/series regression of
+  `1{W = g}` on `X`). `"conservative"` returns the Cauchy-Schwarz upper
+  bound `sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))`
+  from Theorem 6.4(c); use only if the propensity-score estimator
+  violates (Psi-IF) (e.g., a Robins-Rotnitzky-augmented doubly-robust
+  estimator, which the package does not currently implement). Supplying
+  `indep_counts` makes `"conservative"` give the same standard error as
+  `"default"`. `"cluster"` is an *experimental* unit-clustered
+  Liang-Zeger sandwich SE (see the companion vignette
+  `inference_vignette` for the formula, the assumptions, and the
+  theory-pending caveat). The default value of `"default"` corresponds
+  to the new tight Gaussian default introduced in version 1.12.0;
+  previous versions used the conservative Cauchy-Schwarz formula as the
+  default. To recover the prior conservative default behavior, pass
+  `se_type = "conservative"` without `indep_counts`.
 
 - ci_type:
 
@@ -231,8 +233,10 @@ An object of class `fetwfe_etwfe` containing the following elements:
 
 - catt_ses:
 
-  A named vector containing the (asymptotically exact) standard errors
-  for the estimated average treatment effects within each cohort.
+  A vector containing the (asymptotically exact) standard errors for the
+  estimated average treatment effects within each cohort, named by
+  cohort when they were computed. If the Gram matrix is not invertible,
+  the entries are NA.
 
 - cohort_probs:
 
@@ -271,13 +275,13 @@ An object of class `fetwfe_etwfe` containing the following elements:
 
 - sig_eps_sq:
 
-  Either the provided `sig_eps_sq` or the estimated one, if a value
-  wasn't provided.
+  The provided `sig_eps_sq` if both variances were provided, and
+  otherwise the REML estimate.
 
 - sig_eps_c_sq:
 
-  Either the provided `sig_eps_c_sq` or the estimated one, if a value
-  wasn't provided.
+  The provided `sig_eps_c_sq` if both variances were provided, and
+  otherwise the REML estimate.
 
 - X_ints:
 
@@ -290,14 +294,12 @@ An object of class `fetwfe_etwfe` containing the following elements:
 
 - X_final:
 
-  The design matrix after applying the change in coordinates to fit the
-  model and also multiplying on the left by the square root inverse of
-  the estimated covariance matrix for each unit.
+  The GLS-whitened design matrix `X_ints`.
 
 - y_final:
 
-  The final response after multiplying on the left by the square root
-  inverse of the estimated covariance matrix for each unit.
+  The GLS-whitened response `y`, with `p` zeros appended for the ridge
+  penalty when `add_ridge` is `TRUE`.
 
 - N:
 
@@ -346,8 +348,9 @@ An object of class `fetwfe_etwfe` containing the following elements:
 
 - indep_counts_used:
 
-  Logical scalar; `TRUE` if a valid `indep_counts` argument was provided
-  and used for asymptotically-exact ATT inference, `FALSE` otherwise.
+  Logical scalar; `TRUE` if a valid `indep_counts` argument was
+  provided, so the cohort probabilities came from it, and `FALSE`
+  otherwise.
 
 - se_type:
 
@@ -420,8 +423,7 @@ An object of class `fetwfe_etwfe` containing the following elements:
 
   X_final
 
-  :   The design matrix after the change-of-coordinates step. Same as
-      top-level `X_final`.
+  :   Same as top-level `X_final`.
 
   y_final
 

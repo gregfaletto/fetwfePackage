@@ -5,7 +5,7 @@ BETWFE / twfeCovs object. The simultaneous critical value c_{1 - alpha}
 is the (1 - alpha) quantile of max_k |Z_k| where Z follows a
 multivariate normal with correlation matrix cov2cor(Sigma); it is
 computed deterministically via mvtnorm::qmvnorm(). Under Faletto (2025)
-Theorem (c') tight Gaussianity and Assumption (Psi-IF), the family of
+Theorem 6.4(c') tight Gaussianity and Assumption (Psi-IF), the family of
 psi-linear effects is asymptotically multivariate normal with a covariance
 that is estimable from the package's existing variance machinery; under the
 paper's fixed-dim framing no high-dimensional correction is needed.
@@ -20,7 +20,7 @@ BETWFE / twfeCovs object. The simultaneous critical value c_{1 - alpha}
 is the (1 - alpha) quantile of max_k |Z_k| where Z follows a
 multivariate normal with correlation matrix cov2cor(Sigma); it is
 computed deterministically via mvtnorm::qmvnorm(). Under Faletto (2025)
-Theorem (c') tight Gaussianity and Assumption (Psi-IF), the family of
+Theorem 6.4(c') tight Gaussianity and Assumption (Psi-IF), the family of
 psi-linear effects is asymptotically multivariate normal with a covariance
 that is estimable from the package's existing variance machinery; under the
 paper's fixed-dim framing no high-dimensional correction is needed.
@@ -73,7 +73,7 @@ BETWFE / twfeCovs object. The simultaneous critical value <code>c_{1 - alpha}</c
 is the <code>(1 - alpha)</code> quantile of <code>max_k |Z_k|</code> where <code>Z</code> follows a
 multivariate normal with correlation matrix <code>cov2cor(Sigma)</code>; it is
 computed deterministically via <code><a href="https://rdrr.io/pkg/mvtnorm/man/qmvnorm.html" class="external-link">mvtnorm::qmvnorm()</a></code>. Under Faletto (2025)
-Theorem (c') tight Gaussianity and Assumption (Psi-IF), the family of
+Theorem 6.4(c') tight Gaussianity and Assumption (Psi-IF), the family of
 psi-linear effects is asymptotically multivariate normal with a covariance
 that is estimable from the package's existing variance machinery; under the
 paper's fixed-dim framing no high-dimensional correction is needed.</p>
@@ -244,13 +244,14 @@ max-T multiplicity-adjusted (family-wise) p-value for each effect, the
 exact dual of the simultaneous band (a coefficient lies outside the
 <code>(1 - alpha)</code> band iff its adjusted p-value is <code>&lt; alpha</code>). Computed via
 <code><a href="https://rdrr.io/pkg/mvtnorm/man/pmvnorm.html" class="external-link">mvtnorm::pmvnorm()</a></code> over the same correlation matrix the band uses
-(or, under <code>se_type = "conservative"</code>, the Bonferroni adjustment
-<code>min(1, K * pointwise_p)</code>). <code>NA</code> for degenerate effects. (#200)</p></dd>
+(or, in the conservative fallback described in Details, the
+Bonferroni adjustment <code>min(1, K * pointwise_p)</code>). <code>NA</code> for degenerate
+effects. (#200)</p></dd>
 
 <dt>critical_value</dt>
 <dd><p>The simultaneous critical value <code>c_{1 - alpha}</code>
-(or, when the fit used <code>se_type = "conservative"</code>, the Bonferroni critical value
-<code>qnorm(1 - alpha/(2K))</code> – see Details).</p></dd>
+(or, in the conservative fallback described in Details, the Bonferroni
+critical value <code>qnorm(1 - alpha/(2K))</code>).</p></dd>
 
 <dt>pointwise_critical_value</dt>
 <dd><p><code>qnorm(1 - alpha/2)</code>, for reference.</p></dd>
@@ -344,25 +345,25 @@ its own (#304) condition already.</p>
 analytic standard errors at all, so <code>method = "analytic"</code> errors there rather
 than warning; <code>method = "bootstrap"</code> still works, because the desparsified
 band is built from the empirical per-unit influence function.</p>
-<p><strong>Paper grounding.</strong> Theorem (c') tight Gaussianity (Faletto 2025,
-<code>paper_arxiv.tex:1233</code>) guarantees the joint asymptotic normality; Assumption
-(Psi-IF) (assumption equation <code>paper_arxiv.tex:2013</code>; in-prose discussion at
-paper line 1268) is the influence-function condition the package's default
-cohort-sample-proportions estimator satisfies; the fixed-dim framing follows
-the paper's AE point 1(d).</p>
-<p><strong>Conservative fallback.</strong> When the fit was made with <code>se_type = "conservative"</code>, the function
-falls back to Bonferroni-corrected pointwise CIs (the Cauchy-Schwarz upper
-bound used for the conservative scalar SE does not generalize to a <code>K x K</code>
-covariance matrix) and emits a brief <code><a href="https://rdrr.io/r/base/message.html" class="external-link">message()</a></code>. The <code>$critical_value</code>
-field is set to the Bonferroni value in this branch.</p>
+<p><strong>Paper grounding.</strong> Theorem 6.4(c') tight Gaussianity (Faletto 2025)
+guarantees the joint asymptotic normality; Assumption (Psi-IF) is the
+influence-function condition the package's default
+cohort-sample-proportions estimator satisfies.</p>
+<p><strong>Conservative fallback.</strong> The function falls back to Bonferroni-corrected
+pointwise CIs only when the fit was made with <code>se_type = "conservative"</code>
+and without <code>indep_counts</code>, under the default <code>method = "analytic"</code>: the
+Cauchy-Schwarz upper bound used for the conservative scalar SE does not
+generalize to a <code>K x K</code> covariance matrix. It then emits a brief
+<code><a href="https://rdrr.io/r/base/message.html" class="external-link">message()</a></code>, and <code>$critical_value</code> is the Bonferroni value. Two cases are
+handled before this branch: a fit without standard errors stops, and an
+all-zeroed support returns the degenerate band.</p>
 <p><strong>Numerical integration.</strong> The critical value is computed via
 <code>mvtnorm::qmvnorm(..., algorithm = mvtnorm::GenzBretz())</code> (mvtnorm's default
-quasi-Monte Carlo integrator; sub-second through <code>K</code> up to about 100, so no
-<code>K</code> cap is of practical concern for FETWFE families). <code>mvtnorm</code> is an
+quasi-Monte Carlo integrator). <code>mvtnorm</code> is an
 <code>Imports</code> dependency (as of version 1.16.0, when simultaneous bands became
 the default reported confidence interval; see the <code>ci_type</code> argument of
-<code><a href="fetwfe.html">fetwfe()</a></code>). The function uses it only when <code>K &gt; 1</code> and
-<code>se_type != "conservative"</code> (the <code>K = 1</code> and conservative paths bypass the
+<code><a href="fetwfe.html">fetwfe()</a></code>). The function uses it only when <code>K &gt; 1</code> and the conservative
+fallback does not apply (the <code>K = 1</code> and fallback paths bypass the
 dependency), and retains a defensive <code><a href="https://rdrr.io/r/base/stop.html" class="external-link">stop()</a></code> with an actionable message if
 it is somehow unavailable (e.g., a corrupted install).</p>
 <p><strong>Determinism contract.</strong> The function is deterministic in its inputs: the

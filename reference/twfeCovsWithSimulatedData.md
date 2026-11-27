@@ -1,8 +1,8 @@
 # Run twfeCovs on Simulated Data
 
-This function runs the bridge-penalized extended two-way fixed effects
-estimator
-([`twfeCovs()`](https://gregfaletto.github.io/fetwfePackage/reference/twfeCovs.md))
+This function runs the two-way fixed effects estimator with covariates,
+fit by least squares
+([`twfeCovs()`](https://gregfaletto.github.io/fetwfePackage/reference/twfeCovs.md)),
 on simulated data. It is simply a wrapper for
 [`twfeCovs()`](https://gregfaletto.github.io/fetwfePackage/reference/twfeCovs.md):
 it accepts an object of class `"FETWFE_simulated"` (produced by
@@ -65,19 +65,13 @@ twfeCovsWithSimulatedData(
 
 - se_type:
 
-  Character; one of `"default"`, `"conservative"`, or `"cluster"`.
-  `"default"` returns the tight Gaussian variance
-  `sqrt(att_var_1 + att_var_2)` from Theorem (c\$'\$) under Assumption
-  (Psi-IF) (asymptotically exact for the package's default cohort
-  sample-proportions estimator); `"conservative"` returns the
-  Cauchy-Schwarz upper bound from Theorem (c) (use only when the
-  propensity-score estimator violates (Psi-IF)); `"cluster"` is an
-  *experimental* unit-clustered Liang-Zeger sandwich SE on the
-  OLS-selected support (see the companion vignette `inference_vignette`
-  for the formula, the assumptions, and the theory-pending caveat).
-  Default is `"default"`. v1.12.0 introduced the tight Gaussian default;
-  versions \<= 1.11.7 used the conservative Cauchy-Schwarz formula as
-  the default.
+  Character; one of `"default"`, `"conservative"`, or `"cluster"`, as in
+  [`twfeCovs()`](https://gregfaletto.github.io/fetwfePackage/reference/twfeCovs.md);
+  see its `se_type` entry. This wrapper passes the simulator's
+  independent cohort counts (`simulated_obj$indep_counts`) to
+  [`twfeCovs()`](https://gregfaletto.github.io/fetwfePackage/reference/twfeCovs.md),
+  so `"conservative"` gives the same `att_se` as `"default"`. Default is
+  `"default"`.
 
 - ci_type:
 
@@ -111,10 +105,8 @@ An object of class `twfeCovs` containing the following elements:
 
 - att_se:
 
-  A standard error for the ATT. If `indep_counts` was provided, this
-  standard error is asymptotically exact; otherwise, it is
-  asymptotically conservative. If the Gram matrix is not invertible,
-  this will be NA.
+  A standard error for the ATT (see `se_type`). If the Gram matrix is
+  not invertible, this will be NA.
 
 - att_p_value:
 
@@ -130,9 +122,10 @@ An object of class `twfeCovs` containing the following elements:
 
 - catt_ses:
 
-  A named vector containing the (asymptotically exact, non-conservative)
+  A vector containing the (asymptotically exact, non-conservative)
   standard errors for the estimated average treatment effects within
-  each cohort. If the Gram matrix is not invertible, the entries are NA.
+  each cohort, named by cohort when they were computed. If the Gram
+  matrix is not invertible, the entries are NA.
 
 - cohort_probs:
 
@@ -171,13 +164,13 @@ An object of class `twfeCovs` containing the following elements:
 
 - sig_eps_sq:
 
-  Either the provided `sig_eps_sq` or the estimated one, if a value
-  wasn't provided.
+  The provided `sig_eps_sq` if both variances were provided, and
+  otherwise the REML estimate.
 
 - sig_eps_c_sq:
 
-  Either the provided `sig_eps_c_sq` or the estimated one, if a value
-  wasn't provided.
+  The provided `sig_eps_c_sq` if both variances were provided, and
+  otherwise the REML estimate.
 
 - X_ints:
 
@@ -190,14 +183,14 @@ An object of class `twfeCovs` containing the following elements:
 
 - X_final:
 
-  The design matrix after applying the change in coordinates to fit the
-  model and also multiplying on the left by the square root inverse of
-  the estimated covariance matrix for each unit.
+  The GLS-whitened design matrix of
+  [`twfeCovs()`](https://gregfaletto.github.io/fetwfePackage/reference/twfeCovs.md)'s
+  model, which has one treatment column per cohort.
 
 - y_final:
 
-  The final response after multiplying on the left by the square root
-  inverse of the estimated covariance matrix for each unit.
+  The GLS-whitened response `y`, with `p` zeros appended for the ridge
+  penalty when `add_ridge` is `TRUE`.
 
 - N:
 
@@ -242,8 +235,9 @@ An object of class `twfeCovs` containing the following elements:
 
 - indep_counts_used:
 
-  Logical scalar; `TRUE` if a valid `indep_counts` argument was provided
-  and used for asymptotically-exact ATT inference, `FALSE` otherwise.
+  Logical scalar; `TRUE` if a valid `indep_counts` argument was
+  provided, so the cohort probabilities came from it, and `FALSE`
+  otherwise.
 
 - se_type:
 
@@ -314,8 +308,7 @@ An object of class `twfeCovs` containing the following elements:
 
   X_final
 
-  :   The design matrix after the change-of-coordinates step. Same as
-      top-level `X_final`.
+  :   Same as top-level `X_final`.
 
   y_final
 

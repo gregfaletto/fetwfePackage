@@ -77,9 +77,9 @@ betwfeWithSimulatedData(
 - q:
 
   (Optional.) Numeric; determines what `L_q` penalty is used for the
-  fusion regularization. `q` = 1 is the lasso, and for 0 \< `q` \< 1, it
-  is possible to get standard errors and confidence intervals. `q` = 2
-  is ridge regression. See Faletto (2025) for details. Default is 0.5.
+  regularization. `q` = 1 is the lasso, and for 0 \< `q` \< 1, it is
+  possible to get standard errors and confidence intervals. `q` = 2 is
+  ridge regression. See Faletto (2025) for details. Default is 0.5.
 
 - verbose:
 
@@ -111,22 +111,12 @@ betwfeWithSimulatedData(
 
 - se_type:
 
-  Character; one of `"default"`, `"conservative"`, or `"cluster"`.
-  `"default"` returns the tight Gaussian variance
-  `sqrt(att_var_1 + att_var_2)` from Theorem (c\$'\$) under Assumption
-  (Psi-IF); this is asymptotically exact for the package's default
-  cohort sample-proportions estimator and for every standard
-  propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
-  any GLM on `W | X`, kernel/series regression of `1{W = g}` on `X`).
-  `"conservative"` returns the Cauchy-Schwarz upper bound from Theorem
-  (c); use only if the propensity-score estimator violates (Psi-IF).
-  `"cluster"` is an *experimental* unit-clustered Liang-Zeger sandwich
-  SE on the bridge-selected support (see the companion vignette
-  `inference_vignette` for details). `"cluster"` is only meaningful when
-  `q < 1` (the bridge oracle property is required); for `q >= 1` the SE
-  will be `NA` regardless of `se_type`. The default `"default"` was the
-  conservative Cauchy-Schwarz formula in versions \<= 1.11.7; v1.12.0
-  switched the default to the tight Gaussian variance. Default is
+  Character; one of `"default"`, `"conservative"`, or `"cluster"`, as in
+  [`betwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/betwfe.md);
+  see its `se_type` entry. This wrapper passes the simulator's
+  independent cohort counts (`simulated_obj$indep_counts`) to
+  [`betwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/betwfe.md),
+  so `"conservative"` gives the same `att_se` as `"default"`. Default is
   `"default"`.
 
 - lambda_selection:
@@ -199,9 +189,9 @@ An object of class `betwfe` containing the following elements:
 
 - att_se:
 
-  If `q < 1`, a standard error for the ATT. If `indep_counts` was
-  provided, this standard error is asymptotically exact; if not, it is
-  asymptotically conservative. If `q >= 1`, this will be NA.
+  A standard error for the ATT (see `se_type`). `NA` when standard
+  errors were not computed (`calc_ses` is `FALSE`), for example when
+  `q >= 1`.
 
 - att_p_value:
 
@@ -228,9 +218,10 @@ An object of class `betwfe` containing the following elements:
 
 - catt_ses:
 
-  If `q < 1`, a named vector containing the (asymptotically exact,
-  non-conservative) standard errors for the estimated average treatment
-  effects within each cohort.
+  A vector containing the (asymptotically exact, non-conservative)
+  standard errors for the estimated average treatment effects within
+  each cohort, named by cohort when they were computed. `NA` when
+  `calc_ses` is `FALSE`, for example when `q >= 1`.
 
 - cohort_probs:
 
@@ -270,13 +261,13 @@ An object of class `betwfe` containing the following elements:
 
 - sig_eps_sq:
 
-  Either the provided `sig_eps_sq` or the estimated one, if a value
-  wasn't provided.
+  The provided `sig_eps_sq` if both variances were provided, and
+  otherwise the REML estimate.
 
 - sig_eps_c_sq:
 
-  Either the provided `sig_eps_c_sq` or the estimated one, if a value
-  wasn't provided.
+  The provided `sig_eps_c_sq` if both variances were provided, and
+  otherwise the REML estimate.
 
 - lambda.max:
 
@@ -364,14 +355,12 @@ An object of class `betwfe` containing the following elements:
 
 - X_final:
 
-  The design matrix after applying the change in coordinates to fit the
-  model and also multiplying on the left by the square root inverse of
-  the estimated covariance matrix for each unit.
+  The GLS-whitened design matrix `X_ints`.
 
 - y_final:
 
-  The final response after multiplying on the left by the square root
-  inverse of the estimated covariance matrix for each unit.
+  The GLS-whitened response `y`, with `p` zeros appended for the ridge
+  penalty when `add_ridge` is `TRUE`.
 
 - N:
 
@@ -420,8 +409,9 @@ An object of class `betwfe` containing the following elements:
 
 - indep_counts_used:
 
-  Logical scalar; `TRUE` if a valid `indep_counts` argument was provided
-  and used for asymptotically-exact ATT inference, `FALSE` otherwise.
+  Logical scalar; `TRUE` if a valid `indep_counts` argument was
+  provided, so the cohort probabilities came from it, and `FALSE`
+  otherwise.
 
 - se_type:
 
@@ -472,8 +462,7 @@ An object of class `betwfe` containing the following elements:
 
   X_final
 
-  :   The design matrix after the change-of-coordinates step. Same as
-      top-level `X_final`.
+  :   Same as top-level `X_final`.
 
   y_final
 

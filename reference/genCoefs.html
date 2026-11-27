@@ -326,9 +326,9 @@ for the treatment-effect block, <code>genInvTwoWayFusionTransformMat()</code> wh
 <code>fusion_structure = "cohort"</code> or <code>genInvEventStudyFusionTransformMat()</code>
 when <code>fusion_structure = "event_study"</code>.</p></li>
 </ol><p>The multinomial-logit and proportional-odds reference DGPs are the
-canonical parametric propensity-score models named in Faletto (2025)
-line 1016; the propensity-weighted population-truth aggregation matches
-Eq. <code>att.estimator.weighted</code> (line 837).</p>
+canonical parametric propensity-score models named in Faletto (2025);
+the propensity-weighted population-truth aggregation matches
+Eq. <code>att.estimator.weighted</code>.</p>
 <p>Note on the random-number generator: passing an explicit numeric
 <code>seed</code> calls <code>set.seed(seed)</code> internally and <strong>leaves the
 global RNG advanced</strong> after the call returns. This is deliberate — it

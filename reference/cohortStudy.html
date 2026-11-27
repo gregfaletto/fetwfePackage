@@ -108,16 +108,20 @@ the cohort first received treatment).</p></dd>
 <dd><p>Numeric; the per-cohort ATT estimate.</p></dd>
 
 <dt>se</dt>
-<dd><p>Numeric; standard error for the per-cohort ATT (<code>NA</code> when
-the Gram matrix is singular or, for <code><a href="fetwfe.html">fetwfe()</a></code> / <code><a href="betwfe.html">betwfe()</a></code>, the
-bridge penalty zeroed out the cohort).</p></dd>
+<dd><p>Numeric; standard error for the per-cohort ATT. <code>NA</code> for
+every cohort when the fit computed no standard errors (<code>calc_ses</code> is
+<code>FALSE</code>, for example when the Gram matrix is singular), a cohort the
+bridge penalty zeroed out included. Otherwise, for <code><a href="fetwfe.html">fetwfe()</a></code> /
+<code><a href="betwfe.html">betwfe()</a></code>, <code>0</code> for a cohort the bridge penalty zeroed out
+(<code>selected = FALSE</code>).</p></dd>
 
 <dt>ci_low, ci_high</dt>
 <dd><p>Numeric; the stored lower and upper
 confidence-interval bounds, reflecting the fit's <code>ci_type</code> –
 simultaneous (family-wise) by default, or pointwise <code>1 - alpha</code>
 Wald bounds when the fit used <code>ci_type = "pointwise"</code> (<code>alpha</code> is
-the value passed at fit time).</p></dd>
+the value passed at fit time). <code>NA</code> when <code>se</code> is <code>NA</code>; otherwise
+<code>(0, 0)</code> for a zeroed-out cohort.</p></dd>
 
 <dt>p_value</dt>
 <dd><p>Numeric; follows the fit's <code>ci_type</code>. Under

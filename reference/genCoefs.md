@@ -302,9 +302,9 @@ The function operates in two steps:
     `fusion_structure = "event_study"`.
 
 The multinomial-logit and proportional-odds reference DGPs are the
-canonical parametric propensity-score models named in Faletto (2025)
-line 1016; the propensity-weighted population-truth aggregation matches
-Eq. `att.estimator.weighted` (line 837).
+canonical parametric propensity-score models named in Faletto (2025);
+the propensity-weighted population-truth aggregation matches Eq.
+`att.estimator.weighted`.
 
 Note on the random-number generator: passing an explicit numeric `seed`
 calls `set.seed(seed)` internally and **leaves the global RNG advanced**

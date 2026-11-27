@@ -92,47 +92,46 @@ betwfe(
 
 - indep_counts:
 
-  (Optional.) Integer; a vector. If you have a sufficiently large number
-  of units, you can optionally randomly split your data set in half
-  (with `N` units in each data set). The data for half of the units
-  should go in the `pdata` argument provided above. For the other `N`
-  units, simply provide the counts for how many units appear in the
-  untreated cohort plus each of the other `G` cohorts in this argument
-  `indep_counts`. The benefit of doing this is that the standard error
-  for the average treatment effect will be (asymptotically) exact
-  instead of conservative. The length of `indep_counts` must equal 1
-  plus the number of treated cohorts in `pdata`. All entries of
-  `indep_counts` must be strictly positive (if you are concerned that
-  this might not work out, maybe your data set is on the small side and
-  it's best to just leave your full data set in `pdata`). The sum of all
-  the counts in `indep_counts` must match the total number of units in
-  `pdata`. Default is NA (in which case conservative standard errors
-  will be calculated if `q < 1`.)
+  (Optional.) Integer; a vector of cohort counts from a sample
+  independent of `pdata`: the number of units in the untreated cohort,
+  then in each treated cohort in adoption order. When supplied, the
+  cohort probabilities that weight the overall ATT and the
+  [`eventStudy()`](https://gregfaletto.github.io/fetwfePackage/reference/eventStudy.md)
+  estimates come from these counts instead of from `pdata`. The counts
+  describe the panel the estimator fits: units treated in the first
+  period are dropped, and on a panel with no never-treated units the
+  latest cohort becomes the untreated cohort (see
+  `allow_no_never_treated`). So the length of `indep_counts` must equal
+  1 plus the number of treated cohorts that remain, all entries must be
+  strictly positive, and the counts must sum to the number of units that
+  remain. It is not needed for an exact standard error: the default
+  standard error is already asymptotically exact (see `se_type`).
+  Default is NA (cohort probabilities come from `pdata`).
 
 - sig_eps_sq:
 
   (Optional.) Numeric; the variance of the row-level IID noise assumed
   to apply to each observation. See Section 2 of Faletto (2025) for
-  details. It is best to provide this variance if it is known (for
-  example, if you are using simulated data). If this variance is
-  unknown, this argument can be omitted, and the variance will be
-  estimated by REML on the linear mixed-effects model
+  details. It is best to provide this variance and `sig_eps_c_sq` if
+  both are known (for example, if you are using simulated data); if this
+  variance is unknown, this argument can be omitted, and the variance
+  will be estimated by REML on the linear mixed-effects model
   `y ~ X + (1 | unit)` via
   [`lme4::lmer`](https://rdrr.io/pkg/lme4/man/lmer.html) (Bates et al.
-  2015; Patterson & Thompson 1971). When supplied, the value also sets
-  the scale of the bridge penalty's grid (the response is divided by
-  `sqrt(sig_eps_sq)` before the fit), so at `q != 1` a value supplied in
-  the wrong units moves the estimates, not only their standard errors.
-  Default is NA.
+  2015; Patterson & Thompson 1971). When both variances are supplied,
+  `sig_eps_sq` also sets the scale of the bridge penalty's grid (the
+  response is divided by `sqrt(sig_eps_sq)` before the fit), so a value
+  supplied in the wrong units can move the estimates, not only their
+  standard errors. Default is NA.
 
 - sig_eps_c_sq:
 
   (Optional.) Numeric; the variance of the unit-level IID noise (random
   effects) assumed to apply to each observation. See Section 2 of
-  Faletto (2025) for details. It is best to provide this variance if it
-  is known (for example, if you are using simulated data). If this
-  variance is unknown, this argument can be omitted, and the variance
-  will be estimated by REML via
+  Faletto (2025) for details. It is best to provide this variance and
+  `sig_eps_sq` if both are known (for example, if you are using
+  simulated data); if this variance is unknown, this argument can be
+  omitted, and the variance will be estimated by REML via
   [`lme4::lmer`](https://rdrr.io/pkg/lme4/man/lmer.html) on the linear
   mixed-effects model `y ~ X + (1 | unit)` (Bates et al. 2015; Patterson
   & Thompson 1971). Default is NA.
@@ -209,21 +208,25 @@ betwfe(
 
   Character; one of `"default"`, `"conservative"`, or `"cluster"`.
   `"default"` returns the tight Gaussian variance
-  `sqrt(att_var_1 + att_var_2)` from Theorem (c\$'\$) under Assumption
-  (Psi-IF); this is asymptotically exact for the package's default
-  cohort sample-proportions estimator and for every standard
-  propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
-  any GLM on `W | X`, kernel/series regression of `1{W = g}` on `X`).
-  `"conservative"` returns the Cauchy-Schwarz upper bound from Theorem
-  (c); use only if the propensity-score estimator violates (Psi-IF).
-  `"cluster"` is an *experimental* unit-clustered Liang-Zeger sandwich
-  SE on the bridge-selected support (see the companion vignette
+  `sqrt(att_var_1 + att_var_2)`: Theorem 6.4(c') under Assumption
+  (Psi-IF), with the paper's differences matrix `D_N` the identity on
+  every coefficient block, since `betwfe()` applies the bridge penalty
+  to the coefficients themselves. This is asymptotically exact for the
+  package's default cohort sample-proportions estimator and for every
+  standard propensity-score estimator that satisfies (Psi-IF)
+  (multinomial logit, any GLM on `W | X`, kernel/series regression of
+  `1{W = g}` on `X`). `"conservative"` returns the Cauchy-Schwarz upper
+  bound from Theorem 6.4(c); use only if the propensity-score estimator
+  violates (Psi-IF). Supplying `indep_counts` makes `"conservative"`
+  give the same standard error as `"default"`. `"cluster"` is an
+  *experimental* unit-clustered Liang-Zeger sandwich SE on the
+  bridge-selected support (see the companion vignette
   `inference_vignette` for details). `"cluster"` is only meaningful when
-  `q < 1` (the bridge oracle property is required); for `q >= 1` the SE
-  will be `NA` regardless of `se_type`. The default `"default"` was the
-  conservative Cauchy-Schwarz formula in versions \<= 1.11.7; v1.12.0
-  switched the default to the tight Gaussian variance. Default is
-  `"default"`.
+  `q < 1` (the bridge oracle property is required), and the SE is `NA`
+  regardless of `se_type` whenever `calc_ses` is `FALSE` (see `att_se`).
+  The default `"default"` was the conservative Cauchy-Schwarz formula in
+  versions \<= 1.11.7; v1.12.0 switched the default to the tight
+  Gaussian variance. Default is `"default"`.
 
 - lambda_selection:
 
@@ -295,9 +298,9 @@ An object of class `betwfe` containing the following elements:
 
 - att_se:
 
-  If `q < 1`, a standard error for the ATT. If `indep_counts` was
-  provided, this standard error is asymptotically exact; if not, it is
-  asymptotically conservative. If `q >= 1`, this will be NA.
+  A standard error for the ATT (see `se_type`). `NA` when standard
+  errors were not computed (`calc_ses` is `FALSE`), for example when
+  `q >= 1`.
 
 - att_p_value:
 
@@ -324,9 +327,10 @@ An object of class `betwfe` containing the following elements:
 
 - catt_ses:
 
-  If `q < 1`, a named vector containing the (asymptotically exact,
-  non-conservative) standard errors for the estimated average treatment
-  effects within each cohort.
+  A vector containing the (asymptotically exact, non-conservative)
+  standard errors for the estimated average treatment effects within
+  each cohort, named by cohort when they were computed. `NA` when
+  `calc_ses` is `FALSE`, for example when `q >= 1`.
 
 - cohort_probs:
 
@@ -366,13 +370,13 @@ An object of class `betwfe` containing the following elements:
 
 - sig_eps_sq:
 
-  Either the provided `sig_eps_sq` or the estimated one, if a value
-  wasn't provided.
+  The provided `sig_eps_sq` if both variances were provided, and
+  otherwise the REML estimate.
 
 - sig_eps_c_sq:
 
-  Either the provided `sig_eps_c_sq` or the estimated one, if a value
-  wasn't provided.
+  The provided `sig_eps_c_sq` if both variances were provided, and
+  otherwise the REML estimate.
 
 - lambda.max:
 
@@ -460,14 +464,12 @@ An object of class `betwfe` containing the following elements:
 
 - X_final:
 
-  The design matrix after applying the change in coordinates to fit the
-  model and also multiplying on the left by the square root inverse of
-  the estimated covariance matrix for each unit.
+  The GLS-whitened design matrix `X_ints`.
 
 - y_final:
 
-  The final response after multiplying on the left by the square root
-  inverse of the estimated covariance matrix for each unit.
+  The GLS-whitened response `y`, with `p` zeros appended for the ridge
+  penalty when `add_ridge` is `TRUE`.
 
 - N:
 
@@ -542,8 +544,9 @@ An object of class `betwfe` containing the following elements:
 
 - indep_counts_used:
 
-  Logical scalar; `TRUE` if a valid `indep_counts` argument was provided
-  and used for asymptotically-exact ATT inference, `FALSE` otherwise.
+  Logical scalar; `TRUE` if a valid `indep_counts` argument was
+  provided, so the cohort probabilities came from it, and `FALSE`
+  otherwise.
 
 - se_type:
 
@@ -572,8 +575,7 @@ An object of class `betwfe` containing the following elements:
 
   X_final
 
-  :   The design matrix after the change-of-coordinates step. Same as
-      top-level `X_final`.
+  :   Same as top-level `X_final`.
 
   y_final
 
@@ -656,7 +658,7 @@ if (requireNamespace("bacondecomp", quietly = TRUE)) {
   # units)
   100 * res$att_hat
 
-  # Conservative 95% confidence interval for ATT (in percentage point units)
+  # 95% confidence interval for ATT (in percentage point units)
 
   low_att <- 100 * (res$att_hat - qnorm(1 - 0.05 / 2) * res$att_se)
   high_att <- 100 * (res$att_hat + qnorm(1 - 0.05 / 2) * res$att_se)
@@ -677,12 +679,12 @@ if (requireNamespace("bacondecomp", quietly = TRUE)) {
 #> No covariates provided; skipping covariate processing.
 #> Getting omega sqrt inverse estimate...
 #> Done! Time to estimate noise variances:
-#> 0.229252099990845
+#> 0.225072860717773
 #> Time to get sqrt inverse matrix:
-#> 0.000329017639160156
+#> 0.000233650207519531
 #> Estimating bridge regression with 10-fold CV...
 #> Done! Time for estimation:
-#> 0.0876541137695312
+#> 0.082557201385498
 #> No treatment features selected; all treatment effects estimated to be 0.
 #>   cohort estimate se ci_low ci_high p_value selected
 #> 1   2005        0  0      0       0      NA    FALSE

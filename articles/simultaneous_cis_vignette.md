@@ -66,11 +66,9 @@ returns intervals that maintain family-wise coverage at the requested
 $`c_{1-\alpha}`$ defined as the $`(1 - \alpha)`$ quantile of
 $`\max_k |Z_k|`$ where $`Z \sim N(0, \rho)`$ and $`\rho`$ is the
 correlation matrix of the effect family’s joint covariance. Under
-Theorem (c$`'`$) (`paper_arxiv.tex:1233`) and Assumption
-$`(\Psi\text{-IF})`$ (assumption equation `paper_arxiv.tex:2013`;
-in-prose discussion of when it implies tight Gaussianity at paper line
-1268), this joint Gaussianity is exact asymptotically; under the paper’s
-fixed-dim framing (AE 1(d)), no high-dimensional correction is needed.
+Theorem 6.4(c$`'`$) and Assumption $`(\Psi\text{-IF})`$, this joint
+Gaussianity is exact asymptotically; under the paper’s fixed-dim
+framing, no high-dimensional correction is needed.
 
 For an event-study family on the fitted `res_default` object from the
 setup above:
@@ -189,16 +187,16 @@ independent** multiplier stream over a per-unit cohort-probability
 decomposition $`\Sigma = \Sigma_1 + \Sigma_2`$. The event-study family
 is the one whose propensity term $`\Sigma_2`$ is non-zero, because each
 event-time effect pools across the cohorts treated by that event time,
-weighted by the estimated cohort probabilities $`\hat\pi_g = N_g / N`$;
-its per-unit propensity influence function is the
-cohort-sample-proportion summand $`\xi_i = e_{W_i} - \hat\pi`$ (paper
-assumption $`(\Psi\text{-IF})`$). The two channels are asymptotically
-uncorrelated (paper Theorem C.1, Step 5), so their variances add with no
-cross-term — which is exactly why the multipliers are drawn
-independently. On a `se_type = "cluster"` fit the event-study bootstrap
-per-effect standard errors equal the analytic ones to machine precision,
-and the critical value matches the analytic `qmvnorm` one up to
-Monte-Carlo error:
+weighted by the estimated cohort probabilities. On a fit without
+`indep_counts` these are the sample proportions $`\hat\pi_g = N_g / N`$,
+whose per-unit influence function is the summand
+$`\xi_i = e_{W_i} - \hat\pi`$ (paper assumption $`(\Psi\text{-IF})`$).
+The two channels are asymptotically uncorrelated (paper Theorem C.1,
+Step 5), so their variances add with no cross-term — which is exactly
+why the multipliers are drawn independently. On a `se_type = "cluster"`
+fit the event-study bootstrap per-effect standard errors equal the
+analytic ones to machine precision, and the critical value matches the
+analytic `qmvnorm` one up to Monte-Carlo error:
 
 ``` r
 
@@ -357,10 +355,10 @@ surface in the package agrees under the default: `broom::tidy(fit)`’s
 cohort rows, `summary(fit)`, `cohortStudy(fit)`, and
 `plot(fit, type = "catt")` all report the same simultaneous bounds. (The
 overall-ATT row of `broom::tidy(fit)` stays the scalar pointwise
-interval.) When standard errors are unavailable (`q >= 1` for the bridge
-estimators, or a rank-deficient design) the bounds are `NA` under both
-settings, and the fit still succeeds — the simultaneous path degrades
-cleanly to the (`NA`) pointwise bounds rather than throwing an error.
+interval.) When standard errors are unavailable, the bounds are `NA`
+under both settings, and the fit still succeeds — the simultaneous path
+degrades cleanly to the (`NA`) pointwise bounds rather than throwing an
+error.
 
 ## 2. Selection consistency as an implicit zero-effect test
 
@@ -384,13 +382,13 @@ The mapping is:
   to one.
 
 The conclusion for a selected-out cohort is delivered by the `selected`
-flag, **not** by a p-value. A cohort the penalty zeros out has
-`estimate == 0`, `se == 0`, and `p_value == NA` by construction — there
-is no Wald p-value to read, and the inferential content lives entirely
-in `selected`. (A condensed, first-time-user-oriented version of this
-discussion appears under “Testing the zero-effect null” in the main
-package vignette; the treatment here is the deeper, inference-focused
-one.)
+flag, **not** by a p-value. On a fit with standard errors, a cohort the
+penalty zeros out has `estimate == 0`, `se == 0`, and `p_value == NA` by
+construction — there is no Wald p-value to read, and the inferential
+content lives entirely in `selected`. (A condensed,
+first-time-user-oriented version of this discussion appears under
+“Testing the zero-effect null” in the main package vignette; the
+treatment here is the deeper, inference-focused one.)
 
 ### Why this is stronger than a confidence interval on an unregularized estimator
 
@@ -426,8 +424,8 @@ Theorem 6.3), with the practical Wald confidence intervals and p-values
 of Theorem 6.4 — the same machinery documented in
 [`vignette("inference_vignette")`](https://gregfaletto.github.io/fetwfePackage/articles/inference_vignette.md).
 So `selected = TRUE` cohorts come with the usual valid CIs and finite
-p-values, while `selected = FALSE` cohorts carry the stronger,
-selection-based zero-effect conclusion.
+p-values on a fit with standard errors, while `selected = FALSE` cohorts
+carry the stronger, selection-based zero-effect conclusion.
 
 ### The `q < 1` caveat
 

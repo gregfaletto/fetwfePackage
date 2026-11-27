@@ -56,12 +56,14 @@ containing one row per treated cohort and columns:
 
 - se:
 
-  Numeric; standard error for the per-cohort ATT (`NA` when the Gram
-  matrix is singular or, for
+  Numeric; standard error for the per-cohort ATT. `NA` for every cohort
+  when the fit computed no standard errors (`calc_ses` is `FALSE`, for
+  example when the Gram matrix is singular), a cohort the bridge penalty
+  zeroed out included. Otherwise, for
   [`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)
   /
   [`betwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/betwfe.md),
-  the bridge penalty zeroed out the cohort).
+  `0` for a cohort the bridge penalty zeroed out (`selected = FALSE`).
 
 - ci_low, ci_high:
 
@@ -69,6 +71,7 @@ containing one row per treated cohort and columns:
   reflecting the fit's `ci_type` – simultaneous (family-wise) by
   default, or pointwise `1 - alpha` Wald bounds when the fit used
   `ci_type = "pointwise"` (`alpha` is the value passed at fit time).
+  `NA` when `se` is `NA`; otherwise `(0, 0)` for a zeroed-out cohort.
 
 - p_value:
 
