@@ -71,40 +71,39 @@ estimation will proceed, but it will only be valid under unconditional
 versions of the parallel trends and no anticipation assumptions. Default
 is c().}
 
-\item{indep_counts}{(Optional.) Integer; a vector. If you have a sufficiently
-large number of units, you can optionally randomly split your data set in
-half (with \code{N} units in each data set). The data for half of the units should
-go in the \code{pdata} argument provided above. For the other \code{N} units, simply
-provide the counts for how many units appear in the untreated cohort plus
-each of the other \code{G} cohorts in this argument \code{indep_counts}. The benefit
-of doing this is that the standard error for the average treatment effect
-will be (asymptotically) exact instead of conservative. The length of
-\code{indep_counts} must equal 1 plus the number of treated cohorts in \code{pdata}.
-All entries of \code{indep_counts} must be strictly positive (if you are concerned
-that this might not work out, maybe your data set is on the small side and
-it's best to just leave your full data set in \code{pdata}). The sum of all the
-counts in \code{indep_counts} must match the total number of units in \code{pdata}.
-Default is NA (in which case conservative standard errors will be calculated
-if \code{q < 1}.)}
+\item{indep_counts}{(Optional.) Integer; a vector of cohort counts from a
+sample independent of \code{pdata}: the number of units in the untreated cohort,
+then in each treated cohort in adoption order. When supplied, the cohort
+probabilities that weight the overall ATT and the \code{\link[=eventStudy]{eventStudy()}} estimates
+come from these counts instead of from \code{pdata}.
+The counts describe the panel the estimator fits: units
+treated in the first period are dropped, and on a panel with no
+never-treated units the latest cohort becomes the untreated cohort (see
+\code{allow_no_never_treated}). So the length of \code{indep_counts} must equal 1 plus
+the number of treated cohorts that remain, all entries must be strictly
+positive, and the counts must sum to the number of units that remain. It is
+not needed for an exact standard error: the default standard error is
+already asymptotically exact (see \code{se_type}). Default is NA (cohort
+probabilities come from \code{pdata}).}
 
 \item{sig_eps_sq}{(Optional.) Numeric; the variance of the row-level IID
 noise assumed to apply to each observation. See Section 2 of Faletto (2025)
-for details. It is best to provide this variance if it is known (for example,
-if you are using simulated data). If this variance is unknown, this argument
-can be omitted, and the variance will be estimated by
-REML on the linear mixed-effects model \code{y ~ X + (1 | unit)} via
-\code{lme4::lmer} (Bates et al. 2015; Patterson & Thompson 1971). When
-supplied, the value also sets the scale of the bridge penalty's grid (the
-response is divided by \code{sqrt(sig_eps_sq)} before the fit), so at \code{q != 1} a
-value supplied in the wrong units moves the estimates, not only their
-standard errors. Default is NA.}
+for details. It is best to provide this variance and \code{sig_eps_c_sq} if both
+are known (for example, if you are using simulated data); if this variance
+is unknown, this argument can be omitted, and the variance will be estimated
+by REML on the linear mixed-effects model \code{y ~ X + (1 | unit)} via
+\code{lme4::lmer} (Bates et al. 2015; Patterson & Thompson 1971). When both
+variances are supplied, \code{sig_eps_sq} also sets the scale of the bridge
+penalty's grid (the response is divided by \code{sqrt(sig_eps_sq)} before the
+fit), so a value supplied in the wrong units can move the
+estimates, not only their standard errors. Default is NA.}
 
 \item{sig_eps_c_sq}{(Optional.) Numeric; the variance of the unit-level IID
 noise (random effects) assumed to apply to each observation. See Section 2 of
-Faletto (2025) for details. It is best to provide this variance if it is
-known (for example, if you are using simulated data). If this variance is
-unknown, this argument can be omitted, and the variance will be estimated
-by REML via \code{lme4::lmer} on the
+Faletto (2025) for details. It is best to provide this variance and
+\code{sig_eps_sq} if both are known (for example, if you are using simulated
+data); if this variance is unknown, this argument can be omitted, and the
+variance will be estimated by REML via \code{lme4::lmer} on the
 linear mixed-effects model \code{y ~ X + (1 | unit)} (Bates et al. 2015;
 Patterson & Thompson 1971). Default is NA.}
 
@@ -159,18 +158,23 @@ already contains never-treated units. Default is \code{TRUE}.}
 
 \item{se_type}{Character; one of \code{"default"}, \code{"conservative"}, or
 \code{"cluster"}. \code{"default"} returns the tight Gaussian variance
-\code{sqrt(att_var_1 + att_var_2)} from Theorem (c$'$) under Assumption
-(Psi-IF); this is asymptotically exact for the package's default
-cohort sample-proportions estimator and for every standard
+\code{sqrt(att_var_1 + att_var_2)}: Theorem 6.4(c') under Assumption (Psi-IF),
+with the paper's differences matrix \code{D_N} the identity on every
+coefficient block, since \code{betwfe()} applies the bridge penalty to the
+coefficients themselves. This is asymptotically exact for the package's
+default cohort sample-proportions estimator and for every standard
 propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
 any GLM on \code{W | X}, kernel/series regression of \verb{1\{W = g\}} on \code{X}).
 \code{"conservative"} returns the Cauchy-Schwarz upper bound from Theorem
-(c); use only if the propensity-score estimator violates (Psi-IF).
+6.4(c); use only if the propensity-score estimator violates (Psi-IF).
+Supplying \code{indep_counts} makes \code{"conservative"} give the same standard
+error as \code{"default"}.
 \code{"cluster"} is an \emph{experimental} unit-clustered Liang-Zeger sandwich
 SE on the bridge-selected support (see the companion vignette
 \code{inference_vignette} for details). \code{"cluster"} is only meaningful
-when \code{q < 1} (the bridge oracle property is required); for \code{q >= 1}
-the SE will be \code{NA} regardless of \code{se_type}. The default \code{"default"}
+when \code{q < 1} (the bridge oracle property is required), and the SE is
+\code{NA} regardless of \code{se_type} whenever \code{calc_ses} is \code{FALSE} (see
+\code{att_se}). The default \code{"default"}
 was the conservative Cauchy-Schwarz formula in versions <= 1.11.7;
 v1.12.0 switched the default to the tight Gaussian variance.
 Default is \code{"default"}.}
@@ -222,9 +226,9 @@ is \code{"simultaneous"}.}
 An object of class \code{betwfe} containing the following elements:
 \item{att_hat}{The
 estimated overall average treatment effect for a randomly selected treated
-unit.} \item{att_se}{If \code{q < 1}, a standard error for the ATT. If
-\code{indep_counts} was provided, this standard error is asymptotically exact; if
-not, it is asymptotically conservative. If \code{q >= 1}, this will be NA.}
+unit.} \item{att_se}{A standard error for the ATT (see \code{se_type}). \code{NA} when
+standard errors were not computed (\code{calc_ses} is \code{FALSE}), for example when
+\code{q >= 1}.}
 \item{att_p_value}{A two-sided p-value for the overall ATT against the
 null \code{H_0: tau = 0}, computed as \verb{2 * pnorm(-|att_hat / att_se|)}. \code{NA} if
 \code{att_se} is zero or \code{NA} (e.g., under the bridge solver's selected-out
@@ -238,9 +242,10 @@ assumption different from the one Theorem 6.2 establishes for FETWFE. For
 ridge (\code{q = 2}) the bridge solver does not zero coefficients, so this will
 typically be \code{TRUE}.}
 \item{catt_hats}{A named vector containing the estimated average treatment
-effects for each cohort.} \item{catt_ses}{If \code{q < 1}, a named vector
-containing the (asymptotically exact, non-conservative) standard errors for
-the estimated average treatment effects within each cohort.}
+effects for each cohort.} \item{catt_ses}{A vector containing the
+(asymptotically exact, non-conservative) standard errors for the estimated
+average treatment effects within each cohort, named by cohort when they were
+computed. \code{NA} when \code{calc_ses} is \code{FALSE}, for example when \code{q >= 1}.}
 \item{cohort_probs}{A vector of the estimated probabilities of being in each
 cohort conditional on being treated, which was used in calculating \code{att_hat}.
 If \code{indep_counts} was provided, \code{cohort_probs} was calculated from that;
@@ -260,10 +265,11 @@ bridge penalty left the cohort's CATT nonzero). For selected-out cohorts
 the treatment effects for each cohort at each time.}
 \item{treat_int_inds}{The indices of \code{beta_hat} corresponding to the
 interactions between the treatment effects for each cohort at each time and
-the covariates.} \item{sig_eps_sq}{Either the provided \code{sig_eps_sq} or
-the estimated one, if a value wasn't provided.} \item{sig_eps_c_sq}{Either
-the provided \code{sig_eps_c_sq} or the estimated one, if a value wasn't
-provided.} \item{lambda.max}{The largest \code{lambda} of the grid used, which
+the covariates.} \item{sig_eps_sq}{The provided \code{sig_eps_sq} if both
+variances were provided, and otherwise the REML estimate.}
+\item{sig_eps_c_sq}{The provided \code{sig_eps_c_sq} if both variances were
+provided, and otherwise the REML estimate.}
+\item{lambda.max}{The largest \code{lambda} of the grid used, which
 is a supplied \code{lambda.max} only on the BIC route. (This is returned to help
 with getting a reasonable range of \code{lambda} values for grid search.)}
 \item{lambda.max_model_size}{The number of selected features (excluding the
@@ -293,12 +299,11 @@ when \code{lambda_selection = "bic"}.}
 \item{catt_band_applied}{Logical scalar; \code{TRUE} when the fit-time cohort-family simultaneous band was computed and written into \code{catt_df}, and \code{FALSE} otherwise --- including when \code{ci_type = "pointwise"}, when standard errors were unavailable, and when the band construction degraded. It records only whether the band was applied: it does not imply the band is wider than the pointwise interval (they coincide when fewer than two effects have positive variance) and does not imply the band is informative (a degenerate fit can carry an all-zero band with \code{TRUE}).}
 \item{X_ints}{The design matrix created containing all
 interactions, time and cohort dummies, etc.} \item{y}{The vector of
-responses, containing \code{nrow(X_ints)} entries.} \item{X_final}{The design
-matrix after applying the change in coordinates to fit the model and also
-multiplying on the left by the square root inverse of the estimated
-covariance matrix for each unit.} \item{y_final}{The final response after
-multiplying on the left by the square root inverse of the estimated
-covariance matrix for each unit.} \item{N}{The final number of units that
+responses, containing \code{nrow(X_ints)} entries.}
+\item{X_final}{The GLS-whitened design matrix \code{X_ints}.}
+\item{y_final}{The GLS-whitened response \code{y}, with \code{p} zeros appended for
+the ridge penalty when \code{add_ridge} is \code{TRUE}.}
+\item{N}{The final number of units that
 were in the  data set used for estimation (after any units may have been
 removed because they were treated in the first time period).} \item{T}{The
 number of time periods in the final data set.} \item{G}{The final number of
@@ -326,7 +331,7 @@ expansion). Consumed by \code{augment.betwfe()}.}
 on the overall sample (treated and untreated), used in computing the
 variance of the overall ATT.}
 \item{indep_counts_used}{Logical scalar; \code{TRUE} if a valid \code{indep_counts}
-argument was provided and used for asymptotically-exact ATT inference,
+argument was provided, so the cohort probabilities came from it, and
 \code{FALSE} otherwise.}
 \item{se_type}{Character scalar; the \code{se_type} argument the user passed
 (\code{"default"}, \code{"conservative"}, or \code{"cluster"}).}
@@ -342,8 +347,7 @@ are also duplicated at top level for backward compat;
 \item{X_ints}{The design matrix containing all interactions,
 time and cohort dummies, etc. Same value as top-level \code{X_ints}.}
 \item{y}{The vector of responses. Same as top-level \code{y}.}
-\item{X_final}{The design matrix after the change-of-coordinates
-step. Same as top-level \code{X_final}.}
+\item{X_final}{Same as top-level \code{X_final}.}
 \item{y_final}{The transformed response vector. Same as top-level
 \code{y_final}.}
 \item{calc_ses}{Logical indicating whether standard errors were
@@ -398,7 +402,7 @@ if (requireNamespace("bacondecomp", quietly = TRUE)) {
   # units)
   100 * res$att_hat
 
-  # Conservative 95\% confidence interval for ATT (in percentage point units)
+  # 95\% confidence interval for ATT (in percentage point units)
 
   low_att <- 100 * (res$att_hat - qnorm(1 - 0.05 / 2) * res$att_se)
   high_att <- 100 * (res$att_hat + qnorm(1 - 0.05 / 2) * res$att_se)

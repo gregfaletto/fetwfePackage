@@ -141,7 +141,7 @@ test_that("cohortStudy column types are well-formed", {
 	# package; see fetwfe()'s catt_df spec). Numeric coercion succeeds.
 	expect_true(is.character(cs$cohort) || is.numeric(cs$cohort))
 	expect_false(anyNA(suppressWarnings(as.numeric(cs$cohort))))
-	# Numeric columns are numeric (may be NA for selected-out cohorts).
+	# Numeric columns are numeric.
 	expect_true(is.numeric(cs$estimate))
 	expect_true(is.numeric(cs$se))
 	expect_true(is.numeric(cs$ci_low))
@@ -149,6 +149,100 @@ test_that("cohortStudy column types are well-formed", {
 	expect_true(is.numeric(cs$p_value))
 	# `selected` is logical.
 	expect_true(is.logical(cs$selected))
+})
+
+test_that("zeroed-out cohorts carry se 0 on a fit with SEs; on a fit without SEs every se is NA, theirs included (#516)", {
+	setup <- .cs_setup(seed = 2026)
+	fits <- list(
+		fetwfe = fetwfeWithSimulatedData(setup$sim),
+		betwfe = betwfeWithSimulatedData(setup$sim)
+	)
+	for (est in names(fits)) {
+		cs <- cohortStudy(fits[[est]])
+		zeroed <- !cs$selected
+		expect_true(any(zeroed), info = est)
+		expect_equal(cs$se[zeroed], rep(0, sum(zeroed)), info = est)
+		expect_equal(cs$ci_low[zeroed], rep(0, sum(zeroed)), info = est)
+		expect_equal(cs$ci_high[zeroed], rep(0, sum(zeroed)), info = est)
+		expect_true(all(is.na(cs$p_value[zeroed])), info = est)
+
+		cta <- cohortTimeATTs(fits[[est]])
+		zeroed_cells <- !cta$selected
+		expect_true(any(zeroed_cells), info = est)
+		expect_equal(
+			cta$se[zeroed_cells],
+			rep(0, sum(zeroed_cells)),
+			info = est
+		)
+		expect_equal(
+			cta$ci_low[zeroed_cells],
+			rep(0, sum(zeroed_cells)),
+			info = est
+		)
+		expect_equal(
+			cta$ci_high[zeroed_cells],
+			rep(0, sum(zeroed_cells)),
+			info = est
+		)
+		expect_true(all(is.na(cta$p_value[zeroed_cells])), info = est)
+	}
+
+	fit_no_se <- fetwfe(
+		pdata = setup$sim$pdata,
+		time_var = setup$sim$time_var,
+		unit_var = setup$sim$unit_var,
+		treatment = setup$sim$treatment,
+		response = setup$sim$response,
+		covs = setup$sim$covs,
+		gls = FALSE
+	)
+	expect_false(fit_no_se$calc_ses)
+	cs_no_se <- cohortStudy(fit_no_se)
+	expect_true(any(!cs_no_se$selected))
+	expect_identical(cs_no_se[["se"]], rep(NA_real_, nrow(fit_no_se$catt_df)))
+	expect_identical(
+		unlist(cs_no_se[c("ci_low", "ci_high")], use.names = FALSE),
+		rep(NA_real_, 2L * nrow(fit_no_se$catt_df))
+	)
+	expect_identical(
+		generics::tidy(fit_no_se)$std.error,
+		rep(NA_real_, nrow(fit_no_se$catt_df) + 1L)
+	)
+	expect_identical(
+		generics::tidy(cs_no_se)$std.error,
+		rep(NA_real_, nrow(fit_no_se$catt_df))
+	)
+	expect_true(any(cohortTimeATTs(fit_no_se)$estimate != 0))
+	expect_identical(
+		cohortTimeATTs(fit_no_se)$se,
+		rep(NA_real_, length(fit_no_se$treat_inds))
+	)
+	expect_identical(
+		unlist(
+			cohortTimeATTs(fit_no_se)[c("ci_low", "ci_high")],
+			use.names = FALSE
+		),
+		rep(NA_real_, 2L * length(fit_no_se$treat_inds))
+	)
+
+	skip_if_not_installed("broom")
+	for (est in names(fits)) {
+		n_zeroed <- sum(!cohortStudy(fits[[est]])$selected)
+
+		td_fit <- broom::tidy(fits[[est]])
+		rows_fit <- td_fit$term != "ATT" & !td_fit$selected
+		expect_equal(sum(rows_fit), n_zeroed, info = est)
+		expect_equal(td_fit$std.error[rows_fit], rep(0, n_zeroed), info = est)
+		expect_true(all(is.na(td_fit$statistic[rows_fit])), info = est)
+		expect_true(all(is.na(td_fit$p.value[rows_fit])), info = est)
+
+		td_cs <- broom::tidy(cohortStudy(fits[[est]]))
+		rows_cs <- !td_cs$selected
+		expect_equal(sum(rows_cs), n_zeroed, info = est)
+		expect_equal(td_cs$std.error[rows_cs], rep(0, n_zeroed), info = est)
+		expect_true(all(is.na(td_cs$statistic[rows_cs])), info = est)
+		expect_true(all(is.na(td_cs$p.value[rows_cs])), info = est)
+	}
 })
 
 # ------------------------------------------------------------------------

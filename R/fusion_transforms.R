@@ -878,12 +878,11 @@ genInvEventStudyFusionTransformMat <- function(n_vars, first_inds, G) {
 #'   `fusion_matrix` is `NULL` (the default) it returns `NULL` unchanged, so the
 #'   built-in `fusion_structure` dispatch is used.
 #'
-#'   Checks (in order), all referencing the cohort-major `(g, t)` row order of
-#'   `getFirstInds()` / `getTreatInds()`:
+#'   Checks (in order):
 #'   \enumerate{
 #'     \item type/shape: a finite numeric matrix with
 #'       `nrow == ncol == num_treats` (else `stop()`, naming the expected
-#'       `num_treats` derived from `G` and `T`);
+#'       `num_treats`);
 #'     \item invertibility: `solve(fusion_matrix)` must succeed (else `stop()`);
 #'     \item conditioning: a `warning()` (not error) when `D_N` is numerically
 #'       near-singular (reciprocal condition number `< 1e-10`) -- it stays
@@ -958,12 +957,14 @@ genInvEventStudyFusionTransformMat <- function(n_vars, first_inds, G) {
 			ncol(fusion_matrix),
 			", expected num_treats = ",
 			num_treats,
-			" (from G = ",
+			" for this panel (G = ",
 			G,
-			", T = ",
+			" treated cohorts, T = ",
 			T,
-			"). The rows/columns follow the cohort-major (g, t) order of ",
-			"getFirstInds() / getTreatInds().",
+			" periods): one per treated cohort per period from its first ",
+			"treated period. Rows and columns follow the cohort-major (g, t) ",
+			"order: cohorts in adoption order, each cohort's effects in ",
+			"event-time order.",
 			call. = FALSE
 		)
 	}
@@ -1060,8 +1061,8 @@ genInvEventStudyFusionTransformMat <- function(n_vars, first_inds, G) {
 #' @param G Integer. Number of treated cohorts (\(\ge 1\)).
 #'   The function stops if you accidentally pass \code{G = 0}.
 #' @param d Integer. Number of time-invariant covariates (can be 0).
-#' @param num_treats Integer.  Total number of base treatment-effect
-#'   coefficients \(\mathfrak W = T G - G(G+1)/2\).
+#' @param num_treats Integer.  The panel's `num_treats`: the total number of
+#'   base treatment-effect coefficients \(\mathfrak W\).
 #' @param fusion_structure Character; one of `"cohort"` (default) or
 #'   `"event_study"`. Selects which built-in inverse treatment-effect fusion
 #'   block is embedded (ignored when `d_inv_treat` is supplied).

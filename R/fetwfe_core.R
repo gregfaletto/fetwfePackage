@@ -277,8 +277,7 @@ checkFetwfeInputs <- function(
 #' This function implements the core estimation steps of the FETWFE methodology.
 #' It takes a pre-processed design matrix and response, applies transformations
 #' for fusion penalties, handles variance components, performs bridge regression,
-#' selects the optimal penalty, and calculates treatment effects and their
-#' standard errors.
+#' selects the optimal penalty, and calculates treatment effects.
 #'
 #' @param X_ints The design matrix with all fixed effects, covariates, treatment
 #'   dummies, and their interactions, as produced by `prepXints`.
@@ -295,12 +294,12 @@ checkFetwfeInputs <- function(
 #'   each cohort's first treatment effect within the treatment effect block.
 #' @param indep_counts (Optional) An integer vector of counts for how many units
 #'   appear in the untreated cohort plus each of the other `G` cohorts, derived
-#'   from an independent dataset. Used for asymptotically exact standard errors for
-#'   the ATT. Default is `NA`.
+#'   from an independent dataset. See the exported wrapper `fetwfe()` for
+#'   details. Default is `NA`.
 #' @param sig_eps_sq (Optional) Numeric; the known variance of the observation-level
-#'   IID noise. If `NA`, it will be estimated. Default is `NA`.
+#'   IID noise. Default is `NA`.
 #' @param sig_eps_c_sq (Optional) Numeric; the known variance of the unit-level IID
-#'   noise (random effects). If `NA`, it will be estimated. Default is `NA`.
+#'   noise (random effects). Default is `NA`.
 #' @param lambda.max (Optional) Numeric; the maximum `lambda` penalty parameter for
 #'   the bridge regression grid search. If `NA`, `grpreg` selects it. Default is `NA`.
 #' @param lambda.min (Optional) Numeric; the minimum `lambda` penalty parameter.
@@ -344,17 +343,9 @@ checkFetwfeInputs <- function(
 #'     `X_ints` into `X_mod`. This transformation allows a standard bridge
 #'     regression penalty on `X_mod` to achieve the desired fusion penalties
 #'     on the original coefficients.
-#'   \item **Variance Component Handling:**
-#'     \itemize{
-#'       \item If `sig_eps_sq` or `sig_eps_c_sq` are `NA`, `estOmegaSqrtInv` is
-#'         called to estimate them from the data using a fixed-effects ridge
-#'         regression.
-#'       \item Constructs the covariance matrix `Omega` and its inverse square
-#'         root `Omega_sqrt_inv`.
-#'       \item Pre-multiplies `y` and `X_mod` by `sqrt(sig_eps_sq) * Omega_sqrt_inv`
-#'         (via Kronecker product) to obtain `y_final` and `X_final`, effectively
-#'         performing a GLS transformation.
-#'     }
+#'   \item **Variance Component Handling:** `.estimate_variance_and_gls()` when
+#'     `gls` is `TRUE`; the `gls` entry of `?fetwfe` says what a `gls = FALSE`
+#'     fit skips.
 #'   \item **Optional Ridge Penalty:** If `add_ridge` is `TRUE`, `X_final_scaled`
 #'     (scaled version of `X_final`) and `y_final` are augmented to add an L2
 #'     penalty on the *original* (untransformed) coefficient scale. This involves
@@ -379,18 +370,16 @@ checkFetwfeInputs <- function(
 #'     \itemize{
 #'       \item Extracts cohort-specific average treatment effects (CATTs) from
 #'         `beta_hat`.
-#'       \item Calls `getCohortATTsFinal` to calculate CATT point estimates,
-#'         standard errors (if `q < 1`), and confidence intervals. This involves
-#'         computing the Gram matrix and related quantities.
+#'       \item Calls `getCohortATTsFinal` for the CATT point estimates and
+#'         `catt_df`; the `catt_ses` item says when they carry standard errors.
 #'     }
 #'   \item **Overall ATT Calculation:** Calls `getTeResults2` to calculate the
-#'     overall average treatment effect on the treated (ATT) and its standard
-#'     error, using both in-sample probabilities and independent probabilities
-#'     if `indep_counts` were provided.
+#'     overall average treatment effect on the treated (ATT), using both
+#'     in-sample probabilities and independent probabilities if `indep_counts`
+#'     were provided.
 #' }
-#' The standard errors for CATTs are asymptotically exact. For ATT, if
-#' `indep_counts` are provided, the SE is asymptotically exact; otherwise, it's
-#' asymptotically conservative (if `q < 1`).
+#' The standard errors for CATTs are asymptotically exact; for the ATT's, see
+#' `se_type`.
 #'
 #' @return A list containing detailed estimation results:
 #'   \item{in_sample_att_hat}{Estimated overall ATT using in-sample cohort probabilities.}
@@ -399,7 +388,7 @@ checkFetwfeInputs <- function(
 #'   \item{indep_att_hat}{Estimated overall ATT using `indep_counts` cohort probabilities (NA if `indep_counts` not provided).}
 #'   \item{indep_att_se}{Standard error for `indep_att_hat` (NA if not applicable).}
 #'   \item{catt_hats}{A named vector of estimated CATTs for each cohort.}
-#'   \item{catt_ses}{A named vector of SEs for `catt_hats` (NA if `q >= 1`).}
+#'   \item{catt_ses}{See `catt_ses` in `?fetwfe`'s value.}
 #'   \item{catt_df}{A data frame (with S3 class `c("catt_df", "data.frame")`) summarizing CATTs (`cohort`, `estimate`, `se`, `ci_low`, `ci_high`, `p_value`) and a `selected` logical flag (`TRUE` when the bridge penalty left the cohort's CATT nonzero). The `catt_df` S3 class makes `[[` / `$` / `[` access on the pre-1.11.0 Title-Case column names `stop()` with a migration message pointing to the new name.}
 #'   \item{theta_hat}{The vector of estimated coefficients in the *transformed* (fused) space, including the intercept as the first element.}
 #'   \item{beta_hat}{The vector of estimated coefficients in the *original* space (after untransforming `theta_hat`, excluding intercept).}
@@ -407,8 +396,8 @@ checkFetwfeInputs <- function(
 #'   \item{treat_int_inds}{Indices in `beta_hat` corresponding to treatment-covariate interactions.}
 #'   \item{cohort_probs}{Estimated cohort probabilities conditional on being treated, from `in_sample_counts`.}
 #'   \item{indep_cohort_probs}{Estimated cohort probabilities from `indep_counts` (NA if not provided).}
-#'   \item{sig_eps_sq}{The (possibly estimated) variance of observation-level noise.}
-#'   \item{sig_eps_c_sq}{The (possibly estimated) variance of unit-level random effects.}
+#'   \item{sig_eps_sq}{See the `sig_eps_sq` item of `?fetwfe`'s value.}
+#'   \item{sig_eps_c_sq}{See the `sig_eps_c_sq` item of `?fetwfe`'s value.}
 #'   \item{lambda.max}{The largest lambda of the grid (units: see `.dispatch_bridge_selection()`).}
 #'   \item{lambda.max_model_size}{Number of selected features (excluding the intercept) for `lambda.max`.}
 #'   \item{lambda.min}{The smallest lambda of the grid (units: see `.dispatch_bridge_selection()`).}
@@ -417,8 +406,8 @@ checkFetwfeInputs <- function(
 #'   \item{lambda_star_model_size}{Number of selected features (excluding the intercept) for `lambda_star`.}
 #'   \item{X_ints}{The original input design matrix from `prepXints`.}
 #'   \item{y}{The original input centered response vector from `prepXints`.}
-#'   \item{X_final}{The design matrix after fusion transformation and GLS weighting.}
-#'   \item{y_final}{The response vector after GLS weighting.}
+#'   \item{X_final}{See `internal$X_final` in `?fetwfe`'s value.}
+#'   \item{y_final}{See `internal$y_final` in `?fetwfe`'s value.}
 #'   \item{N, T, G, d, p}{Dimensions used in estimation.}
 #' @keywords internal
 #' @noRd
@@ -686,8 +675,7 @@ fetwfe_core <- function(
 		)
 		# Apply ridge adjustment locally before early-exit return; doesn't
 		# affect later code paths (they re-compute `beta_hat` separately
-		# and run the non-early-exit `add_ridge` scaling at line ~1083).
-		# Plan D3.
+		# and run the non-early-exit `add_ridge` scaling).
 		if (add_ridge) {
 			lambda_ridge <- ifelse(is.na(lambda_ridge), 0, lambda_ridge)
 			beta_hat_early_exit <- beta_hat_early_exit * (1 + lambda_ridge)

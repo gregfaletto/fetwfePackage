@@ -101,8 +101,8 @@
 }
 
 # The pointwise quantities of a fit. `bounds` reads `catt_df`'s interval, so it
-# belongs to `ci_type = "pointwise"` fits only. A `gls = TRUE` fit echoes a
-# supplied variance, so `variances = FALSE` is for fits that supply them.
+# belongs to `ci_type = "pointwise"` fits only. `variances = FALSE` is for fits
+# that supply both variances.
 .rse428_fit_quantities <- function(
 	q = 0.5,
 	penalized = TRUE,

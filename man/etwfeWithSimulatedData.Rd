@@ -38,25 +38,9 @@ behavior prior to version 1.5.6). The argument has no effect when the input
 already contains never-treated units. Default is \code{TRUE}.}
 
 \item{se_type}{Character; one of \code{"default"}, \code{"conservative"}, or
-\code{"cluster"}. \code{"default"} returns the tight Gaussian variance
-\code{sqrt(att_var_1 + att_var_2)} from Theorem (c$'$) under Assumption
-(Psi-IF); this is asymptotically exact for the package's default
-cohort sample-proportions estimator and for every standard
-propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
-any GLM on \code{W | X}, kernel/series regression of \verb{1\{W = g\}} on \code{X}).
-\code{"conservative"} returns the Cauchy-Schwarz upper bound
-\code{sqrt(att_var_1 + att_var_2 + 2 * sqrt(att_var_1 * att_var_2))} from
-Theorem (c); use only if the propensity-score estimator violates
-(Psi-IF) (e.g., a Robins-Rotnitzky-augmented doubly-robust estimator,
-which the package does not currently implement). \code{"cluster"} is an
-\emph{experimental} unit-clustered Liang-Zeger sandwich SE on the
-OLS-selected support (see the companion vignette
-\code{inference_vignette} for the formula, the assumptions, and the
-theory-pending caveat). The default value of \code{"default"} corresponds
-to the new tight Gaussian default introduced in version 1.12.0;
-previous versions used the conservative Cauchy-Schwarz formula as the
-default. To recover the prior conservative default behavior, pass
-\code{se_type = "conservative"}.}
+\code{"cluster"}, as in \code{\link[=etwfe]{etwfe()}}; see its \code{se_type} entry. This wrapper passes
+the simulator's independent cohort counts (\code{simulated_obj$indep_counts}) to
+\code{etwfe()}, so \code{"conservative"} gives the same \code{att_se} as \code{"default"}.}
 
 \item{ci_type}{Character; one of \code{"simultaneous"} (default) or
 \code{"pointwise"}. Controls the confidence-interval bounds reported for the
@@ -89,9 +73,11 @@ null \code{H_0: tau = 0}, computed as \verb{2 * pnorm(-|att_hat / att_se|)}. \co
 \code{att_se} is zero or \code{NA}. Standard post-OLS interpretation; ETWFE does not
 perform selection.}
 \item{catt_hats}{A named vector containing the
-estimated average treatment effects for each cohort.} \item{catt_ses}{A named
+estimated average treatment effects for each cohort.} \item{catt_ses}{A
 vector containing the (asymptotically exact) standard errors for
-the estimated average treatment effects within each cohort.}
+the estimated average treatment effects within each cohort, named by cohort
+when they were computed. If the Gram matrix is not invertible, the entries
+are NA.}
 \item{cohort_probs}{A vector of the estimated probabilities of being in each
 cohort conditional on being treated, which was used in calculating \code{att_hat}.
 If \code{indep_counts} was provided, \code{cohort_probs} was calculated from that;
@@ -109,17 +95,17 @@ the new name. See \code{NEWS.md} for the rename table.}
 the treatment effects for each cohort at each time.}
 \item{treat_int_inds}{The indices of \code{beta_hat} corresponding to the
 interactions between the treatment effects for each cohort at each time and
-the covariates.} \item{sig_eps_sq}{Either the provided \code{sig_eps_sq} or
-the estimated one, if a value wasn't provided.} \item{sig_eps_c_sq}{Either
-the provided \code{sig_eps_c_sq} or the estimated one, if a value wasn't
-provided.} \item{X_ints}{The design matrix created containing all
+the covariates.} \item{sig_eps_sq}{The provided \code{sig_eps_sq} if both
+variances were provided, and otherwise the REML estimate.}
+\item{sig_eps_c_sq}{The provided \code{sig_eps_c_sq} if both variances were
+provided, and otherwise the REML estimate.}
+\item{X_ints}{The design matrix created containing all
 interactions, time and cohort dummies, etc.} \item{y}{The vector of
-responses, containing \code{nrow(X_ints)} entries.} \item{X_final}{The design
-matrix after applying the change in coordinates to fit the model and also
-multiplying on the left by the square root inverse of the estimated
-covariance matrix for each unit.} \item{y_final}{The final response after
-multiplying on the left by the square root inverse of the estimated
-covariance matrix for each unit.} \item{N}{The final number of units that
+responses, containing \code{nrow(X_ints)} entries.}
+\item{X_final}{The GLS-whitened design matrix \code{X_ints}.}
+\item{y_final}{The GLS-whitened response \code{y}, with \code{p} zeros appended for
+the ridge penalty when \code{add_ridge} is \code{TRUE}.}
+\item{N}{The final number of units that
 were in the  data set used for estimation (after any units may have been
 removed because they were treated in the first time period).} \item{T}{The
 number of time periods in the final data set.} \item{G}{The final number of
@@ -137,7 +123,7 @@ set of covariates used to estimate the model.}
 on the overall sample (treated and untreated), used in computing the
 variance of the overall ATT.}
 \item{indep_counts_used}{Logical scalar; \code{TRUE} if a valid \code{indep_counts}
-argument was provided and used for asymptotically-exact ATT inference,
+argument was provided, so the cohort probabilities came from it, and
 \code{FALSE} otherwise.}
 \item{se_type}{Character scalar; the \code{se_type} argument the user passed
 (\code{"default"}, \code{"conservative"}, or \code{"cluster"}).}
@@ -165,8 +151,7 @@ are also duplicated at top level for backward compat;
 \item{X_ints}{The design matrix containing all interactions,
 time and cohort dummies, etc. Same value as top-level \code{X_ints}.}
 \item{y}{The vector of responses. Same as top-level \code{y}.}
-\item{X_final}{The design matrix after the change-of-coordinates
-step. Same as top-level \code{X_final}.}
+\item{X_final}{Same as top-level \code{X_final}.}
 \item{y_final}{The transformed response vector. Same as top-level
 \code{y_final}.}
 \item{calc_ses}{Logical indicating whether standard errors were

@@ -39,38 +39,37 @@
 #' estimation will proceed, but it will only be valid under unconditional
 #' versions of the parallel trends and no anticipation assumptions. Default
 #' is c().
-#' @param indep_counts (Optional.) Integer; a vector. If you have a sufficiently
-#' large number of units, you can optionally randomly split your data set in
-#' half (with `N` units in each data set). The data for half of the units should
-#' go in the `pdata` argument provided above. For the other `N` units, simply
-#' provide the counts for how many units appear in the untreated cohort plus
-#' each of the other `G` cohorts in this argument `indep_counts`. The benefit
-#' of doing this is that the standard error for the average treatment effect
-#' will be (asymptotically) exact instead of conservative. The length of
-#' `indep_counts` must equal 1 plus the number of treated cohorts in `pdata`.
-#' All entries of `indep_counts` must be strictly positive (if you are concerned
-#' that this might not work out, maybe your data set is on the small side and
-#' it's best to just leave your full data set in `pdata`). The sum of all the
-#' counts in `indep_counts` must match the total number of units in `pdata`.
-#' Default is NA (in which case conservative standard errors will be calculated
-#' if `q < 1`.)
+#' @param indep_counts (Optional.) Integer; a vector of cohort counts from a
+#' sample independent of `pdata`: the number of units in the untreated cohort,
+#' then in each treated cohort in adoption order. When supplied, the cohort
+#' probabilities that weight the overall ATT and the [eventStudy()] estimates
+#' come from these counts instead of from `pdata`.
+#' The counts describe the panel the estimator fits: units
+#' treated in the first period are dropped, and on a panel with no
+#' never-treated units the latest cohort becomes the untreated cohort (see
+#' `allow_no_never_treated`). So the length of `indep_counts` must equal 1 plus
+#' the number of treated cohorts that remain, all entries must be strictly
+#' positive, and the counts must sum to the number of units that remain. It is
+#' not needed for an exact standard error: the default standard error is
+#' already asymptotically exact (see `se_type`). Default is NA (cohort
+#' probabilities come from `pdata`).
 #' @param sig_eps_sq (Optional.) Numeric; the variance of the row-level IID
 #' noise assumed to apply to each observation. See Section 2 of Faletto (2025)
-#' for details. It is best to provide this variance if it is known (for example,
-#' if you are using simulated data). If this variance is unknown, this argument
-#' can be omitted, and the variance will be estimated by
-#' REML on the linear mixed-effects model `y ~ X + (1 | unit)` via
-#' `lme4::lmer` (Bates et al. 2015; Patterson & Thompson 1971). When
-#' supplied, the value also sets the scale of the bridge penalty's grid (the
-#' response is divided by `sqrt(sig_eps_sq)` before the fit), so at `q != 1` a
-#' value supplied in the wrong units moves the estimates, not only their
-#' standard errors. Default is NA.
+#' for details. It is best to provide this variance and `sig_eps_c_sq` if both
+#' are known (for example, if you are using simulated data); if this variance
+#' is unknown, this argument can be omitted, and the variance will be estimated
+#' by REML on the linear mixed-effects model `y ~ X + (1 | unit)` via
+#' `lme4::lmer` (Bates et al. 2015; Patterson & Thompson 1971). When both
+#' variances are supplied, `sig_eps_sq` also sets the scale of the bridge
+#' penalty's grid (the response is divided by `sqrt(sig_eps_sq)` before the
+#' fit), so a value supplied in the wrong units can move the
+#' estimates, not only their standard errors. Default is NA.
 #' @param sig_eps_c_sq (Optional.) Numeric; the variance of the unit-level IID
 #' noise (random effects) assumed to apply to each observation. See Section 2 of
-#' Faletto (2025) for details. It is best to provide this variance if it is
-#' known (for example, if you are using simulated data). If this variance is
-#' unknown, this argument can be omitted, and the variance will be estimated
-#' by REML via `lme4::lmer` on the
+#' Faletto (2025) for details. It is best to provide this variance and
+#' `sig_eps_sq` if both are known (for example, if you are using simulated
+#' data); if this variance is unknown, this argument can be omitted, and the
+#' variance will be estimated by REML via `lme4::lmer` on the
 #' linear mixed-effects model `y ~ X + (1 | unit)` (Bates et al. 2015;
 #' Patterson & Thompson 1971). Default is NA.
 #' @param lambda.max (Optional.) Numeric. Used only on the BIC route
@@ -116,18 +115,23 @@
 #' already contains never-treated units. Default is `TRUE`.
 #' @param se_type Character; one of `"default"`, `"conservative"`, or
 #' `"cluster"`. `"default"` returns the tight Gaussian variance
-#' `sqrt(att_var_1 + att_var_2)` from Theorem (c$'$) under Assumption
-#' (Psi-IF); this is asymptotically exact for the package's default
-#' cohort sample-proportions estimator and for every standard
+#' `sqrt(att_var_1 + att_var_2)`: Theorem 6.4(c') under Assumption (Psi-IF),
+#' with the paper's differences matrix `D_N` the identity on every
+#' coefficient block, since `betwfe()` applies the bridge penalty to the
+#' coefficients themselves. This is asymptotically exact for the package's
+#' default cohort sample-proportions estimator and for every standard
 #' propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
 #' any GLM on `W | X`, kernel/series regression of `1{W = g}` on `X`).
 #' `"conservative"` returns the Cauchy-Schwarz upper bound from Theorem
-#' (c); use only if the propensity-score estimator violates (Psi-IF).
+#' 6.4(c); use only if the propensity-score estimator violates (Psi-IF).
+#' Supplying `indep_counts` makes `"conservative"` give the same standard
+#' error as `"default"`.
 #' `"cluster"` is an *experimental* unit-clustered Liang-Zeger sandwich
 #' SE on the bridge-selected support (see the companion vignette
 #' `inference_vignette` for details). `"cluster"` is only meaningful
-#' when `q < 1` (the bridge oracle property is required); for `q >= 1`
-#' the SE will be `NA` regardless of `se_type`. The default `"default"`
+#' when `q < 1` (the bridge oracle property is required), and the SE is
+#' `NA` regardless of `se_type` whenever `calc_ses` is `FALSE` (see
+#' `att_se`). The default `"default"`
 #' was the conservative Cauchy-Schwarz formula in versions <= 1.11.7;
 #' v1.12.0 switched the default to the tight Gaussian variance.
 #' Default is `"default"`.
@@ -173,9 +177,9 @@
 #' @return An object of class \code{betwfe} containing the following elements:
 #' \item{att_hat}{The
 #' estimated overall average treatment effect for a randomly selected treated
-#' unit.} \item{att_se}{If `q < 1`, a standard error for the ATT. If
-#' `indep_counts` was provided, this standard error is asymptotically exact; if
-#' not, it is asymptotically conservative. If `q >= 1`, this will be NA.}
+#' unit.} \item{att_se}{A standard error for the ATT (see `se_type`). `NA` when
+#' standard errors were not computed (`calc_ses` is `FALSE`), for example when
+#' `q >= 1`.}
 #' \item{att_p_value}{A two-sided p-value for the overall ATT against the
 #' null `H_0: tau = 0`, computed as `2 * pnorm(-|att_hat / att_se|)`. `NA` if
 #' `att_se` is zero or `NA` (e.g., under the bridge solver's selected-out
@@ -189,9 +193,10 @@
 #' ridge (`q = 2`) the bridge solver does not zero coefficients, so this will
 #' typically be `TRUE`.}
 #' \item{catt_hats}{A named vector containing the estimated average treatment
-#' effects for each cohort.} \item{catt_ses}{If `q < 1`, a named vector
-#' containing the (asymptotically exact, non-conservative) standard errors for
-#' the estimated average treatment effects within each cohort.}
+#' effects for each cohort.} \item{catt_ses}{A vector containing the
+#' (asymptotically exact, non-conservative) standard errors for the estimated
+#' average treatment effects within each cohort, named by cohort when they were
+#' computed. `NA` when `calc_ses` is `FALSE`, for example when `q >= 1`.}
 #' \item{cohort_probs}{A vector of the estimated probabilities of being in each
 #' cohort conditional on being treated, which was used in calculating `att_hat`.
 #' If `indep_counts` was provided, `cohort_probs` was calculated from that;
@@ -211,10 +216,11 @@
 #' the treatment effects for each cohort at each time.}
 #' \item{treat_int_inds}{The indices of `beta_hat` corresponding to the
 #' interactions between the treatment effects for each cohort at each time and
-#' the covariates.} \item{sig_eps_sq}{Either the provided `sig_eps_sq` or
-#' the estimated one, if a value wasn't provided.} \item{sig_eps_c_sq}{Either
-#' the provided `sig_eps_c_sq` or the estimated one, if a value wasn't
-#' provided.} \item{lambda.max}{The largest `lambda` of the grid used, which
+#' the covariates.} \item{sig_eps_sq}{The provided `sig_eps_sq` if both
+#' variances were provided, and otherwise the REML estimate.}
+#' \item{sig_eps_c_sq}{The provided `sig_eps_c_sq` if both variances were
+#' provided, and otherwise the REML estimate.}
+#' \item{lambda.max}{The largest `lambda` of the grid used, which
 #' is a supplied `lambda.max` only on the BIC route. (This is returned to help
 #' with getting a reasonable range of `lambda` values for grid search.)}
 #' \item{lambda.max_model_size}{The number of selected features (excluding the
@@ -244,12 +250,11 @@
 #' \item{catt_band_applied}{Logical scalar; `TRUE` when the fit-time cohort-family simultaneous band was computed and written into `catt_df`, and `FALSE` otherwise --- including when `ci_type = "pointwise"`, when standard errors were unavailable, and when the band construction degraded. It records only whether the band was applied: it does not imply the band is wider than the pointwise interval (they coincide when fewer than two effects have positive variance) and does not imply the band is informative (a degenerate fit can carry an all-zero band with `TRUE`).}
 #' \item{X_ints}{The design matrix created containing all
 #' interactions, time and cohort dummies, etc.} \item{y}{The vector of
-#' responses, containing `nrow(X_ints)` entries.} \item{X_final}{The design
-#' matrix after applying the change in coordinates to fit the model and also
-#' multiplying on the left by the square root inverse of the estimated
-#' covariance matrix for each unit.} \item{y_final}{The final response after
-#' multiplying on the left by the square root inverse of the estimated
-#' covariance matrix for each unit.} \item{N}{The final number of units that
+#' responses, containing `nrow(X_ints)` entries.}
+#' \item{X_final}{The GLS-whitened design matrix `X_ints`.}
+#' \item{y_final}{The GLS-whitened response `y`, with `p` zeros appended for
+#' the ridge penalty when `add_ridge` is `TRUE`.}
+#' \item{N}{The final number of units that
 #' were in the  data set used for estimation (after any units may have been
 #' removed because they were treated in the first time period).} \item{T}{The
 #' number of time periods in the final data set.} \item{G}{The final number of
@@ -277,7 +282,7 @@
 #' on the overall sample (treated and untreated), used in computing the
 #' variance of the overall ATT.}
 #' \item{indep_counts_used}{Logical scalar; `TRUE` if a valid `indep_counts`
-#' argument was provided and used for asymptotically-exact ATT inference,
+#' argument was provided, so the cohort probabilities came from it, and
 #' `FALSE` otherwise.}
 #' \item{se_type}{Character scalar; the `se_type` argument the user passed
 #' (`"default"`, `"conservative"`, or `"cluster"`).}
@@ -293,8 +298,7 @@
 #'     \item{X_ints}{The design matrix containing all interactions,
 #'       time and cohort dummies, etc. Same value as top-level `X_ints`.}
 #'     \item{y}{The vector of responses. Same as top-level `y`.}
-#'     \item{X_final}{The design matrix after the change-of-coordinates
-#'       step. Same as top-level `X_final`.}
+#'     \item{X_final}{Same as top-level `X_final`.}
 #'     \item{y_final}{The transformed response vector. Same as top-level
 #'       `y_final`.}
 #'     \item{calc_ses}{Logical indicating whether standard errors were
@@ -360,7 +364,7 @@
 #'   # units)
 #'   100 * res$att_hat
 #'
-#'   # Conservative 95% confidence interval for ATT (in percentage point units)
+#'   # 95% confidence interval for ATT (in percentage point units)
 #'
 #'   low_att <- 100 * (res$att_hat - qnorm(1 - 0.05 / 2) * res$att_se)
 #'   high_att <- 100 * (res$att_hat + qnorm(1 - 0.05 / 2) * res$att_se)
@@ -540,7 +544,7 @@ betwfe <- function(
 #' number of `lambda` penalty parameters considered. See the description of
 #' `lambda.max` for details. Default is 100.
 #' @param q (Optional.) Numeric; determines what `L_q` penalty is used for the
-#' fusion regularization. `q` = 1 is the lasso, and for 0 < `q` < 1, it is
+#' regularization. `q` = 1 is the lasso, and for 0 < `q` < 1, it is
 #' possible to get standard errors and confidence intervals. `q` = 2 is ridge
 #' regression. See Faletto (2025) for details. Default is 0.5.
 #' @param verbose Logical; if TRUE, more details on the progress of the function will
@@ -559,21 +563,9 @@ betwfe <- function(
 #' behavior prior to version 1.5.6). The argument has no effect when the input
 #' already contains never-treated units. Default is `TRUE`.
 #' @param se_type Character; one of `"default"`, `"conservative"`, or
-#' `"cluster"`. `"default"` returns the tight Gaussian variance
-#' `sqrt(att_var_1 + att_var_2)` from Theorem (c$'$) under Assumption
-#' (Psi-IF); this is asymptotically exact for the package's default
-#' cohort sample-proportions estimator and for every standard
-#' propensity-score estimator that satisfies (Psi-IF) (multinomial logit,
-#' any GLM on `W | X`, kernel/series regression of `1{W = g}` on `X`).
-#' `"conservative"` returns the Cauchy-Schwarz upper bound from Theorem
-#' (c); use only if the propensity-score estimator violates (Psi-IF).
-#' `"cluster"` is an *experimental* unit-clustered Liang-Zeger sandwich
-#' SE on the bridge-selected support (see the companion vignette
-#' `inference_vignette` for details). `"cluster"` is only meaningful
-#' when `q < 1` (the bridge oracle property is required); for `q >= 1`
-#' the SE will be `NA` regardless of `se_type`. The default `"default"`
-#' was the conservative Cauchy-Schwarz formula in versions <= 1.11.7;
-#' v1.12.0 switched the default to the tight Gaussian variance.
+#' `"cluster"`, as in [betwfe()]; see its `se_type` entry. This wrapper passes
+#' the simulator's independent cohort counts (`simulated_obj$indep_counts`) to
+#' `betwfe()`, so `"conservative"` gives the same `att_se` as `"default"`.
 #' Default is `"default"`.
 #' @param lambda_selection Character; method for selecting the bridge
 #'   penalty parameter `lambda`. Either `"cv"` (10-fold cross-validation
@@ -609,9 +601,9 @@ betwfe <- function(
 #' @return An object of class \code{betwfe} containing the following elements:
 #' \item{att_hat}{The
 #' estimated overall average treatment effect for a randomly selected treated
-#' unit.} \item{att_se}{If `q < 1`, a standard error for the ATT. If
-#' `indep_counts` was provided, this standard error is asymptotically exact; if
-#' not, it is asymptotically conservative. If `q >= 1`, this will be NA.}
+#' unit.} \item{att_se}{A standard error for the ATT (see `se_type`). `NA` when
+#' standard errors were not computed (`calc_ses` is `FALSE`), for example when
+#' `q >= 1`.}
 #' \item{att_p_value}{A two-sided p-value for the overall ATT against the
 #' null `H_0: tau = 0`, computed as `2 * pnorm(-|att_hat / att_se|)`. `NA` if
 #' `att_se` is zero or `NA` (e.g., under the bridge solver's selected-out
@@ -625,9 +617,10 @@ betwfe <- function(
 #' ridge (`q = 2`) the bridge solver does not zero coefficients, so this will
 #' typically be `TRUE`.}
 #' \item{catt_hats}{A named vector containing the estimated average treatment
-#' effects for each cohort.} \item{catt_ses}{If `q < 1`, a named vector
-#' containing the (asymptotically exact, non-conservative) standard errors for
-#' the estimated average treatment effects within each cohort.}
+#' effects for each cohort.} \item{catt_ses}{A vector containing the
+#' (asymptotically exact, non-conservative) standard errors for the estimated
+#' average treatment effects within each cohort, named by cohort when they were
+#' computed. `NA` when `calc_ses` is `FALSE`, for example when `q >= 1`.}
 #' \item{cohort_probs}{A vector of the estimated probabilities of being in each
 #' cohort conditional on being treated, which was used in calculating `att_hat`.
 #' If `indep_counts` was provided, `cohort_probs` was calculated from that;
@@ -647,10 +640,11 @@ betwfe <- function(
 #' the treatment effects for each cohort at each time.}
 #' \item{treat_int_inds}{The indices of `beta_hat` corresponding to the
 #' interactions between the treatment effects for each cohort at each time and
-#' the covariates.} \item{sig_eps_sq}{Either the provided `sig_eps_sq` or
-#' the estimated one, if a value wasn't provided.} \item{sig_eps_c_sq}{Either
-#' the provided `sig_eps_c_sq` or the estimated one, if a value wasn't
-#' provided.} \item{lambda.max}{The largest `lambda` of the grid used, which
+#' the covariates.} \item{sig_eps_sq}{The provided `sig_eps_sq` if both
+#' variances were provided, and otherwise the REML estimate.}
+#' \item{sig_eps_c_sq}{The provided `sig_eps_c_sq` if both variances were
+#' provided, and otherwise the REML estimate.}
+#' \item{lambda.max}{The largest `lambda` of the grid used, which
 #' is a supplied `lambda.max` only on the BIC route. (This is returned to help
 #' with getting a reasonable range of `lambda` values for grid search.)}
 #' \item{lambda.max_model_size}{The number of selected features (excluding the
@@ -680,12 +674,11 @@ betwfe <- function(
 #' \item{catt_band_applied}{Logical scalar; `TRUE` when the fit-time cohort-family simultaneous band was computed and written into `catt_df`, and `FALSE` otherwise --- including when `ci_type = "pointwise"`, when standard errors were unavailable, and when the band construction degraded. It records only whether the band was applied: it does not imply the band is wider than the pointwise interval (they coincide when fewer than two effects have positive variance) and does not imply the band is informative (a degenerate fit can carry an all-zero band with `TRUE`).}
 #' \item{X_ints}{The design matrix created containing all
 #' interactions, time and cohort dummies, etc.} \item{y}{The vector of
-#' responses, containing `nrow(X_ints)` entries.} \item{X_final}{The design
-#' matrix after applying the change in coordinates to fit the model and also
-#' multiplying on the left by the square root inverse of the estimated
-#' covariance matrix for each unit.} \item{y_final}{The final response after
-#' multiplying on the left by the square root inverse of the estimated
-#' covariance matrix for each unit.} \item{N}{The final number of units that
+#' responses, containing `nrow(X_ints)` entries.}
+#' \item{X_final}{The GLS-whitened design matrix `X_ints`.}
+#' \item{y_final}{The GLS-whitened response `y`, with `p` zeros appended for
+#' the ridge penalty when `add_ridge` is `TRUE`.}
+#' \item{N}{The final number of units that
 #' were in the  data set used for estimation (after any units may have been
 #' removed because they were treated in the first time period).} \item{T}{The
 #' number of time periods in the final data set.} \item{G}{The final number of
@@ -703,7 +696,7 @@ betwfe <- function(
 #' on the overall sample (treated and untreated), used in computing the
 #' variance of the overall ATT.}
 #' \item{indep_counts_used}{Logical scalar; `TRUE` if a valid `indep_counts`
-#' argument was provided and used for asymptotically-exact ATT inference,
+#' argument was provided, so the cohort probabilities came from it, and
 #' `FALSE` otherwise.}
 #' \item{se_type}{Character scalar; the `se_type` argument the user passed
 #' (`"default"`, `"conservative"`, or `"cluster"`).}
@@ -728,8 +721,7 @@ betwfe <- function(
 #'     \item{X_ints}{The design matrix containing all interactions,
 #'       time and cohort dummies, etc. Same value as top-level `X_ints`.}
 #'     \item{y}{The vector of responses. Same as top-level `y`.}
-#'     \item{X_final}{The design matrix after the change-of-coordinates
-#'       step. Same as top-level `X_final`.}
+#'     \item{X_final}{Same as top-level `X_final`.}
 #'     \item{y_final}{The transformed response vector. Same as top-level
 #'       `y_final`.}
 #'     \item{calc_ses}{Logical indicating whether standard errors were
@@ -822,7 +814,7 @@ betwfeWithSimulatedData <- function(
 #' This function implements the core estimation steps of the BETWFE methodology.
 #' It takes a pre-processed design matrix and response, handles variance
 #' components, performs bridge regression, selects the optimal penalty, and
-#' calculates treatment effects and their standard errors.
+#' calculates treatment effects.
 #'
 #' @param X_ints The design matrix with all fixed effects, covariates, treatment
 #'   dummies, and their interactions, as produced by `prepXints`.
@@ -839,8 +831,8 @@ betwfeWithSimulatedData <- function(
 #'   each cohort's first treatment effect within the treatment effect block.
 #' @param indep_counts (Optional) An integer vector of counts for how many units
 #'   appear in the untreated cohort plus each of the other `G` cohorts, derived
-#'   from an independent dataset. Used for asymptotically exact standard errors for
-#'   the ATT. Default is `NA`.
+#'   from an independent dataset. See the exported wrapper `betwfe()` for
+#'   details. Default is `NA`.
 #' @param sig_eps_sq (Optional) Numeric; the known variance of the observation-level
 #'   IID noise. If `NA`, it will be estimated. Default is `NA`.
 #' @param sig_eps_c_sq (Optional) Numeric; the known variance of the unit-level IID
@@ -851,7 +843,7 @@ betwfeWithSimulatedData <- function(
 #'   If `NA`, `grpreg` selects it. Default is `NA`.
 #' @param nlambda (Optional) Integer; the number of `lambda` values in the grid.
 #'   Default is 100.
-#' @param q (Optional) Numeric; the power of the Lq penalty for fusion regularization
+#' @param q (Optional) Numeric; the power of the Lq penalty for regularization
 #'   (0 < q <= 2). `q=0.5` is default, `q=1` is lasso, `q=2` is ridge.
 #'   Default is 0.5.
 #' @param verbose Logical; if `TRUE`, prints progress messages. Default is `FALSE`.
@@ -860,8 +852,8 @@ betwfeWithSimulatedData <- function(
 #' @param add_ridge (Optional) Logical; if `TRUE`, adds a small L2 penalty to
 #'   the coefficients to stabilize estimation. Default is `FALSE`.
 #' @param se_type Character; the standard-error type, one of `"default"`
-#'   (tight Gaussian variance under (Psi-IF), Theorem (c$'$)),
-#'   `"conservative"` (Cauchy-Schwarz upper bound from Theorem (c) for
+#'   (tight Gaussian variance under (Psi-IF)),
+#'   `"conservative"` (Cauchy-Schwarz upper bound from Theorem 6.4(c) for
 #'   non-(Psi-IF) propensity estimators), or `"cluster"` (experimental
 #'   unit-clustered Liang-Zeger sandwich SE on the bridge-selected
 #'   support). See the exported wrapper `betwfe()` for details. Default
@@ -874,8 +866,7 @@ betwfeWithSimulatedData <- function(
 #'   \item **Variance Component Handling:**
 #'     \itemize{
 #'       \item If `sig_eps_sq` or `sig_eps_c_sq` are `NA`, `estOmegaSqrtInv` is
-#'         called to estimate them from the data using a fixed-effects ridge
-#'         regression.
+#'         called to estimate them from the data.
 #'       \item Constructs the covariance matrix `Omega` and its inverse square
 #'         root `Omega_sqrt_inv`.
 #'       \item Pre-multiplies `y` and `X_mod` by `sqrt(sig_eps_sq) * Omega_sqrt_inv`
@@ -904,18 +895,16 @@ betwfeWithSimulatedData <- function(
 #'     \itemize{
 #'       \item Extracts cohort-specific average treatment effects (CATTs) from
 #'         `beta_hat`.
-#'       \item Calls `getCohortATTsFinal` to calculate CATT point estimates,
-#'         standard errors (if `q < 1`), and confidence intervals. This involves
-#'         computing the Gram matrix and related quantities.
+#'       \item Calls `getCohortATTsFinal` for the CATT point estimates and
+#'         `catt_df`; the `catt_ses` item says when they carry standard errors.
 #'     }
 #'   \item **Overall ATT Calculation:** Calls `getTeResultsOLS` to calculate the
-#'     overall average treatment effect on the treated (ATT) and its standard
-#'     error, using both in-sample probabilities and independent probabilities
-#'     if `indep_counts` were provided.
+#'     overall average treatment effect on the treated (ATT), using both
+#'     in-sample probabilities and independent probabilities if `indep_counts`
+#'     were provided.
 #' }
-#' The standard errors for CATTs are asymptotically exact. For ATT, if
-#' `indep_counts` are provided, the SE is asymptotically exact; otherwise, it's
-#' asymptotically conservative (if `q < 1`).
+#' The standard errors for CATTs are asymptotically exact; for the ATT's, see
+#' `se_type`.
 #'
 #' @return A list containing detailed estimation results:
 #'   \item{in_sample_att_hat}{Estimated overall ATT using in-sample cohort probabilities.}
@@ -924,7 +913,7 @@ betwfeWithSimulatedData <- function(
 #'   \item{indep_att_hat}{Estimated overall ATT using `indep_counts` cohort probabilities (NA if `indep_counts` not provided).}
 #'   \item{indep_att_se}{Standard error for `indep_att_hat` (NA if not applicable).}
 #'   \item{catt_hats}{A named vector of estimated CATTs for each cohort.}
-#'   \item{catt_ses}{A named vector of SEs for `catt_hats` (NA if `q >= 1`).}
+#'   \item{catt_ses}{See `catt_ses` in `?betwfe`'s value.}
 #'   \item{catt_df}{A data frame (with S3 class `c("catt_df", "data.frame")`) summarizing CATTs (`cohort`, `estimate`, `se`, `ci_low`, `ci_high`, `p_value`) and a `selected` logical flag (`TRUE` when the bridge penalty left the cohort's CATT nonzero). The `catt_df` S3 class makes `[[` / `$` / `[` access on the pre-1.11.0 Title-Case column names `stop()` with a migration message pointing to the new name.}
 #'   \item{beta_hat}{The vector of estimated coefficients.}
 #'   \item{treat_inds}{Indices in `beta_hat` corresponding to base treatment effects.}
@@ -942,7 +931,7 @@ betwfeWithSimulatedData <- function(
 #'   \item{X_ints}{The original input design matrix from `prepXints`.}
 #'   \item{y}{The original input centered response vector from `prepXints`.}
 #'   \item{X_final}{The design matrix after GLS weighting.}
-#'   \item{y_final}{The response vector after GLS weighting.}
+#'   \item{y_final}{See `y_final` in `?betwfe`'s value.}
 #'   \item{N, T, G, d, p}{Dimensions used in estimation.}
 #' @keywords internal
 #' @noRd
@@ -1155,7 +1144,7 @@ betwfe_core <- function(
 		# Apply ridge adjustment locally before early-exit return; doesn't
 		# affect later code paths (they re-compute `beta_hat` from
 		# `beta_hat_slopes` separately and run the non-early-exit
-		# `add_ridge` scaling at line ~1108). Plan D3.
+		# `add_ridge` scaling).
 		if (add_ridge) {
 			lambda_ridge <- ifelse(is.na(lambda_ridge), 0, lambda_ridge)
 			beta_hat_slopes <- beta_hat_slopes * (1 + lambda_ridge)

@@ -6,13 +6,9 @@ library(fetwfe)
 #
 # Prior to v1.8.0 the internal `getSecondVarTermDataApp()` (which backs FETWFE's
 # overall-ATT SE component `att_var_2`) used the outer-loop variable for the
-# off-diagonal Jacobian coefficient, deviating from paper Theorem 6.3 by an
-# off-by-one index. The fix uses the column index, matching the paper and the
-# parallel `getSecondVarTermOLS()` in `R/variance_machinery.R`. The same fix flows
-# through `.event_study_var2_fetwfe()`.
-#
-# These tests are regression coverage for the corrected formula. They also
-# explicitly reconstruct the buggy formula inline to catch any future revert.
+# off-diagonal Jacobian coefficient. The fix uses the column index, matching the
+# paper and the parallel `getSecondVarTermOLS()` in `R/variance_machinery.R`. The
+# same fix flows through `.event_study_var2_fetwfe()`.
 # ------------------------------------------------------------------------------
 
 # Helper: deterministically fit FETWFE on R=3, T=6, d=0, N=300. Returns a list
@@ -123,7 +119,7 @@ library(fetwfe)
 # ------------------------------------------------------------------------------
 # Test 1: hand-computed reference matches getSecondVarTermDataApp's output.
 # ------------------------------------------------------------------------------
-test_that("FETWFE att_var_2 helper matches paper Theorem 6.3 Jacobian by hand", {
+test_that("FETWFE att_var_2 helper matches the Jacobian by hand", {
 	fit <- .make_var2_fit()
 	var2_handcomputed <- .overall_var_2(fit, off_use_outer = FALSE)
 

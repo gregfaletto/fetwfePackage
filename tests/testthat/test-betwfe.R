@@ -723,7 +723,7 @@ test_that("Estimator works with no covariates again", {
 		unit_var = "unit", # The unit identifier
 		treatment = "treated", # The treatment dummy indicator
 		response = "response", # The response variable
-		q = 0.5 # The L_q penalty for fusion regularization
+		q = 0.5 # The L_q penalty for regularization
 	)
 
 	expect_true(is.numeric(result$att_hat))

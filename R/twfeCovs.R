@@ -45,34 +45,32 @@
 #' estimation will proceed, but it will only be valid under unconditional
 #' versions of the parallel trends and no anticipation assumptions. Default
 #' is c().
-#' @param indep_counts (Optional.) Integer; a vector. If you have a sufficiently
-#' large number of units, you can optionally randomly split your data set in
-#' half (with `N` units in each data set). The data for half of the units should
-#' go in the `pdata` argument provided above. For the other `N` units, simply
-#' provide the counts for how many units appear in the untreated cohort plus
-#' each of the other `G` cohorts in this argument `indep_counts`. The benefit
-#' of doing this is that the standard error for the average treatment effect
-#' will be (asymptotically) exact instead of conservative. The length of
-#' `indep_counts` must equal 1 plus the number of treated cohorts in `pdata`.
-#' All entries of `indep_counts` must be strictly positive (if you are concerned
-#' that this might not work out, maybe your data set is on the small side and
-#' it's best to just leave your full data set in `pdata`). The sum of all the
-#' counts in `indep_counts` must match the total number of units in `pdata`.
-#' Default is NA (in which case the conservative standard error formula will
-#' be used).
+#' @param indep_counts (Optional.) Integer; a vector of cohort counts from a
+#' sample independent of `pdata`: the number of units in the untreated cohort,
+#' then in each treated cohort in adoption order. When supplied, the cohort
+#' probabilities that weight the overall ATT come from these counts instead of
+#' from `pdata`. The counts describe the panel the estimator fits: units
+#' treated in the first period are dropped, and on a panel with no
+#' never-treated units the latest cohort becomes the untreated cohort (see
+#' `allow_no_never_treated`). So the length of `indep_counts` must equal 1 plus
+#' the number of treated cohorts that remain, all entries must be strictly
+#' positive, and the counts must sum to the number of units that remain. It is
+#' not needed for an exact standard error: the default standard error is
+#' already asymptotically exact (see `se_type`). Default is NA (cohort
+#' probabilities come from `pdata`).
 #' @param sig_eps_sq (Optional.) Numeric; the variance of the row-level IID
 #' noise assumed to apply to each observation. See Section 2 of Faletto (2025)
-#' for details. It is best to provide this variance if it is known (for example,
-#' if you are using simulated data). If this variance is unknown, this argument
-#' can be omitted, and the variance will be estimated by
-#' REML on the linear mixed-effects model `y ~ X + (1 | unit)` via
+#' for details. It is best to provide this variance and `sig_eps_c_sq` if both
+#' are known (for example, if you are using simulated data); if this variance
+#' is unknown, this argument can be omitted, and the variance will be estimated
+#' by REML on the linear mixed-effects model `y ~ X + (1 | unit)` via
 #' `lme4::lmer` (Bates et al. 2015; Patterson & Thompson 1971). Default is NA.
 #' @param sig_eps_c_sq (Optional.) Numeric; the variance of the unit-level IID
 #' noise (random effects) assumed to apply to each observation. See Section 2 of
-#' Faletto (2025) for details. It is best to provide this variance if it is
-#' known (for example, if you are using simulated data). If this variance is
-#' unknown, this argument can be omitted, and the variance will be estimated
-#' by REML via `lme4::lmer` on the
+#' Faletto (2025) for details. It is best to provide this variance and
+#' `sig_eps_sq` if both are known (for example, if you are using simulated
+#' data); if this variance is unknown, this argument can be omitted, and the
+#' variance will be estimated by REML via `lme4::lmer` on the
 #' linear mixed-effects model `y ~ X + (1 | unit)` (Bates et al. 2015;
 #' Patterson & Thompson 1971). Default is NA.
 #' @param verbose Logical; if TRUE, more details on the progress of the function will
@@ -92,14 +90,18 @@
 #' already contains never-treated units. Default is `TRUE`.
 #' @param se_type Character; one of `"default"`, `"conservative"`, or
 #' `"cluster"`. `"default"` returns the tight Gaussian variance
-#' `sqrt(att_var_1 + att_var_2)` from Theorem (c$'$) under Assumption
-#' (Psi-IF) (asymptotically exact for the package's default cohort
-#' sample-proportions estimator); `"conservative"` returns the
-#' Cauchy-Schwarz upper bound from Theorem (c) (use only when the
-#' propensity-score estimator violates (Psi-IF)); `"cluster"` is an
-#' *experimental* unit-clustered Liang-Zeger sandwich SE on the
-#' OLS-selected support (see the companion vignette `inference_vignette`
-#' for the formula, the assumptions, and the theory-pending caveat).
+#' `sqrt(att_var_1 + att_var_2)`, which is asymptotically exact for the
+#' package's default cohort sample-proportions estimator by the argument of
+#' Theorem 6.4(c') under Assumption (Psi-IF) applied to least squares on
+#' `twfeCovs()`'s GLS-whitened model, so it holds when that model does (see
+#' the Description of [twfeCovs()]); `"conservative"` returns the
+#' Cauchy-Schwarz upper bound from Theorem 6.4(c) (use only when the
+#' propensity-score estimator violates (Psi-IF)). Supplying `indep_counts`
+#' makes `"conservative"` give the same standard error as `"default"`.
+#' `"cluster"` is an
+#' *experimental* unit-clustered Liang-Zeger sandwich SE (see the companion
+#' vignette `inference_vignette` for the formula, the assumptions, and the
+#' theory-pending caveat).
 #' Default is `"default"`. v1.12.0 introduced the tight Gaussian default;
 #' versions <= 1.11.7 used the conservative Cauchy-Schwarz formula as
 #' the default.
@@ -129,9 +131,11 @@
 #' `att_se` is zero or `NA`. Standard post-OLS interpretation; `twfeCovs` does
 #' not perform selection.}
 #' \item{catt_hats}{A named vector containing the
-#' estimated average treatment effects for each cohort.} \item{catt_ses}{A named
+#' estimated average treatment effects for each cohort.} \item{catt_ses}{A
 #' vector containing the (asymptotically exact) standard errors for
-#' the estimated average treatment effects within each cohort.}
+#' the estimated average treatment effects within each cohort, named by cohort
+#' when they were computed. If the Gram matrix is not invertible, the entries
+#' are NA.}
 #' \item{cohort_probs}{A vector of the estimated probabilities of being in each
 #' cohort conditional on being treated, which was used in calculating `att_hat`.
 #' If `indep_counts` was provided, `cohort_probs` was calculated from that;
@@ -150,17 +154,18 @@
 #' the treatment effects for each cohort.}
 #' \item{treat_int_inds}{The indices of `beta_hat` corresponding to the
 #' interactions between the treatment effects for each cohort and
-#' the covariates.} \item{sig_eps_sq}{Either the provided `sig_eps_sq` or
-#' the estimated one, if a value wasn't provided.} \item{sig_eps_c_sq}{Either
-#' the provided `sig_eps_c_sq` or the estimated one, if a value wasn't
-#' provided.} \item{X_ints}{The design matrix created containing all
+#' the covariates.} \item{sig_eps_sq}{The provided `sig_eps_sq` if both
+#' variances were provided, and otherwise the REML estimate.}
+#' \item{sig_eps_c_sq}{The provided `sig_eps_c_sq` if both variances were
+#' provided, and otherwise the REML estimate.}
+#' \item{X_ints}{The design matrix created containing all
 #' interactions, time and cohort dummies, etc.} \item{y}{The vector of
-#' responses, containing `nrow(X_ints)` entries.} \item{X_final}{The design
-#' matrix after applying the change in coordinates to fit the model and also
-#' multiplying on the left by the square root inverse of the estimated
-#' covariance matrix for each unit.} \item{y_final}{The final response after
-#' multiplying on the left by the square root inverse of the estimated
-#' covariance matrix for each unit.} \item{N}{The final number of units that
+#' responses, containing `nrow(X_ints)` entries.}
+#' \item{X_final}{The GLS-whitened design matrix of `twfeCovs()`'s model,
+#' which has one treatment column per cohort.}
+#' \item{y_final}{The GLS-whitened response `y`, with `p` zeros appended for
+#' the ridge penalty when `add_ridge` is `TRUE`.}
+#' \item{N}{The final number of units that
 #' were in the  data set used for estimation (after any units may have been
 #' removed because they were treated in the first time period).} \item{T}{The
 #' number of time periods in the final data set.} \item{G}{The final number of
@@ -186,7 +191,7 @@
 #' on the overall sample (treated and untreated), used in computing the
 #' variance of the overall ATT.}
 #' \item{indep_counts_used}{Logical scalar; `TRUE` if a valid `indep_counts`
-#' argument was provided and used for asymptotically-exact ATT inference,
+#' argument was provided, so the cohort probabilities came from it, and
 #' `FALSE` otherwise.}
 #' \item{se_type}{Character scalar; the `se_type` argument the user passed
 #' (`"default"`, `"conservative"`, or `"cluster"`).}
@@ -205,8 +210,7 @@
 #'     \item{X_ints}{The design matrix containing all interactions,
 #'       time and cohort dummies, etc. Same value as top-level `X_ints`.}
 #'     \item{y}{The vector of responses. Same as top-level `y`.}
-#'     \item{X_final}{The design matrix after the change-of-coordinates
-#'       step. Same as top-level `X_final`.}
+#'     \item{X_final}{Same as top-level `X_final`.}
 #'     \item{y_final}{The transformed response vector. Same as top-level
 #'       `y_final`.}
 #'     \item{calc_ses}{Logical indicating whether standard errors were
@@ -342,8 +346,8 @@ twfeCovs <- function(
 #' Run twfeCovs on Simulated Data
 #'
 #' @description
-#' This function runs the bridge-penalized extended two-way fixed effects estimator (\code{twfeCovs()}) on
-#' simulated data. It is simply a wrapper for \code{twfeCovs()}: it accepts an object of class
+#' This function runs the two-way fixed effects estimator with covariates, fit by least squares
+#' (\code{twfeCovs()}), on simulated data. It is simply a wrapper for \code{twfeCovs()}: it accepts an object of class
 #' \code{"FETWFE_simulated"} (produced by \code{simulateData()}) and unpacks the necessary
 #' components to pass to \code{twfeCovs()}. So the outputs match \code{twfeCovs()}, and the needed inputs
 #' match their counterparts in \code{twfeCovs()}.
@@ -366,18 +370,10 @@ twfeCovs <- function(
 #' behavior prior to version 1.5.6). The argument has no effect when the input
 #' already contains never-treated units. Default is `TRUE`.
 #' @param se_type Character; one of `"default"`, `"conservative"`, or
-#' `"cluster"`. `"default"` returns the tight Gaussian variance
-#' `sqrt(att_var_1 + att_var_2)` from Theorem (c$'$) under Assumption
-#' (Psi-IF) (asymptotically exact for the package's default cohort
-#' sample-proportions estimator); `"conservative"` returns the
-#' Cauchy-Schwarz upper bound from Theorem (c) (use only when the
-#' propensity-score estimator violates (Psi-IF)); `"cluster"` is an
-#' *experimental* unit-clustered Liang-Zeger sandwich SE on the
-#' OLS-selected support (see the companion vignette `inference_vignette`
-#' for the formula, the assumptions, and the theory-pending caveat).
-#' Default is `"default"`. v1.12.0 introduced the tight Gaussian default;
-#' versions <= 1.11.7 used the conservative Cauchy-Schwarz formula as
-#' the default.
+#' `"cluster"`, as in [twfeCovs()]; see its `se_type` entry. This wrapper
+#' passes the simulator's independent cohort counts
+#' (`simulated_obj$indep_counts`) to `twfeCovs()`, so `"conservative"` gives
+#' the same `att_se` as `"default"`. Default is `"default"`.
 #' @param ci_type Character; one of `"simultaneous"` (default) or
 #'   `"pointwise"`. Controls the confidence-interval bounds reported for the
 #'   cohort-specific ATTs (in `catt_df`). `"simultaneous"` reports parametric
@@ -397,19 +393,17 @@ twfeCovs <- function(
 #' @return An object of class \code{twfeCovs} containing the following elements:
 #' \item{att_hat}{The
 #' estimated overall average treatment effect for a randomly selected treated
-#' unit.} \item{att_se}{A standard error for the ATT. If `indep_counts` was
-#' provided, this standard error is asymptotically exact; otherwise, it is
-#' asymptotically conservative. If the Gram matrix is not invertible, this
-#' will be NA.}
+#' unit.} \item{att_se}{A standard error for the ATT (see `se_type`). If the
+#' Gram matrix is not invertible, this will be NA.}
 #' \item{att_p_value}{A two-sided p-value for the overall ATT against the
 #' null `H_0: tau = 0`, computed as `2 * pnorm(-|att_hat / att_se|)`. `NA` if
 #' `att_se` is zero or `NA`. Standard post-OLS interpretation; `twfeCovs` does
 #' not perform selection.}
 #' \item{catt_hats}{A named vector containing the estimated average treatment
-#' effects for each cohort.} \item{catt_ses}{A named vector containing the
+#' effects for each cohort.} \item{catt_ses}{A vector containing the
 #' (asymptotically exact, non-conservative) standard errors for the estimated
-#' average treatment effects within each cohort. If the Gram matrix is not
-#' invertible, the entries are NA.}
+#' average treatment effects within each cohort, named by cohort when they were
+#' computed. If the Gram matrix is not invertible, the entries are NA.}
 #' \item{cohort_probs}{A vector of the estimated probabilities of being in each
 #' cohort conditional on being treated, which was used in calculating `att_hat`.
 #' If `indep_counts` was provided, `cohort_probs` was calculated from that;
@@ -428,18 +422,18 @@ twfeCovs <- function(
 #' the treatment effects for each cohort.}
 #' \item{treat_int_inds}{The indices of `beta_hat` corresponding to the
 #' interactions between the treatment effects for each cohort and
-#' the covariates.} \item{sig_eps_sq}{Either the provided `sig_eps_sq` or
-#' the estimated one, if a value wasn't provided.} \item{sig_eps_c_sq}{Either
-#' the provided `sig_eps_c_sq` or the estimated one, if a value wasn't
-#' provided.}
+#' the covariates.} \item{sig_eps_sq}{The provided `sig_eps_sq` if both
+#' variances were provided, and otherwise the REML estimate.}
+#' \item{sig_eps_c_sq}{The provided `sig_eps_c_sq` if both variances were
+#' provided, and otherwise the REML estimate.}
 #' \item{X_ints}{The design matrix created containing all
 #' interactions, time and cohort dummies, etc.} \item{y}{The vector of
-#' responses, containing `nrow(X_ints)` entries.} \item{X_final}{The design
-#' matrix after applying the change in coordinates to fit the model and also
-#' multiplying on the left by the square root inverse of the estimated
-#' covariance matrix for each unit.} \item{y_final}{The final response after
-#' multiplying on the left by the square root inverse of the estimated
-#' covariance matrix for each unit.} \item{N}{The final number of units that
+#' responses, containing `nrow(X_ints)` entries.}
+#' \item{X_final}{The GLS-whitened design matrix of `twfeCovs()`'s model,
+#' which has one treatment column per cohort.}
+#' \item{y_final}{The GLS-whitened response `y`, with `p` zeros appended for
+#' the ridge penalty when `add_ridge` is `TRUE`.}
+#' \item{N}{The final number of units that
 #' were in the  data set used for estimation (after any units may have been
 #' removed because they were treated in the first time period).} \item{T}{The
 #' number of time periods in the final data set.} \item{G}{The final number of
@@ -456,7 +450,7 @@ twfeCovs <- function(
 #' on the overall sample (treated and untreated), used in computing the
 #' variance of the overall ATT.}
 #' \item{indep_counts_used}{Logical scalar; `TRUE` if a valid `indep_counts`
-#' argument was provided and used for asymptotically-exact ATT inference,
+#' argument was provided, so the cohort probabilities came from it, and
 #' `FALSE` otherwise.}
 #' \item{se_type}{Character scalar; the `se_type` argument the user passed
 #' (`"default"`, `"conservative"`, or `"cluster"`).}
@@ -484,8 +478,7 @@ twfeCovs <- function(
 #'     \item{X_ints}{The design matrix containing all interactions,
 #'       time and cohort dummies, etc. Same value as top-level `X_ints`.}
 #'     \item{y}{The vector of responses. Same as top-level `y`.}
-#'     \item{X_final}{The design matrix after the change-of-coordinates
-#'       step. Same as top-level `X_final`.}
+#'     \item{X_final}{Same as top-level `X_final`.}
 #'     \item{y_final}{The transformed response vector. Same as top-level
 #'       `y_final`.}
 #'     \item{calc_ses}{Logical indicating whether standard errors were

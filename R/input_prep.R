@@ -591,9 +591,8 @@ prep_for_etwfe_core <- function(
 #' @param sig_eps_c_sq Numeric scalar or \code{NA}.  Prespecified unit-level
 #'   random-effect variance component.  If \code{NA}, it will later be estimated.
 #' @param indep_counts Optional integer vector.  Cohort counts from an
-#'   independent sample used to obtain asymptotically exact SEs for the ATT.
-#'   Must have the same length and ordering as \code{in_sample_counts}.
-#'   Default is \code{NA}.
+#'   independent sample.  Must have the same length and ordering as
+#'   \code{in_sample_counts}.  Default is \code{NA}.
 #' @param verbose Logical.  Forwarded verbosity flag.  Default \code{FALSE}.
 #' @param alpha Numeric in \eqn{(0,1)}.  Significance level requested for
 #'   confidence intervals.  Default \code{0.05}.

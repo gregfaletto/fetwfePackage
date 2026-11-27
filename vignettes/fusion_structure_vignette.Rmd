@@ -114,9 +114,7 @@ the data-generating effects exactly, we can measure recovery error directly.
 We use the package's simulation utilities (`genCoefs()` / `simulateData()` /
 `fetwfeWithSimulatedData()`; see the *Simulation* vignette for a full tour). The
 treatment-effect coefficients occupy a known block of the coefficient vector;
-`fetwfe()` reports their positions in its `treat_inds` slot (see `?fetwfe`), and
-those positions depend only on the panel shape (`G` cohorts, `T` periods, `d`
-covariates):
+`fetwfe()` reports their positions in its `treat_inds` slot (see `?fetwfe`):
 
 ```{r}
 G <- 6L
@@ -277,16 +275,20 @@ blocks are unchanged).
 **cohort-major `(g, t)` order** the estimator uses for the treatment effects.
 Row/column `i` corresponds to base treatment effect `i`:
 
-- `num_treats = T * G - G * (G + 1) / 2` is the total number of base treatment
-  effects.
-- `getFirstInds(G, T)` returns, for each cohort `g`, the 1-based row of its
-  **first** effect `tau_{g, 0}`. Cohort `g` then occupies rows
-  `first_inds[g]:(first_inds[g + 1] - 1)` (the last cohort runs through
-  `num_treats`), ordered by event time within the cohort
-  (`tau_{g, 0}, tau_{g, 1}, ...`).
-- `getTreatInds(G, T, d, num_treats)` maps this block into the full
-  design-matrix columns; `fit$treat_inds` reports the same positions on a fitted
-  object.
+- The cohorts come in adoption order, and each cohort's effects come in
+  event-time order (`tau_{g, 0}, tau_{g, 1}, ...`).
+- A cohort first treated at position `k` among the `T` sorted periods has
+  `T - k + 1` effects, and `num_treats` is their total over the treated
+  cohorts. The periods and cohorts are those of the panel `fetwfe()` fits (see
+  the `treatment` and `allow_no_never_treated` entries of `?fetwfe`). The
+  simulator codes time `1, ..., T`, so on this panel the count is `sum(n_k)`,
+  with the `n_k` computed above. When the cohorts adopt in consecutive periods
+  `2, ..., G + 1`, the total is `T * G - G * (G + 1) / 2`.
+- Cohort `g` occupies rows `first_inds[g]:(first_inds[g + 1] - 1)` (the last
+  cohort runs through `num_treats`), where
+  `first_inds <- cumsum(c(1, head(n_k, -1)))`.
+- `fit$treat_inds` reports the positions of these effects in a fitted object's
+  `beta_hat`, so `length(fit$treat_inds)` is `num_treats`.
 
 Interpreting `D_N` as forward differences: `theta = D_N %*% beta` is the
 penalized (sparse) parameterization and `beta = solve(D_N) %*% theta` recovers
@@ -295,8 +297,8 @@ the original-scale effects. You supply `D_N`; the code uses `solve(D_N)`.
 ## Worked example
 
 We build `first_inds` from the per-cohort effect counts `n_k` (already computed
-above; no internal helper needed) so the matrix's cohort-major layout is
-explicit, then supply a custom `D_N` and refit. (This reuses the `sim` panel from
+above) so the matrix's cohort-major layout is explicit, then supply a custom
+`D_N` and refit. (This reuses the `sim` panel from
 the side-by-side demo above.)
 
 ```{r, message = FALSE, warning = FALSE}
