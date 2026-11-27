@@ -2889,7 +2889,7 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 
 # Shared post-prep assembly for the OLS estimator pair etwfe()/twfeCovs() (#270) --
 # the symmetric counterpart to .run_estimator_input_prep(). Runs the sequence the two
-# entry bodies share verbatim: rank check -> core fit -> ATT branch -> p-values ->
+# entry bodies share verbatim: core fit -> ATT branch -> p-values ->
 # variance components -> 35-field out-list -> $internal -> validator -> class<- ->
 # .finalize_ci_type(). The boundary deliberately STARTS at .check_cohort_rank_for_ols:
 # the prep call and arg-normalization (where #208/#266 warnings originate) stay in each
