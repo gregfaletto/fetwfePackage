@@ -348,7 +348,7 @@
 - The max-T adjusted p-values of the analytic simultaneous bands
   (`simultaneousCIs()$adjusted_p_values`, and the `catt_df` and `eventStudy()`
   p-values under `ci_type = "simultaneous"`) no longer fall below the pointwise
-  p-value or above its Bonferroni bound, and the bands' critical value stays
+  p-value or above its Bonferroni bound, and those bands' critical value stays
   between the pointwise and the Bonferroni critical values (#551).
 
 ### Internal
