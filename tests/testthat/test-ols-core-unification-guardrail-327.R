@@ -3,7 +3,7 @@
 # the NUMERIC output of etwfe() / twfeCovs() (which exercise the two OLS
 # cores end-to-end) across a fixture matrix.
 #
-# The fingerprint flattens every numeric output the cores produce (overall ATT --
+# The fingerprint flattens these numeric outputs of the cores (overall ATT --
 # including the asymptotically-exact two-sample ATT when indep_counts is supplied
 # (the c7_indep configs), which exercises the indep getTeResultsOLS() call -- the
 # full catt_df, and the coefficient vector) and reduces it to collision-resistant
