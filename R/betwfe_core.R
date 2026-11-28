@@ -366,14 +366,14 @@
 #'
 #'   # Average treatment effect on the treated units (in percentage point
 #'   # units)
-#'   100 * res$att_hat
+#'   print(100 * res$att_hat)
 #'
 #'   # 95% confidence interval for ATT (in percentage point units)
 #'
 #'   low_att <- 100 * (res$att_hat - qnorm(1 - 0.05 / 2) * res$att_se)
 #'   high_att <- 100 * (res$att_hat + qnorm(1 - 0.05 / 2) * res$att_se)
 #'
-#'   c(low_att, high_att)
+#'   print(c(low_att, high_att))
 #'
 #'   # Cohort average treatment effects and confidence intervals (in percentage
 #'   # point units)
