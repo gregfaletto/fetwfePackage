@@ -268,7 +268,12 @@ all-zeroed support returns the degenerate band.
 
 \strong{Numerical integration.} The critical value is computed via
 \code{mvtnorm::qmvnorm(..., algorithm = mvtnorm::GenzBretz())} (mvtnorm's default
-quasi-Monte Carlo integrator). \code{mvtnorm} is an
+quasi-Monte Carlo integrator). That critical value, and the adjusted p-values
+\code{mvtnorm::pmvnorm()} computes alongside it, are then kept within their exact
+bounds: \verb{[qnorm(1 - alpha/2), qnorm(1 - alpha/(2m))]} for the critical value,
+and \verb{[p, min(1, m * p)]} for each effect's adjusted p-value, where \code{p} is the
+effect's pointwise p-value and \code{m} the number of non-degenerate effects.
+\code{mvtnorm} is an
 \code{Imports} dependency (as of version 1.16.0, when simultaneous bands became
 the default reported confidence interval; see the \code{ci_type} argument of
 \code{\link[=fetwfe]{fetwfe()}}). The function uses it only when \code{K > 1} and the conservative
