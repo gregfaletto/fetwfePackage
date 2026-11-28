@@ -116,6 +116,8 @@ We use the package's simulation utilities (`genCoefs()` / `simulateData()` /
 treatment-effect coefficients occupy a known block of the coefficient vector;
 `fetwfe()` reports their positions in its `treat_inds` slot (see `?fetwfe`):
 
+<!-- A block in tests/testthat/test-gencoefs-fusion-structure-237.R pins this demo's draw and fits. -->
+
 ```{r}
 G <- 6L
 T <- 9L
