@@ -345,6 +345,12 @@
   cohort band are right on panels whose time codes do not step by 1, such as
   biennial, gapped or YYYYMM codes (#506).
 
+- The max-T adjusted p-values of the analytic simultaneous bands
+  (`simultaneousCIs()$adjusted_p_values`, and the `catt_df` and `eventStudy()`
+  p-values under `ci_type = "simultaneous"`) no longer fall below the pointwise
+  p-value or above its Bonferroni bound, and the bands' critical value stays
+  between the pointwise and the Bonferroni critical values (#551).
+
 ### Internal
 
 - The remaining six items of the test-power audit that followed the #400/#401
