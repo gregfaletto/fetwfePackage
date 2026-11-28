@@ -123,9 +123,9 @@ d <- 1L
 N <- 400L
 
 # Generate truth that is sparse in the event-study basis directly, with
-# fusion_structure = "event_study". seed 23 is a representative draw (see the
-# note after the plot); density 0.25 keeps the truth genuinely sparse in the
-# event-study basis.
+# fusion_structure = "event_study". seed 23 is a representative draw for
+# per-cell recovery (see the note after the plot); density 0.25 keeps the
+# truth genuinely sparse in the event-study basis.
 coefs <- genCoefs(
   G = G, T = T, d = d, density = 0.25, eff_size = 2, seed = 23,
   fusion_structure = "event_study"
@@ -232,7 +232,8 @@ on any single draw, even the direction --- depends on the simulated data: across
 event-study-sparse draws at this configuration the event-study penalty wins on
 roughly four out of five seeds, and it is the per-cell coefficient recovery
 above, not the aggregated profile, that captures that most reliably. The seed
-shown here is one representative such draw.)
+shown here is a representative draw for that per-cell recovery; the gap between
+the two profiles is wider here than on most draws.)
 
 # When to prefer each
 
