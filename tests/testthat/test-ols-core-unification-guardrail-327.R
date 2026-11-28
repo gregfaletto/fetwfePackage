@@ -2,11 +2,7 @@
 # unification (#327). The existing `_snaps` lock only PRINTED output; this pins
 # the full NUMERIC output of etwfe() / twfeCovs() (which exercise the two OLS
 # cores end-to-end) across a fixture matrix, so any future drift between the two
-# estimators is caught. (The
-# refactor is bit-identical by construction -- a pure reorganization with no
-# arithmetic change -- but we assert at testthat's default tolerance, which is
-# tight enough to catch any substantive regression while staying robust across
-# BLAS/platforms.)
+# estimators is caught.
 #
 # The fingerprint flattens every numeric output the cores produce (overall ATT --
 # including the asymptotically-exact two-sample ATT when indep_counts is supplied
