@@ -237,14 +237,17 @@ test_that("ci_low/ci_high/p_value follow ci_type; se/selected/ATT match", {
 	expect_equal(fit_s$catt_df$se, fit_p$catt_df$se)
 	# #200: p_value now ALSO follows ci_type -- simultaneous is the single-step
 	# max-T adjusted p-value, pointwise is the Wald p-value. They are NOT equal
-	# in general; the adjusted one is >= the pointwise one (multiplicity only
-	# widens). The detailed band/p-value duality lives in
+	# in general; the adjusted one lies between the pointwise one and its
+	# Bonferroni bound (#551). The detailed band/p-value duality lives in
 	# test-maxt-pvalues-200.R.
 	finite_p <- is.finite(fit_s$catt_df$p_value) &
 		is.finite(fit_p$catt_df$p_value)
+	expect_gte(sum(finite_p), 2L)
+	pw <- fit_p$catt_df$p_value[finite_p]
+	m <- sum(is.finite(fit_s$catt_df$p_value))
+	expect_true(all(fit_s$catt_df$p_value[finite_p] >= pw * (1 - 1e-6)))
 	expect_true(all(
-		fit_s$catt_df$p_value[finite_p] >=
-			fit_p$catt_df$p_value[finite_p] - 1e-9
+		fit_s$catt_df$p_value[finite_p] <= pmin(1, m * pw) * (1 + 1e-6)
 	))
 	expect_identical(fit_s$catt_df$selected, fit_p$catt_df$selected)
 	expect_equal(fit_s$catt_df$estimate, fit_p$catt_df$estimate)

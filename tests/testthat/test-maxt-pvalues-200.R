@@ -36,9 +36,11 @@ test_that(".maxt_adjusted_p_nd equals an independent pmvnorm recomputation", {
 
 	expect_equal(adj, indep, tolerance = 1e-12)
 
-	# Adjustment only widens, and is strictly visible for at least one effect.
+	# Each value lies between its pointwise p-value and its Bonferroni bound
+	# (#551), and the adjustment is strictly visible for at least one effect.
 	pw <- 2 * stats::pnorm(-abs(estimates / ses))
-	expect_true(all(adj >= pw - 1e-9))
+	expect_true(all(adj >= pw))
+	expect_true(all(adj <= pmin(1, K * pw)))
 	expect_true(any(adj > pw + 1e-4))
 })
 
@@ -71,7 +73,8 @@ test_that(".maxt_adjusted_p_nd is the exact dual of the qmvnorm critical value",
 })
 
 # ---------------------------------------------------------------------------
-# 3. Degenerate effects scatter to NA; non-degenerate slots are finite.
+# 3. Degenerate effects scatter to NA; each non-degenerate slot is finite and
+#    lies within its own effect's bounds (#551).
 # ---------------------------------------------------------------------------
 test_that(".maxt_adjusted_p_nd scatters NA into degenerate slots", {
 	skip_if_not_installed("mvtnorm")
@@ -87,6 +90,9 @@ test_that(".maxt_adjusted_p_nd scatters NA into degenerate slots", {
 	adj <- .maxt_adjusted_p_nd(estimates, ses, nondeg, rho_nd)
 	expect_true(all(is.na(adj[!nondeg])))
 	expect_true(all(!is.na(adj[nondeg])))
+	pw <- 2 * stats::pnorm(-abs(estimates / ses))
+	expect_true(all(adj[nondeg] >= pw[nondeg]))
+	expect_true(all(adj[nondeg] <= pmin(1, sum(nondeg) * pw[nondeg])))
 })
 
 # ---------------------------------------------------------------------------
@@ -121,13 +127,22 @@ test_that("catt_df p_value is the adjusted dual under simultaneous (cohort)", {
 	cd <- fit$catt_df
 	sci <- suppressMessages(simultaneousCIs(fit, family = "cohort"))
 
-	# Same source: the fit-time finalizer copies the worker's adjusted p.
-	expect_equal(cd$p_value, sci$adjusted_p_values)
-
+	# Same source: the fit-time finalizer copies the worker's adjusted p. The
+	# values reach the far tail, so they are compared as a ratio (#551).
 	fin <- is.finite(cd$p_value)
+	expect_identical(fin, is.finite(sci$adjusted_p_values))
 	expect_true(sum(fin) >= 2L) # fixture has >= 2 non-degenerate cohorts
+	expect_equal(
+		cd$p_value[fin] / sci$adjusted_p_values[fin],
+		rep(1, sum(fin)),
+		tolerance = 1e-6
+	)
+
+	# Between the pointwise p-value and its Bonferroni bound (#551).
 	pw <- 2 * stats::pnorm(-abs(cd$estimate / cd$se))
-	expect_true(all(cd$p_value[fin] >= pw[fin] - 1e-9))
+	m <- sum(fin)
+	expect_true(all(cd$p_value[fin] >= pw[fin] * (1 - 1e-6)))
+	expect_true(all(cd$p_value[fin] <= pmin(1, m * pw[fin]) * (1 + 1e-6)))
 
 	# Band duality: a cohort's band excludes 0 iff its adjusted p < alpha.
 	crit <- sci$critical_value
@@ -153,7 +168,7 @@ test_that("eventStudy p_value is adjusted under simultaneous, Wald under pointwi
 		es_p$p_value[fin],
 		(2 * stats::pnorm(-abs(es_p$estimate / es_p$se)))[fin]
 	)
-	expect_true(all(es_s$p_value[fin] >= es_p$p_value[fin] - 1e-9))
+	expect_true(all(es_s$p_value[fin] >= es_p$p_value[fin] * (1 - 1e-6)))
 })
 
 # ---------------------------------------------------------------------------
@@ -220,4 +235,262 @@ test_that("tidy() p.value matches catt_df p_value (cohort rows)", {
 	# the cohort p-values are the trailing nrow(catt_df) entries.
 	cohort_p <- tail(td$p.value, nrow(fit$catt_df))
 	expect_equal(cohort_p, fit$catt_df$p_value)
+})
+
+# ---------------------------------------------------------------------------
+# 10. Across the tail, each non-degenerate adjusted p-value lies between its
+#     pointwise p-value and its Bonferroni bound min(1, m * p), with
+#     m = sum(nondeg) (#551). Both sides are the same scalar arithmetic on the
+#     same inputs, so the bounds are asserted with no tolerance.
+# ---------------------------------------------------------------------------
+test_that(".maxt_adjusted_p_nd stays within [p, min(1, m p)] across the tail (#551)", {
+	skip_if_not_installed("mvtnorm")
+	equicorr <- function(r, k) {
+		rho <- matrix(r, k, k)
+		diag(rho) <- 1
+		rho
+	}
+	others <- c(1.8, 0.9, 3.1, 2.0)
+	ses <- rep(1, 5L)
+	slices <- list(
+		identity = list(nondeg = rep(TRUE, 5L), rho = equicorr(0, 5L)),
+		rho_045 = list(nondeg = rep(TRUE, 5L), rho = equicorr(0.45, 5L)),
+		rho_090 = list(nondeg = rep(TRUE, 5L), rho = equicorr(0.9, 5L)),
+		# A degenerate slot between non-degenerate ones, so that m = 4 < K = 5.
+		degenerate_slot = list(
+			nondeg = c(TRUE, FALSE, TRUE, TRUE, TRUE),
+			rho = equicorr(0.45, 4L)
+		)
+	)
+	for (nm in names(slices)) {
+		nondeg <- slices[[nm]]$nondeg
+		rho <- slices[[nm]]$rho
+		m <- sum(nondeg)
+		below_floor <- character(0)
+		above_cap <- character(0)
+		for (z1 in seq(3, 12, by = 0.25)) {
+			estimates <- c(z1, others)
+			set.seed(1)
+			adj <- .maxt_adjusted_p_nd(estimates, ses, nondeg, rho)
+			pw <- 2 * stats::pnorm(-abs(estimates / ses))
+			if (any(adj[nondeg] < pw[nondeg])) {
+				below_floor <- c(below_floor, format(z1))
+			}
+			if (any(adj[nondeg] > pmin(1, m * pw[nondeg]))) {
+				above_cap <- c(above_cap, format(z1))
+			}
+		}
+		# The z values, if any, at which a bound is broken.
+		expect_identical(below_floor, character(0), info = nm)
+		expect_identical(above_cap, character(0), info = nm)
+	}
+
+	# #551's own case: block 1's fixture with its first effect at z = 9.8.
+	K <- 5L
+	set.seed(1)
+	adj <- .maxt_adjusted_p_nd(
+		c(9.8, others),
+		ses,
+		rep(TRUE, K),
+		equicorr(0.45, K)
+	)
+	pw1 <- 2 * stats::pnorm(-9.8)
+	expect_gte(adj[1], pw1)
+	expect_lte(adj[1], K * pw1)
+})
+
+# ---------------------------------------------------------------------------
+# Shared fixture for blocks 11-13.
+# ---------------------------------------------------------------------------
+make_bounds_panel_551 <- function() {
+	sc <- genCoefs(G = 3, T = 5, density = 0.5, eff_size = 2, d = 2, seed = 1)
+	simulateData(sc, N = 120, sig_eps_sq = 0.5, sig_eps_c_sq = 0.5, seed = 1)
+}
+
+# Asserts that each finite entry of `p` lies within [pw, min(1, m * pw)] at a
+# relative tolerance of 1e-6, where pw is the pointwise p-value built from
+# `estimate` and `se`. Returns the finite mask.
+expect_p_within_bounds_551 <- function(p, estimate, se, m, label) {
+	pw <- 2 * stats::pnorm(-abs(estimate / se))
+	fin <- is.finite(p)
+	expect_true(all(p[fin] >= pw[fin] * (1 - 1e-6)), info = label)
+	expect_true(
+		all(p[fin] <= pmin(1, m * pw[fin]) * (1 + 1e-6)),
+		info = label
+	)
+	fin
+}
+
+# ---------------------------------------------------------------------------
+# 11. Integration (#551): every estimator's catt_df p-values, and the
+#     eventStudy() p-values of the three estimators that have one, lie within
+#     [p, min(1, m p)], with m the band's count of non-degenerate effects.
+# ---------------------------------------------------------------------------
+test_that("catt_df and eventStudy() p-values lie within [p, min(1, m p)] for every estimator (#551)", {
+	skip_if_not_installed("mvtnorm")
+	sim <- make_bounds_panel_551()
+	fits <- list(
+		fetwfe = fetwfeWithSimulatedData(sim),
+		etwfe = etwfeWithSimulatedData(sim),
+		betwfe = betwfeWithSimulatedData(sim),
+		twfeCovs = twfeCovsWithSimulatedData(sim)
+	)
+	for (nm in names(fits)) {
+		fit <- fits[[nm]]
+		cd <- fit$catt_df
+		sci <- suppressMessages(simultaneousCIs(fit, family = "cohort"))
+		m <- sum(is.finite(sci$adjusted_p_values))
+		expect_gte(m, 2L)
+		fin <- expect_p_within_bounds_551(
+			cd$p_value,
+			cd$estimate,
+			cd$se,
+			m,
+			paste(nm, "cohort")
+		)
+		# catt_df copies the band's p-values, so the counts match.
+		expect_identical(sum(fin), m, info = nm)
+		if (nm == "twfeCovs") {
+			next
+		}
+		es <- eventStudy(fit)
+		sci_es <- suppressMessages(simultaneousCIs(fit, family = "event_study"))
+		m_es <- sum(is.finite(sci_es$adjusted_p_values))
+		fin_es <- expect_p_within_bounds_551(
+			es$p_value,
+			es$estimate,
+			es$se,
+			m_es,
+			paste(nm, "event study")
+		)
+		expect_gte(sum(fin_es), 2L)
+	}
+
+	# The etwfe fit: cohort 3 sits in the far tail, and event time 2 is at most
+	# its Bonferroni bound.
+	cd <- fits$etwfe$catt_df
+	r3 <- as.character(cd$cohort) == "3"
+	expect_identical(sum(r3), 1L)
+	pw3 <- 2 * stats::pnorm(-abs(cd$estimate[r3] / cd$se[r3]))
+	expect_lt(pw3, 1e-20)
+
+	es <- eventStudy(fits$etwfe)
+	m_es <- sum(is.finite(
+		suppressMessages(simultaneousCIs(
+			fits$etwfe,
+			family = "event_study"
+		))$adjusted_p_values
+	))
+	r2 <- es$event_time == 2L
+	expect_identical(sum(r2), 1L)
+	pw2 <- 2 * stats::pnorm(-abs(es$estimate[r2] / es$se[r2]))
+	expect_lte(es$p_value[r2], min(1, m_es * pw2) * (1 + 1e-6))
+})
+
+# ---------------------------------------------------------------------------
+# 12. At a small alpha the analytic critical value is at most the Bonferroni
+#     critical value over the non-degenerate effects, and strictly above the
+#     pointwise one (#551).
+# ---------------------------------------------------------------------------
+test_that("the analytic critical value stays within its bounds at a small alpha (#551)", {
+	skip_if_not_installed("mvtnorm")
+	sim <- make_bounds_panel_551()
+	for (nm in c("etwfe", "fetwfe")) {
+		fit <- get(paste0(nm, "WithSimulatedData"))(sim)
+		sci <- suppressMessages(simultaneousCIs(
+			fit,
+			family = "event_study",
+			alpha = 0.001
+		))
+		m <- sum(is.finite(sci$adjusted_p_values))
+		expect_gte(m, 2L)
+		expect_identical(sci$alpha, 0.001)
+		expect_lte(sci$critical_value, stats::qnorm(1 - 0.001 / (2 * m)))
+		expect_lt(sci$pointwise_critical_value, sci$critical_value)
+	}
+})
+
+# simultaneousCIs() with mvtnorm::qmvnorm()'s quantile overwritten by `q`. The
+# real qmvnorm() still runs, so the RNG stream the adjusted p-values draw from
+# is unchanged.
+sci_with_forced_quantile_551 <- function(fit, family, q) {
+	real_qmvnorm <- mvtnorm::qmvnorm
+	testthat::with_mocked_bindings(
+		suppressMessages(simultaneousCIs(fit, family = family)),
+		qmvnorm = function(...) {
+			out <- real_qmvnorm(...)
+			out$quantile <- q
+			out
+		},
+		.package = "mvtnorm"
+	)
+}
+
+# ---------------------------------------------------------------------------
+# 13. A quantile forced past either end comes out as that end, the pointwise
+#     or the Bonferroni critical value over the m non-degenerate effects, and
+#     the band and the adjusted p-values still agree on every non-degenerate
+#     effect (#551). That agreement needs no such effect with its z in
+#     (qnorm(1 - alpha/2), qnorm(1 - alpha/(2m))], which is asserted first.
+# ---------------------------------------------------------------------------
+test_that("a forced quantile is clamped to its bounds, keeping band duality (#551)", {
+	skip_if_not_installed("mvtnorm")
+	sim <- make_bounds_panel_551()
+	fit <- etwfeWithSimulatedData(sim)
+	alpha <- fit$alpha
+	sci_hi <- sci_with_forced_quantile_551(fit, "event_study", 10)
+	sci_lo <- sci_with_forced_quantile_551(fit, "event_study", 1.5)
+	nd <- is.finite(sci_hi$adjusted_p_values)
+	m <- sum(nd)
+	lo <- stats::qnorm(1 - alpha / 2)
+	hi <- stats::qnorm(1 - alpha / (2 * m))
+
+	# Precondition, from eventStudy()'s own estimates and SEs.
+	es <- eventStudy(fit)
+	z <- abs(es$estimate / es$se)
+	expect_gte(m, 2L)
+	expect_identical(sum(is.finite(z)), m)
+	expect_false(any(z > lo & z <= hi, na.rm = TRUE))
+
+	expect_identical(sci_hi$critical_value, hi)
+	expect_identical(sci_lo$critical_value, lo)
+	for (sci in list(sci_hi, sci_lo)) {
+		excludes_zero <- sci$ci$simultaneous_ci_low > 0 |
+			sci$ci$simultaneous_ci_high < 0
+		expect_identical(
+			excludes_zero[nd],
+			sci$adjusted_p_values[nd] < alpha,
+			info = format(sci$critical_value)
+		)
+	}
+})
+
+# ---------------------------------------------------------------------------
+# 14. The upper end of the critical value's clamp counts the non-degenerate
+#     effects m, not the family size K (#551). On this panel the cohort family
+#     has a degenerate effect.
+# ---------------------------------------------------------------------------
+test_that("the critical value's upper bound counts the non-degenerate effects (#551)", {
+	skip_if_not_installed("mvtnorm")
+	coefs <- genCoefs(
+		G = 3,
+		T = 6,
+		d = 2,
+		density = 0.5,
+		eff_size = 2,
+		seed = 2026
+	)
+	sim <- simulateData(
+		coefs,
+		N = 120,
+		sig_eps_sq = 1,
+		sig_eps_c_sq = 0.5,
+		seed = 2026
+	)
+	fit <- fetwfeWithSimulatedData(sim)
+	sci <- sci_with_forced_quantile_551(fit, "cohort", 10)
+	m <- sum(is.finite(sci$adjusted_p_values))
+	expect_gte(m, 2L)
+	expect_lt(m, sci$K)
+	expect_identical(sci$critical_value, stats::qnorm(1 - fit$alpha / (2 * m)))
 })

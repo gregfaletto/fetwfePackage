@@ -266,7 +266,12 @@ utils::globalVariables(c(
 #'
 #' **Numerical integration.** The critical value is computed via
 #' `mvtnorm::qmvnorm(..., algorithm = mvtnorm::GenzBretz())` (mvtnorm's default
-#' quasi-Monte Carlo integrator). `mvtnorm` is an
+#' quasi-Monte Carlo integrator). That critical value, and the adjusted p-values
+#' `mvtnorm::pmvnorm()` computes alongside it, are then kept within their exact
+#' bounds: `[qnorm(1 - alpha/2), qnorm(1 - alpha/(2m))]` for the critical value,
+#' and `[p, min(1, m * p)]` for each effect's adjusted p-value, where `p` is the
+#' effect's pointwise p-value and `m` the number of non-degenerate effects.
+#' `mvtnorm` is an
 #' `Imports` dependency (as of version 1.16.0, when simultaneous bands became
 #' the default reported confidence interval; see the `ci_type` argument of
 #' [fetwfe()]). The function uses it only when `K > 1` and the conservative
@@ -1119,8 +1124,10 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 					algorithm = mvtnorm::GenzBretz()
 				)
 				# Single-step max-T adjusted p-values over the
-				# non-degenerate sub-family -- the exact dual of the qmvnorm
-				# band, in the same RNG-protected region.
+				# non-degenerate sub-family -- the exact dual of the band, in
+				# the same RNG-protected region. Both are kept within their exact
+				# bounds: see `.maxt_adjusted_p_nd()`'s @details, and the clamp
+				# below.
 				list(
 					crit = qmv$quantile,
 					adjusted_p_values = .maxt_adjusted_p_nd(
@@ -1131,7 +1138,12 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 					)
 				)
 			})
-			crit <- rng_out$crit
+			# Clamp to the exact bounds on the max-T quantile, the pointwise
+			# critical value and the Bonferroni one over the non-degenerate
+			# effects: the duals of `.maxt_adjusted_p_nd()`'s bounds, so the
+			# band and the adjusted p-values stay duals (#551).
+			bonferroni_crit_nd <- stats::qnorm(1 - alpha / (2 * sum(nondeg)))
+			crit <- min(bonferroni_crit_nd, max(pointwise_crit, rng_out$crit))
 			adjusted_p_values <- rng_out$adjusted_p_values
 		}
 	} else {
@@ -1214,7 +1226,9 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 #' @title Single-step max-T multiplicity-adjusted p-values
 #' @description Computes the single-step max-T (family-wise) adjusted p-value for
 #'   each non-degenerate effect in a family, the exact dual of the simultaneous
-#'   band's `mvtnorm::qmvnorm()` critical value. For effect `k` with standardized
+#'   band's critical value. Both are kept within their exact bounds: see the
+#'   details below, and the critical-value clamp in `.simultaneous_cis_impl()`.
+#'   For effect `k` with standardized
 #'   statistic `z_k = estimate_k / se_k`, the adjusted p-value is
 #'   `1 - P(max_j |Z_j| <= |z_k|)` for `Z ~ N(0, rho)`, evaluated via
 #'   `mvtnorm::pmvnorm()` over the **same** non-degenerate correlation matrix the
@@ -1229,8 +1243,15 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 #' @return Numeric vector of length `K`: the adjusted p-value for each
 #'   non-degenerate effect, `NA_real_` for degenerate effects.
 #' @details Must be called inside the caller's `.Random.seed` save/restore region
-#'   (it consumes RNG via `mvtnorm::GenzBretz()`). The result is clamped to
-#'   `[0, 1]` to absorb the quasi-Monte-Carlo integration noise.
+#'   (it consumes RNG via `mvtnorm::GenzBretz()`). Each value is clamped to
+#'   `[p_k, min(1, m * p_k)]`, where `p_k = 2 * pnorm(-|z_k|)` is the effect's
+#'   pointwise p-value and `m = sum(nondeg)`. Both ends are exact bounds for any
+#'   correlation matrix: the event `max_j |Z_j| >= |z_k|` contains
+#'   `|Z_k| >= |z_k|` (the floor), and is the union of the `m` events
+#'   `|Z_j| >= |z_k|`, each of probability `p_k` (the cap). The clamp absorbs the
+#'   quasi-Monte-Carlo integration error, which can carry the estimate past
+#'   either bound where it is small, and the cancellation of `1 - pmvnorm()` to
+#'   exactly 0 at large `|z_k|` (#551).
 #' @keywords internal
 #' @noRd
 .maxt_adjusted_p_nd <- function(estimates, ses, nondeg, rho) {
@@ -1239,6 +1260,7 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 	nd_idx <- which(nondeg)
 	m <- length(nd_idx)
 	z <- abs(estimates[nd_idx] / ses[nd_idx])
+	pw <- .compute_p_values(estimates[nd_idx], ses[nd_idx])
 	for (j in seq_len(m)) {
 		prob <- mvtnorm::pmvnorm(
 			lower = rep(-z[j], m),
@@ -1246,7 +1268,10 @@ simultaneousCIs.twfeCovs <- simultaneousCIs.fetwfe
 			corr = rho,
 			algorithm = mvtnorm::GenzBretz()
 		)
-		adj[nd_idx[j]] <- min(1, max(0, 1 - as.numeric(prob)))
+		adj[nd_idx[j]] <- min(
+			min(1, m * pw[j]),
+			max(pw[j], 1 - as.numeric(prob))
+		)
 	}
 	adj
 }
