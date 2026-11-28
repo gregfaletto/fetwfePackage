@@ -75,7 +75,7 @@ The default analytic path matches `did::aggte(cband = TRUE)` from the Callaway-S
 
 ## The multiplier-bootstrap method: `method = "bootstrap"`
 
-`simultaneousCIs(..., method = "bootstrap")` computes the same sup-t critical value by the CCK (2013) multiplier bootstrap directly --- the procedure `did` uses. It perturbs the per-unit influence functions $\hat f_i^{(k)}$ with random multipliers $\xi_i$ (`multiplier = "rademacher"` or `"mammen"`), forms $T^{(b)} = \max_k |\frac{1}{N}\sum_i \xi_i \hat f_i^{(k)}| / \widehat{\mathrm{sd}}_k$ over $B$ replicates, and takes the $(1-\alpha)$ quantile. The analytic and bootstrap critical values agree up to Monte-Carlo error, and both sit between the pointwise and Bonferroni values:
+`simultaneousCIs(..., method = "bootstrap")` computes the same sup-t critical value by the CCK (2013) multiplier bootstrap directly --- the procedure `did` uses. It perturbs the per-unit influence functions $\hat f_i^{(k)}$ with random multipliers $\xi_i$ (`multiplier = "rademacher"` or `"mammen"`), forms $T^{(b)} = \max_k |\frac{1}{N}\sum_i \xi_i \hat f_i^{(k)}| / \widehat{\mathrm{sd}}_k$ over $B$ replicates, and takes the $(1-\alpha)$ quantile. The analytic and bootstrap critical values agree up to Monte-Carlo error:
 
 ```{r}
 sci_boot <- simultaneousCIs(res_default, family = "all_post_treatment",
