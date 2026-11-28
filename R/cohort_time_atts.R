@@ -35,9 +35,9 @@
 #' call time from the fit's stored design (the same Gram-matrix machinery
 #' [eventStudy()] uses; nothing is added to the fitted object). Because each
 #' cell is a single cohort-time parameter, the cohort-probability sampling
-#' variance that contributes to the aggregated [cohortStudy()] /
-#' [eventStudy()] standard errors is identically zero here, so a cell's SE is a
-#' single coefficient's regression SE.
+#' variance that contributes to [eventStudy()]'s pooled standard errors
+#' is identically zero here, so a cell's SE is a single coefficient's
+#' regression SE.
 #'
 #' Confidence intervals and p-values are \emph{pointwise} \eqn{1 - \alpha} Wald
 #' quantities (`estimate +/- z * se`). For simultaneous (family-wise) bands

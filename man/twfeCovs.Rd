@@ -281,9 +281,6 @@ data(castle)
 castle$l_homicide <- log(castle$homicide)
 castle$treated <- as.integer(castle$cdl > 0)
 
-# No `covs` here: twfeCovs is pure OLS (no bridge penalty), and castle's
-# smallest adoption cohorts contain a single state, so the design is
-# rank-deficient once any covariate is added.
 res <- twfeCovs(
     pdata = castle,
     time_var = "year",

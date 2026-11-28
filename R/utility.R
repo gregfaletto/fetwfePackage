@@ -2825,15 +2825,8 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 #'   from the never-treated cohort through the `G` treated cohorts) and
 #'   `stop()`s -- or `warning()`s when `add_ridge = TRUE` -- if any cohort
 #'   contains fewer than `d + 1` units. The condition forces rank
-#'   deficiency in the OLS-style estimators (etwfe / twfeCovs) because
-#'   each cohort's within-cohort regression needs at least `d + 1` units
-#'   to identify `d` covariates plus an intercept.
-#'
-#'   Extracted from `R/fetwfe.R` (the `etwfe()` wrapper) and
-#'   `R/twfeCovs.R` (the `twfeCovs()` wrapper). Pre-#119, these two sites
-#'   carried drifted wording ("is rank-deficient" vs "may be rank-
-#'   deficient"); this helper converges on the stronger etwfe wording --
-#'   the mathematically-accurate one.
+#'   deficiency in `etwfe()`'s design; `twfeCovs()` skips the check (see
+#'   `.assemble_ols_estimator()`, #395).
 #' @param in_sample_counts Integer vector of length `G + 1`; the per-cohort
 #'   unit counts including the never-treated reference cohort.
 #' @param G Integer; number of treated cohorts.
@@ -2896,7 +2889,7 @@ sse_bridge <- function(eta_hat, beta_hat, y, X_mod, N, T) {
 
 # Shared post-prep assembly for the OLS estimator pair etwfe()/twfeCovs() (#270) --
 # the symmetric counterpart to .run_estimator_input_prep(). Runs the sequence the two
-# entry bodies share verbatim: rank check -> core fit -> ATT branch -> p-values ->
+# entry bodies share verbatim: core fit -> ATT branch -> p-values ->
 # variance components -> 35-field out-list -> $internal -> validator -> class<- ->
 # .finalize_ci_type(). The boundary deliberately STARTS at .check_cohort_rank_for_ols:
 # the prep call and arg-normalization (where #208/#266 warnings originate) stay in each

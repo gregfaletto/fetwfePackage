@@ -31,7 +31,7 @@ A companion vignette covers the rest of the package's inference toolkit:
 
 # 1. The headline: tight Gaussian CIs by default under (Ψ-IF)
 
-By default, the package's standard errors --- the `att_se` slot on the returned object and the entries of `catt_ses` --- are the *tight Gaussian variance* from the paper's Theorem `te.asym.norm.thm`(c$'$), valid under the influence-function condition (Ψ-IF) (Faletto 2025, [arXiv:2312.05985](https://arxiv.org/abs/2312.05985), Assumption (Ψ-IF) at paper Eq. `psi.if.assum`). The combined ATT variance has two pieces,
+By default, the package's overall-ATT standard error --- the `att_se` slot on the returned object --- is the *tight Gaussian variance* from the paper's Theorem `te.asym.norm.thm`(c$'$), valid under the influence-function condition (Ψ-IF) (Faletto 2025, [arXiv:2312.05985](https://arxiv.org/abs/2312.05985), Assumption (Ψ-IF) at paper Eq. `psi.if.assum`). The combined ATT variance has two pieces,
 
 $$
 V_1 \;=\; \sigma_\varepsilon^2 \, \boldsymbol{\alpha}^\top \boldsymbol{\Sigma}^{-1} \boldsymbol{\alpha},
@@ -59,7 +59,7 @@ $$
 \,\right]
 $$
 
-per paper Eq. `conf.int.form`. The same combined variance backs the per-cohort entries of `catt_ses` and the `catt_df` confidence-interval columns.
+per paper Eq. `conf.int.form`. The per-cohort `catt_ses` carry only the first piece, in the form Section 2.1 gives, and so do the `catt_df` bounds built from them. Under the default `ci_type = "simultaneous"`, those bounds are the cohort-family simultaneous band rather than `estimate ± z * se`.
 
 ## 1.1 Which propensity-score estimators satisfy (Ψ-IF)?
 
@@ -195,7 +195,7 @@ For FETWFE and BETWFE, `se_type = "cluster"` is only meaningful when `q < 1` (th
 
 The CR1 sandwich is a textbook estimator and the package's implementation matches `sandwich::vcovCL()` to numerical precision on a clean panel without selection. What is *not* yet covered by the paper's theory is:
 
-* Verification that the bridge oracle property of Theorem 6.2 still holds under the relaxed covariance structure that motivates cluster-robust SEs in the first place.
+* Verification that the bridge oracle property of Theorem 6.3 still holds under the relaxed covariance structure that motivates cluster-robust SEs in the first place.
 * Sandwich consistency *after model selection*, i.e., that the CR1 sandwich evaluated at the bridge-selected support is a consistent estimator of the true asymptotic variance.
 
 These extensions are mechanically routine but conceptually non-trivial, and they are explicitly outside the package's current scope. Until they land, `se_type = "cluster"` is exposed as an opt-in, clearly-labelled experimental feature.
@@ -205,12 +205,27 @@ These extensions are mechanically routine but conceptually non-trivial, and they
 ## 3.3 Worked cluster comparison
 
 ```{r}
-res_cluster <- fetwfeWithSimulatedData(sim_data, se_type = "cluster")
+res_cluster <- fetwfe(
+  pdata = sim_data$pdata,
+  time_var = sim_data$time_var,
+  unit_var = sim_data$unit_var,
+  treatment = sim_data$treatment,
+  covs = sim_data$covs,
+  response = sim_data$response,
+  sig_eps_sq = sim_data$sig_eps_sq,
+  sig_eps_c_sq = sim_data$sig_eps_c_sq,
+  se_type = "cluster"
+)
 
 c(
   default = res_default$att_se,
   cluster = res_cluster$att_se
 )
+```
+
+```{r, include = FALSE}
+# Same fit as res_default apart from se_type.
+stopifnot(isTRUE(all.equal(res_default$att_hat, res_cluster$att_hat)))
 ```
 
 On this F1-conforming simulated panel the two SEs are similar by construction: the data-generating process satisfies F1, so the model-based SE is already valid and the cluster-robust SE estimates the same underlying variance. Under a deliberately serially-correlated DGP (or under heteroskedasticity, or higher-level clustering) the cluster-robust SE will typically be larger.
@@ -229,11 +244,7 @@ As of v1.13.0, `fetwfe()` and `betwfe()` select the bridge penalty `lambda` via 
 
 The `lambda_star` and `lambda_star_model_size` result slots are populated identically under both selection paths; only the underlying selection criterion differs. The CV path stores its provenance in three new top-level slots: `lambda_selection`, `cv_folds`, and `cv_seed`. The seed defaults to `as.integer(N * T)` so consecutive calls on the same dataset are reproducible without the user having to specify a seed.
 
-To select `lambda` by BIC instead, pass `lambda_selection = "bic"`:
-
-```r
-fit_bic <- fetwfe(..., lambda_selection = "bic")
-```
+`lambda_selection = "bic"` remains available for backward compatibility only.
 
 To control the CV fold assignment explicitly, pass `cv_folds` and/or `cv_seed`:
 

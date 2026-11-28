@@ -253,14 +253,9 @@ test_that("event_study differs from cohort at d=0 and d>0; slot stored/printed; 
 
 test_that("event_study recovers native event-study truth better than cohort (#237)", {
 	skip_on_cran()
-	# Deterministic, single-seed check pinned to the SAME seed/shape the
-	# fusion_structure vignette discloses (seed 10, density 0.25, G=6/T=9/d=1,
-	# N=400). On this representative event-study-sparse draw, fitting with the
-	# event-study penalty recovers the per-cell treatment effects with lower
-	# MSE than the default cohort penalty. The truth is generated NATIVELY via
-	# fusion_structure = "event_study" (no hand-built profile). Across-seed
-	# robustness (~80% win at this configuration) is documented in the #237
-	# plan; this asserts the pinned showcase seed reproducibly wins.
+	# Pinned to the shape, seeds and fits of the fusion_structure vignette's
+	# side-by-side demo, with the truth generated natively by
+	# fusion_structure = "event_study".
 	G <- 6L
 	T <- 9L
 	d <- 1L
@@ -279,7 +274,7 @@ test_that("event_study recovers native event-study truth better than cohort (#23
 		d = d,
 		density = 0.25,
 		eff_size = 2,
-		seed = 10,
+		seed = 23,
 		fusion_structure = "event_study"
 	)
 	true_te <- co$beta[treat_inds]
@@ -290,15 +285,11 @@ test_that("event_study recovers native event-study truth better than cohort (#23
 		N = N,
 		sig_eps_sq = 1,
 		sig_eps_c_sq = 0.5,
-		seed = 10
+		seed = 23
 	)
-	fit_cohort <- suppressWarnings(fetwfeWithSimulatedData(
-		sim,
-		lambda_selection = "bic"
-	))
+	fit_cohort <- suppressWarnings(fetwfeWithSimulatedData(sim))
 	fit_event <- suppressWarnings(fetwfeWithSimulatedData(
 		sim,
-		lambda_selection = "bic",
 		fusion_structure = "event_study"
 	))
 
