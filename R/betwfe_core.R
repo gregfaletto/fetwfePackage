@@ -355,7 +355,7 @@
 #'   castle$treated <- as.integer(castle$cdl > 0)
 #'
 #'   # On this panel betwfe's bridge penalty selects every cohort out, so the
-#'   # estimated ATT and cohort effects below are all zero.
+#'   # estimates and intervals below are all zero.
 #'   res <- betwfe(
 #'       pdata = castle,
 #'       time_var = "year",
