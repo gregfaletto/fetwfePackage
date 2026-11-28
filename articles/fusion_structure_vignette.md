@@ -128,11 +128,10 @@ d <- 1L
 N <- 400L
 
 # Generate truth that is sparse in the event-study basis directly, with
-# fusion_structure = "event_study". seed 10 is a representative draw (see the
-# note after the plot); density 0.25 keeps the truth genuinely sparse in the
-# event-study basis.
+# fusion_structure = "event_study", at seed 23 (see the note after the plot);
+# density 0.25 keeps the truth genuinely sparse in the event-study basis.
 coefs <- genCoefs(
-  G = G, T = T, d = d, density = 0.25, eff_size = 2, seed = 10,
+  G = G, T = T, d = d, density = 0.25, eff_size = 2, seed = 23,
   fusion_structure = "event_study"
 )
 
@@ -153,17 +152,16 @@ event_time <- unlist(lapply(n_k, function(nk) 0:(nk - 1)))
 # The true per-cell treatment effects, generated natively (not hand-built).
 true_te <- coefs$beta[treat_inds]
 
-sim <- simulateData(coefs, N = N, sig_eps_sq = 1, sig_eps_c_sq = 0.5, seed = 10)
+sim <- simulateData(coefs, N = N, sig_eps_sq = 1, sig_eps_c_sq = 0.5, seed = 23)
 ```
 
 Now fit the same simulated panel under each fusion structure:
 
 ``` r
 
-fit_cohort <- fetwfeWithSimulatedData(sim, lambda_selection = "bic")
+fit_cohort <- fetwfeWithSimulatedData(sim)
 fit_event <- fetwfeWithSimulatedData(
   sim,
-  lambda_selection = "bic",
   fusion_structure = "event_study"
 )
 
@@ -182,11 +180,11 @@ mse <- function(fit) mean((fit$beta_hat[treat_inds] - true_te)^2)
 errs <- c(cohort = mse(fit_cohort), event_study = mse(fit_event))
 round(errs, 3)
 #>      cohort event_study 
-#>       0.013       0.004
+#>       0.141       0.071
 ```
 
 On this panel the event-study penalty cuts the per-cell recovery error
-by about 67%. The advantage is exactly what we should expect: the truth
+by about 50%. The advantage is exactly what we should expect: the truth
 *is* an event-study structure, so pooling effects across cohorts at each
 event time pools the right things, while the default penalty spends
 effort smoothing across cohorts and calendar time that the truth does
@@ -253,7 +251,8 @@ on the simulated data: across event-study-sparse draws at this
 configuration the event-study penalty wins on roughly four out of five
 seeds, and it is the per-cell coefficient recovery above, not the
 aggregated profile, that captures that most reliably. The seed shown
-here is one representative such draw.)
+here is a median draw for that cut in per-cell recovery error; the gap
+between the two profiles is wider here than on most draws.)
 
 ## When to prefer each
 
@@ -357,13 +356,12 @@ for (k in seq_along(first_inds)) {
 
 fit_custom <- fetwfeWithSimulatedData(
   sim,
-  lambda_selection = "bic",
   fusion_matrix = D_N
 )
 
 # A finite, well-formed fit; the custom block was used throughout.
 fit_custom$att_hat
-#> [1] 0.6717676
+#> [1] -1.316049
 ```
 
 A genuinely bespoke `D_N` — one that fuses your own set of effects (for
@@ -400,7 +398,7 @@ which usually means a better-conditioned `D_N` would serve you better.
 near_singular <- diag(num_treats)
 near_singular[1, 1] <- 1e-12
 fit_warned <- tryCatch(
-  fetwfeWithSimulatedData(sim, lambda_selection = "bic", fusion_matrix = near_singular),
+  fetwfeWithSimulatedData(sim, fusion_matrix = near_singular),
   warning = function(w) conditionMessage(w)
 )
 # The warning message (estimation still succeeds if you allow the warning):

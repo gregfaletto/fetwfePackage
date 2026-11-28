@@ -71,8 +71,8 @@ Faletto</h4>
 </h2>
 <p>The <a href="https://gregfaletto.github.io/fetwfePackage/">fetwfe</a> package implements <code><a href="../reference/fetwfe.html">fetwfe()</a></code> as
 its recommended estimator for difference-in-differences with staggered
-adoptions. It also exports two related estimators that serve as
-comparison baselines:</p>
+adoptions. It also exports related estimators that serve as comparison
+baselines, among them the two this vignette covers:</p>
 <ul>
 <li>
 <code><a href="../reference/etwfe.html">etwfe()</a></code> — Wooldridge-style extended two-way fixed
@@ -88,11 +88,17 @@ of the recommended <code><a href="../reference/fetwfe.html">fetwfe()</a></code> 
 For the underlying simulation pipeline used here, see <a href="https://CRAN.R-project.org/package=fetwfe" class="external-link">the simulation
 vignette</a>. For methodological details, see <a href="https://arxiv.org/abs/2312.05985" class="external-link">Faletto (2025)</a>.</p>
 <p>All three estimators (<code><a href="../reference/fetwfe.html">fetwfe()</a></code>, <code><a href="../reference/etwfe.html">etwfe()</a></code>,
-<code><a href="../reference/betwfe.html">betwfe()</a></code>) accept the same call signature, so a user
-familiar with <code><a href="../reference/fetwfe.html">fetwfe()</a></code> can drop in <code><a href="../reference/etwfe.html">etwfe()</a></code> or
-<code><a href="../reference/betwfe.html">betwfe()</a></code> simply by changing the function name. Below we use
-the <code>*WithSimulatedData()</code> wrappers to keep the simulation
-flow concise.</p>
+<code><a href="../reference/betwfe.html">betwfe()</a></code>) share their data and inference arguments, so a
+user familiar with <code><a href="../reference/fetwfe.html">fetwfe()</a></code> can switch estimators mostly by
+changing the function name. <code><a href="../reference/etwfe.html">etwfe()</a></code> has none of
+<code>q</code>, <code>lambda.max</code>, <code>lambda.min</code>,
+<code>nlambda</code>, <code>lambda_selection</code>,
+<code>cv_folds</code>, <code>cv_seed</code>,
+<code>fusion_structure</code>, <code>fusion_matrix</code> or
+<code>gls</code>, and <code><a href="../reference/betwfe.html">betwfe()</a></code> has none of
+<code>fusion_structure</code>, <code>fusion_matrix</code> or
+<code>gls</code>. Below we use the <code>*WithSimulatedData()</code>
+wrappers to keep the simulation flow concise.</p>
 </div>
 <div class="section level2">
 <h2 id="setup-simulating-panel-data">Setup: simulating panel data<a class="anchor" aria-label="anchor" href="#setup-simulating-panel-data"></a>

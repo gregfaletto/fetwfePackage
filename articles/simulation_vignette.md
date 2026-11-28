@@ -56,7 +56,7 @@ vignette
 In this example we set:
 
 - **G** (number of treated cohorts) = 3
-- **T** (number of time periods) = 6
+- **T** (number of time periods) = 4
 - **d** (number of covariates) = 2  
 - **density** (sparsity level) = 0.1  
 - **eff_size** (effect‐size multiplier) = 2
@@ -131,7 +131,8 @@ head(sim_data$pdata)
 We then run the estimator on the simulated data using
 [`fetwfeWithSimulatedData()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfeWithSimulatedData.md).
 (We could get the same results by manually unpacking `sim_data` and
-passing the arguments appropriately to `fewtfe()`.
+passing the arguments appropriately to
+[`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md).
 [`fetwfeWithSimulatedData()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfeWithSimulatedData.md)
 is just a wrapper function that takes care of this for us.)
 

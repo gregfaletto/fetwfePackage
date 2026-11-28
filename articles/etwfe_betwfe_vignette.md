@@ -11,8 +11,8 @@ The [fetwfe](https://gregfaletto.github.io/fetwfePackage/) package
 implements
 [`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)
 as its recommended estimator for difference-in-differences with
-staggered adoptions. It also exports two related estimators that serve
-as comparison baselines:
+staggered adoptions. It also exports related estimators that serve as
+comparison baselines, among them the two this vignette covers:
 
 - [`etwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/etwfe.md)
   — Wooldridge-style extended two-way fixed effects.
@@ -37,14 +37,16 @@ All three estimators
 ([`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md),
 [`etwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/etwfe.md),
 [`betwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/betwfe.md))
-accept the same call signature, so a user familiar with
+share their data and inference arguments, so a user familiar with
 [`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)
-can drop in
+can switch estimators mostly by changing the function name.
 [`etwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/etwfe.md)
-or
+has none of `q`, `lambda.max`, `lambda.min`, `nlambda`,
+`lambda_selection`, `cv_folds`, `cv_seed`, `fusion_structure`,
+`fusion_matrix` or `gls`, and
 [`betwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/betwfe.md)
-simply by changing the function name. Below we use the
-`*WithSimulatedData()` wrappers to keep the simulation flow concise.
+has none of `fusion_structure`, `fusion_matrix` or `gls`. Below we use
+the `*WithSimulatedData()` wrappers to keep the simulation flow concise.
 
 ## Setup: simulating panel data
 

@@ -69,8 +69,9 @@ simultaneousCIs(
   `twfeCovs`). Ignored for the other families. Note that the `"custom"`
   family omits the cohort-probability variance term (`Sigma_2 = 0`), so
   a custom contrast that pools across cohorts in a probability-weighted
-  way is anti-conservative (its band can under-cover); use
-  `family = "cohort"` for cohort-pooled effects.
+  way is anti-conservative (its band can under-cover). Only
+  `family = "event_study"` carries that term, for event-time effects
+  pooled across cohorts; no family adds it to a custom contrast.
 
 - method:
 
@@ -368,8 +369,13 @@ RNG-using code observes no perturbation.
 
 ## References
 
+Chernozhukov, V., Chetverikov, D., & Kato, K. (2013). Gaussian
+Approximations and Multiplier Bootstrap for Maxima of Sums of
+High-Dimensional Random Vectors. *The Annals of Statistics* 41(6),
+2786-2819.
+
 Faletto, G. (2025). Fused Extended Two-Way Fixed Effects for
-Difference-in- Differences with Staggered Adoptions. arXiv:2312.05985.
+Difference-in-Differences with Staggered Adoptions. arXiv:2312.05985.
 
 Hothorn, T., Bretz, F., & Westfall, P. (2008). Simultaneous Inference in
 General Parametric Models. *Biometrical Journal* 50(3), 346-363.

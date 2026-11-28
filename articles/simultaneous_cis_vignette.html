@@ -291,13 +291,14 @@ bootstrap automatically switches to the full-design
 <strong>desparsified</strong> construction (the high-dimensional FETWFE
 theory): each effect’s debiasing direction becomes a nodewise
 (<code>riesz_lasso</code>) relaxed inverse over the singular Gram, with
-the bridge residuals. This is <em>uniformly valid</em> (not
-post-selection) and is the only route to simultaneous bands in that
-regime. It is validated in simulation (<code><a href="../reference/fetwfe.html">fetwfe()</a></code> fits only):
-the scalar overall-ATT coverage (Theorem
-<code>debiased.highdim.thm</code>) and the family-wise <em>band</em>
-coverage (Theorem <code>debiased.highdim.joint.thm</code>, ≈0.92 over
-the event-study family at the
+the residuals of a separate, cross-validated <code>q = 1</code> (fused
+lasso) nuisance fit on the same design, not the fit’s own bridge
+estimate. This is <em>uniformly valid</em> (not post-selection) and is
+the only route to simultaneous bands in that regime. It is validated in
+simulation (<code><a href="../reference/fetwfe.html">fetwfe()</a></code> fits only): the scalar overall-ATT
+coverage (Theorem <code>debiased.highdim.thm</code>) and the family-wise
+<em>band</em> coverage (Theorem <code>debiased.highdim.joint.thm</code>,
+≈0.92 over the event-study family at the
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>&gt;</mo><mi>N</mi><mi>T</mi></mrow><annotation encoding="application/x-tex">p &gt; NT</annotation></semantics></math>
 anchor of Faletto 2025) are both near-nominal, so the returned object
 carries a <code>regime</code> field and per-effect
@@ -609,6 +610,10 @@ specifications land.</p>
 <div class="section level2">
 <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
 </h2>
+<p>Chernozhukov, V., Chetverikov, D., and Kato, K. (2013). “Gaussian
+Approximations and Multiplier Bootstrap for Maxima of Sums of
+High-Dimensional Random Vectors.” <em>The Annals of Statistics</em>
+41(6), 2786–2819.</p>
 <p>Faletto, G. (2025). “Fused Extended Two-Way Fixed Effects for
 Difference-in-Differences with Staggered Adoptions.” <em>arXiv
 preprint</em> <a href="https://arxiv.org/abs/2312.05985" class="external-link">arXiv:2312.05985</a>.</p>

@@ -616,6 +616,9 @@ Mixed-Effects Models Using lme4. *Journal of Statistical Software*,
 67(1), 1-48.
 [doi:10.18637/jss.v067.i01](https://doi.org/10.18637/jss.v067.i01) .
 
+Kock, A. B. (2013). Oracle Efficient Variable Selection in Random and
+Fixed Effects Panel Data Models. *Econometric Theory*, 29(1), 115-152.
+
 Patterson, H. D., & Thompson, R. (1971). Recovery of inter-block
 information when block sizes are unequal. *Biometrika*, 58(3), 545-554.
 
@@ -638,9 +641,7 @@ if (requireNamespace("bacondecomp", quietly = TRUE)) {
 
   # Response: the log homicide rate. Treatment: `cdl` records the share of
   # the year the castle-doctrine law was in effect, so `cdl > 0` gives the
-  # absorbing 0/1 treatment indicator. No `covs`: castle's smallest
-  # adoption cohorts contain a single state, so the design is
-  # rank-deficient once any covariate is added.
+  # absorbing 0/1 treatment indicator.
   castle$l_homicide <- log(castle$homicide)
   castle$treated <- as.integer(castle$cdl > 0)
 
@@ -679,12 +680,12 @@ if (requireNamespace("bacondecomp", quietly = TRUE)) {
 #> No covariates provided; skipping covariate processing.
 #> Getting omega sqrt inverse estimate...
 #> Done! Time to estimate noise variances:
-#> 0.154556274414062
+#> 0.177162408828735
 #> Time to get sqrt inverse matrix:
-#> 0.000210046768188477
+#> 0.00020599365234375
 #> Estimating bridge regression with 10-fold CV...
 #> Done! Time for estimation:
-#> 0.0597500801086426
+#> 0.0642096996307373
 #> No treatment features selected; all treatment effects estimated to be 0.
 #>   cohort estimate se ci_low ci_high p_value selected
 #> 1   2005        0  0      0       0      NA    FALSE

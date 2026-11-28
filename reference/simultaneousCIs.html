@@ -133,8 +133,9 @@ is the number of estimated effects, equal to <code>G</code> for <code>twfeCovs</
 for the other families. Note that the <code>"custom"</code> family omits the
 cohort-probability variance term (<code>Sigma_2 = 0</code>), so a custom contrast
 that pools across cohorts in a probability-weighted way is
-anti-conservative (its band can under-cover); use <code>family = "cohort"</code> for
-cohort-pooled effects.</p></dd>
+anti-conservative (its band can under-cover). Only <code>family = "event_study"</code>
+carries that term, for event-time effects pooled across cohorts; no family
+adds it to a custom contrast.</p></dd>
 
 
 <dt id="arg-method">method<a class="anchor" aria-label="anchor" href="#arg-method"></a></dt>
@@ -380,8 +381,12 @@ and downstream RNG-using code observes no perturbation.</p>
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
-    <p>Faletto, G. (2025). Fused Extended Two-Way Fixed Effects for Difference-in-
-Differences with Staggered Adoptions. arXiv:2312.05985.</p>
+    <p>Chernozhukov, V., Chetverikov, D., &amp; Kato, K. (2013). Gaussian
+Approximations and Multiplier Bootstrap for Maxima of Sums of
+High-Dimensional Random Vectors. <em>The Annals of Statistics</em> 41(6),
+2786-2819.</p>
+<p>Faletto, G. (2025). Fused Extended Two-Way Fixed Effects for
+Difference-in-Differences with Staggered Adoptions. arXiv:2312.05985.</p>
 <p>Hothorn, T., Bretz, F., &amp; Westfall, P. (2008). Simultaneous Inference in
 General Parametric Models. <em>Biometrical Journal</em> 50(3), 346-363.</p>
     </div>

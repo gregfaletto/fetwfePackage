@@ -570,6 +570,9 @@ Difference-in-Differences with Staggered Adoptions.
 Linear Mixed-Effects Models Using lme4. <em>Journal of Statistical
 Software</em>, 67(1), 1-48. <a href="https://doi.org/10.18637/jss.v067.i01" class="external-link">doi:10.18637/jss.v067.i01</a>
 .</p>
+<p>Kock, A. B. (2013). Oracle Efficient Variable Selection in Random and
+Fixed Effects Panel Data Models. <em>Econometric Theory</em>, 29(1),
+115-152.</p>
 <p>Patterson, H. D., &amp; Thompson, R. (1971). Recovery of inter-block
 information when block sizes are unequal. <em>Biometrika</em>, 58(3),
 545-554.</p>
@@ -592,9 +595,7 @@ S and S-PLUS</em>. Springer.</p>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>  <span class="co"># Response: the log homicide rate. Treatment: `cdl` records the share of</span></span></span>
 <span class="r-in"><span>  <span class="co"># the year the castle-doctrine law was in effect, so `cdl &gt; 0` gives the</span></span></span>
-<span class="r-in"><span>  <span class="co"># absorbing 0/1 treatment indicator. No `covs`: castle's smallest</span></span></span>
-<span class="r-in"><span>  <span class="co"># adoption cohorts contain a single state, so the design is</span></span></span>
-<span class="r-in"><span>  <span class="co"># rank-deficient once any covariate is added.</span></span></span>
+<span class="r-in"><span>  <span class="co"># absorbing 0/1 treatment indicator.</span></span></span>
 <span class="r-in"><span>  <span class="va">castle</span><span class="op">$</span><span class="va">l_homicide</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="va">castle</span><span class="op">$</span><span class="va">homicide</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="va">castle</span><span class="op">$</span><span class="va">treated</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="va">castle</span><span class="op">$</span><span class="va">cdl</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
@@ -633,12 +634,12 @@ S and S-PLUS</em>. Springer.</p>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> No covariates provided; skipping covariate processing.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Getting omega sqrt inverse estimate...</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Done! Time to estimate noise variances:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> 0.154556274414062</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 0.177162408828735</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Time to get sqrt inverse matrix:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> 0.000210046768188477</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 0.00020599365234375</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Estimating bridge regression with 10-fold CV...</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Done! Time for estimation:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> 0.0597500801086426</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 0.0642096996307373</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> No treatment features selected; all treatment effects estimated to be 0.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   cohort estimate se ci_low ci_high p_value selected</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1   2005        0  0      0       0      NA    FALSE</span>

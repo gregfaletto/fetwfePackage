@@ -174,3 +174,6 @@ structure: cohort vs. event-study penalties”* —
 - Faletto, G (2025). *Fused Extended Two-Way Fixed Effects for
   Difference-in-Differences with Staggered Adoptions*. [arXiv preprint
   arXiv:2312.05985](https://arxiv.org/abs/2312.05985).
+- Stevenson, B., & Wolfers, J. (2006). Bargaining in the Shadow of the
+  Law: Divorce Laws and Family Distress. *The Quarterly Journal of
+  Economics*, 121(1), 267-288.

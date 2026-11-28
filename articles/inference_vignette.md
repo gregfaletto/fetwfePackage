@@ -29,10 +29,10 @@ A companion vignette covers the rest of the package’s inference toolkit:
 
 ## 1. The headline: tight Gaussian CIs by default under (Ψ-IF)
 
-By default, the package’s standard errors — the `att_se` slot on the
-returned object and the entries of `catt_ses` — are the *tight Gaussian
-variance* from the paper’s Theorem `te.asym.norm.thm`(c$`'`$), valid
-under the influence-function condition (Ψ-IF) (Faletto 2025,
+By default, the package’s overall-ATT standard error — the `att_se` slot
+on the returned object — is the *tight Gaussian variance* from the
+paper’s Theorem `te.asym.norm.thm`(c$`'`$), valid under the
+influence-function condition (Ψ-IF) (Faletto 2025,
 [arXiv:2312.05985](https://arxiv.org/abs/2312.05985), Assumption (Ψ-IF)
 at paper Eq. `psi.if.assum`). The combined ATT variance has two pieces,
 
@@ -70,9 +70,11 @@ variance estimator, and the Wald confidence interval is
 \,\right]
 ```
 
-per paper Eq. `conf.int.form`. The same combined variance backs the
-per-cohort entries of `catt_ses` and the `catt_df` confidence-interval
-columns.
+per paper Eq. `conf.int.form`. The per-cohort `catt_ses` carry only the
+first piece, in the form Section 2.1 gives, and so do the `catt_df`
+bounds built from them. Under the default `ci_type = "simultaneous"`,
+those bounds are the cohort-family simultaneous band rather than
+`estimate ± z * se`.
 
 ### 1.1 Which propensity-score estimators satisfy (Ψ-IF)?
 
@@ -307,7 +309,7 @@ implementation matches `sandwich::vcovCL()` to numerical precision on a
 clean panel without selection. What is *not* yet covered by the paper’s
 theory is:
 
-- Verification that the bridge oracle property of Theorem 6.2 still
+- Verification that the bridge oracle property of Theorem 6.3 still
   holds under the relaxed covariance structure that motivates
   cluster-robust SEs in the first place.
 - Sandwich consistency *after model selection*, i.e., that the CR1
@@ -328,14 +330,24 @@ the default for headline numbers.
 
 ``` r
 
-res_cluster <- fetwfeWithSimulatedData(sim_data, se_type = "cluster")
+res_cluster <- fetwfe(
+  pdata = sim_data$pdata,
+  time_var = sim_data$time_var,
+  unit_var = sim_data$unit_var,
+  treatment = sim_data$treatment,
+  covs = sim_data$covs,
+  response = sim_data$response,
+  sig_eps_sq = sim_data$sig_eps_sq,
+  sig_eps_c_sq = sim_data$sig_eps_c_sq,
+  se_type = "cluster"
+)
 
 c(
   default = res_default$att_se,
   cluster = res_cluster$att_se
 )
-#>    default    cluster 
-#> 0.10486600 0.09988543
+#>   default   cluster 
+#> 0.1048660 0.1041626
 ```
 
 On this F1-conforming simulated panel the two SEs are similar by
@@ -356,11 +368,11 @@ print(res_cluster)
 #> ===========================================
 #> 
 #> Overall Average Treatment Effect (ATT):
-#>   Estimate:   -0.7777
-#>   Std. Error (cluster-robust): 0.0999
-#>   P-value:    6.912e-15
+#>   Estimate:   -0.8313
+#>   Std. Error (cluster-robust): 0.1042
+#>   P-value:    1.457e-15
 #>   Selected:   TRUE
-#>   95% CI:    [-0.9735, -0.5819]
+#>   95% CI:    [-1.0354, -0.6271]
 #> 
 #> Cohort Average Treatment Effects (CATT) [simultaneous 95% CI]:
 #>  cohort   estimate         se     ci_low    ci_high      p_value selected
@@ -371,10 +383,10 @@ print(res_cluster)
 #> Event-Study Average Treatment Effects (per event time) [simultaneous 95% CI]:
 #>  event_time n_cohorts   estimate        se     ci_low    ci_high      p_value
 #>           0         3  0.0000000 0.0000000  0.0000000  0.0000000           NA
-#>           1         3 -0.6342543 0.1102732 -0.8954173 -0.3730913 2.246783e-08
-#>           2         3 -0.6342543 0.1102732 -0.8954173 -0.3730913 2.628733e-08
-#>           3         2 -3.0242895 0.1920647 -3.4791616 -2.5694175 0.000000e+00
-#>           4         1  0.1683984 0.2513507 -0.4268825  0.7636793 8.582874e-01
+#>           1         3 -0.6708459 0.1163172 -0.9461998 -0.3954920 2.013912e-08
+#>           2         3 -0.6708459 0.1163172 -0.9461998 -0.3954920 2.355221e-08
+#>           3         2 -3.0008214 0.1907395 -3.4523527 -2.5492900 0.000000e+00
+#>           4         1  0.1683984 0.2513507 -0.4266159  0.7634127 8.572584e-01
 #> 
 #> Model Details:
 #>   Units (N)           : 120
@@ -414,12 +426,8 @@ new top-level slots: `lambda_selection`, `cv_folds`, and `cv_seed`. The
 seed defaults to `as.integer(N * T)` so consecutive calls on the same
 dataset are reproducible without the user having to specify a seed.
 
-To select `lambda` by BIC instead, pass `lambda_selection = "bic"`:
-
-``` r
-
-fit_bic <- fetwfe(..., lambda_selection = "bic")
-```
+`lambda_selection = "bic"` remains available for backward compatibility
+only.
 
 To control the CV fold assignment explicitly, pass `cv_folds` and/or
 `cv_seed`:

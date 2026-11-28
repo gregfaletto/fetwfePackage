@@ -492,6 +492,15 @@ An object of class `betwfe` containing the following elements:
       1-based panel-time-index offsets when the labels are
       integer-coercible. New in v1.13.3 (issue \#174).
 
+## References
+
+Faletto, G (2025). Fused Extended Two-Way Fixed Effects for
+Difference-in-Differences with Staggered Adoptions. *arXiv preprint
+arXiv:2312.05985*. <https://arxiv.org/abs/2312.05985>.
+
+Kock, A. B. (2013). Oracle Efficient Variable Selection in Random and
+Fixed Effects Panel Data Models. *Econometric Theory*, 29(1), 115-152.
+
 ## Examples
 
 ``` r

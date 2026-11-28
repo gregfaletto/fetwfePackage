@@ -26,12 +26,10 @@ machinery
 [`eventStudy()`](https://gregfaletto.github.io/fetwfePackage/reference/eventStudy.md)
 uses; nothing is added to the fitted object). Because each cell is a
 single cohort-time parameter, the cohort-probability sampling variance
-that contributes to the aggregated
-[`cohortStudy()`](https://gregfaletto.github.io/fetwfePackage/reference/cohortStudy.md)
-/
-[`eventStudy()`](https://gregfaletto.github.io/fetwfePackage/reference/eventStudy.md)
-standard errors is identically zero here, so a cell's SE is a single
-coefficient's regression SE.
+that contributes to
+[`eventStudy()`](https://gregfaletto.github.io/fetwfePackage/reference/eventStudy.md)'s
+pooled standard errors is identically zero here, so a cell's SE is a
+single coefficient's regression SE.
 
 Confidence intervals and p-values are *pointwise* \\1 - \alpha\\ Wald
 quantities (`estimate +/- z * se`). For simultaneous (family-wise) bands

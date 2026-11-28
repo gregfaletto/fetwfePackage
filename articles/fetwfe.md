@@ -95,7 +95,7 @@ estimates.**
 
 ## Package Usage
 
-The package provides a single exported function,
+The package’s main function is
 [`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md),
 which implements the FETWFE estimator. Its primary arguments include:
 
@@ -110,6 +110,22 @@ which implements the FETWFE estimator. Its primary arguments include:
   variable.
 - **`covs`**: A character vector of covariate names (typically
   time-invariant or the pre-treatment values), if applicable.
+- **`add_ridge`**: if `TRUE`, adds a small ridge ($`\ell_2`$) penalty on
+  the untransformed coefficients (default `FALSE`), the paper’s optional
+  extension for settings where $`p`$ is comparable to $`N`$ (Faletto
+  2025, “Incorporating Direct Ridge Regularization into FETWFE”). On
+  [`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)
+  and
+  [`betwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/betwfe.md)
+  it is optional: their bridge penalty already handles rank-deficient
+  designs. On the unpenalized
+  [`etwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/etwfe.md)
+  and
+  [`twfeCovs()`](https://gregfaletto.github.io/fetwfePackage/reference/twfeCovs.md),
+  it lets a rank-deficient design (collinear covariates, or, for
+  [`etwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/etwfe.md),
+  a cohort with fewer than `d + 1` units) return point estimates,
+  without standard errors, instead of stopping.
 - **Additional tuning parameters:** such as the tuning parameter for the
   bridge penalty (controlled via argument `q`), the geometry of the
   fusion penalty (`fusion_structure`, either the default `"cohort"` or
@@ -521,12 +537,13 @@ retains *heterogeneous* cohort effects here: several adoption cohorts
 are pruned to exactly zero while the rest carry nonzero, varying
 estimates, so the rows of `res$catt_df` are no longer all identical.
 
-Unlike the simulated example above, this fit includes covariates (the
+Like the simulated example above, this fit includes covariates (the
 `covs` argument). Because FETWFE regularizes the cohort-interacted
 design through its bridge penalty, it accommodates covariates even on
 this panel’s scattered, single-state adoption cohorts – a setting in
-which an unregularized two-way fixed effects fit would be
-rank-deficient.
+which the unpenalized extended two-way fixed effects fit,
+[`etwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/etwfe.md),
+is rank-deficient.
 
 ### Testing the zero-effect null
 
@@ -591,8 +608,9 @@ For
 [`etwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/etwfe.md)
 and
 [`twfeCovs()`](https://gregfaletto.github.io/fetwfePackage/reference/twfeCovs.md),
-neither has a selection step, so the `selected` column is omitted; the
-`p_value` column is a standard post-OLS t-test.
+neither has a selection step, so the `selected` column is omitted; their
+`p_value` column follows the same `ci_type` convention described at the
+start of this section.
 
 It is worth keeping in mind that the asymptotic 100% CI of `{0}`
 interpretation is an `N -> infinity` statement. In small samples, it may
@@ -673,9 +691,11 @@ Its standard errors are the per-cell regression standard errors,
 recomputed from the fit exactly as
 [`eventStudy()`](https://gregfaletto.github.io/fetwfePackage/reference/eventStudy.md)
 does (each cell is a single coefficient, so the cohort-probability
-sampling variance that contributes to the aggregated SEs is identically
-zero here). Confidence intervals and p-values are pointwise; a cell the
-fusion penalty zeroed out has `estimate = 0` and `selected = FALSE`.
+sampling variance that contributes to
+[`eventStudy()`](https://gregfaletto.github.io/fetwfePackage/reference/eventStudy.md)’s
+pooled SEs is identically zero here). Confidence intervals and p-values
+are pointwise; a cell the fusion penalty zeroed out has `estimate = 0`
+and `selected = FALSE`.
 [`broom::tidy()`](https://generics.r-lib.org/reference/tidy.html) works
 here too (`term = "cohort_<g>_time_<t>"`). For simultaneous
 (family-wise) bands over the `(cohort, time)` cell family, use
@@ -735,7 +755,7 @@ If you use the tidyverse, the fitted object also plays nicely with the
 overall ATT and per-cohort CATTs into a long data frame with the
 standard `term` / `estimate` / `std.error` / `statistic` / `p.value` /
 `conf.low` / `conf.high` columns, plus a `selected` flag (see “Testing
-the zero-effect null” below):
+the zero-effect null” above):
 
 ``` r
 
@@ -833,14 +853,14 @@ think there’s a bug in the package or you’d like to request a feature.
 
 ## References
 
-- Cheng, C., & Hoekstra, M. (2013). Does Strengthening Self-Defense Law
-  Deter Crime or Escalate Violence? Evidence from Expansions to Castle
-  Doctrine. *Journal of Human Resources*, 48(3), 821-854.
 - Faletto, G. (2025). Fused Extended Two-Way Fixed Effects for
   Difference-in-Differences with Staggered Adoptions. [arXiv preprint
   arXiv:2312.05985](https://arxiv.org/abs/2312.05985).
 - Flack, E., & Jee, E. (2020). bacondecomp: Goodman-Bacon Decomposition.
   R package version 0.1.1.
   <https://CRAN.R-project.org/package=bacondecomp>.
-- Kock, A. B. (2013). Oracle inequalities for high-dimensional
-  nonparametric models. *Econometric Theory*.
+- Kock, A. B. (2013). Oracle Efficient Variable Selection in Random and
+  Fixed Effects Panel Data Models. *Econometric Theory*, 29(1), 115-152.
+- Stevenson, B., & Wolfers, J. (2006). Bargaining in the Shadow of the
+  Law: Divorce Laws and Family Distress. *The Quarterly Journal of
+  Economics*, 121(1), 267-288.

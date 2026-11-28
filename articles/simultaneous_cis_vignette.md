@@ -215,10 +215,11 @@ high-dimensional — where the analytic Gram inverse need not exist, so
 there is no analytic sup-t band — the bootstrap automatically switches
 to the full-design **desparsified** construction (the high-dimensional
 FETWFE theory): each effect’s debiasing direction becomes a nodewise
-(`riesz_lasso`) relaxed inverse over the singular Gram, with the bridge
-residuals. This is *uniformly valid* (not post-selection) and is the
-only route to simultaneous bands in that regime. It is validated in
-simulation
+(`riesz_lasso`) relaxed inverse over the singular Gram, with the
+residuals of a separate, cross-validated `q = 1` (fused lasso) nuisance
+fit on the same design, not the fit’s own bridge estimate. This is
+*uniformly valid* (not post-selection) and is the only route to
+simultaneous bands in that regime. It is validated in simulation
 ([`fetwfe()`](https://gregfaletto.github.io/fetwfePackage/reference/fetwfe.md)
 fits only): the scalar overall-ATT coverage (Theorem
 `debiased.highdim.thm`) and the family-wise *band* coverage (Theorem
@@ -493,6 +494,11 @@ extensions the same `selected`-as-implicit-test reasoning will cover
 when the specifications land.
 
 ## References
+
+Chernozhukov, V., Chetverikov, D., and Kato, K. (2013). “Gaussian
+Approximations and Multiplier Bootstrap for Maxima of Sums of
+High-Dimensional Random Vectors.” *The Annals of Statistics* 41(6),
+2786–2819.
 
 Faletto, G. (2025). “Fused Extended Two-Way Fixed Effects for
 Difference-in-Differences with Staggered Adoptions.” *arXiv preprint*

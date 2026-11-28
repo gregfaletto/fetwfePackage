@@ -155,9 +155,8 @@ effect estimates.</strong></p>
 <div class="section level2">
 <h2 id="package-usage">Package Usage<a class="anchor" aria-label="anchor" href="#package-usage"></a>
 </h2>
-<p>The package provides a single exported function,
-<code><a href="../reference/fetwfe.html">fetwfe()</a></code>, which implements the FETWFE estimator. Its
-primary arguments include:</p>
+<p>The package’s main function is <code><a href="../reference/fetwfe.html">fetwfe()</a></code>, which
+implements the FETWFE estimator. Its primary arguments include:</p>
 <ul>
 <li>
 <strong><code>pdata</code></strong>: A data frame in panel (long)
@@ -179,6 +178,23 @@ specifying the response (outcome) variable.</li>
 <strong><code>covs</code></strong>: A character vector of covariate
 names (typically time-invariant or the pre-treatment values), if
 applicable.</li>
+<li>
+<strong><code>add_ridge</code></strong>: if <code>TRUE</code>, adds
+a small ridge
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>ℓ</mi><mn>2</mn></msub><annotation encoding="application/x-tex">\ell_2</annotation></semantics></math>)
+penalty on the untransformed coefficients (default <code>FALSE</code>),
+the paper’s optional extension for settings where
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>
+is comparable to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>N</mi><annotation encoding="application/x-tex">N</annotation></semantics></math>
+(Faletto 2025, “Incorporating Direct Ridge Regularization into FETWFE”).
+On <code><a href="../reference/fetwfe.html">fetwfe()</a></code> and <code><a href="../reference/betwfe.html">betwfe()</a></code> it is optional: their
+bridge penalty already handles rank-deficient designs. On the
+unpenalized <code><a href="../reference/etwfe.html">etwfe()</a></code> and <code><a href="../reference/twfeCovs.html">twfeCovs()</a></code>, it lets a
+rank-deficient design (collinear covariates, or, for
+<code><a href="../reference/etwfe.html">etwfe()</a></code>, a cohort with fewer than <code>d + 1</code> units)
+return point estimates, without standard errors, instead of
+stopping.</li>
 <li>
 <strong>Additional tuning parameters:</strong> such as the tuning
 parameter for the bridge penalty (controlled via argument
@@ -551,12 +567,12 @@ retains <em>heterogeneous</em> cohort effects here: several adoption
 cohorts are pruned to exactly zero while the rest carry nonzero, varying
 estimates, so the rows of <code>res$catt_df</code> are no longer all
 identical.</p>
-<p>Unlike the simulated example above, this fit includes covariates (the
+<p>Like the simulated example above, this fit includes covariates (the
 <code>covs</code> argument). Because FETWFE regularizes the
 cohort-interacted design through its bridge penalty, it accommodates
 covariates even on this panel’s scattered, single-state adoption cohorts
-– a setting in which an unregularized two-way fixed effects fit would be
-rank-deficient.</p>
+– a setting in which the unpenalized extended two-way fixed effects fit,
+<code><a href="../reference/etwfe.html">etwfe()</a></code>, is rank-deficient.</p>
 </div>
 <div class="section level3">
 <h3 id="testing-the-zero-effect-null">Testing the zero-effect null<a class="anchor" aria-label="anchor" href="#testing-the-zero-effect-null"></a>
@@ -610,8 +626,9 @@ asymptotic statement that the truth is zero, under a sparsity assumption
 different from the one Theorem 6.2 establishes for
 <code><a href="../reference/fetwfe.html">fetwfe()</a></code>. For <code><a href="../reference/etwfe.html">etwfe()</a></code> and
 <code><a href="../reference/twfeCovs.html">twfeCovs()</a></code>, neither has a selection step, so the
-<code>selected</code> column is omitted; the <code>p_value</code> column
-is a standard post-OLS t-test.</p>
+<code>selected</code> column is omitted; their <code>p_value</code>
+column follows the same <code>ci_type</code> convention described at the
+start of this section.</p>
 <p>It is worth keeping in mind that the asymptotic 100% CI of
 <code>{0}</code> interpretation is an <code>N -&gt; infinity</code>
 statement. In small samples, it may be wise to read
@@ -672,9 +689,9 @@ cohorts at each event time):</p>
 <p>Its standard errors are the per-cell regression standard errors,
 recomputed from the fit exactly as <code><a href="../reference/eventStudy.html">eventStudy()</a></code> does (each
 cell is a single coefficient, so the cohort-probability sampling
-variance that contributes to the aggregated SEs is identically zero
-here). Confidence intervals and p-values are pointwise; a cell the
-fusion penalty zeroed out has <code>estimate = 0</code> and
+variance that contributes to <code><a href="../reference/eventStudy.html">eventStudy()</a></code>’s pooled SEs is
+identically zero here). Confidence intervals and p-values are pointwise;
+a cell the fusion penalty zeroed out has <code>estimate = 0</code> and
 <code>selected = FALSE</code>. <code><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">broom::tidy()</a></code> works here too
 (<code>term = "cohort_&lt;g&gt;_time_&lt;t&gt;"</code>). For
 simultaneous (family-wise) bands over the <code>(cohort, time)</code>
@@ -730,7 +747,7 @@ long data frame with the standard <code>term</code> /
 <code>estimate</code> / <code>std.error</code> / <code>statistic</code>
 / <code>p.value</code> / <code>conf.low</code> / <code>conf.high</code>
 columns, plus a <code>selected</code> flag (see “Testing the zero-effect
-null” below):</p>
+null” above):</p>
 <div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://broom.tidymodels.org/" class="external-link">broom</a></span><span class="op">)</span></span>
 <span></span>
@@ -810,17 +827,17 @@ package!</strong></p>
 <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
 </h2>
 <ul>
-<li>Cheng, C., &amp; Hoekstra, M. (2013). Does Strengthening
-Self-Defense Law Deter Crime or Escalate Violence? Evidence from
-Expansions to Castle Doctrine. <em>Journal of Human Resources</em>,
-48(3), 821-854.</li>
 <li>Faletto, G. (2025). Fused Extended Two-Way Fixed Effects for
 Difference-in-Differences with Staggered Adoptions. <a href="https://arxiv.org/abs/2312.05985" class="external-link">arXiv preprint
 arXiv:2312.05985</a>.</li>
 <li>Flack, E., &amp; Jee, E. (2020). bacondecomp: Goodman-Bacon
 Decomposition. R package version 0.1.1. <a href="https://CRAN.R-project.org/package=bacondecomp" class="external-link">https://CRAN.R-project.org/package=bacondecomp</a>.</li>
-<li>Kock, A. B. (2013). Oracle inequalities for high-dimensional
-nonparametric models. <em>Econometric Theory</em>.</li>
+<li>Kock, A. B. (2013). Oracle Efficient Variable Selection in Random
+and Fixed Effects Panel Data Models. <em>Econometric Theory</em>, 29(1),
+115-152.</li>
+<li>Stevenson, B., &amp; Wolfers, J. (2006). Bargaining in the Shadow of
+the Law: Divorce Laws and Family Distress. <em>The Quarterly Journal of
+Economics</em>, 121(1), 267-288.</li>
 </ul>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
