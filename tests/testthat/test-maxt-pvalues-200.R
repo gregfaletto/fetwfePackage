@@ -402,6 +402,7 @@ test_that("the analytic critical value stays within its bounds at a small alpha 
 		))
 		m <- sum(is.finite(sci$adjusted_p_values))
 		expect_gte(m, 2L)
+		expect_identical(sci$alpha, 0.001)
 		expect_lte(sci$critical_value, stats::qnorm(1 - 0.001 / (2 * m)))
 		expect_lt(sci$pointwise_critical_value, sci$critical_value)
 	}
