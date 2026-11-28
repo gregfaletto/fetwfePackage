@@ -1,8 +1,7 @@
 # Behavior-preserving guardrail for the etwfe_core() / twfeCovs_core()
 # unification (#327). The existing `_snaps` lock only PRINTED output; this pins
 # the full NUMERIC output of etwfe() / twfeCovs() (which exercise the two OLS
-# cores end-to-end) across a fixture matrix, so any future drift between the two
-# estimators is caught.
+# cores end-to-end) across a fixture matrix.
 #
 # The fingerprint flattens every numeric output the cores produce (overall ATT --
 # including the asymptotically-exact two-sample ATT when indep_counts is supplied
