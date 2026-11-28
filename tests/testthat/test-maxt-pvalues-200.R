@@ -73,7 +73,8 @@ test_that(".maxt_adjusted_p_nd is the exact dual of the qmvnorm critical value",
 })
 
 # ---------------------------------------------------------------------------
-# 3. Degenerate effects scatter to NA; non-degenerate slots are finite.
+# 3. Degenerate effects scatter to NA; each non-degenerate slot is finite and
+#    lies within its own effect's bounds (#551).
 # ---------------------------------------------------------------------------
 test_that(".maxt_adjusted_p_nd scatters NA into degenerate slots", {
 	skip_if_not_installed("mvtnorm")
@@ -89,6 +90,9 @@ test_that(".maxt_adjusted_p_nd scatters NA into degenerate slots", {
 	adj <- .maxt_adjusted_p_nd(estimates, ses, nondeg, rho_nd)
 	expect_true(all(is.na(adj[!nondeg])))
 	expect_true(all(!is.na(adj[nondeg])))
+	pw <- 2 * stats::pnorm(-abs(estimates / ses))
+	expect_true(all(adj[nondeg] >= pw[nondeg]))
+	expect_true(all(adj[nondeg] <= pmin(1, sum(nondeg) * pw[nondeg])))
 })
 
 # ---------------------------------------------------------------------------
@@ -252,9 +256,9 @@ test_that(".maxt_adjusted_p_nd stays within [p, min(1, m p)] across the tail (#5
 		identity = list(nondeg = rep(TRUE, 5L), rho = equicorr(0, 5L)),
 		rho_045 = list(nondeg = rep(TRUE, 5L), rho = equicorr(0.45, 5L)),
 		rho_090 = list(nondeg = rep(TRUE, 5L), rho = equicorr(0.9, 5L)),
-		# A degenerate slot, so that m = 4 < K = 5.
+		# A degenerate slot between non-degenerate ones, so that m = 4 < K = 5.
 		degenerate_slot = list(
-			nondeg = c(TRUE, TRUE, TRUE, TRUE, FALSE),
+			nondeg = c(TRUE, FALSE, TRUE, TRUE, TRUE),
 			rho = equicorr(0.45, 4L)
 		)
 	)
