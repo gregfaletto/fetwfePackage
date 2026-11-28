@@ -109,6 +109,17 @@ test_that("simultaneousCIs critical value: pointwise < simultaneous < Bonferroni
 	expect_lt(sci_10$critical_value, sci_05$critical_value)
 	expect_lt(sci_05$critical_value, sci_01$critical_value)
 
+	# The strict ordering at the other two alphas as well. With every effect
+	# non-degenerate (m = K), the reported Bonferroni value is the upper end of
+	# the analytic critical value's clamp (#551), so these assert that neither
+	# end of the clamp binds.
+	expect_identical(sum(is.finite(sci_10$adjusted_p_values)), sci_10$K)
+	expect_lt(sci_10$pointwise_critical_value, sci_10$critical_value)
+	expect_lt(sci_10$critical_value, sci_10$bonferroni_critical_value)
+	expect_identical(sum(is.finite(sci_01$adjusted_p_values)), sci_01$K)
+	expect_lt(sci_01$pointwise_critical_value, sci_01$critical_value)
+	expect_lt(sci_01$critical_value, sci_01$bonferroni_critical_value)
+
 	# Load-bearing math check: sqrt(diag(Sigma)) (the per-point SE implied by
 	# the pointwise CI width) must equal the existing eventStudy() SEs.
 	es <- eventStudy(fit)

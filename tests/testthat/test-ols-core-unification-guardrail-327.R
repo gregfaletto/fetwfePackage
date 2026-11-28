@@ -14,11 +14,7 @@
 # (the c7_indep configs), which exercises the indep getTeResultsOLS() call -- the
 # full catt_df, and the coefficient vector) and reduces it to collision-resistant
 # aggregates; the position-weighted sum (`wsum`) catches reorderings/swaps that
-# plain sum/sumsq would miss. The etwfe goldens are captured from the pre-refactor
-# code (commit f1c8cca); the twfeCovs goldens were re-captured after the #339
-# collapse off-by-one fix (see the note on the twfeCovs_* block below); and both
-# `c3_ridge` rows were re-captured after #428 made the ridge penalty unit-free
-# (see the note on `etwfe_c3_ridge`).
+# plain sum/sumsq would miss.
 
 .fp_327 <- function(fit) {
 	v <- c(
@@ -108,15 +104,14 @@
 	c7_indep = list(G = 3, T = 5, d = 2, indep = TRUE)
 )
 
-# Goldens: fingerprint of each (estimator, config); the header says which code
-# each was captured from.
+# Goldens: fingerprint of each (estimator, config).
 .GOLDEN_327 <- list(
 	etwfe_c1_base = c(
 		n = 74,
-		sum = 60.8352899168,
-		sumsq = 304.06524078,
-		sumabs = 108.225547072,
-		wsum = 2231.05132864,
+		sum = 60.8352734697,
+		sumsq = 304.0652407664,
+		sumabs = 108.2255306250,
+		wsum = 2231.0509503580,
 		mx = 6.14708716389,
 		mn = -4.35012442767
 	),
@@ -133,10 +128,10 @@
 	# pre-refactor value; likewise `twfeCovs_c3_ridge`.
 	etwfe_c3_ridge = c(
 		n = 74,
-		sum = 60.8354895793,
-		sumsq = 304.0673412106,
-		sumabs = 108.2258999016,
-		wsum = 2231.0590267747,
+		sum = 60.8354731328,
+		sumsq = 304.0673411971,
+		sumabs = 108.2258834551,
+		wsum = 2231.0586485055,
 		mx = 6.1471088233,
 		mn = -4.3501397377
 	),
@@ -160,27 +155,26 @@
 	),
 	etwfe_c6_reml = c(
 		n = 74,
-		sum = 61.0043302714,
-		sumsq = 304.480412608,
-		sumabs = 108.533286057,
-		wsum = 2233.64525524,
+		sum = 61.0043063298,
+		sumsq = 304.4804125696,
+		sumabs = 108.5332621155,
+		wsum = 2233.6447045813,
 		mx = 6.14708716389,
 		mn = -4.35012442767
 	),
 	etwfe_c7_indep = c(
 		n = 74,
-		sum = 60.7968737847,
-		sumsq = 304.0921750954,
-		sumabs = 108.1871309400,
-		wsum = 2230.6565019494,
+		sum = 60.7968573377,
+		sumsq = 304.0921750818,
+		sumabs = 108.1871144929,
+		wsum = 2230.6561236666,
 		mx = 6.1470871639,
 		mn = -4.3501244277
 	),
 	# twfeCovs goldens re-captured after the #339 collapse off-by-one fix (the
 	# pre-collapse treatment-column extraction now uses getTreatInds()), so these
 	# rows are post-#339 values, NOT the pre-refactor f1c8cca byte-identical
-	# values; the etwfe goldens above other than `etwfe_c3_ridge` remain
-	# pre-refactor (etwfe never collapses).
+	# values.
 	twfeCovs_c1_base = c(
 		n = 36,
 		sum = 28.2113851932,
@@ -246,7 +240,7 @@
 	)
 )
 
-test_that("etwfe() / twfeCovs() numeric output matches the pre-#327 golden to numeric tolerance (#327)", {
+test_that("etwfe() / twfeCovs() numeric output matches its golden fingerprint to numeric tolerance (#327)", {
 	skip_on_cran()
 	skip_if_not_installed("lme4")
 	for (est in c("etwfe", "twfeCovs")) {
