@@ -679,12 +679,12 @@ if (requireNamespace("bacondecomp", quietly = TRUE)) {
 #> No covariates provided; skipping covariate processing.
 #> Getting omega sqrt inverse estimate...
 #> Done! Time to estimate noise variances:
-#> 0.237576961517334
+#> 0.154556274414062
 #> Time to get sqrt inverse matrix:
-#> 0.000314712524414062
+#> 0.000210046768188477
 #> Estimating bridge regression with 10-fold CV...
 #> Done! Time for estimation:
-#> 0.0824644565582275
+#> 0.0597500801086426
 #> No treatment features selected; all treatment effects estimated to be 0.
 #>   cohort estimate se ci_low ci_high p_value selected
 #> 1   2005        0  0      0       0      NA    FALSE
