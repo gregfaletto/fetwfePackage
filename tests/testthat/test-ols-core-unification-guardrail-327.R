@@ -1,9 +1,8 @@
 # Behavior-preserving guardrail for the etwfe_core() / twfeCovs_core()
 # unification (#327). The existing `_snaps` lock only PRINTED output; this pins
 # the full NUMERIC output of etwfe() / twfeCovs() (which exercise the two OLS
-# cores end-to-end) across a fixture matrix, so the refactor that extracts the
-# shared `.ols_estimator_core()` reproduces the pre-refactor output to numeric
-# tolerance, and any future drift between the two estimators is caught. (The
+# cores end-to-end) across a fixture matrix, so any future drift between the two
+# estimators is caught. (The
 # refactor is bit-identical by construction -- a pure reorganization with no
 # arithmetic change -- but we assert at testthat's default tolerance, which is
 # tight enough to catch any substantive regression while staying robust across
@@ -124,8 +123,6 @@
 		mx = 6.14708716389,
 		mn = -4.35012442767
 	),
-	# Re-captured after #428 made the ridge penalty unit-free, so not a
-	# pre-refactor value; likewise `twfeCovs_c3_ridge`.
 	etwfe_c3_ridge = c(
 		n = 74,
 		sum = 60.8354731328,
@@ -171,10 +168,6 @@
 		mx = 6.1470871639,
 		mn = -4.3501244277
 	),
-	# twfeCovs goldens re-captured after the #339 collapse off-by-one fix (the
-	# pre-collapse treatment-column extraction now uses getTreatInds()), so these
-	# rows are post-#339 values, NOT the pre-refactor f1c8cca byte-identical
-	# values.
 	twfeCovs_c1_base = c(
 		n = 36,
 		sum = 28.2113851932,
