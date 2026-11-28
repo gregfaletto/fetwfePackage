@@ -373,9 +373,11 @@ penalty. Estimates overall ATT as well as CATT (cohort average treatment
 effects on the treated units).
 }
 \examples{
-# `bacondecomp` (which supplies the `castle` data) is a Suggests-only
-# dependency, so guard the example on its availability.
-if (requireNamespace("bacondecomp", quietly = TRUE)) {
+# `bacondecomp` (which supplies the `castle` data) and `lme4` (which the
+# default fit uses to estimate the variance components) are Suggests-only
+# dependencies, so guard the example on both.
+if (requireNamespace("bacondecomp", quietly = TRUE) &&
+    requireNamespace("lme4", quietly = TRUE)) {
   library(bacondecomp)
 
   data(castle)
