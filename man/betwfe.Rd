@@ -373,9 +373,11 @@ penalty. Estimates overall ATT as well as CATT (cohort average treatment
 effects on the treated units).
 }
 \examples{
-# `bacondecomp` (which supplies the `castle` data) is a Suggests-only
-# dependency, so guard the example on its availability.
-if (requireNamespace("bacondecomp", quietly = TRUE)) {
+# `bacondecomp` (which supplies the `castle` data) and `lme4` (which the
+# default fit uses to estimate the variance components) are Suggests-only
+# dependencies, so guard the example on both.
+if (requireNamespace("bacondecomp", quietly = TRUE) &&
+    requireNamespace("lme4", quietly = TRUE)) {
   library(bacondecomp)
 
   data(castle)
@@ -387,7 +389,7 @@ if (requireNamespace("bacondecomp", quietly = TRUE)) {
   castle$treated <- as.integer(castle$cdl > 0)
 
   # On this panel betwfe's bridge penalty selects every cohort out, so the
-  # estimated ATT and cohort effects below are all zero.
+  # estimates and intervals below are all zero.
   res <- betwfe(
       pdata = castle,
       time_var = "year",
@@ -398,14 +400,14 @@ if (requireNamespace("bacondecomp", quietly = TRUE)) {
 
   # Average treatment effect on the treated units (in percentage point
   # units)
-  100 * res$att_hat
+  print(100 * res$att_hat)
 
   # 95\% confidence interval for ATT (in percentage point units)
 
   low_att <- 100 * (res$att_hat - qnorm(1 - 0.05 / 2) * res$att_se)
   high_att <- 100 * (res$att_hat + qnorm(1 - 0.05 / 2) * res$att_se)
 
-  c(low_att, high_att)
+  print(c(low_att, high_att))
 
   # Cohort average treatment effects and confidence intervals (in percentage
   # point units)
