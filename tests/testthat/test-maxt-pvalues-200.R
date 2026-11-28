@@ -294,8 +294,7 @@ test_that(".maxt_adjusted_p_nd stays within [p, min(1, m p)] across the tail (#5
 })
 
 # ---------------------------------------------------------------------------
-# Shared fixture for blocks 11-14: a panel on which the bands of every
-# estimator reach the far tail.
+# Shared fixture for blocks 11-13.
 # ---------------------------------------------------------------------------
 make_bounds_panel_551 <- function() {
 	sc <- genCoefs(G = 3, T = 5, density = 0.5, eff_size = 2, d = 2, seed = 1)
