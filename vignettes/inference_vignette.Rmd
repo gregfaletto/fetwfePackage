@@ -59,7 +59,7 @@ $$
 \,\right]
 $$
 
-per paper Eq. `conf.int.form`. The per-cohort `catt_ses`, and the `catt_df` bounds built from them, carry only the first piece; Section 2.1 gives their form.
+per paper Eq. `conf.int.form`. The per-cohort `catt_ses` carry only the first piece, in the form Section 2.1 gives, and so do the `catt_df` bounds built from them. Under the default `ci_type = "simultaneous"`, those bounds are the cohort-family simultaneous band rather than `estimate ± z * se`.
 
 ## 1.1 Which propensity-score estimators satisfy (Ψ-IF)?
 
