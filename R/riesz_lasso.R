@@ -181,6 +181,15 @@ lambda_node_default <- function(p, N, const = 1.0, scale = 1.0) {
 	feasibility <= lambda_node * (1 + rtol)
 }
 
+#' Elapsed seconds for `.cv_lambda_node()`'s `cv_time_budget`
+#'
+#' @return The `"elapsed"` entry of `proc.time()`, in seconds.
+#' @keywords internal
+#' @noRd
+.cv_elapsed <- function() {
+	proc.time()[["elapsed"]]
+}
+
 #' Cross-validate the high-dimensional nodewise penalty constant `lambda_c`
 #'
 #' @description
@@ -336,11 +345,11 @@ lambda_node_default <- function(p, N, const = 1.0, scale = 1.0) {
 	# loop; a fold solve that hits the cap without converging BAILS its point (excluded,
 	# and skipped in the remaining folds) rather than scoring a non-converged direction.
 	loss_sum <- rep(0, length(mult_grid))
-	t0 <- proc.time()[["elapsed"]]
+	t0 <- .cv_elapsed()
 	timed_out <- FALSE
 	over_budget <- function() {
 		is.finite(cv_time_budget) &&
-			(proc.time()[["elapsed"]] - t0) > cv_time_budget
+			(.cv_elapsed() - t0) > cv_time_budget
 	}
 	for (f in seq_len(nfolds)) {
 		if (over_budget()) {
